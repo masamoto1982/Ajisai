@@ -33,38 +33,33 @@ const makeDeps = (mobileMode: boolean, state: LayoutState): ApplyAreaStateDeps =
 };
 
 describe('analyzeStackModifiers', () => {
-    it('defaults to TOP and EAT when no modifier token is present', () => {
-        expect(analyzeStackModifiers('1 2 ADD')).toEqual({ stak: false, keep: false });
-        expect(analyzeStackModifiers('')).toEqual({ stak: false, keep: false });
+    it('defaults to EAT when no modifier token is present', () => {
+        expect(analyzeStackModifiers('1 2 ADD')).toEqual({ keep: false });
+        expect(analyzeStackModifiers('')).toEqual({ keep: false });
     });
 
-    it('reads the canonical TOP/STAK and EAT/KEEP tokens', () => {
-        expect(analyzeStackModifiers('. ADD')).toEqual({ stak: false, keep: false });
-        expect(analyzeStackModifiers('.. ADD')).toEqual({ stak: true, keep: false });
-        expect(analyzeStackModifiers(', ADD')).toEqual({ stak: false, keep: false });
-        expect(analyzeStackModifiers(',, ADD')).toEqual({ stak: false, keep: true });
+    it('reads the KEEP modifier', () => {
+        expect(analyzeStackModifiers(',, ADD')).toEqual({ keep: true });
     });
 
-    it('reads the combined modifier forms of SPEC §6.3', () => {
-        expect(analyzeStackModifiers('.,, ADD')).toEqual({ stak: false, keep: true });
-        expect(analyzeStackModifiers('..,, ADD')).toEqual({ stak: true, keep: true });
-        expect(analyzeStackModifiers('..,  ADD')).toEqual({ stak: true, keep: false });
-    });
-
-    it('reads the ; and ;; sugar (. , and .. ,,)', () => {
-        expect(analyzeStackModifiers('; ADD')).toEqual({ stak: false, keep: false });
-        expect(analyzeStackModifiers(';; ADD')).toEqual({ stak: true, keep: true });
+    // There is exactly one modifier axis, so the spellings of the retired target
+    // axis are not modifiers — they are not Words at all, and must not paint the
+    // stack as if a modifier were in force.
+    it('does not read a retired modifier spelling as a modifier', () => {
+        for (const source of ['. ADD', '.. ADD', ', ADD', '; ADD', ';; ADD', '.,, ADD', '..,, ADD']) {
+            expect(analyzeStackModifiers(source)).toEqual({ keep: false });
+        }
     });
 
     it('never mistakes a decimal literal for a modifier', () => {
-        expect(analyzeStackModifiers('.5 ADD')).toEqual({ stak: false, keep: false });
-        expect(analyzeStackModifiers('5. ADD')).toEqual({ stak: false, keep: false });
-        expect(analyzeStackModifiers('3.14 ADD')).toEqual({ stak: false, keep: false });
+        expect(analyzeStackModifiers('.5 ADD')).toEqual({ keep: false });
+        expect(analyzeStackModifiers('5. ADD')).toEqual({ keep: false });
+        expect(analyzeStackModifiers('3.14 ADD')).toEqual({ keep: false });
     });
 
-    it('treats either axis as triggered if any token selects the non-default', () => {
-        expect(analyzeStackModifiers('1 .. ADD 2 . SUB')).toEqual({ stak: true, keep: false });
-        expect(analyzeStackModifiers('1 ,, ADD 2 , SUB')).toEqual({ stak: false, keep: true });
+    it('treats the axis as triggered if any token selects the non-default', () => {
+        expect(analyzeStackModifiers('1 ,, ADD 2 SUB')).toEqual({ keep: true });
+        expect(analyzeStackModifiers('1 ADD 2 SUB')).toEqual({ keep: false });
     });
 });
 

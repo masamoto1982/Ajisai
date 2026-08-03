@@ -123,8 +123,21 @@ function buildWordTable() {
       if (!contract) fail(`no contract found for coreword ${entry.surface}`);
       const syntax = contract.documentation.syntax ? ` — e.g. \`${contract.documentation.syntax}\`` : '';
       rows.push(`| \`${entry.surface}\` | ${entry.category} | ${contract.documentation.summary}${syntax} |`);
-    } else if (entry.canonical && entry.canonical !== 'RESERVED-BEGIN') {
-      rows.push(`| \`${entry.surface.replace(/\|/g, '\\|')}\` | ${entry.kind.replace(/_/g, ' ')} | shorthand for \`${entry.canonical.replace(/\|/g, '\\|')}\` |`);
+    } else if (entry.canonical) {
+      const escaped = entry.surface.replace(/\|/g, '\\|');
+      const concept = entry.canonical.replace(/\|/g, '\\|');
+      // Only an alias is a shorthand *for* a Word you could have written out. A
+      // delimiter, a directive, or a reserved marker is not: calling a reserved
+      // marker "shorthand" would read as an invitation to use one.
+      const note = {
+        reserved_marker: `${concept} — reserved, never valid in source`,
+        source_directive: `${concept} — consumed by the lexer, not a Word`,
+        control_directive: `${concept} — only inside the construct that defines it`,
+        delimiter_sugar: `${concept} — structural delimiter, not a Word`,
+        literal_sugar: `${concept} — literal delimiter, not a Word`,
+        input_helper: `${concept} — editor affordance, not a Word`,
+      }[entry.kind] ?? `shorthand for \`${concept}\``;
+      rows.push(`| \`${escaped}\` | ${entry.kind.replace(/_/g, ' ')} | ${note} |`);
     }
   }
   return rows;

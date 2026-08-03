@@ -253,7 +253,6 @@ pub enum Token {
     VectorEnd,
     BlockStart,
     BlockEnd,
-    Pipeline,
     NilCoalesce,
     CondClauseSep,
     LineBreak,

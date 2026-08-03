@@ -23,9 +23,9 @@ const INDENT_UNIT = '  ';
 
 // Characters that are always their own token in Ajisai source and can never be
 // part of a word or number. This is tokenizer.rs::is_special_char minus the
-// operator characters whose tokenization depends on context (' # > = ( )),
-// which we deliberately leave untouched so we never mis-split e.g. `>CF`.
-const STANDALONE_DELIMITERS = new Set(['[', ']', '{', '}', '|', '~', '^']);
+// characters whose tokenization depends on context (' # > = ( )), which are left
+// untouched so a two-character spelling such as `>=` is never mis-split.
+const STANDALONE_DELIMITERS = new Set(['[', ']', '{', '}', '|', '^']);
 const OPENING_BRACKETS = new Set(['[', '{']);
 const CLOSING_BRACKETS = new Set([']', '}']);
 
@@ -33,7 +33,7 @@ const CLOSING_BRACKETS = new Set([']', '}']);
 // the next character is whitespace, end-of-input, or a special character other
 // than another quote.
 const STRING_CLOSE_SPECIALS = new Set([
-    '[', ']', '{', '}', '(', ')', '#', '>', '=', '|', '~', '^',
+    '[', ']', '{', '}', '(', ')', '#', '>', '=', '|', '^',
 ]);
 const isStringCloseDelimiter = (ch: string | undefined): boolean =>
     ch === undefined || /\s/.test(ch) || STRING_CLOSE_SPECIALS.has(ch);

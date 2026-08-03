@@ -242,12 +242,15 @@ code-data REFLECT` |
 | `<>` | symbol alias | shorthand for `NEQ` |
 | `&` | symbol alias | shorthand for `AND` |
 | `,,` | syntax sugar | shorthand for `KEEP` |
-| `'` | input helper | shorthand for `STRING-QUOTE` |
+| `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
 | `?` | symbol alias | shorthand for `LOOKUP` |
-| `#` | source directive | shorthand for `COMMENT-LINE` |
-| `\|` | control directive | shorthand for `COND-CLAUSE` |
-| `[` | delimiter sugar | shorthand for `BEGIN-VECTOR` |
-| `]` | delimiter sugar | shorthand for `END-VECTOR` |
-| `{` | delimiter sugar | shorthand for `BEGIN-BLOCK` |
-| `}` | delimiter sugar | shorthand for `END-BLOCK` |
-| `'` | literal sugar | shorthand for `STRING-QUOTE` |
+| `^` | syntax sugar | shorthand for `VENT` |
+| `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
+| `\|` | control directive | COND-CLAUSE — only inside the construct that defines it |
+| `[` | delimiter sugar | BEGIN-VECTOR — structural delimiter, not a Word |
+| `]` | delimiter sugar | END-VECTOR — structural delimiter, not a Word |
+| `{` | delimiter sugar | BEGIN-BLOCK — structural delimiter, not a Word |
+| `}` | delimiter sugar | END-BLOCK — structural delimiter, not a Word |
+| `'` | literal sugar | STRING-QUOTE — literal delimiter, not a Word |
+| `(` | reserved marker | RESERVED-BEGIN — reserved, never valid in source |
+| `)` | reserved marker | RESERVED-END — reserved, never valid in source |

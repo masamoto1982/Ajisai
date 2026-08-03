@@ -490,8 +490,6 @@ mod comparison_budget_infrastructure_tests {
         assert!(!bool_of(&interp));
     }
 
-    // ── Regression: STAK-mode property checks still produce a single bool
-
     // ── NIL projection contract for the Undecidable case ─────────────────
 
     #[tokio::test]
@@ -535,7 +533,7 @@ mod comparison_budget_infrastructure_tests {
 ///    through `ExactReal::eq_with_budget` and may surface `None`.
 /// 2. `apply_equality` projects `None` to the §7.4.1 Undecidable
 ///    NIL via the existing `push_undecidable_nil` helper.
-/// 3. STAK-mode `EQ` / `NEQ` short-circuit on the first
+/// 3. A vector-lifted `EQ` / `NEQ` short-circuits on the first
 ///    NIL-producing pair (SPEC §7.4).
 ///
 /// We can't yet construct a non-Rational `ExactReal` scalar value
@@ -610,8 +608,6 @@ mod phase_seven_eq_budget_tests {
         let interp = run("-1/2 1/2 EQ").await;
         assert!(!bool_of(&interp));
     }
-
-    // ── STAK-mode regression ─────────────────────────────────────────────
 
     // ── NIL passthrough is unchanged ─────────────────────────────────────
 

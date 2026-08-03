@@ -3,9 +3,8 @@
 //! Companion to `algebraic_laws.rs`, encoding
 //! `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 2: the surface
 //! desugaring of SPEC §3.9 / §7.0 is *observationally transparent*. Every
-//! symbolic alias renders identically to its English-word canonical form, the
-//! `FLOW` (`~`) marker is a no-op,
-//! and word names are case-normalized (§3.8). Each law is the compressed form
+//! symbolic alias renders identically to its English-word canonical form, and
+//! word names are case-normalized (§3.8). Each law is the compressed form
 //! of infinitely many tokenizer conformance cases: if desugaring were not
 //! `⟦desugar(s)⟧ = ⟦s⟧`, some generated pair would render differently.
 //!
@@ -62,10 +61,16 @@ proptest! {
         assert_law("alias-gte", &format!("{a} {b} >="), &format!("{a} {b} GTE"));
     }
 
-    // ── FLOW (`~`) is a no-op visual separator (§6.4) ──
+    // ── An unallocated symbol is not a silent no-op ──
+    //
+    // Desugaring is semantics-preserving (LANG.SOURCE.DESUGAR), which cuts both
+    // ways: a symbol the language has not allocated must not quietly disappear
+    // from a program. `~` is unallocated, so it reaches the dictionary as an
+    // ordinary name and fails there.
     #[test]
-    fn pipe_is_noop(a in small(), b in small()) {
-        assert_law("pipe-noop", &format!("{a} {b} ~ ADD"), &format!("{a} {b} ADD"));
+    fn an_unallocated_symbol_is_not_a_silent_noop(a in small(), b in small()) {
+        let observation = observed(&format!("{a} {b} ~ ADD"));
+        prop_assert_eq!(observation.error_category, Some("unknownWord"));
     }
 
     // ── Word-name case normalization (§3.8): add ≡ Add ≡ ADD ──

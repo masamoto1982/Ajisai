@@ -9,11 +9,11 @@
 //!
 //! This module classifies the lexical / structural / reserved surface forms that
 //! are **not** runtime-canonicalizable words. The runtime *word* aliases
-//! (`+` -> `ADD`, `.` -> `TOP`, `~` -> `FLOW`, ...) live in
-//! [`crate::core_word_aliases`], which remains the single source of truth for
-//! runtime name canonicalization. The two tables are deliberately kept separate:
+//! (`+` -> `ADD`, `^` -> `VENT`, ...) live in [`crate::core_word_aliases`], which
+//! remains the single source of truth for runtime name canonicalization. The two
+//! tables are deliberately kept separate:
 //! [`crate::core_word_aliases::canonicalize_core_word_name`] must never map `#`,
-//! `[`, `{`, `'`, `;`, ... onto the concept names defined here, because these
+//! `[`, `{`, `'`, ... onto the concept names defined here, because these
 //! concepts are not runtime words.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -22,19 +22,12 @@ pub enum SurfaceFormKind {
     DelimiterSugar,
     /// String-literal delimiter, e.g. `'`.
     LiteralSugar,
-    /// Compound stack-modifier shorthand, e.g. `;` (`. ,`) and `;;` (`.. ,,`).
-    ModifierSugar,
     /// Source-level directive consumed by the tokenizer, e.g. `#`.
     SourceDirective,
     /// Control-flow directive meaningful only inside a construct, e.g. `|`.
     ControlDirective,
     /// Reserved marker that is never a runtime token, e.g. `(` `)`.
     ReservedMarker,
-    /// Conversion-word lexical pattern: `>` immediately followed by letters,
-    /// e.g. `>CF`. This is a *pattern*, not a fixed table entry, because the
-    /// canonical home is a runtime word of the same name (see
-    /// [`is_conversion_word_token`]).
-    ConversionWord,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -53,9 +46,7 @@ pub struct SurfaceForm {
 /// The lexical / structural / reserved surface forms.
 ///
 /// Runtime word aliases are intentionally absent here; see
-/// [`crate::core_word_aliases::CORE_WORD_ALIASES`]. The `>NAME` conversion-word
-/// form is also absent because it is a pattern (see [`is_conversion_word_token`])
-/// whose canonical home is a runtime word, not a fixed sugar entry.
+/// [`crate::core_word_aliases::CORE_WORD_ALIASES`].
 pub const SURFACE_FORMS: &[SurfaceForm] = &[
     SurfaceForm {
         surface: "#",
@@ -127,27 +118,14 @@ pub fn lookup_surface_form(surface: &str) -> Option<&'static SurfaceForm> {
     SURFACE_FORMS.iter().find(|f| f.surface == surface)
 }
 
-/// Classify a `>NAME` conversion-word token (e.g. `>CF`).
-///
-/// `>` and `>=` are the `GT` / `GTE` comparison aliases (see
-/// [`crate::core_word_aliases`]); `>` immediately followed by an ASCII letter is
-/// instead a single conversion-word token whose canonical home is the runtime
-/// word of the same name (e.g. the `>CF` continued-fraction conversion word).
-pub fn is_conversion_word_token(token: &str) -> bool {
-    let mut chars = token.chars();
-    chars.next() == Some('>') && matches!(chars.next(), Some(c) if c.is_ascii_alphabetic())
-}
-
 /// Human-readable label for a surface-form kind, for diagnostics.
 pub fn surface_form_kind_label(kind: SurfaceFormKind) -> &'static str {
     match kind {
         SurfaceFormKind::DelimiterSugar => "delimiter sugar",
         SurfaceFormKind::LiteralSugar => "literal sugar",
-        SurfaceFormKind::ModifierSugar => "modifier sugar",
         SurfaceFormKind::SourceDirective => "a source directive",
         SurfaceFormKind::ControlDirective => "control directive sugar",
         SurfaceFormKind::ReservedMarker => "a reserved marker",
-        SurfaceFormKind::ConversionWord => "a conversion word",
     }
 }
 
@@ -202,19 +180,7 @@ mod tests {
         assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
         assert_ne!(canonicalize_core_word_name("{"), "BEGIN-BLOCK");
         assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
-        assert_ne!(canonicalize_core_word_name(";"), "TOP-EAT");
-        assert_ne!(canonicalize_core_word_name(";;"), "STAK-KEEP");
         assert_ne!(canonicalize_core_word_name("|"), "COND-CLAUSE");
-    }
-
-    #[test]
-    fn conversion_word_pattern() {
-        assert!(is_conversion_word_token(">CF"));
-        assert!(is_conversion_word_token(">Cf"));
-        // `>` and `>=` are comparison aliases, not conversion words.
-        assert!(!is_conversion_word_token(">"));
-        assert!(!is_conversion_word_token(">="));
-        assert!(!is_conversion_word_token(">2"));
     }
 
     #[test]

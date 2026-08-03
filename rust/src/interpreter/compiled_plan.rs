@@ -52,7 +52,7 @@ pub enum CompiledOp {
     BeginGuardedBlock,
     LineBreak,
     // FallbackToken keeps runtime-sensitive tokens in the interpreter path:
-    // - directives / control markers (Pipeline, NilCoalesce, CondClauseSep)
+    // - directives / control markers (NilCoalesce, CondClauseSep)
     // - unresolved symbols at compile time
     // - structural tokens we cannot lower safely in current pass (e.g. vectors)
     // - tokens that could alter semantic hint behavior in dynamic ways
@@ -244,9 +244,7 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
                 _ => CompiledOp::FallbackToken(token.clone()),
             },
             Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
-            Token::Pipeline | Token::NilCoalesce | Token::CondClauseSep => {
-                CompiledOp::FallbackToken(token.clone())
-            }
+            Token::NilCoalesce | Token::CondClauseSep => CompiledOp::FallbackToken(token.clone()),
             Token::LineBreak => CompiledOp::LineBreak,
             Token::Symbol(s) => {
                 let upper = crate::core_word_aliases::canonicalize_core_word_name(s);

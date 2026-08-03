@@ -2817,6 +2817,31 @@
       "desugars_to": "END-BLOCK"
     },
     {
+      "id": "surface.quote",
+      "kind": "literal_sugar",
+      "surface": "'",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.html §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "String-literal delimiter, serving as both open and close. The lexer resolves it, so it is not runtime vocabulary; `alias.quote` records the separate editor affordance of the same character.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "desugars_to": "STRING-QUOTE"
+    },
+    {
       "id": "surface.left-paren",
       "kind": "reserved_marker",
       "surface": "(",
@@ -2840,6 +2865,31 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "RESERVED-BEGIN"
+    },
+    {
+      "id": "surface.right-paren",
+      "kind": "reserved_marker",
+      "surface": ")",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.html §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Reserved continued-fraction serialization marker; invalid in source and classified as lexical reserved marker rather than runtime vocabulary.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "desugars_to": "RESERVED-END"
     },
     {
       "id": "alias.plus",
@@ -2912,6 +2962,30 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "MUL"
+    },
+    {
+      "id": "alias.slash",
+      "kind": "symbol_alias",
+      "surface": "/",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.html §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for DIV; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "desugars_to": "DIV"
     },
     {
       "id": "alias.percent",
@@ -3174,6 +3248,31 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "LOOKUP"
+    },
+    {
+      "id": "alias.caret",
+      "kind": "syntax_sugar",
+      "surface": "^",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.html §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/vent_canonical_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for VENT; the tokenizer emits the same control token for both spellings, so the two are one directive.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "desugars_to": "VENT"
     },
     {
       "id": "core.reflect",

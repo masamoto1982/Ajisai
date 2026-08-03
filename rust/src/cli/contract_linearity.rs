@@ -97,8 +97,6 @@ pub(crate) fn body_keeps_a_discharged_handle(tokens: &[Token]) -> bool {
         let canonical = canonicalize_core_word_name(symbol);
         match canonical.as_ref() {
             "KEEP" => pending_keep = true,
-            // The target axis (`TOP`/`STAK`) is orthogonal and leaves the flag untouched.
-            "TOP" | "STAK" => {}
             other => {
                 if pending_keep && handle_role(other) == Some(HandleRole::Discharge) {
                     return true;

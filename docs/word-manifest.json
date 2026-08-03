@@ -16,8 +16,9 @@
     "standardWords": 22,
     "corewords": 57,
     "aliases": 15,
-    "surface_forms": 8,
-    "manifestEntries": 80
+    "inputHelpers": 1,
+    "surface_forms": 9,
+    "manifestEntries": 82
   },
   "entries": [
     {
@@ -1103,15 +1104,13 @@
       "surface": "/",
       "canonical": "DIV",
       "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "core.import.name-resolution",
-      "semantic_role": "Primitive",
-      "algebraic_family": "dictionary",
-      "core_tier": "flow",
-      "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.state-transformer.composition"
-      ],
-      "classification": "Core"
+      "coverage_entry_id": "alias.slash",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "derived_from": [],
+      "desugars_to": "DIV",
+      "classification": "Surface"
     },
     {
       "id": "alias.percent",
@@ -1268,6 +1267,20 @@
       "classification": "Surface"
     },
     {
+      "id": "alias.caret",
+      "kind": "syntax_sugar",
+      "surface": "^",
+      "canonical": "VENT",
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.caret",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "derived_from": [],
+      "desugars_to": "VENT",
+      "classification": "Surface"
+    },
+    {
       "id": "surface.hash",
       "kind": "source_directive",
       "surface": "#",
@@ -1371,7 +1384,7 @@
       "runtime_word": false,
       "source": "rust/src/surface_forms.rs",
       "canonical": "STRING-QUOTE",
-      "coverage_entry_id": "alias.quote",
+      "coverage_entry_id": "surface.quote",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
@@ -1393,6 +1406,22 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "RESERVED-BEGIN",
+      "classification": "Surface"
+    },
+    {
+      "id": "surface.right-paren",
+      "kind": "reserved_marker",
+      "surface": ")",
+      "concept": "RESERVED-END",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "RESERVED-END",
+      "coverage_entry_id": "surface.right-paren",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "derived_from": [],
+      "desugars_to": "RESERVED-END",
       "classification": "Surface"
     }
   ]

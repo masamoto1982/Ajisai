@@ -3,7 +3,7 @@
 //! SPEC §12 observes each stack slot as a `(data, role)` pair. Every observation
 //! surface (CLI stack display, REPL, in-process conformance runner, JSON report)
 //! renders through one function — `crate::types::display::render_stack` — so a
-//! position role such as `>CF` or a timestamp cannot render one way on one
+//! interpretation role such as a timestamp cannot render one way on one
 //! surface and another way on another. These tests pin that shared rendering and
 //! prove it uses the *slot* role, not the value's construction-time hint.
 

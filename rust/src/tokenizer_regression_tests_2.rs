@@ -89,8 +89,10 @@ mod tokenizer_regression_tests_2 {
         assert!(result.unwrap_err().contains("Unclosed literal"));
     }
 
+    /// A run of `.` lexes as one Symbol. It is not a modifier — the one
+    /// modifier axis is spelled `,,` — so the dictionary simply does not have it.
     #[test]
-    fn test_dot_operator() {
+    fn test_dot_lexes_as_a_symbol() {
         let result = tokenize(". + 3").unwrap();
         assert_eq!(
             result,
@@ -112,18 +114,18 @@ mod tokenizer_regression_tests_2 {
         );
     }
 
+    /// `;` and `;;` carry no meaning: they lex as ordinary Symbols the
+    /// dictionary does not have, rather than erroring in the lexer or expanding
+    /// into a modifier pair.
     #[test]
-    fn test_semicolon_mode_sugar() {
-        assert!(tokenize("; +").is_err());
-
-        let result2 = tokenize(";; +").unwrap();
+    fn test_semicolon_is_an_ordinary_symbol() {
         assert_eq!(
-            result2,
-            vec![
-                Token::Symbol("..".into()),
-                Token::Symbol(",,".into()),
-                Token::Symbol("+".into()),
-            ]
+            tokenize("; +").unwrap(),
+            vec![Token::Symbol(";".into()), Token::Symbol("+".into())]
+        );
+        assert_eq!(
+            tokenize(";; +").unwrap(),
+            vec![Token::Symbol(";;".into()), Token::Symbol("+".into())]
         );
     }
 
@@ -266,8 +268,9 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_single_semicolon_is_rejected() {
-        assert!(tokenize("[ 2 ] * ;").is_err());
+    fn test_single_semicolon_lexes_without_a_bespoke_error() {
+        let result = tokenize("[ 2 ] * ;").unwrap();
+        assert_eq!(result.last(), Some(&Token::Symbol(";".into())));
     }
 
     #[test]

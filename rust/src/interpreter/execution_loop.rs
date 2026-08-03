@@ -436,7 +436,6 @@ impl Interpreter {
                 Token::BlockEnd => {
                     return Err(AjisaiError::from("Unexpected code block end"));
                 }
-                Token::Pipeline => {}
                 Token::NilCoalesce => {
                     // VENT (`^` / spelled-out `VENT`, SPEC §6.4): inspect the top.
                     let (value, hint) = self.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;

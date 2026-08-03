@@ -15,6 +15,12 @@ function readRepo(path) {
   return readFileSync(resolve(repoRoot, path), 'utf8');
 }
 
+// The returned body *includes* the closing `\n];`. The entry patterns below
+// delimit each item by looking ahead to either the next item or that
+// terminator, so cutting it off silently dropped whichever entry happened to be
+// last — `^` -> VENT and `)` -> RESERVED-END went missing from the manifest that
+// way, and the drift check could not see it because the committed file matched
+// the generator's own truncated output.
 function constArrayBody(source, constName) {
   const startPattern = new RegExp(`(?:pub\\([^)]*\\)\\s+)?(?:pub\\s+)?const\\s+${constName}[^=]*=\\s*&\\[`);
   const start = source.search(startPattern);
@@ -22,7 +28,17 @@ function constArrayBody(source, constName) {
   const open = source.indexOf('[', source.indexOf('&[', start));
   const end = source.indexOf('\n];', open);
   if (end < 0) fail(`could not find end of const array ${constName}`);
-  return source.slice(open + 1, end);
+  return source.slice(open + 1, end + '\n];'.length);
+}
+
+// A struct literal per entry, so the count of `Name {` openings is how many
+// entries the table has. Comparing that against what the item pattern extracted
+// turns a lookahead that quietly matches too little into a failed build.
+function assertExtractedEveryEntry(body, structName, extracted, sourcePath) {
+  const declared = body.match(new RegExp(`\\b${structName}\\s*{`, 'g'))?.length ?? 0;
+  if (declared !== extracted) {
+    fail(`${sourcePath}: ${structName} declares ${declared} entries but ${extracted} were extracted`);
+  }
 }
 
 function slug(value) {
@@ -185,6 +201,7 @@ function extractAliases() {
     });
   }
   if (entries.length === 0) fail('no aliases extracted');
+  assertExtractedEveryEntry(body, 'CoreWordAlias', entries.length, sourcePath);
   return entries;
 }
 
@@ -210,6 +227,7 @@ function extractSurfaceForms() {
     });
   }
   if (entries.length === 0) fail('no surface forms extracted');
+  assertExtractedEveryEntry(body, 'SurfaceForm', entries.length, sourcePath);
   return entries;
 }
 
@@ -263,7 +281,15 @@ const manifest = {
     semanticKernelWords: contracts.entries.filter((entry) => entry.vocabularyTier === 'kernel').length,
     standardWords: contracts.entries.filter((entry) => entry.vocabularyTier === 'standard').length,
     corewords: entries.filter((entry) => entry.kind === 'coreword').length,
-    aliases: entries.filter((entry) => ['symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
+    // The alias count is the number of *symbolic aliases* the specification
+    // claims (LANG.AUTHORITY.IDENTITY): a spelling that resolves to a canonical
+    // Word. An input helper carries no canonical Word — it is an editor
+    // affordance — so counting it here would inflate the alias total by one and
+    // contradict the Specification.
+    aliases: entries.filter(
+      (entry) => ['symbol_alias', 'syntax_sugar'].includes(entry.kind) && entry.canonical,
+    ).length,
+    inputHelpers: entries.filter((entry) => entry.kind === 'input_helper').length,
     surface_forms: entries.filter((entry) => !['coreword', 'symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
     // Deliberately no grand total: an alias and a surface form are spellings of
     // a canonical Word, so summing them with `canonicalWords` would publish a

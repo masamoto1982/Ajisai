@@ -85,6 +85,8 @@ README、Specification、Reference、Manifest、Rust docs、hover、LOOKUP、SKI
 - stack snapshot、user-word export、persistenceは現行のlossless/versioned形式だけを受理し、α形式reader、downgrade、fallback、migration、dictionary recoveryを残さない。
 - 削除Word専用aliasとlegacy canonicalization pathを削除する。記号糖の新設・再編は別scopeとする。
 
+記号糖の残骸整理は完了した。`~`（存在しない`FLOW`を指すno-op token）、`;`/`;;`と`..`への展開、`.`/`,`単体と複合modifierの分解、`>NAME` conversion-word字句規則、未使用の`ExecutionForm::NoOpControlDirective`を削除し、`~`と`;`は他の未割り当て記号と同じくUnknown Wordになる。Word Manifestの抽出器が各表の末尾entryを黙って落としていた不具合を修正し（`^`→VENT と `)`→RESERVED-END が欠落していた）、`/`・`^`・`)`・`'`(literal) に固有のformalization entryを追加した。抽出漏れとledger漏れはそれぞれgateで検出する。保持Wordへの記号割り当ての再編は引き続き別scopeである。
+
 ## 7. 実装順序
 
 1. **契約と分類**: metadata schema、57語の分類、35/22構造gateを追加する。13語が残る間は移行中であることを明示する。
