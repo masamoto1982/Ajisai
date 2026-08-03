@@ -18,6 +18,21 @@ The two directions are one reversible relation, not independent operations. A si
 
 Existing user Words cannot inspect or construct `CodeBlock` token sequences: the separation is deliberately below the user-definition layer. The boundary therefore requires one irreducible primitive. Adding exactly one Word is preferable to weakening the type separation or adding a general evaluator. The alias count remains unchanged.
 
+## Minimality argument and its scope
+
+Let `C69` be the pre-reflection Core. Its source reader can introduce a literal `CodeBlock`, but no Word in `C69` exposes the block's `Token` sequence as values, and no Word constructs a `CodeBlock` from values. `EXEC` and the higher-order Words consume a block by evaluating it; casts and collection Words remain in their existing value domains. Composition with `DEF` cannot add a new cross-domain transition that none of its callees has.
+
+By structural induction over User Word bodies built from `C69`, neither of these functions is definable:
+
+```text
+CodeBlock -> canonical-code-data
+canonical-code-data -> CodeBlock
+```
+
+Therefore at least one primitive transition is necessary for the requested capability. Because the two transitions are inverse branches over disjoint input domains, one type-directed involution implements both; two directional Words would not add expressive power. Relative to the requested code/data boundary, the increase by exactly one Word and zero aliases is minimal.
+
+This is deliberately narrower than claiming that the entire 70-Word inventory is globally irreducible under every possible redesign. `70/70` is coverage completeness—every declared Core Word has a formalization and executable witness—not a machine proof that no different language basis could derive some existing Word. Auditing or reducing the pre-existing 69 Words is a separate Core-reduction project and is not evidence for removing `REFLECT` while retaining this capability.
+
 ## Why `EXEC` is not extended
 
 A Vector remains data even when it resembles canonical code data. Execution still requires two explicit steps—`REFLECT` to obtain a `CodeBlock`, then `EXEC`, `DEF`, or a higher-order Word. This keeps evaluation authority visible in source and prevents ordinary Vectors or Strings from becoming executable by representation guessing.
