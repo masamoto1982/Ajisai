@@ -2058,5 +2058,15 @@
 <h3>Malformed code data is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' 'extra' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">malformed canonical code data</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-keep" data-category="core">
 <h3>KEEP preserves the reflected operand</h3><pre class="ajisai-source">{ 1 } KEEP REFLECT</pre><pre class="ajisai-expect-result">1 [ 'AJISAI-CODE-1' [ 'number' '1' ] ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-lexemes-preserved" data-category="core">
+<h3>REFLECT preserves lexical token spelling</h3><pre class="ajisai-source">{ 1 1/1 1.0 ADD add + 'ADD' } REFLECT</pre><pre class="ajisai-expect-result">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '1/1' ] [ 'number' '1.0' ] [ 'symbol' 'ADD' ] [ 'symbol' 'add' ] [ 'symbol' '+' ] [ 'string' 'ADD' ] ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-undefined-symbol-is-not-resolved" data-category="core">
+<h3>REFLECT constructs unresolved code without resolving it</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'symbol' 'UNDEFINED-BY-REFLECT' ] ] REFLECT</pre><pre class="ajisai-expect-result">UNDEFINED-BY-REFLECT</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-dictionary-independent" data-category="core">
+<h3>Code data is independent of User dictionary state</h3><pre class="ajisai-source">{ FOO-R } REFLECT { 1 } 'FOO-R' DEF { FOO-R } REFLECT EQ</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-wrong-header-errors" data-category="core">
+<h3>Wrong code-data version is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-2' [ 'number' '1' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-arbitrary-vector-errors" data-category="core">
+<h3>An arbitrary Vector is not code data</h3><pre class="ajisai-source">[ 'ordinary' 'vector' ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
 </body>
 </html>

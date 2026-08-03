@@ -7,7 +7,7 @@
     "primitives": 23,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 15,
-    "distinct_conformance_cases": 37
+    "distinct_conformance_cases": 42
   },
   "primitives": [
     {
@@ -524,7 +524,7 @@
       "status": "accepted",
       "derived_word_count": 10,
       "law_test_count": 3,
-      "conformance_case_count": 6,
+      "conformance_case_count": 11,
       "derived_words": [
         "core.cond",
         "core.def",
@@ -547,8 +547,13 @@
         "core-fold-word-name",
         "core-map",
         "core-user-definition-resolved",
+        "reflection-arbitrary-vector-errors",
         "reflection-code-to-data",
-        "reflection-data-exec"
+        "reflection-data-exec",
+        "reflection-dictionary-independent",
+        "reflection-lexemes-preserved",
+        "reflection-undefined-symbol-is-not-resolved",
+        "reflection-wrong-header-errors"
       ]
     },
     {

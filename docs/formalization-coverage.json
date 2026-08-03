@@ -3480,7 +3480,12 @@
       ],
       "conformance_cases": [
         "reflection-code-to-data",
-        "reflection-data-exec"
+        "reflection-data-exec",
+        "reflection-lexemes-preserved",
+        "reflection-undefined-symbol-is-not-resolved",
+        "reflection-dictionary-independent",
+        "reflection-wrong-header-errors",
+        "reflection-arbitrary-vector-errors"
       ],
       "status": "Formalized",
       "notes": "Pure involution between CodeBlock token sequences and versioned canonical structured data.",
