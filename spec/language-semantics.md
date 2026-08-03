@@ -73,7 +73,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 70 canonical Words and 16 symbolic aliases. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
+The vocabulary is 57 canonical Words and 15 symbolic aliases. Aliases are surface forms of those Words and are not counted as vocabulary. Within the 57, a 35-Word Semantic Kernel carries the semantic identity of the language and 22 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -286,7 +286,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>The dictionary has two tiers. <strong>Core</strong> holds the 70 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core.</p>
+<p>The dictionary has two tiers. <strong>Core</strong> holds the 57 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core.</p>
 
 <p>Those two tiers are the whole dictionary: a name resolves in Core or in User, and a Core name is reachable by itself. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
 

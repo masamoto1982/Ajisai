@@ -3199,7 +3199,7 @@
         "reflection-arbitrary-vector-errors"
       ],
       "status": "Formalized",
-      "notes": "Pure involution between CodeBlock token sequences and versioned canonical structured data. It is irreducible relative to the pre-reflection Core because no existing Word exposes Token sequences or constructs CodeBlocks from data; 70/70 denotes witness coverage, not a proof that every pre-existing Word is globally basis-minimal.",
+      "notes": "Pure involution between CodeBlock token sequences and versioned canonical structured data. It is irreducible relative to the rest of the Core because no other Word exposes Token sequences or constructs CodeBlocks from data. Witness counts denote coverage, not a proof that the Semantic Kernel is a globally minimal basis.",
       "semantic_role": "Primitive",
       "primitive": true,
       "derived_from": [

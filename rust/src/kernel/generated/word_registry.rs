@@ -269,6 +269,29 @@ impl Determinism {
     }
 }
 
+/// Where the Word sits in the public Core: the Semantic Kernel or the Standard vocabulary.
+///
+/// Generated from the `vocabularyTier` enum in spec/words.schema.json: every value the
+/// specification admits is a variant, so the implementation vocabulary cannot be
+/// narrower than the canonical one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum VocabularyTier {
+    /// `kernel`
+    Kernel,
+    /// `standard`
+    Standard,
+}
+
+impl VocabularyTier {
+    /// The canonical spec string for this variant.
+    pub const fn as_spec_str(self) -> &'static str {
+        match self {
+            VocabularyTier::Kernel => "kernel",
+            VocabularyTier::Standard => "standard",
+        }
+    }
+}
+
 /// Stack arity as declared in spec/words.json: an exact count, or one of the
 /// data-dependent markers the specification names.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -312,6 +335,13 @@ pub struct GeneratedWord {
     pub partiality: Partiality,
     pub purity: Purity,
     pub determinism: Determinism,
+    /// Which half of the public Core the Word belongs to. Both halves are
+    /// ordinary sealed-Core Words reached by their plain names; the tier is a
+    /// design classification the reading surfaces report, never a namespace.
+    pub vocabulary_tier: VocabularyTier,
+    /// Why a Standard Word is native rather than left to a user definition, or
+    /// `None` for a Semantic Kernel Word.
+    pub standard_kind: Option<&'static str>,
     /// The effects the Word declares, in the specification's own spelling.
     /// Empty for every `pure` Word; the vocabulary is open (the schema types
     /// it as free strings), so this is projected as declared rather than
@@ -333,6 +363,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -348,6 +380,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -363,6 +397,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -378,6 +414,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("shorthand"),
         effects: &[],
     },
     GeneratedWord {
@@ -393,6 +431,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -408,6 +448,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -423,6 +465,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("shorthand"),
         effects: &[],
     },
     GeneratedWord {
@@ -438,6 +482,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -453,6 +499,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("shorthand"),
         effects: &[],
     },
     GeneratedWord {
@@ -468,6 +516,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -483,6 +533,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("shorthand"),
         effects: &[],
     },
     GeneratedWord {
@@ -498,6 +550,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -513,6 +567,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("shorthand"),
         effects: &[],
     },
     GeneratedWord {
@@ -528,6 +584,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -543,6 +601,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -558,6 +618,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
         effects: &[],
     },
     GeneratedWord {
@@ -573,6 +635,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -588,6 +652,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("algorithm"),
         effects: &[],
     },
     GeneratedWord {
@@ -603,6 +669,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
         effects: &[],
     },
     GeneratedWord {
@@ -618,6 +686,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -633,6 +703,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
         effects: &[],
     },
     GeneratedWord {
@@ -648,6 +720,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
         effects: &[],
     },
     GeneratedWord {
@@ -663,6 +737,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -678,6 +754,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -693,6 +771,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -708,6 +788,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
         effects: &[],
     },
     GeneratedWord {
@@ -723,6 +805,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -738,6 +822,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
         effects: &[],
     },
     GeneratedWord {
@@ -753,6 +839,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -768,6 +856,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -783,6 +873,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("operational"),
         effects: &[],
     },
     GeneratedWord {
@@ -798,6 +890,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("operational"),
         effects: &[],
     },
     GeneratedWord {
@@ -813,6 +907,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("namedPattern"),
         effects: &[],
     },
     GeneratedWord {
@@ -828,6 +924,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("operational"),
         effects: &[],
     },
     GeneratedWord {
@@ -843,6 +941,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("operational"),
         effects: &[],
     },
     GeneratedWord {
@@ -858,6 +958,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -873,6 +975,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("operational"),
         effects: &[],
     },
     GeneratedWord {
@@ -888,6 +992,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("operational"),
         effects: &[],
     },
     GeneratedWord {
@@ -903,6 +1009,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -918,6 +1026,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -933,6 +1043,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("algorithm"),
         effects: &[],
     },
     GeneratedWord {
@@ -948,6 +1060,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("algorithm"),
         effects: &[],
     },
     GeneratedWord {
@@ -963,6 +1077,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Standard,
+        standard_kind: Some("algorithm"),
         effects: &[],
     },
     GeneratedWord {
@@ -978,6 +1094,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Projecting,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -993,6 +1111,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1008,6 +1128,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1023,6 +1145,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1038,6 +1162,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1053,6 +1179,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1068,6 +1196,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1083,6 +1213,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1098,6 +1230,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Total,
         purity: Purity::Pure,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
     GeneratedWord {
@@ -1113,6 +1247,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Effectful,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &["dictionaryWrite"],
     },
     GeneratedWord {
@@ -1128,6 +1264,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Effectful,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &["dictionaryDelete"],
     },
     GeneratedWord {
@@ -1143,6 +1281,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Observational,
         determinism: Determinism::StateRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &["dictionaryRead"],
     },
     GeneratedWord {
@@ -1158,6 +1298,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Effectful,
         determinism: Determinism::HostRelative,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &["consoleWrite"],
     },
     GeneratedWord {
@@ -1173,6 +1315,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         partiality: Partiality::Partial,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        vocabulary_tier: VocabularyTier::Kernel,
+        standard_kind: None,
         effects: &[],
     },
 ];

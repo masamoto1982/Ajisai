@@ -265,7 +265,11 @@ const manifest = {
     corewords: entries.filter((entry) => entry.kind === 'coreword').length,
     aliases: entries.filter((entry) => ['symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
     surface_forms: entries.filter((entry) => !['coreword', 'symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
-    total: entries.length,
+    // Deliberately no grand total: an alias and a surface form are spellings of
+    // a canonical Word, so summing them with `canonicalWords` would publish a
+    // vocabulary size the language does not have. `manifestEntries` counts rows
+    // in this file and is named so it cannot be read as a Word count.
+    manifestEntries: entries.length,
   },
   entries,
 };

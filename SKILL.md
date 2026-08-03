@@ -162,9 +162,12 @@ produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 9. Word quick reference
 
-Generated from `docs/word-manifest.json` — the complete inventory: 70
-canonical Words in one flat Core dictionary. A word absent here does not
-exist. There is no module system and nothing to import.
+Generated from `docs/word-manifest.json` — the complete inventory:
+57 canonical Words in one flat Core dictionary, of which
+35 form the Semantic Kernel and 22 are Standard Words. Both are
+ordinary Core Words called by their plain names; the split is a design
+classification, not a namespace. A word absent here does not exist. There is
+no module system and nothing to import.
 
 | word | category | summary |
 |---|---|---|
