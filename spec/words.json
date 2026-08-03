@@ -2,7 +2,8 @@
   "schemaVersion": 1,
   "migration": {
     "phase": 6,
-    "completeInventory": true
+    "completeInventory": true,
+    "betaFreezePhase": 1
   },
   "entries": [
     {
@@ -39,7 +40,8 @@
       "executorKey": "True",
       "effects": [],
       "partiality": "total",
-      "category": "constant"
+      "category": "constant",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "FALSE",
@@ -75,7 +77,8 @@
       "executorKey": "False",
       "effects": [],
       "partiality": "total",
-      "category": "constant"
+      "category": "constant",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "AND",
@@ -115,7 +118,8 @@
       "executorKey": "And",
       "effects": [],
       "partiality": "total",
-      "category": "logic"
+      "category": "logic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "OR",
@@ -153,7 +157,9 @@
       "executorKey": "Or",
       "effects": [],
       "partiality": "total",
-      "category": "logic"
+      "category": "logic",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "NOT",
@@ -191,7 +197,8 @@
       "executorKey": "Not",
       "effects": [],
       "partiality": "total",
-      "category": "logic"
+      "category": "logic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "EQ",
@@ -233,7 +240,8 @@
       "executorKey": "Eq",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NEQ",
@@ -275,7 +283,9 @@
       "executorKey": "Neq",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "LT",
@@ -318,7 +328,8 @@
       "executorKey": "Lt",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "LTE",
@@ -361,7 +372,9 @@
       "executorKey": "Le",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "GT",
@@ -404,7 +417,8 @@
       "executorKey": "Gt",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "GTE",
@@ -447,7 +461,9 @@
       "executorKey": "Gte",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "ADD",
@@ -490,7 +506,8 @@
       "executorKey": "Add",
       "effects": [],
       "partiality": "total",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "SUB",
@@ -533,7 +550,9 @@
       "executorKey": "Sub",
       "effects": [],
       "partiality": "total",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "MUL",
@@ -576,7 +595,8 @@
       "executorKey": "Mul",
       "effects": [],
       "partiality": "total",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "DIV",
@@ -619,7 +639,8 @@
       "executorKey": "Div",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "MOD",
@@ -663,7 +684,9 @@
       "executorKey": "Mod",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "FLOOR",
@@ -704,7 +727,8 @@
       "executorKey": "Floor",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "CEIL",
@@ -786,7 +810,9 @@
       "executorKey": "Round",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "ABS",
@@ -827,7 +853,9 @@
       "executorKey": "Abs",
       "effects": [],
       "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "NEG",
@@ -868,7 +896,8 @@
       "executorKey": "Neg",
       "effects": [],
       "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "SIGN",
@@ -950,7 +979,9 @@
       "executorKey": "Min",
       "effects": [],
       "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "MAX",
@@ -991,7 +1022,9 @@
       "executorKey": "Max",
       "effects": [],
       "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "SQRT",
@@ -1033,7 +1066,8 @@
       "executorKey": "Sqrt",
       "effects": [],
       "partiality": "projecting",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "GET",
@@ -1074,7 +1108,8 @@
       "executorKey": "Get",
       "effects": [],
       "partiality": "projecting",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "INSERT",
@@ -1239,7 +1274,8 @@
       "executorKey": "Length",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "TAKE",
@@ -1280,7 +1316,9 @@
       "executorKey": "Take",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "SPLIT",
@@ -1361,7 +1399,8 @@
       "executorKey": "Concat",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "REVERSE",
@@ -1401,7 +1440,9 @@
       "executorKey": "Reverse",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "REORDER",
@@ -1483,7 +1524,8 @@
       "executorKey": "Collect",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "RANGE",
@@ -1523,7 +1565,8 @@
       "executorKey": "Range",
       "effects": [],
       "partiality": "projecting",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "FILL",
@@ -1563,7 +1606,9 @@
       "executorKey": "Fill",
       "effects": [],
       "partiality": "projecting",
-      "category": "tensor"
+      "category": "tensor",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "SORT",
@@ -1604,7 +1649,9 @@
       "executorKey": "Sort",
       "effects": [],
       "partiality": "total",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "UNIQUE",
@@ -1727,7 +1774,9 @@
       "executorKey": "IndexOf",
       "effects": [],
       "partiality": "projecting",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "MAP",
@@ -1767,7 +1816,9 @@
       "executorKey": "Map",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "FILTER",
@@ -1807,7 +1858,9 @@
       "executorKey": "Filter",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "FOLD",
@@ -1847,7 +1900,8 @@
       "executorKey": "Fold",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "ANY",
@@ -1887,7 +1941,9 @@
       "executorKey": "Any",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "ALL",
@@ -1927,7 +1983,9 @@
       "executorKey": "All",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "CHARS",
@@ -1966,7 +2024,8 @@
       "executorKey": "Chars",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "JOIN",
@@ -2006,7 +2065,8 @@
       "executorKey": "Join",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "TRIM",
@@ -2045,7 +2105,9 @@
       "executorKey": "Trim",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "TOKENIZE",
@@ -2085,7 +2147,9 @@
       "executorKey": "Tokenize",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "SUBSTITUTE",
@@ -2124,7 +2188,9 @@
       "executorKey": "Substitute",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "STARTS-WITH?",
@@ -2243,7 +2309,8 @@
       "executorKey": "Num",
       "effects": [],
       "partiality": "projecting",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "STR",
@@ -2280,7 +2347,8 @@
       "executorKey": "Str",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "CHR",
@@ -2360,7 +2428,8 @@
       "executorKey": "Cond",
       "effects": [],
       "partiality": "partial",
-      "category": "control"
+      "category": "control",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "EXEC",
@@ -2400,7 +2469,8 @@
       "executorKey": "Exec",
       "effects": [],
       "partiality": "partial",
-      "category": "control"
+      "category": "control",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NIL",
@@ -2437,7 +2507,8 @@
       "executorKey": "Nil",
       "effects": [],
       "partiality": "total",
-      "category": "constant"
+      "category": "constant",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NIL?",
@@ -2474,7 +2545,8 @@
       "executorKey": "NilCheck",
       "effects": [],
       "partiality": "total",
-      "category": "absence"
+      "category": "absence",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NIL-REASON",
@@ -2511,7 +2583,8 @@
       "executorKey": "NilReason",
       "effects": [],
       "partiality": "total",
-      "category": "absence"
+      "category": "absence",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "VENT",
@@ -2552,7 +2625,8 @@
       "executorKey": "LazyNextUnitFallback",
       "effects": [],
       "partiality": "total",
-      "category": "control-directive"
+      "category": "control-directive",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "EAT",
@@ -2628,7 +2702,8 @@
       "executorKey": "SetConsumptionKeep",
       "effects": [],
       "partiality": "total",
-      "category": "modifier"
+      "category": "modifier",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "DEF",
@@ -2671,7 +2746,8 @@
         "dictionaryWrite"
       ],
       "partiality": "partial",
-      "category": "dictionary"
+      "category": "dictionary",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "DEL",
@@ -2714,7 +2790,8 @@
         "dictionaryDelete"
       ],
       "partiality": "partial",
-      "category": "dictionary"
+      "category": "dictionary",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "LOOKUP",
@@ -2758,7 +2835,8 @@
         "dictionaryRead"
       ],
       "partiality": "partial",
-      "category": "dictionary"
+      "category": "dictionary",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "PRINT",
@@ -2797,7 +2875,8 @@
         "consoleWrite"
       ],
       "partiality": "partial",
-      "category": "io"
+      "category": "io",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "REFLECT",
@@ -2836,7 +2915,8 @@
       "executorKey": "Reflect",
       "effects": [],
       "partiality": "partial",
-      "category": "reflection"
+      "category": "reflection",
+      "vocabularyTier": "kernel"
     }
   ]
 }

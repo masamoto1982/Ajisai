@@ -43,13 +43,16 @@ function resolveAjisaiBin() {
     return process.env.AJISAI_BIN;
   }
   const debugBin = resolve(repoRoot, 'rust/target/debug/ajisai');
-  if (!existsSync(debugBin)) {
-    console.error('[skill-md] building ajisai CLI (cargo build --bin ajisai)...');
-    execFileSync('cargo', ['build', '--bin', 'ajisai'], {
-      cwd: resolve(repoRoot, 'rust'),
-      stdio: ['ignore', 'inherit', 'inherit'],
-    });
-  }
+  // Never trust a pre-existing target binary. A cached or locally stale CLI
+  // can make the freshness gate validate examples against a different source
+  // tree (and was the reason this gate reported a false example failure after
+  // the beta branch was rebuilt). Cargo's incremental build is cheap when the
+  // binary is current and guarantees that the executable matches HEAD.
+  console.error('[skill-md] building ajisai CLI (cargo build --bin ajisai)...');
+  execFileSync('cargo', ['build', '--bin', 'ajisai'], {
+    cwd: resolve(repoRoot, 'rust'),
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
   if (!existsSync(debugBin)) fail('ajisai CLI binary not found after build');
   return debugBin;
 }
