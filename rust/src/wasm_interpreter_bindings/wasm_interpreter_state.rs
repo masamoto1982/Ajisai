@@ -108,10 +108,6 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
-    pub(crate) fn collect_imported_modules_array(&self) -> JsValue {
-        js_sys::Array::new().into()
-    }
-
     pub(crate) fn collect_user_words_for_state(&self) -> JsValue {
         let mut names: Vec<String> = self.interpreter.user_words.keys().cloned().collect();
         names.sort();

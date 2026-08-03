@@ -138,70 +138,74 @@ async fn exact_rational_is_not_marked_approximate() {
 }
 
 // ---------------------------------------------------------------------------
-// Inbound boundary: restore_stack with untrusted / malformed values.
+// Inbound boundary: restore_stack_snapshot with untrusted / malformed payloads.
 //
-// `restore_stack` feeds each element through `js_value_to_value`. A restored
-// snapshot is untrusted (it can be tampered with in IndexedDB or arrive across
-// the worker boundary), so a malformed value must surface a recoverable error
-// rather than panic the module to an unrecoverable trap. Two such inputs used
-// to abort: a number whose denominator is "0" (panicked in `Fraction::new`),
-// and a deeply nested vector (overflowed the stack via unbounded recursion).
+// The lossless snapshot string is the one stack format persistence accepts, and
+// it is untrusted: it can be tampered with in IndexedDB or arrive across the
+// worker boundary. A malformed payload must surface a recoverable error rather
+// than panic the module into an unrecoverable trap. The two inputs that trap
+// most easily are a zero denominator (`Fraction::new` panics on one) and a
+// deeply nested vector (unbounded recursion overflows the wasm stack).
 // ---------------------------------------------------------------------------
 
-fn set_field(obj: &js_sys::Object, key: &str, val: &JsValue) {
-    js_sys::Reflect::set(obj, &JsValue::from_str(key), val).expect("set field");
-}
-
-fn number_node(numerator: &str, denominator: &str) -> JsValue {
-    let frac = js_sys::Object::new();
-    set_field(&frac, "numerator", &JsValue::from_str(numerator));
-    set_field(&frac, "denominator", &JsValue::from_str(denominator));
-    let node = js_sys::Object::new();
-    set_field(&node, "type", &JsValue::from_str("number"));
-    set_field(&node, "value", &frac.into());
-    node.into()
-}
-
-fn single_stack(node: JsValue) -> JsValue {
-    let arr = js_sys::Array::new();
-    arr.push(&node);
-    arr.into()
+/// One stack slot in the persistence wire format: an unassigned-role value
+/// wrapping the given `d` payload.
+fn snapshot_of(data: &str) -> String {
+    format!("[{{\"v\":{{\"h\":\"unassigned\",\"d\":{data}}},\"r\":\"unassigned\"}}]")
 }
 
 #[wasm_bindgen_test]
-fn restore_stack_rejects_zero_denominator_without_panicking() {
+fn restore_stack_snapshot_rejects_malformed_json_without_panicking() {
     let mut interp = AjisaiInterpreter::new();
-    let result = interp.restore_stack(single_stack(number_node("1", "0")));
+    let result = interp.restore_stack_snapshot("{ not a snapshot");
     assert!(
         result.is_err(),
-        "a zero-denominator value must be a recoverable error, not a Fraction::new panic"
+        "a malformed snapshot must be a recoverable error, not a panic"
     );
 }
 
 #[wasm_bindgen_test]
-fn restore_stack_accepts_valid_rational() {
+fn restore_stack_snapshot_accepts_valid_rational() {
     let mut interp = AjisaiInterpreter::new();
-    let result = interp.restore_stack(single_stack(number_node("3", "4")));
-    assert!(result.is_ok(), "a valid rational must restore successfully");
+    let snapshot = snapshot_of("{\"t\":\"Scalar\",\"n\":\"3\",\"d\":\"4\"}");
+    let result = interp.restore_stack_snapshot(&snapshot);
+    assert!(
+        result.is_ok(),
+        "a valid rational must restore successfully: {result:?}"
+    );
+    let stack = js_sys::Array::from(&interp.collect_stack());
+    assert_eq!(stack.length(), 1, "one slot restores to one stack value");
 }
 
 #[wasm_bindgen_test]
-fn restore_stack_rejects_deeply_nested_vector_without_overflow() {
-    // Wrap a scalar in `{type:'vector', value:[ ... ]}` far beyond the depth
-    // cap; deserializing this used to recurse until the WASM stack overflowed.
-    let mut node = number_node("1", "1");
+fn restore_stack_snapshot_survives_a_zero_denominator() {
+    // A zero denominator is the `Fraction` nil sentinel rather than a division:
+    // decoding routes it through the dedicated constructor, so the payload
+    // decodes instead of panicking in `Fraction::new`.
+    let mut interp = AjisaiInterpreter::new();
+    let snapshot = snapshot_of("{\"t\":\"Scalar\",\"n\":\"1\",\"d\":\"0\"}");
+    let result = interp.restore_stack_snapshot(&snapshot);
+    assert!(
+        result.is_ok(),
+        "a zero denominator must decode as the NIL sentinel, not panic: {result:?}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn restore_stack_snapshot_rejects_deeply_nested_payload_without_overflow() {
+    // Wrap a scalar in `{"t":"Vector","items":[ ... ]}` far beyond any depth a
+    // real session reaches; decoding this must error rather than recurse until
+    // the wasm stack overflows.
+    let mut data = String::from("{\"t\":\"Scalar\",\"n\":\"1\",\"d\":\"1\"}");
     for _ in 0..1000 {
-        let arr = js_sys::Array::new();
-        arr.push(&node);
-        let vector = js_sys::Object::new();
-        set_field(&vector, "type", &JsValue::from_str("vector"));
-        set_field(&vector, "value", &arr.into());
-        node = vector.into();
+        data = format!(
+            "{{\"t\":\"Vector\",\"items\":[{{\"h\":\"unassigned\",\"d\":{data}}}]}}"
+        );
     }
     let mut interp = AjisaiInterpreter::new();
-    let result = interp.restore_stack(single_stack(node));
+    let result = interp.restore_stack_snapshot(&snapshot_of(&data));
     assert!(
         result.is_err(),
-        "deeply nested restored value must error, not overflow the stack"
+        "a deeply nested snapshot must error, not overflow the stack"
     );
 }
