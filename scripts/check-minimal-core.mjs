@@ -15,7 +15,9 @@ const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
-const COMPLETED_DERIVATIONS = new Set(['OR', 'NEQ', 'LTE', 'GTE', 'SUB', 'MOD', 'ROUND', 'ABS', 'MIN', 'MAX']);
+const DERIVABLE = new Set(`OR NEQ LTE GTE SUB MOD ROUND ABS MIN MAX
+TAKE REVERSE INDEX-OF TRIM TOKENIZE SUBSTITUTE`.split(/\s+/));
+const OPERATIONAL = new Set('MAP FILTER ANY ALL FILL SORT'.split(/\s+/));
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
@@ -87,10 +89,29 @@ for (const word of words) {
     if (witness.standard_relation === 'operational' && !witness.law_tests.includes(OPERATIONAL_LAW_TEST)) {
       errors.push(`${word.name}: operational Standard is not covered by ${OPERATIONAL_LAW_TEST}`);
     }
-    if (COMPLETED_DERIVATIONS.has(word.name) && !witness.law_tests.includes(DERIVATION_LAW_TEST)) {
-      errors.push(`${word.name}: completed derivation is not covered by ${DERIVATION_LAW_TEST}`);
+    if (witness.standard_relation === 'derivable' && !witness.law_tests.includes(DERIVATION_LAW_TEST)) {
+      errors.push(`${word.name}: derivable Standard has no Kernel witness in ${DERIVATION_LAW_TEST}`);
+    }
+    if (DERIVABLE.has(word.name) && witness.standard_relation !== 'derivable') {
+      errors.push(`${word.name}: expected the derivable relation, found ${witness.standard_relation}`);
+    }
+    if (OPERATIONAL.has(word.name) && witness.standard_relation !== 'operational') {
+      errors.push(`${word.name}: expected the operational relation, found ${witness.standard_relation}`);
     }
   }
+}
+
+const derivableWords = new Set(
+  words.filter((word) => bySurface.get(word.name)?.standard_relation === 'derivable').map((word) => word.name),
+);
+const operationalWords = new Set(
+  words.filter((word) => bySurface.get(word.name)?.standard_relation === 'operational').map((word) => word.name),
+);
+if (derivableWords.size !== DERIVABLE.size) {
+  errors.push(`${derivableWords.size} derivable Standards declared; expected ${DERIVABLE.size}`);
+}
+if (operationalWords.size !== OPERATIONAL.size) {
+  errors.push(`${operationalWords.size} operational Standards declared; expected ${OPERATIONAL.size}`);
 }
 
 for (const entry of coverage.entries.filter((entry) => entry.kind === 'coreword')) {
@@ -104,4 +125,8 @@ if (errors.length) {
 }
 console.log('[minimal-core] 35/35 Semantic Kernel Words have executable witnesses.');
 console.log('[minimal-core] 22/22 Standard Words have complete contracts and law witnesses.');
+console.log(
+  `[minimal-core] ${DERIVABLE.size}/${DERIVABLE.size} derivable Standards carry a Kernel-only witness; ` +
+    `${OPERATIONAL.size}/${OPERATIONAL.size} operational Standards state a native retention reason.`,
+);
 if (isPhaseOne) console.log('[minimal-core] phase 1: 13 alpha Words remain explicitly pending removal.');

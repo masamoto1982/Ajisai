@@ -87,9 +87,9 @@ proptest! {
 fn projecting_words_bubble_domain_misses() {
     assert_eq!(obs("1 0 DIV"), vec!["NIL"]);
     assert_eq!(obs("1 0 /"), vec!["NIL"]);
-    // GET is non-consuming (probe finding E3): it keeps its source vector and
-    // pushes the projected NIL for an out-of-range index.
-    assert_eq!(obs("[ 1 2 3 ] 9 GET"), vec!["[ 1/1 2/1 3/1 ]", "NIL"]);
+    // GET declares `consumption: eat` (LANG.MODIFIERS.CONSUMPTION): both
+    // operands leave the stack and the projected NIL is all that remains.
+    assert_eq!(obs("[ 1 2 3 ] 9 GET"), vec!["NIL"]);
 }
 
 // ──────────────────────── contract lattice laws (§7.14) ─────────────────────

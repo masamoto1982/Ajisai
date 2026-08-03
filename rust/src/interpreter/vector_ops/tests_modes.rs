@@ -66,8 +66,8 @@ async fn test_get_consume_mode() {
     assert!(result.is_ok(), "GET should succeed: {:?}", result);
     assert_eq!(
         interp.stack.len(),
-        2,
-        "GET in StackTop mode preserves source vector and pushes result"
+        1,
+        "GET declares `consumption: eat`: both operands leave, the element stays"
     );
 }
 
@@ -96,8 +96,8 @@ async fn test_length_consume_mode() {
     assert!(result.is_ok(), "LENGTH should succeed: {:?}", result);
     assert_eq!(
         interp.stack.len(),
-        2,
-        "LENGTH in StackTop mode preserves source vector and pushes result"
+        1,
+        "LENGTH declares `consumption: eat`: the measured vector leaves the stack"
     );
 }
 

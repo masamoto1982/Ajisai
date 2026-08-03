@@ -20,7 +20,13 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, index) = pop_index_operand(interp)?;
 
-    let target_val = match interp.stack.last().cloned() {
+    // `GET` declares `consumption: eat` with `[ vec ] [ idx ] -> [ elem ]`, so
+    // the vector operand leaves the stack unless `KEEP` is in force.
+    let target_val = match if is_keep_mode {
+        interp.stack.last().cloned()
+    } else {
+        interp.stack.pop()
+    } {
         Some(value) => value,
         None => {
             interp.stack.push(index_val);
@@ -29,6 +35,9 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     };
 
     if !target_val.is_vector() {
+        if !is_keep_mode {
+            interp.stack.push(target_val);
+        }
         interp.stack.push(index_val);
         return Err(AjisaiError::create_structure_error(
             "vector",

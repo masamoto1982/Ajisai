@@ -1892,7 +1892,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
-        "rust/tests/structural_laws.rs"
+        "rust/tests/structural_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "core-take"
@@ -1949,7 +1950,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
-        "rust/tests/structural_laws.rs"
+        "rust/tests/structural_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "core-reverse"
@@ -2164,7 +2166,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
       ],
       "law_tests": [
-        "rust/tests/string_laws.rs"
+        "rust/tests/string_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "standard-trim"
@@ -2193,7 +2196,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
       ],
       "law_tests": [
-        "rust/tests/string_laws.rs"
+        "rust/tests/string_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "standard-tokenize"
@@ -2222,7 +2226,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
       ],
       "law_tests": [
-        "rust/tests/string_laws.rs"
+        "rust/tests/string_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "standard-substitute"
@@ -2515,7 +2520,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §9-quater"
       ],
       "law_tests": [
-        "rust/src/interpreter/algo_ops_tests.rs"
+        "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "standard-index-of"

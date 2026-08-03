@@ -2,7 +2,7 @@
 
 Status: **Non-canonical / 方針記録・改修指示書**。正典は `spec/` 配下と、そこから生成される `SPECIFICATION.html` である。実装作業は GitHub Issue #1429 で追跡する。
 
-Implementation status: **Phase 3 in progress** — 6 operational Standard Wordsのnative観測契約と、truth/exact-arithmetic Standard 10語のKernel-only executable witnessを固定した。残るcollection/text Standard 6語のwitness完成後にPhase 4へ進む。
+Implementation status: **Phase 3 complete** — 6 operational Standard Wordsのnative観測契約と、derivable Standard 16語すべてのKernel-only executable witnessを固定した。`GET` と `LENGTH` の runtime は宣言どおり `consumption: eat` に収束させ、削除13語のUnknown Word性をsource、REFLECT decode、compiled body、`LOOKUP` の各入口で検査する。次はPhase 4の互換層削除。
 
 ## 1. β版の境界
 
