@@ -41,24 +41,6 @@ fn neg_scalar(value: &Value) -> Result<Value> {
     }
 }
 
-/// The scalar law of `SIGN`, lifted by [`lift_unary_numeric`].
-fn sign_scalar(value: &Value) -> Result<Value> {
-    let zero = Value::from_fraction(Fraction::from(0));
-    match crate::interpreter::comparison::three_way_compare(value, &zero)? {
-        crate::interpreter::comparison::OrderOutcome::Decided(ord) => {
-            let sign = match ord {
-                std::cmp::Ordering::Less => -1,
-                std::cmp::Ordering::Equal => 0,
-                std::cmp::Ordering::Greater => 1,
-            };
-            Ok(Value::from_fraction(Fraction::from(sign)))
-        }
-        crate::interpreter::comparison::OrderOutcome::Undecided(_) => {
-            Err(AjisaiError::from("operand is outside the exact domain"))
-        }
-    }
-}
-
 /// The scalar law of `ABS`, lifted by [`lift_unary_numeric`].
 fn abs_scalar(value: &Value) -> Result<Value> {
     let zero = Value::from_fraction(Fraction::from(0));
@@ -126,35 +108,6 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
     }
     let operands = extract_operands(interp, 1)?;
     match lift_unary_numeric(&operands[0], &abs_scalar) {
-        Ok(result) => {
-            push_result(interp, result);
-            interp.stack.set_last_role(Interpretation::RawNumber);
-            Ok(())
-        }
-        Err(e) => {
-            restore_operands(interp, operands);
-            Err(e)
-        }
-    }
-}
-
-/// `SIGN` extracts the sign of a number as the scalar `-1`, `0`, or `1`
-/// (SPEC §7.4.3). Like `MIN`/`MAX`, it decides the order against `0` through
-/// the same budgeted comparison as the relations and therefore accepts the
-/// full numeric domain, including lazy continued-fraction operands: over the
-/// admitted domain (§4.2.7) the sign is total and exact. When the order
-/// against `0` does not decide within the budget, the result is the logical
-/// `Unknown` (U) carrying `diagnosis.agreedPrefix`, matching the U-honesty of
-/// the other comparison-dependent words. NIL-passthrough, with NIL taking
-/// priority over a U-producing comparison (§4.5.2). A non-numeric operand is
-/// malformed use and raises an error.
-pub(crate) fn op_sign(interp: &mut Interpreter) -> Result<()> {
-    require_stack_top(interp, "SIGN")?;
-    if nil_passthrough_unary(interp) {
-        return Ok(());
-    }
-    let operands = extract_operands(interp, 1)?;
-    match lift_unary_numeric(&operands[0], &sign_scalar) {
         Ok(result) => {
             push_result(interp, result);
             interp.stack.set_last_role(Interpretation::RawNumber);

@@ -125,7 +125,7 @@ function validateUniqueEntryIds(entries) {
 
 function validateWordManifest(coverage) {
   const manifest = JSON.parse(readFileSync(wordManifestPath, 'utf8'));
-  if (manifest.schemaVersion !== 1) fail('word manifest schemaVersion must be 1');
+  if (manifest.schemaVersion !== 2) fail('word manifest schemaVersion must be 2');
   if (!Array.isArray(manifest.entries)) fail('word manifest entries must be an array');
 
   const manifestById = new Map();

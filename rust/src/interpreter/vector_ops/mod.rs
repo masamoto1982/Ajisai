@@ -8,9 +8,9 @@ mod tests;
 #[cfg(test)]
 mod tests_modes;
 
-pub use position::{op_get, op_insert, op_remove, op_replace};
-pub use quantity::{op_length, op_split, op_take};
-pub use structure::{op_collect, op_concat, op_range, op_reorder, op_reverse};
+pub use position::op_get;
+pub use quantity::{op_length, op_take};
+pub use structure::{op_collect, op_concat, op_range, op_reverse};
 
 use crate::types::Value;
 

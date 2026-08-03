@@ -87,12 +87,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Logical AND alias",
     },
     CoreWordAlias {
-        alias: ",",
-        canonical: Some("EAT"),
-        kind: CoreWordAliasKind::SyntaxSugar,
-        summary: "Consume operands",
-    },
-    CoreWordAlias {
         alias: ",,",
         canonical: Some("KEEP"),
         kind: CoreWordAliasKind::SyntaxSugar,

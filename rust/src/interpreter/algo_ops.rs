@@ -14,34 +14,6 @@ fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
     }
 }
 
-/// `vector -- vector`. Remove duplicate elements, keeping the first
-/// occurrence and preserving order. An empty result projects to NIL,
-/// matching `SORT`.
-pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
-    require_stack_top(interp, "UNIQUE")?;
-    let operands = extract_operands(interp, 1)?;
-    let view = match operands[0].as_vector_view() {
-        Some(v) => v,
-        None => {
-            restore_operands(interp, operands);
-            return Err(AjisaiError::create_structure_error(
-                "UNIQUE: expected vector",
-                "non-vector value",
-            ));
-        }
-    };
-
-    let mut seen: Vec<Value> = Vec::new();
-    for elem in view.iter() {
-        if !seen.iter().any(|kept| kept == elem) {
-            seen.push(elem.clone());
-        }
-    }
-
-    interp.stack.push(Value::from_vector(seen));
-    Ok(())
-}
-
 fn pop_vector_and_target(interp: &mut Interpreter, word: &str) -> Result<(Vec<Value>, Value)> {
     let operands = extract_operands(interp, 2)?;
     match operands[0].as_vector_view() {
@@ -57,17 +29,6 @@ fn pop_vector_and_target(interp: &mut Interpreter, word: &str) -> Result<(Vec<Va
             ))
         }
     }
-}
-
-/// `vector value -- bool`. True if the vector contains an element equal to
-/// the target value.
-pub fn op_contains(interp: &mut Interpreter) -> Result<()> {
-    require_stack_top(interp, "CONTAINS")?;
-    let (vector, target) = pop_vector_and_target(interp, "CONTAINS")?;
-    let found = vector.iter().any(|elem| elem == &target);
-    interp.stack.push(Value::from_bool(found));
-    interp.stack.set_last_role(Interpretation::TruthValue);
-    Ok(())
 }
 
 /// `vector value -- index`. Index of the first element equal to the target.

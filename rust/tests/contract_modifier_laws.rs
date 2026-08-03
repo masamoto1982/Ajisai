@@ -4,12 +4,12 @@
 //! `docs/dev/ajisai-mathematical-formalization.md` §9-quater E (Phase 3):
 //!
 //! 1. **Modifier combinators** (`SPEC §6`): `⟦μ·w⟧ = κ_consume ∘ δ_region ∘
-//!    base(w)`. `EAT` is the identity default and `KEEP` is bifurcation.
+//!    base(w)`. default consumption is the identity and `KEEP` is bifurcation.
 //! 2. **Coreword contracts** (`SPEC §7.14`): the `partiality` / `nil_policy` /
 //!    `safety_level` lattices, with contract absence = conformance violation.
 //! 3. **Static mass conservation** (`SPEC §13`): consumption/production as a
 //!    resource (linear) discipline, observed here via stack-depth deltas
-//!    (`depth(KEEP w) − depth(EAT w) = arity`).
+//!    (`depth(KEEP w) − depth(w) = arity`).
 //!
 //! Every law was checked against the reference implementation with a throwaway
 //! probe before being written (roadmap §1.2-(T) discipline). Probe findings are
@@ -48,17 +48,6 @@ fn binary_arith() -> impl Strategy<Value = &'static str> {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
-    /// `EAT` is the identity default of the one modifier axis: the bare word
-    /// and every default-modifier spelling render the same stack
-    /// (LANG.MODIFIERS.CONSUMPTION; the sugar `,` ≡ EAT).
-    #[test]
-    fn default_modifiers_are_identities(a in small(), b in small(), w in binary_arith()) {
-        let bare = obs(&format!("{a} {b} {w}"));
-        for variant in ["EAT", ","] {
-            prop_assert_eq!(&bare, &obs(&format!("{a} {b} {variant} {w}")));
-        }
-    }
-
     /// `KEEP` is bifurcation (§13.2): operands are retained *and* the result is
     /// pushed. Observationally `a b KEEP w == (a b) ++ (a b w)`. The sugar
     /// `,,`≡KEEP (SPEC §6.2).
@@ -71,11 +60,11 @@ proptest! {
     }
 
     /// **Mass conservation / bifurcation arity** (§13.1/§13.2): for a binary
-    /// word the only stack-mass difference between `KEEP` and `EAT` is the two
-    /// retained operands, so `depth(KEEP w) − depth(EAT w) = arity = 2`.
+    /// word the only stack-mass difference between `KEEP` and default consumption is the two
+    /// retained operands, so `depth(KEEP w) − depth(w) = arity = 2`.
     #[test]
     fn keep_minus_eat_equals_arity(a in small(), b in small(), w in binary_arith()) {
-        let eat = depth(&format!("{a} {b} EAT {w}")) as i64;
+        let eat = depth(&format!("{a} {b} {w}")) as i64;
         let keep = depth(&format!("{a} {b} KEEP {w}")) as i64;
         prop_assert_eq!(keep - eat, 2);
     }
@@ -150,7 +139,7 @@ fn every_coreword_declares_a_reachable_contract() {
 /// `A` used to also imply *deterministic*, on the reasoning that the strongest
 /// safety class must be reproducible. The canonical declarations show those are
 /// independent axes, and reading them made three counterexamples visible at
-/// once: `EAT`, `KEEP` and `VENT` are all safety `A` and all `stateRelative` —
+/// once: `KEEP` and `VENT` are safety `A` and `stateRelative` —
 /// they compute nothing and touch no value, but what they *do* is change how
 /// the next Word runs. `VENT` also broke the "A must be pure" half by
 /// declaring `conditional`, the class the hand-written vocabulary could not

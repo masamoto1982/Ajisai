@@ -55,10 +55,6 @@ fn vlit(xs: &[i64]) -> String {
 fn vec_ne() -> impl Strategy<Value = Vec<i64>> {
     prop::collection::vec(small(), 1..=6)
 }
-fn triple() -> impl Strategy<Value = (i64, i64, i64)> {
-    (small(), small(), small())
-}
-
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
@@ -77,17 +73,6 @@ proptest! {
         assert_law("take-full", &format!("{v} {n} TAKE"), &v);
     }
 
-    /// Identity `REORDER` is the identity; reversed indices equal `REVERSE`.
-    #[test]
-    fn reorder_identity_and_reverse((a, b, c) in triple()) {
-        let v = format!("[ {a} {b} {c} ]");
-        assert_law("reorder-id", &format!("{v} [ 0 1 2 ] REORDER"), &v);
-        assert_law(
-            "reorder-reverse",
-            &format!("{v} [ 2 1 0 ] REORDER"),
-            &format!("{v} REVERSE"),
-        );
-    }
 }
 
 // ── Free-monoid laws of CONCAT / REVERSE (fixed operands) ──
@@ -118,24 +103,6 @@ fn reverse_is_anti_homomorphism() {
     );
 }
 
-#[test]
-fn split_then_concat_round_trips() {
-    // `SPLIT` at two sizes leaves exactly two chunks, which is exactly what a
-    // binary `CONCAT` takes.
-    assert_law(
-        "split-concat-roundtrip",
-        "[ 1 2 3 4 ] [ 2 2 ] SPLIT CONCAT",
-        "[ 1 2 3 4 ]",
-    );
-}
-
-#[test]
-fn point_updates_and_collect_are_sequence_transforms() {
-    assert_law("insert-point", "[ 1 3 ] [ 1 2 ] INSERT", "[ 1 2 3 ]");
-    assert_law("replace-point", "[ 1 2 3 ] [ 1 9 ] REPLACE", "[ 1 9 3 ]");
-    assert_law("remove-point", "[ 1 2 3 ] 1 REMOVE", "[ 1 3 ]");
-    assert_law("collect-stack", "1 2 3 3 COLLECT", "[ 1 2 3 ]");
-}
 // ── SORT (ALGO) on the decidable rational sub-domain (§7.4.3) ──
 
 #[test]

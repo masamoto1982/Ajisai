@@ -94,14 +94,13 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         True | False | Nil => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse => (Linear, true),
-        Insert | Replace | Remove | Take | Split | Reorder | Collect => (Linear, false),
+        Take | Collect => (Linear, false),
         // The value-driven materializers: a numeric operand's *value* sets the
         // materialized length (Phase 3 gives these the runtime water level).
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
-        Floor | Ceil | Round | Mod => (Linear, false),
-        Str | Num | Chr | Chars | Tokenize | Trim => (Linear, false),
-        StartsWith | EndsWith => (Linear, false),
+        Floor | Round | Mod => (Linear, false),
+        Str | Num | Chars | Tokenize | Trim => (Linear, false),
         // Repetition can multiply sizes (pattern × replacement, k × separator).
         Substitute | Join => (Superlinear, false),
         // Dictionary registration copies bounded structure.
@@ -109,13 +108,13 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Del | Lookup => (Const, false),
         Print => (Linear, false),
         // The Words promoted out of the deleted MATH and ALGO modules.
-        Abs | Neg | Sign | Min | Max | Sqrt => (Linear, false),
-        Sort | Unique => (Linear, true),
-        Contains | IndexOf => (Linear, false),
+        Abs | Neg | Min | Max | Sqrt => (Linear, false),
+        Sort => (Linear, true),
+        IndexOf => (Linear, false),
         // The positional control directives (SPEC §6.4) never reach a
         // primitive: the execution loop interprets them against the source
         // stream, so they materialize nothing.
-        LazyNextUnitFallback | SetConsumptionConsume | SetConsumptionKeep => (Const, false),
+        LazyNextUnitFallback | SetConsumptionKeep => (Const, false),
     }
 }
 

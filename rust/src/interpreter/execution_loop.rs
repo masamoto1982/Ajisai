@@ -365,9 +365,6 @@ impl Interpreter {
                         "KEEP" => {
                             self.update_consumption_mode(ConsumptionMode::Keep);
                         }
-                        "EAT" => {
-                            self.update_consumption_mode(ConsumptionMode::Consume);
-                        }
                         _ => {
                             let upper = canonical;
 
