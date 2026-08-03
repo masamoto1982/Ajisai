@@ -5,39 +5,14 @@ use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, ValueDat
 use std::collections::HashSet;
 use std::sync::Arc;
 
-/// Serialize a code-block token stream back into Ajisai source text.
-///
-/// `LineBreak` tokens become real newlines so that a multi-line `{ }` body is
-/// re-tokenized into one `ExecutionLine` per source line (see
-/// `parse_definition_body`). This is the only body shape DEF accepts.
-fn code_block_tokens_to_source(tokens: &[Token]) -> String {
-    tokens
-        .iter()
-        .map(|t| match t {
-            Token::Number(n) => n.to_string(),
-            Token::String(s) => format!("'{}'", s),
-            Token::Symbol(s) => s.to_string(),
-            Token::VectorStart => "[".to_string(),
-            Token::VectorEnd => "]".to_string(),
-            Token::BlockStart => "{".to_string(),
-            Token::BlockEnd => "}".to_string(),
-            Token::Pipeline => "~".to_string(),
-            Token::NilCoalesce => "^".to_string(),
-            Token::CondClauseSep => "|".to_string(),
-            Token::LineBreak => "\n".to_string(),
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 /// DEF is strictly two positional arguments: `{ body } 'NAME' DEF`.
 ///
 /// The top of the stack is the name (a string), and directly below it is the
 /// body (a code block `{ }`). No value types are inspected to *guess* roles —
 /// position alone determines them — which is why a leftover string-like value
 /// on the stack can no longer shift argument interpretation. Definitions from
-/// data arrays are intentionally not accepted here; that path is reserved for
-/// the future `>CODE` conversion word.
+/// data arrays are intentionally not accepted here; canonical code data must
+/// first cross the explicit `REFLECT` boundary.
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
@@ -48,8 +23,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let definition_str = match &def_val.data {
-        ValueData::CodeBlock(tokens) => code_block_tokens_to_source(tokens),
+    let tokens = match &def_val.data {
+        ValueData::CodeBlock(tokens) => tokens.clone(),
         _ => {
             return Err(AjisaiError::from(
                 "DEF requires a code block { ... } as the definition body",
@@ -57,13 +32,12 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let tokens = crate::tokenizer::tokenize(&definition_str)
-        .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
-
     op_def_inner(interp, &name_str, &tokens)
 }
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {
+    crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::from)?;
+    interp.check_source_numeric_literals(tokens)?;
     if let Some(message) =
         crate::interpreter::naming_convention_checker::check_reserved_word_name(name)
     {

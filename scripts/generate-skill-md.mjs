@@ -389,7 +389,7 @@ ${renderForbiddenPatterns()}
 
 ## 9. Word quick reference
 
-Generated from \`docs/word-manifest.json\` — the complete inventory: 69
+Generated from \`docs/word-manifest.json\` — the complete inventory: 70
 canonical Words in one flat Core dictionary. A word absent here does not
 exist. There is no module system and nothing to import.
 

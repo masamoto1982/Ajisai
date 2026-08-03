@@ -632,4 +632,13 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",
     },
+    GeneratedCoreWordDoc {
+        name: "REFLECT",
+        category: "reflection",
+        summary: "Reflect a CodeBlock into canonical code data, or canonical code data into a CodeBlock.",
+        role: "Reflection primitive: cross the explicit boundary between executable code values and structured code data.",
+        stack_effect: "CodeBlock -> code-data\ncode-data -> CodeBlock",
+        hover_summary: "REFLECT — cross the code/data boundary",
+        hover_syntax: "CodeBlock REFLECT\ncode-data REFLECT",
+    },
 ];

@@ -8,7 +8,7 @@ Ajisai is an AI-first, vector-oriented dataflow language for **auditable, exact 
 
 Its central promise is **value integrity first**: numbers stay exact, structure stays visible, partial failure stays diagnosable, and every built-in Word carries a machine-readable contract that a user word's declaration can be checked against ahead of execution (`ajisai check --contract`). That check is deliberately conservative — it verifies declarations within the syntactic fragment its inference can analyze, and reports anything it cannot prove as "cannot verify".
 
-**Ten concepts.** Ajisai is built from ten concepts and nothing else: exact rationals closed under `SQRT`; three outcomes (a value, a reasoned absence, an error); a stack and vectors; code blocks evaluated only on request; one modifier axis; a sealed-Core / User dictionary with content-addressed identity; a machine-readable contract per Word; a pre-execution check of user declarations against those contracts; one host protocol; and an executable conformance corpus. The vocabulary is **69 Words** in one flat dictionary.
+**Ten concepts.** Ajisai is built from ten concepts and nothing else: exact rationals closed under `SQRT`; three outcomes (a value, a reasoned absence, an error); a stack and vectors; code blocks evaluated only on request; one modifier axis; a sealed-Core / User dictionary with content-addressed identity; a machine-readable contract per Word; a pre-execution check of user declarations against those contracts; one host protocol; and an executable conformance corpus. The vocabulary is **70 Words** in one flat dictionary.
 
 **Numeric scope.** Numbers are *exact by default*: exact rationals and the multiquadratic field they generate under `SQRT` — square roots of non-negative rationals, closed under field arithmetic, in a normal form \(\sum_d c_d\sqrt d\). Arithmetic never rounds, coefficients are arbitrary-precision, and **comparison is total**: every comparison of two scalars decides in finite time. That field is the whole numeric domain, so π, e, and logarithms are not Ajisai values.
 
@@ -86,7 +86,7 @@ Spec links: [The consumption axis](https://masamoto1982.github.io/Ajisai/SPECIFI
 
 ### 5) Words and contracts: searchable channels for humans and AI
 
-The dictionary has two tiers: **Core** holds the 69 canonical Words and is sealed, and **User** holds definitions made by `DEF`. Every Core Word is reachable by its plain name, so a program starts with the full vocabulary already in scope.
+The dictionary has two tiers: **Core** holds the 70 canonical Words and is sealed, and **User** holds definitions made by `DEF`. Every Core Word is reachable by its plain name, so a program starts with the full vocabulary already in scope.
 
 Each Core Word's contract is a machine-readable record in [`spec/words.json`](spec/words.json): arity, consumption, NIL policy, projection reason, error conditions, purity, effects, and documentation. That record is the single place the Word is defined; prose is a projection of it.
 
@@ -197,7 +197,7 @@ Quality process documents live in [`docs/quality/`](docs/quality/), including th
 
 | Path | Purpose |
 | --- | --- |
-| [`spec/`](spec/) | Canonical sources: the semantic kernel, the 69-Word registry, the shared laws, presentation, and the host protocol |
+| [`spec/`](spec/) | Canonical sources: the semantic kernel, the 70-Word registry, the shared laws, presentation, and the host protocol |
 | [`SPECIFICATION.html`](SPECIFICATION.html) | Generated from `spec/` ([rendered here](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html)) |
 | [`rust/src/`](rust/src/) | Rust interpreter core and value model |
 | [`src/`](src/) | TypeScript GUI/runtime shell |

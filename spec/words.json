@@ -2798,6 +2798,45 @@
       ],
       "partiality": "partial",
       "category": "io"
+    },
+    {
+      "name": "REFLECT",
+      "aliases": [],
+      "family": "reflection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonReflectableValue",
+        "malformedCodeData"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.SOURCE.REFLECTION"
+      ],
+      "documentation": {
+        "summary": "Reflect a CodeBlock into canonical code data, or canonical code data into a CodeBlock.",
+        "hover": "REFLECT — cross the code/data boundary",
+        "lookup": "Convert between a CodeBlock and its canonical structured data representation without evaluating the code.",
+        "syntax": "CodeBlock REFLECT\ncode-data REFLECT",
+        "role": "Reflection primitive: cross the explicit boundary between executable code values and structured code data.",
+        "stackEffect": "CodeBlock -> code-data\ncode-data -> CodeBlock"
+      },
+      "executorKey": "Reflect",
+      "effects": [],
+      "partiality": "partial",
+      "category": "reflection"
     }
   ]
 }

@@ -45,6 +45,7 @@ const allowedAlgebraicFamilies = new Set([
   'hosted-effect',
   'syntax-sugar',
   'observation',
+  'reflection',
 ]);
 
 const allowedCoreTiers = new Set([
