@@ -83,6 +83,21 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn malformed_data_and_nil_preserve_the_operand_on_failure() {
+        let malformed = "[ 'AJISAI-CODE-1' [ 'number' 'not-a-number' ] ]";
+        for source in [
+            format!("{malformed} REFLECT"),
+            format!("{malformed} KEEP REFLECT"),
+            "NIL REFLECT".to_string(),
+            "NIL KEEP REFLECT".to_string(),
+        ] {
+            let mut interp = Interpreter::new();
+            assert!(interp.execute(&source).await.is_err(), "accepted {source}");
+            assert_eq!(interp.stack.len(), 1, "operand was not restored: {source}");
+        }
+    }
+
     #[test]
     fn reflection_output_role_is_always_unassigned() {
         let mut interp = Interpreter::new();
@@ -94,6 +109,24 @@ mod tests {
             .execute_section_core(&[Token::Symbol("REFLECT".into())], 0)
             .unwrap();
         assert_eq!(interp.stack.last_role(), Interpretation::Unassigned);
+    }
+
+    #[tokio::test]
+    async fn reflected_results_match_through_a_compiled_user_word() {
+        let mut direct = Interpreter::new();
+        direct.execute("{ 1 ADD } REFLECT").await.unwrap();
+        let expected = direct.stack.last().cloned().unwrap();
+
+        let mut through_user_word = Interpreter::new();
+        through_user_word
+            .execute("{ REFLECT } 'REFLECT-THROUGH-USER' DEF { 1 ADD } REFLECT-THROUGH-USER")
+            .await
+            .unwrap();
+        assert_eq!(through_user_word.stack.last(), Some(&expected));
+        assert_eq!(
+            through_user_word.stack.last_role(),
+            Interpretation::Unassigned
+        );
     }
 
     #[test]
