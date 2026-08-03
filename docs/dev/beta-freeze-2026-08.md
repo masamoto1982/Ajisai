@@ -2,7 +2,7 @@
 
 Status: **Non-canonical / 方針記録・改修指示書**。正典は `spec/` 配下と、そこから生成される `SPECIFICATION.html` である。実装作業は GitHub Issue #1429 で追跡する。
 
-Implementation status: **Phase 3 in progress** — 6 operational Standard Wordsのnative観測契約と、truth/exact-arithmetic Standard 10語のKernel-only executable witnessを固定した。残るcollection/text Standard 6語のwitness完成後にPhase 4へ進む。
+Implementation status: **Phase 5 complete — beta boundary recorded** — 6 operational Standard Wordsのnative観測契約と、derivable Standard 16語すべてのKernel-only executable witnessを固定した。`GET` と `LENGTH` の runtime は宣言どおり `consumption: eat` に収束させ、削除13語のUnknown Word性をsource、REFLECT decode、compiled body、`LOOKUP` の各入口で検査する。互換層はHostProtocolV1 schema/golden/contract test/`kernel::legacy_v1`、旧stack snapshot reader、旧export array形式、module/import残骸とUI、hedged/execution-mode互換を含めて削除した。公開面は57 canonical / 35 kernelへ統一し、`vocabularyTier` を生成registryと `LOOKUP` に投影し、package/crate/Tauri versionを `0.2.0-beta.1` へ同期して `check-version-sync` をCI gateに加えた。β境界commitは `350834ee22ca1f1583eaa50e35d69f8ac29cac3e`、α基準点は `ebb66a5f9d14a6c8d6610488724e476e652abc35` としてREADMEとSpecificationに記録した。
 
 ## 1. β版の境界
 

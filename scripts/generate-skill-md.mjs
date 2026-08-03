@@ -96,6 +96,20 @@ function readRepo(path) {
   return readFileSync(resolve(repoRoot, path), 'utf8');
 }
 
+// Vocabulary counts read from the manifest, so the sentence introducing the
+// table cannot drift from the table itself.
+function readVocabularyCounts() {
+  const manifest = JSON.parse(readRepo('docs/word-manifest.json'));
+  const { canonicalWords, semanticKernelWords, standardWords } = manifest.counts;
+  for (const [name, value] of Object.entries({ canonicalWords, semanticKernelWords, standardWords })) {
+    if (typeof value !== 'number') fail(`docs/word-manifest.json counts.${name} is missing`);
+  }
+  if (semanticKernelWords + standardWords !== canonicalWords) {
+    fail('docs/word-manifest.json kernel + standard counts do not sum to the canonical inventory');
+  }
+  return { canonicalWords, semanticKernelWords, standardWords };
+}
+
 function buildWordTable() {
   const manifest = JSON.parse(readRepo('docs/word-manifest.json'));
   const words = JSON.parse(readRepo('spec/words.json'));
@@ -306,6 +320,7 @@ function buildSkillMd() {
   const nil = verifiedNilSection();
   const exactness = verifiedExactnessSection();
   const wordRows = buildWordTable();
+  const vocabulary = readVocabularyCounts();
 
   return `<!-- GENERATED FILE — do not edit by hand.
      Regenerate: npm run generate:skill   (verified against the ajisai CLI)
@@ -389,9 +404,12 @@ ${renderForbiddenPatterns()}
 
 ## 9. Word quick reference
 
-Generated from \`docs/word-manifest.json\` — the complete inventory: 70
-canonical Words in one flat Core dictionary. A word absent here does not
-exist. There is no module system and nothing to import.
+Generated from \`docs/word-manifest.json\` — the complete inventory:
+${vocabulary.canonicalWords} canonical Words in one flat Core dictionary, of which
+${vocabulary.semanticKernelWords} form the Semantic Kernel and ${vocabulary.standardWords} are Standard Words. Both are
+ordinary Core Words called by their plain names; the split is a design
+classification, not a namespace. A word absent here does not exist. There is
+no module system and nothing to import.
 
 | word | category | summary |
 |---|---|---|

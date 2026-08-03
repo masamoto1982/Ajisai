@@ -17,11 +17,6 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "output", &(output.clone().into()));
                 set_js_prop(&obj, "stack", &(self.collect_stack()));
                 set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
-                set_js_prop(
-                    &obj,
-                    "importedModules",
-                    &(self.collect_imported_modules_array()),
-                );
 
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     set_js_prop(&obj, "definition_to_load", &(def_str.into()));
@@ -96,11 +91,6 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "total", &((self.step_tokens.len() as u32).into()));
                 set_js_prop(&obj, "stack", &(self.collect_stack()));
                 set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
-                set_js_prop(
-                    &obj,
-                    "importedModules",
-                    &(self.collect_imported_modules_array()),
-                );
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
             Err(e) => {
@@ -143,11 +133,6 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "output", &("System reinitialized.".into()));
                 set_js_prop(&obj, "stack", &(self.collect_stack()));
                 set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
-                set_js_prop(
-                    &obj,
-                    "importedModules",
-                    &(self.collect_imported_modules_array()),
-                );
             }
             Err(e) => {
                 set_js_prop(&obj, "status", &("ERROR".into()));

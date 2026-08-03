@@ -1,8 +1,7 @@
 import { createDisplay, Display } from './output-display-renderer';
-import { createVocabularyManager, VocabularyManager } from './vocabulary-state-controller';
+import { createVocabularyManager, formatDictionaryTabName, VocabularyManager } from './vocabulary-state-controller';
 import { createEditor, Editor } from './code-input-editor';
 import { createMobileHandler, MobileHandler } from './mobile-view-switcher';
-import { createModuleTabManager, ModuleTabManager } from './module-selector-sheets';
 import { createDictionarySheetSelector } from './dictionary-sheet-selector';
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
@@ -42,26 +41,9 @@ const HIDDEN_AUTOCOMPLETE_ALIASES: ReadonlySet<string> = new Set([
     '.', ',', "'", '"',
 ]);
 
-// Matches a module import: a single-quoted module name, an optional selector
-// vector (for IMPORT-ONLY), and the IMPORT / IMPORT-ONLY word. Deliberately
-// does not match UNIMPORT / UNIMPORT-ONLY (no word boundary before IMPORT).
-const MODULE_IMPORT_PATTERN = /'([^']+)'\s*(?:\[[^\]]*\]\s*)?(?:IMPORT-ONLY|IMPORT)\b/gi;
-
-// Returns the (upper-cased) name of the last module imported by `code`, or
-// null when the code performs no import.
-const extractImportedModuleName = (code: string): string | null => {
-    MODULE_IMPORT_PATTERN.lastIndex = 0;
-    let lastModule: string | null = null;
-    let match: RegExpExecArray | null;
-    while ((match = MODULE_IMPORT_PATTERN.exec(code)) !== null) {
-        lastModule = match[1]!.toUpperCase();
-    }
-    return lastModule;
-};
-
 export interface GUI {
     readonly init: () => Promise<void>;
-    readonly updateAllDisplays: (executedCode?: string) => void;
+    readonly updateAllDisplays: () => void;
     readonly extractElements: () => GUIElements;
     readonly extractDisplay: () => Display;
     readonly extractEditor: () => Editor;
@@ -72,8 +54,8 @@ export interface GUI {
 }
 
 // The full word list only changes when the vocabulary changes (after an
-// execution). Without this cache the whole set — including several WASM
-// round-trips per imported module — was rebuilt on every keystroke.
+// execution). Without this cache the whole set — including a WASM round-trip
+// per query — was rebuilt on every keystroke.
 let autocompleteWordsCache: string[] | null = null;
 
 const invalidateAutocompleteCache = (): void => {
@@ -97,20 +79,7 @@ const collectAutocompleteWords = (): string[] => {
         `${word[0]}@${word[1]}`
     ]);
 
-    const moduleWords: string[] = [];
-    try {
-        const importedModules: string[] = INTERPRETER_CLIENT.collectImportedModules();
-        for (const moduleName of importedModules) {
-            const words = INTERPRETER_CLIENT.collectModuleWordsInfo(moduleName);
-            const prefix: string = `${moduleName}@`;
-            for (const word of words) {
-                const name: string = word[0] ?? '';
-                moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
-            }
-        }
-    } catch {  }
-
-    const allWords: Set<string> = new Set([...coreWords, ...userWords, ...moduleWords]);
+    const allWords: Set<string> = new Set([...coreWords, ...userWords]);
     autocompleteWordsCache = Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
     return autocompleteWordsCache;
 };
@@ -123,7 +92,6 @@ export const createGUI = (): GUI => {
     let mobile: MobileHandler;
     let persistence: Persistence;
     let executionController: ExecutionController;
-    let moduleTabManager: ModuleTabManager;
     let layoutState: LayoutState;
     let layoutController: LayoutController;
 
@@ -135,21 +103,11 @@ export const createGUI = (): GUI => {
         elements,
         state: layoutState,
         mobile,
-        moduleTabManager,
         switchDictionarySheet: doSwitchDictionarySheet,
     });
 
 
-    const revealDictionarySheet = (sheetId: string): void => {
-        if (layoutState.currentRightMode !== 'dictionary'
-            || (mobile.isMobile() && layoutState.currentMode !== 'dictionary')) {
-            layoutController.setArea('dictionary');
-        }
-        elements.dictionarySheetSelect.value = sheetId;
-        doSwitchDictionarySheet(sheetId);
-    };
-
-    const updateAllDisplays = (executedCode?: string): void => {
+    const updateAllDisplays = (): void => {
         if (!INTERPRETER_CLIENT.getOptional()) return;
 
         invalidateAutocompleteCache();
@@ -157,19 +115,6 @@ export const createGUI = (): GUI => {
         try {
             display.renderStack(INTERPRETER_CLIENT.collectStack());
             vocabulary.updateUserWords(INTERPRETER_CLIENT.collectUserWordsInfo());
-
-            moduleTabManager.syncModuleTabs();
-
-            if (executedCode) {
-                // Importing a module (by typed code) switches the right pane to
-                // that module's dictionary. Sheets for every module already
-                // exist, so this is purely a navigation convenience.
-                const importedModule = extractImportedModuleName(executedCode);
-                if (importedModule
-                    && moduleTabManager.lookupModuleArea(`module-${importedModule}`)) {
-                    revealDictionarySheet(`module-${importedModule}`);
-                }
-            }
 
             updateHighlights(elements, elements.codeInput.value);
         } catch (error) {
@@ -221,41 +166,13 @@ export const createGUI = (): GUI => {
         display.init();
         updateEditorPlaceholder(elements, mobile);
 
-        const dictionarySheetSelector = createDictionarySheetSelector(elements.dictionarySheetSelect, {
-            onToggleModule: (name: string, active: boolean) => moduleTabManager.toggleModule(name, active),
-        });
-
-        moduleTabManager = createModuleTabManager({
-            selector: dictionarySheetSelector,
-            sheetContainerEl: elements.dictionaryArea,
-            onWordClick: (word: string) => {
-                if (!mobile.isMobile()) {
-                    editor.insertWord(word);
-                }
-            },
-            onBackgroundClick: () => {
-                if (!mobile.isMobile()) {
-                    editor.insertWord(' ');
-                }
-            },
-            onBackgroundDoubleClick: () => {
-                if (!mobile.isMobile()) {
-                    editor.removeLastWord();
-                }
-            },
-            onUpdateDisplays: () => updateAllDisplays(),
-            onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text: string, append: boolean) => display.renderInfo(text, append),
-            revealSheet: (sheetId: string) => revealDictionarySheet(sheetId),
-            moduleActions: {
-                IO: [{
-                    label: 'JSON',
-                    className: 'btn',
-                    ariaLabel: 'Import JSON as vector',
-                    onClick: () => persistence.importJsonAsVector(),
-                }],
-            },
-        });
+        // The dictionary has two tiers (LANG.DICTIONARY.RESOLUTION), so the
+        // sheet list is fixed: Core and User.
+        const dictionarySheetSelector = createDictionarySheetSelector(elements.dictionarySheetSelect);
+        dictionarySheetSelector.setEntries([
+            { sheetId: 'core', label: formatDictionaryTabName('CORE'), kind: 'core' },
+            { sheetId: 'user', label: formatDictionaryTabName('USER'), kind: 'user' },
+        ]);
 
 
         layoutController = createLayoutController({
@@ -320,7 +237,6 @@ export const createGUI = (): GUI => {
             elements,
             mobile,
             layoutState,
-            moduleTabManager,
             vocabulary,
             display,
             editor,

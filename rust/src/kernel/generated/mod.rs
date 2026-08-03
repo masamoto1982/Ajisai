@@ -16,8 +16,8 @@
 mod word_registry;
 
 pub use word_registry::{
-    Arity, Consumption, Determinism, Family, GeneratedWord, NilPolicy, Partiality, Purity, WordId,
-    GENERATED_WORDS,
+    Arity, Consumption, Determinism, Family, GeneratedWord, NilPolicy, Partiality, Purity,
+    VocabularyTier, WordId, GENERATED_WORDS,
 };
 
 /// The declared contract for a Word, by canonical name.
@@ -49,7 +49,8 @@ serialize_as_spec_str!(
     NilPolicy,
     Partiality,
     Purity,
-    Determinism
+    Determinism,
+    VocabularyTier
 );
 
 #[cfg(test)]

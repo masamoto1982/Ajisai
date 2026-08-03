@@ -98,12 +98,10 @@ export class TauriPersistence implements Persistence {
         const current = await readStoredData();
         current.interpreterState = {
             key: 'interpreter_state',
+            stateVersion: state.stateVersion,
             stack: state.stack,
             stackSnapshot: state.stackSnapshot,
             userWords: state.userWords,
-            importedModules: state.importedModules,
-            importState: state.importState,
-            exampleWordsVersion: state.exampleWordsVersion,
             activeDictionarySheet: state.activeDictionarySheet,
             activeUserDictionary: state.activeUserDictionary,
             updatedAt: new Date().toISOString()
@@ -120,12 +118,10 @@ export class TauriPersistence implements Persistence {
         }
 
         return {
+            stateVersion: Number(state.stateVersion),
             stack: state.stack as InterpreterStateSnapshot['stack'],
             stackSnapshot: state.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
             userWords: state.userWords as InterpreterStateSnapshot['userWords'],
-            importedModules: state.importedModules as InterpreterStateSnapshot['importedModules'],
-            importState: state.importState as InterpreterStateSnapshot['importState'],
-            exampleWordsVersion: state.exampleWordsVersion,
             activeDictionarySheet: state.activeDictionarySheet,
             activeUserDictionary: state.activeUserDictionary
         };

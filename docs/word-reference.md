@@ -3,12 +3,13 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **57 Words**. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json).
+Canonical inventory: **57 Words**, of which **35** form the Semantic Kernel and **22** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
 Push the boolean TRUE onto the stack.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
 - **Stack:** 0 input(s) → 1 output(s); `none` consumption
 - **NIL policy:** `preserveReason`; projection: none
@@ -21,6 +22,7 @@ Push the boolean TRUE onto the stack.
 
 Push the boolean FALSE onto the stack.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
 - **Stack:** 0 input(s) → 1 output(s); `none` consumption
 - **NIL policy:** `preserveReason`; projection: none
@@ -33,6 +35,7 @@ Push the boolean FALSE onto the stack.
 
 Logical AND. A NIL operand passes through.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -47,6 +50,7 @@ Logical AND. A NIL operand passes through.
 
 Logical OR. A NIL operand passes through.
 
+- **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `booleanLogic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -60,6 +64,7 @@ Logical OR. A NIL operand passes through.
 
 Logical negation. A NIL operand passes through.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -73,6 +78,7 @@ Logical negation. A NIL operand passes through.
 
 Test equality of two values.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -87,6 +93,7 @@ Test equality of two values.
 
 Test inequality of two values.
 
+- **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -101,6 +108,7 @@ Test inequality of two values.
 
 Test less-than comparison.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -115,6 +123,7 @@ Test less-than comparison.
 
 Test less-than-or-equal comparison.
 
+- **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -129,6 +138,7 @@ Test less-than-or-equal comparison.
 
 Test greater-than comparison.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -143,6 +153,7 @@ Test greater-than comparison.
 
 Test greater-than-or-equal comparison.
 
+- **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -157,6 +168,7 @@ Test greater-than-or-equal comparison.
 
 Add two numeric values, element-wise with broadcasting.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -171,6 +183,7 @@ Add two numeric values, element-wise with broadcasting.
 
 Subtract two numeric values, element-wise with broadcasting.
 
+- **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -185,6 +198,7 @@ Subtract two numeric values, element-wise with broadcasting.
 
 Multiply two numeric values, element-wise with broadcasting.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -199,6 +213,7 @@ Multiply two numeric values, element-wise with broadcasting.
 
 Divide two numeric values exactly (fractional result).
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: divisorEqualsZero → divisionByZero
@@ -213,6 +228,7 @@ Divide two numeric values exactly (fractional result).
 
 Modulo (remainder) of two numeric values.
 
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
@@ -227,6 +243,7 @@ Modulo (remainder) of two numeric values.
 
 Round toward negative infinity.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
@@ -240,6 +257,7 @@ Round toward negative infinity.
 
 Round to nearest integer (half-up).
 
+- **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
@@ -253,6 +271,7 @@ Round to nearest integer (half-up).
 
 Absolute value of a number.
 
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: none
@@ -266,6 +285,7 @@ Absolute value of a number.
 
 Numeric negation.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: none
@@ -279,6 +299,7 @@ Numeric negation.
 
 Smaller of two numbers.
 
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: none
@@ -292,6 +313,7 @@ Smaller of two numbers.
 
 Larger of two numbers.
 
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: none
@@ -305,6 +327,7 @@ Larger of two numbers.
 
 Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: negativeScalar → domainMiss
@@ -318,6 +341,7 @@ Exact square root of a non-negative rational. The result is carried in multiquad
 
 Extract one element of a vector by index.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: indexOutOfBounds → indexOutOfBounds
@@ -331,6 +355,7 @@ Extract one element of a vector by index.
 
 Return the number of elements in a vector.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -344,6 +369,7 @@ Return the number of elements in a vector.
 
 Take the first N or last -N elements of a vector.
 
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -357,6 +383,7 @@ Take the first N or last -N elements of a vector.
 
 Flatten and concatenate two vectors.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -370,6 +397,7 @@ Flatten and concatenate two vectors.
 
 Reverse the order of vector elements.
 
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -383,6 +411,7 @@ Reverse the order of vector elements.
 
 Collect N items off the stack into a new vector.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** variable input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -396,6 +425,7 @@ Collect N items off the stack into a new vector.
 
 Generate a numeric sequence from a [start, end] pair.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
@@ -409,6 +439,7 @@ Generate a numeric sequence from a [start, end] pair.
 
 Fill a target shape with a constant value.
 
+- **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
@@ -422,6 +453,7 @@ Fill a target shape with a constant value.
 
 Return a copy of a vector sorted in ascending order.
 
+- **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -435,6 +467,7 @@ Return a copy of a vector sorted in ascending order.
 
 Index of the first element equal to the value; Bubble/NIL if absent.
 
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: valueAbsent → missingField
@@ -448,6 +481,7 @@ Index of the first element equal to the value; Bubble/NIL if absent.
 
 Apply a code block to each element of a vector.
 
+- **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `consumeNil`; projection: none
@@ -461,6 +495,7 @@ Apply a code block to each element of a vector.
 
 Keep only the elements for which a predicate block returns TRUE.
 
+- **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `consumeNil`; projection: none
@@ -474,6 +509,7 @@ Keep only the elements for which a predicate block returns TRUE.
 
 Reduce a vector to a single value using an initial accumulator and combiner block.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
 - **Stack:** 3 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `consumeNil`; projection: none
@@ -487,6 +523,7 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 
 TRUE if at least one element satisfies the predicate.
 
+- **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `consumeNil`; projection: none
@@ -500,6 +537,7 @@ TRUE if at least one element satisfies the predicate.
 
 TRUE if every element satisfies the predicate.
 
+- **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `consumeNil`; projection: none
@@ -513,6 +551,7 @@ TRUE if every element satisfies the predicate.
 
 Split a string into a vector of one-character strings.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -526,6 +565,7 @@ Split a string into a vector of one-character strings.
 
 Join a vector of strings into a single string.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -539,6 +579,7 @@ Join a vector of strings into a single string.
 
 Remove whitespace from both ends of a string.
 
+- **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -552,6 +593,7 @@ Remove whitespace from both ends of a string.
 
 Split a string into a vector of substrings using a separator.
 
+- **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -565,6 +607,7 @@ Split a string into a vector of substrings using a separator.
 
 Replace every occurrence of a substring with another.
 
+- **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 3 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -578,6 +621,7 @@ Replace every occurrence of a substring with another.
 
 Parse text as a number; Bubble/NIL on parse failure.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: parseFailure → invalidEncoding
@@ -591,6 +635,7 @@ Parse text as a number; Bubble/NIL on parse failure.
 
 Convert a value to its string representation.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
@@ -603,6 +648,7 @@ Convert a value to its string representation.
 
 Evaluate guard/body clauses in order, executing the first match.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
 - **Stack:** variable input(s) → variable output(s); `conditional` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -616,6 +662,7 @@ Evaluate guard/body clauses in order, executing the first match.
 
 Evaluate a code block.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
 - **Stack:** 1 input(s) → variable output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -629,6 +676,7 @@ Evaluate a code block.
 
 Push the NIL value onto the stack.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
 - **Stack:** 0 input(s) → 1 output(s); `none` consumption
 - **NIL policy:** `preserveReason`; projection: none
@@ -641,6 +689,7 @@ Push the NIL value onto the stack.
 
 Test whether the top value is an operational NIL (absent).
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
 - **Stack:** 1 input(s) → 2 output(s); `retain` consumption
 - **NIL policy:** `consumeNil`; projection: none
@@ -653,6 +702,7 @@ Test whether the top value is an operational NIL (absent).
 
 Read the direct reason of an operational NIL as a protocol-string Text.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
 - **Stack:** 1 input(s) → 2 output(s); `retain` consumption
 - **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrHasNoReason → notAvailable
@@ -665,6 +715,7 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 
 Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
 - **Stack:** control input(s) → control output(s); `conditional` consumption
 - **NIL policy:** `inspectNil`; projection: none
@@ -679,6 +730,7 @@ Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following
 
 Set the consumption mode to keep operands.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `stackModifier`
 - **Stack:** 0 input(s) → 0 output(s); `none` consumption
 - **NIL policy:** `preserveReason`; projection: none
@@ -692,6 +744,7 @@ Set the consumption mode to keep operands.
 
 Define a user word from a body and a name.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
 - **Stack:** 2 input(s) → 0 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -705,6 +758,7 @@ Define a user word from a body and a name.
 
 Delete a user word from the dictionary.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
 - **Stack:** 1 input(s) → 0 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -718,6 +772,7 @@ Delete a user word from the dictionary.
 
 Display the documentation for a named word.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
 - **Stack:** 1 input(s) → 0 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
@@ -732,6 +787,7 @@ Display the documentation for a named word.
 
 Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `output`
 - **Stack:** 1 input(s) → 0 output(s); `eat` consumption
 - **NIL policy:** `preserveReason`; projection: none
@@ -744,6 +800,7 @@ Write the top stack value to the output stream, consuming it. A string is writte
 
 Convert between a CodeBlock and its canonical structured data representation without evaluating the code.
 
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `reflection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none

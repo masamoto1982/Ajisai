@@ -10,7 +10,7 @@
 //! mislabelled `RejectsNil` is never probed for passthrough, and a Word
 //! mislabelled `Passthrough` in an uncovered category is never probed at all.
 //!
-//! An audit of all 69 Words against `spec/words.json` found six Words whose
+//! An audit of every Word against `spec/words.json` found six Words whose
 //! runtime behavior contradicts the policy *both* sources declare, every one of
 //! them invisible to the existing suite for exactly that reason.
 //!

@@ -97,9 +97,6 @@ self.onmessage = async (event: MessageEvent) => {
     try {
 
         applyInterpreterSnapshot(interpreter!, event.data.state);
-        if (event.data.executionMode) {
-            interpreter!.set_execution_mode(event.data.executionMode);
-        }
 
         if (isAborted) throw new Error('aborted');
 
@@ -107,18 +104,12 @@ self.onmessage = async (event: MessageEvent) => {
         const result: ExecuteResult = await interpreter!.execute(event.data.code);
         result.runtimeMetricsDelta = diffMetrics(metricsBefore, collectMetrics(interpreter!));
 
-        // Attach the lossless stack snapshot (SPEC §2.3) so the main thread
-        // restores exact post-run values (CodeBlock, ExactScalar) instead of the
-        // lossy observation `stack`. The interpreter still holds the post-execute
-        // state here, so this captures the result stack exactly. A snapshot
-        // failure degrades to the observation `stack`, never dropping the result.
-        if (typeof interpreter!.snapshot_stack === 'function') {
-            try {
-                result.stackSnapshot = interpreter!.snapshot_stack();
-            } catch (e) {
-                console.warn('[Worker] snapshot_stack failed; using observation stack', e);
-            }
-        }
+        // Attach the lossless stack snapshot (SPEC §2.3): it is the format the
+        // main thread restores from, so exact post-run values (CodeBlock,
+        // ExactScalar) survive instead of the lossy observation `stack`. The
+        // interpreter still holds the post-execute state here, so this captures
+        // the result stack exactly.
+        result.stackSnapshot = interpreter!.snapshot_stack();
 
         if (isAborted) throw new Error('aborted');
 

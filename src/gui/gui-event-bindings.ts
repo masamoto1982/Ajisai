@@ -3,7 +3,6 @@ import { getPlatform } from '../platform';
 import type { Display } from './output-display-renderer';
 import type { Editor } from './code-input-editor';
 import type { MobileHandler, ViewMode } from './mobile-view-switcher';
-import type { ModuleTabManager } from './module-selector-sheets';
 import type { Persistence } from './interpreter-state-persistence';
 import type { ExecutionController } from './execution-controller';
 import type { VocabularyManager } from './vocabulary-state-controller';
@@ -16,7 +15,6 @@ export type GuiEventBindingContext = {
     readonly mobile: MobileHandler;
     readonly layoutState: LayoutState;
     readonly layoutController: LayoutController;
-    readonly moduleTabManager: ModuleTabManager;
     readonly vocabulary: VocabularyManager;
     readonly display: Display;
     readonly editor: Editor;
@@ -103,12 +101,11 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
 }
 
 function bindInteractionEvents(context: GuiEventBindingContext): void {
-    const { elements, vocabulary, moduleTabManager, editor, mobile, layoutState, switchArea, display, persistence, executionController } = context;
+    const { elements, vocabulary, editor, mobile, layoutState, switchArea, display, persistence, executionController } = context;
     const applySearchFilter = (filter: string): void => {
         elements.dictionarySearch.value = filter;
         elements.mobileDictionarySearch.value = filter;
         vocabulary.updateSearchFilter(filter);
-        moduleTabManager.updateSearchFilter(filter);
     };
 
     const applySearchInput = debounce(() => {
@@ -155,6 +152,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
     elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
+    elements.importJsonBtn?.addEventListener('click', () => persistence.importJsonAsVector());
 
     {
         const serialBtn = elements.serialConnectBtn;

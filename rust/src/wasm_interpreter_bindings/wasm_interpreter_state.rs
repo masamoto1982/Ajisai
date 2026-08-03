@@ -1,6 +1,4 @@
-use super::wasm_value_conversion::{
-    extract_display_hint_from_js, js_value_to_value, value_to_js, UserWordData,
-};
+use super::wasm_value_conversion::{value_to_js, UserWordData};
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
 use crate::interpreter;
@@ -110,10 +108,6 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
-    pub(crate) fn collect_imported_modules_array(&self) -> JsValue {
-        js_sys::Array::new().into()
-    }
-
     pub(crate) fn collect_user_words_for_state(&self) -> JsValue {
         let mut names: Vec<String> = self.interpreter.user_words.keys().cloned().collect();
         names.sort();
@@ -171,61 +165,6 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn collect_imported_modules(&self) -> JsValue {
-        js_sys::Array::new().into()
-    }
-
-    /// Frozen V1 surface. Modules are gone from the language, so the catalog
-    /// of importable module names is always empty.
-    #[wasm_bindgen]
-    pub fn collect_available_modules(&self) -> JsValue {
-        let arr = js_sys::Array::new();
-        // Modules are gone from the language; the catalog is empty.
-        arr.into()
-    }
-
-    /// Frozen V1 surface. Tuple shape: `(shortName, description, imported:
-    /// bool)`. No module owns any word, so every catalog is empty.
-    #[wasm_bindgen]
-    pub fn collect_module_catalog_words_info(&self, _module_name: &str) -> JsValue {
-        // Modules are gone from the language; every catalog is empty.
-        js_sys::Array::new().into()
-    }
-
-    /// Frozen V1 surface. Tuple shape: `(module, importAllPublic: bool,
-    /// words: string[], samples: string[])`. There is no import state to
-    /// report, so the result is always empty.
-    #[wasm_bindgen]
-    pub fn collect_import_state(&self) -> JsValue {
-        js_sys::Array::new().into()
-    }
-
-    /// Accept a legacy import-state snapshot. Modules are no longer runtime
-    /// vocabulary, so restoration intentionally has no effect.
-    #[wasm_bindgen]
-    pub fn restore_import_state(&mut self, _state_js: JsValue) {}
-
-    /// Tuple shape: `(name, description)`.
-    #[wasm_bindgen]
-    pub fn collect_module_words_info(&self, _module_name: &str) -> JsValue {
-        js_sys::Array::new().into()
-    }
-
-    #[wasm_bindgen]
-    /// Always empty. Dependencies between *named dictionaries* were a
-    /// consequence of there being more than one user tier; LANG.DICTIONARY.
-    /// RESOLUTION gives two tiers, so there is nothing for a dictionary to
-    /// depend on. Word-level dependencies are unaffected and still drive
-    /// DEF/DEL protection. The export is kept so the generated binding surface
-    /// does not change under callers.
-    pub fn collect_dictionary_dependencies(&self) -> JsValue {
-        js_sys::Array::new().into()
-    }
-
-    #[wasm_bindgen]
-    pub fn restore_imported_modules(&mut self, _modules_js: JsValue) {}
-
-    #[wasm_bindgen]
     pub fn lookup_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
         self.interpreter
@@ -242,28 +181,15 @@ impl AjisaiInterpreter {
         }
     }
 
-    #[wasm_bindgen]
-    pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
-        let js_array = js_sys::Array::from(&stack_js);
-        let mut stack = Vec::new();
-        let mut hints: Vec<crate::types::Interpretation> = Vec::new();
-        for i in 0..js_array.length() {
-            let item = js_array.get(i);
-            stack.push(js_value_to_value(item.clone())?);
-            let hint = extract_display_hint_from_js(&item);
-            hints.push(hint);
-        }
-        self.interpreter.update_stack_with_hints(stack, hints);
-        Ok(())
-    }
-
-    /// Lossless stack snapshot for session persistence (SPEC §2.3). Unlike
+    /// The one stack format persistence accepts (SPEC §2.3). Unlike
     /// `collect_stack`, which serializes the *observation* wire format (a
     /// CodeBlock shows as `nil`, an ExactScalar as a marked rational
     /// approximation), this captures the exact value so `restore_stack_snapshot`
     /// returns identical values. The two surfaces are deliberately distinct:
-    /// observation is lossy-but-honest, persistence is lossless. The payload is
-    /// an opaque JSON string produced by `crate::types::value_persist`.
+    /// observation is lossy-but-honest, persistence is lossless. Restoring the
+    /// observation format is not offered — it would silently downgrade exact
+    /// values. The payload is an opaque JSON string produced by
+    /// `crate::types::value_persist`.
     #[wasm_bindgen]
     pub fn snapshot_stack(&self) -> Result<String, String> {
         crate::types::value_persist::encode_stack(self.interpreter.get_stack().iter_slots())
@@ -305,16 +231,6 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn clear_io_output_buffer(&mut self) {}
 
-    /// Execution mode is no longer selectable: there is exactly one execution
-    /// path. Kept as a stable no-op so the GUI's control keeps its shape.
-    #[wasm_bindgen]
-    pub fn set_execution_mode(&mut self, _mode: &str) {}
-
-    #[wasm_bindgen]
-    pub fn get_execution_mode(&self) -> String {
-        "greedy".to_string()
-    }
-
     /// Override the execution step budget (water level, SPEC §5.3) for
     /// subsequent executions. A runtime safety control, not a language
     /// semantic: the host may raise or lower it; never calling this keeps
@@ -325,14 +241,6 @@ impl AjisaiInterpreter {
         if steps > 0 {
             self.interpreter.set_max_execution_steps(steps);
         }
-    }
-
-    /// HostProtocolV1 pins this method, so it stays as a stable no-op: the
-    /// hedged execution engine it reported on is gone, and there is one
-    /// execution path with nothing to trace.
-    #[wasm_bindgen]
-    pub fn collect_hedged_trace(&mut self) -> JsValue {
-        js_sys::Array::new().into()
     }
 
     #[wasm_bindgen]

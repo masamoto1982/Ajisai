@@ -58,6 +58,7 @@ const CONTRACT_ENUMS = [
   ['Partiality', 'partiality', 'Whether well-formed application is total, partial, or NIL-projecting.'],
   ['Purity', 'purity', 'Observational purity class (SPEC §7.14).'],
   ['Determinism', 'determinism', 'What the Word\'s result may depend on beyond its operands.'],
+  ['VocabularyTier', 'vocabularyTier', 'Where the Word sits in the public Core: the Semantic Kernel or the Standard vocabulary.'],
 ];
 
 const enumBlocks = CONTRACT_ENUMS.map(([rustName, field, doc]) => {
@@ -135,6 +136,8 @@ const rows = entries
         partiality: ${enumRef('Partiality', word.partiality)},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
+        vocabulary_tier: ${enumRef('VocabularyTier', word.vocabularyTier)},
+        standard_kind: ${word.standardKind ? `Some(${rustStr(word.standardKind)})` : 'None'},
         effects: ${rustStrSlice(word.effects)},
     },`,
   )
@@ -199,6 +202,13 @@ pub struct GeneratedWord {
     pub partiality: Partiality,
     pub purity: Purity,
     pub determinism: Determinism,
+    /// Which half of the public Core the Word belongs to. Both halves are
+    /// ordinary sealed-Core Words reached by their plain names; the tier is a
+    /// design classification the reading surfaces report, never a namespace.
+    pub vocabulary_tier: VocabularyTier,
+    /// Why a Standard Word is native rather than left to a user definition, or
+    /// \`None\` for a Semantic Kernel Word.
+    pub standard_kind: Option<&'static str>,
     /// The effects the Word declares, in the specification's own spelling.
     /// Empty for every \`pure\` Word; the vocabulary is open (the schema types
     /// it as free strings), so this is projected as declared rather than

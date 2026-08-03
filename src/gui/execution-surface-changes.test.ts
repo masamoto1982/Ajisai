@@ -14,7 +14,6 @@ const okResult = (overrides: Partial<ExecuteResult> = {}): ExecuteResult => ({
 const view = (overrides: Partial<ExecutionStateView> = {}): ExecutionStateView => ({
     stack: [],
     userWords: [],
-    importedModules: [],
     ...overrides
 });
 
@@ -60,25 +59,6 @@ describe('detectExecutionSurfaceChanges', () => {
         );
         expect(changes.dictionaryChanged).toBe(true);
         expect(changes.dictionarySheetId).toBe('user');
-    });
-
-    it('selects the imported module sheet on a module import', () => {
-        const changes = detectExecutionSurfaceChanges(
-            view({ importedModules: [] }),
-            view({ importedModules: ['MATH'] }),
-            okResult()
-        );
-        expect(changes.dictionaryChanged).toBe(true);
-        expect(changes.dictionarySheetId).toBe('module-MATH');
-    });
-
-    it('ignores module reordering with no membership change', () => {
-        const changes = detectExecutionSurfaceChanges(
-            view({ importedModules: ['MATH', 'ALGO'] }),
-            view({ importedModules: ['ALGO', 'MATH'] }),
-            okResult()
-        );
-        expect(changes.dictionaryChanged).toBe(false);
     });
 
     it('treats a failed run as an Output change even with no program output', () => {

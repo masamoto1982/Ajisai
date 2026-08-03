@@ -204,16 +204,16 @@
 </section>
 
 <section class="ajisai-case" id="core-get-negative-index" data-category="core">
-  <h3>GET with a negative index counts from the end (source vector retained)</h3>
+  <h3>GET with a negative index counts from the end</h3>
   <pre class="ajisai-source">[ 10 20 30 ] [ -1 ] GET</pre>
-  <pre class="ajisai-expect-result">[ 10/1 20/1 30/1 ] 30/1</pre>
+  <pre class="ajisai-expect-result">30/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-get-zero-index" data-category="core">
   <h3>GET index 0 is the first element</h3>
   <pre class="ajisai-source">[ 10 20 30 ] [ 0 ] GET</pre>
-  <pre class="ajisai-expect-result">[ 10/1 20/1 30/1 ] 10/1</pre>
+  <pre class="ajisai-expect-result">10/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -239,9 +239,9 @@
 </section>
 
 <section class="ajisai-case" id="core-length" data-category="core">
-  <h3>LENGTH reports element count (source vector retained)</h3>
+  <h3>LENGTH reports element count and consumes the vector it measures</h3>
   <pre class="ajisai-source">[ 1 2 3 ] LENGTH</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] 3/1</pre>
+  <pre class="ajisai-expect-result">3/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -357,9 +357,9 @@
      normatively, so that an independent port reproduces them exactly. -->
 
 <section class="ajisai-case" id="core-get-bare-index-retained" data-category="core">
-  <h3>GET accepts a bare scalar index and retains the source vector</h3>
+  <h3>GET accepts a bare scalar index and consumes both operands</h3>
   <pre class="ajisai-source">[ 1 2 3 ] 1 GET</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] 2/1</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -433,7 +433,7 @@
 <section class="ajisai-case" id="core-chars-then-length-counts-characters" data-category="core">
   <h3>CHARS crosses from String to Vector, where the collection Words apply</h3>
   <pre class="ajisai-source">'abc' CHARS LENGTH</pre>
-  <pre class="ajisai-expect-result">[ 'a' 'b' 'c' ] 3/1</pre>
+  <pre class="ajisai-expect-result">3/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -925,9 +925,9 @@
 <!-- ===================== CORE: CREATES-NIL PROJECTIONS (§7.12, §11.2) ===================== -->
 
 <section class="ajisai-case" id="core-get-out-of-bounds-reason" data-category="core">
-  <h3>GET out of bounds projects to a reasoned Bubble (source vector retained)</h3>
+  <h3>GET out of bounds projects to a reasoned Bubble</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 9 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -968,7 +968,7 @@
 <section class="ajisai-case" id="core-empty-vector-has-length-zero" data-category="core">
   <h3>The empty vector has length zero, and is not an absence</h3>
   <pre class="ajisai-source">[ ] LENGTH</pre>
-  <pre class="ajisai-expect-result">[ ] 0/1</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

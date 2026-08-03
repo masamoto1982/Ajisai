@@ -1,6 +1,8 @@
 mod builtin_word_definitions;
 mod builtin_word_details;
 #[cfg(test)]
+mod builtin_word_details_lookup_tests;
+#[cfg(test)]
 mod builtin_word_details_tests;
 mod builtin_word_lookup_docs;
 mod generated_core_word_docs;
@@ -9,7 +11,7 @@ pub use builtin_word_definitions::lookup_builtin_spec;
 // The whole-table walk is a consistency-checking affordance: every runtime
 // consumer now reaches a Word through the generated registry and looks its
 // prose up by name, so the only readers of the table as a whole are the tests
-// asserting that the two halves still describe the same 69 Words.
+// asserting that the two halves still describe the same 57 Words.
 #[cfg_attr(not(test), allow(unused_imports))]
 pub use builtin_word_definitions::builtin_specs;
 // Re-exported for the wasm bindings (feature = "wasm") only; the re-export is

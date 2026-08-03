@@ -31,16 +31,29 @@ fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, u
 }
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    let _is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    // `LENGTH` declares `consumption: eat` with `[ vec ] -> [ count ]`: the
+    // measured vector leaves the stack unless `KEEP` is in force.
+    let target_val = if is_keep_mode {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
 
     let len = {
-        let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
-
         if target_val.is_nil() {
             0
         } else if target_val.is_vector() {
-            extract_vector_elements(target_val).len()
+            extract_vector_elements(&target_val).len()
         } else {
+            if !is_keep_mode {
+                interp.stack.push(target_val);
+            }
             return Err(AjisaiError::create_structure_error(
                 "vector",
                 "other format",

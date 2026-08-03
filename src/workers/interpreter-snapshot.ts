@@ -1,4 +1,4 @@
-import type { AjisaiInterpreter, ExecutionMode, UserWord, Value } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, UserWord, Value } from '../wasm-interpreter-types';
 
 export interface SerialInboxEntry {
     readonly portId: string;
@@ -7,18 +7,14 @@ export interface SerialInboxEntry {
 }
 
 export interface InterpreterSnapshot {
+    // The observation-format stack, carried for display on the main thread.
     readonly stack: Value[];
-    // Lossless stack snapshot (opaque string from `snapshot_stack`) preferred
-    // over the observation-format `stack` on restore. Reusing the lossy
-    // observation format for the worker round-trip silently changed exact
-    // values on every execution — a CodeBlock came back as nil, √2 as its
-    // rational approximation. `stack` is retained for the downgrade path
-    // (a wasm bundle predating `restore_stack_snapshot`). See SPEC §2.3 and
-    // docs/dev/external-evaluation-response-strategy.md (P0).
+    // The lossless snapshot (opaque string from `snapshot_stack`) and the only
+    // format the worker round-trip restores from. Reusing the lossy observation
+    // format silently changed exact values on every execution — a CodeBlock
+    // came back as nil, √2 as its rational approximation. See SPEC §2.3.
     readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
-    readonly importedModules: string[];
-    readonly executionMode: ExecutionMode;
     /** Host-received serial bytes to inject before this run (SERIAL@READ). */
     readonly serialInbox?: SerialInboxEntry[];
     /**
@@ -33,16 +29,12 @@ export const createInterpreterSnapshot = (snapshot: {
     readonly stack: Value[];
     readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
-    readonly importedModules?: string[];
-    readonly executionMode?: ExecutionMode;
     readonly serialInbox?: SerialInboxEntry[];
     readonly stepLimit?: number;
 }): InterpreterSnapshot => ({
     stack: snapshot.stack,
     stackSnapshot: snapshot.stackSnapshot,
     userWords: snapshot.userWords,
-    importedModules: snapshot.importedModules ?? [],
-    executionMode: snapshot.executionMode ?? "greedy",
     serialInbox: snapshot.serialInbox,
     stepLimit: snapshot.stepLimit
 });
@@ -51,35 +43,22 @@ export const applyInterpreterSnapshot = (
     interpreter: AjisaiInterpreter,
     snapshot?: Partial<InterpreterSnapshot> | null
 ): void => {
-    // Phase 5: a session reset reinitializes the session but keeps the
-    // cross-reset compiled-artifact cache, so an unchanged user word's compiled
-    // plan is reused across runs instead of recompiled. Reuse is content-identity
-    // keyed and observationally transparent; fall back to the full reset against
-    // a wasm bundle that predates the API.
-    if (typeof interpreter.reset_session === 'function') {
-        interpreter.reset_session();
-    } else {
-        interpreter.reset();
-    }
+    // A session reset reinitializes the session but keeps the cross-reset
+    // compiled-artifact cache, so an unchanged user word's compiled plan is
+    // reused across runs instead of recompiled. Reuse is content-identity keyed
+    // and observationally transparent.
+    interpreter.reset_session();
     if (!snapshot) return;
 
-    if (snapshot.importedModules?.length) {
-        interpreter.restore_imported_modules(snapshot.importedModules);
-    }
-    // Prefer the lossless snapshot so exact values (CodeBlock, ExactScalar)
-    // survive the worker round-trip; fall back to the observation-format stack
-    // for a wasm bundle that predates `restore_stack_snapshot` (SPEC §2.3).
-    if (typeof snapshot.stackSnapshot === 'string'
-        && typeof interpreter.restore_stack_snapshot === 'function') {
+    // The lossless snapshot is the only accepted stack format, so exact values
+    // (CodeBlock, ExactScalar) survive the worker round-trip (SPEC §2.3). A
+    // snapshot without one restores an empty stack rather than silently
+    // downgrading through the observation format.
+    if (typeof snapshot.stackSnapshot === 'string') {
         interpreter.restore_stack_snapshot(snapshot.stackSnapshot);
-    } else if (snapshot.stack) {
-        interpreter.restore_stack(snapshot.stack);
     }
     if (snapshot.userWords) {
         interpreter.restore_user_words(snapshot.userWords);
-    }
-    if (snapshot.executionMode) {
-        interpreter.set_execution_mode(snapshot.executionMode);
     }
     // Untrusted partial snapshot: only a positive finite integer is a valid
     // budget; anything else keeps the interpreter default (the wasm side

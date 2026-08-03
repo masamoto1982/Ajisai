@@ -14,12 +14,10 @@ interface TableData {
 
 interface InterpreterState {
     key: string;
+    stateVersion?: unknown;
     stack: unknown;
     stackSnapshot?: unknown;
     userWords: unknown;
-    importedModules?: unknown;
-    importState?: unknown;
-    exampleWordsVersion?: number;
     activeDictionarySheet?: string;
     activeUserDictionary?: string;
     updatedAt: string;
@@ -155,12 +153,10 @@ class WebPersistence implements Persistence {
                 return null;
             }
             return {
+                stateVersion: Number(result.stateVersion),
                 stack: result.stack as InterpreterStateSnapshot['stack'],
                 stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
                 userWords: result.userWords as InterpreterStateSnapshot['userWords'],
-                importedModules: result.importedModules as InterpreterStateSnapshot['importedModules'],
-                importState: result.importState as InterpreterStateSnapshot['importState'],
-                exampleWordsVersion: result.exampleWordsVersion,
                 activeDictionarySheet: result.activeDictionarySheet,
                 activeUserDictionary: result.activeUserDictionary
             };

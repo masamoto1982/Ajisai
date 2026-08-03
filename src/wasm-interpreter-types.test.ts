@@ -25,8 +25,6 @@ const diagnosis: ProtocolDiagnosis = {
 
 const absence: ProtocolAbsence = {
     reason: 'divisionByZero',
-    origin: 'divisionByZero',
-    recoverability: 'recoverable',
     diagnosis
 };
 
@@ -37,24 +35,13 @@ describe('Semantic Firewall protocol payload types', () => {
             value: null,
             displayHint: 'nil',
             semantics: {
-                semanticKind: 'absence',
-                shape: 'absence',
-                capabilities: [
-                    'stackItem',
-                    'serializable',
-                    'displayable',
-                    'nilPassthrough',
-                    'diagnosable',
-                    'aiExplainable'
-                ],
-                origin: 'unknown',
                 absence
             }
         };
 
-        expect(value.semantics?.semanticKind).toBe('absence');
+        expect(value.type).toBe('nil');
         expect(value.semantics?.absence?.reason).toBe('divisionByZero');
-        expect(value.semantics?.absence?.origin).toBe('divisionByZero');
+        expect(value.semantics?.absence?.diagnosis?.why).toBe('domain');
         expect(Object.hasOwn(value, ['nil', 'Reason'].join(''))).toBe(false);
         expect(Object.hasOwn(value, ['error', 'Category'].join(''))).toBe(false);
     });

@@ -9,19 +9,9 @@ export class AjisaiInterpreter {
      * Clear all injected serial receive buffers and disconnected flags.
      */
     clear_serial_inboxes(): void;
-    /**
-     * All importable module names, in specification order. Drives the GUI's
-     * module selector, which pre-lists every module (active or not) so an
-     * inactive module can be surfaced greyed-out and toggled with IMPORT.
-     */
-    collect_available_modules(): any;
     collect_builtin_word_registry(): any;
     /**
-     * Returns Core-listed words (canonical core + Canonical Module words
-     * that are core-listed, e.g. SORT). This is the listing-based Core
-     * view defined by the redesigned vocabulary system; bare module words
-     * are surfaced for visibility only — invoking SORT bare still requires
-     * `'ALGO' IMPORT` per current execution semantics.
+     * Returns the canonical Core-listed words.
      *
      * Tuple shape: `(name, description, syntax)` — same as
      * `collect_core_words_info` so the GUI can render either list with the
@@ -30,31 +20,11 @@ export class AjisaiInterpreter {
     collect_core_listed_words_info(): any;
     collect_core_word_aliases_info(): any;
     collect_core_words_info(): any;
-    collect_dictionary_dependencies(): any;
     collect_error_flow_trace(): any;
-    /**
-     * Detailed import state for persistence. Tuple shape:
-     * `(module, importAllPublic: bool, words: string[], samples: string[])`.
-     * Captures partial imports (IMPORT-ONLY / UNIMPORT-ONLY results) that
-     * `collect_imported_modules` (module names only) cannot represent.
-     */
-    collect_import_state(): any;
-    collect_imported_modules(): any;
     collect_input_helper_words_info(): any;
     /**
-     * Full word catalog for a module, regardless of import state.
-     * Tuple shape: `(shortName, description, imported: bool)`.
-     * `imported` reflects the live import table so the GUI can render active
-     * words normally and inactive words greyed-out within the same sheet.
-     */
-    collect_module_catalog_words_info(module_name: string): any;
-    /**
-     * Tuple shape: `(name, description)`.
-     */
-    collect_module_words_info(module_name: string): any;
-    /**
-     * Cost-model counters for the Playground. Counts are session-cumulative
-     * and reset with the interpreter. Observational only (SPEC §4.8).
+     * Runtime counters for the Playground. Counts are session-cumulative and
+     * reset with the interpreter. Observational only.
      */
     collect_runtime_metrics(): any;
     collect_stack(): any;
@@ -68,37 +38,27 @@ export class AjisaiInterpreter {
     execute(code: string): Promise<any>;
     execute_step(code: string): any;
     extract_io_output_buffer(): string;
-    get_execution_mode(): string;
     is_safe_preview_word(name: string): boolean;
     lookup_word_definition(name: string): any;
     /**
      * Mark a serial port as disconnected by the host. Once its inbox is empty,
      * `SERIAL@READ` projects `NilReason::PortDisconnected`.
      */
-    mark_serial_disconnected(port_id: string): void;
+    mark_serial_disconnected(_port_id: string): void;
     constructor();
     push_json_string(json_string: string): any;
     remove_word(name: string): void;
     reset(): any;
     /**
-     * Session reset (Phase 5): reinitializes session state but keeps the
-     * cross-reset compiled-artifact cache alive. The GUI worker calls this
-     * before restoring a snapshot so an unchanged user word's `CompiledPlan`
-     * is reused instead of recompiled. Reuse is content-identity keyed and
-     * observationally transparent, so the run's result is identical to a full
-     * `reset`.
+     * Compatibility alias for [`Self::reset`].
      */
     reset_session(): any;
     /**
-     * Restore a detailed import state previously captured by
-     * `collect_import_state`. Reinstates partial imports exactly, unlike
-     * `restore_imported_modules` which forces a full IMPORT per module.
+     * Restore a stack from a `snapshot_stack` payload, reinstating exact
+     * values (CodeBlock, ExactScalar, …) and their stack-position roles.
      */
-    restore_import_state(state_js: any): void;
-    restore_imported_modules(modules_js: any): void;
-    restore_stack(stack_js: any): void;
+    restore_stack_snapshot(snapshot_json: string): void;
     restore_user_words(words_js: any): void;
-    set_execution_mode(mode: string): void;
     /**
      * Override the execution step budget (water level, SPEC §5.3) for
      * subsequent executions. A runtime safety control, not a language
@@ -107,13 +67,25 @@ export class AjisaiInterpreter {
      * malformed host call cannot disable the safety budget entirely.
      */
     set_max_execution_steps(steps: number): void;
-    update_input_buffer(text: string): void;
+    /**
+     * The one stack format persistence accepts (SPEC §2.3). Unlike
+     * `collect_stack`, which serializes the *observation* wire format (a
+     * CodeBlock shows as `nil`, an ExactScalar as a marked rational
+     * approximation), this captures the exact value so `restore_stack_snapshot`
+     * returns identical values. The two surfaces are deliberately distinct:
+     * observation is lossy-but-honest, persistence is lossless. Restoring the
+     * observation format is not offered — it would silently downgrade exact
+     * values. The payload is an opaque JSON string produced by
+     * `crate::types::value_persist`.
+     */
+    snapshot_stack(): string;
+    update_input_buffer(_text: string): void;
     /**
      * Inject the host-received bytes for a serial port (Section 9.4). Replaces
      * any buffer previously set for this port id and clears the port's
      * disconnected flag. `SERIAL@READ` drains this buffer.
      */
-    update_serial_inbox(port_id: string, bytes: Uint8Array): void;
+    update_serial_inbox(_port_id: string, _bytes: Uint8Array): void;
 }
 
 /**
@@ -131,19 +103,12 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_ajisaiinterpreter_free: (a: number, b: number) => void;
     readonly ajisaiinterpreter_clear_io_output_buffer: (a: number) => void;
-    readonly ajisaiinterpreter_clear_serial_inboxes: (a: number) => void;
-    readonly ajisaiinterpreter_collect_available_modules: (a: number) => any;
     readonly ajisaiinterpreter_collect_builtin_word_registry: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_listed_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_word_aliases_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_words_info: (a: number) => any;
-    readonly ajisaiinterpreter_collect_dictionary_dependencies: (a: number) => any;
     readonly ajisaiinterpreter_collect_error_flow_trace: (a: number) => any;
-    readonly ajisaiinterpreter_collect_import_state: (a: number) => any;
-    readonly ajisaiinterpreter_collect_imported_modules: (a: number) => any;
     readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
-    readonly ajisaiinterpreter_collect_module_catalog_words_info: (a: number, b: number, c: number) => any;
-    readonly ajisaiinterpreter_collect_module_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_runtime_metrics: (a: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
     readonly ajisaiinterpreter_collect_user_words_info: (a: number) => any;
@@ -151,7 +116,6 @@ export interface InitOutput {
     readonly ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_execute_step: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_extract_io_output_buffer: (a: number) => [number, number];
-    readonly ajisaiinterpreter_get_execution_mode: (a: number) => [number, number];
     readonly ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: number) => number;
     readonly ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_mark_serial_disconnected: (a: number, b: number, c: number) => void;
@@ -159,18 +123,17 @@ export interface InitOutput {
     readonly ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_reset: (a: number) => any;
-    readonly ajisaiinterpreter_reset_session: (a: number) => any;
-    readonly ajisaiinterpreter_restore_import_state: (a: number, b: any) => void;
-    readonly ajisaiinterpreter_restore_imported_modules: (a: number, b: any) => void;
-    readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
+    readonly ajisaiinterpreter_restore_stack_snapshot: (a: number, b: number, c: number) => [number, number];
     readonly ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
-    readonly ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;
-    readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
+    readonly ajisaiinterpreter_snapshot_stack: (a: number) => [number, number, number, number];
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h4d90ba99feb135fa: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h30a1a451a5ab21ed: (a: number, b: number, c: any, d: any) => void;
+    readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
+    readonly ajisaiinterpreter_reset_session: (a: number) => any;
+    readonly ajisaiinterpreter_clear_serial_inboxes: (a: number) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h0896cde0637cafae: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

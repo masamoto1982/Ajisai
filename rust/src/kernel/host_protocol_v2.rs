@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn v2_carries_no_legacy_field() {
-        // The V1-only concepts the spine dropped must never surface in a V2
+        // The concepts the protocol does not carry must never surface in a
         // document, by construction. This is a belt-and-braces check over the
         // serialized text alongside the type-level guarantee.
         let text = serde_json::to_string(&observation_to_v2(&canonical_observation())).unwrap();
@@ -161,7 +161,10 @@ mod tests {
             "importedModules",
             "semanticKind",
         ] {
-            assert!(!text.contains(legacy), "V2 leaked a legacy field: {legacy}");
+            assert!(
+                !text.contains(legacy),
+                "the protocol leaked a field it does not carry: {legacy}"
+            );
         }
     }
 

@@ -1,18 +1,7 @@
 
-export type ExecutionMode =
-    | 'greedy'
-    | 'elastic-safe'
-    | 'elastic-force'
-    | 'hedged-safe'
-    | 'hedged-trace';
-
-
 export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
-
-/** Detailed per-module import state: [module, importAllPublic, words, samples]. */
-export type ImportStateEntry = [string, boolean, string[], string[]];
 
 export interface UserWord {
     dictionary?: string | null;
@@ -24,11 +13,10 @@ export interface AjisaiInterpreter {
     execute(code: string): Promise<ExecuteResult>;
     execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
-    // Session reset (Phase 5): reinitializes session state but keeps the
-    // cross-reset compiled-artifact cache alive so an unchanged user word's
-    // compiled plan is reused instead of recompiled. Optional so the GUI
-    // degrades to a full `reset()` against a wasm bundle that predates the API.
-    reset_session?(): ExecuteResult;
+    // Session reset: reinitializes session state but keeps the cross-reset
+    // compiled-artifact cache alive so an unchanged user word's compiled plan
+    // is reused instead of recompiled.
+    reset_session(): ExecuteResult;
     collect_stack(): Value[];
     // Tuple shape: [dictionary, name, isProtected].
     collect_user_words_info(): Array<[string, string, boolean]>;
@@ -44,43 +32,22 @@ export interface AjisaiInterpreter {
     collect_core_word_aliases_info(): Array<[string, string, string, string]>;
     collect_input_helper_words_info(): Array<[string, string]>;
     lookup_word_definition(name: string): string | null;
-    restore_stack(stack_js: Value[]): void;
-    // Lossless stack persistence (SPEC §2.3). `snapshot_stack` captures exact
-    // values (CodeBlock, ExactScalar, …) that the observation format used by
-    // `collect_stack` cannot round-trip, and `restore_stack_snapshot` reinstates
-    // them. The payload is an opaque string. Optional so the GUI degrades to the
-    // legacy `collect_stack`/`restore_stack` path against a wasm bundle that
-    // predates the API.
-    snapshot_stack?(): string;
-    restore_stack_snapshot?(snapshot_json: string): void;
+    // The one stack format persistence accepts (SPEC §2.3). `snapshot_stack`
+    // captures exact values (CodeBlock, ExactScalar, …) that the observation
+    // format used by `collect_stack` cannot round-trip, and
+    // `restore_stack_snapshot` reinstates them. The payload is an opaque string.
+    snapshot_stack(): string;
+    restore_stack_snapshot(snapshot_json: string): void;
     restore_user_words(words: UserWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
-    collect_imported_modules(): string[];
-    collect_available_modules(): string[];
-    collect_module_words_info(module_name: string): Array<[string, string | null]>;
-    // Tuple shape: [shortName, description, imported]. Returns the
-    // full module catalog (active + inactive words) regardless of import state.
-    collect_module_catalog_words_info(module_name: string): Array<[string, string, boolean]>;
-    collect_dictionary_dependencies(): Array<[string, string[], string[]]>;
-    restore_imported_modules(modules: string[]): void;
-    // Tuple shape: [module, importAllPublic, words, samples]. Captures partial
-    // imports (IMPORT-ONLY / UNIMPORT-ONLY) that module-name lists cannot.
-    collect_import_state(): ImportStateEntry[];
-    restore_import_state(state: ImportStateEntry[]): void;
-    set_execution_mode(mode: ExecutionMode): void;
-    get_execution_mode(): ExecutionMode;
     // Execution step budget override (water level, SPECIFICATION.html §5.3).
     // Host-side runtime safety control, not a language semantic; the wasm
     // side ignores non-positive values and defaults to 100,000.
     set_max_execution_steps(steps: number): void;
-    // Pinned by HostProtocolV1, so the method stays; always empty now that
-    // there is a single execution path with nothing to trace.
-    collect_hedged_trace?(): string[];
     // Cost-model counters (SPECIFICATION.html §4.8): observational only,
-    // session-cumulative, reset with the interpreter. Optional so the GUI
-    // degrades gracefully against a wasm bundle that predates the API.
-    collect_runtime_metrics?(): RuntimeMetricsSnapshot;
+    // session-cumulative, reset with the interpreter.
+    collect_runtime_metrics(): RuntimeMetricsSnapshot;
     // Serial RX inbox injection (SPECIFICATION.html §9.4). Filled before execution
     // from the platform serial adapter; drained by SERIAL@READ.
     update_serial_inbox(portId: string, bytes: Uint8Array): void;
@@ -106,13 +73,12 @@ export interface RuntimeMetricsSnapshot {
     compareWithinLazyCount: number;
     compareWithinUnknownCount: number;
     compareWithinBudgetTermsConsumed: number;
-    // Cross-reset artifact cache (Phase 5): compiled plans reused across a GUI
-    // session reset instead of being rebuilt. Optional so the GUI degrades
-    // gracefully against a wasm bundle that predates the counters.
-    artifactCacheBuildCount?: number;
-    artifactCacheHitCount?: number;
-    artifactCacheMissCount?: number;
-    artifactCacheEvictionCount?: number;
+    // Cross-reset artifact cache: compiled plans reused across a GUI session
+    // reset instead of being rebuilt.
+    artifactCacheBuildCount: number;
+    artifactCacheHitCount: number;
+    artifactCacheMissCount: number;
+    artifactCacheEvictionCount: number;
 }
 
 export interface ProtocolDiagnosis {
@@ -140,25 +106,24 @@ export interface ProtocolDiagnosis {
     agreedPrefix?: number;
 }
 
+/**
+ * The absence envelope the current protocol carries: the reason, plus the
+ * diagnosis when the runtime produced one. An absence's origin and
+ * recoverability are diagnostic state, not wire fields.
+ */
 export interface ProtocolAbsence {
     reason?: string;
-    origin: string;
-    recoverability: string;
     diagnosis?: ProtocolDiagnosis;
 }
 
 export interface ProtocolValueSemantics {
-    semanticKind: string;
-    shape: string;
     /**
      * Three-valued logic surface (SPEC §2.3, §7.5). Present only on
      * truth-valued values; `'true'` / `'false'` / `'unknown'`. This is the
      * only observable surface for the third value — do not infer it from
-     * `semanticKind` or the internal NIL representation.
+     * the value's `type` or the internal NIL representation.
      */
     truthValue?: 'true' | 'false' | 'unknown';
-    capabilities: string[];
-    origin: string;
     absence?: ProtocolAbsence;
     /**
      * Present and `true` only when this node's numeric `value` is a *best
@@ -192,21 +157,15 @@ export interface ExecuteResult {
     definition_to_load?: string;
     inputHelper?: string;
 
+    // The observation-format stack, for display only.
     stack?: Value[];
-    // Lossless stack snapshot (opaque string from `snapshot_stack`) attached by
-    // the execution worker. Preferred over the observation-format `stack` when
-    // syncing the post-run stack back into the main-thread interpreter, so exact
-    // values (CodeBlock, ExactScalar) survive the round-trip instead of being
-    // flattened to nil / a rational approximation. `stack` is retained for
-    // display and as the downgrade path for a wasm bundle that predates the
-    // lossless API. See SPEC §2.3 and
-    // docs/dev/external-evaluation-response-strategy.md (P0).
+    // The lossless snapshot (opaque string from `snapshot_stack`) attached by
+    // the execution worker, and the only format used to sync the post-run stack
+    // back into the main-thread interpreter, so exact values (CodeBlock,
+    // ExactScalar) survive the round-trip instead of being flattened to nil or
+    // a rational approximation. See SPEC §2.3.
     stackSnapshot?: string;
     userWords?: UserWord[];
-    importedModules?: string[];
-    hedgedWinner?: string;
-    hedgedFallbackReason?: string;
-    hedgedCancelled?: string[];
     errorFlowTrace?: ErrorFlowTraceEvent[];
 
     // Per-run cost-model activity: the counter delta across this execution,

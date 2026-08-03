@@ -120,6 +120,9 @@ jobs:
       - name: Check Minimal Core closure
         run: npm run check:minimal-core
 
+      - name: Package, crate and Tauri versions agree
+        run: npm run check:version-sync
+
       - name: Runtime Core Word metadata is projected, not authored
         # BuiltinSpec is a joined view over generated docs and generated
         # contracts, never a second place to write language facts down. A
