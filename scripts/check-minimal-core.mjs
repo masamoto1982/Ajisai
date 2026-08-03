@@ -14,6 +14,8 @@ STARTS-WITH? ENDS-WITH? CHR EAT`.split(/\s+/));
 const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
+const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
+const COMPLETED_DERIVATIONS = new Set(['OR', 'NEQ', 'LTE', 'GTE', 'SUB', 'MOD', 'ROUND', 'ABS', 'MIN', 'MAX']);
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
@@ -84,6 +86,9 @@ for (const word of words) {
     }
     if (witness.standard_relation === 'operational' && !witness.law_tests.includes(OPERATIONAL_LAW_TEST)) {
       errors.push(`${word.name}: operational Standard is not covered by ${OPERATIONAL_LAW_TEST}`);
+    }
+    if (COMPLETED_DERIVATIONS.has(word.name) && !witness.law_tests.includes(DERIVATION_LAW_TEST)) {
+      errors.push(`${word.name}: completed derivation is not covered by ${DERIVATION_LAW_TEST}`);
     }
   }
 }
