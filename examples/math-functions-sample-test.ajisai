@@ -9,10 +9,10 @@
 [ -7/3 ] FLOOR PRINT       # → [ -3 ]
 [ 5 ] FLOOR PRINT          # → [ 5 ]
 
-# CEIL テスト
-[ 7/3 ] CEIL PRINT         # → [ 3 ]
-[ -7/3 ] CEIL PRINT        # → [ -2 ]
-[ 5 ] CEIL PRINT           # → [ 5 ]
+# CEIL 相当は NEG FLOOR NEG で構成
+[ 7/3 ] NEG FLOOR NEG PRINT         # → [ 3 ]
+[ -7/3 ] NEG FLOOR NEG PRINT        # → [ -2 ]
+[ 5 ] NEG FLOOR NEG PRINT           # → [ 5 ]
 
 # ROUND テスト
 [ 5/2 ] ROUND PRINT        # → [ 3 ]

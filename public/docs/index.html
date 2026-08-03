@@ -657,7 +657,7 @@
                                 <tr><th>Canonical</th><th>Sugar</th><th>Effect</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>EAT</code></td><td><code>,</code></td><td class="notes">Consume the operands (default).</td></tr>
+
                                 <tr><td><code>KEEP</code></td><td><code>,,</code></td><td class="notes">Retain the operands and push the result as well.</td></tr>
                             </tbody>
                         </table>
@@ -776,7 +776,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">The rounding words <code>FLOOR</code> and <code>CEIL</code> and <code>ROUND</code> also live here. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
+                    <p class="ref-note">The rounding words <code>FLOOR</code> and <code>ROUND</code> also live here. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
                 </section>
 
                 <section id="comparison" class="ref-page">
@@ -1232,7 +1232,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">Further structural words: <code>INSERT</code> <code>REPLACE</code> <code>REMOVE</code> <code>SPLIT</code> <code>REORDER</code> <code>COLLECT</code> <code>FILL</code>.</p>
+                    <p class="ref-note">Further structural words: <code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code>.</p>
                 </section>
 
                 <section id="higher-order" class="ref-page">
@@ -1472,11 +1472,7 @@ COND</code></td>
                                 <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td><code>65 CHR</code></td>
-                                    <td><code>'A'</code></td>
-                                    <td class="notes">Unicode code point to character.</td>
-                                </tr>
+
                             </tbody>
                         </table>
                         </div>
@@ -1548,11 +1544,7 @@ COND</code></td>
                                 <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td><code>'banana' 'ba' STARTS-WITH?</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">Prefix test; <code>ENDS-WITH?</code> tests the suffix.</td>
-                                </tr>
+
                             </tbody>
                         </table>
                         </div>

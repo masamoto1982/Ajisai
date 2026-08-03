@@ -31,7 +31,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Code blocks: `{ ... }` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF.
 - User word: `{ body } 'NAME' DEF` then call `NAME`. Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
-- One modifier axis, prefixing the *next word only*: `,,` (KEEP: don't consume operands) and `,` (EAT, the default).
+- One modifier, prefixing the *next word only*: `,,` (KEEP: do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration
@@ -154,7 +154,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 8. Forbidden patterns (each verified to fail)
 
-- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use the one modifier axis instead: `,,` (KEEP: the next word does not consume its operands), `,` (EAT, the default).
+- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `,,` (KEEP) when the next word must retain its operands; consumption is the default.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD or recursive user words.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved for the continued-fraction *display* form only. Vectors are `[ ]`, code blocks are `{ }`.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
@@ -185,30 +185,21 @@ exist. There is no module system and nothing to import.
 | `DIV` | arithmetic | Divide two numeric values exactly (fractional result). — e.g. `10 2 /` |
 | `MOD` | arithmetic | Modulo (remainder) of two numeric values. — e.g. `7 3 %` |
 | `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
-| `CEIL` | arithmetic | Round toward positive infinity. — e.g. `[ 7/3 ] CEIL` |
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
 | `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
 | `NEG` | math | Numeric negation. — e.g. `2 NEG` |
-| `SIGN` | math | Sign of a number: -1, 0, or 1. — e.g. `-2 SIGN` |
 | `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |
 | `MAX` | math | Larger of two numbers. — e.g. `1 2 MAX` |
 | `SQRT` | math | Exact square root of a non-negative rational. — e.g. `2 SQRT` |
 | `GET` | vector | Extract one element of a vector by index. — e.g. `[ 10 20 30 ] [ 0 ] GET` |
-| `INSERT` | vector | Insert a value at a given index in a vector. — e.g. `[ 1 3 ] [ 1 2 ] INSERT` |
-| `REPLACE` | vector | Replace an element of a vector at a given index. — e.g. `[ 1 2 3 ] [ 0 9 ] REPLACE` |
-| `REMOVE` | vector | Remove an element from a vector at a given index. — e.g. `[ 1 2 3 ] [ 0 ] REMOVE` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
 | `TAKE` | vector | Take the first N or last -N elements of a vector. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
-| `SPLIT` | vector | Split a vector into chunks at the specified sizes. — e.g. `[ 1 2 3 4 ] [ 2 2 ] SPLIT` |
 | `CONCAT` | vector | Flatten and concatenate two vectors. — e.g. `[ 1 2 ] [ 3 4 ] CONCAT` |
 | `REVERSE` | vector | Reverse the order of vector elements. — e.g. `[ 1 2 3 ] REVERSE` |
-| `REORDER` | vector | Reorder vector elements according to an index permutation. — e.g. `[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER` |
 | `COLLECT` | vector | Collect N items off the stack into a new vector. — e.g. `1 2 3 3 COLLECT` |
 | `RANGE` | vector | Generate a numeric sequence from a [start, end] pair. — e.g. `[ 0 5 ] RANGE` |
 | `FILL` | tensor | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
 | `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
-| `UNIQUE` | vector | Return a copy of a vector with duplicates removed, preserving first-occurrence order. — e.g. `[ 1 2 1 ] UNIQUE` |
-| `CONTAINS` | vector | True if a vector contains an element equal to the given value. — e.g. `[ 1 2 ] 2 CONTAINS` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { 2 = } FILTER` |
@@ -220,18 +211,14 @@ exist. There is no module system and nothing to import.
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
 | `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
 | `SUBSTITUTE` | cast | Replace every occurrence of a substring with another. — e.g. `'hello' 'l' 'L' SUBSTITUTE` |
-| `STARTS-WITH?` | cast | Test whether a string begins with the given prefix. — e.g. `'hello' 'he' STARTS-WITH?` |
-| `ENDS-WITH?` | cast | Test whether a string ends with the given suffix. — e.g. `'hello' 'lo' ENDS-WITH?` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `CHR` | cast | Convert a numeric character code to a single-character string. — e.g. `65 CHR` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
 | `EXEC` | control | Evaluate a code block. — e.g. `{ 1 2 ADD } EXEC` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
-| `EAT` | modifier | Set the consumption mode to consume operands. — e.g. `, +` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `,, +` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
@@ -251,7 +238,6 @@ code-data REFLECT` |
 | `>=` | symbol alias | shorthand for `GTE` |
 | `<>` | symbol alias | shorthand for `NEQ` |
 | `&` | symbol alias | shorthand for `AND` |
-| `,` | syntax sugar | shorthand for `EAT` |
 | `,,` | syntax sugar | shorthand for `KEEP` |
 | `'` | input helper | shorthand for `STRING-QUOTE` |
 | `?` | symbol alias | shorthand for `LOOKUP` |

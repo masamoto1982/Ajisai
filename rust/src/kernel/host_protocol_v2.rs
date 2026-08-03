@@ -5,13 +5,10 @@
 //! [`Observation`], and nothing else. It carries no legacy concept — no module
 //! catalog, no tensor shape, no logical-unknown axis, no absence
 //! origin/recoverability, no capability set — because those cannot be expressed
-//! by the spine types it serializes. That is the whole point of a second
-//! protocol: the frozen [`HostProtocolV1`](crate::semantic::protocol) keeps its
-//! legacy surface for existing consumers, while V2 stays in lockstep with the
-//! language as it is now.
+//! by the spine types it serializes. HostProtocolV2 is the sole current host protocol and stays in lockstep with the language.
 //!
 //! This module is a pure `Observation -> serde_json::Value` mapping; no consumer
-//! reads it yet. Phase 8 routes new GUI/WASM paths onto it.
+//! reads it as an independent semantic authority.
 
 use serde_json::{json, Value as Json};
 

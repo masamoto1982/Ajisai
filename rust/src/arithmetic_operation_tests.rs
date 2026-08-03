@@ -1,75 +1,7 @@
 //! Test suite for `crate::interpreter::arithmetic`.
 
 #[cfg(test)]
-mod ceil_tests {
-    use crate::interpreter::Interpreter;
-
-    #[tokio::test]
-    async fn test_ceil_positive_remainder() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ 7/3 ] CEIL").await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1);
-        let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 3/1 ]", "CEIL(7/3) should be 3");
-    }
-
-    #[tokio::test]
-    async fn test_ceil_negative_remainder() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ -7/3 ] CEIL").await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1);
-        let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -2/1 ]", "CEIL(-7/3) should be -2");
-    }
-
-    #[tokio::test]
-    async fn test_ceil_positive_integer() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ 6/3 ] CEIL").await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1);
-        let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 2/1 ]", "CEIL(6/3) should be 2");
-    }
-
-    #[tokio::test]
-    async fn test_ceil_negative_integer() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ -6/3 ] CEIL").await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1);
-        let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -2/1 ]", "CEIL(-6/3) should be -2");
-    }
-
-    #[tokio::test]
-    async fn test_ceil_operation_target_stack_error() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        let result = interp.execute("[ 1 2 3 ] .. CEIL").await;
-        assert!(result.is_err(), "CEIL should not support Stack mode (..)");
-    }
-
-    #[tokio::test]
-    async fn test_ceil_of_nil_passes_nil_through() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("NIL").await.unwrap();
-        interp
-            .execute("CEIL")
-            .await
-            .expect("CEIL of NIL should succeed and produce NIL");
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1);
-        assert!(stack[0].is_nil(), "CEIL of NIL should yield NIL");
-    }
-}
+mod ceil_tests {}
 
 #[cfg(test)]
 mod round_tests {
@@ -321,16 +253,6 @@ mod nil_passthrough_tests {
     }
 
     #[tokio::test]
-    async fn floor_ceil_round_of_nil_yield_nil() {
-        let interp = run("NIL FLOOR").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL CEIL").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL ROUND").await;
-        assert!(interp.get_stack()[0].is_nil());
-    }
-
-    #[tokio::test]
     async fn comparisons_with_nil_yield_nil() {
         let interp = run("NIL 3 <").await;
         assert!(interp.get_stack()[0].is_nil());
@@ -371,12 +293,11 @@ mod nil_passthrough_tests {
 
 #[cfg(test)]
 mod ai_first_comparison_tests {
-    //! Tests for the AI-first comparison primitives GT, GTE, NEQ. These mirror
-    //! LT / LTE / EQ and exist so an automated producer can emit the relation
-    //! that matches its intent directly rather than rewriting it as a
-    //! negation or operand swap.
-
     use crate::interpreter::Interpreter;
+    // Tests for the AI-first comparison primitives GT, GTE, NEQ. These mirror
+    // LT / LTE / EQ and exist so an automated producer can emit the relation
+    // that matches its intent directly rather than rewriting it as a
+    // negation or operand swap.
 
     async fn run(source: &str) -> Interpreter {
         let mut interp = Interpreter::new();
@@ -512,17 +433,17 @@ mod ai_first_comparison_tests {
 
 #[cfg(test)]
 mod comparison_budget_infrastructure_tests {
-    //! Phase 6 infrastructure for SPEC §7.4.1's partial-quotient
-    //! budget. Every Ajisai scalar currently on the stack is still
-    //! a `Fraction`, so the ordering ops always decide and never
-    //! project Undecidable. These tests pin the *current* behavior
-    //! against regression as the refactor lands, and assert that the
-    //! Undecidable / ComparisonBudget plumbing (NilReason +
-    //! AbsenceOrigin) is wired correctly so Phase 7's non-Rational
-    //! ExactReals will surface NIL with the right metadata when they
-    //! exhaust the budget.
-    use crate::error::NilReason;
     use crate::interpreter::Interpreter;
+    // Phase 6 infrastructure for SPEC §7.4.1's partial-quotient
+    // budget. Every Ajisai scalar currently on the stack is still
+    // a `Fraction`, so the ordering ops always decide and never
+    // project Undecidable. These tests pin the *current* behavior
+    // against regression as the refactor lands, and assert that the
+    // Undecidable / ComparisonBudget plumbing (NilReason +
+    // AbsenceOrigin) is wired correctly so Phase 7's non-Rational
+    // ExactReals will surface NIL with the right metadata when they
+    // exhaust the budget.
+    use crate::error::NilReason;
     use crate::semantic::AbsenceOrigin;
     use crate::types::Value;
 

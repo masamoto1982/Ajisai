@@ -6,8 +6,7 @@
 // origin/recoverability, capability set). The producer is the Rust serializer
 // `kernel::host_protocol_v2`; this module decodes what it emits.
 //
-// This is additive: the existing GUI render path still consumes HostProtocolV1
-// through its adapter. Nothing here is wired into the live GUI yet.
+// This is the sole current host document decoder. Consumers must reject older protocol tags.
 
 /** The display intent carried alongside an observed value; never changes semantics. */
 export type V2Presentation = 'structural' | 'interval' | 'timestamp';

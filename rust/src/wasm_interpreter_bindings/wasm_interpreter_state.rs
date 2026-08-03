@@ -327,14 +327,6 @@ impl AjisaiInterpreter {
         }
     }
 
-    /// HostProtocolV1 pins this method, so it stays as a stable no-op: the
-    /// hedged execution engine it reported on is gone, and there is one
-    /// execution path with nothing to trace.
-    #[wasm_bindgen]
-    pub fn collect_hedged_trace(&mut self) -> JsValue {
-        js_sys::Array::new().into()
-    }
-
     #[wasm_bindgen]
     pub fn collect_error_flow_trace(&mut self) -> JsValue {
         let arr = js_sys::Array::new();

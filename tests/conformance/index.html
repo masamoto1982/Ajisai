@@ -363,20 +363,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-replace-index-element" data-category="core">
-  <h3>REPLACE takes a two-element [ index element ] vector</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 1 5 ] REPLACE</pre>
-  <pre class="ajisai-expect-result">[ 1/1 5/1 3/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-insert-index-element" data-category="core">
-  <h3>INSERT takes a two-element [ index element ] vector</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 1 9 ] INSERT</pre>
-  <pre class="ajisai-expect-result">[ 1/1 9/1 2/1 3/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-range-with-step" data-category="core">
   <h3>RANGE accepts an optional step and includes the end point</h3>
   <pre class="ajisai-source">[ 1 10 2 ] RANGE</pre>
@@ -478,13 +464,6 @@
   <h3>ROUND of a positive half rounds up</h3>
   <pre class="ajisai-source">0.5 ROUND</pre>
   <pre class="ajisai-expect-result">1/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-chr-out-of-range-nil" data-category="core">
-  <h3>CHR of an out-of-range code point produces NIL (InvalidEncoding)</h3>
-  <pre class="ajisai-source">1114112 CHR</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -666,20 +645,6 @@
   <h3>FLOOR rounds toward negative infinity (negative operand)</h3>
   <pre class="ajisai-source">-3.2 FLOOR</pre>
   <pre class="ajisai-expect-result">-4/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-ceil-positive" data-category="core">
-  <h3>CEIL rounds toward positive infinity (positive operand)</h3>
-  <pre class="ajisai-source">3.2 CEIL</pre>
-  <pre class="ajisai-expect-result">4/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-ceil-negative" data-category="core">
-  <h3>CEIL rounds toward positive infinity (negative operand)</h3>
-  <pre class="ajisai-source">-3.2 CEIL</pre>
-  <pre class="ajisai-expect-result">-3/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -897,13 +862,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-passthrough-ceil" data-category="core">
-  <h3>CEIL passes NIL through</h3>
-  <pre class="ajisai-source">NIL CEIL</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-nil-passthrough-round" data-category="core">
   <h3>ROUND passes NIL through</h3>
   <pre class="ajisai-source">NIL ROUND</pre>
@@ -973,13 +931,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-chr-out-of-range-reason" data-category="core">
-  <h3>CHR of an out-of-range code point carries reason invalidEncoding</h3>
-  <pre class="ajisai-source">1114112 CHR NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-num-parse-failure-reason" data-category="core">
   <h3>NUM of unparsable text is a Bubble with reason invalidEncoding</h3>
   <pre class="ajisai-source">'abc' NUM NIL-REASON</pre>
@@ -1021,13 +972,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-empty-vector-nests" data-category="core">
-  <h3>An empty vector is an element like any other</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 0 3 ] SPLIT</pre>
-  <pre class="ajisai-expect-result">[ ] [ 1/1 2/1 3/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-empty-string-chars-is-empty-vector" data-category="core">
   <h3>CHARS of the empty String is the empty Vector, and JOIN inverts it</h3>
   <pre class="ajisai-source">'' CHARS JOIN</pre>
@@ -1063,21 +1007,6 @@
   <pre class="ajisai-source">NIL NUM</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">NUM: expected String, got Nil</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-chr-success" data-category="core">
-  <h3>CHR converts a code point to one-character Text</h3>
-  <pre class="ajisai-source">65 CHR</pre>
-  <pre class="ajisai-expect-result">'A'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-chr-rejects-nil" data-category="core">
-  <h3>CHR rejects a NIL operand with a channel error (not passthrough, §7.12)</h3>
-  <pre class="ajisai-source">NIL CHR</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CHR: expected Number, got Nil</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1251,35 +1180,6 @@
      a re-tagged rational is pinned here and is identical on the CLI and the
      in-process runner. -->
 
-<section class="ajisai-case" id="core-starts-with-true" data-category="core">
-  <h3>STARTS-WITH? is TRUE for a matching prefix</h3>
-  <pre class="ajisai-source">'hello world' 'hello' STARTS-WITH?</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-starts-with-false" data-category="core">
-  <h3>STARTS-WITH? is FALSE for a non-matching prefix</h3>
-  <pre class="ajisai-source">'hello world' 'x' STARTS-WITH?</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-starts-with-type-error" data-category="core">
-  <h3>STARTS-WITH? with a non-Text affix is a type error</h3>
-  <pre class="ajisai-source">'abc' 5 STARTS-WITH?</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">STARTS-WITH?: expected affix as String, got Number</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-ends-with-true" data-category="core">
-  <h3>ENDS-WITH? is TRUE for a matching suffix</h3>
-  <pre class="ajisai-source">'hello world' 'world' ENDS-WITH?</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-trim-both-ends" data-category="core">
   <h3>TRIM strips whitespace from both ends</h3>
   <pre class="ajisai-source">'  hi  ' TRIM</pre>
@@ -1327,58 +1227,6 @@
 
 <!-- ===================== CORE: VECTOR AND TENSOR WORDS (§7.1, §7.2) ===================== -->
 
-<section class="ajisai-case" id="core-remove-index" data-category="core">
-  <h3>REMOVE deletes the element at an index</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] 1 REMOVE</pre>
-  <pre class="ajisai-expect-result">[ 1/1 3/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-remove-out-of-bounds-error" data-category="core">
-  <h3>REMOVE out of bounds raises indexOutOfBounds (unlike GET, which projects to NIL)</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] 5 REMOVE</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Index 5 out of bounds for vector of length 3</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-split-by-sizes" data-category="core">
-  <h3>SPLIT divides a vector into sub-vectors by sizes</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 3 ] SPLIT</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 ] [ 3/1 4/1 5/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-split-sizes-exceed-error" data-category="core">
-  <h3>SPLIT sizes exceeding the vector length is an error</h3>
-  <pre class="ajisai-source">[ 1 2 ] [ 2 2 ] SPLIT</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Split sizes sum exceeds vector length</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-reorder-by-indices" data-category="core">
-  <h3>REORDER rearranges elements by an index list</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 2 0 1 ] REORDER</pre>
-  <pre class="ajisai-expect-result">[ 3/1 1/1 2/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-reorder-negative-index" data-category="core">
-  <h3>REORDER accepts negative (from-end) indices</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ -1 0 1 ] REORDER</pre>
-  <pre class="ajisai-expect-result">[ 3/1 1/1 2/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-reorder-out-of-bounds-error" data-category="core">
-  <h3>REORDER with an out-of-range index raises indexOutOfBounds</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] REORDER</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Index 5 out of bounds for vector of length 3</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-fill-1d" data-category="core">
   <h3>FILL builds a vector of a given shape filled with a value</h3>
   <pre class="ajisai-source">[ 3 7 ] FILL</pre>
@@ -1411,13 +1259,6 @@
 <!-- ===================== CORE: MODIFIER ORTHOGONALITY (§6.1–§6.3) ===================== -->
 <!-- TOP/STAK (target) × EAT/KEEP (consumption) are orthogonal; canonical
      spellings and their sugar (. .. , ,, ; ;;) behave identically. -->
-
-<section class="ajisai-case" id="core-eat-canonical-spelling" data-category="core">
-  <h3>EAT (canonical spelling) is the default consumption modifier</h3>
-  <pre class="ajisai-source">1 2 EAT ADD</pre>
-  <pre class="ajisai-expect-result">3/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
 <section class="ajisai-case" id="core-keep-on-comparison" data-category="core">
   <h3>KEEP retains comparison operands beneath the Boolean result</h3>
@@ -1784,13 +1625,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-lift-unary-sign-nested" data-category="core">
-  <h3>Unary lifting reaches nested vectors</h3>
-  <pre class="ajisai-source">[ [ -3 ] [ 0 5 ] ] SIGN</pre>
-  <pre class="ajisai-expect-result">[ [ -1/1 ] [ 0/1 1/1 ] ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-equality-stays-structural" data-category="core">
   <h3>EQ does not lift: equality is one structural relation between whole values</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 1 2 ] EQ</pre>
@@ -1939,13 +1773,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-sign-trichotomy" data-category="core">
-  <h3>SIGN decides -1, 0, or 1</h3>
-  <pre class="ajisai-source">-2 SIGN 0 SIGN 3 SIGN</pre>
-  <pre class="ajisai-expect-result">-1/1 0/1 1/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-min-max-scalars" data-category="core">
   <h3>MIN and MAX select between two scalars</h3>
   <pre class="ajisai-source">1 2 MAX 1 2 MIN</pre>
@@ -1978,13 +1805,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-contains-present-and-absent" data-category="core">
-  <h3>CONTAINS decides membership</h3>
-  <pre class="ajisai-source">[ 1 2 ] 2 CONTAINS [ 1 2 ] 5 CONTAINS</pre>
-  <pre class="ajisai-expect-result">TRUE FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-index-of-found" data-category="core">
   <h3>INDEX-OF reports a 0-origin position</h3>
   <pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre>
@@ -1996,13 +1816,6 @@
   <h3>INDEX-OF projects to NIL with reason missingField when absent</h3>
   <pre class="ajisai-source">[ 1 2 ] 5 INDEX-OF NIL-REASON</pre>
   <pre class="ajisai-expect-result">NIL 'missingField'</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-unique-preserves-first-order" data-category="core">
-  <h3>UNIQUE drops later duplicates and keeps first-seen order</h3>
-  <pre class="ajisai-source">[ 1 2 1 ] UNIQUE</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2068,5 +1881,25 @@
 <h3>Wrong code-data version is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-2' [ 'number' '1' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-arbitrary-vector-errors" data-category="core">
 <h3>An arbitrary Vector is not code data</h3><pre class="ajisai-source">[ 'ordinary' 'vector' ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
+<!-- Beta Standard Word contract cases (Issue #1429, Phase 3). -->
+<section class="ajisai-case" id="standard-sub" data-category="core"><h3>SUB</h3><pre class="ajisai-source">5 2 SUB</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-mod" data-category="core"><h3>MOD</h3><pre class="ajisai-source">-7 3 MOD</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-round" data-category="core"><h3>ROUND</h3><pre class="ajisai-source">5/2 ROUND</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-neq" data-category="core"><h3>NEQ</h3><pre class="ajisai-source">1 2 NEQ</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-lte" data-category="core"><h3>LTE</h3><pre class="ajisai-source">1 2 LTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-gte" data-category="core"><h3>GTE</h3><pre class="ajisai-source">2 1 GTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-filter" data-category="core"><h3>FILTER</h3><pre class="ajisai-source">[ 1 2 3 ] { 1 GT } FILTER</pre><pre class="ajisai-expect-result">[ 2/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-any" data-category="core"><h3>ANY</h3><pre class="ajisai-source">[ 1 2 3 ] { 2 EQ } ANY</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-all" data-category="core"><h3>ALL</h3><pre class="ajisai-source">[ 1 2 3 ] { 0 GT } ALL</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-fill" data-category="core"><h3>FILL</h3><pre class="ajisai-source">[ 2 2 7 ] FILL</pre><pre class="ajisai-expect-result">[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-trim" data-category="core"><h3>TRIM</h3><pre class="ajisai-source">'  hi  ' TRIM</pre><pre class="ajisai-expect-result">'hi'</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-tokenize" data-category="core"><h3>TOKENIZE</h3><pre class="ajisai-source">'a,b,c' ',' TOKENIZE</pre><pre class="ajisai-expect-result">[ 'a' 'b' 'c' ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-substitute" data-category="core"><h3>SUBSTITUTE</h3><pre class="ajisai-source">'hello' 'l' 'L' SUBSTITUTE</pre><pre class="ajisai-expect-result">'heLLo'</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-sort" data-category="core"><h3>SORT</h3><pre class="ajisai-source">[ 3 1 2 ] SORT</pre><pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-index-of" data-category="core"><h3>INDEX-OF</h3><pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-abs" data-category="core"><h3>ABS</h3><pre class="ajisai-source">-2 ABS</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-min" data-category="core"><h3>MIN</h3><pre class="ajisai-source">1 2 MIN</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-max" data-category="core"><h3>MAX</h3><pre class="ajisai-source">1 2 MAX</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
+
 </body>
 </html>

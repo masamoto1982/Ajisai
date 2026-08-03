@@ -65,43 +65,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sign_reports_three_values() {
-        assert_eq!(top_i64("-42 SIGN").await, -1);
-        assert_eq!(top_i64("0 SIGN").await, 0);
-        assert_eq!(top_i64("42 SIGN").await, 1);
-    }
-
-    /// SIGN decides the order against 0 through the budgeted comparison
-    /// (SPEC §7.4.3), so it accepts the full numeric domain — including lazy
-    /// continued-fraction operands like `2 SQRT` — rather than only rationals.
-    #[tokio::test]
-    async fn sign_handles_lazy_irrationals() {
-        assert_eq!(top_i64("2 SQRT SIGN").await, 1);
-        // -√2, built via 0 - √2.
-        assert_eq!(top_i64("0 2 SQRT SUB SIGN").await, -1);
-        // √2 - √2 = 0 decides exactly to sign 0.
-        assert_eq!(top_i64("2 SQRT 2 SQRT SUB SIGN").await, 0);
-        // √3 > √2, so their difference signs positive.
-        assert_eq!(top_i64("3 SQRT 2 SQRT SUB SIGN").await, 1);
-    }
-
-    /// SIGN is NIL-passthrough: a NIL operand yields NIL, not a sign.
-    #[tokio::test]
-    async fn sign_passes_nil_through() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("1 0 / SIGN")
-            .await
-            .expect("program should succeed");
-        assert_eq!(interp.stack.len(), 1);
-        assert!(
-            interp.stack[0].is_nil(),
-            "SIGN of NIL should be NIL, got {:?}",
-            interp.stack[0]
-        );
-    }
-
-    #[tokio::test]
     async fn min_and_max_pick_correctly() {
         assert_eq!(top_i64("3 8 MIN").await, 3);
         assert_eq!(top_i64("3 8 MAX").await, 8);

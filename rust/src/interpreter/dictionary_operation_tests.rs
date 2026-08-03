@@ -246,7 +246,7 @@ mod tests {
     async fn test_cannot_override_other_builtin_words() {
         let mut interp = Interpreter::new();
 
-        let builtin_words = vec!["INSERT", "REPLACE", "MAP", "FILTER", "PRINT"];
+        let builtin_words = vec!["TAKE", "REVERSE", "MAP", "FILTER", "PRINT"];
 
         for word in builtin_words {
             let code = format!("{{ [ 1 ] + }} '{}' DEF", word);

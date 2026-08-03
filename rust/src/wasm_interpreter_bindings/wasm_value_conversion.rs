@@ -403,7 +403,7 @@ pub(crate) fn arena_node_to_js(
 
     match arena.kind(root_id) {
         // The node now carries its reason, but this display object's shape is
-        // pinned by `spec/host-protocol-v1.schema.json`, which spells absence
+        // emitted at the WASM boundary, which spells absence
         // through the separate `absence` envelope rather than here. Surfacing
         // the reason on this object is a protocol change, not a rendering one.
         NodeKind::Nil(_) => {
