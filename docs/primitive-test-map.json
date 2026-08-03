@@ -534,9 +534,11 @@
         "core.fold",
         "core.import.name-resolution",
         "core.map",
+        "core.reflect",
         "exploratory.child-runtime"
       ],
       "law_tests": [
+        "rust/src/types/code_data.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/naming_resolution_laws.rs"
       ],
@@ -544,7 +546,14 @@
         "core-fold",
         "core-fold-word-name",
         "core-map",
-        "core-user-definition-resolved"
+        "core-user-definition-resolved",
+        "reflection-arbitrary-vector-errors",
+        "reflection-code-to-data",
+        "reflection-data-exec",
+        "reflection-dictionary-independent",
+        "reflection-lexemes-preserved",
+        "reflection-undefined-symbol-is-not-resolved",
+        "reflection-wrong-header-errors"
       ]
     },
     {
