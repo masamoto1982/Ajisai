@@ -75,12 +75,6 @@ proptest! {
         assert_law("case-mixed", &format!("{a} {b} Add"), &format!("{a} {b} ADD"));
     }
 
-    // ── EAT sugar `,` ≡ the default (LANG.MODIFIERS.CONSUMPTION) ──
-    #[test]
-    fn eat_shorthand_is_the_default(a in small(), b in small()) {
-        assert_law("comma-eat", &format!("{a} {b} , ADD"), &format!("{a} {b} EAT ADD"));
-        assert_law("comma-default", &format!("{a} {b} , ADD"), &format!("{a} {b} ADD"));
-    }
 }
 
 #[test]

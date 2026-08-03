@@ -95,12 +95,12 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
 
 #[test]
 fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
-    // MOD/FLOOR/CEIL/ROUND operate on ExactScalar (CF) operands whose
+    // MOD/FLOOR/ROUND operate on ExactScalar (CF) operands whose
     // partial-quotient budget can exhaust, yielding an Undecidable NIL
     // (SPEC §7.4.1). They are therefore Projecting/CreatesNil/B, matching
     // DIV and the comparison words. ADD/SUB/MUL stay Total because their
     // CF arithmetic always yields a value (never a budget miss).
-    for name in &["MOD", "FLOOR", "CEIL", "ROUND"] {
+    for name in &["MOD", "FLOOR", "ROUND"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
         assert_eq!(
@@ -255,7 +255,7 @@ fn aq_ver_contract_f_mass_contract_projects_the_declared_arity() {
         );
     }
     assert!(
-        pinned >= 60,
+        pinned >= 53,
         "only {pinned} Words have a pinned arity; the projection has collapsed"
     );
 }

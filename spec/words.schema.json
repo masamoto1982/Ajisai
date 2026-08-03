@@ -25,6 +25,11 @@
         },
         "completeInventory": {
           "type": "boolean"
+        },
+        "betaFreezePhase": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
         }
       },
       "additionalProperties": false
@@ -291,9 +296,61 @@
         "executorKey": {
           "type": "string",
           "pattern": "^(?:[A-Z][A-Za-z0-9]*|[a-z][a-z0-9_]*::[a-z][a-z0-9_]*)$"
+        },
+        "vocabularyTier": {
+          "enum": [
+            "kernel",
+            "standard"
+          ]
+        },
+        "standardKind": {
+          "enum": [
+            "shorthand",
+            "namedPattern",
+            "algorithm",
+            "operational"
+          ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "vocabularyTier": {
+                "const": "standard"
+              }
+            },
+            "required": [
+              "vocabularyTier"
+            ]
+          },
+          "then": {
+            "required": [
+              "standardKind"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "vocabularyTier": {
+                "const": "kernel"
+              }
+            },
+            "required": [
+              "vocabularyTier"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "standardKind"
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

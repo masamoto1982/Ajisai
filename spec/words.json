@@ -2,7 +2,8 @@
   "schemaVersion": 1,
   "migration": {
     "phase": 6,
-    "completeInventory": true
+    "completeInventory": true,
+    "betaFreezePhase": 2
   },
   "entries": [
     {
@@ -39,7 +40,8 @@
       "executorKey": "True",
       "effects": [],
       "partiality": "total",
-      "category": "constant"
+      "category": "constant",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "FALSE",
@@ -75,7 +77,8 @@
       "executorKey": "False",
       "effects": [],
       "partiality": "total",
-      "category": "constant"
+      "category": "constant",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "AND",
@@ -115,7 +118,8 @@
       "executorKey": "And",
       "effects": [],
       "partiality": "total",
-      "category": "logic"
+      "category": "logic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "OR",
@@ -153,7 +157,9 @@
       "executorKey": "Or",
       "effects": [],
       "partiality": "total",
-      "category": "logic"
+      "category": "logic",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "NOT",
@@ -191,7 +197,8 @@
       "executorKey": "Not",
       "effects": [],
       "partiality": "total",
-      "category": "logic"
+      "category": "logic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "EQ",
@@ -233,7 +240,8 @@
       "executorKey": "Eq",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NEQ",
@@ -275,7 +283,9 @@
       "executorKey": "Neq",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "LT",
@@ -318,7 +328,8 @@
       "executorKey": "Lt",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "LTE",
@@ -361,7 +372,9 @@
       "executorKey": "Le",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "GT",
@@ -404,7 +417,8 @@
       "executorKey": "Gt",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "GTE",
@@ -447,7 +461,9 @@
       "executorKey": "Gte",
       "effects": [],
       "partiality": "projecting",
-      "category": "comparison"
+      "category": "comparison",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "ADD",
@@ -490,7 +506,8 @@
       "executorKey": "Add",
       "effects": [],
       "partiality": "total",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "SUB",
@@ -533,7 +550,9 @@
       "executorKey": "Sub",
       "effects": [],
       "partiality": "total",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
     },
     {
       "name": "MUL",
@@ -576,7 +595,8 @@
       "executorKey": "Mul",
       "effects": [],
       "partiality": "total",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "DIV",
@@ -619,7 +639,8 @@
       "executorKey": "Div",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "MOD",
@@ -663,7 +684,9 @@
       "executorKey": "Mod",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "FLOOR",
@@ -704,48 +727,8 @@
       "executorKey": "Floor",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
-    },
-    {
-      "name": "CEIL",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "integerProjectionUndecidable",
-        "reason": "undecidable"
-      },
-      "errorWhen": [
-        "nonNumeric",
-        "shapeMismatch"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "scalar",
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Round toward positive infinity.",
-        "hover": "CEIL — round toward positive infinity",
-        "lookup": "Round toward positive infinity.",
-        "syntax": "[ 7/3 ] CEIL",
-        "role": "Arithmetic primitive: Round toward positive infinity.",
-        "stackEffect": "[ x ] -> [ ceil x ]"
-      },
-      "executorKey": "Ceil",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "ROUND",
@@ -786,7 +769,9 @@
       "executorKey": "Round",
       "effects": [],
       "partiality": "projecting",
-      "category": "arithmetic"
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "ABS",
@@ -827,7 +812,9 @@
       "executorKey": "Abs",
       "effects": [],
       "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "NEG",
@@ -868,48 +855,8 @@
       "executorKey": "Neg",
       "effects": [],
       "partiality": "total",
-      "category": "math"
-    },
-    {
-      "name": "SIGN",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "stackTargetMode",
-        "nonNumeric"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "scalar",
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Sign of a number: -1, 0, or 1.",
-        "hover": "Sign of a number: -1, 0, or 1.",
-        "lookup": "Sign of a number: -1, 0, or 1.",
-        "syntax": "-2 SIGN",
-        "role": "Direction without magnitude.",
-        "stackEffect": "[ x ] -> [ sign ]"
-      },
-      "executorKey": "Sign",
-      "effects": [],
-      "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "MIN",
@@ -950,7 +897,9 @@
       "executorKey": "Min",
       "effects": [],
       "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "MAX",
@@ -991,7 +940,9 @@
       "executorKey": "Max",
       "effects": [],
       "partiality": "total",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "SQRT",
@@ -1033,7 +984,8 @@
       "executorKey": "Sqrt",
       "effects": [],
       "partiality": "projecting",
-      "category": "math"
+      "category": "math",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "GET",
@@ -1074,132 +1026,8 @@
       "executorKey": "Get",
       "effects": [],
       "partiality": "projecting",
-      "category": "vector"
-    },
-    {
-      "name": "INSERT",
-      "aliases": [],
-      "family": "collection",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "invalidIndexPair"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "unassigned",
-      "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Insert a value at a given index in a vector.",
-        "hover": "INSERT — insert element at index",
-        "lookup": "Insert a value at a given index in a vector.",
-        "syntax": "[ 1 3 ] [ 1 2 ] INSERT",
-        "role": "Extends a vector by inserting an element at the indicated position.",
-        "stackEffect": "[ vec ] [ idx val ] -> [ vec' ]"
-      },
-      "executorKey": "Insert",
-      "effects": [],
-      "partiality": "partial",
-      "category": "vector"
-    },
-    {
-      "name": "REPLACE",
-      "aliases": [],
-      "family": "collection",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "invalidIndexPair",
-        "indexOutOfBounds"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "unassigned",
-      "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Replace an element of a vector at a given index.",
-        "hover": "REPLACE — replace element at index",
-        "lookup": "Replace an element of a vector at a given index.",
-        "syntax": "[ 1 2 3 ] [ 0 9 ] REPLACE",
-        "role": "In-place style update of a vector element.",
-        "stackEffect": "[ vec ] [ idx val ] -> [ vec' ]"
-      },
-      "executorKey": "Replace",
-      "effects": [],
-      "partiality": "partial",
-      "category": "vector"
-    },
-    {
-      "name": "REMOVE",
-      "aliases": [],
-      "family": "collection",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "invalidIndex",
-        "indexOutOfBounds"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "unassigned",
-      "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Remove an element from a vector at a given index.",
-        "hover": "REMOVE — remove element at index",
-        "lookup": "Remove an element from a vector at a given index.",
-        "syntax": "[ 1 2 3 ] [ 0 ] REMOVE",
-        "role": "Shrinks a vector by deleting one element.",
-        "stackEffect": "[ vec ] [ idx ] -> [ vec' ]"
-      },
-      "executorKey": "Remove",
-      "effects": [],
-      "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "LENGTH",
@@ -1239,7 +1067,8 @@
       "executorKey": "Length",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "TAKE",
@@ -1280,48 +1109,9 @@
       "executorKey": "Take",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
-    },
-    {
-      "name": "SPLIT",
-      "aliases": [],
-      "family": "collection",
-      "stack": {
-        "inputs": 2,
-        "outputs": "variable"
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "invalidSizes"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "unassigned",
-      "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Split a vector into chunks at the specified sizes.",
-        "hover": "SPLIT — split vector at sizes",
-        "lookup": "Split a vector into chunks at the specified sizes.",
-        "syntax": "[ 1 2 3 4 ] [ 2 2 ] SPLIT",
-        "role": "Vector primitive: Split a vector into chunks at the specified sizes.",
-        "stackEffect": "[ vec ] [ sizes ] -> [ chunks... ]"
-      },
-      "executorKey": "Split",
-      "effects": [],
-      "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "CONCAT",
@@ -1361,7 +1151,8 @@
       "executorKey": "Concat",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "REVERSE",
@@ -1401,48 +1192,9 @@
       "executorKey": "Reverse",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
-    },
-    {
-      "name": "REORDER",
-      "aliases": [],
-      "family": "collection",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "invalidPermutation"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "unassigned",
-      "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Reorder vector elements according to an index permutation.",
-        "hover": "REORDER — reorder by index list",
-        "lookup": "Reorder vector elements according to an index permutation.",
-        "syntax": "[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER",
-        "role": "Vector primitive: Reorder vector elements according to an index permutation.",
-        "stackEffect": "[ vec ] [ indices ] -> [ permuted ]"
-      },
-      "executorKey": "Reorder",
-      "effects": [],
-      "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "COLLECT",
@@ -1483,7 +1235,8 @@
       "executorKey": "Collect",
       "effects": [],
       "partiality": "partial",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "RANGE",
@@ -1523,7 +1276,8 @@
       "executorKey": "Range",
       "effects": [],
       "partiality": "projecting",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "FILL",
@@ -1563,7 +1317,9 @@
       "executorKey": "Fill",
       "effects": [],
       "partiality": "projecting",
-      "category": "tensor"
+      "category": "tensor",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "SORT",
@@ -1604,89 +1360,9 @@
       "executorKey": "Sort",
       "effects": [],
       "partiality": "total",
-      "category": "vector"
-    },
-    {
-      "name": "UNIQUE",
-      "aliases": [],
-      "family": "collection",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "stackTargetMode",
-        "nonVector"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "vector",
-      "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
-        "hover": "UNIQUE — remove duplicates, keeping first-occurrence order",
-        "lookup": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
-        "syntax": "[ 1 2 1 ] UNIQUE",
-        "role": "Set-like reduction that preserves order.",
-        "stackEffect": "[ vec ] -> [ vec ]"
-      },
-      "executorKey": "Unique",
-      "effects": [],
-      "partiality": "total",
-      "category": "vector"
-    },
-    {
-      "name": "CONTAINS",
-      "aliases": [],
-      "family": "collection",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "stackTargetMode",
-        "nonVector"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "truthValue",
-      "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "True if a vector contains an element equal to the given value.",
-        "hover": "True if a vector contains an element equal to the given value.",
-        "lookup": "True if a vector contains an element equal to the given value.",
-        "syntax": "[ 1 2 ] 2 CONTAINS",
-        "role": "Membership as a definite truth value.",
-        "stackEffect": "[ vec ] [ x ] -> [ bool ]"
-      },
-      "executorKey": "Contains",
-      "effects": [],
-      "partiality": "total",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "INDEX-OF",
@@ -1727,7 +1403,9 @@
       "executorKey": "IndexOf",
       "effects": [],
       "partiality": "projecting",
-      "category": "vector"
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
     },
     {
       "name": "MAP",
@@ -1767,7 +1445,9 @@
       "executorKey": "Map",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "FILTER",
@@ -1807,7 +1487,9 @@
       "executorKey": "Filter",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "FOLD",
@@ -1847,7 +1529,8 @@
       "executorKey": "Fold",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "ANY",
@@ -1887,7 +1570,9 @@
       "executorKey": "Any",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "ALL",
@@ -1927,7 +1612,9 @@
       "executorKey": "All",
       "effects": [],
       "partiality": "partial",
-      "category": "higher-order"
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
     },
     {
       "name": "CHARS",
@@ -1966,7 +1653,8 @@
       "executorKey": "Chars",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "JOIN",
@@ -2006,7 +1694,8 @@
       "executorKey": "Join",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "TRIM",
@@ -2045,7 +1734,9 @@
       "executorKey": "Trim",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "TOKENIZE",
@@ -2085,7 +1776,9 @@
       "executorKey": "Tokenize",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "SUBSTITUTE",
@@ -2124,87 +1817,9 @@
       "executorKey": "Substitute",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
-    },
-    {
-      "name": "STARTS-WITH?",
-      "aliases": [],
-      "family": "text",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonText",
-        "nonTextPrefix"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "truthValue",
-      "clauses": [
-        "LANG.VALUES.DISJOINT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Test whether a string begins with the given prefix.",
-        "hover": "STARTS-WITH? — prefix predicate",
-        "lookup": "Test whether a string begins with the given prefix.",
-        "syntax": "'hello' 'he' STARTS-WITH?",
-        "role": "Cast primitive: Test whether a string begins with the given prefix.",
-        "stackEffect": "[ str ] [ prefix ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "StartsWith",
-      "effects": [],
-      "partiality": "partial",
-      "category": "cast"
-    },
-    {
-      "name": "ENDS-WITH?",
-      "aliases": [],
-      "family": "text",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonText",
-        "nonTextSuffix"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "truthValue",
-      "clauses": [
-        "LANG.VALUES.DISJOINT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Test whether a string ends with the given suffix.",
-        "hover": "ENDS-WITH? — suffix predicate",
-        "lookup": "Test whether a string ends with the given suffix.",
-        "syntax": "'hello' 'lo' ENDS-WITH?",
-        "role": "Cast primitive: Test whether a string ends with the given suffix.",
-        "stackEffect": "[ str ] [ suffix ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "EndsWith",
-      "effects": [],
-      "partiality": "partial",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
     },
     {
       "name": "NUM",
@@ -2243,7 +1858,8 @@
       "executorKey": "Num",
       "effects": [],
       "partiality": "projecting",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "STR",
@@ -2280,47 +1896,8 @@
       "executorKey": "Str",
       "effects": [],
       "partiality": "partial",
-      "category": "cast"
-    },
-    {
-      "name": "CHR",
-      "aliases": [],
-      "family": "text",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "createsNil",
-      "projection": {
-        "when": "invalidCharacterCode",
-        "reason": "invalidEncoding"
-      },
-      "errorWhen": [
-        "nonNumeric",
-        "nonInteger"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "text",
-      "clauses": [
-        "LANG.VALUES.DISJOINT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Convert a numeric character code to a single-character string.",
-        "hover": "CHR — make a character",
-        "lookup": "Convert a numeric character code to a single-character string.",
-        "syntax": "65 CHR",
-        "role": "Cast primitive: Convert a numeric character code to a single-character string.",
-        "stackEffect": "[ n ] -> [ char ]"
-      },
-      "executorKey": "Chr",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "cast"
+      "category": "cast",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "COND",
@@ -2360,7 +1937,8 @@
       "executorKey": "Cond",
       "effects": [],
       "partiality": "partial",
-      "category": "control"
+      "category": "control",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "EXEC",
@@ -2400,7 +1978,8 @@
       "executorKey": "Exec",
       "effects": [],
       "partiality": "partial",
-      "category": "control"
+      "category": "control",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NIL",
@@ -2437,7 +2016,8 @@
       "executorKey": "Nil",
       "effects": [],
       "partiality": "total",
-      "category": "constant"
+      "category": "constant",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NIL?",
@@ -2474,7 +2054,8 @@
       "executorKey": "NilCheck",
       "effects": [],
       "partiality": "total",
-      "category": "absence"
+      "category": "absence",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "NIL-REASON",
@@ -2511,7 +2092,8 @@
       "executorKey": "NilReason",
       "effects": [],
       "partiality": "total",
-      "category": "absence"
+      "category": "absence",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "VENT",
@@ -2552,45 +2134,8 @@
       "executorKey": "LazyNextUnitFallback",
       "effects": [],
       "partiality": "total",
-      "category": "control-directive"
-    },
-    {
-      "name": "EAT",
-      "aliases": [
-        ","
-      ],
-      "family": "stackModifier",
-      "stack": {
-        "inputs": 0,
-        "outputs": 0
-      },
-      "consumption": "none",
-      "nilPolicy": "preserveReason",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [],
-      "purity": "pure",
-      "determinism": "stateRelative",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "unassigned",
-      "clauses": [
-        "LANG.MODIFIERS.CONSUMPTION"
-      ],
-      "documentation": {
-        "summary": "Set the consumption mode to consume operands.",
-        "hover": "EAT — consume operands",
-        "lookup": "Set the consumption mode to consume operands.",
-        "syntax": ", +",
-        "role": "Modifier that switches the next word into operand-consuming mode.",
-        "stackEffect": "no values popped or pushed"
-      },
-      "executorKey": "SetConsumptionConsume",
-      "effects": [],
-      "partiality": "total",
-      "category": "modifier"
+      "category": "control-directive",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "KEEP",
@@ -2628,7 +2173,8 @@
       "executorKey": "SetConsumptionKeep",
       "effects": [],
       "partiality": "total",
-      "category": "modifier"
+      "category": "modifier",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "DEF",
@@ -2671,7 +2217,8 @@
         "dictionaryWrite"
       ],
       "partiality": "partial",
-      "category": "dictionary"
+      "category": "dictionary",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "DEL",
@@ -2714,7 +2261,8 @@
         "dictionaryDelete"
       ],
       "partiality": "partial",
-      "category": "dictionary"
+      "category": "dictionary",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "LOOKUP",
@@ -2758,7 +2306,8 @@
         "dictionaryRead"
       ],
       "partiality": "partial",
-      "category": "dictionary"
+      "category": "dictionary",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "PRINT",
@@ -2797,7 +2346,8 @@
         "consoleWrite"
       ],
       "partiality": "partial",
-      "category": "io"
+      "category": "io",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "REFLECT",
@@ -2836,7 +2386,8 @@
       "executorKey": "Reflect",
       "effects": [],
       "partiality": "partial",
-      "category": "reflection"
+      "category": "reflection",
+      "vocabularyTier": "kernel"
     }
   ]
 }
