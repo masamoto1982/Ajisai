@@ -1,15 +1,14 @@
-import type { UserWord, Value, ImportStateEntry } from '../wasm-interpreter-types';
+import type { UserWord, Value } from '../wasm-interpreter-types';
 
 export interface InterpreterStateSnapshot {
+    // Format identifier of the persisted document; see STATE_FORMAT_VERSION and
+    // InterpreterState in gui/interpreter-state-persistence.ts.
+    readonly stateVersion: number;
+    // The observation-format stack, persisted for display only.
     readonly stack: Value[];
-    // Lossless stack snapshot (opaque string), preferred over `stack` on
-    // restore; see SPEC §2.3 and InterpreterState in
-    // gui/interpreter-state-persistence.ts.
-    readonly stackSnapshot?: string;
+    // The lossless stack snapshot (opaque string) restore reads (SPEC §2.3).
+    readonly stackSnapshot: string;
     readonly userWords: UserWord[];
-    readonly importedModules?: string[];
-    readonly importState?: ImportStateEntry[];
-    readonly exampleWordsVersion?: number;
     readonly activeDictionarySheet?: string;
     readonly activeUserDictionary?: string;
 }
@@ -28,12 +27,10 @@ export interface ExportData {
     }>;
     interpreterState: {
         readonly key: string;
+        readonly stateVersion?: unknown;
         readonly stack: unknown;
         readonly stackSnapshot?: unknown;
         readonly userWords: unknown;
-        readonly importedModules?: unknown;
-        readonly importState?: unknown;
-        readonly exampleWordsVersion?: number;
         readonly activeDictionarySheet?: string;
         readonly activeUserDictionary?: string;
         readonly updatedAt: string;

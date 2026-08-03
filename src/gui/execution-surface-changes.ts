@@ -21,15 +21,11 @@ const normalizeUserWords = (words: readonly UserWord[]): string =>
                 `${a.dictionary ?? ''}@${a.name}`.localeCompare(`${b.dictionary ?? ''}@${b.name}`))
     );
 
-const normalizeModules = (modules: readonly string[]): string =>
-    stableStringify([...modules].sort());
-
 // A view of the surfaces an execution can touch, read from one interpreter
 // instance so before/after are directly comparable.
 export interface ExecutionStateView {
     readonly stack: Value[];
     readonly userWords: UserWord[];
-    readonly importedModules: string[];
 }
 
 export const detectExecutionSurfaceChanges = (
@@ -39,15 +35,6 @@ export const detectExecutionSurfaceChanges = (
 ): ExecutionSurfaceChanges => {
     const userWordsChanged = normalizeUserWords(before.userWords) !== normalizeUserWords(after.userWords);
 
-    const beforeModules = before.importedModules;
-    const afterModules = after.importedModules;
-    const importedModulesChanged = normalizeModules(beforeModules) !== normalizeModules(afterModules);
-    // The module whose import state just flipped: prefer a newly imported
-    // module, otherwise the one that was just unimported, so the dictionary
-    // lands on the sheet the user actually changed.
-    const changedModule = afterModules.find(name => !beforeModules.includes(name))
-        ?? beforeModules.find(name => !afterModules.includes(name));
-
     // Errors and diagnostics render into the Output surface, so a failed run
     // changes Output even when the program emitted no text of its own.
     const hasError = result.status !== 'OK' || Boolean(result.error);
@@ -55,11 +42,8 @@ export const detectExecutionSurfaceChanges = (
     return {
         outputChanged: hasError || Boolean((result.output ?? '').trim()),
         stackChanged: stableStringify(before.stack) !== stableStringify(after.stack),
-        dictionaryChanged: userWordsChanged || importedModulesChanged,
-        // Defining your own word lands on the 'user' sheet; a module import or
-        // unimport lands on that module's sheet. User words win when both move.
-        dictionarySheetId: userWordsChanged
-            ? 'user'
-            : (changedModule ? `module-${changedModule}` : undefined)
+        dictionaryChanged: userWordsChanged,
+        // Defining your own word lands on the 'user' sheet.
+        dictionarySheetId: userWordsChanged ? 'user' : undefined
     };
 };

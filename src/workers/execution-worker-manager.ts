@@ -13,17 +13,9 @@ interface WorkerTask {
     id: string;
     code: string;
     state: InterpreterSnapshot;
-    hedgedRequestId: string;
-    strategyLabel: string;
     resolve: (result: any) => void;
     reject: (error: any) => void;
     timeoutHandle: ReturnType<typeof setTimeout> | null;
-}
-
-interface HedgedGroup {
-    winnerTaskId: string | null;
-    taskIds: Set<string>;
-    cancelledStrategies: string[];
 }
 
 interface WorkerInstance {
@@ -35,19 +27,17 @@ interface WorkerInstance {
 const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
 
-// Per-task wall-clock cap on worker execution. Task 6's recursion guard
-// returns an AjisaiError immediately for blown-stack programs; this is
-// the second line of defence for "still running" non-recursive loops
-// that neither hit the execution-step cap fast enough nor produce a
-// recursion error. Set well above the longest legitimate hedged race
-// (typically tens of milliseconds) so a legal program never trips it.
+// Per-task wall-clock cap on worker execution. The recursion guard returns an
+// AjisaiError immediately for blown-stack programs; this is the second line of
+// defence for "still running" non-recursive loops that neither hit the
+// execution-step cap fast enough nor produce a recursion error. Set well above
+// the longest legitimate run so a legal program never trips it.
 const EXECUTION_TIMEOUT_MS = 5_000;
 
 export class WorkerManager {
     private workers: WorkerInstance[] = [];
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
-    private hedgedGroups = new Map<string, HedgedGroup>();
     private compiledModule: WebAssembly.Module | null = null;
     private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
         ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
@@ -105,100 +95,17 @@ export class WorkerManager {
         if (!task) return;
 
         switch (message.type) {
-            case 'result': {
-                const handled = this.resolveHedgedWinner(task, message.data);
-                if (!handled) {
-                    task.resolve(message.data);
-                }
+            case 'result':
+                task.resolve(message.data);
                 break;
-            }
             case 'error':
-                if (!this.resolveHedgedError(task, message.data)) {
-                    task.reject(new Error(message.data));
-                }
+                task.reject(new Error(message.data));
                 break;
             case 'aborted':
-                if (!this.isLoserTask(task)) {
-                    task.reject(new Error('Execution aborted'));
-                }
+                task.reject(new Error('Execution aborted'));
                 break;
         }
         this.completeTask(instance);
-    }
-
-    private getOrCreateHedgedGroup(hedgedRequestId: string): HedgedGroup {
-        let group = this.hedgedGroups.get(hedgedRequestId);
-        if (!group) {
-            group = {
-                winnerTaskId: null,
-                taskIds: new Set<string>(),
-                cancelledStrategies: []
-            };
-            this.hedgedGroups.set(hedgedRequestId, group);
-        }
-        return group;
-    }
-
-    private isLoserTask(task: WorkerTask): boolean {
-        const group = this.hedgedGroups.get(task.hedgedRequestId);
-        return !!group && !!group.winnerTaskId && group.winnerTaskId !== task.id;
-    }
-
-    private resolveHedgedWinner(task: WorkerTask, data: ExecuteResult): boolean {
-        const group = this.hedgedGroups.get(task.hedgedRequestId);
-        if (!group || group.taskIds.size <= 1) return false;
-
-        if (!group.winnerTaskId) {
-            group.winnerTaskId = task.id;
-            const cancelled = this.abortLosers(task);
-            const enriched: ExecuteResult = {
-                ...data,
-                hedgedWinner: task.strategyLabel,
-                hedgedCancelled: cancelled,
-                hedgedFallbackReason: cancelled.length > 0 ? 'LoserDiscarded' : undefined
-            };
-            task.resolve(enriched);
-            return true;
-        }
-        return true;
-    }
-
-    private resolveHedgedError(task: WorkerTask, errorText: string): boolean {
-        const group = this.hedgedGroups.get(task.hedgedRequestId);
-        if (!group || group.taskIds.size <= 1) return false;
-        group.taskIds.delete(task.id);
-        if (group.taskIds.size === 0) {
-            this.hedgedGroups.delete(task.hedgedRequestId);
-            task.reject(new Error(errorText));
-        }
-        return true;
-    }
-
-    private abortLosers(winnerTask: WorkerTask): string[] {
-        const group = this.hedgedGroups.get(winnerTask.hedgedRequestId);
-        if (!group) return [];
-        const cancelled: string[] = [];
-
-        for (const [taskId, task] of this.activeTasks.entries()) {
-            if (task.hedgedRequestId === winnerTask.hedgedRequestId && taskId !== winnerTask.id) {
-                const worker = this.workers.find(w => w.currentTaskId === taskId)?.worker;
-                if (worker) {
-                    worker.postMessage({ type: 'abort', id: taskId });
-                    cancelled.push(task.strategyLabel);
-                }
-            }
-        }
-
-        this.taskQueue = this.taskQueue.filter(task => {
-            if (task.hedgedRequestId === winnerTask.hedgedRequestId && task.id !== winnerTask.id) {
-                cancelled.push(task.strategyLabel);
-                return false;
-            }
-            return true;
-        });
-
-        group.cancelledStrategies = cancelled;
-        return cancelled;
     }
 
     private resolveWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
@@ -220,13 +127,6 @@ export class WorkerManager {
                 if (task.timeoutHandle !== null) {
                     clearTimeout(task.timeoutHandle);
                     task.timeoutHandle = null;
-                }
-                const group = this.hedgedGroups.get(task.hedgedRequestId);
-                if (group) {
-                    group.taskIds.delete(task.id);
-                    if (group.taskIds.size === 0) {
-                        this.hedgedGroups.delete(task.hedgedRequestId);
-                    }
                 }
             }
             this.activeTasks.delete(instance.currentTaskId);
@@ -251,13 +151,6 @@ export class WorkerManager {
             if (index > -1) this.workers.splice(index, 1);
         }
 
-        const group = this.hedgedGroups.get(task.hedgedRequestId);
-        if (group) {
-            group.taskIds.delete(task.id);
-            if (group.taskIds.size === 0) {
-                this.hedgedGroups.delete(task.hedgedRequestId);
-            }
-        }
         this.activeTasks.delete(taskId);
 
         task.reject(new Error(`Execution timed out after ${EXECUTION_TIMEOUT_MS} ms`));
@@ -267,9 +160,7 @@ export class WorkerManager {
     }
 
     private processQueue(): void {
-        // Drain as many queued tasks as there are idle workers. Assigning only
-        // one task per call serialized hedged execution: the two strategies
-        // were queued together but ran one after another instead of racing.
+        // Drain as many queued tasks as there are idle workers.
         while (this.taskQueue.length > 0) {
             const availableWorker = this.workers.find(w => !w.busy);
             if (!availableWorker) break;
@@ -282,7 +173,6 @@ export class WorkerManager {
         instance.busy = true;
         instance.currentTaskId = task.id;
         this.activeTasks.set(task.id, task);
-        this.getOrCreateHedgedGroup(task.hedgedRequestId).taskIds.add(task.id);
 
         task.timeoutHandle = setTimeout(
             () => this.handleTaskTimeout(task.id),
@@ -293,9 +183,7 @@ export class WorkerManager {
             type: 'execute',
             id: task.id,
             code: task.code,
-            state: task.state,
-            executionMode: task.state.executionMode,
-            hedgedRequestId: task.hedgedRequestId
+            state: task.state
         });
     }
 
@@ -306,10 +194,6 @@ export class WorkerManager {
         }
 
         return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-    }
-
-    private createHedgedRequestId(): string {
-        return `hedged-${this.createTaskId()}`;
     }
 
     execute(code: string, state: InterpreterSnapshot): Promise<ExecuteResult> {
@@ -327,42 +211,15 @@ export class WorkerManager {
                 reject(error);
             };
 
-            const hedgedRequestId = this.createHedgedRequestId();
-            if (state.executionMode === 'hedged-trace' && this.maxWorkers >= 2) {
-                const hedgedSafeState: InterpreterSnapshot = { ...state, executionMode: 'hedged-safe' };
-                const greedyState: InterpreterSnapshot = { ...state, executionMode: 'greedy' };
-                this.taskQueue.push({
-                    id: this.createTaskId(),
-                    code,
-                    state: hedgedSafeState,
-                    hedgedRequestId,
-                    strategyLabel: 'hedged-safe',
-                    resolve: wrapResolve,
-                    reject: wrapReject,
-                    timeoutHandle: null
-                });
-                this.taskQueue.push({
-                    id: this.createTaskId(),
-                    code,
-                    state: greedyState,
-                    hedgedRequestId,
-                    strategyLabel: 'plain-greedy',
-                    resolve: wrapResolve,
-                    reject: wrapReject,
-                    timeoutHandle: null
-                });
-            } else {
-                this.taskQueue.push({
-                    id: this.createTaskId(),
-                    code,
-                    state,
-                    hedgedRequestId,
-                    strategyLabel: state.executionMode,
-                    resolve: wrapResolve,
-                    reject: wrapReject,
-                    timeoutHandle: null
-                });
-            }
+            // One execution path: a run is one task on one worker.
+            this.taskQueue.push({
+                id: this.createTaskId(),
+                code,
+                state,
+                resolve: wrapResolve,
+                reject: wrapReject,
+                timeoutHandle: null
+            });
             this.processQueue();
         });
     }

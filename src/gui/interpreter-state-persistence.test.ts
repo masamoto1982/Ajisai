@@ -34,15 +34,11 @@ describe('parseImportDocument robustness', () => {
         expect(result.value.embeddedIds?.get('OK')).toBe('abc');
     });
 
-    test('parses a valid legacy v1 array', () => {
+    test('rejects the alpha bare-array export instead of migrating it', () => {
         const result = parseImportDocument('[{"name":"A","definition":"{ 1 }"},{"name":"B","definition":null}]');
-        expect(result.ok).toBe(true);
-        if (!result.ok) return;
-        expect(result.value.words).toEqual([
-            { name: 'A', definition: '{ 1 }' },
-            { name: 'B', definition: null },
-        ]);
-        expect(result.value.embeddedIds).toBeNull();
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.message).toContain('Invalid file format');
     });
 
     test('rejects an unrecognized shape with a clean error', () => {

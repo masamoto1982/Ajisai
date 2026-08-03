@@ -125,10 +125,22 @@ async fn arithmetic_standards_have_kernel_only_witnesses() {
         ("-7 ABS", "-7 -7 MUL SQRT"),
         ("7 ABS", "7 7 MUL SQRT"),
         // min(a,b) = ((a+b) - |a-b|) / 2 and max(a,b) = ((a+b) + |a-b|) / 2.
-        ("2 5 MIN", "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT NEG ADD 2 DIV"),
-        ("5 2 MIN", "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT NEG ADD 2 DIV"),
-        ("2 5 MAX", "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT ADD 2 DIV"),
-        ("5 2 MAX", "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT ADD 2 DIV"),
+        (
+            "2 5 MIN",
+            "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT NEG ADD 2 DIV",
+        ),
+        (
+            "5 2 MIN",
+            "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT NEG ADD 2 DIV",
+        ),
+        (
+            "2 5 MAX",
+            "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT ADD 2 DIV",
+        ),
+        (
+            "5 2 MAX",
+            "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT ADD 2 DIV",
+        ),
     ] {
         equivalent(native, witness).await;
     }

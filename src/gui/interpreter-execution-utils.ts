@@ -29,12 +29,9 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
         stack: interpreter.collect_stack(),
         // Carry the lossless snapshot into the worker so exact values on the
         // stack (CodeBlock, ExactScalar) are not flattened by the observation
-        // format before this run executes. Undefined against a wasm bundle that
-        // predates the API — the worker then falls back to `stack` (SPEC §2.3).
-        stackSnapshot: interpreter.snapshot_stack?.(),
+        // format before this run executes (SPEC §2.3).
+        stackSnapshot: interpreter.snapshot_stack(),
         userWords: collectUserWords(interpreter),
-        importedModules: interpreter.collect_imported_modules(),
-        executionMode: interpreter.get_execution_mode(),
         serialInbox: collectSerialInbox(),
         // Host-configured step budget (SPEC §5.3 water level); undefined
         // keeps the interpreter default of 100,000.
@@ -48,11 +45,11 @@ export const syncInterpreterState = (
     if (!result || result.error) return;
     applyInterpreterSnapshot(interpreter, {
         stack: result.stack,
-        // Prefer the worker's lossless snapshot so the post-run stack restored
-        // into the main-thread interpreter keeps its exact values (SPEC §2.3).
+        // The worker's lossless snapshot is what restores the post-run stack
+        // into the main-thread interpreter, so it keeps its exact values
+        // (SPEC §2.3).
         stackSnapshot: result.stackSnapshot,
-        userWords: result.userWords,
-        importedModules: result.importedModules
+        userWords: result.userWords
     });
 };
 

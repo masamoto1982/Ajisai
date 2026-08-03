@@ -23,7 +23,7 @@ export interface ExecutionCallbacks {
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error | string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
-    readonly updateDisplays: (executedCode?: string) => void;
+    readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
     readonly updateView: (mode: ViewMode) => void;
@@ -70,15 +70,6 @@ export const createExecutionController = (
     });
 
     const applyExecutionResult = (result: ExecuteResult, code: string): void => {
-        if (result.hedgedWinner) {
-            showInfo(`[HEDGED-WINNER] ${result.hedgedWinner}`, true);
-        }
-        if (result.hedgedFallbackReason) {
-            showInfo(`[HEDGED-FALLBACK] ${result.hedgedFallbackReason}`, true);
-        }
-        if (result.hedgedCancelled && result.hedgedCancelled.length > 0) {
-            showInfo(`[HEDGED-CANCEL] ${result.hedgedCancelled.join(', ')}`, true);
-        }
         const lastDiagnosis: ProtocolDiagnosis | undefined = result.errorFlowTrace
             ?.map((event) => event.diagnosis)
             .filter((d): d is ProtocolDiagnosis => Boolean(d))
@@ -149,8 +140,7 @@ export const createExecutionController = (
                 currentState,
                 {
                     stack: interpreter.collect_stack(),
-                    userWords: collectUserWords(interpreter),
-                    importedModules: interpreter.collect_imported_modules()
+                    userWords: collectUserWords(interpreter)
                 },
                 result
             );
@@ -159,7 +149,7 @@ export const createExecutionController = (
             resolveExecutionException('ExecController', error, showInfo, showError);
         }
 
-        updateDisplays(code);
+        updateDisplays();
         if (executionChanges) {
             updateAfterExecution(executionChanges);
         }

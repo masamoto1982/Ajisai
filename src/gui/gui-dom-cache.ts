@@ -9,6 +9,7 @@ export interface GUIElements {
     readonly formatBtn: HTMLButtonElement;
     readonly exportBtn: HTMLButtonElement;
     readonly importBtn: HTMLButtonElement;
+    readonly importJsonBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
     readonly builtInWordsDisplay: HTMLElement;
@@ -81,6 +82,7 @@ export const cacheElements = (): GUIElements => ({
     formatBtn: requireElementById('format-btn', HTMLButtonElement),
     exportBtn: requireElementById('export-btn', HTMLButtonElement),
     importBtn: requireElementById('import-btn', HTMLButtonElement),
+    importJsonBtn: requireElementById('import-json-btn', HTMLButtonElement),
     outputDisplay: requireElementById('output-display', HTMLElement),
     stackDisplay: requireElementById('stack-display', HTMLElement),
     builtInWordsDisplay: requireElementById('core-words-display', HTMLElement),

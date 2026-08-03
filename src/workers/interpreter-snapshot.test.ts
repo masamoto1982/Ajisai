@@ -9,12 +9,9 @@ import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 
 const makeMock = () => {
     const fns = {
-        reset: vi.fn(() => ({})),
-        restore_imported_modules: vi.fn(),
-        restore_stack: vi.fn(),
+        reset_session: vi.fn(() => ({})),
         restore_stack_snapshot: vi.fn(),
         restore_user_words: vi.fn(),
-        set_execution_mode: vi.fn(),
         set_max_execution_steps: vi.fn(),
         update_serial_inbox: vi.fn(),
         mark_serial_disconnected: vi.fn(),
@@ -76,29 +73,19 @@ describe('applyInterpreterSnapshot robustness', () => {
         expect(fns.update_serial_inbox.mock.calls[0]![0]).toBe('COM2');
     });
 
-    // Phase 5: prefer the session reset (keeps the cross-reset artifact cache)
-    // when the wasm bundle exposes it, and fall back to the full reset otherwise.
-    test('prefers reset_session when available', () => {
-        const { fns, interpreter } = makeMock();
-        const reset_session = vi.fn(() => ({}));
-        (interpreter as unknown as { reset_session: () => unknown }).reset_session = reset_session;
-        applyInterpreterSnapshot(interpreter, null);
-        expect(reset_session).toHaveBeenCalledTimes(1);
-        expect(fns.reset).not.toHaveBeenCalled();
-    });
-
-    test('falls back to reset when reset_session is absent', () => {
+    // The session reset keeps the cross-reset artifact cache, so an unchanged
+    // user word's compiled plan is reused instead of recompiled.
+    test('resets the session before restoring', () => {
         const { fns, interpreter } = makeMock();
         applyInterpreterSnapshot(interpreter, null);
-        expect(fns.reset).toHaveBeenCalledTimes(1);
+        expect(fns.reset_session).toHaveBeenCalledTimes(1);
     });
 });
 
-// P0 (docs/dev/external-evaluation-response-strategy.md): the worker round-trip
-// must be lossless. When a `stackSnapshot` string is present and the wasm bundle
-// exposes `restore_stack_snapshot`, the exact snapshot is restored and the lossy
-// observation `stack` is ignored; otherwise it falls back to `restore_stack`.
-describe('applyInterpreterSnapshot stack restore prefers the lossless snapshot', () => {
+// The worker round-trip must be lossless: the `stackSnapshot` string is the one
+// format restored, and the lossy observation `stack` is never read back. A
+// snapshot without one leaves the stack empty rather than downgrading.
+describe('applyInterpreterSnapshot restores only the lossless snapshot', () => {
     test('restores from stackSnapshot and ignores the observation stack', () => {
         const { fns, interpreter } = makeMock();
         applyInterpreterSnapshot(interpreter, {
@@ -109,33 +96,20 @@ describe('applyInterpreterSnapshot stack restore prefers the lossless snapshot',
         expect(fns.restore_stack_snapshot).toHaveBeenCalledWith(
             '[{"v":{"h":"unassigned","d":{"t":"Nil"}},"r":"unassigned"}]'
         );
-        expect(fns.restore_stack).not.toHaveBeenCalled();
     });
 
-    test('falls back to restore_stack when no snapshot string is present', () => {
+    test('restores no stack when no snapshot string is present', () => {
         const { fns, interpreter } = makeMock();
         applyInterpreterSnapshot(interpreter, { stack: [{ type: 'nil' }] } as never);
-        expect(fns.restore_stack).toHaveBeenCalledTimes(1);
         expect(fns.restore_stack_snapshot).not.toHaveBeenCalled();
     });
 
-    test('falls back to restore_stack when the wasm bundle lacks restore_stack_snapshot', () => {
-        const { fns, interpreter } = makeMock();
-        delete (interpreter as unknown as { restore_stack_snapshot?: unknown }).restore_stack_snapshot;
-        applyInterpreterSnapshot(interpreter, {
-            stack: [{ type: 'nil' }] as never,
-            stackSnapshot: '[]',
-        } as never);
-        expect(fns.restore_stack).toHaveBeenCalledTimes(1);
-    });
-
-    test('ignores a non-string stackSnapshot and falls back to restore_stack', () => {
+    test('ignores a non-string stackSnapshot', () => {
         const { fns, interpreter } = makeMock();
         applyInterpreterSnapshot(interpreter, {
             stack: [{ type: 'nil' }] as never,
             stackSnapshot: 123,
         } as never);
         expect(fns.restore_stack_snapshot).not.toHaveBeenCalled();
-        expect(fns.restore_stack).toHaveBeenCalledTimes(1);
     });
 });

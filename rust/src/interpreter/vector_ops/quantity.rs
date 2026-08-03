@@ -36,7 +36,11 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     // `LENGTH` declares `consumption: eat` with `[ vec ] -> [ count ]`: the
     // measured vector leaves the stack unless `KEEP` is in force.
     let target_val = if is_keep_mode {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
     } else {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };

@@ -18,4 +18,4 @@
 
 <p>Everything else — column geometry, the breakpoint at which the layout switches, gesture thresholds, tap counts — is tuning, not semantics, and has the same standing as the execution step limit: a host control rather than a language constraint.</p>
 
-<p>The GUI consumes HostProtocolV1 and does not independently decide exact-real equality, Word stack effects, dictionary resolution, absence metadata, or numeric representation. Web and Tauri platform adapters may supply capabilities, but may not change language observations. Existing accessibility names, focus paths, keyboard operation, and panel transitions are part of this GUI contract.</p>
+<p>The GUI consumes the current host protocol and does not independently decide exact-real equality, Word stack effects, dictionary resolution, absence metadata, or numeric representation. Web and Tauri platform adapters may supply capabilities, but may not change language observations. Existing accessibility names, focus paths, keyboard operation, and panel transitions are part of this GUI contract.</p>

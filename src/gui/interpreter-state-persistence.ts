@@ -1,23 +1,23 @@
 
 
-import type { AjisaiInterpreter, Value, UserWord, ImportStateEntry } from '../wasm-interpreter-types';
-import { EXAMPLE_USER_WORDS, EXAMPLE_WORDS_VERSION } from './example-words';
+import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
+import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
 
+// The persisted session document. `stateVersion` identifies the format; a
+// document that does not carry the current version is not migrated — the beta
+// reads one format only (SPEC §2.3).
+export const STATE_FORMAT_VERSION = 3;
+
 export interface InterpreterState {
+    readonly stateVersion: number;
+    // The observation-format stack, persisted for display only.
     readonly stack: Value[];
-    // Lossless stack snapshot (opaque string) preferred over `stack` on restore.
-    // `stack` is retained for display and for downgrading to a wasm bundle that
-    // predates the lossless persistence API. See SPEC §2.3 and
-    // docs/dev/external-evaluation-response-strategy.md (P0).
-    readonly stackSnapshot?: string;
+    // The lossless stack snapshot (opaque string) and the only format restore
+    // accepts.
+    readonly stackSnapshot: string;
     readonly userWords: UserWord[];
-    readonly importedModules?: string[];
-    // Detailed per-module import state. Preferred over `importedModules` on
-    // restore so partial imports (IMPORT-ONLY / UNIMPORT-ONLY) survive reload.
-    readonly importState?: ImportStateEntry[];
-    readonly exampleWordsVersion?: number;
     readonly activeDictionarySheet?: string;
     readonly activeUserDictionary?: string;
 }
@@ -78,19 +78,12 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
 
     const selections = readActiveSelections();
 
-    // Capture the lossless snapshot when the wasm bundle exposes it; keep the
-    // observation-format `stack` for display and legacy restore.
-    const stackSnapshot = typeof interpreter.snapshot_stack === 'function'
-        ? interpreter.snapshot_stack()
-        : undefined;
-
     return {
+        stateVersion: STATE_FORMAT_VERSION,
+        // The lossless snapshot is what restore reads; `stack` is display data.
         stack: interpreter.collect_stack(),
-        stackSnapshot,
+        stackSnapshot: interpreter.snapshot_stack(),
         userWords,
-        importedModules: interpreter.collect_imported_modules(),
-        importState: interpreter.collect_import_state(),
-        exampleWordsVersion: EXAMPLE_WORDS_VERSION,
         activeDictionarySheet: selections.activeDictionarySheet,
         activeUserDictionary: selections.activeUserDictionary
     };
@@ -100,7 +93,7 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
 // carries each word's content identity so a shared group is content-addressed:
 // re-importing it is recognised as a no-op (deduplicated), and a definition
 // edited without re-exporting is detected via an identity mismatch.
-const EXPORT_FORMAT_VERSION = 2;
+const EXPORT_FORMAT_VERSION = 3;
 
 interface ExportWord {
     readonly name: string;
@@ -139,26 +132,21 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
 
 export interface ParsedImport {
     readonly words: UserWord[];
-    // Embedded content identities keyed by upper-cased word name, or null for
-    // legacy (v1) array files that predate content addressing.
+    // Embedded content identities keyed by upper-cased word name, or null when
+    // the document carries none.
     readonly embeddedIds: Map<string, string> | null;
 }
 
 const buildExportFilename = (name: string): string => `${name}.json`;
 const buildWordKey = (dictionary: string, name: string): string => `${dictionary}@${name}`.toUpperCase();
-const REMOVED_USER_WORD_DICTIONARIES = new Set(['DEMO']);
 const filenameToDictionaryName = (filename: string): string => filename.replace(/\.json$/i, '').toUpperCase();
-const isRemovedUserWordDictionary = (dictionary: string | null | undefined): boolean =>
-    REMOVED_USER_WORD_DICTIONARIES.has((dictionary || '').toUpperCase());
-const containsRemovedUserWordDictionary = (words: readonly UserWord[]): boolean =>
-    words.some(word => isRemovedUserWordDictionary(word.dictionary));
 
 // Validate a single raw word entry from an (untrusted) import file. Returns a
 // normalized word, or null when the entry is malformed. A word is only usable
 // downstream if it has a string `name`; `definition` and `id` are optional and
 // must be strings when present. This keeps `parseImportDocument` a total
 // function — a hostile or hand-corrupted file with `null`, numeric, or
-// name-less entries previously threw a TypeError out of the v2 `.map` (and
+// name-less entries previously threw a TypeError out of the `.map` (and
 // would have thrown again at `word.name.toUpperCase()` in `importUserWords`)
 // instead of being parsed or cleanly rejected.
 const normalizeImportWord = (
@@ -195,17 +183,13 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
         return { words, embeddedIds: embeddedIds.size > 0 ? embeddedIds : null };
     };
 
-    // Legacy v1: a bare array of words, with no content identities.
-    if (Array.isArray(parsed)) {
-        return ok({ words: collect(parsed).words, embeddedIds: null });
-    }
-
-    // v2: an export document carrying per-word content identities.
+    // A versioned export document carrying per-word content identities is the
+    // only accepted form; the bare array of the alpha format is not read.
     if (parsed && typeof parsed === 'object' && Array.isArray((parsed as ExportDocument).words)) {
         return ok(collect((parsed as ExportDocument).words as unknown[]));
     }
 
-    return err(new Error('Invalid file format. Expected an array of words or an export document.'));
+    return err(new Error('Invalid file format. Expected a versioned export document with a `words` array.'));
 };
 
 export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
@@ -314,39 +298,25 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             const state = await getPlatform().persistence.loadInterpreterState();
 
             if (state) {
-                // Prefer the lossless snapshot so exact values (CodeBlock,
-                // ExactScalar) survive reload; fall back to the observation-format
-                // stack for snapshots saved before the lossless API, or a wasm
-                // bundle that predates `restore_stack_snapshot` (SPEC §2.3).
-                if (state.stackSnapshot
-                    && typeof window.ajisaiInterpreter.restore_stack_snapshot === 'function') {
-                    window.ajisaiInterpreter.restore_stack_snapshot(state.stackSnapshot);
-                } else if (state.stack) {
-                    window.ajisaiInterpreter.restore_stack(state.stack);
+                // One accepted format: a document of the current version whose
+                // stack is the lossless snapshot. Anything else — an alpha
+                // document, a hand-edited one — starts a fresh session with the
+                // Example Words rather than being migrated (SPEC §2.3).
+                if (state.stateVersion !== STATE_FORMAT_VERSION) {
+                    console.warn(
+                        `Saved state is format ${String(state.stateVersion)}, not ${STATE_FORMAT_VERSION}; loading Example Words.`
+                    );
+                    await loadExampleWords();
+                    return {};
                 }
-                // Prefer the detailed import state (preserves partial imports);
-                // fall back to the legacy module-name list for older snapshots.
-                if (state.importState && state.importState.length > 0) {
-                    window.ajisaiInterpreter.restore_import_state(state.importState);
-                } else if (state.importedModules && state.importedModules.length > 0) {
-                    window.ajisaiInterpreter.restore_imported_modules(state.importedModules);
+                if (typeof state.stackSnapshot === 'string') {
+                    window.ajisaiInterpreter.restore_stack_snapshot(state.stackSnapshot);
                 }
 
                 if (state.userWords && state.userWords.length > 0) {
-                    if (containsRemovedUserWordDictionary(state.userWords)) {
-                        console.warn('Removed legacy user word dictionary found in saved state; resetting to Example Words.');
-                        await loadExampleWords();
-                        return {
-                            activeDictionarySheet: state.activeDictionarySheet,
-                            activeUserDictionary: 'EXAMPLE'
-                        };
-                    }
-
-                    const savedVersion = state.exampleWordsVersion || 0;
                     const wordsToRestore = state.userWords;
 
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
-
 
                     const savedWordKeys = new Set(
                         wordsToRestore.map((w: UserWord) => buildWordKey(w.dictionary || 'EXAMPLE', w.name))
@@ -357,11 +327,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                         if (!savedWordKeys.has(currentWordKey)) {
                             window.ajisaiInterpreter.remove_word(`${dictionary}@${name}`);
                         }
-                    }
-
-
-                    if (savedVersion < EXAMPLE_WORDS_VERSION) {
-                        await saveCurrentState();
                     }
 
                     console.log('Interpreter state restored.');
@@ -419,10 +384,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
                 const dictionary = filenameToDictionaryName(openedFile.filename);
-                if (isRemovedUserWordDictionary(dictionary)) {
-                    showError?.(new Error('DEMO is no longer accepted as a User Words label. Rename the file before importing.'));
-                    return;
-                }
 
                 const { words, embeddedIds } = parseResult.value;
                 const importedWords = words.map(word => ({

@@ -5,46 +5,12 @@
 // ブラウザコンソールにスタックトレースが出るので、原因解析は可能。
 
 use crate::types::arena::{NodeId, NodeKind, ValueArena};
-use crate::types::fraction::Fraction;
 use crate::types::value_protocol::{
     interpretation_protocol_str, value_to_protocol, ProtocolNode, ProtocolValue,
 };
 use crate::types::{Interpretation, Value, ValueData};
-use num_bigint::BigInt;
-use num_traits::Zero;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use wasm_bindgen::prelude::*;
-
-/// Cap on how deeply a JS value may nest when deserialized at the boundary
-/// (`restore_stack` / `restore_user_words`). `js_value_to_value` recurses one
-/// frame per `vector` level, and the resulting `Value` is then traversed
-/// recursively (display, the derived `Drop`, JSON conversions). A hostile or
-/// corrupted restored snapshot with thousands of nesting levels would overflow
-/// the WASM stack — an unrecoverable trap — instead of yielding a recoverable
-/// error. Matches the interpreter's WASM-vetted recursion envelope.
-const MAX_BOUNDARY_NESTING_DEPTH: usize = 256;
-
-/// Parse a `{ numerator, denominator }` JS object into a `Fraction`, rejecting a
-/// zero denominator before it reaches `Fraction::new` (which *panics* on a zero
-/// denominator — an unrecoverable WASM trap when the value comes from untrusted
-/// restored state).
-fn parse_js_fraction(obj: &js_sys::Object) -> Result<Fraction, String> {
-    let num_str = js_sys::Reflect::get(obj, &"numerator".into())
-        .map_err(|_| "No numerator".to_string())?
-        .as_string()
-        .ok_or("Numerator not string")?;
-    let den_str = js_sys::Reflect::get(obj, &"denominator".into())
-        .map_err(|_| "No denominator".to_string())?
-        .as_string()
-        .ok_or("Denominator not string")?;
-    let numerator = BigInt::from_str(&num_str).map_err(|e| e.to_string())?;
-    let denominator = BigInt::from_str(&den_str).map_err(|e| e.to_string())?;
-    if denominator.is_zero() {
-        return Err("denominator is zero".to_string());
-    }
-    Ok(Fraction::new(numerator, denominator))
-}
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct UserWordData {
@@ -73,72 +39,6 @@ pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
         return "[ ]".to_string();
     }
     build_level(shape)
-}
-
-pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
-    js_value_to_value_with_depth(js_val, 0)
-}
-
-fn js_value_to_value_with_depth(js_val: JsValue, depth: usize) -> Result<Value, String> {
-    // Bound recursion before descending: a deeply nested untrusted value would
-    // otherwise overflow the WASM stack (an unrecoverable trap) here and in
-    // every later traversal of the resulting Value.
-    if depth > MAX_BOUNDARY_NESTING_DEPTH {
-        return Err("value nesting too deep".to_string());
-    }
-
-    let obj = js_sys::Object::from(js_val);
-    let type_str = js_sys::Reflect::get(&obj, &"type".into())
-        .map_err(|_| "Failed to get 'type' property".to_string())?
-        .as_string()
-        .ok_or("Type not string")?;
-    let value_js = js_sys::Reflect::get(&obj, &"value".into())
-        .map_err(|_| "Failed to get 'value' property".to_string())?;
-
-    match type_str.as_str() {
-        "number" => {
-            let fraction = parse_js_fraction(&js_sys::Object::from(value_js))?;
-            Ok(Value::from_fraction(fraction))
-        }
-        "string" => {
-            let s = value_js.as_string().ok_or("Value not string")?;
-            Ok(Value::from_string(&s))
-        }
-        "boolean" => {
-            let b = value_js.as_bool().ok_or("Value not boolean")?;
-            Ok(Value::from_bool(b))
-        }
-        "symbol" => {
-            let s = value_js.as_string().ok_or("Value not string")?;
-            Ok(Value::from_symbol(&s))
-        }
-        "vector" => {
-            let js_array = js_sys::Array::from(&value_js);
-            let mut vec = Vec::new();
-            for i in 0..js_array.length() {
-                vec.push(js_value_to_value_with_depth(js_array.get(i), depth + 1)?);
-            }
-            Ok(Value::from_vector(vec))
-        }
-        "tensor" => {
-            let tensor_obj = js_sys::Object::from(value_js);
-
-            let data_js = js_sys::Reflect::get(&tensor_obj, &"data".into())
-                .map_err(|_| "No data in tensor".to_string())?;
-            let data_array = js_sys::Array::from(&data_js);
-            let mut fractions = Vec::new();
-            for i in 0..data_array.length() {
-                let fraction = parse_js_fraction(&js_sys::Object::from(data_array.get(i)))?;
-                fractions.push(fraction);
-            }
-
-            let children: Vec<Value> = fractions.into_iter().map(Value::from_fraction).collect();
-
-            Ok(Value::from_children(children))
-        }
-        "nil" => Ok(Value::nil()),
-        _ => Err(format!("Unknown type: {}", type_str)),
-    }
 }
 
 fn set_prop(obj: &js_sys::Object, key: &str, value: &JsValue) {
@@ -191,31 +91,28 @@ fn diagnosis_to_protocol_js(
     obj.into()
 }
 
+/// The absence envelope the current protocol observes: the reason, plus the
+/// diagnosis when the runtime produced one. An absence's `origin` and
+/// `recoverability` are diagnostic state rather than wire fields, so they are
+/// not reconstructed here.
 fn absence_to_protocol_js(absence: &crate::semantic::AbsenceMetadata) -> JsValue {
     let obj = js_sys::Object::new();
     if let Some(reason) = &absence.reason {
         set_prop(&obj, "reason", &reason.as_protocol_str().into());
     }
-    set_prop(&obj, "origin", &absence.origin.as_protocol_str().into());
-    set_prop(
-        &obj,
-        "recoverability",
-        &absence.recoverability.as_protocol_str().into(),
-    );
     if let Some(diagnosis) = &absence.diagnosis {
         set_prop(&obj, "diagnosis", &diagnosis_to_protocol_js(diagnosis));
     }
     obj.into()
 }
 
+/// The `semantics` metadata bag the current protocol carries. The retired
+/// HostProtocolV1 also spelled `semanticKind`, `shape`, `capabilities`, and
+/// `origin` here; the value domains discriminate themselves through `type`, so
+/// those axes described the same six domains a second time and no reader ever
+/// consulted them.
 fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     let obj = js_sys::Object::new();
-    set_prop(
-        &obj,
-        "semanticKind",
-        &value.semantic_kind().as_protocol_str().into(),
-    );
-    set_prop(&obj, "shape", &value.shape_kind().as_protocol_str().into());
     // The `truthValue` axis (SPEC §2.3) is the only observable surface for
     // the three-valued logic: `true` / `false` / `unknown`. It is derived
     // from the *effective* interpretation role, because a definite boolean
@@ -225,24 +122,6 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     if let Some(truth) = truth {
         set_prop(&obj, "truthValue", &truth.into());
     }
-    let capabilities = js_sys::Array::new();
-    let mut has_truth_valued = false;
-    for capability in value.capabilities() {
-        if capability == crate::semantic::Capability::TruthValued {
-            has_truth_valued = true;
-        }
-        capabilities.push(&JsValue::from_str(capability.as_protocol_str()));
-    }
-    // A value rendered under the TruthValue role advertises `truthValued`
-    // even when the role lives in the semantic plane (comparison/logic
-    // booleans), not on the value's own hint.
-    if truth.is_some() && !has_truth_valued {
-        capabilities.push(&JsValue::from_str(
-            crate::semantic::Capability::TruthValued.as_protocol_str(),
-        ));
-    }
-    set_prop(&obj, "capabilities", &capabilities.into());
-    set_prop(&obj, "origin", &value.origin().as_protocol_str().into());
     if let Some(absence) = value.normalized_absence_metadata() {
         set_prop(&obj, "absence", &absence_to_protocol_js(&absence));
     }
@@ -402,10 +281,10 @@ pub(crate) fn arena_node_to_js(
     js_sys::Reflect::set(&obj, &"displayHint".into(), &hint_str.into()).unwrap();
 
     match arena.kind(root_id) {
-        // The node now carries its reason, but this display object's shape is
-        // pinned by `spec/host-protocol-v1.schema.json`, which spells absence
-        // through the separate `absence` envelope rather than here. Surfacing
-        // the reason on this object is a protocol change, not a rendering one.
+        // The node carries its reason, but the protocol spells absence through
+        // the separate `absence` envelope rather than on this display object.
+        // Surfacing the reason here would be a protocol change, not a
+        // rendering one.
         NodeKind::Nil(_) => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
@@ -490,30 +369,6 @@ fn resolve_effective_hint(
     external_hint_opt: Option<Interpretation>,
 ) -> Interpretation {
     external_hint_opt.unwrap_or_else(|| arena.hint(root_id))
-}
-
-pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> Interpretation {
-    let obj = js_sys::Object::from(js_val.clone());
-    let hint_js = js_sys::Reflect::get(&obj, &"displayHint".into()).unwrap_or(JsValue::UNDEFINED);
-    match hint_js.as_string().as_deref() {
-        Some("rawNumber") => Interpretation::RawNumber,
-        Some("interval") => Interpretation::Interval,
-        Some("truthValue") => Interpretation::TruthValue,
-        Some("timestamp") => Interpretation::Timestamp,
-        Some("nil") => Interpretation::Nil,
-        // Legacy role names from snapshots persisted before the
-        // interpretation-role redesign. Accepted so a saved stack restored
-        // after an upgrade keeps its roles.
-        //
-        // `"text"`/`"string"` are deliberately absent: a String carries its own
-        // domain now, so a restored value is a String because it decodes as
-        // `NodeKind::Text`, not because a role said so. Mapping them to a role
-        // would put the old guess back on the restore path.
-        Some("number") => Interpretation::RawNumber,
-        Some("boolean") => Interpretation::TruthValue,
-        Some("datetime") => Interpretation::Timestamp,
-        _ => Interpretation::Unassigned,
-    }
 }
 
 #[cfg(test)]

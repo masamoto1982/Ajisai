@@ -49,7 +49,7 @@ Ajisai is built from ten concepts. Everything below is one of them, or a consequ
 <h3 id="lang-authority-sources">LANG.AUTHORITY.SOURCES — Normative sources</h3>
 
 <p>
-This Language Semantics is authoritative for program meaning. <code>spec/words.json</code> is authoritative for the vocabulary, <code>spec/semantic-families.json</code> for the laws Words share, <code>spec/gui-semantics.md</code> for presentation, and <code>spec/host-protocol-v1.schema.json</code> for the compatibility boundary between them. <code>SPECIFICATION.html</code> is generated from those sources and is not edited directly.
+This Language Semantics is authoritative for program meaning. <code>spec/words.json</code> is authoritative for the vocabulary, <code>spec/semantic-families.json</code> for the laws Words share, <code>spec/gui-semantics.md</code> for presentation, and <code>spec/host-protocol-v2.schema.json</code> for the boundary between them. <code>SPECIFICATION.html</code> is generated from those sources and is not edited directly.
 </p>
 
 <p>
@@ -79,7 +79,7 @@ The vocabulary is 70 canonical Words and 16 symbolic aliases. Growth is not the 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
 
 <p>
-AST, IR, dispatch, caching, storage layout, numeric representation, and optimization are unobservable. An implementation may change them when all observations and HostProtocolV1 payload meanings remain unchanged.
+AST, IR, dispatch, caching, storage layout, numeric representation, and optimization are unobservable. An implementation may change them when all observations and host protocol payload meanings remain unchanged.
 </p>
 
 <p>
@@ -334,11 +334,11 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>Output is the ordered text observation; Stack is the ordered typed values; Dictionary is the resolved Core and User catalog; Input is normalized source and host editing state where applicable.</p>
 
-<h3 id="lang-observation-protocol">LANG.OBSERVATION.PROTOCOL — HostProtocolV1</h3>
+<h3 id="lang-observation-protocol">LANG.OBSERVATION.PROTOCOL — The host protocol</h3>
 
-<p>HostProtocolV1 fixes execute, step, reset, stack collection and snapshot, Core and User metadata, lookup, and the structured ExecuteResult, Value, and absence payloads. It is the only channel through which anything outside the language observes it.</p>
+<p>One host protocol is current. It fixes execute, step, reset, stack collection and snapshot, Core and User metadata, lookup, and the structured ExecuteResult, Value, and absence payloads. It is the only channel through which anything outside the language observes it.</p>
 
-<p>Within V1 only optional fields may be added. Existing field deletion, rename, semantic change, and tuple reorder or reshape are forbidden. Breaking changes coexist as V2 while V1 remains usable.</p>
+<p>Every document carries a protocol version field, so a future breaking change is identifiable rather than silent. Within the current version only optional fields may be added; existing field deletion, rename, semantic change, and tuple reorder or reshape are forbidden. A breaking change raises the version, and the superseded protocol is removed rather than kept as a second reader: an implementation offers exactly one protocol.</p>
 
 <h3 id="lang-observation-firewall">LANG.OBSERVATION.FIREWALL — Semantic firewall</h3>
 
