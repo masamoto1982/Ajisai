@@ -68,8 +68,8 @@ async fn successful_bubble_uses_normal_word_stack_effect() {
 async fn nil_passthrough_preserves_reason_through_arithmetic_pipeline() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 /").await.unwrap();
-    interp.execute(", 10 +").await.unwrap();
-    interp.execute(", 2 *").await.unwrap();
+    interp.execute("10 +").await.unwrap();
+    interp.execute("2 *").await.unwrap();
     assert!(
         interp
             .get_stack()
@@ -233,22 +233,6 @@ async fn bubble_rule_num_parse_failure_has_direct_reason_and_fallback() {
     assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0/1");
 }
 
-#[tokio::test]
-async fn bubble_rule_chr_invalid_codepoint_has_direct_reason_and_fallback() {
-    let mut interp = Interpreter::new();
-    interp.execute("1114112 CHR").await.unwrap();
-    let top = interp.get_stack().last().expect("top value");
-    assert!(top.is_nil());
-    assert_eq!(top.nil_reason(), Some(&NilReason::InvalidEncoding));
-
-    let mut interp = Interpreter::new();
-    interp.execute("1114112 CHR ^ 'fallback'").await.unwrap();
-    assert_eq!(
-        format!("{}", interp.get_stack().last().unwrap()),
-        "'fallback'"
-    );
-}
-
 /// **Every NIL a program can put on the stack carries a reason.**
 ///
 /// `LANG.VALUES.NIL` makes the reason a NIL's entire observable content — "two
@@ -319,7 +303,6 @@ async fn every_reachable_nil_carries_a_reason() {
     }
 
     for code in [
-        "[ 1 2 3 ] [ 0 3 ] SPLIT",
         "NIL NIL",
         "1 0 / -1 SQRT",
         "[ 1 NIL 2 ]",

@@ -81,14 +81,6 @@ proptest! {
         prop_assert_eq!(obs1(&format!("'{w}' 'a' 'a' SUBSTITUTE")), format!("'{w}'"));
     }
 
-    /// **A string starts with, and ends with, itself** (reflexive prefix /
-    /// suffix): `w 'w' STARTS-WITH? = TRUE`, `w 'w' ENDS-WITH? = TRUE`.
-    #[test]
-    fn starts_and_ends_with_self(w in ascii_word()) {
-        prop_assert_eq!(obs1(&format!("'{w}' '{w}' STARTS-WITH?")), "TRUE");
-        prop_assert_eq!(obs1(&format!("'{w}' '{w}' ENDS-WITH?")), "TRUE");
-    }
-
     /// **`CHARS` of a word has one element per codepoint, and `JOIN` of two
     /// char-vectors concatenates** (free monoid on codepoints):
     /// `(u CHARS) (v CHARS) CONCAT JOIN = uv`. The word lengths start at 1: a
@@ -136,12 +128,6 @@ fn the_empty_string_is_a_string() {
 #[test]
 fn num_of_non_numeric_projects_nil() {
     assert_eq!(obs1("'abc' NUM"), "NIL");
-}
-
-/// **`CHR` maps a codepoint to its single-character string** — a concrete anchor.
-#[test]
-fn chr_anchor() {
-    assert_eq!(obs1("65 CHR"), "'A'");
 }
 
 /// **Finding I2 (resolved): `CONCAT`'s arity does not depend on its operands'

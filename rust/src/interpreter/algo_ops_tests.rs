@@ -5,58 +5,6 @@ mod tests {
     use crate::interpreter::Interpreter;
 
     #[tokio::test]
-    async fn unique_dedupes_preserving_order() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("[ 3 1 3 2 1 ] UNIQUE")
-            .await
-            .expect("should succeed");
-        assert_eq!(interp.stack.len(), 1);
-        let v = interp.stack[0].as_vector_view().expect("vector result");
-        let nums: Vec<i64> = v
-            .iter()
-            .map(|e| e.as_scalar().unwrap().to_i64().unwrap())
-            .collect();
-        assert_eq!(nums, vec![3, 1, 2]);
-    }
-
-    #[tokio::test]
-    async fn unique_collapses_all_equal() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("[ 5 5 5 ] UNIQUE")
-            .await
-            .expect("should succeed");
-        let v = interp.stack[0].as_vector_view().expect("vector result");
-        assert_eq!(v.len(), 1);
-        assert_eq!(v[0].as_scalar().unwrap().to_i64().unwrap(), 5);
-    }
-
-    #[tokio::test]
-    async fn unique_non_vector_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("42 UNIQUE").await;
-        assert!(result.is_err(), "UNIQUE of a non-vector is malformed use");
-    }
-
-    #[tokio::test]
-    async fn contains_reports_membership() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("[ 1 2 3 ] 2 CONTAINS")
-            .await
-            .expect("should succeed");
-        assert_eq!(interp.stack[0].as_truth(), Some(true));
-
-        interp.stack.clear();
-        interp
-            .execute("[ 1 2 3 ] 9 CONTAINS")
-            .await
-            .expect("should succeed");
-        assert_eq!(interp.stack[0].as_truth(), Some(false));
-    }
-
-    #[tokio::test]
     async fn index_of_returns_position() {
         let mut interp = Interpreter::new();
         interp
@@ -75,17 +23,5 @@ mod tests {
             .expect("a search miss is a Bubble, not an error");
         assert_eq!(interp.stack.len(), 1);
         assert!(interp.stack[0].is_nil());
-    }
-
-    #[tokio::test]
-    async fn keep_mode_retains_operands() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("[ 1 2 3 ] 2 ,, CONTAINS")
-            .await
-            .expect("keep mode should succeed");
-        // vector + target retained, plus the boolean result
-        assert_eq!(interp.stack.len(), 3);
-        assert_eq!(interp.stack[2].as_truth(), Some(true));
     }
 }

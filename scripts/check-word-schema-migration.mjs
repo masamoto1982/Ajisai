@@ -17,7 +17,7 @@ const manifestNames = new Set(manifest.entries.map((entry) => entry.canonical));
 const names = new Set();
 
 if (words.migration.completeInventory !== true) fail('the canonical Word inventory must be marked complete');
-if (words.migration.betaFreezePhase !== 1) fail('the beta vocabulary migration must be in phase 1');
+if (words.migration.betaFreezePhase !== 2) fail('the beta vocabulary migration must be in phase 2');
 
 for (const word of words.entries) {
   if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
@@ -37,7 +37,7 @@ for (const word of words.entries) {
   // that the key reaches a runtime arm. The compiler already requires the
   // dispatch match to be total over `WordId`; this catches the case a total
   // match cannot, a Word folded into a neighbour's arm by mistake.
-  const compiledModifiers = new Set(['EAT', 'KEEP']);
+  const compiledModifiers = new Set(['KEEP']);
   const directive = new Set(['VENT', 'FLOW']);
   if (compiledModifiers.has(word.name)) {
     if (!compiledPlanSource.includes(`CompiledOp::${word.executorKey}`)) fail(`${word.name} compiled executorKey drift`);

@@ -91,8 +91,8 @@ mod tests {
     #[test]
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
-            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "EAT",
-            "KEEP", "LOOKUP", "VENT", "SQRT", "SORT",
+            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "KEEP",
+            "LOOKUP", "VENT", "SQRT", "SORT",
         ];
 
         for name in required {

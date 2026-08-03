@@ -114,15 +114,7 @@ mod tokenizer_regression_tests_2 {
 
     #[test]
     fn test_semicolon_mode_sugar() {
-        let result = tokenize("; +").unwrap();
-        assert_eq!(
-            result,
-            vec![
-                Token::Symbol(".".into()),
-                Token::Symbol(",".into()),
-                Token::Symbol("+".into()),
-            ]
-        );
+        assert!(tokenize("; +").is_err());
 
         let result2 = tokenize(";; +").unwrap();
         assert_eq!(
@@ -274,20 +266,8 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_semicolon_is_mode_sugar() {
-        let semicolon_result = tokenize("[ 2 ] * ;");
-        assert!(semicolon_result.is_ok());
-        assert_eq!(
-            semicolon_result.unwrap(),
-            vec![
-                Token::VectorStart,
-                Token::Number("2".into()),
-                Token::VectorEnd,
-                Token::Symbol("*".into()),
-                Token::Symbol(".".into()),
-                Token::Symbol(",".into()),
-            ]
-        );
+    fn test_single_semicolon_is_rejected() {
+        assert!(tokenize("[ 2 ] * ;").is_err());
     }
 
     #[test]
