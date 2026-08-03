@@ -1174,12 +1174,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- >CF changes only the requested display role (§3.9), never the value. Both
-     Rust observation surfaces now render each stack slot from its `(value,
-     role)` pair through one shared function (SPEC §12), so the CF rendering of
-     a re-tagged rational is pinned here and is identical on the CLI and the
-     in-process runner. -->
-
 <section class="ajisai-case" id="core-trim-both-ends" data-category="core">
   <h3>TRIM strips whitespace from both ends</h3>
   <pre class="ajisai-source">'  hi  ' TRIM</pre>
@@ -1256,9 +1250,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: MODIFIER ORTHOGONALITY (§6.1–§6.3) ===================== -->
-<!-- TOP/STAK (target) × EAT/KEEP (consumption) are orthogonal; canonical
-     spellings and their sugar (. .. , ,, ; ;;) behave identically. -->
+<!-- ===================== CORE: THE MODIFIER AXIS ===================== -->
+<!-- There is one modifier axis, consumption: a Word consumes the operands it
+     reads unless KEEP (sugar `,,`) is in force. The canonical spelling and its
+     sugar behave identically. -->
 
 <section class="ajisai-case" id="core-keep-on-comparison" data-category="core">
   <h3>KEEP retains comparison operands beneath the Boolean result</h3>

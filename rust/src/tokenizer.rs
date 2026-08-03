@@ -42,17 +42,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 chars[i], concept
             ));
         }
-        // ModifierSugar: `;;` -> STAK-KEEP (`.. ,,`). The former single `;`
-        // spelling selected explicit consumption and is no longer accepted.
-        if chars[i] == ';' {
-            if i + 1 < chars.len() && chars[i + 1] == ';' {
-                tokens.push(Token::Symbol("..".into()));
-                tokens.push(Token::Symbol(",,".into()));
-                i += 2;
-                continue;
-            }
-            return Err("';' is not valid source; consumption is the default".into());
-        }
         if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
             tokens.push(token);
             i += consumed;
@@ -84,20 +73,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         if chars[i] == '>' {
-            // ConversionWord: `>NAME` (e.g. `>CF`) is a single conversion-word
-            // token whose canonical home is the runtime word of the same name
-            // (see surface_forms::is_conversion_word_token). This is distinct
-            // from `>` -> GT and `>=` -> GTE (core_word_aliases.rs).
-            if i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
-                let start = i;
-                i += 1;
-                while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
-                    i += 1;
-                }
-                let token_str: String = chars[start..i].iter().collect();
-                tokens.push(Token::Symbol(token_str.into()));
-                continue;
-            }
+            // `>` -> GT and `>=` -> GTE (core_word_aliases.rs). `>` is a special
+            // character, so it delimits the word before it and needs no space.
             if i + 1 < chars.len() && chars[i + 1] == '=' {
                 tokens.push(Token::Symbol(">=".into()));
                 i += 2;
@@ -139,13 +116,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
         if let Some(token) = parse_control_directive_word(&token_str) {
             tokens.push(token);
-            continue;
-        }
-
-        if let Some(expanded) = split_compound_modifier(&token_str) {
-            for symbol in expanded {
-                tokens.push(Token::Symbol(symbol.into()));
-            }
             continue;
         }
 
@@ -208,7 +178,7 @@ pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '|' | '~' | '^'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '|' | '^'
     )
 }
 
@@ -224,10 +194,8 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
 
         '|' => Some((Token::CondClauseSep, 1)),
 
-        // Word aliases `~` -> FLOW (visual pipeline marker) and `^` -> VENT
-        // (NIL coalescing). Emitted directly as their dedicated tokens; the
-        // canonical names live in core_word_aliases.rs.
-        '~' => Some((Token::Pipeline, 1)),
+        // The `^` -> VENT alias, emitted directly as its dedicated token; the
+        // canonical name lives in core_word_aliases.rs.
         '^' => Some((Token::NilCoalesce, 1)),
 
         _ => None,
@@ -442,7 +410,7 @@ fn parse_keyword_from_string(s: &str) -> Option<Token> {
     }
 }
 
-/// The spelled-out control directives `VENT` and `FLOW` are the canonical names
+/// The spelled-out control directive `VENT` is the canonical name
 /// of the sugars `^` and `~` (SPEC §6.4, core_word_aliases.rs). Emit the *same*
 /// dedicated control token the sugar produces so the canonical name and its
 /// sugar share one token stream and one lazy execution path — the spelled-out
@@ -456,35 +424,6 @@ fn parse_keyword_from_string(s: &str) -> Option<Token> {
 fn parse_control_directive_word(s: &str) -> Option<Token> {
     if s.eq_ignore_ascii_case("VENT") {
         Some(Token::NilCoalesce)
-    } else if s.eq_ignore_ascii_case("FLOW") {
-        Some(Token::Pipeline)
-    } else {
-        None
-    }
-}
-
-fn split_compound_modifier(s: &str) -> Option<Vec<String>> {
-    let mut remaining = s;
-    let mut parts: Vec<String> = Vec::new();
-    while !remaining.is_empty() {
-        let matched = if let Some(rest) = remaining.strip_prefix("..") {
-            parts.push("..".to_string());
-            rest
-        } else if let Some(rest) = remaining.strip_prefix(",,") {
-            parts.push(",,".to_string());
-            rest
-        } else if let Some(rest) = remaining.strip_prefix('.') {
-            parts.push(".".to_string());
-            rest
-        } else {
-            let rest = remaining.strip_prefix(',')?;
-            parts.push(",".to_string());
-            rest
-        };
-        remaining = matched;
-    }
-    if parts.len() >= 2 {
-        Some(parts)
     } else {
         None
     }

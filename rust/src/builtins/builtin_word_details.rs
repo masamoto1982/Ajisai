@@ -45,13 +45,6 @@ pub fn lookup_builtin_detail(name: &str) -> String {
                  evaluated as the fallback. Not a stack-consuming word.\n",
             );
         }
-        ExecutionForm::NoOpControlDirective => {
-            out.push('\n');
-            out.push_str(
-                "Form:\n  No-op control directive (SPEC §6.4): a positional marker with no\n  \
-                 runtime effect.\n",
-            );
-        }
         ExecutionForm::RuntimeWord => {}
     }
 

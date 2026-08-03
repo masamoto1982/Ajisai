@@ -186,6 +186,23 @@ function validateWordManifest(coverage) {
     allowlistedIds.add(id);
   }
 
+  // Every symbol the language allocates gets its *own* ledger entry, matched by
+  // id rather than by the loose surface matching above. Without this, a sugar
+  // entry could be "classified" only because some other entry's example happened
+  // to contain the character — which is how `/`, `^` and `)` sat in the manifest
+  // with no entry of their own.
+  const SUGAR_KINDS = new Set([
+    'symbol_alias', 'syntax_sugar', 'input_helper', 'delimiter_sugar',
+    'literal_sugar', 'source_directive', 'control_directive', 'reserved_marker',
+  ]);
+  const coverageIds = new Set(coverage.entries.map((entry) => entry.id));
+  const unledgered = manifest.entries
+    .filter((entry) => SUGAR_KINDS.has(entry.kind) && !coverageIds.has(entry.id))
+    .map((entry) => `${entry.surface} (${entry.id})`);
+  if (unledgered.length > 0) {
+    fail(`${unledgered.length} surface form(s) have no coverage entry of their own: ${unledgered.join(', ')}`);
+  }
+
   const unclassified = [];
   for (const entry of manifest.entries) {
     if (!coveredManifestIds.has(entry.id)) unclassified.push(entry.id);

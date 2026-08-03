@@ -187,21 +187,13 @@ mod comment_newline_absorption {
 // AQ-VER-002-D
 // DUT: rust/src/tokenizer.rs `parse_token_from_single_char`
 //
-//     '~' => Some((Token::Pipeline, 1)),
 //     '^' => Some((Token::NilCoalesce, 1)),
 //
-// `~` (FLOW) and `^` (VENT) are single-character word aliases. They are
-// recognized directly by `parse_token_from_single_char`, and `=` is now an
-// unconditional single-char `EQ` Symbol with no lookahead. We cover each
+// `^` (VENT) is the one single-character alias with its own token, and `=` is an
+// unconditional single-char `EQ` Symbol with no lookahead. We cover the
 // single-char branch plus the bare `=` Symbol.
 mod single_char_aliases {
     use super::*;
-
-    #[test]
-    fn aq_ver_002_d_tilde_is_pipeline() {
-        let tokens = tokenize("a ~ b").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::Pipeline, sym("b")]);
-    }
 
     #[test]
     fn aq_ver_002_d_caret_is_nilcoalesce() {
@@ -210,31 +202,30 @@ mod single_char_aliases {
     }
 
     #[test]
-    fn aq_ver_002_d_tilde_caret_need_no_surrounding_whitespace() {
-        // `~` and `^` are special characters, so they break adjacent symbols.
-        let tokens = tokenize("a~b^c").unwrap();
-        assert_eq!(
-            tokens,
-            vec![
-                sym("a"),
-                Token::Pipeline,
-                sym("b"),
-                Token::NilCoalesce,
-                sym("c")
-            ]
-        );
+    fn aq_ver_002_d_caret_needs_no_surrounding_whitespace() {
+        // `^` is a special character, so it breaks adjacent symbols.
+        let tokens = tokenize("a^b").unwrap();
+        assert_eq!(tokens, vec![sym("a"), Token::NilCoalesce, sym("b")]);
+    }
+
+    /// `~` carries no meaning, so it is an ordinary Symbol the dictionary does
+    /// not have — not a token of its own, and not a word that silently does
+    /// nothing.
+    #[test]
+    fn aq_ver_002_d_tilde_is_an_ordinary_symbol() {
+        let tokens = tokenize("a ~ b").unwrap();
+        assert_eq!(tokens, vec![sym("a"), sym("~"), sym("b")]);
     }
 
     #[test]
     fn aq_ver_002_d_equals_is_bare_symbol() {
-        // `=` no longer has any lookahead: it is always the bare EQ Symbol.
+        // `=` has no lookahead: it is always the bare EQ Symbol.
         let tokens = tokenize("= a").unwrap();
         assert_eq!(tokens, vec![sym("="), sym("a")]);
     }
 
     #[test]
-    fn aq_ver_002_d_double_equals_is_two_eq_symbols_not_pipeline() {
-        // `==` is retired as pipeline sugar: only `~` emits Token::Pipeline.
+    fn aq_ver_002_d_double_equals_is_two_eq_symbols() {
         let tokens = tokenize("a == b").unwrap();
         assert_eq!(tokens, vec![sym("a"), sym("="), sym("="), sym("b")]);
     }

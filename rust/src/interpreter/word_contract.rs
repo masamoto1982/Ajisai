@@ -402,7 +402,6 @@ impl Interpreter {
                     | Token::VectorEnd
                     | Token::BlockStart
                     | Token::BlockEnd
-                    | Token::Pipeline
                     | Token::NilCoalesce
                     | Token::CondClauseSep
                     | Token::LineBreak => sim.feed_structural(token),

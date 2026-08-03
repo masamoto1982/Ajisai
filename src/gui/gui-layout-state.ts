@@ -5,35 +5,27 @@ import type { GUIElements } from './gui-dom-cache';
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
-// A stack modifier is a maximal run of the modifier characters `.` `,` `;`,
-// bounded by whitespace or the start/end of the source. Reading whole tokens
-// (rather than scanning for a bare `.` or `..`) lets the highlight recognize
-// the combined forms SPEC §6.3 allows — `.,,` (TOP KEEP), `..,,` (STAK KEEP) —
-// and the `;` / `;;` sugar (`;` = `. ,` TOP-EAT, `;;` = `.. ,,` STAK-KEEP),
-// while never mistaking a decimal such as `.5` or `5.` for a modifier.
-const STACK_MODIFIER_TOKEN = /(?:^|\s)([.,;]+)(?=\s|$)/g;
+// The modifier is a whole token, bounded by whitespace or the start/end of the
+// source: `,,` is KEEP's spelling and the only modifier there is. Reading a whole
+// token rather than scanning for a bare `,` keeps a lone `,` — which is not a
+// Word at all — from reading as a modifier.
+const STACK_MODIFIER_TOKEN = /(?:^|\s)(,+)(?=\s|$)/g;
 
 export interface StackModifierState {
-    /** STAK target (`..` / `;;`): the whole stack is the operand, not just the top. */
-    readonly stak: boolean;
-    /** KEEP consumption (`,,` / `;;`): operands are retained rather than eaten. */
+    /** KEEP consumption (`,,`): operands are retained rather than eaten. */
     readonly keep: boolean;
 }
 
-// Mirror the runtime defaults (SPEC §6.1, §6.2): TOP and EAT. A token reads as
-// STAK if it carries `..` or the `;;` sugar, and as KEEP if it carries `,,` or
-// `;;`. The two axes are independent (SPEC §6.3), so a program is summarized by
-// whether *any* token selects the non-default on each axis — matching the
-// existing "any occurrence wins" behavior of the target highlight.
+// Mirror the runtime default (LANG.MODIFIERS.CONSUMPTION): a Word consumes the
+// operands it reads. There is exactly one modifier axis, so a program is
+// summarized by whether *any* token selects the non-default — matching the
+// existing "any occurrence wins" behavior of the highlight.
 export const analyzeStackModifiers = (content: string): StackModifierState => {
-    let stak = false;
     let keep = false;
     for (const match of content.matchAll(STACK_MODIFIER_TOKEN)) {
-        const token = match[1] ?? '';
-        if (token.includes('..') || token.includes(';;')) stak = true;
-        if (token.includes(',,') || token.includes(';;')) keep = true;
+        if ((match[1] ?? '').includes(',,')) keep = true;
     }
-    return { stak, keep };
+    return { keep };
 };
 
 // Plain-text placeholder cheat sheet shown in the empty editor. Desktop lists
@@ -210,18 +202,15 @@ export const applyExecutionAreaState = (
 };
 
 export const updateHighlights = (elements: GUIElements, content: string): void => {
-    const { stak, keep } = analyzeStackModifiers(content);
+    const { keep } = analyzeStackModifiers(content);
     const classes = elements.stackDisplay.classList;
 
-    // Target axis (lemon background): STAK paints every stack item, otherwise the
-    // default TOP paints only the top item — answering "which values?".
-    classes.toggle('highlight-all', stak);
-    classes.toggle('highlight-top', !stak);
+    // A Word takes its operands from the top of the stack, so the top item is
+    // what the highlight paints.
+    classes.add('highlight-top');
 
-    // Consumption axis (border on those same operand nodes): KEEP draws a solid
-    // border (operands remain), the default EAT a dashed border (operands are
-    // removed) — answering "what becomes of them?". The two channels are
-    // independent so any TOP/STAK x EAT/KEEP combination reads at a glance.
+    // The consumption axis is the fill color on that operand: KEEP means the
+    // operands remain, the default EAT that they are removed.
     classes.toggle('consume-keep', keep);
     classes.toggle('consume-eat', !keep);
 

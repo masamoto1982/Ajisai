@@ -13,8 +13,8 @@ use serde::Serialize;
 /// consumption / production / bifurcation" declaration; the NIL-projection part
 /// of §13.1 is carried by `nil_policy`.
 ///
-/// `Dynamic` marks a data-dependent arity (e.g. the `STAK` count-driven fold or
-/// runtime-shaped vector ops) that is not statically pinned; the static
+/// `Dynamic` marks a data-dependent arity (e.g. `COLLECT`'s count-driven gather
+/// or runtime-shaped vector ops) that is not statically pinned; the static
 /// mass-conservation validator abstains on `Dynamic` words.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
@@ -37,20 +37,16 @@ impl MassContract {
 /// human-facing `stack_effect` prose.
 ///
 /// Most words are ordinary `RuntimeWord`s dispatched by name and consuming/
-/// producing stack values. The lazy control directives of SPEC §6.4 are not:
-/// the tokenizer emits them as dedicated tokens (`^`/`VENT` -> `NilCoalesce`,
-/// `~`/`FLOW` -> `Pipeline`) and the execution loop interprets the *following
-/// source unit* positionally rather than popping operands. This enum lets
-/// generators and consistency tests assert that classification instead of
-/// parsing the prose.
+/// producing stack values. The lazy control directive of SPEC §6.4 is not: the
+/// tokenizer emits it as a dedicated token (`^`/`VENT` -> `NilCoalesce`) and the
+/// execution loop interprets the *following source unit* positionally rather
+/// than popping operands. This enum lets generators and consistency tests assert
+/// that classification instead of parsing the prose.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum ExecutionForm {
     /// Ordinary word: dispatched by name, operates on stack operands.
     RuntimeWord,
-    /// No-op control directive: a positional marker with no runtime effect
-    /// (e.g. `FLOW` / `~`).
-    NoOpControlDirective,
     /// Lazy NIL-coalescing control directive: inspects the stack top and, if it
     /// is non-NIL, keeps it and skips the following source unit *unevaluated*;
     /// if it is NIL, discards it and evaluates the following source unit as the

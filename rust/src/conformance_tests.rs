@@ -311,7 +311,7 @@ async fn run_case(case: &Case) -> std::result::Result<(), String> {
 
         // Final result = the whole stack, each slot rendered as its observable
         // `(value, role)` string via the shared surface (SPEC §12), so a
-        // position role such as `>CF` or a timestamp is observed here exactly as
+        // interpretation role such as a timestamp is observed here exactly as
         // the CLI observes it — not via role-blind `Value::to_string()`.
         let actual_result = crate::types::display::render_stack(interp.get_stack()).join(" ");
         let expected_norm = normalize_ws(&case.expect_result);

@@ -768,21 +768,13 @@
 
 /* Operand highlight as a background fill. A fill (not a text-color change) is
    used so it never competes with the bracket depth-colors that show Vector
-   nesting; the tint is kept very pale so the value's own ink stays legible. The
-   filled set is the target axis (SPEC §6.1): STAK fills every stack item, the
-   default TOP only the top item. The fill *color* carries the consumption axis
-   (SPEC §6.2) — a non-operand is never consumed, so the fill alone shows both
-   "which values are operands" and "what becomes of them". Padding is even on
-   all four sides so the value sits with equal vertical and horizontal breathing
-   room, in both the canonical and LaTeX renderings. */
-#stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
-#stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
-    font-weight: bold;
-    padding: 0.35rem;
-    border-radius: 0;
-}
-
-
+   nesting; the tint is kept very pale so the value's own ink stays legible. A
+   Word takes its operands from the top of the stack, so the fill marks the top
+   item, and the fill *color* carries the one modifier axis
+   (LANG.MODIFIERS.CONSUMPTION) — a non-operand is never consumed, so the fill
+   alone shows both "which value is the operand" and "what becomes of it".
+   Padding is even on all four sides so the value sits with equal vertical and
+   horizontal breathing room, in both the canonical and LaTeX renderings. */
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
     padding: 0.35rem;
@@ -791,7 +783,6 @@
 
 
 /* EAT (default): operands are removed after the operation — very pale warm red. */
-#stack-display.highlight-all.consume-eat .stack-item .stack-node[data-depth="1"],
 #stack-display.highlight-top.consume-eat .stack-item:last-child .stack-node[data-depth="1"] {
     background-color: var(--color-consume-eat);
 }
@@ -799,7 +790,6 @@
 
 /* KEEP: operands are retained — very pale teal-green, set apart from EAT in both
    hue and lightness so the two read apart under color-vision deficiency. */
-#stack-display.highlight-all.consume-keep .stack-item .stack-node[data-depth="1"],
 #stack-display.highlight-top.consume-keep .stack-item:last-child .stack-node[data-depth="1"] {
     background-color: var(--color-consume-keep);
 }

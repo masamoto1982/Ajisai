@@ -1,17 +1,15 @@
-//! CS2: `VENT`/`FLOW` canonical-name ↔ sugar unification.
+//! CS2: `VENT` canonical-name ↔ sugar unification.
 //!
 //! SPEC §6.4: `VENT` (sugar `^`) is a *lazy* NIL-coalescing control directive —
 //! if the stack top is non-NIL it is kept and the following source unit is
 //! skipped unevaluated; if it is NIL the top is discarded and the following unit
-//! is evaluated as the fallback. `FLOW` (sugar `~`) is a no-op pipeline marker.
+//! is evaluated as the fallback.
 //!
 //! The canonical spelled-out name and its sugar must produce the *same* token
-//! and therefore the *same* execution result. Before this change the sugar
-//! tokenized to a dedicated control token while the spelled-out name fell
-//! through to a builtin with no executor and raised `UnknownWord`. These tests
-//! lock the two spellings together across the non-NIL keep/skip, the lazy
-//! (unevaluated) fallback, the NIL fallback, balanced vector/block group skips,
-//! nesting, stack underflow, and the `FLOW` no-op.
+//! and therefore the *same* execution result. These tests lock the two spellings
+//! together across the non-NIL keep/skip, the lazy (unevaluated) fallback, the
+//! NIL fallback, balanced vector/block group skips, nesting, and stack
+//! underflow.
 
 use crate::builtins::lookup_builtin_spec;
 use crate::coreword_registry::ExecutionForm;
@@ -138,5 +136,3 @@ fn vent_contract_is_lazy_not_eager_binary() {
         .fixed()
         .is_none());
 }
-
-// --- FLOW (~) is a no-op pipeline marker in both spellings -----------------

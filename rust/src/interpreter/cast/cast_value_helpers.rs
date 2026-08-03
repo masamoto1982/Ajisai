@@ -47,7 +47,7 @@ pub(crate) fn apply_unary_cast(
     match convert(&value) {
         Ok(result) => {
             // A unary cast is value-preserving on the semantic plane: the
-            // slot keeps its prior plane role (e.g. `>CF` retagging).
+            // slot keeps its prior plane role.
             // Core casts that do change the role (STR/NUM/…) are re-tagged
             // afterward by `apply_word_hint_override`.
             interp.stack.push_with_role(result, hint);

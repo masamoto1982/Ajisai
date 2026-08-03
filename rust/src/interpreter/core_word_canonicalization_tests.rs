@@ -47,7 +47,6 @@ async fn surface_form_concepts_are_not_runtime_canonicalizations() {
     assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
     assert_ne!(canonicalize_core_word_name("{"), "BEGIN-BLOCK");
     assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
-    assert_ne!(canonicalize_core_word_name(";"), "TOP-EAT");
 }
 
 /// 手3 (dispatch de-allocation): canonicalization must not allocate on the two

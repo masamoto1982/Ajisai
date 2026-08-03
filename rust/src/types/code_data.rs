@@ -15,7 +15,6 @@ pub(crate) fn tokens_to_code_data(tokens: &[Token]) -> Value {
             Token::VectorEnd => ("vector-end", None),
             Token::BlockStart => ("block-start", None),
             Token::BlockEnd => ("block-end", None),
-            Token::Pipeline => ("pipeline", None),
             Token::NilCoalesce => ("nil-coalesce", None),
             Token::CondClauseSep => ("cond-clause-sep", None),
             Token::LineBreak => ("line-break", None),
@@ -78,7 +77,6 @@ pub(crate) fn code_data_to_tokens(value: &Value) -> Result<Vec<Token>> {
             ("vector-end", 1) => Token::VectorEnd,
             ("block-start", 1) => Token::BlockStart,
             ("block-end", 1) => Token::BlockEnd,
-            ("pipeline", 1) => Token::Pipeline,
             ("nil-coalesce", 1) => Token::NilCoalesce,
             ("cond-clause-sep", 1) => Token::CondClauseSep,
             ("line-break", 1) => Token::LineBreak,
@@ -86,8 +84,8 @@ pub(crate) fn code_data_to_tokens(value: &Value) -> Result<Vec<Token>> {
                 return Err(malformed("payload record must contain exactly two fields"))
             }
             (
-                "vector-start" | "vector-end" | "block-start" | "block-end" | "pipeline"
-                | "nil-coalesce" | "cond-clause-sep" | "line-break",
+                "vector-start" | "vector-end" | "block-start" | "block-end" | "nil-coalesce"
+                | "cond-clause-sep" | "line-break",
                 _,
             ) => {
                 return Err(malformed(
@@ -123,9 +121,8 @@ mod tests {
             prop::sample::select(vec!["0", "-1", "1/1", "1.0", ".5"])
                 .prop_map(|value| Token::Number(value.into())),
             any::<String>().prop_map(|value| Token::String(value.into())),
-            prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD", ">CF"])
+            prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD"])
                 .prop_map(|value| Token::Symbol(value.into())),
-            Just(Token::Pipeline),
             Just(Token::NilCoalesce),
             Just(Token::LineBreak),
         ];
@@ -160,7 +157,6 @@ mod tests {
             Token::CondClauseSep,
             Token::Number(Arc::from("3")),
             Token::BlockEnd,
-            Token::Pipeline,
             Token::NilCoalesce,
             Token::LineBreak,
         ];
@@ -250,7 +246,7 @@ mod tests {
         fn payload_token_sequences_round_trip(
             strings in prop::collection::vec(any::<String>(), 0..20),
             numbers in prop::collection::vec(prop::sample::select(vec!["0", "-1", "1/1", "1.0", ".5"]), 0..20),
-            symbols in prop::collection::vec(prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD", ">CF"]), 0..20),
+            symbols in prop::collection::vec(prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD"]), 0..20),
         ) {
             let mut tokens = Vec::new();
             tokens.extend(strings.into_iter().map(|s| Token::String(s.into())));

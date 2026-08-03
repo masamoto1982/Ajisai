@@ -15,7 +15,7 @@
 //! (`Value.hint`, SPEC §12.1). A module word that pops operands and pushes
 //! freshly built results therefore adopts the results' construction roles
 //! automatically, while slots it never touches keep the plane role a prior
-//! position cast (`>CF`) assigned — the same outcome the retired fingerprint
+//! interpretation role assigned — the same outcome the retired fingerprint
 //! resync produced, but without any pointer-identity comparison.
 
 use super::{Interpretation, Value};
@@ -162,7 +162,7 @@ impl Stack {
             .unwrap_or(Interpretation::Unassigned)
     }
 
-    /// Retag the slot at `index` (a position cast such as `>CF`, or a core-word
+    /// Retag the slot at `index` (a core-word
     /// role override). Out-of-range indices are ignored, matching the legacy
     /// `update_hint_at`.
     pub fn set_role_at(&mut self, index: usize, role: Interpretation) {
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn position_cast_survives_a_push_and_pop_above_it() {
-        // Mirrors `x >CF <module-word>`: the cast retags a lower slot, and a
+        // A retag of a lower slot, where a
         // later slot built and removed above it must not disturb that role.
         let mut stack = Stack::new();
         stack.push(Value::from_int(5));

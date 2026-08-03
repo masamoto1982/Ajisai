@@ -4,10 +4,10 @@
     "docs/formalization-coverage.json"
   ],
   "summary": {
-    "primitives": 24,
+    "primitives": 23,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 15,
-    "distinct_conformance_cases": 42
+    "distinct_law_test_files": 17,
+    "distinct_conformance_cases": 60
   },
   "primitives": [
     {
@@ -15,15 +15,14 @@
       "algebraic_family": "boolean-truth",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 22,
-      "law_test_count": 9,
-      "conformance_case_count": 7,
+      "derived_word_count": 17,
+      "law_test_count": 10,
+      "conformance_case_count": 16,
       "derived_words": [
         "core.all",
         "core.any",
         "core.comparison",
         "core.cond",
-        "core.ends-with",
         "core.eq",
         "core.false",
         "core.filter",
@@ -33,14 +32,10 @@
         "core.lte",
         "core.neq",
         "core.nil-p",
-        "core.starts-with",
         "core.true",
-        "module.algo.contains",
         "module.algo.sort",
-        "module.algo.unique",
         "module.math.max",
-        "module.math.min",
-        "module.math.sign"
+        "module.math.min"
       ],
       "law_tests": [
         "rust/src/arithmetic_operation_tests.rs",
@@ -50,7 +45,8 @@
         "rust/tests/algebraic_laws.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/observation_laws.rs",
-        "rust/tests/string_laws.rs",
+        "rust/tests/standard_derivation_laws.rs",
+        "rust/tests/standard_operational_laws.rs",
         "rust/tests/structural_laws.rs"
       ],
       "conformance_cases": [
@@ -60,7 +56,16 @@
         "core-false-literal",
         "core-nil-check-false-for-present-value",
         "core-nil-check-true-retains-source",
-        "core-true-literal"
+        "core-true-literal",
+        "standard-all",
+        "standard-any",
+        "standard-filter",
+        "standard-gte",
+        "standard-lte",
+        "standard-max",
+        "standard-min",
+        "standard-neq",
+        "standard-sort"
       ]
     },
     {
@@ -87,13 +92,14 @@
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 1,
-      "law_test_count": 1,
+      "law_test_count": 2,
       "conformance_case_count": 1,
       "derived_words": [
         "core.or"
       ],
       "law_tests": [
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "core-kleene-or-definite"
@@ -123,8 +129,8 @@
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 6,
-      "law_test_count": 2,
-      "conformance_case_count": 4,
+      "law_test_count": 3,
+      "conformance_case_count": 6,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
@@ -135,13 +141,16 @@
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/desugar_laws.rs"
+        "rust/tests/desugar_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "core-bignum-does-not-fall-to-float",
         "core-division-by-zero-is-nil",
         "core-exact-addition",
-        "core-exact-division"
+        "core-exact-division",
+        "standard-mod",
+        "standard-sub"
       ]
     },
     {
@@ -149,9 +158,9 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 15,
-      "law_test_count": 6,
-      "conformance_case_count": 3,
+      "derived_word_count": 12,
+      "law_test_count": 8,
+      "conformance_case_count": 11,
       "derived_words": [
         "core.comparison",
         "core.eq",
@@ -160,14 +169,11 @@
         "core.lt",
         "core.lte",
         "core.neq",
-        "module.algo.contains",
         "module.algo.index-of",
         "module.algo.sort",
-        "module.algo.unique",
         "module.math.abs",
         "module.math.max",
-        "module.math.min",
-        "module.math.sign"
+        "module.math.min"
       ],
       "law_tests": [
         "rust/src/arithmetic_operation_tests.rs",
@@ -175,12 +181,22 @@
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/tests/algebraic_laws.rs",
         "rust/tests/observation_laws.rs",
+        "rust/tests/standard_derivation_laws.rs",
+        "rust/tests/standard_operational_laws.rs",
         "rust/tests/structural_laws.rs"
       ],
       "conformance_cases": [
         "core-boolean-is-not-a-number",
         "core-decided-comparison-false",
-        "core-decided-comparison-true"
+        "core-decided-comparison-true",
+        "standard-abs",
+        "standard-gte",
+        "standard-index-of",
+        "standard-lte",
+        "standard-max",
+        "standard-min",
+        "standard-neq",
+        "standard-sort"
       ]
     },
     {
@@ -188,11 +204,10 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
       "status": "accepted",
-      "derived_word_count": 6,
-      "law_test_count": 4,
-      "conformance_case_count": 0,
+      "derived_word_count": 5,
+      "law_test_count": 5,
+      "conformance_case_count": 2,
       "derived_words": [
-        "core.ceil",
         "core.exact-real.sqrt",
         "core.floor",
         "core.mod",
@@ -203,9 +218,13 @@
         "rust/src/types/exact/algebraic_tests.rs",
         "rust/tests/algebraic_laws.rs",
         "rust/tests/desugar_laws.rs",
+        "rust/tests/standard_derivation_laws.rs",
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": []
+      "conformance_cases": [
+        "standard-mod",
+        "standard-round"
+      ]
     },
     {
       "id": "algebra.exact-real.gosper",
@@ -213,8 +232,8 @@
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 3,
-      "law_test_count": 3,
-      "conformance_case_count": 0,
+      "law_test_count": 4,
+      "conformance_case_count": 1,
       "derived_words": [
         "core.exact-real.sqrt",
         "module.math.abs",
@@ -223,26 +242,26 @@
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/src/types/exact/algebraic_tests.rs",
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": []
+      "conformance_cases": [
+        "standard-abs"
+      ]
     },
     {
       "id": "algebra.exact-scalar.codepoint-sequence",
       "algebraic_family": "exact-scalar",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 12,
-      "law_test_count": 2,
-      "conformance_case_count": 0,
+      "derived_word_count": 9,
+      "law_test_count": 3,
+      "conformance_case_count": 3,
       "derived_words": [
         "core.chars",
-        "core.chr",
-        "core.ends-with",
         "core.join",
         "core.num",
         "core.print",
-        "core.starts-with",
         "core.str",
         "core.structural.string",
         "core.substitute",
@@ -251,26 +270,29 @@
       ],
       "law_tests": [
         "rust/src/interpreter/io.rs",
+        "rust/tests/standard_derivation_laws.rs",
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": []
+      "conformance_cases": [
+        "standard-substitute",
+        "standard-tokenize",
+        "standard-trim"
+      ]
     },
     {
       "id": "algebra.bubble.domain",
       "algebraic_family": "bubble",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 9,
-      "law_test_count": 7,
-      "conformance_case_count": 10,
+      "derived_word_count": 7,
+      "law_test_count": 8,
+      "conformance_case_count": 11,
       "derived_words": [
-        "core.chr",
         "core.get",
         "core.nil",
         "core.nil-p",
         "core.nil-reason",
         "core.num",
-        "core.remove",
         "core.vent",
         "module.algo.index-of"
       ],
@@ -280,6 +302,7 @@
         "rust/tests/algebraic_laws.rs",
         "rust/tests/contract_modifier_laws.rs",
         "rust/tests/observation_laws.rs",
+        "rust/tests/standard_derivation_laws.rs",
         "rust/tests/string_laws.rs",
         "rust/tests/structural_laws.rs"
       ],
@@ -293,7 +316,8 @@
         "core-nil-reason-division-by-zero",
         "core-nil-reason-present-value-is-nil",
         "core-nil-spelling",
-        "core-or-nil-fallback"
+        "core-or-nil-fallback",
+        "standard-index-of"
       ]
     },
     {
@@ -301,13 +325,12 @@
       "algebraic_family": "bubble",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 15,
-      "law_test_count": 3,
-      "conformance_case_count": 7,
+      "derived_word_count": 14,
+      "law_test_count": 4,
+      "conformance_case_count": 13,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
-        "core.ceil",
         "core.div",
         "core.eq",
         "core.floor",
@@ -324,7 +347,8 @@
       "law_tests": [
         "rust/src/arithmetic_operation_tests.rs",
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/desugar_laws.rs"
+        "rust/tests/desugar_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "core-bignum-does-not-fall-to-float",
@@ -333,7 +357,13 @@
         "core-decided-comparison-true",
         "core-division-by-zero-is-nil",
         "core-exact-addition",
-        "core-exact-division"
+        "core-exact-division",
+        "standard-gte",
+        "standard-lte",
+        "standard-mod",
+        "standard-neq",
+        "standard-round",
+        "standard-sub"
       ]
     },
     {
@@ -359,9 +389,9 @@
       "algebraic_family": "structure-lift",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 21,
-      "law_test_count": 4,
-      "conformance_case_count": 9,
+      "derived_word_count": 14,
+      "law_test_count": 6,
+      "conformance_case_count": 15,
       "derived_words": [
         "core.all",
         "core.any",
@@ -371,24 +401,19 @@
         "core.filter",
         "core.fold",
         "core.get",
-        "core.insert",
         "core.length",
         "core.range",
-        "core.remove",
-        "core.reorder",
-        "core.replace",
         "core.reverse",
-        "core.split",
         "core.take",
-        "module.algo.contains",
         "module.algo.index-of",
-        "module.algo.sort",
-        "module.algo.unique"
+        "module.algo.sort"
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
         "rust/tests/contract_modifier_laws.rs",
         "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_derivation_laws.rs",
+        "rust/tests/standard_operational_laws.rs",
         "rust/tests/structural_laws.rs"
       ],
       "conformance_cases": [
@@ -400,7 +425,13 @@
         "core-length",
         "core-range",
         "core-reverse",
-        "core-take"
+        "core-take",
+        "standard-all",
+        "standard-any",
+        "standard-fill",
+        "standard-filter",
+        "standard-index-of",
+        "standard-sort"
       ]
     },
     {
@@ -409,7 +440,7 @@
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 2,
-      "law_test_count": 2,
+      "law_test_count": 3,
       "conformance_case_count": 5,
       "derived_words": [
         "core.map",
@@ -417,6 +448,7 @@
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs",
         "rust/tests/structural_laws.rs"
       ],
       "conformance_cases": [
@@ -454,15 +486,18 @@
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 1,
-      "law_test_count": 1,
-      "conformance_case_count": 0,
+      "law_test_count": 2,
+      "conformance_case_count": 1,
       "derived_words": [
         "core.fill"
       ],
       "law_tests": [
+        "rust/tests/standard_operational_laws.rs",
         "rust/tests/structural_laws.rs"
       ],
-      "conformance_cases": []
+      "conformance_cases": [
+        "standard-fill"
+      ]
     },
     {
       "id": "algebra.modifier.consumption.keep",
@@ -483,31 +518,14 @@
       ]
     },
     {
-      "id": "algebra.modifier.consumption.eat",
-      "algebraic_family": "modifier",
-      "kind": "operation",
-      "status": "accepted",
-      "derived_word_count": 1,
-      "law_test_count": 1,
-      "conformance_case_count": 0,
-      "derived_words": [
-        "core.eat"
-      ],
-      "law_tests": [
-        "rust/tests/contract_modifier_laws.rs"
-      ],
-      "conformance_cases": []
-    },
-    {
       "id": "algebra.state-transformer.combinator",
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 2,
+      "derived_word_count": 1,
       "law_test_count": 1,
       "conformance_case_count": 1,
       "derived_words": [
-        "core.eat",
         "core.modifier.keep"
       ],
       "law_tests": [
@@ -523,8 +541,8 @@
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 9,
-      "law_test_count": 2,
-      "conformance_case_count": 4,
+      "law_test_count": 3,
+      "conformance_case_count": 5,
       "derived_words": [
         "core.cond",
         "core.def",
@@ -534,26 +552,19 @@
         "core.fold",
         "core.import.name-resolution",
         "core.map",
-        "core.reflect",
         "exploratory.child-runtime"
       ],
       "law_tests": [
-        "rust/src/types/code_data.rs",
         "rust/tests/higher_order_laws.rs",
-        "rust/tests/naming_resolution_laws.rs"
+        "rust/tests/naming_resolution_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
         "core-fold",
         "core-fold-word-name",
         "core-map",
         "core-user-definition-resolved",
-        "reflection-arbitrary-vector-errors",
-        "reflection-code-to-data",
-        "reflection-data-exec",
-        "reflection-dictionary-independent",
-        "reflection-lexemes-preserved",
-        "reflection-undefined-symbol-is-not-resolved",
-        "reflection-wrong-header-errors"
+        "standard-filter"
       ]
     },
     {

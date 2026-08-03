@@ -42,8 +42,12 @@ describe('formatAjisaiSource', () => {
         expect(formatAjisaiSource('[1 2 3]PRINT')).toBe('[ 1 2 3 ] PRINT');
     });
 
-    test('pads the pipeline and nil-coalesce markers', () => {
-        expect(formatAjisaiSource('a~b^c')).toBe('a ~ b ^ c');
+    test('pads the nil-coalesce marker', () => {
+        // `^` is a special character in the lexer, so padding it cannot change
+        // the token sequence. `~` is not: it belongs to the word around it, so
+        // splitting `a~b` would turn one token into three.
+        expect(formatAjisaiSource('a^c')).toBe('a ^ c');
+        expect(formatAjisaiSource('a~b')).toBe('a~b');
     });
 
     test('is idempotent on already-canonical input', () => {
@@ -115,8 +119,11 @@ describe('formatAjisaiSource', () => {
         expect(formatAjisaiSource('[ 1 ] ;')).toBe('[ 1 ] ;');
     });
 
-    test('keeps a conversion word such as >CF intact', () => {
-        expect(formatAjisaiSource('[ 1 ] [ 3 ] / >CF')).toBe('[ 1 ] [ 3 ] / >CF');
+    test('keeps a two-character comparison spelling intact', () => {
+        // `>` is not split, so `>=` survives as one token rather than becoming
+        // `> =` (GT followed by EQ).
+        expect(formatAjisaiSource('[ 1 ] [ 3 ] >=')).toBe('[ 1 ] [ 3 ] >=');
+        expect(formatAjisaiSource('[ 1 ] [ 3 ] <>')).toBe('[ 1 ] [ 3 ] <>');
     });
 
     test('formatting is idempotent on a multi-line block', () => {

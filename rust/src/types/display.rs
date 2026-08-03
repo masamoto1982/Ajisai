@@ -8,7 +8,7 @@ use std::fmt;
 ///
 /// This is the single stack rendering shared by all observation surfaces — the
 /// CLI stack display, the REPL, the in-process conformance runner, and the JSON
-/// report — so that a position role such as `>CF` or a timestamp can never
+/// report — so that an interpretation role such as a timestamp can never
 /// render one way on one surface and another way on another. It renders each
 /// slot with the *slot's* role rather than the value's construction-time hint,
 /// which is what makes it differ from `Value`'s own `Display`.
@@ -255,7 +255,6 @@ fn format_code_block(tokens: &[super::Token]) -> String {
             Token::VectorEnd => "]".to_string(),
             Token::BlockStart => "{".to_string(),
             Token::BlockEnd => "}".to_string(),
-            Token::Pipeline => "~".to_string(),
             Token::NilCoalesce => "^".to_string(),
             Token::CondClauseSep => "|".to_string(),
             Token::LineBreak => "\n".to_string(),
