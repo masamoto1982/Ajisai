@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::interpreter::cast::cast_conversions::{op_bool, op_chr, op_num, op_str};
+    use crate::interpreter::cast::cast_conversions::{op_bool, op_num, op_str};
     use crate::interpreter::cast::cast_value_helpers::{
         format_value_to_string_repr, is_number_value, is_string_value,
     };
@@ -167,103 +167,6 @@ mod tests {
         interp.stack.push(Value::from_bool(true));
         let result = op_bool(&mut interp);
         assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_chr_basic() {
-        let mut interp = Interpreter::new();
-
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(65),
-            BigInt::one(),
-        )));
-        op_chr(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "A");
-        }
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(97),
-            BigInt::one(),
-        )));
-        op_chr(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "a");
-        }
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(10),
-            BigInt::one(),
-        )));
-        op_chr(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "\n");
-        }
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(48),
-            BigInt::one(),
-        )));
-        op_chr(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "0");
-        }
-    }
-
-    #[test]
-    fn test_chr_errors() {
-        let mut interp = Interpreter::new();
-
-        interp.stack.push(Value::from_string("A"));
-        let result = op_chr(&mut interp);
-        assert!(result.is_err());
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(1),
-            BigInt::from(2),
-        )));
-        let result = op_chr(&mut interp);
-        assert!(result.is_err());
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(-1),
-            BigInt::one(),
-        )));
-        op_chr(&mut interp).unwrap();
-        assert!(interp.stack.last().unwrap().is_nil());
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(0x110000),
-            BigInt::one(),
-        )));
-        op_chr(&mut interp).unwrap();
-        assert!(interp.stack.last().unwrap().is_nil());
-    }
-
-    #[tokio::test]
-    async fn test_chr_integration() {
-        let mut interp = Interpreter::new();
-
-        interp.execute("65 CHR").await.unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "A");
-        }
     }
 
     #[tokio::test]

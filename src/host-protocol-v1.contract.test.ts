@@ -98,10 +98,13 @@ describe('GUI Phase 0 freeze contract', () => {
         // every Word is a flat Core Word.
         const manifest = readJson('docs/word-manifest.json');
         expect(manifest.counts).toEqual({
-            corewords: 70,
-            aliases: 16,
+            canonicalWords: 57,
+            semanticKernelWords: 35,
+            standardWords: 22,
+            corewords: 57,
+            aliases: 15,
             surface_forms: 8,
-            total: 94,
+            total: 80,
         });
     });
 });

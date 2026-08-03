@@ -85,8 +85,7 @@ pub(crate) fn handle_role(canonical: &str) -> Option<HandleRole> {
 /// A consumption modifier is its own token that binds the operating word that
 /// follows it, so we carry a `pending_keep` flag across a run of modifier
 /// tokens and test it when the next operating word turns out to be a discharge.
-/// `EAT` on the same word cancels the intent (it is an explicit consume), and
-/// any non-modifier, non-discharge token resets the pending flag — both keep
+/// Any non-modifier, non-discharge token resets the pending flag, keeping
 /// the check free of false positives.
 pub(crate) fn body_keeps_a_discharged_handle(tokens: &[Token]) -> bool {
     let mut pending_keep = false;
@@ -98,9 +97,7 @@ pub(crate) fn body_keeps_a_discharged_handle(tokens: &[Token]) -> bool {
         let canonical = canonicalize_core_word_name(symbol);
         match canonical.as_ref() {
             "KEEP" => pending_keep = true,
-            // `EAT` overrides a preceding `KEEP` on the same word; the target
-            // axis (`TOP`/`STAK`) is orthogonal and leaves the flag untouched.
-            "EAT" => pending_keep = false,
+            // The target axis (`TOP`/`STAK`) is orthogonal and leaves the flag untouched.
             "TOP" | "STAK" => {}
             other => {
                 if pending_keep && handle_role(other) == Some(HandleRole::Discharge) {

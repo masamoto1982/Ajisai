@@ -315,52 +315,38 @@ impl Interpreter {
             WordId::Del => execute_del::op_del(self),
             WordId::Lookup => execute_lookup::op_lookup(self),
             WordId::Print => io::op_print(self),
-            WordId::Insert => vector_ops::op_insert(self),
-            WordId::Replace => vector_ops::op_replace(self),
-            WordId::Remove => vector_ops::op_remove(self),
             WordId::Take => vector_ops::op_take(self),
-            WordId::Split => vector_ops::op_split(self),
             WordId::Reverse => vector_ops::op_reverse(self),
             WordId::Range => vector_ops::op_range(self),
-            WordId::Reorder => vector_ops::op_reorder(self),
             WordId::Collect => vector_ops::op_collect(self),
             WordId::Fill => tensor_cmds::op_fill(self),
             WordId::Floor => tensor_cmds::op_floor(self),
-            WordId::Ceil => tensor_cmds::op_ceil(self),
             WordId::Round => tensor_cmds::op_round(self),
             WordId::Mod => tensor_cmds::op_mod(self),
             WordId::Str => cast::op_str(self),
             WordId::Num => cast::op_num(self),
-            WordId::Chr => cast::op_chr(self),
             WordId::Chars => cast::op_chars(self),
             WordId::Join => cast::op_join(self),
             WordId::Trim => cast::op_trim(self),
             WordId::Tokenize => cast::op_tokenize(self),
             WordId::Substitute => cast::op_substitute(self),
-            WordId::StartsWith => cast::op_starts_with(self),
-            WordId::EndsWith => cast::op_ends_with(self),
             WordId::NilCheck => nil_diagnostics::op_nil_check(self),
             WordId::NilReason => nil_diagnostics::op_nil_reason(self),
             WordId::Abs => math_ops::op_abs(self),
             WordId::Neg => math_ops::op_neg(self),
-            WordId::Sign => math_ops::op_sign(self),
             WordId::Min => math_ops::op_min(self),
             WordId::Max => math_ops::op_max(self),
             WordId::Sqrt => math_ops::op_sqrt(self),
             WordId::Sort => sort::op_sort(self),
-            WordId::Unique => algo_ops::op_unique(self),
-            WordId::Contains => algo_ops::op_contains(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
             // The positional control directives of SPEC §6.4. The execution
             // loop interprets these against the source stream — `VENT` decides
-            // whether the *following source unit* is evaluated, `EAT`/`KEEP`
-            // set the consumption mode — so they are never dispatched by name
+            // whether the *following source unit* is evaluated and `KEEP`
+            // sets the non-default consumption mode — so they are never dispatched by name
             // and have no primitive. Reaching one here means a caller bypassed
             // the loop, which is exactly the unknown-word answer the old
             // `executor_key: None` path gave.
-            WordId::LazyNextUnitFallback
-            | WordId::SetConsumptionConsume
-            | WordId::SetConsumptionKeep => {
+            WordId::LazyNextUnitFallback | WordId::SetConsumptionKeep => {
                 Err(AjisaiError::UnknownWord(self.word_name_for(id).to_string()))
             }
         }

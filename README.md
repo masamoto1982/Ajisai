@@ -56,7 +56,7 @@ Spec links: [Exact scalars](https://masamoto1982.github.io/Ajisai/SPECIFICATION.
 
 ### 2) Bubble: partial failure stays visible
 
-Ajisai distinguishes three outcomes. A **value** is ordinary success. A **bubble** is `NIL`: a well-formed operation that could not produce a value — division by zero, a failed `NUM` parse, an invalid `CHR` code point, an out-of-range `GET`. A **channel error** is malformed use, which propagates and halts evaluation.
+Ajisai distinguishes three outcomes. A **value** is ordinary success. A **bubble** is `NIL`: a well-formed operation that could not produce a value — division by zero, a failed `NUM` parse, an out-of-range `GET`. A **channel error** is malformed use, which propagates and halts evaluation.
 
 A bubble carries a machine-readable **reason** and flows downstream, so absence stays diagnosable. `NIL` is not `FALSE`, and an error is not a value.
 
@@ -78,9 +78,9 @@ Spec links: [Vectors](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#l
 
 ### 4) One modifier axis: consume or keep
 
-A modifier prefixes the next word only, and the single axis is **consumption**. `EAT` (`,`, the default) consumes the operands a word reads; `KEEP` (`,,`) leaves them on the stack beneath the result.
+A modifier prefixes the next word only, and the single axis is **consumption**. A word consumes the operands it reads by default; `KEEP` (`,,`) leaves them on the stack beneath the result.
 
-That is the whole modifier system: two words, one decision. Everything else about how a Word behaves is in the Word itself, so reading a call means reading a name and at most one prefix.
+That is the whole modifier system: one explicit operation for the non-default behavior. Everything else about how a Word behaves is in the Word itself, so reading a call means reading a name and at most one prefix.
 
 Spec links: [The consumption axis](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-modifiers-consumption), [Stack observation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-stack-order)
 

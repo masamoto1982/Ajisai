@@ -7,7 +7,7 @@ use crate::kernel::generated::{Arity, GeneratedWord};
 use serde::Serialize;
 
 /// Static mass contract (SPEC §13.1): a word's flow-mass relationship under the
-/// default `TOP`/`EAT` mode. `consumes` operands are read and `produces` results
+/// default target/consume mode. `consumes` operands are read and `produces` results
 /// are pushed; under `KEEP` the `consumes` operands are additionally retained
 /// (bifurcation, §13.2). This is the machine-readable form of the §13.1 "arity /
 /// consumption / production / bifurcation" declaration; the NIL-projection part

@@ -115,10 +115,6 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     apply_unary_math(interp, |f| f.floor(), |er| er.floor(), "FLOOR")
 }
 
-pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
-    apply_unary_math(interp, |f| f.ceil(), |er| er.ceil(), "CEIL")
-}
-
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
 }

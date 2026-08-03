@@ -59,7 +59,7 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
-    // MOD / FLOOR / CEIL / ROUND create NIL on a domain miss and are covered
+    // MOD / FLOOR / ROUND create NIL on a domain miss and are covered
     // by projecting_word_set_matches_registry.
     // The comparison words pass NIL operands through. Comparison itself is
     // total (LANG.VALUES.EXACT), so they never create NIL.
@@ -150,8 +150,6 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
 /// Projecting words: a well-formed domain miss yields Bubble/NIL with a
 /// reason; malformed use raises an ordinary error.
 const PROJECTING_WORDS: &[&str] = &[
-    "CEIL",
-    "CHR",
     "DIV",
     "FILL",
     "FLOOR",
@@ -284,73 +282,6 @@ async fn nil_check_answers_rather_than_projecting() {
     }
 }
 
-/// **An empty vector is a value**, which is what makes the `projection: never`
-/// declared by `SORT`, `UNIQUE`, `FILTER`, `TAKE`, `MAP`, `SPLIT` and `REMOVE`
-/// true.
-///
-/// This law used to read the other way: the parser refused the literal and
-/// every operation that would compute an emptiness answered NIL instead
-/// (`EmptySequence`). That made those `projection: never` declarations false —
-/// each of those Words *did* project, on exactly the empty case — and it put
-/// NIL to work as "empty collection", a second job that collides with
-/// LANG.VALUES.NIL, where a reason is the whole observable content of an
-/// absence rather than a stand-in for a value.
-///
-/// The old law even said so: "if an empty vector ever becomes constructible,
-/// this fails and both declarations need revisiting." It became constructible,
-/// and the declarations turned out to be the correct half.
-#[tokio::test]
-async fn an_empty_vector_is_a_value() {
-    for literal in ["[ ]", "[ [ ] ]"] {
-        let mut interp = Interpreter::new();
-        interp
-            .execute(literal)
-            .await
-            .unwrap_or_else(|e| panic!("`{literal}` must be a value: {e}"));
-        let result = interp.stack.last().expect("a result value");
-        assert!(
-            !result.is_nil(),
-            "`{literal}` must not be an absence: {result:?}"
-        );
-    }
-
-    // Each of these computes an emptiness by a different route: a filter that
-    // keeps nothing, a zero-length prefix, an emptying removal, and a mapped
-    // empty. None of them projects.
-    for code in [
-        "[ 1 2 3 ] { FALSE } FILTER",
-        "[ 1 2 3 ] [ 0 ] TAKE",
-        "[ 1 ] [ 0 ] REMOVE",
-        "[ ] { 1 ADD } MAP",
-        "[ ] SORT",
-    ] {
-        let mut interp = Interpreter::new();
-        interp
-            .execute(code)
-            .await
-            .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
-        let result = interp.stack.last().expect("a result value");
-        assert!(
-            !result.is_nil(),
-            "`{code}` declares `projection: never`, so it must answer an empty \
-             vector rather than NIL: {result:?}"
-        );
-        assert_eq!(result.len(), 0, "`{code}` must answer an empty vector");
-    }
-
-    // A zero-sized SPLIT chunk is an empty vector beside the non-empty one, so
-    // a vector's elements can be empty vectors too.
-    let mut interp = Interpreter::new();
-    interp.execute("[ 1 2 3 ] [ 0 3 ] SPLIT").await.unwrap();
-    assert_eq!(interp.stack.len(), 2, "SPLIT pushes one value per size");
-    assert!(
-        !interp.stack[0].is_nil(),
-        "the zero-sized chunk must be an empty vector, got {:?}",
-        interp.stack[0]
-    );
-    assert_eq!(interp.stack[0].len(), 0);
-}
-
 #[tokio::test]
 async fn bubble_creation_comparison_nil_input() {
     // Comparison words are Projecting/Passthrough (SPEC §7.14, revised). A
@@ -380,7 +311,7 @@ async fn projecting_arithmetic_nil_input_passes_through() {
     // still propagates as NIL via the universal Bubble Rule (SPEC §4.5.1)
     // — the CreatesNil policy is about CF-budget exhaustion on irrational
     // operands, not about rejecting NIL inputs.
-    for name in &["FLOOR", "CEIL", "ROUND"] {
+    for name in &["FLOOR", "ROUND"] {
         let code = format!("NIL {name}");
         let stack = run_ok(&code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");

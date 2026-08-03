@@ -2,12 +2,11 @@ use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_with_arg;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
-    create_number_value, extract_bigint_from_value, extract_integer_from_value,
+    create_number_value, extract_integer_from_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
-use num_traits::ToPrimitive;
 
 fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, usize)> {
     // Compare the magnitude in u64 before narrowing to usize. `(-count) as
@@ -75,71 +74,5 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(count_val);
     }
     interp.stack.push(Value::from_vector(result));
-    Ok(())
-}
-
-pub fn op_split(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let sizes: Vec<usize> = if args_val.is_vector() {
-        let n = args_val.len();
-        if n == 0 {
-            interp.stack.push(args_val);
-            return Err(AjisaiError::from("SPLIT requires at least one size"));
-        }
-
-        let mut sizes = Vec::with_capacity(n);
-        for i in 0..n {
-            let child = args_val
-                .child(i)
-                .expect("SPLIT: child index in 0..len must be valid");
-            match extract_bigint_from_value(&child) {
-                Ok(bi) => match bi.to_usize() {
-                    Some(s) => sizes.push(s),
-                    None => {
-                        interp.stack.push(args_val);
-                        return Err(AjisaiError::from("Split size is too large"));
-                    }
-                },
-                Err(_) => {
-                    interp.stack.push(args_val);
-                    return Err(AjisaiError::from("Split sizes must be integers"));
-                }
-            }
-        }
-        sizes
-    } else {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::from("SPLIT requires [sizes...] vector"));
-    };
-
-    let result_vectors =
-        with_stacktop_vector_target_with_arg(interp, &args_val, is_keep_mode, |vector_val| {
-            let elements = extract_vector_elements(vector_val);
-            let total_size: usize = sizes.iter().sum();
-            if total_size > elements.len() {
-                return Err(AjisaiError::from("Split sizes sum exceeds vector length"));
-            }
-
-            let mut current_pos = 0;
-            let mut result_vectors = Vec::new();
-            for &size in &sizes {
-                let chunk = elements[current_pos..current_pos + size].to_vec();
-                result_vectors.push(Value::from_vector(chunk));
-                current_pos += size;
-            }
-            if current_pos < elements.len() {
-                let chunk = elements[current_pos..].to_vec();
-                result_vectors.push(Value::from_vector(chunk));
-            }
-            Ok(result_vectors)
-        })?;
-
-    if is_keep_mode {
-        interp.stack.push(args_val);
-    }
-    interp.stack.extend(result_vectors);
     Ok(())
 }
