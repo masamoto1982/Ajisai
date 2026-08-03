@@ -369,7 +369,7 @@ mod tests {
     fn bubble_rule_words_describe_nil_not_only_errors() {
         // The three-layer model (§2.3) requires GET / DIV / NUM / CHR to
         // describe their Bubble/NIL cases separately from contract errors.
-        for word in ["GET", "DIV", "NUM", "CHR"] {
+        for word in ["GET", "DIV", "NUM"] {
             let body = lookup_builtin_detail(word);
             assert!(
                 body.contains("Bubble/NIL"),
@@ -382,11 +382,11 @@ mod tests {
 
     #[test]
     fn word_without_authored_entry_falls_back_to_hover_example() {
-        let body = lookup_builtin_detail("SIGN");
-        let spec = lookup_builtin_spec("SIGN").expect("SIGN spec");
+        let body = lookup_builtin_detail("ROUND");
+        let spec = lookup_builtin_spec("ROUND").expect("ROUND spec");
         assert!(
             body.contains(spec.hover_syntax),
-            "SIGN Examples should reuse hover_syntax until authored:\n{}",
+            "ROUND Examples should reuse hover_syntax until authored:\n{}",
             body
         );
     }

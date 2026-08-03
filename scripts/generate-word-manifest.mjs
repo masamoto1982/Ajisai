@@ -145,6 +145,7 @@ function extractCoreWords() {
   const parsed = JSON.parse(readRepo(sourcePath)).entries.map((word) => ({
     name: word.name,
     category: word.category,
+    vocabularyTier: word.vocabularyTier,
   }));
   if (parsed.length === 0) fail('no core words extracted');
 
@@ -153,14 +154,14 @@ function extractCoreWords() {
     const base = slug(name);
     baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1);
   }
-  return parsed.map(({ name, category }) => {
+  return parsed.map(({ name, category, vocabularyTier }) => {
     const base = slug(name);
     const dropped = name.replace(/[a-zA-Z0-9]+/g, '');
     let id = `core.${base}`;
     if (baseCounts.get(base) > 1 && dropped) {
       id = `core.${base}${dropped.includes('?') ? '-p' : `-${slug(dropped) || 'x'}`}`;
     }
-    return { id, kind: 'coreword', surface: name, category, source: sourcePath };
+    return { id, kind: 'coreword', surface: name, category, vocabularyTier, source: sourcePath };
   });
 }
 
@@ -246,7 +247,7 @@ for (const entry of entries) {
 }
 
 const manifest = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedFrom: [
     'spec/words.json',
     'rust/src/core_word_aliases.rs',
@@ -258,6 +259,9 @@ const manifest = {
   ],
   semanticMetadataFrom: 'docs/formalization-coverage.json',
   counts: {
+    canonicalWords: contracts.entries.length,
+    semanticKernelWords: contracts.entries.filter((entry) => entry.vocabularyTier === 'kernel').length,
+    standardWords: contracts.entries.filter((entry) => entry.vocabularyTier === 'standard').length,
     corewords: entries.filter((entry) => entry.kind === 'coreword').length,
     aliases: entries.filter((entry) => ['symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
     surface_forms: entries.filter((entry) => !['coreword', 'symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,

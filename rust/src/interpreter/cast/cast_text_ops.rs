@@ -190,61 +190,6 @@ pub fn op_substitute(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn op_affix_predicate(
-    interp: &mut Interpreter,
-    word: &str,
-    check: impl Fn(&str, &str) -> bool,
-) -> Result<()> {
-    let needle_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let hay_val = match interp.stack.pop() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(needle_val);
-            return Err(AjisaiError::StackUnderflow);
-        }
-    };
-
-    let restore = |interp: &mut Interpreter, a: Value, b: Value| {
-        interp.stack.push(a);
-        interp.stack.push(b);
-    };
-
-    let validate = |label: &str, v: &Value| -> Option<AjisaiError> {
-        if v.is_nil() {
-            return Some(AjisaiError::from(format!(
-                "{}: expected {}, got Nil",
-                word, label
-            )));
-        }
-        if !is_string_value(v) {
-            return Some(AjisaiError::from(format!(
-                "{}: expected {} as String, got {}",
-                word,
-                label,
-                type_name_of(v)
-            )));
-        }
-        None
-    };
-    if let Some(err) = validate("String", &hay_val).or_else(|| validate("affix", &needle_val)) {
-        restore(interp, hay_val, needle_val);
-        return Err(err);
-    }
-
-    let hay = value_as_string(&hay_val).unwrap_or_default();
-    let needle = value_as_string(&needle_val).unwrap_or_default();
-    interp.stack.push(Value::from_bool(check(&hay, &needle)));
-    Ok(())
-}
-
-pub fn op_starts_with(interp: &mut Interpreter) -> Result<()> {
-    op_affix_predicate(interp, "STARTS-WITH?", |h, n| h.starts_with(n))
-}
-
-pub fn op_ends_with(interp: &mut Interpreter) -> Result<()> {
-    op_affix_predicate(interp, "ENDS-WITH?", |h, n| h.ends_with(n))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,34 +257,6 @@ mod tests {
         let mut interp = Interpreter::new();
         let r = interp.execute("'hello' '' 'X' SUBSTITUTE").await;
         assert!(r.is_err());
-    }
-
-    #[tokio::test]
-    async fn starts_with_true() {
-        let mut interp = Interpreter::new();
-        interp.execute("'hello' 'he' STARTS-WITH?").await.unwrap();
-        assert!(interp.stack.last().unwrap().is_truthy());
-    }
-
-    #[tokio::test]
-    async fn starts_with_false() {
-        let mut interp = Interpreter::new();
-        interp.execute("'hello' 'lo' STARTS-WITH?").await.unwrap();
-        assert!(!interp.stack.last().unwrap().is_truthy());
-    }
-
-    #[tokio::test]
-    async fn ends_with_true() {
-        let mut interp = Interpreter::new();
-        interp.execute("'hello' 'lo' ENDS-WITH?").await.unwrap();
-        assert!(interp.stack.last().unwrap().is_truthy());
-    }
-
-    #[tokio::test]
-    async fn ends_with_false() {
-        let mut interp = Interpreter::new();
-        interp.execute("'hello' 'he' ENDS-WITH?").await.unwrap();
-        assert!(!interp.stack.last().unwrap().is_truthy());
     }
 
     #[tokio::test]

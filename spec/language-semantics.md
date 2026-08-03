@@ -228,7 +228,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-modifiers-consumption">LANG.MODIFIERS.CONSUMPTION — The consumption axis</h3>
 
-<p>There is exactly one modifier axis. <code>EAT</code> consumes the operands a Word reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order. The default is <code>EAT</code>.</p>
+<p>There is exactly one modifier axis. By default a Word consumes the operands it reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order.</p>
 
 <p>A Word selects operands from the top of the stack, validates its registered contract, computes or projects the result, and then commits consumption according to the axis. ERROR does not masquerade as a successful NIL projection.</p>
 

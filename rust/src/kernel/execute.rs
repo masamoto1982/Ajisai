@@ -51,7 +51,7 @@ impl KernelStack {
 /// How the wrapper treats the consumed operands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Consumption {
-    /// Consume the operands (the default `EAT` mode).
+    /// Consume the operands (the default mode).
     Eat,
     /// Keep the operands and append the results (`KEEP`).
     Keep,

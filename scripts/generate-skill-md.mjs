@@ -200,7 +200,7 @@ const forbiddenPatterns = [
   {
     pattern: 'DUP / SWAP / DROP / OVER / ROT',
     code: 'DUP',
-    why: 'Forth-style stack shufflers do not exist. Use the one modifier axis instead: `,,` (KEEP: the next word does not consume its operands), `,` (EAT, the default).',
+    why: 'Forth-style stack shufflers do not exist. Use `,,` (KEEP) when the next word must retain its operands; consumption is the default.',
   },
   {
     pattern: 'IF / ELSE / THEN / WHILE',
@@ -340,7 +340,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Code blocks: \`{ ... }\` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF.
 - User word: \`{ body } 'NAME' DEF\` then call \`NAME\`. Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
-- One modifier axis, prefixing the *next word only*: \`,,\` (KEEP: don't consume operands) and \`,\` (EAT, the default).
+- One modifier, prefixing the *next word only*: \`,,\` (KEEP: do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration

@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **70 Words**. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json).
+Canonical inventory: **57 Words**. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json).
 
 ## `TRUE`
 
@@ -236,19 +236,6 @@ Round toward negative infinity.
 - **Syntax:** `[ 7/3 ] FLOOR`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
-## `CEIL`
-
-Round toward positive infinity.
-
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 7/3 ] CEIL`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
 ## `ROUND`
 
 Round to nearest integer (half-up).
@@ -286,19 +273,6 @@ Numeric negation.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `2 NEG`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
-
-## `SIGN`
-
-Sign of a number: -1, 0, or 1.
-
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `-2 SIGN`
 - **ERROR conditions:** `stackTargetMode`, `nonNumeric`
 
 ## `MIN`
@@ -353,45 +327,6 @@ Extract one element of a vector by index.
 - **Syntax:** `[ 10 20 30 ] [ 0 ] GET`
 - **ERROR conditions:** `nonVector`, `invalidIndex`
 
-## `INSERT`
-
-Insert a value at a given index in a vector.
-
-- **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 3 ] [ 1 2 ] INSERT`
-- **ERROR conditions:** `nonVector`, `invalidIndexPair`
-
-## `REPLACE`
-
-Replace an element of a vector at a given index.
-
-- **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] [ 0 9 ] REPLACE`
-- **ERROR conditions:** `nonVector`, `invalidIndexPair`, `indexOutOfBounds`
-
-## `REMOVE`
-
-Remove an element from a vector at a given index.
-
-- **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] [ 0 ] REMOVE`
-- **ERROR conditions:** `nonVector`, `invalidIndex`, `indexOutOfBounds`
-
 ## `LENGTH`
 
 Return the number of elements in a vector.
@@ -418,19 +353,6 @@ Take the first N or last -N elements of a vector.
 - **Syntax:** `[ 1 2 3 4 5 ] [ 3 ] TAKE`
 - **ERROR conditions:** `nonVector`, `invalidCount`
 
-## `SPLIT`
-
-Split a vector into chunks at the specified sizes.
-
-- **Family:** `collection`
-- **Stack:** 2 input(s) → variable output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 4 ] [ 2 2 ] SPLIT`
-- **ERROR conditions:** `nonVector`, `invalidSizes`
-
 ## `CONCAT`
 
 Flatten and concatenate two vectors.
@@ -456,19 +378,6 @@ Reverse the order of vector elements.
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] REVERSE`
 - **ERROR conditions:** `nonVector`
-
-## `REORDER`
-
-Reorder vector elements according to an index permutation.
-
-- **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER`
-- **ERROR conditions:** `nonVector`, `invalidPermutation`
 
 ## `COLLECT`
 
@@ -521,32 +430,6 @@ Return a copy of a vector sorted in ascending order.
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 3 1 2 ] SORT`
 - **ERROR conditions:** `nonVector`, `nonComparableElement`
-
-## `UNIQUE`
-
-Return a copy of a vector with duplicates removed, preserving first-occurrence order.
-
-- **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 1 ] UNIQUE`
-- **ERROR conditions:** `stackTargetMode`, `nonVector`
-
-## `CONTAINS`
-
-True if a vector contains an element equal to the given value.
-
-- **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 ] 2 CONTAINS`
-- **ERROR conditions:** `stackTargetMode`, `nonVector`
 
 ## `INDEX-OF`
 
@@ -691,32 +574,6 @@ Replace every occurrence of a substring with another.
 - **Syntax:** `'hello' 'l' 'L' SUBSTITUTE`
 - **ERROR conditions:** `nonText`
 
-## `STARTS-WITH?`
-
-Test whether a string begins with the given prefix.
-
-- **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `'hello' 'he' STARTS-WITH?`
-- **ERROR conditions:** `nonText`, `nonTextPrefix`
-
-## `ENDS-WITH?`
-
-Test whether a string ends with the given suffix.
-
-- **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `'hello' 'lo' ENDS-WITH?`
-- **ERROR conditions:** `nonText`, `nonTextSuffix`
-
 ## `NUM`
 
 Parse text as a number; Bubble/NIL on parse failure.
@@ -741,19 +598,6 @@ Convert a value to its string representation.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `42 STR`
-
-## `CHR`
-
-Convert a numeric character code to a single-character string.
-
-- **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: invalidCharacterCode → invalidEncoding
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `65 CHR`
-- **ERROR conditions:** `nonNumeric`, `nonInteger`
 
 ## `COND`
 
@@ -830,19 +674,6 @@ Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following
 - **Syntax:** `NIL ^ [ 0 ]`
 - **Aliases:** `^`
 - **ERROR conditions:** `missingFollowingSourceUnit`
-
-## `EAT`
-
-Set the consumption mode to consume operands.
-
-- **Family:** `stackModifier`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MODIFIERS.CONSUMPTION`
-- **Syntax:** `, +`
-- **Aliases:** `,`
 
 ## `KEEP`
 
