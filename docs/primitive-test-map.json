@@ -4,7 +4,7 @@
     "docs/formalization-coverage.json"
   ],
   "summary": {
-    "primitives": 23,
+    "primitives": 24,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 15,
     "distinct_conformance_cases": 42
@@ -522,9 +522,9 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 10,
-      "law_test_count": 3,
-      "conformance_case_count": 11,
+      "derived_word_count": 9,
+      "law_test_count": 2,
+      "conformance_case_count": 4,
       "derived_words": [
         "core.cond",
         "core.def",
@@ -611,6 +611,30 @@
         "rust/tests/naming_resolution_laws.rs"
       ],
       "conformance_cases": []
+    },
+    {
+      "id": "algebra.reflection.involution",
+      "algebraic_family": "reflection",
+      "kind": "isomorphism",
+      "status": "accepted",
+      "derived_word_count": 1,
+      "law_test_count": 1,
+      "conformance_case_count": 7,
+      "derived_words": [
+        "core.reflect"
+      ],
+      "law_tests": [
+        "rust/src/types/code_data.rs"
+      ],
+      "conformance_cases": [
+        "reflection-arbitrary-vector-errors",
+        "reflection-code-to-data",
+        "reflection-data-exec",
+        "reflection-dictionary-independent",
+        "reflection-lexemes-preserved",
+        "reflection-undefined-symbol-is-not-resolved",
+        "reflection-wrong-header-errors"
+      ]
     }
   ]
 }

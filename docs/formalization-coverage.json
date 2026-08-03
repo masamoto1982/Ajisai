@@ -13,8 +13,8 @@
       "flow"
     ],
     "entry_counts": {
-      "flow": 21,
-      "identity": 27,
+      "flow": 20,
+      "identity": 28,
       "material": 138,
       "sugar": 28
     }
@@ -680,6 +680,21 @@
         "LOOKUP",
         "IO@INPUT",
         "MUSIC@EXPLAIN"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "algebra.reflection.involution",
+      "algebraic_family": "reflection",
+      "core_tier": "identity",
+      "kind": "isomorphism",
+      "description": "A strict involution between CodeBlock token sequences and versioned canonical structured code data.",
+      "admission_reason": "Accepted as the irreducible typed boundary needed to expose code as data without making Vector or String executable.",
+      "introduced_by": [
+        "REFLECT"
+      ],
+      "can_derive": [
+        "REFLECT"
       ],
       "status": "accepted"
     }
@@ -3492,10 +3507,10 @@
       "semantic_role": "Primitive",
       "primitive": true,
       "derived_from": [
-        "algebra.state-transformer.composition"
+        "algebra.reflection.involution"
       ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow"
+      "algebraic_family": "reflection",
+      "core_tier": "identity"
     }
   ],
   "unclassified_allowlist": []

@@ -1207,10 +1207,10 @@
       "canonical": "REFLECT",
       "coverage_entry_id": "core.reflect",
       "semantic_role": "Primitive",
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
+      "algebraic_family": "reflection",
+      "core_tier": "identity",
       "derived_from": [
-        "algebra.state-transformer.composition"
+        "algebra.reflection.involution"
       ],
       "classification": "Core"
     },
