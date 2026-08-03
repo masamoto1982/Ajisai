@@ -92,16 +92,16 @@ describe('GUI Phase 0 freeze contract', () => {
         }
     });
 
-    test('the generated word inventory stays at 93 surfaces', () => {
+    test('the generated word inventory stays at 94 surfaces', () => {
         // The vocabulary is a ceiling, not a fixed inventory: shrinking is free,
         // growing is a deliberate specification change. Modules are gone, so
         // every Word is a flat Core Word.
         const manifest = readJson('docs/word-manifest.json');
         expect(manifest.counts).toEqual({
-            corewords: 69,
+            corewords: 70,
             aliases: 16,
             surface_forms: 8,
-            total: 93,
+            total: 94,
         });
     });
 });

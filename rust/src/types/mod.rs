@@ -1,4 +1,5 @@
 pub mod arena;
+pub(crate) mod code_data;
 pub mod display;
 pub mod exact;
 pub mod fraction;

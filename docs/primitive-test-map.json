@@ -4,10 +4,10 @@
     "docs/formalization-coverage.json"
   ],
   "summary": {
-    "primitives": 23,
+    "primitives": 24,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 13,
-    "distinct_conformance_cases": 35
+    "distinct_law_test_files": 15,
+    "distinct_conformance_cases": 42
   },
   "primitives": [
     {
@@ -233,7 +233,7 @@
       "kind": "domain",
       "status": "accepted",
       "derived_word_count": 12,
-      "law_test_count": 1,
+      "law_test_count": 2,
       "conformance_case_count": 0,
       "derived_words": [
         "core.chars",
@@ -250,6 +250,7 @@
         "core.trim"
       ],
       "law_tests": [
+        "rust/src/interpreter/io.rs",
         "rust/tests/string_laws.rs"
       ],
       "conformance_cases": []
@@ -521,11 +522,12 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 8,
+      "derived_word_count": 9,
       "law_test_count": 2,
       "conformance_case_count": 4,
       "derived_words": [
         "core.cond",
+        "core.def",
         "core.del",
         "core.exec",
         "core.filter",
@@ -569,17 +571,20 @@
       "algebraic_family": "dictionary",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 2,
+      "derived_word_count": 3,
       "law_test_count": 1,
-      "conformance_case_count": 0,
+      "conformance_case_count": 1,
       "derived_words": [
+        "core.def",
         "core.del",
         "core.structural.record"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
       ],
-      "conformance_cases": []
+      "conformance_cases": [
+        "core-user-definition-resolved"
+      ]
     },
     {
       "id": "algebra.observation.structured-diagnostic",
@@ -597,6 +602,30 @@
         "rust/tests/naming_resolution_laws.rs"
       ],
       "conformance_cases": []
+    },
+    {
+      "id": "algebra.reflection.involution",
+      "algebraic_family": "reflection",
+      "kind": "isomorphism",
+      "status": "accepted",
+      "derived_word_count": 1,
+      "law_test_count": 1,
+      "conformance_case_count": 7,
+      "derived_words": [
+        "core.reflect"
+      ],
+      "law_tests": [
+        "rust/src/types/code_data.rs"
+      ],
+      "conformance_cases": [
+        "reflection-arbitrary-vector-errors",
+        "reflection-code-to-data",
+        "reflection-data-exec",
+        "reflection-dictionary-independent",
+        "reflection-lexemes-preserved",
+        "reflection-undefined-symbol-is-not-resolved",
+        "reflection-wrong-header-errors"
+      ]
     }
   ]
 }

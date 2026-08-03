@@ -14,7 +14,7 @@
     ],
     "entry_counts": {
       "flow": 20,
-      "identity": 27,
+      "identity": 28,
       "material": 138,
       "sugar": 28
     }
@@ -680,6 +680,21 @@
         "LOOKUP",
         "IO@INPUT",
         "MUSIC@EXPLAIN"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "algebra.reflection.involution",
+      "algebraic_family": "reflection",
+      "core_tier": "identity",
+      "kind": "isomorphism",
+      "description": "A strict involution between CodeBlock token sequences and versioned canonical structured code data.",
+      "admission_reason": "Accepted as the irreducible typed boundary needed to expose code as data without making Vector or String executable.",
+      "introduced_by": [
+        "REFLECT"
+      ],
+      "can_derive": [
+        "REFLECT"
       ],
       "status": "accepted"
     }
@@ -3463,6 +3478,39 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "LOOKUP"
+    },
+    {
+      "id": "core.reflect",
+      "kind": "coreword",
+      "surface": "REFLECT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.8"
+      ],
+      "formalization_sections": [
+        "docs/dev/code-data-reflection-design-2026-08.md"
+      ],
+      "law_tests": [
+        "rust/src/types/code_data.rs"
+      ],
+      "conformance_cases": [
+        "reflection-code-to-data",
+        "reflection-data-exec",
+        "reflection-lexemes-preserved",
+        "reflection-undefined-symbol-is-not-resolved",
+        "reflection-dictionary-independent",
+        "reflection-wrong-header-errors",
+        "reflection-arbitrary-vector-errors"
+      ],
+      "status": "Formalized",
+      "notes": "Pure involution between CodeBlock token sequences and versioned canonical structured data.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.reflection.involution"
+      ],
+      "algebraic_family": "reflection",
+      "core_tier": "identity"
     }
   ],
   "unclassified_allowlist": []
