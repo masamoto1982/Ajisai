@@ -118,6 +118,35 @@ mod tests {
         Value::from_vector(values)
     }
 
+    fn legal_token_sequences() -> impl Strategy<Value = Vec<Token>> {
+        let atom = prop_oneof![
+            prop::sample::select(vec!["0", "-1", "1/1", "1.0", ".5"])
+                .prop_map(|value| Token::Number(value.into())),
+            any::<String>().prop_map(|value| Token::String(value.into())),
+            prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD", ">CF"])
+                .prop_map(|value| Token::Symbol(value.into())),
+            Just(Token::Pipeline),
+            Just(Token::NilCoalesce),
+            Just(Token::LineBreak),
+        ];
+        prop::collection::vec(atom, 0..8).prop_recursive(4, 64, 8, |inner| {
+            prop_oneof![
+                inner.clone().prop_map(|tokens| {
+                    let mut nested = vec![Token::VectorStart];
+                    nested.extend(tokens);
+                    nested.push(Token::VectorEnd);
+                    nested
+                }),
+                inner.prop_map(|tokens| {
+                    let mut nested = vec![Token::BlockStart];
+                    nested.extend(tokens);
+                    nested.push(Token::BlockEnd);
+                    nested
+                }),
+            ]
+        })
+    }
+
     #[test]
     fn all_token_variants_round_trip() {
         let tokens = vec![
@@ -227,6 +256,13 @@ mod tests {
             tokens.extend(strings.into_iter().map(|s| Token::String(s.into())));
             tokens.extend(numbers.into_iter().map(|s| Token::Number(s.into())));
             tokens.extend(symbols.into_iter().map(|s| Token::Symbol(s.into())));
+            let encoded = tokens_to_code_data(&tokens);
+            prop_assert_eq!(code_data_to_tokens(&encoded).unwrap(), tokens);
+            prop_assert_eq!(tokens_to_code_data(&code_data_to_tokens(&encoded).unwrap()), encoded);
+        }
+
+        #[test]
+        fn arbitrarily_nested_legal_sequences_round_trip(tokens in legal_token_sequences()) {
             let encoded = tokens_to_code_data(&tokens);
             prop_assert_eq!(code_data_to_tokens(&encoded).unwrap(), tokens);
             prop_assert_eq!(tokens_to_code_data(&code_data_to_tokens(&encoded).unwrap()), encoded);

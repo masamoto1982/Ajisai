@@ -158,5 +158,13 @@ mod tests {
             .unwrap_err();
         assert!(error.to_string().contains("numeric literal"));
         assert!(!def.user_words.contains_key("TOO-BIG"));
+
+        let mut higher_order = Interpreter::new();
+        higher_order.set_runtime_limits(limits);
+        let error = higher_order
+            .execute(&format!("[ 1 ] {data} MAP"))
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("numeric literal"));
     }
 }
