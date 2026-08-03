@@ -173,7 +173,8 @@
             "absence",
             "stackModifier",
             "dictionary",
-            "output"
+            "output",
+            "reflection"
           ]
         },
         "category": {

@@ -5,62 +5,104 @@
   "families": [
     {
       "id": "booleanLogic",
-      "clauses": ["LANG.VALUES.TRUTH"],
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
       "truth": "twoValued",
       "nilPolicy": "contractSpecific"
     },
     {
       "id": "comparison",
-      "clauses": ["LANG.VALUES.TRUTH", "LANG.VALUES.EXACT"],
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.VALUES.EXACT"
+      ],
       "decidability": "total",
       "nilPolicy": "passthrough"
     },
     {
       "id": "exactArithmetic",
-      "clauses": ["LANG.VALUES.EXACT", "LANG.COLLECTIONS.LIFT", "LANG.FAILURE.TRICHOTOMY"],
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
       "nilPolicy": "passthroughThenProject",
       "lifting": "elementwise"
     },
     {
       "id": "collection",
-      "clauses": ["LANG.VALUES.VECTOR", "LANG.COLLECTIONS.LIFT", "LANG.MACHINE.LIMITS"],
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
       "nilPolicy": "contractSpecific",
       "budgetOutcome": "reasonedNil"
     },
     {
       "id": "higherOrder",
-      "clauses": ["LANG.COLLECTIONS.HIGHER"],
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER"
+      ],
       "effectOrder": "elementVisitOrder"
     },
     {
       "id": "text",
-      "clauses": ["LANG.VALUES.DISJOINT", "LANG.FAILURE.TRICHOTOMY"],
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
       "nilPolicy": "contractSpecific"
     },
     {
       "id": "control",
-      "clauses": ["LANG.MACHINE.TRANSFORMERS", "LANG.SOURCE.CODE"],
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.SOURCE.CODE"
+      ],
       "effectOrder": "evaluationOrder"
     },
     {
       "id": "absence",
-      "clauses": ["LANG.VALUES.NIL", "LANG.FAILURE.RECOVERY"],
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
       "nilPolicy": "inspectOrRecover"
     },
     {
       "id": "stackModifier",
-      "clauses": ["LANG.MODIFIERS.CONSUMPTION"],
-      "axes": ["consumption"]
+      "clauses": [
+        "LANG.MODIFIERS.CONSUMPTION"
+      ],
+      "axes": [
+        "consumption"
+      ]
     },
     {
       "id": "dictionary",
-      "clauses": ["LANG.DICTIONARY.RESOLUTION", "LANG.DICTIONARY.MUTATION"],
+      "clauses": [
+        "LANG.DICTIONARY.RESOLUTION",
+        "LANG.DICTIONARY.MUTATION"
+      ],
       "commit": "atomic"
     },
     {
       "id": "output",
-      "clauses": ["LANG.EFFECTS.OUTPUT", "LANG.MACHINE.ORDER"],
+      "clauses": [
+        "LANG.EFFECTS.OUTPUT",
+        "LANG.MACHINE.ORDER"
+      ],
       "effectOrder": "requestOrder"
+    },
+    {
+      "id": "reflection",
+      "clauses": [
+        "LANG.SOURCE.REFLECTION"
+      ],
+      "evaluation": "never",
+      "dictionaryAccess": "none"
     }
   ]
 }
