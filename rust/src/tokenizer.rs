@@ -165,7 +165,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     }
 
     check_bracket_matching(input)?;
-    check_cond_clause_per_line_constraint(&tokens)?;
+    // Keep source entry and token-native entry points on one structural
+    // validator. The source-oriented bracket check above is retained for its
+    // precise diagnostics; this call is the shared semantic acceptance gate.
+    validate_code_tokens(&tokens)?;
     Ok(tokens)
 }
 

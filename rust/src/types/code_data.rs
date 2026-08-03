@@ -192,6 +192,30 @@ mod tests {
         );
     }
 
+    #[test]
+    fn representative_legal_code_shapes_round_trip_as_tokens() {
+        for source in [
+            "",
+            "1",
+            "''",
+            "'line one\nline two 🙂'",
+            "UNKNOWN-WORD",
+            "[ 1 [ 2 ] { 'nested' } ]",
+            "{ 1 { 2 } }",
+            "1 ~ 2",
+            "NIL ^ { 3 }",
+            "{ 1 | 2 }",
+            "1\n2\n{ 3 }",
+        ] {
+            let tokens = crate::tokenizer::tokenize(source).unwrap();
+            assert_eq!(
+                code_data_to_tokens(&tokens_to_code_data(&tokens)).unwrap(),
+                tokens,
+                "source: {source:?}"
+            );
+        }
+    }
+
     proptest! {
         #[test]
         fn payload_token_sequences_round_trip(

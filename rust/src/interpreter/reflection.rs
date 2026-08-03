@@ -68,6 +68,21 @@ mod tests {
         assert_eq!(keep_failed.stack.last().and_then(Value::as_i64), Some(1));
     }
 
+    #[tokio::test]
+    async fn rejects_every_non_reflectable_domain_and_noncanonical_vector() {
+        for source in [
+            "1 REFLECT",
+            "TRUE REFLECT",
+            "'text' REFLECT",
+            "NIL REFLECT",
+            "[ 1 2 3 ] REFLECT",
+            "[ [ 1 2 ] [ 3 4 ] ] REFLECT",
+        ] {
+            let mut interp = Interpreter::new();
+            assert!(interp.execute(source).await.is_err(), "accepted {source}");
+        }
+    }
+
     #[test]
     fn reflection_output_role_is_always_unassigned() {
         let mut interp = Interpreter::new();
@@ -79,6 +94,27 @@ mod tests {
             .execute_section_core(&[Token::Symbol("REFLECT".into())], 0)
             .unwrap();
         assert_eq!(interp.stack.last_role(), Interpretation::Unassigned);
+    }
+
+    #[test]
+    fn primitive_does_not_resolve_symbols_or_mutate_interpreter_state() {
+        let mut interp = Interpreter::new();
+        let dictionary_epoch = interp.dictionary_epoch;
+        let body_store_len = interp.body_store.len();
+        let dependency_count = interp.dependents.len();
+        let resolve_cache_len = interp.resolve_cache.len();
+        interp.stack.push(Value::from_code_block(vec![Token::Symbol(
+            "UNRESOLVED-BY-REFLECT".into(),
+        )]));
+
+        op_reflect(&mut interp).unwrap();
+
+        assert_eq!(interp.dictionary_epoch, dictionary_epoch);
+        assert_eq!(interp.body_store.len(), body_store_len);
+        assert_eq!(interp.dependents.len(), dependency_count);
+        assert_eq!(interp.resolve_cache.len(), resolve_cache_len);
+        assert!(interp.user_words.is_empty());
+        assert!(interp.collect_output().is_empty());
     }
 
     #[tokio::test]
