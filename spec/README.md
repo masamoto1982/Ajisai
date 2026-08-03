@@ -29,7 +29,7 @@ Run `npm run specification:generate` after an authoritative source change and
 `npm run specification:check` in quality gates.
 
 `npm run semantic-kernel:check` enforces the budgets that keep the language
-small: at most 400 lines of kernel, 12 semantic families, 69 canonical Words,
+small: at most 400 lines of kernel, 12 semantic families, 70 canonical Words,
 and 16 aliases, with every family and clause reference resolving. The budgets
 are ceilings — shrinking is always allowed, growing is a deliberate
 specification change.

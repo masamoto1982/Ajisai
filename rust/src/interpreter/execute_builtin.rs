@@ -6,8 +6,8 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     algo_ops, arithmetic, cast, comparison, control, control_cond, execute_def, execute_del,
-    execute_lookup, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, sort,
-    tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
+    execute_lookup, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
+    reflection, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
 
 /// What a Word's declared `nilPolicy` requires of the operands on the stack,
@@ -309,6 +309,7 @@ impl Interpreter {
                 Ok(())
             }
             WordId::Exec => control::op_exec(self),
+            WordId::Reflect => reflection::op_reflect(self),
             WordId::Cond => control_cond::op_cond(self),
             WordId::Def => execute_def::op_def(self),
             WordId::Del => execute_del::op_del(self),
