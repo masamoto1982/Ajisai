@@ -202,27 +202,23 @@ export const createVocabularyManager = (
             .map(createWordInfoFromTuple)
             .filter(word => word.dictionary === selectedDictionary);
 
-    const deleteWord = async (wordName: string, forceDelete: boolean): Promise<boolean> => {
-        const deleteCode = forceDelete
-            ? `! '${wordName}' DEL`
-            : `'${wordName}' DEL`;
-
+    // A referenced word is not deletable, and there is no way to override that:
+    // no Word in the vocabulary forces the delete, so the refusal is final and
+    // the only route is to delete the dependents first. This used to offer a
+    // force delete that re-ran the deletion as `! 'NAME' DEL`; `!` was one of
+    // the symbols retired when every symbol became one character, so accepting
+    // that prompt could only ever report "Unknown word: !". The interpreter
+    // already names the referencing words in its message, so surface it as-is.
+    const deleteWord = async (wordName: string): Promise<boolean> => {
         try {
-            const result = await window.ajisaiInterpreter.execute(deleteCode);
+            const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
             if (result.status === 'ERROR') {
-                if (!forceDelete && result.message?.includes(DEPENDENCY_DELETE_ERROR)) {
-                    const confirmed = confirm(
-                        `Word '${wordName}' is referenced by other user words. Force delete with ! ?`
-                    );
-
-                    if (confirmed) {
-                        return deleteWord(wordName, true);
-                    }
-
-                    return false;
+                const message = result.message || 'Unknown error';
+                if (message.includes(DEPENDENCY_DELETE_ERROR)) {
+                    showInfo?.(message, true);
+                } else {
+                    alert(`Failed to delete word: ${message}`);
                 }
-
-                alert(`Failed to delete word: ${result.message}`);
                 return false;
             }
 
@@ -237,7 +233,7 @@ export const createVocabularyManager = (
     };
 
     const confirmAndDeleteWord = async (wordName: string): Promise<void> => {
-        await deleteWord(wordName, false);
+        await deleteWord(wordName);
     };
 
     const renderBuiltInWordsSorted = (
