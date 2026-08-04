@@ -49,13 +49,17 @@ declare global {
     }
 }
 
+// Words are addressed by bare name (LANG.DICTIONARY.RESOLUTION: two tiers, and
+// User is one of them). A `DICT@NAME` prefix resolves to nothing, so composing
+// one here persisted every definition as null and lost the user's words on the
+// next load.
 const toUserWord = (
     wordData: [string, string, boolean],
     getDefinition: (name: string) => string | null
 ): UserWord => ({
     dictionary: wordData[0],
     name: wordData[1],
-    definition: getDefinition(`${wordData[0]}@${wordData[1]}`)
+    definition: getDefinition(wordData[1])
 });
 
 const readActiveSelections = (): {
@@ -107,10 +111,12 @@ interface ExportDocument {
     readonly words: ExportWord[];
 }
 
+// Keyed by bare name, matching `collect_word_identities`, which reports the
+// User-tier key itself rather than a `DICT@NAME` composite.
 const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, string> => {
     const map = new Map<string, string>();
     for (const [fqName, id] of interpreter.collect_word_identities()) {
-        map.set(fqName.toUpperCase(), id);
+        map.set(buildWordKey(fqName), id);
     }
     return map;
 };
@@ -119,11 +125,11 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
     const identities = collectWordIdentityMap(interpreter);
     const words: ExportWord[] = interpreter.collect_user_words_info()
         .filter(([dictionary]) => dictionary === dictionaryName)
-        .map(([dictionary, name]) => {
-            const id = identities.get(buildWordKey(dictionary, name));
+        .map(([, name]) => {
+            const id = identities.get(buildWordKey(name));
             return {
                 name,
-                definition: interpreter.lookup_word_definition(`${dictionary}@${name}`),
+                definition: interpreter.lookup_word_definition(name),
                 ...(id ? { id } : {})
             };
         });
@@ -138,7 +144,8 @@ export interface ParsedImport {
 }
 
 const buildExportFilename = (name: string): string => `${name}.json`;
-const buildWordKey = (dictionary: string, name: string): string => `${dictionary}@${name}`.toUpperCase();
+// The whole key of a User-tier word: its normalized name.
+const buildWordKey = (name: string): string => name.toUpperCase();
 const filenameToDictionaryName = (filename: string): string => filename.replace(/\.json$/i, '').toUpperCase();
 
 // Validate a single raw word entry from an (untrusted) import file. Returns a
@@ -319,13 +326,12 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
                     const savedWordKeys = new Set(
-                        wordsToRestore.map((w: UserWord) => buildWordKey(w.dictionary || 'EXAMPLE', w.name))
+                        wordsToRestore.map((w: UserWord) => buildWordKey(w.name))
                     );
                     const currentWords = window.ajisaiInterpreter.collect_user_words_info();
-                    for (const [dictionary, name] of currentWords) {
-                        const currentWordKey = buildWordKey(dictionary, name);
-                        if (!savedWordKeys.has(currentWordKey)) {
-                            window.ajisaiInterpreter.remove_word(`${dictionary}@${name}`);
+                    for (const [, name] of currentWords) {
+                        if (!savedWordKeys.has(buildWordKey(name))) {
+                            window.ajisaiInterpreter.remove_word(name);
                         }
                     }
 
@@ -402,7 +408,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 let deduplicated = 0;
                 const idMismatches: string[] = [];
                 for (const word of importedWords) {
-                    const fqName = buildWordKey(dictionary, word.name);
+                    const fqName = buildWordKey(word.name);
                     if (before.has(fqName) && before.get(fqName) === after.get(fqName)) {
                         deduplicated++;
                     } else {

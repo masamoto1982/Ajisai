@@ -15,12 +15,20 @@ const collectSerialInbox = (): SerialInboxEntry[] | undefined => {
     return entries.length > 0 ? entries : undefined;
 };
 
+// A word is addressed by its bare name. The dictionary has two tiers and User
+// is one of them (LANG.DICTIONARY.RESOLUTION), so there is nothing for a
+// `DICT@NAME` prefix to select and the interpreter no longer resolves one:
+// looking a word up as `USER@FOO` returns null. That null then travelled the
+// whole execution path — `restore_user_words` skips a definition-less word, so
+// the worker ran without the user's words and reported none back, and the
+// post-run sync wiped them from the main interpreter. Every run then looked
+// like a dictionary change and dragged the right column to the Words sheet.
 export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
     const userWordsInfo = interpreter.collect_user_words_info();
     return userWordsInfo.map(wordData => ({
         dictionary: wordData[0],
         name: wordData[1],
-        definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`)
+        definition: interpreter.lookup_word_definition(wordData[1])
     }));
 };
 
