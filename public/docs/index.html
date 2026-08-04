@@ -462,7 +462,29 @@
                     <h3>How to read the examples</h3>
                     <p>The <strong>Expected value</strong> column shows the final stack exactly as the language renders it, value by value. Two display conventions matter from the start:</p>
                     <p>Numbers display as exact fractions in <code>numerator/denominator</code> form — the integer three renders as <code>3/1</code>. Truth values display as <code>TRUE</code> and <code>FALSE</code>; the absence of a value displays as <code>NIL</code>.</p>
-                    <p>In the text of this reference, anything with a gray background is an Ajisai token. Every symbol token defined by Ajisai is a word in disguise — <code>+</code> is <code>ADD</code> and <code>,,</code> is <code>KEEP</code> — so the gray background is the signal that a mark belongs to the program, not to the prose.</p>
+                    <p>In the text of this reference, anything with a gray background is an Ajisai token. Every symbol token defined by Ajisai is a word in disguise — <code>+</code> is <code>ADD</code> and <code>^</code> is <code>VENT</code> — so the gray background is the signal that a mark belongs to the program, not to the prose.</p>
+                </section>
+
+                <section id="tokens" class="ref-page">
+                    <h2>Tokens and Spelling</h2>
+                    <p>A program is a sequence of tokens separated by whitespace. <strong>A token ends at exactly three things</strong>: whitespace, a structural delimiter (<code>[</code> <code>]</code> <code>{</code> <code>}</code> <code>(</code> <code>)</code>), or the start of a comment (<code>#</code> to the end of the line). Nothing else ends a token, so every other character — punctuation included — is an ordinary name character.</p>
+                    <p>The practical consequence is that <strong>an operator needs a space around it</strong> the same way a word does. <code>2 +</code> is two tokens; <code>2+</code> is a single name that no word answers to, and it fails as an unknown word rather than silently parsing as addition. Brackets and braces are the exception, because they delimit themselves: <code>[ 1 2 ][ 3 4 ]CONCAT</code> is read exactly like the spaced form.</p>
+                    <p>A symbol obeys the rule a word obeys because <strong>a symbol is a name</strong> — one spelled with punctuation. Each is a single character; there are no two-character symbols. What a token means is decided by the whole token, not by its first character: <code>1/2</code> is a number because the entire lexeme parses as one, and a bare <code>/</code> is a name for the same reason.</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Written</th><th>Read as</th><th>Why</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>3 4 +</code></td><td class="notes">three tokens</td><td class="notes">Whitespace ends each token; <code>+</code> is the symbol for <code>ADD</code>.</td></tr>
+                                <tr><td><code>3 4+</code></td><td class="notes">two tokens</td><td class="notes"><code>4+</code> is one name — an error, not addition.</td></tr>
+                                <tr><td><code>[ 1 2 ]LENGTH</code></td><td class="notes">five tokens</td><td class="notes">A structural delimiter ends a token from either side.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h3>Number literals</h3>
+                    <p>A decimal literal carries at least one digit on <strong>both</strong> sides of the point: <code>0.5</code> and <code>5.0</code> are numbers, while <code>.5</code> and <code>5.</code> are not. The point is therefore never the first or last character of a number, which is what lets a lone <code>.</code> be an ordinary name rather than a truncated literal.</p>
+                    <p class="ref-note">A string closes on the quote that sits at a token boundary, which is how a string carries an apostrophe with no escape character: <code>'It's fine'</code> is one string. A quote followed immediately by a name character stays inside the text, so <code>'abc'CHARS</code> is an unclosed string rather than two tokens.</p>
                 </section>
 
                 <section id="vectors" class="ref-page">
@@ -650,18 +672,18 @@
 
                 <section id="stack" class="ref-page">
                     <h2>Stack and Modifiers</h2>
-                    <p>Words take their operands from the stack and push their results back. A <strong>modifier</strong>, written before a word, controls whether the operands survive the call:</p>
+                    <p>Words take their operands from the stack and push their results back. Consumption is the default: a word eats the operands it reads. The single <strong>modifier</strong>, written before a word, is the one explicit way to change that:</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
-                                <tr><th>Canonical</th><th>Sugar</th><th>Effect</th></tr>
+                                <tr><th>Modifier</th><th>Effect</th></tr>
                             </thead>
                             <tbody>
-
-                                <tr><td><code>KEEP</code></td><td><code>,,</code></td><td class="notes">Retain the operands and push the result as well.</td></tr>
+                                <tr><td><code>KEEP</code></td><td class="notes">Retain the operands of the next word and push its result as well.</td></tr>
                             </tbody>
                         </table>
                     </div>
+                    <p><code>KEEP</code> prefixes the <em>next word only</em>, and it carries no symbol — it is written out. That is the whole modifier system: one explicit operation for the non-default behavior, and no Forth-style stack shufflers to go with it. Everything else about how a word behaves is in the word itself, so reading a call means reading a name and at most one prefix.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -691,7 +713,7 @@
                                 <tr>
                                     <td><code>3 4 KEEP ADD</code></td>
                                     <td><code>3/1 4/1 7/1</code></td>
-                                    <td class="notes"><code>KEEP</code> (<code>,,</code>) retains the operands; the result is pushed on top.</td>
+                                    <td class="notes"><code>KEEP</code> retains the operands; the result is pushed on top.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -776,12 +798,12 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">The rounding words <code>FLOOR</code> and <code>ROUND</code> also live here. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
+                    <p class="ref-note">The remaining numeric words live here too: <code>ABS</code> and <code>NEG</code> for sign, <code>MIN</code> and <code>MAX</code> over two numbers, <code>SQRT</code>, and the rounding pair <code>FLOOR</code> and <code>ROUND</code>. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
                 </section>
 
                 <section id="comparison" class="ref-page">
                     <h2>Comparison and Truth Values</h2>
-                    <p>All six ordering relations exist as words. The result is a <strong>truth value</strong>, which is its own kind of value — a Boolean is not a number.</p>
+                    <p>All six ordering relations exist as words. The result is a <strong>truth value</strong>, which is its own kind of value — a Boolean is not a number. Three of the six have a one-character symbol; the other three are written out, because every Ajisai symbol is a single character and the two-character spellings a keyboard suggests for them are not part of the language.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -789,11 +811,11 @@
                             </thead>
                             <tbody>
                                 <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">Equal</td></tr>
-                                <tr><td><code>NEQ</code></td><td><code>&lt;&gt;</code></td><td class="notes">Not equal</td></tr>
+                                <tr><td><code>NEQ</code></td><td class="notes">—</td><td class="notes">Not equal</td></tr>
                                 <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">Less than</td></tr>
-                                <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">Less than or equal</td></tr>
+                                <tr><td><code>LTE</code></td><td class="notes">—</td><td class="notes">Less than or equal</td></tr>
                                 <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">Greater than</td></tr>
-                                <tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td class="notes">Greater than or equal</td></tr>
+                                <tr><td><code>GTE</code></td><td class="notes">—</td><td class="notes">Greater than or equal</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -808,6 +830,25 @@
                                     <td><code>5 3 GT</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">A decided comparison yields a Boolean.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 1 LTE</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes"><code>LTE</code>, <code>GTE</code> and <code>NEQ</code> are reached by name.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -859,7 +900,7 @@
 
                 <section id="logic" class="ref-page">
                     <h2>Logic</h2>
-                    <p><code>AND</code> (<code>&amp;</code>) and <code>OR</code> and <code>NOT</code> are the Boolean operations over the two truth values <code>TRUE</code> and <code>FALSE</code>. An absent operand passes through: <code>NIL</code> in, <code>NIL</code> out, so a bubble stays visible in the result even when the other operand would settle the answer.</p>
+                    <p><code>AND</code>, <code>OR</code> and <code>NOT</code> are the Boolean operations over the two truth values <code>TRUE</code> and <code>FALSE</code>. All three are written out — none of them carries a symbol. An absent operand passes through: <code>NIL</code> in, <code>NIL</code> out, so a bubble stays visible in the result even when the other operand would settle the answer.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -941,7 +982,7 @@
                 <section id="nil" class="ref-page">
                     <h2>NIL and the Bubble Rule</h2>
                     <p>The failure model in one line: <strong>could not produce a value → a bubble; used incorrectly → an error.</strong> A well-formed operation that cannot produce a result projects onto <code>NIL</code> — a "bubble" carrying a structured reason — while malformed use (wrong types, missing operands) raises an ordinary error.</p>
-                    <p>Bubbles flow: arithmetic and comparison are NIL-passthrough, so a <code>NIL</code> operand makes the result <code>NIL</code> without crashing the pipeline. At the end, <code>VENT</code> (<code>^</code>) supplies a fallback.</p>
+                    <p>Bubbles flow: arithmetic and comparison are NIL-passthrough, so a <code>NIL</code> operand makes the result <code>NIL</code> without crashing the pipeline. Two words look at a bubble without disturbing it — <code>NIL?</code> asks whether the top value is one, and <code>NIL-REASON</code> reads the reason it carries. Both leave the value in place and push the answer above it. At the end, <code>VENT</code> (<code>^</code>) supplies a fallback.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -989,7 +1030,7 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 10 20 30 ] [ 5 ] GET</code></td>
-                                    <td><code>[ 10/1 20/1 30/1 ] NIL</code></td>
+                                    <td><code>NIL</code></td>
                                     <td class="notes">An out-of-range index on a valid vector is a bubble (reason: index out of bounds).</td>
                                 </tr>
                             </tbody>
@@ -1010,6 +1051,44 @@
                                     <td><code>'ABC' NUM</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">Text that cannot be parsed as a number is a bubble (reason: invalid encoding).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 / NIL?</code></td>
+                                    <td><code>NIL TRUE</code></td>
+                                    <td class="notes"><code>NIL?</code> tests the top value and leaves it where it was.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 / NIL-REASON</code></td>
+                                    <td><code>NIL 'divisionByZero'</code></td>
+                                    <td class="notes">The reason is a protocol string, so a program can branch on why a value is missing.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1060,7 +1139,7 @@
 
                 <section id="vector-ops" class="ref-page">
                     <h2>Vector Operations</h2>
-                    <p>Vectors are 0-indexed; a negative index counts from the end. Reading words such as <code>GET</code> and <code>LENGTH</code> leave the source vector on the stack and push the answer on top of it.</p>
+                    <p>Vectors are 0-indexed; a negative index counts from the end. Reading words such as <code>GET</code> and <code>LENGTH</code> consume the vector they read, like every other word; prefix them with <code>KEEP</code> when the source vector is still needed afterwards.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1070,8 +1149,8 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 10 20 30 ] [ 0 ] GET</code></td>
-                                    <td><code>[ 10/1 20/1 30/1 ] 10/1</code></td>
-                                    <td class="notes">Index 0 is the first element; the source vector is retained.</td>
+                                    <td><code>10/1</code></td>
+                                    <td class="notes">Index 0 is the first element; the vector and the index are both consumed.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1089,7 +1168,7 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 10 20 30 ] [ -1 ] GET</code></td>
-                                    <td><code>[ 10/1 20/1 30/1 ] 30/1</code></td>
+                                    <td><code>30/1</code></td>
                                     <td class="notes">Negative indices count from the end.</td>
                                 </tr>
                             </tbody>
@@ -1108,8 +1187,27 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 1 2 3 ] LENGTH</code></td>
+                                    <td><code>3/1</code></td>
+                                    <td class="notes">Element count; the vector is consumed.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] KEEP LENGTH</code></td>
                                     <td><code>[ 1/1 2/1 3/1 ] 3/1</code></td>
-                                    <td class="notes">Element count, with the source vector retained.</td>
+                                    <td class="notes"><code>KEEP</code> is how the source vector survives the read.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1232,7 +1330,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">Further structural words: <code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code>.</p>
+                    <p class="ref-note">Further structural words: <code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code>. <code>INDEX-OF</code> searches instead of indexing — <code>[ 10 20 30 ] 20 INDEX-OF</code> is <code>1/1</code>, and a value that is not there is a bubble rather than an error.</p>
                 </section>
 
                 <section id="higher-order" class="ref-page">
@@ -1353,6 +1451,48 @@
                         </div>
                     </div>
                     <p class="ref-note"><code>EXEC</code> runs a code block taken from the stack.</p>
+
+                    <h3>Code as data</h3>
+                    <p>A code block and a vector are <strong>different kinds of value</strong>: a vector is data and is never executable, and <code>EXEC</code> accepts only a code block. <code>REFLECT</code> is the one crossing between them. It turns a code block into a canonical vector of token records — and turns that vector back into the block — without evaluating anything and without consulting the dictionary.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ 1 2 + } REFLECT</code></td>
+                                    <td><code>[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' '+' ] ]</code></td>
+                                    <td class="notes">The block becomes inspectable data: a version tag followed by one record per token.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ 1 2 + } REFLECT REFLECT EXEC</code></td>
+                                    <td><code>3/1</code></td>
+                                    <td class="notes">Reflection is reversible, so a round trip gives back a block that runs.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">Each record keeps the token's original spelling — the number lexeme, the string content, the symbol as written — so nothing is lost across the crossing. A vector that is not canonical code data is an error, not a bubble: <code>[ 1 2 ] REFLECT</code> raises rather than guessing.</p>
                 </section>
 
                 <section id="cond" class="ref-page">
@@ -1472,7 +1612,11 @@ COND</code></td>
                                 <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
                             </thead>
                             <tbody>
-
+                                <tr>
+                                    <td><code>'hello' CHARS</code></td>
+                                    <td><code>[ 'h' 'e' 'l' 'l' 'o' ]</code></td>
+                                    <td class="notes"><code>CHARS</code> crosses from the string domain into the vector domain.</td>
+                                </tr>
                             </tbody>
                         </table>
                         </div>
@@ -1544,7 +1688,11 @@ COND</code></td>
                                 <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
                             </thead>
                             <tbody>
-
+                                <tr>
+                                    <td><code>'a,b,c' ',' TOKENIZE</code></td>
+                                    <td><code>[ 'a' 'b' 'c' ]</code></td>
+                                    <td class="notes">Split on a separator; <code>JOIN</code> puts the pieces back together.</td>
+                                </tr>
                             </tbody>
                         </table>
                         </div>
@@ -1552,7 +1700,7 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note"><code>CHARS</code> splits a string into its characters and <code>TOKENIZE</code> splits by a separator; both produce code-point values that <code>JOIN</code> assembles back into text.</p>
+                    <p class="ref-note"><code>CHARS</code> splits a string into its characters and <code>TOKENIZE</code> splits by a separator; both produce a vector of strings that <code>JOIN</code> assembles back into text — <code>'hello' CHARS REVERSE JOIN</code> is <code>'olleh'</code>.</p>
                 </section>
 
                 <section id="define" class="ref-page">
@@ -1606,7 +1754,7 @@ COND</code></td>
                 <section id="dictionaries" class="ref-page">
                     <h2>Dictionaries and Word Identity</h2>
                     <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 57 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
-                    <p>Those 57 words divide into a <strong>35-word Semantic Kernel</strong> and <strong>22 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 57 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="../word-reference.md">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
+                    <p>Those 57 words divide into a <strong>35-word Semantic Kernel</strong> and <strong>22 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 57 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
                     <p>A name resolves in Core or in User, and User never shadows Core. A word&#39;s name is therefore its whole address — there is no qualified form, no dictionary to select, and no way for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same word.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1618,7 +1766,7 @@ COND</code></td>
                                 <tr>
                                     <td><code>{ 10 ADD } &#39;ADD10&#39; DEF
 5 ADD10</code></td>
-                                    <td><code>15</code></td>
+                                    <td><code>15/1</code></td>
                                     <td class="notes">A defined word is reached by its name.</td>
                                 </tr>
                                 <tr>
@@ -1630,7 +1778,7 @@ COND</code></td>
                                     <td><code>{ 10 ADD } &#39;ADD10&#39; DEF
 { 20 ADD } &#39;ADD10&#39; DEF
 5 ADD10</code></td>
-                                    <td><code>25</code></td>
+                                    <td><code>25/1</code></td>
                                     <td class="notes">A redefinition rebinds the one User entry — unless another word depends on it, which <code>DEF</code> refuses.</td>
                                 </tr>
                             </tbody>
@@ -1645,7 +1793,7 @@ COND</code></td>
 
                 <section id="output" class="ref-page">
                     <h2>Output</h2>
-                    <p><code>PRINT</code> writes the top stack value to the output area. Like any word it consumes its operand by default; with <code>KEEP</code> (<code>,,</code>) the value also stays on the stack. The Playground always shows the final stack, so <code>PRINT</code> is for the output channel, not for seeing results.</p>
+                    <p><code>PRINT</code> writes the top stack value to the output area. Like any word it consumes its operand by default; with <code>KEEP</code> the value also stays on the stack. The Playground always shows the final stack, so <code>PRINT</code> is for the output channel, not for seeing results.</p>
                     <p>A string is shown on the stack wrapped in single quotes (<code>'TEST'</code>) so you can tell it apart from a numeric vector. Those quotes belong to the Stack display, not to the value: <code>PRINT</code> writes the raw text, so <code>'TEST'</code> prints as <code>TEST</code>. Quote characters that are part of the text are kept (a string whose content is <code>T'ES'T</code> prints as <code>T'ES'T</code>). Numbers and booleans print exactly as they appear on the stack.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1655,9 +1803,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>42 ,, PRINT</code></td>
+                                    <td><code>42 KEEP PRINT</code></td>
                                     <td><code>42/1</code></td>
-                                    <td class="notes">The value goes to the output area and, thanks to <code>,,</code>, stays on the stack.</td>
+                                    <td class="notes">The value goes to the output area and, thanks to <code>KEEP</code>, stays on the stack.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1731,6 +1879,7 @@ COND</code></td>
                 <h2>Index</h2>
                 <ul>
                     <li><a href="#intro">Introduction</a></li>
+                    <li><a href="#tokens">Tokens and Spelling</a></li>
                     <li><a href="#vectors">Values and Vectors</a></li>
                     <li><a href="#numbers">Exact Numbers</a></li>
                     <li><a href="#identity-model">Identity Model</a></li>
