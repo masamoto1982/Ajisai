@@ -56,7 +56,7 @@ proptest! {
         let mut expected = obs(&format!("{a} {b}"));
         expected.extend(obs(&format!("{a} {b} {w}")));
         prop_assert_eq!(&expected, &obs(&format!("{a} {b} KEEP {w}")));
-        prop_assert_eq!(&expected, &obs(&format!("{a} {b} ,, {w}")));
+        prop_assert_eq!(&expected, &obs(&format!("{a} {b} KEEP {w}")));
     }
 
     /// **Mass conservation / bifurcation arity** (§13.1/§13.2): for a binary

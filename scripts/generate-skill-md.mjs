@@ -165,14 +165,14 @@ const canonicalExamples = [
   { title: 'Define a user word: { body } then name, then DEF', code: "{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM" },
   {
     title: 'COND: value on stack, then { guard } { body } pairs (use { TRUE } as else-guard)',
-    code: "4 { 0 >= } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND",
+    code: "4 { 0 GTE } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND",
   },
   { title: 'Strings are bare \'...\' literals; CHARS/JOIN convert', code: "'hello' CHARS REVERSE JOIN" },
   { title: 'Cast a string to an exact number', code: "'42' NUM" },
   { title: 'PRINT pops and emits to output (not the stack)', code: '[ 1 2 3 ] PRINT' },
   { title: 'Sorting is a plain Core word', code: '[ 3 1 2 ] SORT' },
   { title: 'Exact square root takes a bare scalar', code: '2 SQRT' },
-  { title: 'KEEP modifier `,,` makes the next word non-consuming', code: '[ 5 ] ,, PRINT' },
+  { title: 'The KEEP modifier makes the next word non-consuming', code: '[ 5 ] KEEP PRINT' },
 ];
 
 const commonErrors = [
@@ -227,7 +227,7 @@ const forbiddenPatterns = [
   {
     pattern: 'DUP / SWAP / DROP / OVER / ROT',
     code: 'DUP',
-    why: 'Forth-style stack shufflers do not exist. Use `,,` (KEEP) when the next word must retain its operands; consumption is the default.',
+    why: 'Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.',
   },
   {
     pattern: 'IF / ELSE / THEN / WHILE',
@@ -368,7 +368,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Code blocks: \`{ ... }\` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF.
 - User word: \`{ body } 'NAME' DEF\` then call \`NAME\`. Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
-- One modifier, prefixing the *next word only*: \`,,\` (KEEP: do not consume operands). Consumption is the default.
+- One modifier, prefixing the *next word only*: \`KEEP\` (do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration

@@ -39,14 +39,15 @@ describe('analyzeStackModifiers', () => {
     });
 
     it('reads the KEEP modifier', () => {
-        expect(analyzeStackModifiers(',, ADD')).toEqual({ keep: true });
+        expect(analyzeStackModifiers('KEEP ADD')).toEqual({ keep: true });
+        expect(analyzeStackModifiers('[ 1 ] keep ADD')).toEqual({ keep: true });
     });
 
-    // There is exactly one modifier axis, so the spellings of the retired target
-    // axis are not modifiers — they are not Words at all, and must not paint the
-    // stack as if a modifier were in force.
-    it('does not read a retired modifier spelling as a modifier', () => {
-        for (const source of ['. ADD', '.. ADD', ', ADD', '; ADD', ';; ADD', '.,, ADD', '..,, ADD']) {
+    // KEEP carries no symbol, so none of the retired punctuation spellings paints
+    // the stack as if a modifier were in force. A name that merely contains the
+    // word is not the modifier either.
+    it('does not read a retired spelling or a longer name as a modifier', () => {
+        for (const source of ['. ADD', '.. ADD', ', ADD', ',, ADD', '; ADD', ';; ADD', 'KEEP-ALL ADD']) {
             expect(analyzeStackModifiers(source)).toEqual({ keep: false });
         }
     });
@@ -61,7 +62,7 @@ describe('analyzeStackModifiers', () => {
     });
 
     it('treats the axis as triggered if any token selects the non-default', () => {
-        expect(analyzeStackModifiers('1 ,, ADD 2 SUB')).toEqual({ keep: true });
+        expect(analyzeStackModifiers('1 KEEP ADD 2 SUB')).toEqual({ keep: true });
         expect(analyzeStackModifiers('1 ADD 2 SUB')).toEqual({ keep: false });
     });
 });

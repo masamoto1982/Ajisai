@@ -75,7 +75,7 @@ async fn test_get_consume_mode() {
 async fn test_get_keep_mode() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 10 20 30 ] [ 0 ] ,, GET").await;
+    let result = interp.execute("[ 10 20 30 ] [ 0 ] KEEP GET").await;
     assert!(
         result.is_ok(),
         "GET with keep mode should succeed: {:?}",
@@ -105,7 +105,7 @@ async fn test_length_consume_mode() {
 async fn test_length_keep_mode() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 1 2 3 4 5 ] ,, LENGTH").await;
+    let result = interp.execute("[ 1 2 3 4 5 ] KEEP LENGTH").await;
     assert!(
         result.is_ok(),
         "LENGTH with keep mode should succeed: {:?}",
@@ -122,7 +122,7 @@ async fn test_length_keep_mode() {
 async fn test_reverse_keep_mode() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 3 1 2 ] ,, REVERSE").await;
+    let result = interp.execute("[ 3 1 2 ] KEEP REVERSE").await;
     assert!(
         result.is_ok(),
         "REVERSE with keep mode should succeed: {:?}",
@@ -139,7 +139,7 @@ async fn test_reverse_keep_mode() {
 async fn test_take_keep_mode() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 1 2 3 4 5 ] [ 3 ] ,, TAKE").await;
+    let result = interp.execute("[ 1 2 3 4 5 ] [ 3 ] KEEP TAKE").await;
     assert!(
         result.is_ok(),
         "TAKE with keep mode should succeed: {:?}",
@@ -155,8 +155,8 @@ async fn test_take_keep_mode() {
 #[tokio::test]
 async fn test_get_keep_mode_preserves_all_operands() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 20 30 ] [ 0 ] ,, GET").await;
-    assert!(result.is_ok(), "GET ,, should succeed: {:?}", result);
+    let result = interp.execute("[ 10 20 30 ] [ 0 ] KEEP GET").await;
+    assert!(result.is_ok(), "GET KEEP should succeed: {:?}", result);
     assert_eq!(interp.stack.len(), 3, "target + index + result");
 
     assert!(interp.stack[0].is_vector());
@@ -170,8 +170,8 @@ async fn test_get_keep_mode_preserves_all_operands() {
 #[tokio::test]
 async fn test_print_keep_mode() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 42 ] ,, PRINT").await;
-    assert!(result.is_ok(), "PRINT ,, should succeed: {:?}", result);
+    let result = interp.execute("[ 42 ] KEEP PRINT").await;
+    assert!(result.is_ok(), "PRINT KEEP should succeed: {:?}", result);
     assert_eq!(
         interp.stack.len(),
         1,
@@ -187,8 +187,8 @@ async fn test_print_keep_mode() {
 #[tokio::test]
 async fn test_floor_keep_mode() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 3.7 ] ,, FLOOR").await;
-    assert!(result.is_ok(), "FLOOR ,, should succeed: {:?}", result);
+    let result = interp.execute("[ 3.7 ] KEEP FLOOR").await;
+    assert!(result.is_ok(), "FLOOR KEEP should succeed: {:?}", result);
     assert_eq!(
         interp.stack.len(),
         2,
@@ -199,8 +199,8 @@ async fn test_floor_keep_mode() {
 #[tokio::test]
 async fn test_mod_keep_mode() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 3 ] ,, MOD").await;
-    assert!(result.is_ok(), "MOD ,, should succeed: {:?}", result);
+    let result = interp.execute("[ 10 ] [ 3 ] KEEP MOD").await;
+    assert!(result.is_ok(), "MOD KEEP should succeed: {:?}", result);
     assert_eq!(
         interp.stack.len(),
         3,
@@ -211,8 +211,8 @@ async fn test_mod_keep_mode() {
 #[tokio::test]
 async fn test_percent_alias_keep_mode() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 3 ] ,, %").await;
-    assert!(result.is_ok(), "% ,, should succeed: {:?}", result);
+    let result = interp.execute("[ 10 ] [ 3 ] KEEP %").await;
+    assert!(result.is_ok(), "% KEEP should succeed: {:?}", result);
     assert_eq!(
         interp.stack.len(),
         3,
@@ -224,7 +224,7 @@ async fn test_percent_alias_keep_mode() {
 async fn test_modes_auto_reset_after_execution() {
     let mut interp = Interpreter::new();
 
-    let result1 = interp.execute("[ 1 ] [ 2 ] ,, +").await;
+    let result1 = interp.execute("[ 1 ] [ 2 ] KEEP +").await;
     assert!(result1.is_ok());
     assert_eq!(interp.stack.len(), 3);
 

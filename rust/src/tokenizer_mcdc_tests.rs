@@ -201,11 +201,13 @@ mod single_char_aliases {
         assert_eq!(tokens, vec![sym("a"), Token::NilCoalesce, sym("b")]);
     }
 
+    /// A symbol obeys the same boundary rule as a word: only whitespace, a
+    /// structural delimiter or a comment start ends a token, so `^` glued to a
+    /// name is part of that name rather than a directive of its own.
     #[test]
-    fn aq_ver_002_d_caret_needs_no_surrounding_whitespace() {
-        // `^` is a special character, so it breaks adjacent symbols.
-        let tokens = tokenize("a^b").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::NilCoalesce, sym("b")]);
+    fn aq_ver_002_d_caret_needs_surrounding_whitespace() {
+        assert_eq!(tokenize("a^b").unwrap(), vec![sym("a^b")]);
+        assert_eq!(tokenize("[ a ]^").unwrap()[3], Token::NilCoalesce);
     }
 
     /// `~` carries no meaning, so it is an ordinary Symbol the dictionary does
@@ -224,10 +226,12 @@ mod single_char_aliases {
         assert_eq!(tokens, vec![sym("="), sym("a")]);
     }
 
+    /// Every symbol is one character and nothing looks ahead, so `==` is a single
+    /// name token rather than two `EQ`s.
     #[test]
-    fn aq_ver_002_d_double_equals_is_two_eq_symbols() {
+    fn aq_ver_002_d_double_equals_is_one_name() {
         let tokens = tokenize("a == b").unwrap();
-        assert_eq!(tokens, vec![sym("a"), sym("="), sym("="), sym("b")]);
+        assert_eq!(tokens, vec![sym("a"), sym("=="), sym("b")]);
     }
 
     #[test]

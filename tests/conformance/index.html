@@ -1252,8 +1252,7 @@
 
 <!-- ===================== CORE: THE MODIFIER AXIS ===================== -->
 <!-- There is one modifier axis, consumption: a Word consumes the operands it
-     reads unless KEEP (sugar `,,`) is in force. The canonical spelling and its
-     sugar behave identically. -->
+     reads unless KEEP is in force. -->
 
 <section class="ajisai-case" id="core-keep-on-comparison" data-category="core">
   <h3>KEEP retains comparison operands beneath the Boolean result</h3>
@@ -1726,7 +1725,7 @@
 
 <section class="ajisai-case" id="core-map-carries-its-block-effects" data-category="core">
   <h3>MAP emits its block's output effects in index order</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] { ,, PRINT } MAP</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] { KEEP PRINT } MAP</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span><span class="ajisai-effect" data-kind="print" data-payload="2/1"></span><span class="ajisai-effect" data-kind="print" data-payload="3/1"></span></div>
 </section>

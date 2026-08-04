@@ -69,7 +69,7 @@ mod tests {
     #[tokio::test]
     async fn test_print_keep_mode_leaves_string_on_stack() {
         let mut interp = Interpreter::new();
-        interp.execute("'TEST' ,, PRINT").await.unwrap();
+        interp.execute("'TEST' KEEP PRINT").await.unwrap();
         assert_eq!(interp.collect_output().trim(), "TEST");
         assert_eq!(interp.stack.len(), 1);
         // The value still renders with its Stack-projection quotes.
@@ -91,7 +91,7 @@ mod tests {
     #[tokio::test]
     async fn test_print_mixed_vector_renders_each_role() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 'mix' 42 ] ,, PRINT").await.unwrap();
+        interp.execute("[ 'mix' 42 ] KEEP PRINT").await.unwrap();
         assert_eq!(interp.collect_output().trim(), "[ 'mix' 42/1 ]");
         // The Stack projection shows the same structure.
         assert_eq!(interp.stack.last().unwrap().to_string(), "[ 'mix' 42/1 ]");

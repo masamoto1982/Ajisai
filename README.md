@@ -80,7 +80,7 @@ Spec links: [Vectors](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#l
 
 ### 4) One modifier axis: consume or keep
 
-A modifier prefixes the next word only, and the single axis is **consumption**. A word consumes the operands it reads by default; `KEEP` (`,,`) leaves them on the stack beneath the result.
+A modifier prefixes the next word only, and the single axis is **consumption**. A word consumes the operands it reads by default; `KEEP` leaves them on the stack beneath the result.
 
 That is the whole modifier system: one explicit operation for the non-default behavior. Everything else about how a Word behaves is in the Word itself, so reading a call means reading a name and at most one prefix.
 

@@ -82,9 +82,7 @@
     },
     {
       "name": "AND",
-      "aliases": [
-        "&"
-      ],
+      "aliases": [],
       "family": "booleanLogic",
       "stack": {
         "inputs": 2,
@@ -245,9 +243,7 @@
     },
     {
       "name": "NEQ",
-      "aliases": [
-        "<>"
-      ],
+      "aliases": [],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -276,7 +272,7 @@
         "summary": "Test inequality of two values.",
         "hover": "NEQ — test inequality",
         "lookup": "Test inequality of two values.",
-        "syntax": "1 2 <>",
+        "syntax": "1 2 NEQ",
         "role": "Comparison primitive: Test inequality of two values.",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
       },
@@ -333,9 +329,7 @@
     },
     {
       "name": "LTE",
-      "aliases": [
-        "<="
-      ],
+      "aliases": [],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -365,7 +359,7 @@
         "summary": "Test less-than-or-equal comparison.",
         "hover": "LTE — test less than or equal",
         "lookup": "Test less-than-or-equal comparison.",
-        "syntax": "1 1 <=",
+        "syntax": "1 1 LTE",
         "role": "Comparison primitive: Test less-than-or-equal comparison.",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
       },
@@ -422,9 +416,7 @@
     },
     {
       "name": "GTE",
-      "aliases": [
-        ">="
-      ],
+      "aliases": [],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -454,7 +446,7 @@
         "summary": "Test greater-than-or-equal comparison.",
         "hover": "GTE — test greater than or equal",
         "lookup": "Test greater-than-or-equal comparison.",
-        "syntax": "1 1 >=",
+        "syntax": "1 1 GTE",
         "role": "Comparison primitive: Test greater-than-or-equal comparison.",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
       },
@@ -2139,9 +2131,7 @@
     },
     {
       "name": "KEEP",
-      "aliases": [
-        ",,"
-      ],
+      "aliases": [],
       "family": "stackModifier",
       "stack": {
         "inputs": 0,
@@ -2166,7 +2156,7 @@
         "summary": "Set the consumption mode to keep operands.",
         "hover": "KEEP — keep operands and append result",
         "lookup": "Set the consumption mode to keep operands.",
-        "syntax": ",, +",
+        "syntax": "KEEP +",
         "role": "Modifier that preserves operands while appending the next word's result.",
         "stackEffect": "operands preserved; result pushed"
       },

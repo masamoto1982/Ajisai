@@ -42,45 +42,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 chars[i], concept
             ));
         }
-        if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
+        // A structural delimiter is the only kind of character that is a token
+        // on its own. Every other character can appear inside a name, so no
+        // symbol needs lookahead and none of them splits a word.
+        if let Some(token) = structural_token(chars[i]) {
             tokens.push(token);
-            i += consumed;
-            continue;
-        }
-
-        if chars[i] == '=' {
-            tokens.push(Token::Symbol("=".into()));
-            i += 1;
-            continue;
-        }
-
-        if chars[i] == '<' {
-            if i + 1 < chars.len() && chars[i + 1] == '=' {
-                tokens.push(Token::Symbol("<=".into()));
-                i += 2;
-                continue;
-            }
-
-            if i + 1 < chars.len() && chars[i + 1] == '>' {
-                tokens.push(Token::Symbol("<>".into()));
-                i += 2;
-                continue;
-            }
-
-            tokens.push(Token::Symbol("<".into()));
-            i += 1;
-            continue;
-        }
-
-        if chars[i] == '>' {
-            // `>` -> GT and `>=` -> GTE (core_word_aliases.rs). `>` is a special
-            // character, so it delimits the word before it and needs no space.
-            if i + 1 < chars.len() && chars[i + 1] == '=' {
-                tokens.push(Token::Symbol(">=".into()));
-                i += 2;
-                continue;
-            }
-            tokens.push(Token::Symbol(">".into()));
             i += 1;
             continue;
         }
@@ -98,28 +64,26 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             QuoteParseResult::NotQuote => {}
         }
 
+        // A token runs to the next boundary. `chars[i]` is not one (whitespace,
+        // `#`, the reserved parens, the structural delimiters and the quote are
+        // all handled above), so this always consumes at least one character.
         let start = i;
-        while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
+        while i < chars.len() && !ends_token(chars[i]) {
             i += 1;
-        }
-
-        if i == start {
-            return Err(format!("Unexpected character: {}", chars[i]));
         }
 
         let token_str: String = chars[start..i].iter().collect();
 
-        if let Some(token) = parse_keyword_from_string(&token_str) {
+        // The token is interpreted as a whole: a number when the numeric
+        // grammar accepts the entire lexeme, otherwise a name. This is why no
+        // character needs special treatment — `1/2` is a number because the
+        // whole token parses as one, and `/` is a name for the same reason.
+        if let Some(token) = parse_number_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
 
         if let Some(token) = parse_control_directive_word(&token_str) {
-            tokens.push(token);
-            continue;
-        }
-
-        if let Some(token) = parse_number_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
@@ -175,29 +139,32 @@ pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
 }
 
-fn is_special_char(c: char) -> bool {
-    matches!(
-        c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '|' | '^'
-    )
+/// The characters that build nesting rather than names: they can never be part
+/// of a word, so they delimit tokens without any whitespace around them.
+fn is_structural_char(c: char) -> bool {
+    matches!(c, '[' | ']' | '{' | '}' | '(' | ')')
 }
 
-fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
-    // DelimiterSugar / ControlDirective surface forms (see surface_forms.rs):
-    // `[` -> BEGIN-VECTOR, `]` -> END-VECTOR, `{` -> BEGIN-BLOCK,
-    // `}` -> END-BLOCK, `|` -> COND-CLAUSE. None of these are runtime words.
+/// A token ends at exactly three things: whitespace, a structural delimiter, or
+/// a comment start. Nothing else can end one — every other character,
+/// punctuation included, is an ordinary name character, which is why no symbol
+/// needs lookahead and no symbol splits a word.
+///
+/// This is also the rule that closes a string literal (see
+/// [`is_string_close_delimiter`]), so source has one notion of "the token stops
+/// here" rather than one per construct.
+fn ends_token(c: char) -> bool {
+    c.is_whitespace() || is_structural_char(c) || c == '#'
+}
+
+/// The structural delimiters that are valid source. `(` and `)` are structural
+/// too but are reserved markers, rejected earlier with their own diagnostic.
+fn structural_token(c: char) -> Option<Token> {
     match c {
-        '[' => Some((Token::VectorStart, 1)),
-        ']' => Some((Token::VectorEnd, 1)),
-        '{' => Some((Token::BlockStart, 1)),
-        '}' => Some((Token::BlockEnd, 1)),
-
-        '|' => Some((Token::CondClauseSep, 1)),
-
-        // The `^` -> VENT alias, emitted directly as its dedicated token; the
-        // canonical name lives in core_word_aliases.rs.
-        '^' => Some((Token::NilCoalesce, 1)),
-
+        '[' => Some(Token::VectorStart),
+        ']' => Some(Token::VectorEnd),
+        '{' => Some(Token::BlockStart),
+        '}' => Some(Token::BlockEnd),
         _ => None,
     }
 }
@@ -396,18 +363,13 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
     QuoteParseResult::Unclosed
 }
 
+/// A quote closes the string when the next character would end a token anyway;
+/// end of input closes it too, which the callers check. A quote followed by
+/// anything else is content, which is what lets a string carry an apostrophe
+/// (`'It's fine'`) in a language with no escape character and no second quote
+/// spelling.
 fn is_string_close_delimiter(c: char) -> bool {
-    c.is_whitespace() || (is_special_char(c) && c != '\'')
-}
-
-fn parse_keyword_from_string(s: &str) -> Option<Token> {
-    match s {
-        "." => Some(Token::Symbol(".".into())),
-        ".." => Some(Token::Symbol("..".into())),
-        "," => Some(Token::Symbol(",".into())),
-        ",," => Some(Token::Symbol(",,".into())),
-        _ => None,
-    }
+    ends_token(c)
 }
 
 /// The spelled-out control directive `VENT` is the canonical name
@@ -422,10 +384,15 @@ fn parse_keyword_from_string(s: &str) -> Option<Token> {
 /// is misconverted. Because the tokenizer emits the control token directly,
 /// these names are also not shadowable by a user definition.
 fn parse_control_directive_word(s: &str) -> Option<Token> {
-    if s.eq_ignore_ascii_case("VENT") {
-        Some(Token::NilCoalesce)
-    } else {
-        None
+    // A control directive is emitted as its own token because the execution loop
+    // reads the *following* source unit positionally. Both spellings of VENT and
+    // the COND clause separator arrive here as ordinary name tokens, so they obey
+    // exactly the same boundary rule as every other name.
+    match s {
+        "^" => Some(Token::NilCoalesce),
+        "|" => Some(Token::CondClauseSep),
+        _ if s.eq_ignore_ascii_case("VENT") => Some(Token::NilCoalesce),
+        _ => None,
     }
 }
 

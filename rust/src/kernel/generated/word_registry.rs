@@ -387,7 +387,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::And,
         name: "AND",
-        aliases: &["&"],
+        aliases: &[],
         family: Family::BooleanLogic,
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
@@ -455,7 +455,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::Neq,
         name: "NEQ",
-        aliases: &["<>"],
+        aliases: &[],
         family: Family::Comparison,
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
@@ -489,7 +489,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::Le,
         name: "LTE",
-        aliases: &["<="],
+        aliases: &[],
         family: Family::Comparison,
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
@@ -523,7 +523,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::Gte,
         name: "GTE",
-        aliases: &[">="],
+        aliases: &[],
         family: Family::Comparison,
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
@@ -1220,7 +1220,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::SetConsumptionKeep,
         name: "KEEP",
-        aliases: &[",,"],
+        aliases: &[],
         family: Family::StackModifier,
         stack_inputs: Arity::Fixed(0),
         stack_outputs: Arity::Fixed(0),

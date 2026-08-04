@@ -72,7 +72,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Comparison primitive: Test inequality of two values.",
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         hover_summary: "NEQ — test inequality",
-        hover_syntax: "1 2 <>",
+        hover_syntax: "1 2 NEQ",
     },
     GeneratedCoreWordDoc {
         name: "LT",
@@ -90,7 +90,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Comparison primitive: Test less-than-or-equal comparison.",
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         hover_summary: "LTE — test less than or equal",
-        hover_syntax: "1 1 <=",
+        hover_syntax: "1 1 LTE",
     },
     GeneratedCoreWordDoc {
         name: "GT",
@@ -108,7 +108,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Comparison primitive: Test greater-than-or-equal comparison.",
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         hover_summary: "GTE — test greater than or equal",
-        hover_syntax: "1 1 >=",
+        hover_syntax: "1 1 GTE",
     },
     GeneratedCoreWordDoc {
         name: "ADD",
@@ -477,7 +477,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Modifier that preserves operands while appending the next word's result.",
         stack_effect: "operands preserved; result pushed",
         hover_summary: "KEEP — keep operands and append result",
-        hover_syntax: ",, +",
+        hover_syntax: "KEEP +",
     },
     GeneratedCoreWordDoc {
         name: "DEF",
