@@ -118,7 +118,7 @@ mod tests {
 
     fn legal_token_sequences() -> impl Strategy<Value = Vec<Token>> {
         let atom = prop_oneof![
-            prop::sample::select(vec!["0", "-1", "1/1", "1.0", ".5"])
+            prop::sample::select(vec!["0", "-1", "1/1", "1.0", "0.5"])
                 .prop_map(|value| Token::Number(value.into())),
             any::<String>().prop_map(|value| Token::String(value.into())),
             prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD"])
@@ -245,7 +245,7 @@ mod tests {
         #[test]
         fn payload_token_sequences_round_trip(
             strings in prop::collection::vec(any::<String>(), 0..20),
-            numbers in prop::collection::vec(prop::sample::select(vec!["0", "-1", "1/1", "1.0", ".5"]), 0..20),
+            numbers in prop::collection::vec(prop::sample::select(vec!["0", "-1", "1/1", "1.0", "0.5"]), 0..20),
             symbols in prop::collection::vec(prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD"]), 0..20),
         ) {
             let mut tokens = Vec::new();

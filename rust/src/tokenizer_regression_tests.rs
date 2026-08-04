@@ -213,17 +213,31 @@ mod tokenizer_regression_tests {
         assert_eq!(result4, vec![Token::Number("1.5e10".into())]);
     }
 
+    /// A decimal literal carries digits on both sides of the point. The point is
+    /// therefore never a number's first or last character, so `.` on its own is
+    /// unambiguously a name -- which is what keeps the character allocatable as a
+    /// symbol later without changing the numeric language a second time.
     #[test]
-    fn test_leading_dot_decimal_is_a_number() {
-        // SPEC §3.2 lists `.5` as a valid Decimal literal. The leading-dot
-        // form (and its signed variants) must tokenize as Number, not as a
-        // `Symbol(".5")` (which previously fell through the modifier path).
-        assert_eq!(tokenize(".5").unwrap(), vec![Token::Number(".5".into())]);
-        assert_eq!(tokenize("-.5").unwrap(), vec![Token::Number("-.5".into())]);
-        assert_eq!(tokenize("+.5").unwrap(), vec![Token::Number("+.5".into())]);
+    fn test_decimal_point_needs_digits_on_both_sides() {
+        assert_eq!(tokenize("0.5").unwrap(), vec![Token::Number("0.5".into())]);
+        assert_eq!(
+            tokenize("-0.5").unwrap(),
+            vec![Token::Number("-0.5".into())]
+        );
+        assert_eq!(tokenize("5.0").unwrap(), vec![Token::Number("5.0".into())]);
 
-        // Guard the modifier path: bare `.` / `..` must still be modifier
-        // sugar symbols, not numbers.
+        // No integer part, no fractional part, and a point followed only by an
+        // exponent: none of these is a number, so each reaches the dictionary as
+        // a name and fails there.
+        for lexeme in [".5", "-.5", "+.5", "5.", "5.e3"] {
+            assert_eq!(
+                tokenize(lexeme).unwrap(),
+                vec![Token::Symbol(lexeme.into())],
+                "`{lexeme}` must not be a Number"
+            );
+        }
+
+        // A bare point or a run of points is a name, not a number.
         assert_eq!(tokenize(".").unwrap(), vec![Token::Symbol(".".into())]);
         assert_eq!(tokenize("..").unwrap(), vec![Token::Symbol("..".into())]);
     }
