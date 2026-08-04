@@ -17,6 +17,10 @@ const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
 const known = new Set();
 for (const entry of manifest.entries) {
   known.add(entry.canonical);
+  // The manifest field is `surface` (singular). Reading a plural that no entry
+  // has meant the registered *symbols* were never in this set — harmless while
+  // only word-shaped tokens were checked, and wrong the moment they are not.
+  known.add(entry.surface);
   for (const surface of entry.surfaces ?? []) known.add(surface);
 }
 
@@ -39,6 +43,22 @@ const SURFACES = ['README.md', 'public/docs/index.html', 'SPECIFICATION.html'];
 // Anything else inside <code> is a literal, a fragment, or punctuation.
 const WORD_SHAPED = /^[A-Z][A-Z0-9@?!'-]*$/;
 
+// Punctuation-shaped: a token of nothing but punctuation is a *symbol* claim.
+// This half of the check did not exist, and the whole retired set — `,,`, `<=`,
+// `>=`, `<>` and `&` — sat in the in-app Reference presenting itself as usable
+// sugar while the gate reported success, because a symbol is not word-shaped.
+const SYMBOL_SHAPED = /^[^A-Za-z0-9\s]+$/;
+
+// Characters a document names in order to say the language does *not* allocate
+// them, plus prose placeholders inside shape sketches. Each is a deliberate
+// mention rather than a claim, so each is listed rather than inferred.
+const UNALLOCATED_MENTIONS = new Set([
+  // the decimal-literal clause names the point to say a lone `.` is a name
+  '.',
+  // `{ ... }` sketches a block's shape; the ellipsis stands for a body
+  '...',
+]);
+
 const errors = [];
 
 for (const path of SURFACES) {
@@ -58,9 +78,19 @@ for (const path of SURFACES) {
 
   for (const span of spans) {
     // A span may hold a whole program (`2 SQRT 2 LT`), so check every token.
-    for (const token of span.trim().split(/\s+/)) {
-      if (!WORD_SHAPED.test(token)) continue;
-      if (known.has(token) || EXAMPLE_NAMES.has(token)) continue;
+    for (const raw of span.trim().split(/\s+/)) {
+      // Markdown escapes a table-cell pipe as `\|`; the token is the pipe.
+      const token = raw.replace(/\\([|`*_])/g, '$1');
+      if (WORD_SHAPED.test(token)) {
+        if (known.has(token) || EXAMPLE_NAMES.has(token)) continue;
+        seen.set(token, (seen.get(token) ?? 0) + 1);
+        continue;
+      }
+      if (!SYMBOL_SHAPED.test(token)) continue;
+      // A token opening with a quote is a string literal, and its content is
+      // not vocabulary — `''` is the empty string, not a symbol.
+      if (token.startsWith("'")) continue;
+      if (known.has(token) || UNALLOCATED_MENTIONS.has(token)) continue;
       seen.set(token, (seen.get(token) ?? 0) + 1);
     }
   }
@@ -74,9 +104,10 @@ if (errors.length) {
   for (const error of errors) console.error(`[reading-surfaces] ${error}`);
   console.error('[reading-surfaces] LANG.AUTHORITY.PRESENT: a reading surface may name only Words the language has.');
   console.error('[reading-surfaces] If the name is a new worked example, add it to EXAMPLE_NAMES in this script.');
+  console.error('[reading-surfaces] If a symbol is named only to say the language does not allocate it, add it to UNALLOCATED_MENTIONS.');
   process.exitCode = 1;
 } else {
   console.log(
-    `[reading-surfaces] ${SURFACES.length} surfaces name only the ${manifest.entries.length} registered surfaces and ${EXAMPLE_NAMES.size} declared example names.`,
+    `[reading-surfaces] ${SURFACES.length} surfaces name only the ${manifest.entries.length} registered surfaces, ${EXAMPLE_NAMES.size} declared example names and ${UNALLOCATED_MENTIONS.size} declared unallocated mentions.`,
   );
 }

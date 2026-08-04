@@ -462,7 +462,7 @@
                     <h3>How to read the examples</h3>
                     <p>The <strong>Expected value</strong> column shows the final stack exactly as the language renders it, value by value. Two display conventions matter from the start:</p>
                     <p>Numbers display as exact fractions in <code>numerator/denominator</code> form — the integer three renders as <code>3/1</code>. Truth values display as <code>TRUE</code> and <code>FALSE</code>; the absence of a value displays as <code>NIL</code>.</p>
-                    <p>In the text of this reference, anything with a gray background is an Ajisai token. Every symbol token defined by Ajisai is a word in disguise — <code>+</code> is <code>ADD</code> and <code>,,</code> is <code>KEEP</code> — so the gray background is the signal that a mark belongs to the program, not to the prose.</p>
+                    <p>In the text of this reference, anything with a gray background is an Ajisai token. Every symbol token defined by Ajisai is a word in disguise — <code>+</code> is <code>ADD</code> and <code>^</code> is <code>VENT</code> — so the gray background is the signal that a mark belongs to the program, not to the prose.</p>
                 </section>
 
                 <section id="vectors" class="ref-page">
@@ -645,7 +645,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">An irrational value itself renders as a nested continued fraction such as <code>( 1 ( 2 ( 2 ( 2 ...) ) ) )</code>, truncated at a display budget. The nested form is display output only — it is not source syntax, and <code>(</code> <code>)</code> are rejected in programs.</p>
+                    <p class="ref-note">An irrational value itself renders as a nested continued fraction such as <code>( 1 ( 2 ( 2 ( 2 ... ) ) ) )</code>, truncated at a display budget. The nested form is display output only — it is not source syntax, and <code>(</code> <code>)</code> are rejected in programs.</p>
                 </section>
 
                 <section id="stack" class="ref-page">
@@ -654,11 +654,11 @@
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
-                                <tr><th>Canonical</th><th>Sugar</th><th>Effect</th></tr>
+                                <tr><th>Canonical</th><th>Effect</th></tr>
                             </thead>
                             <tbody>
 
-                                <tr><td><code>KEEP</code></td><td><code>,,</code></td><td class="notes">Retain the operands and push the result as well.</td></tr>
+                                <tr><td><code>KEEP</code></td><td class="notes">Retain the operands and push the result as well.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -691,7 +691,7 @@
                                 <tr>
                                     <td><code>3 4 KEEP ADD</code></td>
                                     <td><code>3/1 4/1 7/1</code></td>
-                                    <td class="notes"><code>KEEP</code> (<code>,,</code>) retains the operands; the result is pushed on top.</td>
+                                    <td class="notes"><code>KEEP</code> retains the operands; the result is pushed on top.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -789,11 +789,11 @@
                             </thead>
                             <tbody>
                                 <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">Equal</td></tr>
-                                <tr><td><code>NEQ</code></td><td><code>&lt;&gt;</code></td><td class="notes">Not equal</td></tr>
+                                <tr><td><code>NEQ</code></td><td></td><td class="notes">Not equal</td></tr>
                                 <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">Less than</td></tr>
-                                <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">Less than or equal</td></tr>
+                                <tr><td><code>LTE</code></td><td></td><td class="notes">Less than or equal</td></tr>
                                 <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">Greater than</td></tr>
-                                <tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td class="notes">Greater than or equal</td></tr>
+                                <tr><td><code>GTE</code></td><td></td><td class="notes">Greater than or equal</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -859,7 +859,7 @@
 
                 <section id="logic" class="ref-page">
                     <h2>Logic</h2>
-                    <p><code>AND</code> (<code>&amp;</code>) and <code>OR</code> and <code>NOT</code> are the Boolean operations over the two truth values <code>TRUE</code> and <code>FALSE</code>. An absent operand passes through: <code>NIL</code> in, <code>NIL</code> out, so a bubble stays visible in the result even when the other operand would settle the answer.</p>
+                    <p><code>AND</code>, <code>OR</code> and <code>NOT</code> are the Boolean operations over the two truth values <code>TRUE</code> and <code>FALSE</code>. An absent operand passes through: <code>NIL</code> in, <code>NIL</code> out, so a bubble stays visible in the result even when the other operand would settle the answer.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1645,7 +1645,7 @@ COND</code></td>
 
                 <section id="output" class="ref-page">
                     <h2>Output</h2>
-                    <p><code>PRINT</code> writes the top stack value to the output area. Like any word it consumes its operand by default; with <code>KEEP</code> (<code>,,</code>) the value also stays on the stack. The Playground always shows the final stack, so <code>PRINT</code> is for the output channel, not for seeing results.</p>
+                    <p><code>PRINT</code> writes the top stack value to the output area. Like any word it consumes its operand by default; with <code>KEEP</code> the value also stays on the stack. The Playground always shows the final stack, so <code>PRINT</code> is for the output channel, not for seeing results.</p>
                     <p>A string is shown on the stack wrapped in single quotes (<code>'TEST'</code>) so you can tell it apart from a numeric vector. Those quotes belong to the Stack display, not to the value: <code>PRINT</code> writes the raw text, so <code>'TEST'</code> prints as <code>TEST</code>. Quote characters that are part of the text are kept (a string whose content is <code>T'ES'T</code> prints as <code>T'ES'T</code>). Numbers and booleans print exactly as they appear on the stack.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1655,9 +1655,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>42 ,, PRINT</code></td>
+                                    <td><code>42 KEEP PRINT</code></td>
                                     <td><code>42/1</code></td>
-                                    <td class="notes">The value goes to the output area and, thanks to <code>,,</code>, stays on the stack.</td>
+                                    <td class="notes">The value goes to the output area and, thanks to <code>KEEP</code>, stays on the stack.</td>
                                 </tr>
                             </tbody>
                         </table>
