@@ -88,15 +88,15 @@ mod example_words_tests {
 
     async fn setup_example_words(interp: &mut Interpreter) {
         interp
-            .execute("{ 'Hello' ,, PRINT } 'SAY-HELLO' DEF")
+            .execute("{ 'Hello' KEEP PRINT } 'SAY-HELLO' DEF")
             .await
             .unwrap();
         interp
-            .execute("{ 'World' ,, PRINT } 'SAY-WORLD' DEF")
+            .execute("{ 'World' KEEP PRINT } 'SAY-WORLD' DEF")
             .await
             .unwrap();
         interp
-            .execute("{ '!' ,, PRINT } 'SAY-BANG' DEF")
+            .execute("{ '!' KEEP PRINT } 'SAY-BANG' DEF")
             .await
             .unwrap();
         interp
@@ -104,7 +104,7 @@ mod example_words_tests {
             .await
             .unwrap();
         interp
-            .execute("{ { [ 15 ] MOD [ 0 ] = } { 'FizzBuzz' PRINT } { [ 3 ] MOD [ 0 ] = } { 'Fizz' PRINT } { [ 5 ] MOD [ 0 ] = } { 'Buzz' PRINT } { TRUE } { ,, PRINT } COND } 'FIZZBUZZ' DEF")
+            .execute("{ { [ 15 ] MOD [ 0 ] = } { 'FizzBuzz' PRINT } { [ 3 ] MOD [ 0 ] = } { 'Fizz' PRINT } { [ 5 ] MOD [ 0 ] = } { 'Buzz' PRINT } { TRUE } { KEEP PRINT } COND } 'FIZZBUZZ' DEF")
             .await
             .unwrap();
         let _ = interp.collect_output();

@@ -43,7 +43,6 @@ Logical AND. A NIL operand passes through.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`
 - **Syntax:** `TRUE TRUE &`
-- **Aliases:** `&`
 - **ERROR conditions:** `nonTruthValue`
 
 ## `OR`
@@ -100,8 +99,7 @@ Test inequality of two values.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
-- **Syntax:** `1 2 <>`
-- **Aliases:** `<>`
+- **Syntax:** `1 2 NEQ`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `LT`
@@ -130,8 +128,7 @@ Test less-than-or-equal comparison.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 1 <=`
-- **Aliases:** `<=`
+- **Syntax:** `1 1 LTE`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `GT`
@@ -160,8 +157,7 @@ Test greater-than-or-equal comparison.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 1 >=`
-- **Aliases:** `>=`
+- **Syntax:** `1 1 GTE`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `ADD`
@@ -737,8 +733,7 @@ Set the consumption mode to keep operands.
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.MODIFIERS.CONSUMPTION`
-- **Syntax:** `,, +`
-- **Aliases:** `,,`
+- **Syntax:** `KEEP +`
 
 ## `DEF`
 

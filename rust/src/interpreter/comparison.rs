@@ -38,15 +38,6 @@ impl OrderingKind {
             OrderingKind::Ge => o != Ordering::Less,
         }
     }
-
-    fn surface(self) -> &'static str {
-        match self {
-            OrderingKind::Lt => "<",
-            OrderingKind::Le => "<=",
-            OrderingKind::Gt => ">",
-            OrderingKind::Ge => ">=",
-        }
-    }
 }
 
 /// Result of a three-valued scalar comparison (SPEC §7.4.1): a decided
@@ -297,11 +288,7 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
     }
 }
 
-fn apply_binary_comparison(
-    interp: &mut Interpreter,
-    kind: OrderingKind,
-    _op_name: &str,
-) -> Result<()> {
+fn apply_binary_comparison(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     if interp.stack.len() < 2 {
@@ -343,7 +330,7 @@ fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result
             return Ok(());
         }
     }
-    apply_binary_comparison(interp, kind, kind.surface())
+    apply_binary_comparison(interp, kind)
 }
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {

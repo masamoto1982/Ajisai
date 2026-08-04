@@ -22,7 +22,8 @@ async fn symbol_aliases_execute_same_as_canonical_words() {
     assert_same_stack("8 2 /", "8 2 DIV").await;
     assert_same_stack("1 1 =", "1 1 EQ").await;
     assert_same_stack("1 2 <", "1 2 LT").await;
-    assert_same_stack("1 1 <=", "1 1 LTE").await;
+    assert_same_stack("2 1 >", "2 1 GT").await;
+    assert_same_stack("7 2 %", "7 2 MOD").await;
 }
 #[tokio::test]
 async fn lookup_alias_canonicalizes_to_english_word() {

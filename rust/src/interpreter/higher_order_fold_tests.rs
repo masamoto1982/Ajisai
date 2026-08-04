@@ -76,7 +76,7 @@ mod tests {
     /// accepted the resulting singleton Vector as a predicate result. Both
     /// coercions are gone, so the case now states its subject directly.
     #[tokio::test]
-    async fn test_filter_ampersand_alias_matches_and() {
+    async fn test_filter_reaches_and_by_name() {
         let mut and_interp = Interpreter::new();
         let and_result = and_interp
             .execute("[ TRUE FALSE TRUE ] { TRUE AND } FILTER")
@@ -87,17 +87,17 @@ mod tests {
             and_result
         );
 
+        // AND, OR and NOT carry no symbol: `&` is an ordinary name the
+        // dictionary does not have, inside a block body like anywhere else.
         let mut alias_interp = Interpreter::new();
         let alias_result = alias_interp
             .execute("[ TRUE FALSE TRUE ] { TRUE & } FILTER")
             .await;
         assert!(
-            alias_result.is_ok(),
-            "FILTER with & alias failed: {:?}",
+            alias_result.is_err(),
+            "`&` must not be a spelling of AND: {:?}",
             alias_result
         );
-
-        assert_eq!(alias_interp.stack, and_interp.stack);
     }
 
     /// A `booleanLogic` Word raises its registered `nonTruthValue` ERROR on a

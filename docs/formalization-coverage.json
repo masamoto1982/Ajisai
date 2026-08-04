@@ -3060,30 +3060,6 @@
       "desugars_to": "LT"
     },
     {
-      "id": "alias.less-than-or-equal",
-      "kind": "symbol_alias",
-      "surface": "<=",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for LTE; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "LTE"
-    },
-    {
       "id": "alias.greater-than",
       "kind": "symbol_alias",
       "surface": ">",
@@ -3106,102 +3082,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "GT"
-    },
-    {
-      "id": "alias.greater-than-or-equal",
-      "kind": "symbol_alias",
-      "surface": ">=",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for GTE; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "GTE"
-    },
-    {
-      "id": "alias.not-equal",
-      "kind": "symbol_alias",
-      "surface": "<>",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for NEQ; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "NEQ"
-    },
-    {
-      "id": "alias.ampersand",
-      "kind": "symbol_alias",
-      "surface": "&",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for AND; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "AND"
-    },
-    {
-      "id": "alias.comma-comma",
-      "kind": "syntax_sugar",
-      "surface": ",,",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for KEEP; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "KEEP"
     },
     {
       "id": "alias.quote",

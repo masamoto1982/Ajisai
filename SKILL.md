@@ -31,7 +31,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Code blocks: `{ ... }` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF.
 - User word: `{ body } 'NAME' DEF` then call `NAME`. Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
-- One modifier, prefixing the *next word only*: `,,` (KEEP: do not consume operands). Consumption is the default.
+- One modifier, prefixing the *next word only*: `KEEP` (do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration
@@ -99,7 +99,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 - Define a user word: { body } then name, then DEF
   `{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
 - COND: value on stack, then { guard } { body } pairs (use { TRUE } as else-guard)
-  `4 { 0 >= } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND` → prints `non-negative`; stack: `4/1`
+  `4 { 0 GTE } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND` → prints `non-negative`; stack: `4/1`
 - Strings are bare '...' literals; CHARS/JOIN convert
   `'hello' CHARS REVERSE JOIN` → stack: `'olleh'`
 - Cast a string to an exact number
@@ -110,8 +110,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
 - Exact square root takes a bare scalar
   `2 SQRT` → stack: `( 1 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ...) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )`
-- KEEP modifier `,,` makes the next word non-consuming
-  `[ 5 ] ,, PRINT` → prints `[ 5/1 ]`; stack: `[ 5/1 ]`
+- The KEEP modifier makes the next word non-consuming
+  `[ 5 ] KEEP PRINT` → prints `[ 5/1 ]`; stack: `[ 5/1 ]`
 
 ## 7. Common errors — actual CLI output, and the fix
 
@@ -154,7 +154,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 8. Forbidden patterns (each verified to fail)
 
-- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `,,` (KEEP) when the next word must retain its operands; consumption is the default.
+- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD or recursive user words.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved for the continued-fraction *display* form only. Vectors are `[ ]`, code blocks are `{ }`.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
@@ -177,11 +177,11 @@ no module system and nothing to import.
 | `OR` | logic | Logical OR. A NIL operand passes through. — e.g. `TRUE FALSE OR` |
 | `NOT` | logic | Logical negation. A NIL operand passes through. — e.g. `TRUE NOT` |
 | `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
-| `NEQ` | comparison | Test inequality of two values. — e.g. `1 2 <>` |
+| `NEQ` | comparison | Test inequality of two values. — e.g. `1 2 NEQ` |
 | `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
-| `LTE` | comparison | Test less-than-or-equal comparison. — e.g. `1 1 <=` |
+| `LTE` | comparison | Test less-than-or-equal comparison. — e.g. `1 1 LTE` |
 | `GT` | comparison | Test greater-than comparison. — e.g. `2 1 >` |
-| `GTE` | comparison | Test greater-than-or-equal comparison. — e.g. `1 1 >=` |
+| `GTE` | comparison | Test greater-than-or-equal comparison. — e.g. `1 1 GTE` |
 | `ADD` | arithmetic | Add two numeric values, element-wise with broadcasting. — e.g. `1 2 +` |
 | `SUB` | arithmetic | Subtract two numeric values, element-wise with broadcasting. — e.g. `5 3 -` |
 | `MUL` | arithmetic | Multiply two numeric values, element-wise with broadcasting. — e.g. `2 4 *` |
@@ -222,7 +222,7 @@ no module system and nothing to import.
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
-| `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `,, +` |
+| `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |
@@ -236,12 +236,7 @@ code-data REFLECT` |
 | `%` | symbol alias | shorthand for `MOD` |
 | `=` | symbol alias | shorthand for `EQ` |
 | `<` | symbol alias | shorthand for `LT` |
-| `<=` | symbol alias | shorthand for `LTE` |
 | `>` | symbol alias | shorthand for `GT` |
-| `>=` | symbol alias | shorthand for `GTE` |
-| `<>` | symbol alias | shorthand for `NEQ` |
-| `&` | symbol alias | shorthand for `AND` |
-| `,,` | syntax sugar | shorthand for `KEEP` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
 | `?` | symbol alias | shorthand for `LOOKUP` |
 | `^` | syntax sugar | shorthand for `VENT` |

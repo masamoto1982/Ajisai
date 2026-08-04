@@ -256,15 +256,15 @@ mod nil_passthrough_tests {
     async fn comparisons_with_nil_yield_nil() {
         let interp = run("NIL 3 <").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL <=").await;
+        let interp = run("3 NIL LTE").await;
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL NIL =").await;
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL 3 >").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL >=").await;
+        let interp = run("3 NIL GTE").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 3 <>").await;
+        let interp = run("NIL 3 NEQ").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
@@ -365,13 +365,13 @@ mod ai_first_comparison_tests {
 
     #[tokio::test]
     async fn gte_symbol_alias_matches_canonical() {
-        let interp = run("3 3 >=").await;
+        let interp = run("3 3 GTE").await;
         assert!(bool_of(&interp));
     }
 
     #[tokio::test]
     async fn neq_symbol_alias_matches_canonical() {
-        let interp = run("1 2 <>").await;
+        let interp = run("1 2 NEQ").await;
         assert!(bool_of(&interp));
     }
 
@@ -415,7 +415,7 @@ mod ai_first_comparison_tests {
     async fn neq_with_two_nils_yields_nil() {
         // NEQ is NIL-passthrough, so NIL NEQ NIL is NIL — *not* FALSE.
         // (NIL is an absence value, not a member of an equivalence class.)
-        let interp = run("NIL NIL <>").await;
+        let interp = run("NIL NIL NEQ").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
@@ -425,7 +425,7 @@ mod ai_first_comparison_tests {
 
     #[tokio::test]
     async fn gt_keep_mode_preserves_both_operands() {
-        let interp = run("2 1 ,, GT").await;
+        let interp = run("2 1 KEEP GT").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 3, "KEEP must retain both operands plus result");
     }

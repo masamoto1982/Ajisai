@@ -7,7 +7,7 @@ mod tests {
     #[tokio::test]
     async fn test_keep_mode_basic() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[1] [2] ,, +").await;
+        let result = interp.execute("[1] [2] KEEP +").await;
         assert!(
             result.is_ok(),
             "Keep mode addition should succeed: {:?}",
@@ -41,7 +41,7 @@ mod tests {
     #[tokio::test]
     async fn test_mode_reset_after_word() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[1] [2] ,, + [3] +").await;
+        let result = interp.execute("[1] [2] KEEP + [3] +").await;
         assert!(result.is_ok(), "Mode should reset after word: {:?}", result);
 
         assert_eq!(
@@ -55,7 +55,7 @@ mod tests {
     #[tokio::test]
     async fn test_keep_mode_with_mul() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[3] [4] ,, *").await;
+        let result = interp.execute("[3] [4] KEEP *").await;
         assert!(
             result.is_ok(),
             "Keep mode multiplication should succeed: {:?}",
@@ -72,7 +72,7 @@ mod tests {
     #[tokio::test]
     async fn test_keep_mode_with_sub() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[10] [3] ,, -").await;
+        let result = interp.execute("[10] [3] KEEP -").await;
         assert!(
             result.is_ok(),
             "Keep mode subtraction should succeed: {:?}",
@@ -89,7 +89,7 @@ mod tests {
     #[tokio::test]
     async fn test_keep_mode_with_div() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[12] [4] ,, /").await;
+        let result = interp.execute("[12] [4] KEEP /").await;
         assert!(
             result.is_ok(),
             "Keep mode division should succeed: {:?}",

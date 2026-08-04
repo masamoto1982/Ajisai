@@ -53,24 +53,31 @@ proptest! {
     // ── Comparison aliases (§3.9): = <> < <= > >= ──
     #[test]
     fn comparison_aliases(a in small(), b in small()) {
-        assert_law("alias-eq",  &format!("{a} {b} ="),  &format!("{a} {b} EQ"));
-        assert_law("alias-neq", &format!("{a} {b} <>"), &format!("{a} {b} NEQ"));
-        assert_law("alias-lt",  &format!("{a} {b} <"),  &format!("{a} {b} LT"));
-        assert_law("alias-lte", &format!("{a} {b} <="), &format!("{a} {b} LTE"));
-        assert_law("alias-gt",  &format!("{a} {b} >"),  &format!("{a} {b} GT"));
-        assert_law("alias-gte", &format!("{a} {b} >="), &format!("{a} {b} GTE"));
+        // Every symbol is one character; LTE, GTE and NEQ are reached by name.
+        assert_law("alias-eq", &format!("{a} {b} ="), &format!("{a} {b} EQ"));
+        assert_law("alias-lt", &format!("{a} {b} <"), &format!("{a} {b} LT"));
+        assert_law("alias-gt", &format!("{a} {b} >"), &format!("{a} {b} GT"));
     }
 
     // ── An unallocated symbol is not a silent no-op ──
     //
     // Desugaring is semantics-preserving (LANG.SOURCE.DESUGAR), which cuts both
     // ways: a symbol the language has not allocated must not quietly disappear
-    // from a program. `~` is unallocated, so it reaches the dictionary as an
-    // ordinary name and fails there.
+    // from a program, and neither must a retired spelling. Each of these reaches
+    // the dictionary as an ordinary name and fails there: `~` was never
+    // allocated, `&` no longer spells AND, and `<=`, `>=`, `<>` and `,,` are
+    // two-character spellings that no longer exist.
     #[test]
     fn an_unallocated_symbol_is_not_a_silent_noop(a in small(), b in small()) {
-        let observation = observed(&format!("{a} {b} ~ ADD"));
-        prop_assert_eq!(observation.error_category, Some("unknownWord"));
+        for symbol in ["~", "&", "<=", ">=", "<>", ",,"] {
+            let observation = observed(&format!("{a} {b} {symbol} ADD"));
+            prop_assert_eq!(
+                observation.error_category,
+                Some("unknownWord"),
+                "`{}` must reach the dictionary as a name",
+                symbol
+            );
+        }
     }
 
     // ── Word-name case normalization (§3.8): add ≡ Add ≡ ADD ──
@@ -131,26 +138,4 @@ fn alias_error_category_is_observationally_transparent() {
     assert_eq!(alias.error_category, Some("stackUnderflow"));
     assert!(alias.stack.is_empty());
     assert!(alias.effects.is_empty());
-}
-
-// ── AND alias `&` over the three-valued domain {T, F, U} (§7.5) ──
-fn truths() -> [(&'static str, &'static str); 3] {
-    [
-        ("T", "TRUE"),
-        ("F", "FALSE"),
-        ("U", "'MATH' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
-    ]
-}
-
-#[test]
-fn and_alias_over_k3() {
-    for (na, a) in truths() {
-        for (nb, b) in truths() {
-            assert_law(
-                &format!("alias-and[{na},{nb}]"),
-                &format!("{a} {b} &"),
-                &format!("{a} {b} AND"),
-            );
-        }
-    }
 }

@@ -116,7 +116,7 @@ mod tests {
     async fn keep_mode_retains_operands() {
         let mut interp = Interpreter::new();
         interp
-            .execute("3 8 ,, MIN")
+            .execute("3 8 KEEP MIN")
             .await
             .expect("keep mode should succeed");
         assert_eq!(interp.stack.len(), 3, "operands retained plus result");

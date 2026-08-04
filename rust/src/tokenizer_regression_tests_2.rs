@@ -286,30 +286,18 @@ mod tokenizer_regression_tests_2 {
         );
     }
 
+    /// Every symbol is exactly one character, so a two-character spelling is one
+    /// ordinary name token rather than a comparison. `GTE` and `NEQ` are reached
+    /// by name.
     #[test]
-    fn test_greater_than_equal_tokenizes_as_gte_alias() {
-        let result = tokenize("5 3 >=").unwrap();
-        assert_eq!(
-            result,
-            vec![
-                Token::Number("5".into()),
-                Token::Number("3".into()),
-                Token::Symbol(">=".into()),
-            ]
-        );
-    }
-
-    #[test]
-    fn test_not_equal_tokenizes_as_neq_alias() {
-        let result = tokenize("5 3 <>").unwrap();
-        assert_eq!(
-            result,
-            vec![
-                Token::Number("5".into()),
-                Token::Number("3".into()),
-                Token::Symbol("<>".into()),
-            ]
-        );
+    fn test_two_character_comparisons_are_plain_names() {
+        for lexeme in [">=", "<>", "<="] {
+            assert_eq!(
+                tokenize(lexeme).unwrap(),
+                vec![Token::Symbol(lexeme.into())],
+                "`{lexeme}` must be one name token"
+            );
+        }
     }
 
     #[test]
@@ -317,7 +305,7 @@ mod tokenizer_regression_tests_2 {
         // The single-line block constraint was removed: a `{ }` body may now
         // span multiple lines, with each internal line break preserved as a
         // statement separator inside the code block.
-        let input = "{ ,, [ 1 ] =\n[ 10 ] } 'CHECK_ONE' DEF";
+        let input = "{ KEEP [ 1 ] =\n[ 10 ] } 'CHECK_ONE' DEF";
         let result = tokenize(input);
         assert!(result.is_ok(), "multi-line code block should tokenize");
         assert!(

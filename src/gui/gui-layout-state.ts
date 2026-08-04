@@ -5,14 +5,13 @@ import type { GUIElements } from './gui-dom-cache';
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
-// The modifier is a whole token, bounded by whitespace or the start/end of the
-// source: `,,` is KEEP's spelling and the only modifier there is. Reading a whole
-// token rather than scanning for a bare `,` keeps a lone `,` — which is not a
-// Word at all — from reading as a modifier.
-const STACK_MODIFIER_TOKEN = /(?:^|\s)(,+)(?=\s|$)/g;
+// The modifier carries no symbol: `KEEP` is its only spelling. Matching a whole
+// token keeps a user word whose name merely contains "keep" from reading as the
+// modifier.
+const STACK_MODIFIER_TOKEN = /(?:^|\s)(KEEP)(?=\s|$)/gi;
 
 export interface StackModifierState {
-    /** KEEP consumption (`,,`): operands are retained rather than eaten. */
+    /** KEEP consumption: operands are retained rather than eaten. */
     readonly keep: boolean;
 }
 
@@ -22,8 +21,8 @@ export interface StackModifierState {
 // existing "any occurrence wins" behavior of the highlight.
 export const analyzeStackModifiers = (content: string): StackModifierState => {
     let keep = false;
-    for (const match of content.matchAll(STACK_MODIFIER_TOKEN)) {
-        if ((match[1] ?? '').includes(',,')) keep = true;
+    for (const _match of content.matchAll(STACK_MODIFIER_TOKEN)) {
+        keep = true;
     }
     return { keep };
 };

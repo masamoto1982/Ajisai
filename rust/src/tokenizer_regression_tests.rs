@@ -412,13 +412,13 @@ mod tokenizer_regression_tests {
         );
     }
     #[test]
-    fn test_ampersand_is_treated_as_symbol() {
+    fn test_ampersand_lexes_as_a_name() {
         let result = tokenize("&").unwrap();
         assert_eq!(result, vec![Token::Symbol("&".into())]);
     }
 
     #[test]
-    fn test_ampersand_symbol_in_and_context() {
+    fn test_ampersand_lexes_as_a_name_after_vectors() {
         let result = tokenize("[ TRUE ] [ FALSE ] &").unwrap();
         assert_eq!(
             result,

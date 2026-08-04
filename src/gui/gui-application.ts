@@ -36,7 +36,7 @@ declare global {
 const INTERPRETER_CLIENT = createInterpreterClient();
 
 const HIDDEN_AUTOCOMPLETE_ALIASES: ReadonlySet<string> = new Set([
-    '+', '-', '*', '/', '=', '<', '>', '<=', '>=',
+    '+', '-', '*', '/', '=', '<', '>',
     '[', ']', '{', '}', '(', ')',
     '.', ',', "'", '"',
 ]);
