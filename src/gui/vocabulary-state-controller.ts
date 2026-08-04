@@ -298,10 +298,14 @@ export const createVocabularyManager = (
             const button = createWordButtonElement(
                 wordInfo.name,
                 className,
-                () => onWordClick(wordInfo.dictionary === 'EXAMPLE' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
+                // A word is addressed by its bare name: the dictionary has two
+                // tiers and User is one of them, so a `DICT@NAME` prefix
+                // selects nothing and no longer resolves — inserting it wrote
+                // uncallable code into the editor, and looking a word up under
+                // it showed no definition.
+                () => onWordClick(wordInfo.name),
                 () => {
-                    const lookupName = `${wordInfo.dictionary}@${wordInfo.name}`;
-                    const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName) ?? '';
+                    const definition = window.ajisaiInterpreter?.lookup_word_definition(wordInfo.name) ?? '';
                     renderWordInfo(
                         elements.userWordInfo,
                         definition || DEFAULT_WORD_INFO_MESSAGE,
@@ -309,7 +313,7 @@ export const createVocabularyManager = (
                     );
                 },
                 () => { resetWordInfoDisplay(elements.userWordInfo); },
-                (event) => renderDeleteContextMenu(event, `${wordInfo.dictionary}@${wordInfo.name}`)
+                (event) => renderDeleteContextMenu(event, wordInfo.name)
             );
 
             fragment.appendChild(button);

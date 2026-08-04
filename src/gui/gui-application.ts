@@ -74,10 +74,9 @@ const collectAutocompleteWords = (): string[] => {
         .filter((w): w is string => w !== undefined && !HIDDEN_AUTOCOMPLETE_ALIASES.has(w));
 
     const userWordsInfo = INTERPRETER_CLIENT.collectUserWordsInfo();
-    const userWords: string[] = userWordsInfo.flatMap(word => [
-        word[1],
-        `${word[0]}@${word[1]}`
-    ]);
+    // Bare names only: a `DICT@NAME` completion no longer resolves to anything,
+    // so suggesting one only offered code that fails to run.
+    const userWords: string[] = userWordsInfo.map(word => word[1]);
 
     const allWords: Set<string> = new Set([...coreWords, ...userWords]);
     autocompleteWordsCache = Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
