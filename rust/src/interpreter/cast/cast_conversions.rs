@@ -33,18 +33,28 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_string)
 }
 
-/// `NUM` parses *data* text, so it is deliberately more permissive than the
-/// source lexeme grammar: `Fraction::from_str` still accepts the truncated
-/// decimals (`.5`, `5.`) that `tokenizer::parse_number_from_string` rejects, and
-/// text arriving from outside the program is where those spellings show up. The
-/// two are separate surfaces on purpose — do not tighten one to match the other
-/// without deciding that `'.5' NUM` should become a NIL bubble.
+/// `NUM` accepts exactly the lexemes a source literal accepts (LANG.SOURCE.TEXT):
+/// the sealed numeric grammar is the one definition of what text denotes a
+/// number, so `'.5' NUM` fails for the same reason `.5` is not a literal.
+///
+/// The gate is deliberately the tokenizer's own validator rather than
+/// `Fraction::from_str`, which is the *internal* value parser and stays more
+/// permissive — it accepts truncated decimals and underscore digit separators
+/// (`1_000`), neither of which is Ajisai source. Nothing outside the program can
+/// reach this Word, because the vocabulary has no input Word: every operand was
+/// written as a literal or built by the program, so leniency here would only
+/// create a second numeric language for a program to trip over.
 fn convert_value_to_number(val: &Value) -> Result<Value> {
     if val.is_text() {
         let s = value_as_string(val).unwrap_or_default();
-        match Fraction::from_str(&s) {
-            Ok(fraction) => return Ok(create_number_value(fraction)),
-            Err(_) => {
+        let parsed = if crate::tokenizer::is_number_token_lexeme(&s) {
+            Fraction::from_str(&s).ok()
+        } else {
+            None
+        };
+        match parsed {
+            Some(fraction) => return Ok(create_number_value(fraction)),
+            None => {
                 return Ok(Value::bubble_with_reason(
                     NilReason::InvalidEncoding,
                     Recoverability::Recoverable,

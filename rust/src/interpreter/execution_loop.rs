@@ -262,13 +262,14 @@ impl Interpreter {
                             has_other = true;
                         }
                         _ => {
-                            // Data-ization (SPEC §4.3, P1): a bare symbol inside a
-                            // vector literal is *data* — the symbol text as a Text
-                            // value — never executed as code. Only the literal
-                            // keywords TRUE / FALSE / NIL (handled above) denote
-                            // values. This makes `[ FOO ]` mean the same thing
-                            // regardless of dictionary state, instead of executing
-                            // FOO when it happens to be a defined user word.
+                            // LANG.VALUES.VECTOR: inside a Vector literal a name is
+                            // data — its own text as a String — and no dictionary
+                            // lookup occurs. Only TRUE / FALSE / NIL (handled above)
+                            // denote values. This is what makes `[ FOO ]` denote the
+                            // same Vector under every dictionary state instead of
+                            // executing FOO when it happens to be a defined word,
+                            // and it is why a misspelled name here is an element
+                            // rather than an error.
                             values.push(Value::from_string(s));
                             has_other = true;
                         }

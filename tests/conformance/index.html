@@ -75,6 +75,40 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- LANG.VALUES.VECTOR: inside a Vector literal a name is data — its own text —
+     and no dictionary lookup occurs, so a literal denotes the same value under
+     every dictionary state. Only TRUE / FALSE / NIL denote values. The last case
+     records the consequence: a misspelling here is an element, not an error. -->
+
+<section class="ajisai-case" id="core-vector-name-is-data" data-category="core">
+  <h3>A name inside a Vector literal is its own text</h3>
+  <pre class="ajisai-source">[ FOO 1 ]</pre>
+  <pre class="ajisai-expect-result">[ 'FOO' 1/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vector-literal-ignores-dictionary" data-category="core">
+  <h3>A Vector literal denotes the same value when the name is a defined Word</h3>
+  <pre class="ajisai-source">{ [ 99 ] } 'FOO' DEF
+[ FOO 1 ]</pre>
+  <pre class="ajisai-expect-result">[ 'FOO' 1/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vector-truth-names-denote-values" data-category="core">
+  <h3>TRUE, FALSE and NIL denote values inside a Vector literal, not their text</h3>
+  <pre class="ajisai-source">[ TRUE FALSE NIL ]</pre>
+  <pre class="ajisai-expect-result">[ TRUE FALSE NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vector-misspelling-is-an-element" data-category="core">
+  <h3>A misspelled name inside a Vector literal is a String element, not an error</h3>
+  <pre class="ajisai-source">[ 1 LENGHT 2 ]</pre>
+  <pre class="ajisai-expect-result">[ 1/1 'LENGHT' 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-nesting-preserved" data-category="core">
   <h3>Nesting is preserved</h3>
   <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ]</pre>
@@ -999,6 +1033,32 @@
   <h3>NUM parses fraction text to an exact rational</h3>
   <pre class="ajisai-source">'3/4' NUM</pre>
   <pre class="ajisai-expect-result">3/4</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- NUM accepts exactly the lexemes a source literal accepts
+     (LANG.SOURCE.TEXT). The internal value parser is more permissive — it takes
+     truncated decimals and underscore digit separators — so these cases pin the
+     boundary at the Word rather than at that parser. -->
+
+<section class="ajisai-case" id="core-num-decimal" data-category="core">
+  <h3>NUM parses a decimal with digits on both sides of the point</h3>
+  <pre class="ajisai-source">'0.5' NUM</pre>
+  <pre class="ajisai-expect-result">1/2</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-num-rejects-truncated-decimal" data-category="core">
+  <h3>NUM projects a truncated decimal to NIL, as source would reject it</h3>
+  <pre class="ajisai-source">'.5' NUM NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-num-rejects-digit-separator" data-category="core">
+  <h3>NUM projects an underscore digit separator to NIL: it is not Ajisai source</h3>
+  <pre class="ajisai-source">'1_000' NUM NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

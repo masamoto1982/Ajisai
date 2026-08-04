@@ -80,8 +80,8 @@ fn boolean_vector_keeps_truth_value_rendering() {
 
 #[test]
 fn symbol_in_vector_is_data_not_executed() {
-    // Data-ization (SPEC §4.3): a bare symbol inside a vector literal is the
-    // symbol text as data, even when it names a defined user word. `[ TEN 2 3 ]`
+    // LANG.VALUES.VECTOR: a name inside a Vector literal is its own text as
+    // data, even when it names a defined user word. `[ TEN 2 3 ]`
     // is therefore a fully literal vector — TEN is the string "TEN", never the
     // word's result — and lowers identically on the compiled and interpreted
     // paths. This is the regression guard for the retired word-execution behavior.
@@ -99,7 +99,7 @@ fn symbol_in_vector_is_data_not_executed() {
 
 #[test]
 fn vector_literal_is_independent_of_dictionary_state() {
-    // The core of data-ization (SPEC §4.3): the *same* source vector produces
+    // The core of LANG.VALUES.VECTOR: the *same* source vector produces
     // the *same* value whether or not the symbol names a defined word. Before,
     // `[ FOO 1 ]` executed FOO when defined and was data otherwise — a
     // dictionary-state-dependent meaning. Now both are the data `[ "FOO" 1 ]`.

@@ -35,6 +35,9 @@ const EXAMPLE_NAMES = new Set([
   'EXAMPLE', 'AUDIOLIB', 'DICT@WORD', 'EXAMPLE@ADD10', 'EXAMPLE@GREET', 'AUDIOLIB@GREET',
   // literal string contents shown on the stack
   'TEST', "T'ES'T", 'AB', 'CD',
+  // a placeholder name, introduced by the Vector clause to show that `[ FOO ]`
+  // holds the text FOO whether or not FOO is a defined Word
+  'FOO',
 ]);
 
 const SURFACES = ['README.md', 'public/docs/index.html', 'SPECIFICATION.html'];
@@ -78,7 +81,15 @@ for (const path of SURFACES) {
 
   for (const span of spans) {
     // A span may hold a whole program (`2 SQRT 2 LT`), so check every token.
-    for (const raw of span.trim().split(/\s+/)) {
+    // Whitespace is only one of the boundaries the lexer has: a structural
+    // delimiter is always a token of its own, so `][` is `]` then `[` rather
+    // than one unknown symbol, and `[FOO]` names FOO.
+    const tokens = span
+      .trim()
+      .split(/\s+/)
+      .flatMap((part) => part.split(/([[\]{}()])/))
+      .filter(Boolean);
+    for (const raw of tokens) {
       // Markdown escapes a table-cell pipe as `\|`; the token is the pipe.
       const token = raw.replace(/\\([|`*_])/g, '$1');
       if (WORD_SHAPED.test(token)) {

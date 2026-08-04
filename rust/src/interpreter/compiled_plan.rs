@@ -192,8 +192,8 @@ fn try_collect_literal_vector(
                         values.push(Value::nil());
                         has_other = true;
                     }
-                    // Data-ization (SPEC §4.3): a bare symbol inside a vector
-                    // literal is the symbol text as data, never executed. This
+                    // LANG.VALUES.VECTOR: a name inside a Vector literal is its
+                    // own text as data, never executed. This
                     // mirrors `collect_vector`, so a symbol-bearing vector is a
                     // literal and lowers here identically to the interpreter path.
                     _ => {
