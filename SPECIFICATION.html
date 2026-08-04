@@ -288,6 +288,10 @@ A decimal literal carries at least one digit on both sides of the point: <code>0
 </p>
 
 <p>
+This numeric grammar is the single definition of what text denotes a number. A conversion from Text to a Scalar accepts exactly the lexemes a source literal accepts and projects everything else to NIL, so the language has one numeric grammar rather than one per entry point.
+</p>
+
+<p>
 Malformed delimiters, malformed literals, invalid names, and invalid definition forms are source errors. They do not denote NIL.
 </p>
 
@@ -375,6 +379,10 @@ A Vector is an ordered finite collection of values. Indexing is 0-origin and neg
 
 <p>
 Vector length is semantic even when storage is flattened, shared, or lazily materialized. Order and length are a Vector's whole observable structure, and a nested Vector is an element like any other.
+</p>
+
+<p>
+Inside a Vector literal a name is data, not code: it denotes its own text, and no dictionary lookup occurs. <code>[ FOO ]</code> is the one-element Vector holding the String <code>FOO</code> whether or not <code>FOO</code> is a defined Word, so a Vector literal denotes the same value under every dictionary state. Only <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code> denote values rather than their text. A consequence worth stating: a misspelled name inside a Vector literal is a String element, not an error.
 </p>
 
 <h2 id="lang-machine">4. Machine State and Evaluation</h2>
