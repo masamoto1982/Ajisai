@@ -33,6 +33,12 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_string)
 }
 
+/// `NUM` parses *data* text, so it is deliberately more permissive than the
+/// source lexeme grammar: `Fraction::from_str` still accepts the truncated
+/// decimals (`.5`, `5.`) that `tokenizer::parse_number_from_string` rejects, and
+/// text arriving from outside the program is where those spellings show up. The
+/// two are separate surfaces on purpose — do not tighten one to match the other
+/// without deciding that `'.5' NUM` should become a NIL bubble.
 fn convert_value_to_number(val: &Value) -> Result<Value> {
     if val.is_text() {
         let s = value_as_string(val).unwrap_or_default();

@@ -438,27 +438,20 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     let mut i = 0;
 
     if chars[i] == '-' || chars[i] == '+' {
-        if chars.len() == 1 {
-            return None;
-        }
-        // The sign must be followed by a digit or a leading-dot decimal
-        // (`-.5`, `+.5`); otherwise it is a word symbol, not a number.
-        let next_is_digit = chars[i + 1].is_ascii_digit();
-        let next_is_dot_digit =
-            chars[i + 1] == '.' && i + 2 < chars.len() && chars[i + 2].is_ascii_digit();
-        if !next_is_digit && !next_is_dot_digit {
+        // The sign must be followed by a digit; otherwise the token is a name,
+        // not a number. This is what leaves `-` free to be the SUB spelling.
+        if chars.len() == 1 || !chars[i + 1].is_ascii_digit() {
             return None;
         }
         i += 1;
     }
 
-    // A leading-dot decimal (`.5`, `-.5`) has an empty integer part: the dot
-    // must be followed by at least one digit (SPEC §3.2). Bare `.` / `..` are
-    // modifier sugar already handled before this function is reached.
-    let has_leading_dot_digits =
-        i < chars.len() && chars[i] == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit();
-
-    if !has_leading_dot_digits && (i >= chars.len() || !chars[i].is_ascii_digit()) {
+    // A decimal literal carries digits on *both* sides of the point: `0.5`, not
+    // `.5` or `5.`. The point is therefore never the first or last character of
+    // a number, which is what keeps a bare `.` unambiguously a name and leaves
+    // the character allocatable as a symbol later without a second breaking
+    // change to the numeric language.
+    if i >= chars.len() || !chars[i].is_ascii_digit() {
         return None;
     }
 
@@ -490,6 +483,10 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     if i < chars.len() && chars[i] == '.' {
         has_dot = true;
         i += 1;
+        // At least one digit after the point: `5.` and `5.e3` are not numbers.
+        if i >= chars.len() || !chars[i].is_ascii_digit() {
+            return None;
+        }
         while i < chars.len() && chars[i].is_ascii_digit() {
             i += 1;
         }

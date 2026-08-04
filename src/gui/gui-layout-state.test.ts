@@ -51,10 +51,13 @@ describe('analyzeStackModifiers', () => {
         }
     });
 
-    it('never mistakes a decimal literal for a modifier', () => {
+    it('never mistakes a number for a modifier', () => {
+        expect(analyzeStackModifiers('0.5 ADD')).toEqual({ keep: false });
+        expect(analyzeStackModifiers('3.14 ADD')).toEqual({ keep: false });
+        expect(analyzeStackModifiers('1/2 ADD')).toEqual({ keep: false });
+        // A truncated decimal is not a number either, and still not a modifier.
         expect(analyzeStackModifiers('.5 ADD')).toEqual({ keep: false });
         expect(analyzeStackModifiers('5. ADD')).toEqual({ keep: false });
-        expect(analyzeStackModifiers('3.14 ADD')).toEqual({ keep: false });
     });
 
     it('treats the axis as triggered if any token selects the non-default', () => {

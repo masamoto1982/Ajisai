@@ -284,6 +284,10 @@ A program is Unicode text tokenized by the sealed Ajisai lexical grammar. Tokens
 </p>
 
 <p>
+A decimal literal carries at least one digit on both sides of the point: <code>0.5</code> and <code>5.0</code> are numbers, <code>.5</code> and <code>5.</code> are not. The point is therefore never the first or last character of a number, so a lone <code>.</code> is unambiguously a name rather than a truncated literal.
+</p>
+
+<p>
 Malformed delimiters, malformed literals, invalid names, and invalid definition forms are source errors. They do not denote NIL.
 </p>
 
