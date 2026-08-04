@@ -468,7 +468,7 @@
                 <section id="tokens" class="ref-page">
                     <h2>Tokens and Spelling</h2>
                     <p>A program is a sequence of tokens separated by whitespace. <strong>A token ends at exactly three things</strong>: whitespace, a structural delimiter (<code>[</code> <code>]</code> <code>{</code> <code>}</code> <code>(</code> <code>)</code>), or the start of a comment (<code>#</code> to the end of the line). Nothing else ends a token, so every other character — punctuation included — is an ordinary name character.</p>
-                    <p>The practical consequence is that <strong>an operator needs a space around it</strong> the same way a word does. <code>2 +</code> is two tokens; <code>2+</code> is a single name that no word answers to, and it fails as an unknown word rather than silently parsing as addition. Brackets and braces are the exception, because they delimit themselves: <code>[ 1 2 ][ 3 4 ]CONCAT</code> is read exactly like the spaced form.</p>
+                    <p>The practical consequence is that <strong>an operator needs a space around it</strong> the same way a word does. <code>2 +</code> is two tokens; <code>2+</code> is a single name that no word answers to, and it fails as an unknown word rather than silently parsing as addition. Brackets and braces are the exception, because they delimit themselves: <code>[ 1 2 ]LENGTH</code> is read exactly like the spaced form, and so is a bracket written flush against another bracket.</p>
                     <p>A symbol obeys the rule a word obeys because <strong>a symbol is a name</strong> — one spelled with punctuation. Each is a single character; there are no two-character symbols. What a token means is decided by the whole token, not by its first character: <code>1/2</code> is a number because the entire lexeme parses as one, and a bare <code>/</code> is a name for the same reason.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
@@ -667,7 +667,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">An irrational value itself renders as a nested continued fraction such as <code>( 1 ( 2 ( 2 ( 2 ...) ) ) )</code>, truncated at a display budget. The nested form is display output only — it is not source syntax, and <code>(</code> <code>)</code> are rejected in programs.</p>
+                    <p class="ref-note">An irrational value itself renders as a nested continued fraction such as <code>( 1 ( 2 ( 2 ( 2 ... ) ) ) )</code>, truncated at a display budget. The nested form is display output only — it is not source syntax, and <code>(</code> <code>)</code> are rejected in programs.</p>
                 </section>
 
                 <section id="stack" class="ref-page">
