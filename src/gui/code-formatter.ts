@@ -15,9 +15,12 @@
 //   - keeps string literals ('...') and comments (#...) verbatim;
 //   - re-indents the line by the bracket/block nesting depth open at its start.
 //
-// It never adds or removes line breaks. If the input contains something it
-// cannot rewrite safely (an unterminated string, or a newline inside a string
-// literal) it returns the input unchanged.
+// It adds a line break in exactly one situation: when two or more `|` COND
+// clauses begin on the same line, which the language rejects outright. That is
+// the one layout rule Ajisai enforces, so a formatter that left it alone would
+// decline to fix the only thing it is obliged to fix. If the input contains
+// something it cannot rewrite safely (an unterminated string, or a newline
+// inside a string literal) it returns the input unchanged.
 
 const INDENT_UNIT = '  ';
 
@@ -130,6 +133,60 @@ const scanLines = (source: string): string[][] | null => {
     return lines;
 };
 
+// Whether the block opening at `start` (`tokens[start] === '{'`) contains a `|`
+// at its own top level — that is, whether it is a COND guard clause rather than
+// an ordinary code block.
+const isCondClauseBlock = (tokens: string[], start: number): boolean => {
+    let depth = 0;
+    for (let i = start; i < tokens.length; i += 1) {
+        const token = tokens[i];
+        if (token === '{') {
+            depth += 1;
+        } else if (token === '}') {
+            depth -= 1;
+            if (depth === 0) return false;
+        } else if (token === '|' && depth === 1) {
+            return true;
+        }
+    }
+    return false;
+};
+
+// Break a line so that at most one COND guard clause begins on it.
+//
+// The formatter otherwise never adds a line break, and this is the one place
+// where refusing to add one leaves the source unusable rather than merely
+// untidy: "one `|` clause per line" is the single layout rule the language
+// enforces, and a COND written on one line does not run at all — it fails
+// before evaluation with *COND: | clauses must be written one clause per line*.
+// Splitting is therefore not a style choice imposed on working code; it is the
+// difference between code that runs and code that cannot.
+//
+// The break goes immediately before each clause after the first, and nowhere
+// else, so everything the author wrote stays where they put it. Clauses nested
+// inside a clause body are split the same way, because the rule counts every
+// clause that begins on the physical line however deeply it is nested.
+const splitCondClauseLines = (tokens: string[]): string[][] => {
+    const out: string[][] = [];
+    let current: string[] = [];
+    let clausesOnLine = 0;
+
+    for (let i = 0; i < tokens.length; i += 1) {
+        if (tokens[i] === '{' && isCondClauseBlock(tokens, i)) {
+            if (clausesOnLine >= 1 && current.length > 0) {
+                out.push(current);
+                current = [];
+                clausesOnLine = 0;
+            }
+            clausesOnLine += 1;
+        }
+        current.push(tokens[i]!);
+    }
+
+    out.push(current);
+    return out;
+};
+
 const countLeadingClosers = (tokens: string[]): number => {
     let leading = 0;
     while (leading < tokens.length && CLOSING_BRACKETS.has(tokens[leading]!)) {
@@ -184,5 +241,5 @@ export const formatAjisaiSource = (source: string): string => {
     if (lines === null) {
         return source;
     }
-    return renderLines(lines);
+    return renderLines(lines.flatMap(splitCondClauseLines));
 };

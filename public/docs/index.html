@@ -471,7 +471,9 @@
                     <h2>Tokens and Spelling</h2>
                     <p>A program is a sequence of tokens separated by whitespace. <strong>A token ends at exactly three things</strong>: whitespace, a structural delimiter (<code>[</code> <code>]</code> <code>{</code> <code>}</code> <code>(</code> <code>)</code>), or the start of a comment (<code>#</code> to the end of the line). Nothing else ends a token, so every other character — punctuation included — is an ordinary name character.</p>
                     <p>The practical consequence is that <strong>an operator needs a space around it</strong> the same way a word does. <code>2 +</code> is two tokens; <code>2+</code> is a single name that no word answers to, and it fails as an unknown word rather than silently parsing as addition. Brackets and braces are the exception, because they delimit themselves: <code>[ 1 2 ]LENGTH</code> is read exactly like the spaced form, and so is a bracket written flush against another bracket.</p>
-                    <p>A symbol obeys the rule a word obeys because <strong>a symbol is a name</strong> — one spelled with punctuation. Each is a single character; there are no two-character symbols. What a token means is decided by the whole token, not by its first character: <code>1/2</code> is a number because the entire lexeme parses as one, and a bare <code>/</code> is a name for the same reason.</p>
+                    <p>A symbol obeys the rule a word obeys because <strong>a symbol is a name</strong> — one spelled with punctuation. Most are a single character, and the comparison family adds three of two: <code>&lt;=</code>, <code>&gt;=</code> and <code>!=</code>, for <code>LTE</code>, <code>GTE</code> and <code>NEQ</code>. That costs the rule above nothing, because a token ends only at whitespace or a delimiter and never in the middle. What a token means is decided by the whole token, not by its first character: <code>1/2</code> is a number because the entire lexeme parses as one, and a bare <code>/</code> is a name for the same reason.</p>
+                    <h3>Comments</h3>
+                    <p>A <code>#</code> begins a comment that runs to the end of the line, and the line's remaining characters are dropped before anything is tokenized. A <code>#</code> inside a string is ordinary text, so <code>'a # b'</code> is one three-word string.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -1457,6 +1459,70 @@
                     </div>
                     <p class="ref-note"><code>EXEC</code> runs a code block taken from the stack.</p>
 
+                    <h3 id="blocks-frames">What a block sees</h3>
+                    <p>A block has <strong>no stack discipline of its own</strong>. The word that evaluates it decides what the block can reach and what it may leave behind, and reading the wrong rule is the difference between a <code>+</code> inside the block finding two operands and finding none. There are five rules, and the block's own text does not say which applies to it — the word receiving it does.</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Evaluated by</th><th>The block sees</th><th>The block leaves</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>A word body (<code>DEF</code>)</td><td class="notes">the whole stack</td><td class="notes">whatever it pushes, however many</td></tr>
+                                <tr><td><code>EXEC</code></td><td class="notes">the whole stack</td><td class="notes">whatever it pushes, however many</td></tr>
+                                <tr><td><code>COND</code> guard, and the body that fires</td><td class="notes">one value: the dispatch value, alone</td><td class="notes">exactly one — the top; leaving none is an error, and anything under the top is discarded</td></tr>
+                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">one value: the current element, alone</td><td class="notes">exactly one — the mapped element, or a truth value for the predicate words</td></tr>
+                                <tr><td><code>FOLD</code></td><td class="notes">two values: the accumulator, then the element</td><td class="notes">exactly one: the next accumulator</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p>So <code>{ + } 'ADDW' DEF</code> followed by <code>3 4 ADDW</code> gives <code>7</code>, and so does <code>3 4 { + } EXEC</code> — both see the whole stack. But <code>100 [ 1 2 ] { + } MAP</code> is a stack underflow: the block sees one element and the <code>100</code> is not in its frame.</p>
+                    <p class="ref-note">A block written <em>inside</em> another block is data where it is written. It is evaluated only when the word that receives it runs it, under that word's row above rather than the enclosing block's — which is why a word may call itself from inside a <code>{ }</code> it hands to <code>MAP</code> or <code>EXEC</code>, and why that call is an ordinary recursive call.</p>
+
+                    <h3 id="two-arguments">Writing a word that takes two arguments</h3>
+                    <p>Ajisai has no <code>DUP</code>, <code>SWAP</code>, <code>DROP</code> or <code>ROT</code>, and that is deliberate rather than missing: <strong>several values travel in a vector, not on the stack</strong>. A word that needs two arguments takes one vector of two, and the caller either writes it — <code>[ 3 4 ]</code> — or builds it from computed values with <code>COLLECT</code>.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ 0 { + } FOLD } 'PSUM' DEF
+[ 3 4 ] PSUM</code></td>
+                                    <td><code>7/1</code></td>
+                                    <td class="notes">The argument is the vector; reduce it rather than unpacking it.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ [ 1 -1 ] * 0 { + } FOLD } 'PDIFF' DEF
+2 5 * 3 2 COLLECT PDIFF</code></td>
+                                    <td><code>7/1</code></td>
+                                    <td class="notes">An asymmetric word weights the positions by broadcast, then reduces. <code>2 COLLECT</code> packs two computed values.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p>When you do need a position rather than a reduction, read it with <code>GET</code>: <code>[ 0 ] GET</code> is the first element and <code>[ -1 ] GET</code> the last, so <code>{ SORT [ -1 ] GET } 'PMAX' DEF</code> answers the larger of a pair. <code>REVERSE</code> is the vector's swap, and <code>TAKE</code> with <code>CONCAT</code> rebuilds a vector from slices of one.</p>
+                    <p class="ref-note">The one duplication device is <code>KEEP</code>. Prefixed to a word that reads one value and pushes one, it leaves the operand underneath the result, so <code>KEEP REVERSE REVERSE</code> is a two-line way to write "copy the vector on top". Prefixed to a two-operand word it keeps <em>both</em> operands, which is rarely what you want: <code>[ 10 3 ] KEEP [ 0 ] GET</code> leaves the index vector on the stack as well.</p>
+
                     <h3>Code as data</h3>
                     <p>A code block and a vector are <strong>different kinds of value</strong>: a vector is data and is never executable, and <code>EXEC</code> accepts only a code block. <code>REFLECT</code> is the one crossing between them. It turns a code block into a canonical vector of token records — and turns that vector back into the block — without evaluating anything and without consulting the dictionary.</p>
                     <div class="sample">
@@ -1498,11 +1564,37 @@
                         </div>
                     </div>
                     <p class="ref-note">Each record keeps the token's original spelling — the number lexeme, the string content, the symbol as written — so nothing is lost across the crossing. A vector that is not canonical code data is an error, not a bubble: <code>[ 1 2 ] REFLECT</code> raises rather than guessing.</p>
+                    <h4>Putting a runtime value inside a block</h4>
+                    <p>A block is source, so a value you computed while the program was running is not in it. <code>MAP</code> and <code>FILTER</code> take a block and nothing else, which raises a real question: how do you filter by a threshold you only learn at run time? <code>{ 5 LT }</code> tests against a literal five, and there is no five to write when the number came out of the program.</p>
+                    <p><code>REFLECT</code> answers it in both directions. Build the token records for the block you want — with the runtime value converted to its lexeme by <code>STR</code> — and cross back into a block with <code>REFLECT</code>. The result is an ordinary block, and every word that takes one accepts it.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 3 1 4 1 5 9 2 6 ]
+'AJISAI-CODE-1' 'number' 5 STR 2 COLLECT 'symbol' 'LT' 2 COLLECT 3 COLLECT REFLECT
+FILTER</code></td>
+                                    <td><code>[ 3/1 1/1 4/1 1/1 2/1 ]</code></td>
+                                    <td class="notes">The <code>5</code> is an ordinary stack value here; replace it with anything the program computed and the predicate follows.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">Read the middle line as the vector <code>[ 'AJISAI-CODE-1' [ 'number' '5' ] [ 'symbol' 'LT' ] ]</code> assembled a piece at a time: <code>2 COLLECT</code> packs each two-element record, and the final <code>3 COLLECT</code> packs the tag and the two records. This is the whole of partial application in Ajisai — there is no separate word for it, and none is needed, because a block is a value whose contents you can compute.</p>
                 </section>
 
                 <section id="cond" class="ref-page">
                     <h2>Conditionals</h2>
                     <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is true. In the clause form, <code>|</code> separates the guard from the body and each clause occupies exactly one line; <code>TRUE</code> makes an always-true else guard.</p>
+                    <p>The else clause can also be spelled <code>IDLE</code>, and that is the spelling to prefer. <code>IDLE</code> is not one of the 57 Words and you will not find it in the Dictionary panel: it is a keyword read positionally, meaningful only as a guard, and it means <em>this clause fires when no earlier one did</em>. <code>TRUE</code> reaches the same outcome by pushing a value the guard then reads, which works but says less; <code>IDLE</code> says which clause is the fallback.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1547,6 +1639,32 @@ COND</code></td>
                     </div>
                     <p class="ref-note">Each guard answers <code>TRUE</code> or <code>FALSE</code>, so a clause either fires or does not. If no clause matches and no else clause is present, <code>COND</code> raises an error.</p>
                     <p class="ref-note">One clause per line is a rule, not a layout preference — it is the only place in the language where a line break is significant (see <a href="#tokens">Tokens and Spelling</a>). Collapsing the clause form onto one line fails before anything runs, with <em>COND: | clauses must be written one clause per line</em>. The pair form above has no <code>|</code> in it and so carries no such rule: it fits on one line.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5
+{ 3 &lt; | 'small' }
+{ IDLE | 'big' }
+COND</code></td>
+                                    <td><code>'big'</code></td>
+                                    <td class="notes"><code>IDLE</code> names the fallback clause.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>What a clause sees</h3>
+                    <p>A <code>COND</code> clause does not run on the stack you can see. Every guard, and the body of the clause that fires, runs in an <strong>isolated frame holding exactly one value</strong> — the value <code>COND</code> is dispatching on — and exactly one value comes back out of it: whatever is on top when the body finishes. This is different from a word body or <code>EXEC</code>, which see the whole stack; see <a href="#blocks-frames">What a block sees</a> for all five rules side by side.</p>
+                    <p>Two consequences are worth writing down before you meet them. A clause body cannot reach values that were on the stack before the <code>COND</code>: <code>1 2 3 4</code> followed by a clause whose body is <code>+</code> is a stack underflow, because <code>+</code> finds only the dispatch value. And a body that ends with several values keeps only the top one — <code>{ TRUE | 7 8 9 }</code> answers <code>9</code>, and the <code>7</code> and <code>8</code> go with the frame.</p>
+                    <p class="ref-note">The isolation is what makes recursion over <code>COND</code> practical. A clause body that builds working values on its way to a self-call does not have to clean them up: they cannot survive the frame, so each turn of the recursion starts from one value no matter how much scaffolding the previous turn built.</p>
                 </section>
 
                 <section id="strings" class="ref-page">

@@ -22,7 +22,17 @@ pub fn op_print(interp: &mut Interpreter) -> Result<()> {
         // character content, without the `'...'` quotes the Stack projection
         // uses to mark it as a string (SPEC §7.9).
         let payload = crate::types::display::format_for_output(&val);
-        write!(&mut interp.output_buffer, "{} ", payload)
+        // One PRINT, one line. LANG.EFFECTS.OUTPUT makes the output stream an
+        // *ordered sequence of emissions* and leaves rendering to the host, and
+        // the structured `HostEffect::Print` channel below already carries one
+        // item per call — this buffer is the host-readable rendering of that
+        // same sequence. Joining the items with a space instead collapsed every
+        // emission into one long line, so nine `PRINT`s of a Pascal's triangle
+        // row produced a single row of numbers and the language had no way at
+        // all to produce multi-line output. The native CLI has always rendered
+        // one payload per line; this brings the buffer that the browser host
+        // reads in line with it.
+        writeln!(&mut interp.output_buffer, "{}", payload)
             .map_err(|e| AjisaiError::from(format!("PRINT failed: {}", e)))?;
         Ok(HostEffect::Print(payload))
     })

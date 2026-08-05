@@ -62,7 +62,9 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // One User tier (LANG.DICTIONARY.RESOLUTION), so a Word's name is its
     // whole address: no active dictionary to pick, no `DICT@WORD` to build.
     if let Some(existing) = interp.user_words.get(&upper_name) {
-        let dependents = interp.collect_dependents(&upper_name);
+        // A word's own self-reference does not lock it: see
+        // `collect_external_dependents`.
+        let dependents = interp.collect_external_dependents(&upper_name);
 
         // A referenced word is not redefinable. There is no force modifier: the
         // vocabulary has no Word that overrides this, so the refusal is final

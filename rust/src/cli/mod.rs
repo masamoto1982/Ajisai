@@ -514,6 +514,16 @@ fn emit(report: &Report, opts: &Opts) {
     }
     if let Some(diagnosis) = &report.diagnosis {
         eprintln!("diagnosis: {}", diagnosis.summary);
+        // The stack lengths either side of the failure. They are already in the
+        // structured `evidence`, and reading them is most of the work of
+        // telling "the word was called with too few operands" apart from "the
+        // word consumed more than it should have" — so print them next to the
+        // summary rather than only in `--json`.
+        for line in &diagnosis.evidence {
+            if line.starts_with("stackLen") {
+                eprintln!("  {}", line);
+            }
+        }
         for check in &diagnosis.next_checks {
             eprintln!("  - {}: {}", check.label, check.detail);
         }

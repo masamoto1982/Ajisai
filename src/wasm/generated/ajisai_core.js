@@ -21,6 +21,20 @@ export class AjisaiInterpreter {
         wasm.ajisaiinterpreter_clear_serial_inboxes(this.__wbg_ptr);
     }
     /**
+     * Discard every value on the stack, leaving the dictionary, the output
+     * and every other piece of session state untouched.
+     *
+     * A REPL keeps its stack between runs, which is right, and until now the
+     * only way to get rid of a leftover intermediate was the full reset — and
+     * that takes the User dictionary with it. Clearing values is not a
+     * language operation (no Word does it, and none should: a program's own
+     * values are its own business), so it belongs here, on the host, where the
+     * person at the keyboard is the one asking.
+     */
+    clear_stack() {
+        wasm.ajisaiinterpreter_clear_stack(this.__wbg_ptr);
+    }
+    /**
      * @returns {any}
      */
     collect_builtin_word_registry() {

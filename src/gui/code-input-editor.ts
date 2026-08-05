@@ -323,9 +323,19 @@ export const createEditor = (
                 e.preventDefault();
                 selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
                 renderSuggestions();
-            } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey)) {
+            } else if (e.key === 'Tab') {
+                // Tab accepts; Enter never does. COND requires one `|` clause
+                // per line, so a newline is load-bearing syntax in this
+                // language — an open suggestion panel must not be able to eat
+                // one. It used to: typing `PRINT` opened the panel, and the
+                // Enter meant to end the line accepted the completion instead,
+                // so the next line's first token was appended to it (`PRINT3`).
+                // Dismissing the panel instead keeps the following Enter,
+                // whether the panel was wanted or not, a newline.
                 e.preventDefault();
                 applySuggestion(currentSuggestions[selectedSuggestionIndex]!);
+            } else if (e.key === 'Enter') {
+                hideSuggestions();
             } else if (e.key === 'Escape') {
                 hideSuggestions();
             }

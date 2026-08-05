@@ -1,5 +1,7 @@
 //! Surface-form metadata: the named, English-based concept behind every visible
-//! *symbolic* form in Ajisai source.
+//! source form that is *not* a runtime word — the symbolic ones, and the one
+//! word-shaped keyword (`IDLE`) that is read positionally rather than looked
+//! up.
 //!
 //! Ajisai source is word-based. Visible symbols are **surface forms** — aliases
 //! or sugar for named, English-based canonical concepts. Crucially, not every
@@ -61,6 +63,22 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         kind: SurfaceFormKind::ControlDirective,
         runtime_word: false,
         summary: "COND clause separator (guard | body)",
+    },
+    // `IDLE` is the else-guard: a clause whose guard is exactly this one name
+    // fires when no earlier clause did. It is matched positionally by
+    // `control_cond::is_idle_guard`, never resolved through the dictionary, so
+    // it is not one of the 57 Words and does not appear in the Dictionary
+    // panel. It was also, until it was registered here, in no registry, no
+    // reading surface, and no `LOOKUP` entry — a name a reader could only learn
+    // from an example, in a language whose whole claim is that 57 Words are all
+    // there is. Registering it puts it in the manifest and lets the reading
+    // surfaces name it.
+    SurfaceForm {
+        surface: "IDLE",
+        concept: "COND-ELSE-GUARD",
+        kind: SurfaceFormKind::ControlDirective,
+        runtime_word: false,
+        summary: "COND else-guard: fires when no earlier clause did",
     },
     SurfaceForm {
         surface: "[",

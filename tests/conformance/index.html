@@ -1479,6 +1479,48 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- Self-recursion reached through a nested code block (Sections 6.3, 7.7). A
+     block is data where it is written and code only where the Word that
+     receives it runs it, so a self-call inside one is an ordinary call, not the
+     enclosing word's tail position. These cases pin that: before they existed,
+     the tail-call trampoline mistook `{ SELF } MAP` for a guarded tail
+     self-call and left the first element unmapped, answering a wrong value with
+     no error and no NIL. -->
+
+<section class="ajisai-case" id="core-self-recursion-through-map-block" data-category="core">
+  <h3>A self-call inside a MAP block recurses (nested-block self-recursion)</h3>
+  <pre class="ajisai-source">{
+{ 2 LT | 1 * }
+{ IDLE | [ 1 2 ] - { FIB } MAP 0 { + } FOLD }
+COND } 'FIB' DEF
+[ 0 10 ] RANGE { FIB } MAP</pre>
+  <pre class="ajisai-expect-result">[ 0/1 1/1 1/1 2/1 3/1 5/1 8/1 13/1 21/1 34/1 55/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-self-recursion-through-exec-block" data-category="core">
+  <h3>A self-call inside an EXEC block recurses (nested-block self-recursion)</h3>
+  <pre class="ajisai-source">{
+{ 0 LTE | 0 * }
+{ IDLE | 1 - { CNT } EXEC 1 + }
+COND } 'CNT' DEF
+7 CNT</pre>
+  <pre class="ajisai-expect-result">7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-self-recursion-through-filter-block" data-category="core">
+  <h3>A self-call inside a FILTER block recurses (nested-block self-recursion)</h3>
+  <pre class="ajisai-source">{
+{ 0 EQ | 0 EQ }
+{ IDLE | 1 - { EVENP } EXEC NOT }
+COND } 'EVENP' DEF
+{ { EVENP } EXEC } 'EVENQ' DEF
+[ 0 1 2 3 4 5 ] { EVENQ } FILTER</pre>
+  <pre class="ajisai-expect-result">[ 0/1 2/1 4/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-del-removes-word" data-category="core">
   <h3>DEL removes a user word; calling it afterwards is unknownWord</h3>
   <pre class="ajisai-source">{ 2 MUL } 'D2' DEF 'D2' DEL 5 D2</pre>

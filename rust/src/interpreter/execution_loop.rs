@@ -470,6 +470,33 @@ impl Interpreter {
         Ok(start_index + i)
     }
 
+    /// Evaluate the tokens of a *nested* code block — the block a higher-order
+    /// Word (`MAP`, `FILTER`, `ANY`, `ALL`, `FOLD`) applies, or the one `EXEC`
+    /// runs — as its own token stream.
+    ///
+    /// A nested block is never the enclosing word's tail position, even when it
+    /// is written at the very end of a tail `COND` clause body: the block is
+    /// data at that point, and the Word that receives it decides when (and how
+    /// many times) it runs. Inheriting `in_tail_context` here made
+    /// `{ FIB } MAP` inside `FIB`'s own body look like a guarded tail self-call,
+    /// so `FIB` was *not applied to the first element* — the deferral site left
+    /// the element untouched and raised `tail_jump_pending`, which a later
+    /// frame's cleanup then swallowed. The result was a silently wrong answer
+    /// from a program with no error and no NIL, which is exactly the failure
+    /// mode LANG.FAILURE.TRICHOTOMY exists to prevent. With `EXEC` the same
+    /// deferral instead re-ran the body forever until the step limit.
+    ///
+    /// Saving and clearing the flag around the block keeps genuine tail
+    /// self-calls (a bare `... COND`-guarded self-call written directly in the
+    /// body's token stream) trampolined, while a self-call reached *through* a
+    /// block is an ordinary call.
+    pub(crate) fn execute_nested_block(&mut self, tokens: &[Token]) -> Result<()> {
+        let saved_tail_context: bool = std::mem::replace(&mut self.in_tail_context, false);
+        let result = self.execute_section_core(tokens, 0).map(|_| ());
+        self.in_tail_context = saved_tail_context;
+        result
+    }
+
     pub(crate) fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         // Mirror the compiled-plan tail marking on the plain interpreter path so
         // the two stay behaviorally identical (shadow validation runs both). A

@@ -21,7 +21,8 @@ export interface ExecutionCallbacks {
     readonly updateEditorValue: (value: string) => void;
     readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
-    readonly showError: (error: Error | string) => void;
+    readonly showDocumentation: (text: string) => void;
+    readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
@@ -51,6 +52,7 @@ export const createExecutionController = (
         updateEditorValue,
         insertEditorText,
         showInfo,
+        showDocumentation,
         showError,
         showExecutionResult,
         updateDisplays,
@@ -69,30 +71,52 @@ export const createExecutionController = (
         saveState
     });
 
-    const applyExecutionResult = (result: ExecuteResult, code: string): void => {
-        const lastDiagnosis: ProtocolDiagnosis | undefined = result.errorFlowTrace
-            ?.map((event) => event.diagnosis)
-            .filter((d): d is ProtocolDiagnosis => Boolean(d))
+    // The word that failed, the stack depth it failed at, and what to check —
+    // written *under* the error rather than before it. This block used to run
+    // first, and `showError` then cleared the area, so the one message that
+    // named the failing word was drawn and immediately erased: what survived
+    // was a bare "Error: Stack underflow" with nothing to say where.
+    const describeDiagnosis = (result: ExecuteResult): string | null => {
+        const event = result.errorFlowTrace
+            ?.filter((candidate) => Boolean(candidate.diagnosis))
             .at(-1);
-        if (lastDiagnosis) {
-            const whereLabel = lastDiagnosis.where.word ?? lastDiagnosis.where.kind;
-            const lines = [
-                `[DIAGNOSIS] ${lastDiagnosis.summary}`,
-                `Q1 when: ${lastDiagnosis.when}`,
-                `Q2 where: ${whereLabel}`,
-                `Q3 why: ${lastDiagnosis.why}`,
-                ...lastDiagnosis.nextChecks.map(
-                    (check) => `next: ${check.label} - ${check.detail}`
-                )
-            ];
-            showInfo(lines.join('\n'), true);
-        }
+        const diagnosis: ProtocolDiagnosis | undefined = event?.diagnosis;
+        if (!diagnosis) return null;
+
+        const where = diagnosis.where.word
+            ? `${diagnosis.where.word} (${diagnosis.where.kind})`
+            : diagnosis.where.kind;
+        const depth =
+            event && typeof event.stackLenBefore === 'number'
+                ? `, stack depth ${event.stackLenBefore}`
+                : '';
+        return [
+            `[DIAGNOSIS] ${diagnosis.summary}`,
+            `Q1 when: ${diagnosis.when}`,
+            `Q2 where: ${where}${depth}`,
+            `Q3 why: ${diagnosis.why}`,
+            ...diagnosis.nextChecks.map((check) => `next: ${check.label} - ${check.detail}`)
+        ].join('\n');
+    };
+
+    const applyExecutionResult = (result: ExecuteResult, code: string): void => {
+        const diagnosis = describeDiagnosis(result);
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);
             showInfo('Input helper inserted', false);
             updateView('input');
+        } else if (result.documentation) {
+            // Reference text for a Core Word is read, not edited, so it goes to
+            // the output area. It used to be written into the editor, where
+            // several screens of prose replaced whatever the user had typed;
+            // `'ADD' ?` in the middle of writing a program lost the program.
+            showDocumentation(result.documentation);
+            updateView('output');
         } else if (result.definition_to_load) {
+            // A User Word's reconstructed `DEF` *is* meant for the editor: the
+            // point of looking one up is to edit it and define it again. What it
+            // replaces is the `?` line that just ran.
             updateEditorValue(result.definition_to_load);
             const wordName = code.replace(/\?|LOOKUP/gi, "").trim();
             showInfo(`Showing definition: ${wordName}`, false);
@@ -101,8 +125,13 @@ export const createExecutionController = (
             showExecutionResult(result);
             clearEditor(false);
         } else {
-            showError(result.message || 'Unknown error');
+            // Keep whatever the run printed before it failed: the host reports
+            // it on the error path, and the error is written below it.
+            showError(result.message || 'Unknown error', result.output || '');
+            if (diagnosis) showInfo(diagnosis, true);
+            return;
         }
+        if (diagnosis) showInfo(diagnosis, true);
     };
 
     const executeCode = async (code: string): Promise<void> => {

@@ -455,7 +455,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::Neq,
         name: "NEQ",
-        aliases: &[],
+        aliases: &["!="],
         family: Family::Comparison,
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
@@ -489,7 +489,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::Le,
         name: "LTE",
-        aliases: &[],
+        aliases: &["<="],
         family: Family::Comparison,
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
@@ -523,7 +523,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::Gte,
         name: "GTE",
-        aliases: &[],
+        aliases: &[">="],
         family: Family::Comparison,
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
@@ -1121,7 +1121,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         aliases: &[],
         family: Family::Control,
         stack_inputs: Arity::Variable,
-        stack_outputs: Arity::Variable,
+        stack_outputs: Arity::Fixed(1),
         consumption: Consumption::Conditional,
         nil_policy: NilPolicy::RejectNil,
         projection: None,

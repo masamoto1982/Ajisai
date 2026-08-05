@@ -202,19 +202,58 @@ const vectorToLatex = (elements: Value[]): string | null => {
 };
 
 // The LaTeX reading of a stack value, or `null` when the canonical text
+interface ExactTerm {
+    readonly numerator: string;
+    readonly denominator: string;
+    readonly radicand: string;
+}
+
+// Σ c·√r as typeset mathematics. A coefficient of one is left implicit, the
+// rational term (radicand 1) is drawn as an ordinary fraction, and a negative
+// term joins with a minus rather than `+ -`.
+export const normalFormToLatex = (
+    terms: ReadonlyArray<ExactTerm> | undefined
+): string | null => {
+    if (!terms || terms.length === 0) return null;
+    let out = '';
+    for (const term of terms) {
+        const negative = term.numerator.startsWith('-');
+        const magnitude = negative ? term.numerator.slice(1) : term.numerator;
+        const root = term.radicand === '1' ? '' : `\\sqrt{${term.radicand}}`;
+        const unit = magnitude === '1' && term.denominator === '1' && root !== '';
+        const coefficient = unit
+            ? ''
+            : fractionToLatex({ numerator: magnitude, denominator: term.denominator });
+        if (out === '') {
+            out = `${negative ? '-' : ''}${coefficient}${root}`;
+        } else {
+            out += ` ${negative ? '-' : '+'} ${coefficient}${root}`;
+        }
+    }
+    return out;
+};
+
 // rendering is the only faithful surface.
 export const valueToLatex = (item: Value): string | null => {
     if (!item || !item.type) return null;
 
     switch (item.type) {
         case 'number': {
+            const semantics = item.semantics as
+                | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }
+                | undefined;
+            // An algebraic irrational carries its exact normal form, and that
+            // is what mathematics notation is for: `\sqrt{3}` says the whole
+            // value, where the approximation below can only gesture at it.
+            const exact = normalFormToLatex(semantics?.exactTerms);
+            if (exact !== null) return exact;
             const frac = checkFractionShape(item.value);
             if (frac === null) return null;
             const tex = fractionToLatex(frac);
             // Best rational approximation of an exact irrational under a
             // lossy role (SPEC §2.3): make the approximation visible. The
             // scientific form may already carry its own \approx.
-            const approximate = (item.semantics as { approximate?: boolean } | undefined)?.approximate === true;
+            const approximate = semantics?.approximate === true;
             return approximate && !tex.startsWith('\\approx') ? `\\approx ${tex}` : tex;
         }
         case 'tensor':

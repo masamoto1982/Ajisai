@@ -138,6 +138,34 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     {
         set_prop(&obj, "approximate", &JsValue::TRUE);
     }
+    // The exact value itself, when there is a short way to write it. An
+    // algebraic irrational is *stored* as the multiquadratic normal form
+    // Σ c_m √m (SPEC §4.2), so these pairs are the number rather than a view of
+    // it, and a host given them can draw `√3` or `1/2 + 1/3√5` instead of
+    // choosing between a thirty-line continued fraction and an approximation.
+    // Additive and optional: a host that ignores it sees exactly what it saw
+    // before.
+    if let ValueData::ExactScalar(crate::types::exact::ExactReal::Algebraic(algebraic)) =
+        &value.data
+    {
+        let terms = js_sys::Array::new();
+        for (coefficient, radicand) in algebraic.normal_form_terms() {
+            let term = js_sys::Object::new();
+            set_prop(
+                &term,
+                "numerator",
+                &coefficient.numerator().to_string().into(),
+            );
+            set_prop(
+                &term,
+                "denominator",
+                &coefficient.denominator().to_string().into(),
+            );
+            set_prop(&term, "radicand", &radicand.to_string().into());
+            terms.push(&term.into());
+        }
+        set_prop(&obj, "exactTerms", &terms.into());
+    }
     obj.into()
 }
 

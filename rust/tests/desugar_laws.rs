@@ -50,13 +50,19 @@ proptest! {
         assert_law("alias-mod", &format!("{a} {b} %"), &format!("{a} {b} MOD"));
     }
 
-    // ── Comparison aliases (§3.9): = <> < <= > >= ──
+    // ── Comparison aliases (§3.9): = != < <= > >= ──
     #[test]
     fn comparison_aliases(a in small(), b in small()) {
-        // Every symbol is one character; LTE, GTE and NEQ are reached by name.
+        // The comparison family is symmetric: all six relations have a symbol,
+        // and each renders identically to its English name. `<=`, `>=` and `!=`
+        // are two characters, which costs the lexer nothing — a token ends only
+        // at whitespace or a structural delimiter.
         assert_law("alias-eq", &format!("{a} {b} ="), &format!("{a} {b} EQ"));
+        assert_law("alias-neq", &format!("{a} {b} !="), &format!("{a} {b} NEQ"));
         assert_law("alias-lt", &format!("{a} {b} <"), &format!("{a} {b} LT"));
+        assert_law("alias-lte", &format!("{a} {b} <="), &format!("{a} {b} LTE"));
         assert_law("alias-gt", &format!("{a} {b} >"), &format!("{a} {b} GT"));
+        assert_law("alias-gte", &format!("{a} {b} >="), &format!("{a} {b} GTE"));
     }
 
     // ── An unallocated symbol is not a silent no-op ──
@@ -65,11 +71,12 @@ proptest! {
     // ways: a symbol the language has not allocated must not quietly disappear
     // from a program, and neither must a retired spelling. Each of these reaches
     // the dictionary as an ordinary name and fails there: `~` was never
-    // allocated, `&` no longer spells AND, and `<=`, `>=`, `<>` and `,,` are
-    // two-character spellings that no longer exist.
+    // allocated, `&` no longer spells AND, and `<>` and `,,` are retired
+    // spellings. `<=` and `>=` have left this list: they are allocated now, to
+    // LTE and GTE, and the law above pins them to their English names.
     #[test]
     fn an_unallocated_symbol_is_not_a_silent_noop(a in small(), b in small()) {
-        for symbol in ["~", "&", "<=", ">=", "<>", ",,"] {
+        for symbol in ["~", "&", "<>", ",,"] {
             let observation = observed(&format!("{a} {b} {symbol} ADD"));
             prop_assert_eq!(
                 observation.error_category,

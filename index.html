@@ -124,8 +124,24 @@
                         <div id="core-words-display" class="words-display"></div>
                     </div>
                     <div id="dictionary-sheet-user" class="dictionary-sheet" hidden>
-                        <label for="user-dictionary-select" class="visually-hidden">Select user dictionary</label>
-                        <select id="user-dictionary-select" class="dictionary-sheet-select">
+                        <!--
+                          The User tier is a single flat dictionary: a Word's
+                          name is its whole address, and no Word in the
+                          vocabulary switches between User dictionaries. This
+                          control is therefore always a one-option select, and
+                          drawn next to the working "Select dictionary" chooser
+                          above it read as a second, broken copy of it.
+
+                          It stays in the DOM, `hidden`: the saved-session
+                          format carries `activeUserDictionary`, which is read
+                          from and written to this element, and the beta has one
+                          persisted state format with no converter from another.
+                          `hidden` takes it out of both the page and the
+                          accessibility tree while every read of `.value` keeps
+                          answering the one dictionary there is.
+                        -->
+                        <label for="user-dictionary-select" class="visually-hidden" hidden>Select user dictionary</label>
+                        <select id="user-dictionary-select" class="dictionary-sheet-select" hidden tabindex="-1" aria-hidden="true">
                             <option value="EXAMPLE">Example Words</option>
                         </select>
                         <span id="user-word-info" class="word-info-display"></span>

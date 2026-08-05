@@ -181,6 +181,21 @@ impl AjisaiInterpreter {
         }
     }
 
+    /// Discard every value on the stack, leaving the dictionary, the output
+    /// and every other piece of session state untouched.
+    ///
+    /// A REPL keeps its stack between runs, which is right, and until now the
+    /// only way to get rid of a leftover intermediate was the full reset — and
+    /// that takes the User dictionary with it. Clearing values is not a
+    /// language operation (no Word does it, and none should: a program's own
+    /// values are its own business), so it belongs here, on the host, where the
+    /// person at the keyboard is the one asking.
+    #[wasm_bindgen]
+    pub fn clear_stack(&mut self) {
+        self.interpreter
+            .update_stack_with_hints(Vec::new(), Vec::new());
+    }
+
     /// The one stack format persistence accepts (SPEC §2.3). Unlike
     /// `collect_stack`, which serializes the *observation* wire format (a
     /// CodeBlock shows as `nil`, an ExactScalar as a marked rational

@@ -9,6 +9,18 @@ export class AjisaiInterpreter {
      * Clear all injected serial receive buffers and disconnected flags.
      */
     clear_serial_inboxes(): void;
+    /**
+     * Discard every value on the stack, leaving the dictionary, the output
+     * and every other piece of session state untouched.
+     *
+     * A REPL keeps its stack between runs, which is right, and until now the
+     * only way to get rid of a leftover intermediate was the full reset — and
+     * that takes the User dictionary with it. Clearing values is not a
+     * language operation (no Word does it, and none should: a program's own
+     * values are its own business), so it belongs here, on the host, where the
+     * person at the keyboard is the one asking.
+     */
+    clear_stack(): void;
     collect_builtin_word_registry(): any;
     /**
      * Returns the canonical Core-listed words.
@@ -103,6 +115,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_ajisaiinterpreter_free: (a: number, b: number) => void;
     readonly ajisaiinterpreter_clear_io_output_buffer: (a: number) => void;
+    readonly ajisaiinterpreter_clear_stack: (a: number) => void;
     readonly ajisaiinterpreter_collect_builtin_word_registry: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_listed_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_word_aliases_info: (a: number) => any;

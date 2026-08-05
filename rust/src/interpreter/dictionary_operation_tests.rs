@@ -275,10 +275,17 @@ mod tests {
             "LOOKUP on built-in GET should succeed: {:?}",
             result.err()
         );
+        // A Core Word's entry is reference text, not editable source, so it
+        // arrives on the documentation channel — the host shows it rather than
+        // loading it over whatever is in the editor.
+        assert!(
+            interp.definition_to_load.is_none(),
+            "a Core Word's LOOKUP must not be offered as a definition to load"
+        );
         let loaded = interp
-            .definition_to_load
+            .documentation_to_show
             .take()
-            .expect("definition_to_load should be set");
+            .expect("documentation_to_show should be set");
         for section in ["# GET", "Category:", "Summary:", "Role:", "Stack Effect:"] {
             assert!(
                 loaded.contains(section),
@@ -529,5 +536,128 @@ mod tests {
             "Expected BuiltinProtection error, got: {}",
             err_msg
         );
+    }
+
+    // ── A word's own self-reference must not lock it ──────────────────────
+    // A recursive word depends on itself. Once that self-edge is in the
+    // dependency index, the guard that protects *callers* from losing a
+    // definition fired on the word itself: `DEF` and `DEL` both refused with
+    // "referenced by FIB — delete those words first", naming the word being
+    // deleted. There was then no Word in the vocabulary that could correct or
+    // remove a recursive definition, so writing one and fixing it — the most
+    // ordinary development loop there is — was impossible without discarding
+    // the whole User dictionary.
+
+    const SELF_RECURSIVE: &str = "{\n\
+         { 0 LTE | 0 * }\n\
+         { IDLE | 1 - SELFW }\n\
+         COND } 'SELFW' DEF";
+
+    const SELF_RECURSIVE_V2: &str = "{\n\
+         { 0 LTE | 0 * }\n\
+         { IDLE | 2 - SELFW }\n\
+         COND } 'SELFW' DEF";
+
+    #[tokio::test]
+    async fn a_self_recursive_word_can_be_redefined() {
+        let mut interp = Interpreter::new();
+        interp.execute(SELF_RECURSIVE).await.unwrap();
+        // The second DEF is what records the self-edge (SELFW now resolves
+        // while its own body is scanned), so the third is the one that used to
+        // be refused.
+        interp.execute(SELF_RECURSIVE_V2).await.unwrap();
+        let result = interp.execute(SELF_RECURSIVE).await;
+        assert!(
+            result.is_ok(),
+            "a word's own self-reference must not block redefining it: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_self_recursive_word_can_be_deleted() {
+        let mut interp = Interpreter::new();
+        interp.execute(SELF_RECURSIVE).await.unwrap();
+        interp.execute(SELF_RECURSIVE_V2).await.unwrap();
+        let result = interp.execute("'SELFW' DEL").await;
+        assert!(
+            result.is_ok(),
+            "a word's own self-reference must not block deleting it: {result:?}"
+        );
+        assert!(interp.execute("3 SELFW").await.is_err(), "SELFW is gone");
+    }
+
+    #[tokio::test]
+    async fn another_word_still_locks_a_self_recursive_word() {
+        // The protection that matters is unchanged: a *different* word holding
+        // a reference still refuses the redefinition and the deletion.
+        let mut interp = Interpreter::new();
+        interp.execute(SELF_RECURSIVE).await.unwrap();
+        interp.execute("{ SELFW } 'CALLER' DEF").await.unwrap();
+
+        let err = interp
+            .execute(SELF_RECURSIVE_V2)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("CALLER"),
+            "redefinition must still name the external dependent: {err}"
+        );
+
+        let err = interp.execute("'SELFW' DEL").await.unwrap_err().to_string();
+        assert!(
+            err.contains("CALLER"),
+            "deletion must still name the external dependent: {err}"
+        );
+    }
+
+    // ── LOOKUP must round-trip ────────────────────────────────────────────
+    // Loading a user word, editing it, and defining it again is the ordinary
+    // way to correct a definition. That only works if what LOOKUP loads is
+    // source `DEF` accepts. It used to wrap the body in `[ ]`: `DEF` rejects a
+    // Vector body outright, and a `|` clause inside `[ ]` does not even
+    // tokenize, so a COND word could not be reloaded at all.
+
+    async fn lookup_source(interp: &mut Interpreter, name: &str) -> String {
+        interp.execute(&format!("'{name}' ?")).await.unwrap();
+        let _ = interp.collect_output();
+        interp
+            .definition_to_load
+            .take()
+            .expect("LOOKUP must load a definition")
+    }
+
+    #[tokio::test]
+    async fn lookup_of_a_user_word_round_trips_through_def() {
+        let mut interp = Interpreter::new();
+        interp.execute("{ 2 MUL } 'DBL' DEF").await.unwrap();
+        let loaded = lookup_source(&mut interp, "DBL").await;
+        assert!(
+            loaded.starts_with('{'),
+            "the body must be a code block, not a vector: {loaded}"
+        );
+
+        // Running the loaded text redefines the word, and it still computes.
+        interp.execute(&loaded).await.unwrap();
+        interp.execute("5 DBL").await.unwrap();
+        assert_eq!(format!("{}", interp.stack.last().unwrap()), "10/1");
+    }
+
+    #[tokio::test]
+    async fn lookup_of_a_cond_word_round_trips_through_def() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("{\n{ 5 LT | 'small' }\n{ IDLE | 'big' }\nCOND } 'SIZE' DEF")
+            .await
+            .unwrap();
+        let loaded = lookup_source(&mut interp, "SIZE").await;
+        assert!(
+            loaded.contains('|'),
+            "the clause separator must survive the round trip: {loaded}"
+        );
+
+        interp.execute(&loaded).await.unwrap();
+        interp.execute("7 SIZE").await.unwrap();
+        assert_eq!(format!("{}", interp.stack.last().unwrap()), "'big'");
     }
 }

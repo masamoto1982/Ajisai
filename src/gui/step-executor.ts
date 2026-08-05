@@ -16,7 +16,7 @@ export interface StepState {
 export interface StepExecutorCallbacks {
     readonly extractEditorValue: () => string;
     readonly showInfo: (text: string, append: boolean) => void;
-    readonly showError: (error: Error | string) => void;
+    readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
@@ -135,7 +135,7 @@ export const createStepExecutor = (
             if (result.status === 'OK' && !result.error) {
                 showExecutionResult(result);
             } else {
-                showError(result.message || 'Unknown error');
+                showError(result.message || 'Unknown error', result.output || '');
                 reset();
                 updateDisplays();
                 await saveState();

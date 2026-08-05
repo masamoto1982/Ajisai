@@ -74,7 +74,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 57 canonical Words and 15 symbolic aliases. Aliases are surface forms of those Words and are not counted as vocabulary. Within the 57, a 35-Word Semantic Kernel carries the semantic identity of the language and 22 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
+The vocabulary is 57 canonical Words and 13 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 57, a 35-Word Semantic Kernel carries the semantic identity of the language and 22 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -140,6 +140,15 @@ A code block is a tagged value containing source for later evaluation. Producing
 <p>
 Quoted code is not eagerly executed. Code and data are distinct value domains: executable source lives in a CodeBlock, and a Vector is data and is never executable.
 </p>
+
+<h3 id="lang-source-frame">LANG.SOURCE.FRAME — What a block sees</h3>
+<p>A block has no stack discipline of its own: the Word that evaluates it decides what the block reaches and what it may leave, and the block's text does not say which rule applies. The difference is whether a <code>+</code> written inside it finds two operands or none.</p>
+<table><thead><tr><th>Evaluated by</th><th>The block sees</th><th>The block leaves</th></tr></thead><tbody>
+<tr><td>A user Word's body (<code>DEF</code>), and <code>EXEC</code></td><td>the whole stack</td><td>whatever it pushes, however many</td></tr>
+<tr><td><code>COND</code> — every guard, and the winning body</td><td>one value: the target, alone in an isolated frame</td><td>exactly one, the top of the frame; leaving none is ERROR, and anything below the top goes with the frame</td></tr>
+<tr><td><code>MAP</code>, <code>FILTER</code>, <code>ANY</code>, <code>ALL</code></td><td>one value: the current element, alone in an isolated frame</td><td>exactly one — the mapped element, or a Boolean for the predicate Words</td></tr>
+<tr><td><code>FOLD</code></td><td>two values: the accumulator and the current element</td><td>exactly one: the next accumulator</td></tr></tbody></table>
+<p>Isolation is what lets a recursive <code>COND</code> word terminate cleanly — working values a clause body pushes cannot leak past it, so a tail self-call starts from one value however much scaffolding the body built — and the discard in the last column is its cost. A block written inside another block is data where it is written, evaluated only when the Word receiving it runs it, under that Word's row and not the enclosing block's; a self-call inside such a block is an ordinary call.</p>
 
 <h2 id="lang-values">3. Value Domains</h2>
 

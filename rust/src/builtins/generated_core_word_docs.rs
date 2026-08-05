@@ -419,9 +419,9 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "COND",
         category: "control",
-        summary: "Evaluate guard/body clauses in order, executing the first match.",
-        role: "General conditional dispatch with first-match semantics.",
-        stack_effect: "value { ... } ... -> [ result ]",
+        summary: "Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
+        role: "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
+        stack_effect: "value { guard | body } ... -> [ result ]",
         hover_summary: "COND — evaluate guard/body clauses",
         hover_syntax: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
     },

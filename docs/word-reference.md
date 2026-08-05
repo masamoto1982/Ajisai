@@ -100,6 +100,7 @@ Test inequality of two values.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
 - **Syntax:** `1 2 NEQ`
+- **Aliases:** `!=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `LT`
@@ -129,6 +130,7 @@ Test less-than-or-equal comparison.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 1 LTE`
+- **Aliases:** `<=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `GT`
@@ -158,6 +160,7 @@ Test greater-than-or-equal comparison.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 1 GTE`
+- **Aliases:** `>=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `ADD`
@@ -642,11 +645,11 @@ Convert a value to its string representation.
 
 ## `COND`
 
-Evaluate guard/body clauses in order, executing the first match.
+Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** variable input(s) → variable output(s); `conditional` consumption
+- **Stack:** variable input(s) → 1 output(s); `conditional` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`

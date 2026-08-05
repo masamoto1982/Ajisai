@@ -161,7 +161,19 @@ export const createGUI = (): GUI => {
         mobile = createMobileHandler(extractMobileElements(elements), {
             onModeChange: (mode) => layoutController.setArea(mode)
         });
-        display = createDisplay(extractDisplayElements(elements));
+        display = createDisplay(extractDisplayElements(elements), {
+            // Clearing the stack keeps the dictionary, which is the whole point
+            // of having it separate from the full reset. The handler reads
+            // `persistence` at call time because it is assigned further down.
+            onClearStack: () => {
+                const interpreter = INTERPRETER_CLIENT.getOptional();
+                if (!interpreter) return;
+                interpreter.clear_stack();
+                updateAllDisplays();
+                display.renderInfo('Stack cleared', false);
+                void persistence?.saveCurrentState();
+            }
+        });
         display.init();
         updateEditorPlaceholder(elements, mobile);
 
@@ -221,7 +233,8 @@ export const createGUI = (): GUI => {
             updateEditorValue: (value) => editor.updateValue(value),
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
-            showError: (error) => display.renderError(error),
+            showDocumentation: (text) => display.renderDocumentation(text),
+            showError: (error, precedingOutput) => display.renderError(error, precedingOutput),
             showExecutionResult: (result) => display.renderExecutionResult(result),
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),

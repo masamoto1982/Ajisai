@@ -154,6 +154,29 @@ impl Interpreter {
         from_index
     }
 
+    /// The direct dependents of `word_name` *other than itself*.
+    ///
+    /// This is the set that decides whether a word may be redefined or deleted.
+    /// A recursive word depends on itself, and once that self-edge is in the
+    /// index (`rebuild_dependencies` records it, and so does a second `DEF` of
+    /// an already-defined recursive word), the plain dependents set is never
+    /// empty. `DEF` and `DEL` then refused with "referenced by FIB — delete
+    /// those words first", naming the very word being deleted: a recursive word
+    /// could not be corrected or removed by any Word in the vocabulary, only by
+    /// discarding the whole User dictionary. That contradicts
+    /// LANG.DICTIONARY.MUTATION, under which a User Word is redefinable.
+    ///
+    /// The refusal exists to protect *other* words from losing the definition
+    /// they call, and a word cannot be its own such victim: redefining it
+    /// replaces the body the self-call resolves through, and deleting it removes
+    /// caller and callee together. So the self-edge is kept in the index — it is
+    /// real, and word identity depends on it — and excluded here.
+    pub fn collect_external_dependents(&self, word_name: &str) -> HashSet<String> {
+        let mut dependents = self.collect_dependents(word_name);
+        dependents.remove(word_name);
+        dependents
+    }
+
     /// Authoritative full-scan computation of the direct dependents of
     /// `word_name`. This is the ground truth the maintained `dependents` index
     /// mirrors; it is retained only as the debug cross-check for
