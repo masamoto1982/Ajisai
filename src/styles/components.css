@@ -342,6 +342,26 @@
     user-select: none;
 }
 
+/* Discard-the-stack control, beside the LaTeX toggle in the Stack area's
+   corner. Deliberately quiet: it is reached rarely, and it throws work away. */
+.stack-clear-btn {
+    align-self: flex-end;
+    margin: 0 0.125rem 0.125rem 0;
+    padding: 0.1rem 0.45rem;
+    font-family: var(--font-stack-primary);
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+    background: var(--color-white);
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    cursor: pointer;
+}
+
+.stack-clear-btn:hover {
+    background: var(--color-light);
+    color: var(--color-text);
+}
+
 .stack-latex-toggle input {
     margin: 0;
     cursor: pointer;
@@ -775,6 +795,29 @@
 
 .stack-item:last-child {
     font-weight: bold;
+}
+
+
+/* Depth from the top, drawn as a small leading index on every value.
+
+   The area flows bottom-up and `wrap-reverse`, so the top of the stack is the
+   right-hand end of the *top* row. That reads fine while the values fit on one
+   line and stops reading the moment they wrap — finding which of nine values a
+   word will take next then means reconstructing the wrap. The index does not
+   depend on the layout: 0 is always the top, and the marker on it says so
+   outright. */
+.stack-item::before {
+    content: attr(data-stack-depth);
+    font-size: 0.6rem;
+    vertical-align: super;
+    margin-right: 0.15rem;
+    color: var(--color-text-light);
+    font-weight: normal;
+}
+
+.stack-item.stack-item-top::before {
+    content: attr(data-stack-depth) "\25B8";
+    color: var(--color-stack);
 }
 
 

@@ -20,6 +20,14 @@ export interface DisplayState {
     readonly mainOutput: string;
 }
 
+export interface DisplayCallbacks {
+    /// Discard every value on the stack. The Stack area offers this because the
+    /// stack persists between runs — which is what a REPL should do — and until
+    /// there was a button for it the only way to drop a leftover intermediate
+    /// was the full reset, which takes the User dictionary with it.
+    readonly onClearStack?: () => void;
+}
+
 export interface Display {
     readonly init: () => void;
     readonly renderExecutionResult: (result: ExecuteResult) => void;
@@ -252,6 +260,34 @@ const createElisionSpan = (elided: number): HTMLSpanElement => {
     return span;
 };
 
+interface ExactTerm {
+    readonly numerator: string;
+    readonly denominator: string;
+    readonly radicand: string;
+}
+
+/// Σ c·√r as one line. A coefficient of exactly one is left off (`√3`, not
+/// `1/1√3`); every other coefficient keeps the canonical `n/d` shape the rest
+/// of the panel uses, so a number does not change spelling depending on which
+/// term it sits in. A negative term joins with `-` rather than `+ -`.
+const formatNormalForm = (terms: ReadonlyArray<ExactTerm> | undefined): string | null => {
+    if (!terms || terms.length === 0) return null;
+    let out = '';
+    for (const term of terms) {
+        const negative = term.numerator.startsWith('-');
+        const magnitude = negative ? term.numerator.slice(1) : term.numerator;
+        const root = term.radicand === '1' ? '' : `√${term.radicand}`;
+        const unit = magnitude === '1' && term.denominator === '1' && root !== '';
+        const coefficient = unit ? '' : `${magnitude}/${term.denominator}`;
+        if (out === '') {
+            out = `${negative ? '-' : ''}${coefficient}${root}`;
+        } else {
+            out += ` ${negative ? '-' : '+'} ${coefficient}${root}`;
+        }
+    }
+    return out;
+};
+
 const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget): HTMLElement => {
     const node = document.createElement('span');
     node.className = 'stack-node';
@@ -333,8 +369,27 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     if (depth === 1) {
         node.dataset.depth = String(depth);
     }
-    node.textContent = formatValue(item, depth);
+    node.textContent = renderExactScalar(item, formatValue(item, depth));
     return node;
+};
+
+/// An exact irrational cannot be written as `n/d`, so any `n/d` the host sends
+/// for one is a best rational approximation. Drawn plainly, `3 SQRT` read as
+/// `708158977/408855776` — the same shape a genuinely exact rational has, in a
+/// language whose claim is that nothing is silently rounded.
+///
+/// There are two honest answers, and the host supplies both. When it sends the
+/// value's normal form (`semantics.exactTerms`) the panel draws that: `√3` is
+/// the number, exactly, in one line. Only when it does not — a computable real
+/// with no closed form — does the panel fall back to the approximation, and
+/// then it marks it `≈`.
+const renderExactScalar = (item: Value, text: string): string => {
+    const semantics = item?.semantics as
+        | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }
+        | undefined;
+    const exact = formatNormalForm(semantics?.exactTerms);
+    if (exact) return exact;
+    return semantics?.approximate === true && !text.startsWith('≈') ? `≈ ${text}` : text;
 };
 
 const formatValue = (item: Value, depth: number): string => {
@@ -627,7 +682,10 @@ const renderJsonExportLinks = (jsonExportCommands: readonly string[], outputDisp
     });
 };
 
-export const createDisplay = (elements: DisplayElements): Display => {
+export const createDisplay = (
+    elements: DisplayElements,
+    callbacks: DisplayCallbacks = {}
+): Display => {
     let mainOutput = '';
     let mathViewEnabled = readMathViewPreference();
     let lastStack: Value[] = [];
@@ -659,8 +717,22 @@ export const createDisplay = (elements: DisplayElements): Display => {
         panel.appendChild(wrapper);
     };
 
+    const createClearButton = (): void => {
+        const panel = elements.stackDisplay.parentElement;
+        if (!panel || !callbacks.onClearStack || panel.querySelector('.stack-clear-btn')) return;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'stack-clear-btn';
+        button.textContent = 'Clear';
+        button.title = 'Discard every value on the stack (the dictionary is kept)';
+        button.addEventListener('click', () => callbacks.onClearStack?.());
+        panel.appendChild(button);
+    };
+
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
+        createClearButton();
         createLatexToggle();
         AUDIO_ENGINE.init().catch(console.error);
     };
@@ -794,6 +866,15 @@ export const createDisplay = (elements: DisplayElements): Display => {
         lastStack.forEach((item, index) => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
+            // Depth from the top, so the operand a word will read next is 0.
+            // The area flows bottom-up and wrap-reverse, which puts the top at
+            // the *right end of the top row* — readable while everything fits
+            // on one line and unreadable the moment it wraps. A number per
+            // value answers "which one is the top" without depending on where
+            // the row broke.
+            const depth = lastStack.length - 1 - index;
+            elem.dataset.stackDepth = String(depth);
+            if (depth === 0) elem.classList.add('stack-item-top');
             try {
                 const mathNode = mathViewEnabled ? renderMathValueNode(item) : null;
                 elem.appendChild(mathNode ?? renderStackValueNode(item, 1, budget));

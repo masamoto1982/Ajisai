@@ -38,6 +38,10 @@ export interface AjisaiInterpreter {
     // `restore_stack_snapshot` reinstates them. The payload is an opaque string.
     snapshot_stack(): string;
     restore_stack_snapshot(snapshot_json: string): void;
+    // Discard every value on the stack, leaving the dictionary and the rest of
+    // the session untouched. Clearing values is a host action, not a language
+    // one — no Word does it — so it lives here rather than in the vocabulary.
+    clear_stack(): void;
     restore_user_words(words: UserWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
@@ -135,6 +139,20 @@ export interface ProtocolValueSemantics {
      * ignore it are unaffected (additive, optional).
      */
     approximate?: boolean;
+    /**
+     * The exact value of an algebraic irrational, as the multiquadratic normal
+     * form Σ c·√r it is stored in (SPEC §4.2): one entry per term, ascending by
+     * radicand, with radicand `'1'` keying the rational part. These pairs *are*
+     * the number, so a host that draws them shows the exact value in a line —
+     * `√3`, `1/2 + 1/3√5` — instead of choosing between a thirty-line continued
+     * fraction and the approximation `approximate` marks. Absent on rationals
+     * and on every non-scalar node. Additive and optional.
+     */
+    exactTerms?: ReadonlyArray<{
+        readonly numerator: string;
+        readonly denominator: string;
+        readonly radicand: string;
+    }>;
 }
 
 export interface ErrorFlowTraceEvent {

@@ -41,11 +41,7 @@ impl AjisaiInterpreter {
                 // multi-line program that failed late showed the error and
                 // nothing else. Draining the buffer here also stops the
                 // orphaned output from surfacing at the head of the next run.
-                set_js_prop(
-                    &obj,
-                    "output",
-                    &(self.interpreter.collect_output().into()),
-                );
+                set_js_prop(&obj, "output", &(self.interpreter.collect_output().into()));
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
         }
@@ -119,11 +115,7 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "hasMore", &(false.into()));
                 // Same as the whole-program path: a failing step keeps what it
                 // printed, and draining the buffer keeps it out of the next run.
-                set_js_prop(
-                    &obj,
-                    "output",
-                    &(self.interpreter.collect_output().into()),
-                );
+                set_js_prop(&obj, "output", &(self.interpreter.collect_output().into()));
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
         }

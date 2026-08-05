@@ -199,3 +199,55 @@ describe('valueToLatex zero-denominator robustness', () => {
         expect(() => fractionToLatex(frac('12345678901', '0'))).not.toThrow();
     });
 });
+
+// An algebraic irrational carries the multiquadratic normal form it is stored
+// in. That form *is* the value, so the math view draws it rather than the best
+// rational approximation the same node also carries: `\sqrt{3}` says the whole
+// number where `\approx \frac{708158977}{408855776}` only gestures at it.
+describe('valueToLatex exact normal form', () => {
+    function irrational(
+        approximation: Value,
+        ...terms: Array<[string, string, string]>
+    ): Value {
+        return {
+            ...approximation,
+            semantics: {
+                approximate: true,
+                exactTerms: terms.map(([numerator, denominator, radicand]) => ({
+                    numerator,
+                    denominator,
+                    radicand,
+                })),
+            },
+        } as Value;
+    }
+
+    test('a bare square root drops the unit coefficient', () => {
+        expect(valueToLatex(irrational(num(708158977, 408855776), ['1', '1', '3'])))
+            .toBe('\\sqrt{3}');
+    });
+
+    test('an integer coefficient is written in front of the root', () => {
+        expect(valueToLatex(irrational(num(2828427124, 1000000000), ['2', '1', '2'])))
+            .toBe('2\\sqrt{2}');
+    });
+
+    test('a rational term and a scaled root sum', () => {
+        expect(
+            valueToLatex(
+                irrational(num(1245355339, 1000000000), ['1', '2', '1'], ['1', '3', '5'])
+            )
+        ).toBe('\\frac{1}{2} + \\frac{1}{3}\\sqrt{5}');
+    });
+
+    test('a negative term joins with a minus, not a plus', () => {
+        expect(
+            valueToLatex(irrational(num(-732050807, 1000000000), ['1', '1', '1'], ['-1', '1', '3']))
+        ).toBe('1 - \\sqrt{3}');
+    });
+
+    test('without a normal form the approximation is still marked', () => {
+        const approximated = { ...num(1414213562, 1000000000), semantics: { approximate: true } } as Value;
+        expect(valueToLatex(approximated)).toBe('\\approx 1.41421');
+    });
+});

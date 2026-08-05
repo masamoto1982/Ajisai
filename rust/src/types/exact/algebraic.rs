@@ -162,6 +162,22 @@ impl Algebraic {
         &self.terms
     }
 
+    /// The normal form as `(coefficient, radicand)` pairs in ascending
+    /// radicand order, with `1` as the radicand of the rational term.
+    ///
+    /// This is the value itself, not a rendering of it: \(\sum_m c_m\sqrt m\)
+    /// *is* the representation, so a reader given these pairs has the exact
+    /// number. It exists because every surface an irrational reached was
+    /// either long (a thirty-line continued fraction) or lossy (a best rational
+    /// approximation drawn in the same `n/d` shape an exact rational has). A
+    /// host that can say `√3` or `1/2 + 1/3√5` needs neither.
+    pub fn normal_form_terms(&self) -> Vec<(Fraction, BigInt)> {
+        self.terms
+            .iter()
+            .map(|(monomial, coefficient)| (coefficient.clone(), monomial.clone()))
+            .collect()
+    }
+
     /// Rebuild `self`'s terms over `target`, which must cover every
     /// monomial (callers merge bases before rebasing).
     fn rebased_terms(&self, target: &Basis) -> BTreeMap<BigInt, Fraction> {

@@ -293,3 +293,41 @@ fn observation_adapter_narrows_monotonically() {
     assert!(second.lo.mul(&second.lo).lt(&frac(2, 1)));
     assert!(second.hi.mul(&second.hi).gt(&frac(2, 1)));
 }
+
+/// The normal form is the value, and `normal_form_terms` hands it out in the
+/// shape a host can draw in one line. This is what lets a Stack area show `√3`
+/// instead of choosing between a thirty-line continued fraction and a best
+/// rational approximation that looks exactly like an exact rational.
+#[test]
+fn normal_form_terms_expose_the_stored_representation() {
+    let sqrt3 = sqrt_irr(3, 1);
+    assert_eq!(
+        sqrt3.normal_form_terms(),
+        vec![(frac(1, 1), BigInt::from(3))],
+        "√3 is one term with coefficient 1"
+    );
+
+    // 2√2 — the coefficient rides on the term, not on a separate value.
+    let two_root_two = match sqrt_irr(2, 1).mul_fraction(&frac(2, 1)) {
+        AlgebraicResult::Irrational(a) => a,
+        other => panic!("2·√2 is irrational, got {other:?}"),
+    };
+    assert_eq!(
+        two_root_two.normal_form_terms(),
+        vec![(frac(2, 1), BigInt::from(2))]
+    );
+
+    // A rational part keys on radicand 1, and terms come back in ascending
+    // radicand order so a host renders them in a stable sequence.
+    let mixed = match sqrt_irr(5, 1).mul_fraction(&frac(1, 3)) {
+        AlgebraicResult::Irrational(a) => match a.add_fraction(&frac(1, 2)) {
+            AlgebraicResult::Irrational(b) => b,
+            other => panic!("1/2 + 1/3·√5 is irrational, got {other:?}"),
+        },
+        other => panic!("1/3·√5 is irrational, got {other:?}"),
+    };
+    assert_eq!(
+        mixed.normal_form_terms(),
+        vec![(frac(1, 2), BigInt::from(1)), (frac(1, 3), BigInt::from(5))]
+    );
+}
