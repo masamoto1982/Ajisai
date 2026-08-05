@@ -38,6 +38,7 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     'Step → Ctrl+Enter',
     'Format → Shift+Alt+F',
     'Suggestions → Ctrl+Space',
+    'Recall → Ctrl+Up / Ctrl+Down',
     'Reset → Ctrl+Alt+Enter',
     'Abort → Escape'
 ].join('\n');

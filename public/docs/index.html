@@ -462,6 +462,8 @@
                     <h3>How to read the examples</h3>
                     <p>The <strong>Expected value</strong> column shows the final stack exactly as the language renders it, value by value. Two display conventions matter from the start:</p>
                     <p>Numbers display as exact fractions in <code>numerator/denominator</code> form — the integer three renders as <code>3/1</code>. Truth values display as <code>TRUE</code> and <code>FALSE</code>; the absence of a value displays as <code>NIL</code>.</p>
+                    <p class="ref-note">That is the Stack area's standard rendering, and it is what this reference's Expected value column shows. The Stack area also carries a <strong>LaTeX</strong> checkbox — off by default — that redraws the same values as typeset mathematics: a fraction becomes a stacked fraction, a numeric vector becomes a matrix, and a denominator of one reads as a plain integer, so <code>3/1</code> is drawn as <em>3</em>. That is a second reading of one value, not a second value: the number is the same exact rational either way, nothing is rounded or reduced, and unchecking the box brings the canonical form back. A value with no faithful mathematical reading — a string, <code>NIL</code>, a ragged vector — stays in the standard rendering even with the box checked.</p>
+                    <p class="ref-note">A collection can hold far more elements than are worth drawing, so the Stack area draws a leading part of a large one and ends it with a marker such as <em>… 199900 more</em>. The marker is a statement about the drawing, never about the value: the collection on the stack is complete, every word still sees all of it, and <code>LENGTH</code> reports the real length.</p>
                     <p>In the text of this reference, anything with a gray background is an Ajisai token. Every symbol token defined by Ajisai is a word in disguise — <code>+</code> is <code>ADD</code> and <code>^</code> is <code>VENT</code> — so the gray background is the signal that a mark belongs to the program, not to the prose.</p>
                 </section>
 
@@ -482,6 +484,8 @@
                             </tbody>
                         </table>
                     </div>
+                    <h3>Where a line break matters</h3>
+                    <p>Whitespace is whitespace: a newline separates tokens exactly as a space does, and a program may be laid out over as many lines as you like. There is <strong>one</strong> exception, and it is worth knowing before you meet it. A <code>COND</code> guard clause — a block containing a top-level <code>|</code> — must start its own line, and at most one such clause may begin on any line. Writing a whole <code>COND</code> on one line is a source error, not a style choice, and the message says so: <em>COND: | clauses must be written one clause per line</em>. See <a href="#cond">Conditionals</a>. Nothing else in the language reads line breaks.</p>
                     <h3>Number literals</h3>
                     <p>A decimal literal carries at least one digit on <strong>both</strong> sides of the point: <code>0.5</code> and <code>5.0</code> are numbers, while <code>.5</code> and <code>5.</code> are not. The point is therefore never the first or last character of a number, which is what lets a lone <code>.</code> be an ordinary name rather than a truncated literal.</p>
                     <p class="ref-note">A string closes on the quote that sits at a token boundary, which is how a string carries an apostrophe with no escape character: <code>'It's fine'</code> is one string. A quote followed immediately by a name character stays inside the text, so <code>'abc'CHARS</code> is an unclosed string rather than two tokens.</p>
@@ -727,6 +731,7 @@
                 <section id="arithmetic" class="ref-page">
                     <h2>Arithmetic</h2>
                     <p>The arithmetic words act element-wise between vectors, and a one-element vector broadcasts across a longer one. Each word has a canonical English name; the symbol is sugar:</p>
+                    <p class="ref-note">Broadcasting is a rule about axes, not only about one-element vectors. Two vectors are paired axis by axis starting from the innermost, an axis the shorter one does not reach counts as length 1, and an axis of length 1 is reused across the other side's length — so <code>[ 1 2 3 ] [ 10 ] *</code> is <code>[ 10/1 20/1 30/1 ]</code> and <code>[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] *</code> is <code>[ [ 10/1 40/1 ] [ 30/1 80/1 ] ]</code>. Anything else is an error: <code>[ 1 2 3 ] [ 10 20 ] *</code> cannot pair 3 with 2. A scalar needs no axes and combines with every element however the vector is nested, ragged ones included; two <em>vectors</em> can only broadcast when both are rectangular.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -1541,6 +1546,7 @@ COND</code></td>
                         </div>
                     </div>
                     <p class="ref-note">Each guard answers <code>TRUE</code> or <code>FALSE</code>, so a clause either fires or does not. If no clause matches and no else clause is present, <code>COND</code> raises an error.</p>
+                    <p class="ref-note">One clause per line is a rule, not a layout preference — it is the only place in the language where a line break is significant (see <a href="#tokens">Tokens and Spelling</a>). Collapsing the clause form onto one line fails before anything runs, with <em>COND: | clauses must be written one clause per line</em>. The pair form above has no <code>|</code> in it and so carries no such rule: it fits on one line.</p>
                 </section>
 
                 <section id="strings" class="ref-page">
@@ -1746,6 +1752,10 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
+                    <h3>What DEF checks, and what it does not</h3>
+                    <p><code>DEF</code> stores the body; it does not resolve the names inside it. A definition whose body calls a word that does not exist is accepted and reported as defined, and the failure surfaces the first time the word is <strong>called</strong>: <code>{ TOTALL 1 } 'FOO' DEF</code> succeeds, and only running <code>FOO</code> reports <em>Unknown word: TOTALL</em>.</p>
+                    <p>This is a design choice rather than a missing check. Names resolve at call time, which is exactly what lets one word call another that is defined after it — so a pair of words may call each other, and a definition never has to be ordered around its dependencies.</p>
+                    <p class="ref-note">The cost is that a mistyped name in a body sits quietly until something calls it. The headless CLI is where that is caught ahead of time: <code>ajisai check</code> resolves every name in a file without executing anything and reports the unknown ones, and <code>ajisai check --contract</code> additionally verifies declared word contracts. The Playground has no equivalent — in the app, calling the word is the check.</p>
                     <h3>Managing words</h3>
                     <p><code>DEL</code> deletes a user word by quoted name. Dependencies are tracked: a word that other words depend on cannot be deleted at all, so a dangling reference is impossible — delete the dependents first.</p>
                     <p class="ref-note">Word names are case-insensitive (<code>add10</code> and <code>ADD10</code> are the same word) and conventionally follow an action-object style such as <code>APPLY-GAIN</code>. How a name is matched to a definition is the subject of <a href="#dictionaries">Dictionaries and Word Identity</a>.</p>

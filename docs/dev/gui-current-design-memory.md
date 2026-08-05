@@ -17,8 +17,9 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 - Main code entry is a textarea.
 - Run via button or `Shift+Enter`.
 - Step execution via `Ctrl+Enter`.
-- Abort via `Escape`.
+- Abort via `Escape`. The window-level Escape listener captures and stops propagation, so it asks the editor first (`Editor.dismissSuggestions`): an open suggestion panel takes the key and closes, and Abort gets Escape only when there is no panel to close. Without that hand-off the panel could not be dismissed with Escape at all.
 - Full reset via `Ctrl+Alt+Enter` (with confirmation dialog).
+- **Recall of submitted source** via `Ctrl+Up` / `Ctrl+Down` (`src/gui/editor-history.ts`). A successful Run clears the editor and Reset clears it too, while the Stack persists across runs; without recall the natural edit-and-rerun loop meant retyping the whole program. History is session-lived, holds source text only, survives Reset, and stores neither values nor dictionary entries. The plain arrows are left to caret movement and to the suggestion panel's own list navigation.
 - Output panel supports copy-to-clipboard.
 - Clicking output panel (desktop) toggles focus back to input mode.
 
@@ -32,6 +33,8 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 
 ## Data/state behavior
 - Stack display and dictionary update after execution.
+- **The Stack area's drawing is bounded** (`src/gui/stack-render-budget.ts`): at most 100 elements are drawn from any one collection and at most 2000 across a whole render, with the undrawn tail replaced in place by a `… N more` marker (styled as muted italic commentary so it cannot be read as part of the value). The interpreter's materialization ceiling bounds what a generative Word may build, not what the host may draw: `[ 1 500000 ] RANGE` is a legal program well inside that ceiling, and drawing one DOM node per element locked the tab for ~27s with no way to abort, clear the editor, or read the result. The bound is presentation, in the same class as the step limit — the value on the stack is whole and every Word still sees all of it.
+- Relatedly, `detectExecutionSurfaceChanges` compares the pre/post stack **structurally with an early exit** rather than by `JSON.stringify` of both: two full serializations of a possibly-huge stack ran on every single run to answer a question a first difference settles.
 - Stack area has visual highlight modes triggered by code content, scanned as whole whitespace-delimited modifier tokens so the combined forms (`.,,`, `..,,`) and the `;`/`;;` sugar are recognized, and decimals like `.5`/`5.` never false-trigger. Both modifier axes ride on one **background-fill** channel on the operand nodes (a fill rather than a text-color change, so it never competes with the bracket depth-colors that show Vector nesting; the tint is kept very pale so the value's own ink stays legible) — the filled set is the target, the fill color is the consumption fate (a non-operand can never be consumed, so no extra marker is needed):
   - Target axis (which items are filled): `..` (or `;;`) fills every stack item (STAK), otherwise the default `.` (TOP) fills only the top item — "which values are the operands".
   - Consumption axis (the fill color): the default `,` (EAT) is a very pale warm red (operands are removed), `,,` (or `;;`) a very pale teal-green (KEEP — operands are retained) — "what becomes of them". The two tints are separated in lightness as well as hue (`--color-consume-eat` / `--color-consume-keep` in `tokens.css`) so they read apart under color-vision deficiency. The fill uses even padding on all four sides so the value gets equal vertical and horizontal breathing room. The two axes are independent, mirroring SPEC §6.3.

@@ -11,6 +11,7 @@ import {
     renderWordInfo,
     resetWordInfoDisplay,
 } from './dictionary-element-builders';
+import { isCanonicalCoreWordName } from './core-word-name';
 
 export interface WordInfo {
     readonly dictionary: string;
@@ -69,7 +70,8 @@ const clearElement = (element: HTMLElement): void => {
     element.innerHTML = '';
 };
 
-const isCanonicalCoreWordName = (name: string): boolean => /^[A-Z][A-Z0-9-]*$/.test(name);
+// See core-word-name.ts: the predicate lives beside its spec-driven test so a
+// canonical Word can never be filtered out of the Core sheet again.
 
 const DEPENDENCY_DELETE_ERROR = 'Cannot delete';
 

@@ -292,6 +292,10 @@ This numeric grammar is the single definition of what text denotes a number. A c
 </p>
 
 <p>
+Whitespace separates tokens and is otherwise insignificant, with one exception, which is stated here so that it is not discovered by hitting it: a line break delimits <code>COND</code> clauses. A code block containing a top-level <code>|</code> is a guard clause, and at most one such block may begin on any one line. Two clauses written on the same line are a source error, so the vertical layout of a <code>COND</code> is part of its spelling rather than a convention.
+</p>
+
+<p>
 Malformed delimiters, malformed literals, invalid names, and invalid definition forms are source errors. They do not denote NIL.
 </p>
 
@@ -469,7 +473,9 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-collections-lift">LANG.COLLECTIONS.LIFT — Element lifting</h3>
 
-<p>An arithmetic or comparison Word applies element-wise when given vectors. Two vectors combine element-wise when their lengths are equal; a scalar combines with every element of a vector. Any other pairing is ERROR.</p>
+<p>An arithmetic or comparison Word applies element-wise when given vectors. A scalar combines with every element of a vector, however that vector is nested, including a ragged one.</p>
+
+<p>Two vectors combine by pairing their axes. A vector whose nesting is rectangular has a shape: the lengths of its axes, outermost first. The two shapes are aligned at their innermost axis, and an axis the shorter shape does not reach counts as length 1. Paired axes combine when their lengths are equal, and when one of them is 1 that operand's single lane is reused across the other's length; the result carries the longer length on that axis. This makes a one-element vector combine with a vector of any length, and <code>[ 1 2 3 ] [ 10 ] *</code> is <code>[ 10/1 20/1 30/1 ]</code>. Any other pairing is ERROR, and so is any pairing of two vectors where either one is ragged.</p>
 
 <p>Each lane preserves the exactness, truth, NIL, and ERROR distinctions of the scalar law. Vectorization cannot turn an ERROR lane into NIL.</p>
 

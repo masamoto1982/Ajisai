@@ -38,6 +38,9 @@ const EXAMPLE_NAMES = new Set([
   // a placeholder name, introduced by the Vector clause to show that `[ FOO ]`
   // holds the text FOO whether or not FOO is a defined Word
   'FOO',
+  // a deliberate typo, introduced by the Defining Words clause to show that a
+  // body's names resolve when the word is called rather than when it is defined
+  'TOTALL',
 ]);
 
 const SURFACES = ['README.md', 'public/docs/index.html', 'SPECIFICATION.html'];

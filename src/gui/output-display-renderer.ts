@@ -4,6 +4,12 @@ import type { Value, ExecuteResult, RuntimeMetricsSnapshot } from '../wasm-inter
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { getPlatform } from '../platform';
 import { valueToLatex } from './value-latex';
+import {
+    createRenderBudget,
+    formatElision,
+    planCollectionRender,
+    type RenderBudget
+} from './stack-render-budget';
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -232,18 +238,34 @@ const renderMathValueNode = (item: Value): HTMLElement | null => {
     return node;
 };
 
-const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
+// The undrawn tail of a collection, stated as a count rather than drawn. See
+// stack-render-budget.ts for why the Stack area is bounded at all.
+const createElisionSpan = (elided: number): HTMLSpanElement => {
+    const span = document.createElement('span');
+    span.className = 'stack-elision';
+    span.textContent = formatElision(elided);
+    span.title = `${elided} more element(s) are on the stack but not drawn; LENGTH reports the full length.`;
+    return span;
+};
+
+const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget): HTMLElement => {
     const node = document.createElement('span');
     node.className = 'stack-node';
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
+        const children = item.value as Value[];
+        const { shown, elided } = planCollectionRender(children.length, budget);
         node.classList.add('stack-node-vector');
         node.dataset.depth = String(depth);
         node.appendChild(createBracketSpan('[', depth));
-        item.value.forEach((child, index) => {
+        for (let index = 0; index < shown; index++) {
             if (index > 0) node.append(' ');
-            node.appendChild(renderStackValueNode(child, depth + 1));
-        });
+            node.appendChild(renderStackValueNode(children[index]!, depth + 1, budget));
+        }
+        if (elided > 0) {
+            if (shown > 0) node.append(' ');
+            node.appendChild(createElisionSpan(elided));
+        }
         node.appendChild(createBracketSpan(']', depth));
         return node;
     }
@@ -268,11 +290,16 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
                 if ((tensor.displayHint ?? '').toLowerCase() === 'text') {
                     tensorNode.append(deserializeBytesToString(tensorData));
                 } else {
+                    const { shown, elided } = planCollectionRender(tensorData.length, budget);
                     tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-                    tensorData.forEach((frac, index) => {
+                    for (let index = 0; index < shown; index++) {
                         if (index > 0) tensorNode.append(' ');
-                        tensorNode.append(formatFraction(frac));
-                    });
+                        tensorNode.append(formatFraction(tensorData[index]));
+                    }
+                    if (elided > 0) {
+                        if (shown > 0) tensorNode.append(' ');
+                        tensorNode.appendChild(createElisionSpan(elided));
+                    }
                     tensorNode.appendChild(createBracketSpan(']', tensorDepth));
                 }
                 return tensorNode;
@@ -282,10 +309,15 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
             const outerSize = tensorShape[0] ?? 0;
             const innerShape = tensorShape.slice(1);
             const innerSize = innerShape.reduce((a, b) => a * b, 1);
-            for (let i = 0; i < outerSize; i++) {
+            const { shown, elided } = planCollectionRender(outerSize, budget);
+            for (let i = 0; i < shown; i++) {
                 if (i > 0) tensorNode.append(' ');
                 const innerData = tensorData.slice(i * innerSize, (i + 1) * innerSize);
                 tensorNode.appendChild(renderTensorNode(innerShape, innerData, tensorDepth + 1));
+            }
+            if (elided > 0) {
+                if (shown > 0) tensorNode.append(' ');
+                tensorNode.appendChild(createElisionSpan(elided));
             }
             tensorNode.appendChild(createBracketSpan(']', tensorDepth));
             return tensorNode;
@@ -725,12 +757,16 @@ export const createDisplay = (elements: DisplayElements): Display => {
         const container = document.createElement('div');
         container.className = 'area-content-flow stack-content-flow';
 
+        // One budget for the whole render: the Stack area draws a bounded
+        // amount however the values on it are shaped.
+        const budget = createRenderBudget();
+
         lastStack.forEach((item, index) => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
                 const mathNode = mathViewEnabled ? renderMathValueNode(item) : null;
-                elem.appendChild(mathNode ?? renderStackValueNode(item, 1));
+                elem.appendChild(mathNode ?? renderStackValueNode(item, 1, budget));
             } catch {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';

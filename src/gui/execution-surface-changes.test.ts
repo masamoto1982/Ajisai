@@ -78,4 +78,56 @@ describe('detectExecutionSurfaceChanges', () => {
         );
         expect(changes.outputChanged).toBe(true);
     });
+
+    // The stack comparison walks the values structurally instead of stringifying
+    // the whole stack twice per run (a stack can legally hold hundreds of
+    // thousands of elements). These pin the equality it has to reproduce.
+    it('reports no stack change when equal values are distinct objects', () => {
+        const changes = detectExecutionSurfaceChanges(
+            view({ stack: [num(5)] }),
+            view({ stack: [num(5)] }),
+            okResult()
+        );
+        expect(changes.stackChanged).toBe(false);
+    });
+
+    it('sees a change deep inside a nested vector', () => {
+        const vector = (...elements: Value[]): Value =>
+            ({ type: 'vector', value: elements } as unknown as Value);
+        const changes = detectExecutionSurfaceChanges(
+            view({ stack: [vector(vector(num(1), num(2)))] }),
+            view({ stack: [vector(vector(num(1), num(3)))] }),
+            okResult()
+        );
+        expect(changes.stackChanged).toBe(true);
+    });
+
+    it('sees a change of length alone', () => {
+        const changes = detectExecutionSurfaceChanges(
+            view({ stack: [num(1), num(2)] }),
+            view({ stack: [num(1)] }),
+            okResult()
+        );
+        expect(changes.stackChanged).toBe(true);
+    });
+
+    it('sees a value that gained a property', () => {
+        const plain = { type: 'number', value: { numerator: '1', denominator: '1' } } as unknown as Value;
+        const tagged = {
+            type: 'number',
+            value: { numerator: '1', denominator: '1' },
+            semantics: { approximate: true }
+        } as unknown as Value;
+        const changes = detectExecutionSurfaceChanges(
+            view({ stack: [plain] }),
+            view({ stack: [tagged] }),
+            okResult()
+        );
+        expect(changes.stackChanged).toBe(true);
+    });
+
+    it('reports no stack change for two empty stacks', () => {
+        const changes = detectExecutionSurfaceChanges(view(), view(), okResult());
+        expect(changes.stackChanged).toBe(false);
+    });
 });
