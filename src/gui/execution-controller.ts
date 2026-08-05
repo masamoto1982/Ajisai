@@ -71,24 +71,36 @@ export const createExecutionController = (
         saveState
     });
 
-    const applyExecutionResult = (result: ExecuteResult, code: string): void => {
-        const lastDiagnosis: ProtocolDiagnosis | undefined = result.errorFlowTrace
-            ?.map((event) => event.diagnosis)
-            .filter((d): d is ProtocolDiagnosis => Boolean(d))
+    // The word that failed, the stack depth it failed at, and what to check —
+    // written *under* the error rather than before it. This block used to run
+    // first, and `showError` then cleared the area, so the one message that
+    // named the failing word was drawn and immediately erased: what survived
+    // was a bare "Error: Stack underflow" with nothing to say where.
+    const describeDiagnosis = (result: ExecuteResult): string | null => {
+        const event = result.errorFlowTrace
+            ?.filter((candidate) => Boolean(candidate.diagnosis))
             .at(-1);
-        if (lastDiagnosis) {
-            const whereLabel = lastDiagnosis.where.word ?? lastDiagnosis.where.kind;
-            const lines = [
-                `[DIAGNOSIS] ${lastDiagnosis.summary}`,
-                `Q1 when: ${lastDiagnosis.when}`,
-                `Q2 where: ${whereLabel}`,
-                `Q3 why: ${lastDiagnosis.why}`,
-                ...lastDiagnosis.nextChecks.map(
-                    (check) => `next: ${check.label} - ${check.detail}`
-                )
-            ];
-            showInfo(lines.join('\n'), true);
-        }
+        const diagnosis: ProtocolDiagnosis | undefined = event?.diagnosis;
+        if (!diagnosis) return null;
+
+        const where = diagnosis.where.word
+            ? `${diagnosis.where.word} (${diagnosis.where.kind})`
+            : diagnosis.where.kind;
+        const depth =
+            event && typeof event.stackLenBefore === 'number'
+                ? `, stack depth ${event.stackLenBefore}`
+                : '';
+        return [
+            `[DIAGNOSIS] ${diagnosis.summary}`,
+            `Q1 when: ${diagnosis.when}`,
+            `Q2 where: ${where}${depth}`,
+            `Q3 why: ${diagnosis.why}`,
+            ...diagnosis.nextChecks.map((check) => `next: ${check.label} - ${check.detail}`)
+        ].join('\n');
+    };
+
+    const applyExecutionResult = (result: ExecuteResult, code: string): void => {
+        const diagnosis = describeDiagnosis(result);
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);
@@ -113,10 +125,13 @@ export const createExecutionController = (
             showExecutionResult(result);
             clearEditor(false);
         } else {
-            // Keep whatever the run printed before it failed (3-5): the host
-            // reports it on the error path, and the error is written below it.
+            // Keep whatever the run printed before it failed: the host reports
+            // it on the error path, and the error is written below it.
             showError(result.message || 'Unknown error', result.output || '');
+            if (diagnosis) showInfo(diagnosis, true);
+            return;
         }
+        if (diagnosis) showInfo(diagnosis, true);
     };
 
     const executeCode = async (code: string): Promise<void> => {
