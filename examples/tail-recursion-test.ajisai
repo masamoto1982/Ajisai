@@ -14,7 +14,47 @@
 STEP-B PRINT
 # 期待: [ 6 ]
 
-# 3) Recursive design is explicit opt-in and testable
+# 3) Guarded direct self-recursion in the tail of a COND clause. This is the
+#    shape the internal backward jump ("internal GOTO") recognizes, so it runs
+#    in O(1) native stack.
+{
+  { 0 LTE | 0 * }
+  { IDLE  | 1 - COUNTDOWN }
+  COND } 'COUNTDOWN' DEF
+7 COUNTDOWN PRINT
+# 期待: 0/1
+
+# 4) Self-recursion reached through a NESTED code block. `{ FIBR }` is data
+#    where it is written — MAP decides when to run it — so the call inside it is
+#    an ordinary call, not a tail self-call. Keep this case executable: while it
+#    was commented out, the trampoline mistook `{ FIBR } MAP` for a guarded tail
+#    self-call and left the first element unmapped, so FIBR answered a wrong
+#    number with no error and no NIL.
+{
+  { 2 LT | 1 * }
+  { IDLE | [ 1 2 ] - { FIBR } MAP 0 { + } FOLD }
+  COND } 'FIBR' DEF
+[ 0 10 ] RANGE { FIBR } MAP PRINT
+# 期待: [ 0/1 1/1 1/1 2/1 3/1 5/1 8/1 13/1 21/1 34/1 55/1 ]
+
+# 5) The same shape through EXEC rather than MAP.
+{
+  { 0 LTE | 0 * }
+  { IDLE  | 1 - { CNTX } EXEC 1 + }
+  COND } 'CNTX' DEF
+7 CNTX PRINT
+# 期待: 7/1
+
+# 6) A word may map a block AND tail-call itself on the same line; the direct
+#    self-call still becomes a backward jump.
+{
+  { 0 LTE | 0 * }
+  { IDLE  | [ 1 ] { 1 * } MAP [ 0 ] GET - MIXED }
+  COND } 'MIXED' DEF
+9 MIXED PRINT
+# 期待: 0/1
+
+# 7) Recursive design is explicit opt-in and testable
 # 下記は意図的にコメントアウトした失敗ケース（手動検証用）
 # { NXT } 'NXT' DEF
 # NXT

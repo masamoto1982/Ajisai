@@ -34,7 +34,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     // DEL used to also delete a whole named dictionary when the name matched
     // one. There are no named dictionaries to delete now.
-    let dependents = interp.collect_dependents(&word_name);
+    // A word's own self-reference does not lock it: see
+    // `collect_external_dependents`.
+    let dependents = interp.collect_external_dependents(&word_name);
 
     // A referenced word is not deletable. There is no force modifier: the
     // vocabulary has no Word that overrides this, so the refusal is final and

@@ -56,9 +56,20 @@ pub(crate) fn execute_executable_code(
     match exec {
         ExecutableCode::CodeBlock(tokens) => {
             interp.bump_execution_epoch();
-            interp.execute_section_core(tokens, 0)?;
-            Ok(())
+            // A block applied by a higher-order Word is its own token stream and
+            // is never the enclosing word's tail position — see
+            // `Interpreter::execute_nested_block`.
+            interp.execute_nested_block(tokens)
         }
-        ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
+        ExecutableCode::WordName(word_name) => {
+            // Same reasoning as the block arm: what a higher-order Word applies
+            // is not the enclosing word's tail position. A user word restores
+            // the flag itself, but a Core Word reached by name (`'COND' MAP`)
+            // would otherwise read the caller's tail context.
+            let saved_tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
+            let result = interp.execute_word_core(word_name);
+            interp.in_tail_context = saved_tail_context;
+            result
+        }
     }
 }

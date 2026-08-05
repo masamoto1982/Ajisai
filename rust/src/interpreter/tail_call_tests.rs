@@ -149,3 +149,83 @@ async fn unguarded_self_recursion_still_hits_depth_limit() {
     );
     assert_eq!(interp.call_depth, 0, "call_depth must unwind to 0");
 }
+
+// ── Nested-block self-recursion is NOT a tail self-call ────────────────────
+// A code block is data where it is written: `{ FIB } MAP` hands `MAP` a value,
+// and `MAP` decides when and how often to run it. So a self-call inside such a
+// block is an ordinary call, never the enclosing word's tail position.
+//
+// The deferral site used to read `in_tail_context` straight off the interpreter,
+// which stayed set while a tail COND clause body ran. `{ FIB } MAP` written in
+// that body therefore looked like a guarded tail self-call: the site skipped
+// `FIB` for the first element and raised `tail_jump_pending`, which a later
+// frame's cleanup swallowed. The program answered a wrong number with no error
+// and no NIL — the one outcome LANG.FAILURE.TRICHOTOMY rules out. Through
+// `EXEC` the same deferral re-ran the body until the step budget ran out.
+
+const FIB_VIA_MAP: &str = "{\n\
+     { 2 LT | 1 * }\n\
+     { IDLE | [ 1 2 ] - { FIB } MAP 0 { + } FOLD }\n\
+     COND } 'FIB' DEF";
+
+const COUNT_VIA_EXEC: &str = "{\n\
+     { 0 LTE | 0 * }\n\
+     { IDLE | 1 - { CNT } EXEC 1 + }\n\
+     COND } 'CNT' DEF";
+
+#[tokio::test]
+async fn self_call_inside_a_map_block_recurses() {
+    let mut interp = fresh();
+    interp.execute(FIB_VIA_MAP).await.unwrap();
+    interp.execute("[ 0 10 ] RANGE { FIB } MAP").await.unwrap();
+    assert_eq!(
+        top_string(&interp),
+        "[ 0/1 1/1 1/1 2/1 3/1 5/1 8/1 13/1 21/1 34/1 55/1 ]"
+    );
+}
+
+#[tokio::test]
+async fn self_call_inside_an_exec_block_recurses() {
+    let mut interp = fresh();
+    interp.execute(COUNT_VIA_EXEC).await.unwrap();
+    interp.execute("7 CNT").await.unwrap();
+    assert_eq!(top_string(&interp), "7/1");
+}
+
+#[tokio::test]
+async fn a_block_self_call_raises_no_backward_jump() {
+    // The value check above is the contract; this pins the mechanism, so a
+    // future change cannot restore the wrong answer by way of the trampoline.
+    let mut interp = fresh();
+    interp.execute(COUNT_VIA_EXEC).await.unwrap();
+    interp.execute("7 CNT").await.unwrap();
+    assert_eq!(
+        interp.runtime_metrics().tail_call_jump_count,
+        0,
+        "a self-call reached through a block is an ordinary call, not a jump"
+    );
+}
+
+#[tokio::test]
+async fn a_tail_self_call_beside_a_block_still_trampolines() {
+    // The fix must not disarm the trampoline for the surrounding body: this
+    // word maps a block over a vector *and* tail-calls itself directly.
+    let mut interp = fresh();
+    interp
+        .execute(
+            "{\n\
+             { 0 LTE | 0 * }\n\
+             { IDLE | [ 1 ] { 1 * } MAP [ 0 ] GET - SUMD }\n\
+             COND } 'SUMD' DEF",
+        )
+        .await
+        .unwrap();
+    interp.execute("400 SUMD").await.unwrap();
+    assert_eq!(top_string(&interp), "0/1");
+    assert!(
+        interp.runtime_metrics().tail_call_jump_count >= 400,
+        "the direct tail self-call must still jump, got {}",
+        interp.runtime_metrics().tail_call_jump_count
+    );
+    assert_eq!(interp.call_depth, 0, "call_depth must unwind to 0");
+}

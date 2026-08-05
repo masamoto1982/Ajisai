@@ -30,6 +30,7 @@ pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
     let tokens = tokens.clone();
     crate::tokenizer::validate_code_tokens(&tokens).map_err(AjisaiError::from)?;
     interp.check_source_numeric_literals(&tokens)?;
-    interp.execute_section_core(&tokens, 0)?;
-    Ok(())
+    // The block `EXEC` runs is its own token stream and is never the enclosing
+    // word's tail position — see `Interpreter::execute_nested_block`.
+    interp.execute_nested_block(&tokens)
 }
