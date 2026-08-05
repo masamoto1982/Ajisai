@@ -30,6 +30,7 @@ impl Interpreter {
         self.output_buffer.clear();
         self.host_effects.clear();
         self.definition_to_load = None;
+        self.documentation_to_show = None;
         self.reset_execution_modes();
         self.pending_tokens = None;
         self.pending_token_index = 0;

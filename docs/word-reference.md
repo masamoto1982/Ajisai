@@ -100,6 +100,7 @@ Test inequality of two values.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
 - **Syntax:** `1 2 NEQ`
+- **Aliases:** `!=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `LT`
@@ -129,6 +130,7 @@ Test less-than-or-equal comparison.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 1 LTE`
+- **Aliases:** `<=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `GT`
@@ -158,6 +160,7 @@ Test greater-than-or-equal comparison.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 1 GTE`
+- **Aliases:** `>=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `ADD`

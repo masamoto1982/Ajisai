@@ -275,10 +275,17 @@ mod tests {
             "LOOKUP on built-in GET should succeed: {:?}",
             result.err()
         );
+        // A Core Word's entry is reference text, not editable source, so it
+        // arrives on the documentation channel — the host shows it rather than
+        // loading it over whatever is in the editor.
+        assert!(
+            interp.definition_to_load.is_none(),
+            "a Core Word's LOOKUP must not be offered as a definition to load"
+        );
         let loaded = interp
-            .definition_to_load
+            .documentation_to_show
             .take()
-            .expect("definition_to_load should be set");
+            .expect("documentation_to_show should be set");
         for section in ["# GET", "Category:", "Summary:", "Role:", "Stack Effect:"] {
             assert!(
                 loaded.contains(section),

@@ -15,10 +15,10 @@
     "semanticKernelWords": 35,
     "standardWords": 22,
     "corewords": 57,
-    "aliases": 10,
+    "aliases": 13,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 77
+    "manifestEntries": 80
   },
   "entries": [
     {
@@ -1166,6 +1166,48 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "GT",
+      "classification": "Surface"
+    },
+    {
+      "id": "alias.less-than-or-equal",
+      "kind": "symbol_alias",
+      "surface": "<=",
+      "canonical": "LTE",
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.less-than-or-equal",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "derived_from": [],
+      "desugars_to": "LTE",
+      "classification": "Surface"
+    },
+    {
+      "id": "alias.greater-than-or-equal",
+      "kind": "symbol_alias",
+      "surface": ">=",
+      "canonical": "GTE",
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.greater-than-or-equal",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "derived_from": [],
+      "desugars_to": "GTE",
+      "classification": "Surface"
+    },
+    {
+      "id": "alias.not-equal",
+      "kind": "symbol_alias",
+      "surface": "!=",
+      "canonical": "NEQ",
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.not-equal",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "derived_from": [],
+      "desugars_to": "NEQ",
       "classification": "Surface"
     },
     {

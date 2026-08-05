@@ -62,6 +62,30 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         kind: CoreWordAliasKind::SymbolAlias,
         summary: "Compare greater-than",
     },
+    // The comparison family had symbols for three of its six Words. Writing
+    // `<` and then reaching for `<=` is the natural next keystroke, and it
+    // answered "Unknown word: <=" — a gap with no rule behind it, since a
+    // symbol resolves to exactly the same contract and executor as its English
+    // name (SPEC §6.2). A token ends only at whitespace or a structural
+    // delimiter, so these two-character spellings need no lexer change.
+    CoreWordAlias {
+        alias: "<=",
+        canonical: Some("LTE"),
+        kind: CoreWordAliasKind::SymbolAlias,
+        summary: "Compare less-than-or-equal",
+    },
+    CoreWordAlias {
+        alias: ">=",
+        canonical: Some("GTE"),
+        kind: CoreWordAliasKind::SymbolAlias,
+        summary: "Compare greater-than-or-equal",
+    },
+    CoreWordAlias {
+        alias: "!=",
+        canonical: Some("NEQ"),
+        kind: CoreWordAliasKind::SymbolAlias,
+        summary: "Compare inequality",
+    },
     CoreWordAlias {
         alias: "'",
         canonical: None,

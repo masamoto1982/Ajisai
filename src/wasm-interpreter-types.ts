@@ -154,7 +154,15 @@ export interface ExecuteResult {
     message?: string;
     error?: boolean;
     hasMore?: boolean;
+    /** Reconstructed `DEF` source of a User Word, for the editor to load. */
     definition_to_load?: string;
+    /**
+     * `LOOKUP` reference text for a Core Word, for the output area to display.
+     * Separate from `definition_to_load` because the two want opposite
+     * destinations — a definition is loaded to be edited, documentation is only
+     * read — and routing both into the editor overwrote unsaved code.
+     */
+    documentation?: string;
     inputHelper?: string;
 
     // The observation-format stack, for display only.

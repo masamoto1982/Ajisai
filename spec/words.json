@@ -243,7 +243,9 @@
     },
     {
       "name": "NEQ",
-      "aliases": [],
+      "aliases": [
+        "!="
+      ],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -329,7 +331,9 @@
     },
     {
       "name": "LTE",
-      "aliases": [],
+      "aliases": [
+        "<="
+      ],
       "family": "comparison",
       "stack": {
         "inputs": 2,
@@ -416,7 +420,9 @@
     },
     {
       "name": "GTE",
-      "aliases": [],
+      "aliases": [
+        ">="
+      ],
       "family": "comparison",
       "stack": {
         "inputs": 2,

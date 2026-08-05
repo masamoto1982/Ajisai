@@ -8,6 +8,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         self.interpreter.definition_to_load = None;
+        self.interpreter.documentation_to_show = None;
         let obj = js_sys::Object::new();
 
         match self.interpreter.execute(code).await {
@@ -21,6 +22,9 @@ impl AjisaiInterpreter {
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     set_js_prop(&obj, "definition_to_load", &(def_str.into()));
                 }
+                if let Some(doc) = self.interpreter.documentation_to_show.take() {
+                    set_js_prop(&obj, "documentation", &(doc.into()));
+                }
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
             Err(e) => {
@@ -28,6 +32,20 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "status", &("ERROR".into()));
                 set_js_prop(&obj, "message", &(error_msg.into()));
                 set_js_prop(&obj, "error", &(true.into()));
+                // Whatever the program printed before it failed is part of the
+                // report, not something the failure erases: `PRINT` is the
+                // language's trace tool and the run that ends in an error is
+                // exactly the run whose trace is wanted. The native CLI has
+                // always emitted it (`render_completed_run` carries `output`
+                // down the Err arm too); only this host dropped it, so a
+                // multi-line program that failed late showed the error and
+                // nothing else. Draining the buffer here also stops the
+                // orphaned output from surfacing at the head of the next run.
+                set_js_prop(
+                    &obj,
+                    "output",
+                    &(self.interpreter.collect_output().into()),
+                );
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
         }
@@ -99,6 +117,13 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "message", &(e.to_string().into()));
                 set_js_prop(&obj, "error", &(true.into()));
                 set_js_prop(&obj, "hasMore", &(false.into()));
+                // Same as the whole-program path: a failing step keeps what it
+                // printed, and draining the buffer keeps it out of the next run.
+                set_js_prop(
+                    &obj,
+                    "output",
+                    &(self.interpreter.collect_output().into()),
+                );
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
         }

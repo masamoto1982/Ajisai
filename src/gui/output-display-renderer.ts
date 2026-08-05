@@ -25,8 +25,12 @@ export interface Display {
     readonly renderExecutionResult: (result: ExecuteResult) => void;
     readonly appendExecutionResult: (result: ExecuteResult) => void;
     readonly renderOutput: (text: string) => void;
-    readonly renderError: (error: Error | { message?: string } | string) => void;
+    readonly renderError: (
+        error: Error | { message?: string } | string,
+        precedingOutput?: string
+    ) => void;
     readonly renderInfo: (text: string, append?: boolean) => void;
+    readonly renderDocumentation: (text: string) => void;
     readonly renderStack: (stack: Value[]) => void;
     readonly extractState: () => DisplayState;
 }
@@ -717,11 +721,27 @@ export const createDisplay = (elements: DisplayElements): Display => {
         appendSpan(parsed.program, '#4DC4FF');
     };
 
-    const renderError = (error: Error | { message?: string } | string): void => {
+    /// An error is written *below* whatever the run already printed, never in
+    /// place of it. `PRINT` is the language's trace tool, and the run that ends
+    /// in an error is the run whose trace is wanted; clearing the area first
+    /// meant the one moment `PRINT` mattered most was the one moment it showed
+    /// nothing. `precedingOutput` is what the failing run printed before it
+    /// stopped (the host now reports it on the error path too).
+    const renderError = (
+        error: Error | { message?: string } | string,
+        precedingOutput = ''
+    ): void => {
         const errorMessage = formatErrorMessage(error);
+        const parsed = parseOutputCommands(precedingOutput);
+        executeHostCommands(parsed);
+        const printed = parsed.program.trim();
 
-        mainOutput = errorMessage;
         clearElement(elements.outputDisplay);
+        if (printed) {
+            appendSpan(printed, '#4DC4FF');
+            appendToElement(elements.outputDisplay, document.createElement('br'));
+        }
+        mainOutput = printed ? `${printed}\n${errorMessage}` : errorMessage;
 
         const span = appendSpan(errorMessage, '#dc3545');
         span.style.fontWeight = 'bold';
@@ -736,6 +756,16 @@ export const createDisplay = (elements: DisplayElements): Display => {
             clearElement(elements.outputDisplay);
             appendSpan(text, '#666');
         }
+    };
+
+    /// A Core Word's `LOOKUP` entry. Reference text is read rather than run, so
+    /// it is shown here instead of being written into the editor over whatever
+    /// the user was writing. `pre-wrap` is already set on the area, so the
+    /// entry's own line structure survives verbatim.
+    const renderDocumentation = (text: string): void => {
+        mainOutput = text;
+        clearElement(elements.outputDisplay);
+        appendSpan(text, '#333');
     };
 
     const renderStack = (stack: Value[]): void => {
@@ -786,6 +816,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         renderOutput,
         renderError,
         renderInfo,
+        renderDocumentation,
         renderStack,
         extractState
     };

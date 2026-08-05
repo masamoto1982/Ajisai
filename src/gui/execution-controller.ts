@@ -21,7 +21,8 @@ export interface ExecutionCallbacks {
     readonly updateEditorValue: (value: string) => void;
     readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
-    readonly showError: (error: Error | string) => void;
+    readonly showDocumentation: (text: string) => void;
+    readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
@@ -51,6 +52,7 @@ export const createExecutionController = (
         updateEditorValue,
         insertEditorText,
         showInfo,
+        showDocumentation,
         showError,
         showExecutionResult,
         updateDisplays,
@@ -92,7 +94,17 @@ export const createExecutionController = (
             insertEditorText(result.inputHelper);
             showInfo('Input helper inserted', false);
             updateView('input');
+        } else if (result.documentation) {
+            // Reference text for a Core Word is read, not edited, so it goes to
+            // the output area. It used to be written into the editor, where
+            // several screens of prose replaced whatever the user had typed;
+            // `'ADD' ?` in the middle of writing a program lost the program.
+            showDocumentation(result.documentation);
+            updateView('output');
         } else if (result.definition_to_load) {
+            // A User Word's reconstructed `DEF` *is* meant for the editor: the
+            // point of looking one up is to edit it and define it again. What it
+            // replaces is the `?` line that just ran.
             updateEditorValue(result.definition_to_load);
             const wordName = code.replace(/\?|LOOKUP/gi, "").trim();
             showInfo(`Showing definition: ${wordName}`, false);
@@ -101,7 +113,9 @@ export const createExecutionController = (
             showExecutionResult(result);
             clearEditor(false);
         } else {
-            showError(result.message || 'Unknown error');
+            // Keep whatever the run printed before it failed (3-5): the host
+            // reports it on the error path, and the error is written below it.
+            showError(result.message || 'Unknown error', result.output || '');
         }
     };
 

@@ -142,7 +142,16 @@ pub struct Interpreter {
     /// boundary access through this trait object so conformance can inject a
     /// deterministic or restricted host.
     pub(crate) host_env: Arc<dyn super::HostEnv>,
+    /// Source that a host editor should load: the reconstructed `DEF` of a
+    /// User Word, ready to edit and define again.
     pub(crate) definition_to_load: Option<String>,
+    /// Reference text a host should *display* — the `LOOKUP` entry for a Core
+    /// Word. Kept apart from `definition_to_load` because the two want opposite
+    /// destinations: a definition belongs in the editor, where it is edited,
+    /// and documentation belongs in the output area, where reading it costs the
+    /// reader nothing. A single field meant `'ADD' ?` overwrote whatever was in
+    /// the editor with several screens of prose.
+    pub(crate) documentation_to_show: Option<String>,
     pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
@@ -285,6 +294,7 @@ impl Interpreter {
             host_effects: Vec::new(),
             host_env,
             definition_to_load: None,
+            documentation_to_show: None,
             consumption_mode: ConsumptionMode::Consume,
             disable_no_change_check: true,
             pending_tokens: None,

@@ -237,6 +237,9 @@ code-data REFLECT` |
 | `=` | symbol alias | shorthand for `EQ` |
 | `<` | symbol alias | shorthand for `LT` |
 | `>` | symbol alias | shorthand for `GT` |
+| `<=` | symbol alias | shorthand for `LTE` |
+| `>=` | symbol alias | shorthand for `GTE` |
+| `!=` | symbol alias | shorthand for `NEQ` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
 | `?` | symbol alias | shorthand for `LOOKUP` |
 | `^` | syntax sugar | shorthand for `VENT` |

@@ -12,7 +12,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     if let Some(def) = interp.resolve_word(&canonical_name) {
         if def.is_builtin {
             let detailed_info = crate::builtins::lookup_builtin_detail(&name_str);
-            interp.definition_to_load = Some(detailed_info);
+            interp.documentation_to_show = Some(detailed_info);
             return Ok(());
         }
 
