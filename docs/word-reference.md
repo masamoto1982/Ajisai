@@ -645,11 +645,11 @@ Convert a value to its string representation.
 
 ## `COND`
 
-Evaluate guard/body clauses in order, executing the first match.
+Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** variable input(s) → variable output(s); `conditional` consumption
+- **Stack:** variable input(s) → 1 output(s); `conditional` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`

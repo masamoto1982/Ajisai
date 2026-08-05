@@ -216,7 +216,7 @@ no module system and nothing to import.
 | `SUBSTITUTE` | cast | Replace every occurrence of a substring with another. — e.g. `'hello' 'l' 'L' SUBSTITUTE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
+| `COND` | control | Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
 | `EXEC` | control | Evaluate a code block. — e.g. `{ 1 2 ADD } EXEC` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
@@ -245,6 +245,7 @@ code-data REFLECT` |
 | `^` | syntax sugar | shorthand for `VENT` |
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
 | `\|` | control directive | COND-CLAUSE — only inside the construct that defines it |
+| `IDLE` | control directive | COND-ELSE-GUARD — only inside the construct that defines it |
 | `[` | delimiter sugar | BEGIN-VECTOR — structural delimiter, not a Word |
 | `]` | delimiter sugar | END-VECTOR — structural delimiter, not a Word |
 | `{` | delimiter sugar | BEGIN-BLOCK — structural delimiter, not a Word |

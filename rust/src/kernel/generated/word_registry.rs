@@ -1121,7 +1121,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         aliases: &[],
         family: Family::Control,
         stack_inputs: Arity::Variable,
-        stack_outputs: Arity::Variable,
+        stack_outputs: Arity::Fixed(1),
         consumption: Consumption::Conditional,
         nil_policy: NilPolicy::RejectNil,
         projection: None,

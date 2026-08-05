@@ -41,6 +41,8 @@ const EXAMPLE_NAMES = new Set([
   // a deliberate typo, introduced by the Defining Words clause to show that a
   // body's names resolve when the word is called rather than when it is defined
   'TOTALL',
+  // user words defined by the block-frame and two-argument examples
+  'ADDW', 'PSUM', 'PDIFF', 'PMAX',
 ]);
 
 const SURFACES = ['README.md', 'public/docs/index.html', 'SPECIFICATION.html'];
@@ -63,6 +65,12 @@ const UNALLOCATED_MENTIONS = new Set([
   '.',
   // `{ ... }` sketches a block's shape; the ellipsis stands for a body
   '...',
+  // the two-argument clause names the classic stack operators precisely to say
+  // Ajisai has none of them: several values travel in a Vector, not on the
+  // stack. Naming them is the shortest way to answer the question a reader
+  // arrives with, and each is a statement that the language does not allocate
+  // it — the case this list exists for.
+  'DUP', 'SWAP', 'DROP', 'ROT',
 ]);
 
 const errors = [];
@@ -97,6 +105,10 @@ for (const path of SURFACES) {
       const token = raw.replace(/\\([|`*_])/g, '$1');
       if (WORD_SHAPED.test(token)) {
         if (known.has(token) || EXAMPLE_NAMES.has(token)) continue;
+        // A name may also be written only to say the language does not have it.
+        // That was a symbol-only case until the Reference had to answer "where
+        // is DUP?", which it answers by naming DUP.
+        if (UNALLOCATED_MENTIONS.has(token)) continue;
         seen.set(token, (seen.get(token) ?? 0) + 1);
         continue;
       }
@@ -118,7 +130,7 @@ if (errors.length) {
   for (const error of errors) console.error(`[reading-surfaces] ${error}`);
   console.error('[reading-surfaces] LANG.AUTHORITY.PRESENT: a reading surface may name only Words the language has.');
   console.error('[reading-surfaces] If the name is a new worked example, add it to EXAMPLE_NAMES in this script.');
-  console.error('[reading-surfaces] If a symbol is named only to say the language does not allocate it, add it to UNALLOCATED_MENTIONS.');
+  console.error('[reading-surfaces] If a name is written only to say the language does not allocate it, add it to UNALLOCATED_MENTIONS.');
   process.exitCode = 1;
 } else {
   console.log(

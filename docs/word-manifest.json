@@ -17,8 +17,8 @@
     "corewords": 57,
     "aliases": 13,
     "inputHelpers": 1,
-    "surface_forms": 9,
-    "manifestEntries": 80
+    "surface_forms": 10,
+    "manifestEntries": 81
   },
   "entries": [
     {
@@ -1282,6 +1282,22 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "COND-CLAUSE",
+      "classification": "Surface"
+    },
+    {
+      "id": "surface.idle",
+      "kind": "control_directive",
+      "surface": "IDLE",
+      "concept": "COND-ELSE-GUARD",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "COND-ELSE-GUARD",
+      "coverage_entry_id": "surface.idle",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "derived_from": [],
+      "desugars_to": "COND-ELSE-GUARD",
       "classification": "Surface"
     },
     {

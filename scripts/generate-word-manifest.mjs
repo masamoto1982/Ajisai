@@ -71,6 +71,7 @@ function symbolSlug(value) {
     '^': 'caret',
     '#': 'hash',
     '|': 'pipe',
+    'IDLE': 'idle',
     '[': 'left-bracket',
     ']': 'right-bracket',
     '{': 'left-brace',

@@ -1903,7 +1903,7 @@
       "family": "control",
       "stack": {
         "inputs": "variable",
-        "outputs": "variable"
+        "outputs": 1
       },
       "consumption": "conditional",
       "nilPolicy": "rejectNil",
@@ -1925,12 +1925,12 @@
         "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "Evaluate guard/body clauses in order, executing the first match.",
+        "summary": "Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
         "hover": "COND — evaluate guard/body clauses",
-        "lookup": "Evaluate guard/body clauses in order, executing the first match.",
+        "lookup": "Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
         "syntax": "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
-        "role": "General conditional dispatch with first-match semantics.",
-        "stackEffect": "value { ... } ... -> [ result ]"
+        "role": "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
+        "stackEffect": "value { guard | body } ... -> [ result ]"
       },
       "executorKey": "Cond",
       "effects": [],
