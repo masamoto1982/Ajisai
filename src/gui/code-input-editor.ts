@@ -15,6 +15,12 @@ export interface Editor {
     readonly removeLastWord: () => void;
     readonly format: () => void;
     readonly focus: () => void;
+    /**
+     * Close the suggestion panel if it is open. Returns whether there was
+     * anything to close, so a shared Escape handler can spend the key on the
+     * panel and leave Abort alone.
+     */
+    readonly dismissSuggestions: () => boolean;
     readonly registerContentChangeCallback: (callback: (content: string) => void) => void;
 }
 
@@ -446,6 +452,17 @@ export const createEditor = (
         onContentChangeCallback = callback;
     };
 
+    // Escape is bound window-wide to Abort, on a capturing listener that stops
+    // propagation, so the panel's own Escape branch never ran and the panel
+    // could not be dismissed with the key every other editor dismisses it with.
+    // The window handler now asks here first and only aborts when there was no
+    // panel to close.
+    const dismissSuggestions = (): boolean => {
+        if (suggestionPanel.style.display === 'none') return false;
+        hideSuggestions();
+        return true;
+    };
+
     return {
         extractValue,
         updateValue,
@@ -455,6 +472,7 @@ export const createEditor = (
         removeLastWord,
         format,
         focus,
+        dismissSuggestions,
         registerContentChangeCallback
     };
 };

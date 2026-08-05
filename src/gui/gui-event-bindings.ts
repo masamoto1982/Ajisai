@@ -9,6 +9,7 @@ import type { VocabularyManager } from './vocabulary-state-controller';
 import type { GUIElements } from './gui-dom-cache';
 import type { LayoutState } from './gui-layout-state';
 import type { LayoutController } from './layout/layout-controller';
+import { createEditorHistory } from './editor-history';
 
 export type GuiEventBindingContext = {
     readonly elements: GUIElements;
@@ -102,6 +103,9 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
 
 function bindInteractionEvents(context: GuiEventBindingContext): void {
     const { elements, vocabulary, editor, mobile, layoutState, switchArea, display, persistence, executionController } = context;
+    // Session-lived recall of submitted programs, so a run (which clears the
+    // editor) and a Reset are both recoverable. See editor-history.ts.
+    const history = createEditorHistory();
     const applySearchFilter = (filter: string): void => {
         elements.dictionarySearch.value = filter;
         elements.mobileDictionarySearch.value = filter;
@@ -126,9 +130,27 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     // Reformat the editor before running it, so the source that defines words
     // (and therefore the stored definition) is tidied at execution time.
+    //
+    // The submitted source is recorded before execution, not after: a run that
+    // succeeds clears the editor and a Reset clears it too, so recording later
+    // would be recording exactly the cases the user can no longer recover.
     const runEditorCode = (): void => {
         editor.format();
-        executionController.executeCode(editor.extractValue());
+        const source = editor.extractValue();
+        history.record(source);
+        executionController.executeCode(source);
+    };
+
+    // Ctrl+Up / Ctrl+Down walk the session's submitted programs back into the
+    // editor. The plain arrows are left alone — they are how you move the caret
+    // through a multi-line program, and the suggestion panel already uses them
+    // to move through its list.
+    const recallHistory = (direction: 'older' | 'newer'): void => {
+        const recalled = direction === 'older'
+            ? history.recallOlder(elements.codeInput.value)
+            : history.recallNewer();
+        if (recalled === null) return;
+        editor.updateValue(recalled);
     };
 
     elements.outputArea.addEventListener('dblclick', (e: MouseEvent) => {
@@ -183,6 +205,10 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
             e.preventDefault();
             executionController.executeStep();
+        }
+        if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.ctrlKey && !e.altKey && !e.shiftKey) {
+            e.preventDefault();
+            recallHistory(e.key === 'ArrowUp' ? 'older' : 'newer');
         }
         // Shift+Alt+F reformats the editor contents (matches the format button).
         if (e.code === 'KeyF' && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey) {
@@ -249,6 +275,17 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
+            // This listener captures and stops propagation, so the editor's own
+            // Escape branch never sees the key: an open suggestion panel could
+            // not be dismissed the way every other editor dismisses one, and the
+            // panel stayed over the code while the user pressed Escape at it.
+            // Dismissing takes priority; Abort still gets Escape whenever there
+            // is no panel to close.
+            if (editor.dismissSuggestions()) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return;
+            }
             WORKER_MANAGER.abortAll();
             executionController.abortExecution();
             e.preventDefault();

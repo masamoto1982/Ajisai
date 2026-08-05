@@ -755,6 +755,18 @@
 }
 
 
+/* The Stack area draws a bounded prefix of a large collection (see
+   src/gui/stack-render-budget.ts). The marker that stands for the undrawn tail
+   is styled as commentary — muted, italic, never bold — so it cannot be read as
+   part of the value even when it sits inside the brackets. */
+.stack-elision {
+    font-style: italic;
+    font-weight: normal;
+    opacity: 0.65;
+    white-space: nowrap;
+}
+
+
 .stack-node-vector {
     background-color: transparent;
     color: var(--color-stack);
