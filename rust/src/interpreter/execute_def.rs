@@ -53,6 +53,16 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         });
     }
 
+    // The other half of `BIND`'s refusal to take a Word's name. Together they
+    // keep the two name spaces disjoint at every moment, so a reader never has
+    // to know which of the two a name resolved through.
+    if interp.lookup_binding(&upper_name).is_some() {
+        return Err(AjisaiError::from(format!(
+            "Cannot define '{}': the name is bound in this frame. A binding and a Word may not share a name.",
+            upper_name
+        )));
+    }
+
     if let Some(warning) =
         crate::interpreter::naming_convention_checker::check_word_name_convention(name)
     {

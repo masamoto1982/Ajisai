@@ -152,6 +152,10 @@ pub struct Interpreter {
     /// reader nothing. A single field meant `'ADD' ?` overwrote whatever was in
     /// the editor with several screens of prose.
     pub(crate) documentation_to_show: Option<String>,
+    /// Local name bindings, innermost frame last (`super::bindings`). Not a
+    /// second dictionary: each scope belongs to one frame of LANG.SOURCE.FRAME
+    /// and dies with it, so a name here is never reachable from another Word.
+    pub(crate) binding_scopes: Vec<super::bindings::BindingScope>,
     /// The dictionary changes this top-level `execute` has made so far, in
     /// order — `Defined word:` / `Deleted word:` without the prose.
     ///
@@ -319,6 +323,7 @@ impl Interpreter {
             host_env,
             definition_to_load: None,
             documentation_to_show: None,
+            binding_scopes: vec![super::bindings::BindingScope::root()],
             dictionary_changes_this_run: Vec::new(),
             consumption_mode: ConsumptionMode::Consume,
             disable_no_change_check: true,

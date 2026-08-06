@@ -74,7 +74,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 57 canonical Words and 13 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 57, a 35-Word Semantic Kernel carries the semantic identity of the language and 22 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
+The vocabulary is 59 canonical Words and 13 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 59, a 36-Word Semantic Kernel carries the semantic identity of the language and 23 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -149,6 +149,7 @@ Quoted code is not eagerly executed. Code and data are distinct value domains: e
 <tr><td><code>MAP</code>, <code>FILTER</code>, <code>ANY</code>, <code>ALL</code></td><td>one value: the current element, alone in an isolated frame</td><td>exactly one — the mapped element, or a Boolean for the predicate Words</td></tr>
 <tr><td><code>FOLD</code></td><td>two values: the accumulator and the current element</td><td>exactly one: the next accumulator</td></tr></tbody></table>
 <p>Isolation is what lets a recursive <code>COND</code> word terminate cleanly — working values a clause body pushes cannot leak past it, so a tail self-call starts from one value however much scaffolding the body built — and the discard in the last column is its cost. A block written inside another block is data where it is written, evaluated only when the Word receiving it runs it, under that Word's row and not the enclosing block's; a self-call inside such a block is an ordinary call.</p>
+<p>A frame also holds <strong>local bindings</strong>. <code>BIND</code> consumes a value and a name and makes the name that value for the rest of the frame, however many times it is written; several names destructure a Vector of the same length. The isolation above is of the stack, not of names, so the blocks a Word evaluates read the frame they were written in — and a Word call does not: a body reads its own bindings and its operands and nothing of its caller's, so what a Word means never depends on where it is called. A binding ends with its frame, and a name is a Word or a binding and never both.</p>
 
 <h2 id="lang-values">3. Value Domains</h2>
 
@@ -314,9 +315,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>The dictionary has two tiers. <strong>Core</strong> holds the 57 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core.</p>
-
-<p>Those two tiers are the whole dictionary: a name resolves in Core or in User, and a Core name is reachable by itself. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
+<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 59 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
 
 <h3 id="lang-dictionary-mutation">LANG.DICTIONARY.MUTATION — User Words</h3>
 

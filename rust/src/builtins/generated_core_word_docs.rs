@@ -489,6 +489,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "KEEP +",
     },
     GeneratedCoreWordDoc {
+        name: "BIND",
+        category: "dictionary",
+        summary: "Name a value for the rest of the frame that made it.",
+        role: "The one way to name a value without defining a Word.",
+        stack_effect: "[ x ] [ 'name'.. ] -> [ ]",
+        hover_summary: "BIND — name a value locally",
+        hover_syntax: "[ 1 2 3 ] 'XS' BIND",
+    },
+    GeneratedCoreWordDoc {
         name: "DEF",
         category: "dictionary",
         summary: "Define a user word from a body and a name.",

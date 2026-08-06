@@ -200,20 +200,12 @@ fn projecting_word_set_matches_registry() {
     );
 }
 
-/// Run `code`, require it to land on a NIL, and answer the reason that NIL
-/// carries. Shared by every Bubble-creation probe below: a projection is
-/// "NIL with the reason the contract registers" (LANG.FAILURE.PROJECT), so
-/// every probe asks the same two questions and only the reason differs.
+/// Run `code`, require it to land on a NIL, and answer that NIL's reason.
+/// Shared by every Bubble-creation probe below, since a projection is "NIL with
+/// the reason the contract registers" (LANG.FAILURE.PROJECT) and only the
+/// reason differs between them.
 async fn projected_reason(code: &str) -> Option<String> {
-    let mut interp = Interpreter::new();
-    interp
-        .execute(code)
-        .await
-        .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
-    let answer = interp
-        .stack
-        .last()
-        .expect("a projecting Word pushes an answer");
+    let answer = top_of(code).await;
     assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
     answer
         .absence_metadata()
@@ -221,15 +213,17 @@ async fn projected_reason(code: &str) -> Option<String> {
         .map(|reason| reason.as_protocol_str().to_string())
 }
 
-/// Run `code` and answer the Text it leaves on top, for the non-projecting
-/// half of a probe.
+/// The Text `code` leaves on top, for the non-projecting half of a probe.
 async fn text_answer(code: &str) -> Option<String> {
+    crate::interpreter::value_extraction_helpers::value_as_string(&top_of(code).await)
+}
+
+/// The value `code` leaves on top; a failure to run is the probe's own bug.
+async fn top_of(code: &str) -> crate::types::Value {
     let mut interp = Interpreter::new();
-    interp
-        .execute(code)
-        .await
-        .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
-    crate::interpreter::value_extraction_helpers::value_as_string(interp.stack.last().unwrap())
+    let ran = interp.execute(code).await;
+    ran.unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+    interp.stack.last().cloned().expect("an answer was pushed")
 }
 
 /// `QUANTIZE` projects on the condition it declares: a denominator that is not

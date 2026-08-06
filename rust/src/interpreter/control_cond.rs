@@ -241,6 +241,10 @@ fn evaluate_guard_isolated(
         .stack
         .push_with_role(value.clone(), Interpretation::Unassigned);
     interp.consumption_mode = ConsumptionMode::Consume;
+    // A clause is a block written in the enclosing frame, so it reads that
+    // frame's names — the isolation COND enforces is of the stack, which is
+    // what makes recursion terminate cleanly, and a name is not on the stack.
+    interp.open_binding_scope(false);
 
     // Guards are never tail position; run the compiled sub-plan when available,
     // otherwise interpret the tokens. Both produce the same result value.
@@ -250,6 +254,7 @@ fn evaluate_guard_isolated(
     } else {
         interp.execute_section_core(guard_tokens, 0).map(|_| ())
     };
+    interp.close_binding_scope();
     let guard_result_value: Option<Value> = interp.stack.pop();
 
     restore_cond_eval_state(interp, saved_stack, saved_consumption_mode, saved_epoch);
@@ -364,12 +369,14 @@ fn execute_cond_body(
     // body is compiled, in `execute_compiled_line`'s tail-op handling — both
     // keyed on `in_tail_context` and `tail_self_word`.
     interp.in_tail_context = tail_context;
+    interp.open_binding_scope(false);
     let execution_result: Result<()> = if let Some(plan) = body_plan {
         interp.runtime_metrics.cond_clause_compiled_count += 1;
         execute_compiled_plan(interp, plan)
     } else {
         interp.execute_section_core(body_tokens, 0).map(|_| ())
     };
+    interp.close_binding_scope();
     interp.in_tail_context = false;
     let (body_result_value, body_result_hint): (Option<Value>, Interpretation) =
         match interp.stack.pop_slot() {

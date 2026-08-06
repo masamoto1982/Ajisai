@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 58,
-    "semanticKernelWords": 35,
+    "canonicalWords": 59,
+    "semanticKernelWords": 36,
     "standardWords": 23,
-    "corewords": 58,
+    "corewords": 59,
     "aliases": 13,
     "inputHelpers": 1,
     "surface_forms": 10,
-    "manifestEntries": 82
+    "manifestEntries": 83
   },
   "entries": [
     {
@@ -980,6 +980,24 @@
       "derived_from": [
         "algebra.modifier.consumption.keep",
         "algebra.state-transformer.combinator"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.bind",
+      "kind": "coreword",
+      "surface": "BIND",
+      "category": "dictionary",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "BIND",
+      "coverage_entry_id": "core.bind",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "core_tier": "flow",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
       ],
       "classification": "Core"
     },

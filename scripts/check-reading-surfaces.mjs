@@ -47,6 +47,10 @@ const EXAMPLE_NAMES = new Set([
   'DELTA', 'STEP',
   // the identity word the Stack clause uses to show KEEP copying any value
   'ID', 'DOUBLE',
+  // binding names from the Naming a Value clause. These are locals, not Words:
+  // the clause exists to say a binding is not a dictionary entry, so the
+  // registry is correctly the wrong place to look for them.
+  'W', 'B', 'A', 'T', 'LIMIT', 'DX', 'XS',
 ]);
 
 // Names the *host* allocates rather than the language: typed alone into the

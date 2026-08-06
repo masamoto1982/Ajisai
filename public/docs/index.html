@@ -1903,6 +1903,78 @@ COND</code></td>
                 </section>
 
 
+
+                <section id="bindings" class="ref-page">
+                    <h2>Naming a Value</h2>
+                    <p>A stack hands you one value at a time, and most expressions worth writing use a value more than once. A residual feeds both the squared error and the gradient; a threshold feeds both the comparison and the report; a pair of coordinates feeds a sum and a difference. <code>KEEP</code> copies, which sounds like enough and is not — derive something from the upper copy and the result lands <em>on</em> the lower one, so the second use is buried under the first.</p>
+                    <p><code>BIND</code> gives the value a name instead. It takes the value and the name, consumes both, and from then on the name <em>is</em> the value, as often and in whatever order you like.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 4 9 ] [ 'A' 'B' ] BIND A B ADD  A B SUB  2 COLLECT</code></td>
+                                    <td><code>[ 13/1 -5/1 ]</code></td>
+                                    <td class="notes">Two names from one vector, each read twice. Written on the stack alone this needs a matrix and a fold.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p>One name takes the whole value; several destructure a vector of the same length, position by position. The lengths must match exactly — a longer vector would silently drop its tail and a shorter one would name nothing.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5 'T' BIND T T MUL</code></td>
+                                    <td><code>25/1</code></td>
+                                    <td class="notes">A single name. <code>[ 'T' ]</code> means the same thing, as with <code>GET</code>&#39;s index.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>How far a name reaches</h3>
+                    <p>A binding belongs to the <strong>frame</strong> that made it — the word body, or the run itself if you typed it straight in — and it lives exactly as long. Two rules follow, and between them they are the whole story:</p>
+                    <p><strong>A name reaches the blocks written in its frame.</strong> A block that <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>EXEC</code> or a <code>COND</code> clause runs is not a new frame for names, so it reads the ones around it. The isolation those words enforce (see <a href="#blocks-frames">What a block sees</a>) is of the <em>stack</em>, and a name is not on the stack. This is what lets a predicate test against a value the program only learned at run time:</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 'LIMIT' BIND [ 1 5 2 9 ] { LIMIT LT } FILTER</code></td>
+                                    <td><code>[ 1/1 2/1 ]</code></td>
+                                    <td class="notes">The block is written where <code>LIMIT</code> is bound, so it can say <code>LIMIT</code>.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p><strong>A name does not reach into a word you call.</strong> A word&#39;s meaning is its operands and the dictionary and nothing else, which is what makes a word readable on its own — so a body reads its own bindings and never its caller&#39;s. If you need the value in there, pass it as an operand, which is what operands are. Getting this wrong says so plainly rather than reporting an unknown word.</p>
+                    <p>A word that binds leaves no names behind for its caller, and a run&#39;s bindings are gone when the run ends. That is deliberate: a name that outlived its frame would be a second, editable name space sitting next to the dictionary, and there is one name space here. For data you want to keep, define a word — <code>{ [ 1 2 3 ] } 'XS' DEF</code> — which is the dictionary doing the job it is for.</p>
+                    <h3>A name is a word or a binding, never both</h3>
+                    <p>You cannot bind a name that a Core or User word already has, and you cannot define a word whose name is currently bound. Both directions are refused, so you never have to work out which one a name resolved through. Short scratch names — <code>W</code>, <code>DX</code>, <code>LIMIT</code> — are exactly right here, and unlike a word name they attract no naming-convention warning: they are local, and their scope is on the screen in front of you.</p>
+                </section>
+
                 <section id="iterative" class="ref-page">
                     <h2>Iterative Numerics</h2>
                     <p>Exact arithmetic changes what a loop costs. Every other section of this Reference is about what a program <em>means</em>; this one is about what repeating it <em>costs</em>, because that is the one place where exactness asks something of you in return.</p>
@@ -1978,8 +2050,8 @@ COND</code></td>
 
                 <section id="dictionaries" class="ref-page">
                     <h2>Dictionaries and Word Identity</h2>
-                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 58 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
-                    <p>Those 58 words divide into a <strong>35-word Semantic Kernel</strong> and <strong>23 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 58 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
+                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 59 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
+                    <p>Those 59 words divide into a <strong>36-word Semantic Kernel</strong> and <strong>23 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 59 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
                     <p>A name resolves in Core or in User, and User never shadows Core. A word&#39;s name is therefore its whole address — there is no qualified form, no dictionary to select, and no way for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same word.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -2118,6 +2190,7 @@ COND</code></td>
                     <li><a href="#cond">Conditionals</a></li>
                     <li><a href="#strings">Strings</a></li>
                     <li><a href="#define">Defining Words</a></li>
+                    <li><a href="#bindings">Naming a Value</a></li>
                     <li><a href="#iterative">Iterative Numerics</a></li>
                     <li><a href="#dictionaries">Dictionaries and Word Identity</a></li>
                     <li><a href="#output">Output</a></li>
