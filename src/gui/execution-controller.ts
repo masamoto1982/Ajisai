@@ -71,11 +71,17 @@ export const createExecutionController = (
         saveState
     });
 
-    // The word that failed, the stack depth it failed at, and what to check —
-    // written *under* the error rather than before it. This block used to run
-    // first, and `showError` then cleared the area, so the one message that
-    // named the failing word was drawn and immediately erased: what survived
-    // was a bare "Error: Stack underflow" with nothing to say where.
+    const evidence = (entries: readonly string[] | undefined, key: string): string | null => {
+        const hit = entries?.find((entry) => entry.startsWith(`${key}=`));
+        return hit ? hit.slice(key.length + 1) : null;
+    };
+
+    // The word that failed, where in the source it failed, the stack depth at
+    // that point, and what to check — written *under* the error rather than
+    // before it. This block used to run first, and `showError` then cleared the
+    // area, so the one message that named the failing word was drawn and
+    // immediately erased: what survived was a bare "Error: Stack underflow"
+    // with nothing to say where.
     const describeDiagnosis = (result: ExecuteResult): string | null => {
         const event = result.errorFlowTrace
             ?.filter((candidate) => Boolean(candidate.diagnosis))
@@ -90,10 +96,19 @@ export const createExecutionController = (
             event && typeof event.stackLenBefore === 'number'
                 ? `, stack depth ${event.stackLenBefore}`
                 : '';
+        // Where in the source the run was when it failed. The host records it
+        // as evidence — the same `key=value` channel `stackLenBefore` uses —
+        // so nothing about the protocol had to change to carry it.
+        const at = evidence(diagnosis.evidence, 'sourceLine')
+            ? ` at line ${evidence(diagnosis.evidence, 'sourceLine')}, column ${evidence(
+                  diagnosis.evidence,
+                  'sourceColumn'
+              )}`
+            : '';
         return [
             `[DIAGNOSIS] ${diagnosis.summary}`,
             `Q1 when: ${diagnosis.when}`,
-            `Q2 where: ${where}${depth}`,
+            `Q2 where: ${where}${at}${depth}`,
             `Q3 why: ${diagnosis.why}`,
             ...diagnosis.nextChecks.map((check) => `next: ${check.label} - ${check.detail}`)
         ].join('\n');

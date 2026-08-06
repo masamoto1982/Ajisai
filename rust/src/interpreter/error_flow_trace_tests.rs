@@ -157,3 +157,66 @@ async fn direct_bubble_carries_division_by_zero_reason() {
     let reason = top.nil_reason().cloned();
     assert_eq!(reason, Some(NilReason::DivisionByZero));
 }
+
+/// An error carries where in the source it happened, so a reader is sent to a
+/// line rather than left to bisect the program. The evidence channel already
+/// carries `key=value` facts (`stackLenBefore=`), so the position needed no new
+/// protocol field.
+#[cfg(test)]
+mod source_position_tests {
+    use crate::interpreter::Interpreter;
+
+    fn evidence_of(interp: &mut Interpreter, key: &str) -> Option<String> {
+        interp
+            .drain_error_flow_trace()
+            .iter()
+            .rev()
+            .find_map(|event| event.diagnosis.as_ref())
+            .and_then(|d| {
+                d.evidence
+                    .iter()
+                    .find_map(|e| e.strip_prefix(key)?.strip_prefix('=').map(str::to_string))
+            })
+    }
+
+    #[tokio::test]
+    async fn an_unknown_word_reports_the_line_it_is_written_on() {
+        let mut interp = Interpreter::new();
+        let err = interp.execute("1 PRINT\n2 PRINT\nNOSUCHWORD").await;
+        assert!(err.is_err());
+        assert_eq!(evidence_of(&mut interp, "sourceLine").as_deref(), Some("3"));
+    }
+
+    #[tokio::test]
+    async fn a_failure_inside_a_word_body_reports_the_call_site() {
+        // The body has no source of its own — it was stored as tokens — so the
+        // position a reader can act on is the top-level token that reached it.
+        let mut interp = Interpreter::new();
+        interp.execute("{ 1 BADWORD } 'BROKEN' DEF").await.unwrap();
+        let _ = interp.drain_error_flow_trace();
+        assert!(interp.execute("1 PRINT\n2 PRINT\nBROKEN").await.is_err());
+        assert_eq!(evidence_of(&mut interp, "sourceLine").as_deref(), Some("3"));
+    }
+
+    #[tokio::test]
+    async fn the_column_locates_the_token_within_its_line() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("1 2 ADD\n5 5 NOPE").await.is_err());
+        // One drain: reading the trace consumes it.
+        let evidence: Vec<String> = interp
+            .drain_error_flow_trace()
+            .iter()
+            .rev()
+            .find_map(|event| event.diagnosis.as_ref())
+            .map(|d| d.evidence.clone())
+            .unwrap_or_default();
+        assert!(
+            evidence.contains(&"sourceLine=2".to_string()),
+            "{evidence:?}"
+        );
+        assert!(
+            evidence.contains(&"sourceColumn=5".to_string()),
+            "{evidence:?}"
+        );
+    }
+}

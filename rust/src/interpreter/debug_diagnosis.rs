@@ -84,6 +84,26 @@ pub struct DebugDiagnosis {
     pub agreed_prefix: Option<usize>,
 }
 
+impl DebugDiagnosis {
+    /// Record where in the source the failure happened, as two machine-readable
+    /// evidence entries.
+    ///
+    /// Evidence is the established place for a `key=value` fact a reader may
+    /// want and a consumer may parse (`stackLenBefore=5` is already there), so
+    /// the position needs no new protocol field and reaches every host that
+    /// already renders a diagnosis. Adding it twice is a no-op: the position of
+    /// a failure does not change as the error unwinds.
+    pub fn with_source_position(mut self, span: Option<crate::tokenizer::SourceSpan>) -> Self {
+        let Some(span) = span else { return self };
+        if self.evidence.iter().any(|e| e.starts_with("sourceLine=")) {
+            return self;
+        }
+        self.evidence.push(format!("sourceLine={}", span.line));
+        self.evidence.push(format!("sourceColumn={}", span.column));
+        self
+    }
+}
+
 impl ErrorPhase {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
