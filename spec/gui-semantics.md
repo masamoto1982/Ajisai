@@ -10,6 +10,8 @@
 
 <p>The Stack surface reads in ordinary reading order: top to bottom, left to right, with the top of the stack last. The top of the stack is marked, so the value the next Word reads is identifiable without counting, at any number of values and whatever the wrapping.</p>
 
+<p><strong>Host commands.</strong> A bare <code>RESET</code> or <code>CLEAR</code>, typed alone into the Input surface and run, is acted on by the host instead of being handed to the interpreter: <code>RESET</code> discards the session and <code>CLEAR</code> discards the stack. They are the typed spelling of controls that also exist as buttons and shortcuts, and they are deliberately <em>not</em> Words — the vocabulary holds nothing that throws away the values a program was handed or the dictionary it was defined in, and nothing in it should. The name must be the whole input, and a User Word of the same name takes precedence, so a host command can never shadow a definition.</p>
+
 <p>Three visibility rules are normative, because each ties what is shown to what the user is doing rather than to geometry:</p>
 
 <ol>

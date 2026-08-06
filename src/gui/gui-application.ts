@@ -122,6 +122,20 @@ export const createGUI = (): GUI => {
         }
     };
 
+    // Clearing the stack keeps the dictionary — that is the whole point of
+    // having it apart from Reset — so it is the interpreter's `clear_stack` and
+    // nothing else, followed by a redraw and a save. One definition for all
+    // three routes to it: the Stack area's `×`, `Shift+Alt+C`, and the `CLEAR`
+    // host command typed in the editor.
+    const clearStack = (): void => {
+        const interpreter = INTERPRETER_CLIENT.getOptional();
+        if (!interpreter) return;
+        interpreter.clear_stack();
+        updateAllDisplays();
+        display.renderInfo('Stack cleared', false);
+        void persistence.saveCurrentState();
+    };
+
     // Reference ページの用例から渡されたコードをエディタへ流し込む。
     // 受け渡し形式: <playground-url>#code=<encodeURIComponent したソース>
     // Ruby 公式トップのように、用例をそのまま試せる動線を実現するための入口。
@@ -222,6 +236,7 @@ export const createGUI = (): GUI => {
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
             highlightSourceRange: (start, end) => editor.revealRange(start, end),
+            clearStack: () => clearStack(),
             showDocumentation: (text) => display.renderDocumentation(text),
             showError: (error, precedingOutput) => display.renderError(error, precedingOutput),
             showExecutionResult: (result) => display.renderExecutionResult(result),
@@ -245,17 +260,7 @@ export const createGUI = (): GUI => {
             persistence,
             switchArea: (mode) => layoutController.setArea(mode),
             updateAllDisplays,
-            // Clearing the stack keeps the dictionary — that is the whole point
-            // of having it apart from Reset — so it is the interpreter's
-            // `clear_stack` and nothing else, followed by a redraw and a save.
-            clearStack: () => {
-                const interpreter = INTERPRETER_CLIENT.getOptional();
-                if (!interpreter) return;
-                interpreter.clear_stack();
-                updateAllDisplays();
-                display.renderInfo('Stack cleared', false);
-                void persistence.saveCurrentState();
-            },
+            clearStack,
             doSwitchDictionarySheet,
             layoutController
         });
