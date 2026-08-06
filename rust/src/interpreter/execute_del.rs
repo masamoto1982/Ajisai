@@ -66,7 +66,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     interp
         .output_buffer
         .push_str(&format!("Deleted word: {}\n", word_name));
-    interp.dictionary_changes_this_run.push(word_name.to_string());
+    interp
+        .dictionary_changes_this_run
+        .push(word_name.to_string());
 
     interp.recompute_word_identities();
     interp.gc_body_store();

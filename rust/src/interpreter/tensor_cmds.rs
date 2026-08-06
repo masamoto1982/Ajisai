@@ -316,10 +316,9 @@ fn single_rational_operand(value: &Value) -> Result<Option<Fraction>> {
         ValueData::ExactScalar(er) => Ok(er.to_fraction()),
         ValueData::Vector(children) if children.len() == 1 => single_rational_operand(&children[0]),
         ValueData::Tensor { data, .. } if data.len() == 1 => Ok(data.get_small_fraction(0)),
-        ValueData::Vector(_) | ValueData::Tensor { .. } => Err(AjisaiError::create_structure_error(
-            "single-element number",
-            "multi-element vector",
-        )),
+        ValueData::Vector(_) | ValueData::Tensor { .. } => Err(
+            AjisaiError::create_structure_error("single-element number", "multi-element vector"),
+        ),
         ValueData::Text(_) => Err(AjisaiError::create_structure_error(
             "single-element number",
             "string",
@@ -419,8 +418,6 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
 fn quantize_on_stack(interp: &mut Interpreter, denominator: &Fraction) -> Result<()> {
     super::arithmetic::op_mul(interp)?;
     op_round(interp)?;
-    interp
-        .stack
-        .push(create_number_value(denominator.clone()));
+    interp.stack.push(create_number_value(denominator.clone()));
     super::arithmetic::op_div(interp)
 }

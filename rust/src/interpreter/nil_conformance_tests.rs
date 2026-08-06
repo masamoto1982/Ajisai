@@ -210,7 +210,10 @@ async fn projected_reason(code: &str) -> Option<String> {
         .execute(code)
         .await
         .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
-    let answer = interp.stack.last().expect("a projecting Word pushes an answer");
+    let answer = interp
+        .stack
+        .last()
+        .expect("a projecting Word pushes an answer");
     assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
     answer
         .absence_metadata()
@@ -258,7 +261,11 @@ async fn bubble_creation_quantize_projects_on_a_denominator_outside_its_domain()
 /// substituted a rational look-alike for it.
 #[tokio::test]
 async fn bubble_creation_str_projects_on_a_number_with_no_lexeme() {
-    for code in ["2 SQRT STR", "2 SQRT 3 SQRT ADD STR", "[ 1 2 ] 2 SQRT MUL STR"] {
+    for code in [
+        "2 SQRT STR",
+        "2 SQRT 3 SQRT ADD STR",
+        "[ 1 2 ] 2 SQRT MUL STR",
+    ] {
         assert_eq!(
             projected_reason(code).await.as_deref(),
             Some("invalidEncoding")
@@ -291,7 +298,10 @@ async fn bubble_creation_str_projects_on_a_number_with_no_lexeme() {
 #[tokio::test]
 async fn bubble_creation_nil_reason_projects_on_a_reasonless_value() {
     for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
-        assert_eq!(projected_reason(code).await.as_deref(), Some("notAvailable"));
+        assert_eq!(
+            projected_reason(code).await.as_deref(),
+            Some("notAvailable")
+        );
     }
 
     // Reading the projected NIL is what makes the registered reason

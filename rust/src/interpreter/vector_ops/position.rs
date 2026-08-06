@@ -84,11 +84,15 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     // miss stays attached to the position that missed it.
     let len = target_val.len();
     let select = |index: i64| -> Value {
-        if len == 0 { None } else { normalize_index(index, len) }
-            .and_then(|idx| target_val.child(idx))
-            .unwrap_or_else(|| {
-                Value::bubble_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
-            })
+        if len == 0 {
+            None
+        } else {
+            normalize_index(index, len)
+        }
+        .and_then(|idx| target_val.child(idx))
+        .unwrap_or_else(|| {
+            Value::bubble_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
+        })
     };
     let result_elem = match indices.as_slice() {
         [only] => select(*only),
