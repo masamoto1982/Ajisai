@@ -23,6 +23,10 @@ export type GuiEventBindingContext = {
     readonly persistence: Persistence;
     readonly switchArea: (mode: ViewMode) => void;
     readonly updateAllDisplays: () => void;
+    /// Discard every value on the stack, leaving the dictionary alone. Lives on
+    /// the context rather than being reached from here because the interpreter
+    /// client is owned by the application module.
+    readonly clearStack: () => void;
     readonly doSwitchDictionarySheet: (sheetId: string) => void;
 };
 
@@ -102,7 +106,7 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
 }
 
 function bindInteractionEvents(context: GuiEventBindingContext): void {
-    const { elements, vocabulary, editor, mobile, layoutState, switchArea, display, persistence, executionController } = context;
+    const { elements, vocabulary, editor, mobile, layoutState, switchArea, display, persistence, executionController, clearStack } = context;
     // Session-lived recall of submitted programs, so a run (which clears the
     // editor) and a Reset are both recoverable. See editor-history.ts.
     const history = createEditorHistory();
@@ -126,6 +130,10 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.mobileDictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
 
     elements.clearBtn.addEventListener('click', () => editor.clear());
+    // Same control, same corner, same gesture as clearing the editor — the
+    // Stack area's `×` throws away the values and keeps the dictionary, which
+    // is what separates it from Reset.
+    elements.stackClearBtn.addEventListener('click', () => clearStack());
     elements.formatBtn.addEventListener('click', () => editor.format());
 
     // Reformat the editor before running it, so the source that defines words
@@ -295,6 +303,16 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
             if (confirm('Are you sure you want to reset the system?')) {
                 executionController.executeReset();
             }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+        // Shift+Alt+C clears the stack, following Shift+Alt+F for Format. It is
+        // bound on the window rather than the editor because the Stack area can
+        // hold focus, and `e.code` so the binding does not move with the layout.
+        // No confirmation: unlike Reset this loses only values, and the same
+        // values are one re-run away.
+        if (e.code === 'KeyC' && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            clearStack();
             e.preventDefault();
             e.stopImmediatePropagation();
         }

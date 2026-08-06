@@ -1,10 +1,30 @@
 {
   "phase": 0,
   "policy": "No production GUI file may change during specification freeze phases 0 through 2.",
-  "roots": ["index.html", "src/gui", "src/styles"],
-  "surfaces": ["Input", "Output", "Stack", "Dictionary"],
+  "roots": [
+    "index.html",
+    "src/gui",
+    "src/styles"
+  ],
+  "surfaces": [
+    "Input",
+    "Output",
+    "Stack",
+    "Dictionary"
+  ],
   "desktopColumns": 2,
   "mobileVisibleSurfaces": 1,
-  "dictionarySheets": ["core", "user", "module"],
-  "shortcuts": ["Run → Shift+Enter", "Step → Ctrl+Enter", "Reset → Ctrl+Alt+Enter", "Abort → Escape"]
+  "dictionarySheets": [
+    "core",
+    "user",
+    "module"
+  ],
+  "shortcuts": [
+    "Run → Shift+Enter",
+    "Step → Ctrl+Enter",
+    "Reset → Ctrl+Alt+Enter",
+    "Abort → Escape",
+    "Format → Shift+Alt+F",
+    "Clear stack → Shift+Alt+C"
+  ]
 }

@@ -113,6 +113,13 @@
                 <section id="stack-panel" class="stack-area" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
+                    <!--
+                      Discarding the stack is the same gesture as clearing the
+                      editor, so it is the same control in the same place: an
+                      `×` at the top right of its own area. The dictionary is
+                      untouched — that is what separates this from Reset.
+                    -->
+                    <button id="stack-clear-btn" type="button" class="inline-clear-btn" aria-label="Clear stack" title="Clear stack (Shift+Alt+C)">&times;</button>
                 </section>
 
                 <section id="dictionary-panel" class="dictionary-area" aria-label="Dictionary" tabindex="0" hidden>
