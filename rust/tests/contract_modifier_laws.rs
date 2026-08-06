@@ -24,7 +24,7 @@ use ajisai_core::coreword_registry::{
 };
 use proptest::prelude::*;
 use test_support::generators::small;
-use test_support::observe::{render, run};
+use test_support::observe::{render, run, run_err};
 
 // ─────────────────────────── observation helpers ───────────────────────────
 
@@ -76,6 +76,66 @@ proptest! {
     fn total_words_do_not_error(a in small(), b in small(), w in binary_arith()) {
         prop_assert_eq!(depth(&format!("{a} {b} {w}")), 1);
     }
+}
+
+// ─────────────────── KEEP composes with abstraction (§6.2) ──────────────────
+
+/// `KEEP` modifies the *call*, not the body. A User Word is the only place the
+/// two readings can differ, and the body reading is unsound: it let the
+/// modifier reach the first consuming Word inside the body, so the body's own
+/// literals were preserved as if the caller had written them. Each case below
+/// returned a silently wrong stack before the boundary reading:
+/// `5 KEEP TWICE` answered `5 2 10`.
+#[test]
+fn keep_preserves_the_operands_of_a_user_word_call_not_its_body_literals() {
+    assert_eq!(obs("{ 2 * } 'TWICE' DEF 5 KEEP TWICE"), vec!["5/1", "10/1"]);
+    assert_eq!(obs("{ 1 - } 'DEC' DEF 5 KEEP DEC"), vec!["5/1", "4/1"]);
+    // A binary User Word retains both operands, matching the Core Word law.
+    assert_eq!(
+        obs("{ + } 'PLUS' DEF 3 5 KEEP PLUS"),
+        vec!["3/1", "5/1", "8/1"]
+    );
+    // Reaching below the operands it was handed is still one operand region:
+    // the body eats two and leaves one, and both eaten operands come back.
+    assert_eq!(
+        obs("{ + 5 - } 'F' DEF 3 5 KEEP F"),
+        vec!["3/1", "5/1", "3/1"]
+    );
+    // A Word that consumes nothing has no operand region, so `KEEP` retains
+    // nothing extra.
+    assert_eq!(obs("{ 7 } 'SEVEN' DEF 3 KEEP SEVEN"), vec!["3/1", "7/1"]);
+}
+
+/// The bifurcation law of `keep_is_bifurcation` holds for User Words too:
+/// `KEEP w` observes as the operands followed by the plain call's result.
+#[test]
+fn keep_is_bifurcation_across_abstraction() {
+    let mut expected = obs("3 5");
+    expected.extend(obs("{ + } 'PLUS' DEF 3 5 PLUS"));
+    assert_eq!(expected, obs("{ + } 'PLUS' DEF 3 5 KEEP PLUS"));
+}
+
+/// With `KEEP` settled at the call boundary, a total identity Word makes
+/// `KEEP` a total duplicator — one that works on the value domains no
+/// arithmetic or vector trick reaches (Text, truth values, code blocks).
+#[test]
+fn keep_over_a_total_identity_word_copies_any_value() {
+    let id = "{ 1 COLLECT [ 0 ] GET } 'ID' DEF ";
+    assert_eq!(
+        obs(&format!("{id} 'hello' KEEP ID")),
+        vec!["'hello'", "'hello'"]
+    );
+    assert_eq!(obs(&format!("{id} TRUE KEEP ID")), vec!["TRUE", "TRUE"]);
+    assert_eq!(obs(&format!("{id} 7 KEEP ID")), vec!["7/1", "7/1"]);
+}
+
+/// A `KEEP`-ed call that fails reports the failure. The modifier does not
+/// convert malformed use into a stack that looks like a successful bifurcation.
+#[test]
+fn a_failed_keep_call_reports_the_failure() {
+    // `EXEC` on a number is malformed use, so the call errors out.
+    let message = run_err("{ EXEC } 'BOOM' DEF 5 KEEP BOOM");
+    assert!(!message.is_empty());
 }
 
 // ─────────────────── projecting words bubble domain misses ──────────────────

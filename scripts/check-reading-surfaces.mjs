@@ -43,6 +43,10 @@ const EXAMPLE_NAMES = new Set([
   'TOTALL',
   // user words defined by the block-frame and two-argument examples
   'ADDW', 'PSUM', 'PDIFF', 'PMAX',
+  // the relaxation loop of the Iterative Numerics clause
+  'DELTA', 'STEP',
+  // the identity word the Stack clause uses to show KEEP copying any value
+  'ID', 'DOUBLE',
 ]);
 
 // Names the *host* allocates rather than the language: typed alone into the

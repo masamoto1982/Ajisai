@@ -1165,6 +1165,36 @@
       "standard_relation": "derivable"
     },
     {
+      "id": "core.quantize",
+      "kind": "coreword",
+      "surface": "QUANTIZE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/standard_derivation_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-quantize"
+      ],
+      "status": "Formalized",
+      "notes": "QUANTIZE — scaled nearest-integer projection, x' = ROUND(x*d)/d, bounding the denominator by d. Names the representation-size trade an iterative method must make explicitly, at the caller's resolution, instead of letting an exact denominator record the whole derivation.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "standard_relation": "derivable"
+    },
+    {
       "id": "core.comparison",
       "kind": "semantic-area",
       "surface": "EQ/LT/GT",

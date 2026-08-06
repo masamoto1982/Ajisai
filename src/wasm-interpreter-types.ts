@@ -192,6 +192,16 @@ export interface ExecuteResult {
     // a rational approximation. See SPEC §2.3.
     stackSnapshot?: string;
     userWords?: UserWord[];
+    /**
+     * On an ERROR result, the Words the failed run defined or deleted before it
+     * failed. The result carries no `userWords`, so the host keeps its
+     * pre-run dictionary and every one of these changes is thrown away — while
+     * the `output` above still holds the `Defined word:` line each one printed.
+     * The host reports these so those lines are corrected instead of left
+     * standing; without it a failed run silently loses definitions and the log
+     * claims Words the session does not contain.
+     */
+    discardedDictionaryChanges?: string[];
     errorFlowTrace?: ErrorFlowTraceEvent[];
 
     // Per-run cost-model activity: the counter delta across this execution,

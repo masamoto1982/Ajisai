@@ -772,6 +772,49 @@
       "standardKind": "algorithm"
     },
     {
+      "name": "QUANTIZE",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "denominatorIsNotAPositiveInteger",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "scalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round to the nearest multiple of 1/d, bounding the denominator by d.",
+        "hover": "QUANTIZE — nearest multiple of 1/d",
+        "lookup": "Round to the nearest multiple of 1/d, bounding the denominator by d. An exact number carries its whole history in its denominator, so an iterative method grows one without bound; quantizing each step keeps the representation the size of the answer rather than the size of the computation. Ties round away from zero, matching ROUND. A d that is not a positive integer projects to NIL.",
+        "syntax": "[ 119/125 32/125 ] 10 QUANTIZE",
+        "role": "Arithmetic primitive: bound the representation size of an exact number.",
+        "stackEffect": "[ x ] [ d ] -> [ x' ]"
+      },
+      "executorKey": "Quantize",
+      "effects": [],
+      "partiality": "projecting",
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
+    },
+    {
       "name": "ABS",
       "aliases": [],
       "family": "exactArithmetic",
@@ -1014,12 +1057,12 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Extract one element of a vector by index.",
-        "hover": "GET — extract element at index",
-        "lookup": "Extract one element of a vector by index.",
-        "syntax": "[ 10 20 30 ] [ 0 ] GET",
-        "role": "Random access into vectors and tensors.",
-        "stackEffect": "[ vec ] [ idx ] -> [ elem ]"
+        "summary": "Select elements of a vector by index.",
+        "hover": "GET — select elements at indices",
+        "lookup": "Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed.",
+        "syntax": "[ 10 20 30 ] [ 0 2 ] GET",
+        "role": "Random access into vectors and tensors, one position or many.",
+        "stackEffect": "[ vec ] [ idx.. ] -> [ elem | elems ]"
       },
       "executorKey": "Get",
       "effects": [],
@@ -1870,8 +1913,8 @@
       "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "noExactLexemeForValue",
+        "reason": "invalidEncoding"
       },
       "errorWhen": [],
       "purity": "pure",
@@ -1886,14 +1929,14 @@
       "documentation": {
         "summary": "Convert a value to its string representation.",
         "hover": "STR — convert to string",
-        "lookup": "Convert a value to its string representation.",
+        "lookup": "Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. QUANTIZE names an approximation explicitly when one is wanted.",
         "syntax": "42 STR",
         "role": "Cast primitive: Convert a value to its string representation.",
         "stackEffect": "[ x ] -> [ str ]"
       },
       "executorKey": "Str",
       "effects": [],
-      "partiality": "partial",
+      "partiality": "projecting",
       "category": "cast",
       "vocabularyTier": "kernel"
     },

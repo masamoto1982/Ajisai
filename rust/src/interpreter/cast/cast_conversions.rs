@@ -7,7 +7,31 @@ use crate::interpreter::value_extraction_helpers::{create_number_value, value_as
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
+
+/// Whether any number inside `value` has no lexeme in the sealed numeric
+/// grammar — an irrational the source language cannot spell.
+///
+/// The grammar writes integers and ratios and nothing else, so `2 SQRT` has no
+/// faithful text. `STR` used to answer with a continued-fraction convergent
+/// anyway: `'665857/470832'`, a *different number*, with no error and no NIL.
+/// That is precisely the silent-wrong-answer failure LANG.FAILURE.TRICHOTOMY
+/// rules out, and it was worst where it was least visible — `STR` is how a
+/// runtime value becomes a `number` token for `REFLECT`, so building a partial
+/// application over an exact irrational quietly replaced it with a rational
+/// look-alike, in the one value class exactness is the whole point of.
+fn has_no_exact_lexeme(value: &Value) -> bool {
+    match &value.data {
+        ValueData::ExactScalar(exact) => exact.to_fraction().is_none(),
+        ValueData::Vector(children) => children.iter().any(has_no_exact_lexeme),
+        ValueData::Boolean(_)
+        | ValueData::Text(_)
+        | ValueData::Scalar(_)
+        | ValueData::Tensor { .. }
+        | ValueData::Nil
+        | ValueData::CodeBlock(_) => false,
+    }
+}
 
 fn convert_value_to_string(val: &Value) -> Result<Value> {
     if val.is_nil() {
@@ -23,6 +47,19 @@ fn convert_value_to_string(val: &Value) -> Result<Value> {
             let string_repr = format_fraction_to_string(f);
             return Ok(Value::from_string(&string_repr));
         }
+    }
+
+    // No lexeme exists, so there is no text to answer with. `STR` bubbles the
+    // same reason `NUM` bubbles for text that denotes no number: the two are
+    // inverses, and this is the direction of the round trip that has no
+    // encoding. A program that wants a rational stand-in asks for one by name
+    // with `QUANTIZE`, where the denominator is the caller's choice and the
+    // approximation is visible in the source.
+    if has_no_exact_lexeme(val) {
+        return Ok(Value::bubble_with_reason(
+            NilReason::InvalidEncoding,
+            Recoverability::Recoverable,
+        ));
     }
 
     let string_repr = format_value_to_string_repr(val);

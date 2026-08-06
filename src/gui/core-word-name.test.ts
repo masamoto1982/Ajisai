@@ -19,8 +19,8 @@ interface WordEntry {
 const registry = JSON.parse(readFileSync('spec/words.json', 'utf8')) as { entries: WordEntry[] };
 
 describe('isCanonicalCoreWordName', () => {
-    test('the registry is the 57 canonical Words the Specification claims', () => {
-        expect(registry.entries).toHaveLength(57);
+    test('the registry is the 58 canonical Words the Specification claims', () => {
+        expect(registry.entries).toHaveLength(58);
     });
 
     test.each(registry.entries.map(word => word.name))('accepts the canonical name %s', name => {

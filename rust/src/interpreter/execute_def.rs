@@ -145,6 +145,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     interp
         .output_buffer
         .push_str(&format!("Defined word: {}\n", name));
+    interp.dictionary_changes_this_run.push(name.to_string());
 
     interp.bump_dictionary_epoch();
     Ok(())

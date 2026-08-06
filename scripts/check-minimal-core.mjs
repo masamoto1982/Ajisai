@@ -6,7 +6,7 @@ ADD MUL DIV FLOOR NEG SQRT
 GET LENGTH CONCAT COLLECT RANGE FOLD
 CHARS JOIN NUM STR
 COND EXEC NIL NIL? NIL-REASON VENT KEEP DEF DEL LOOKUP PRINT REFLECT`.split(/\s+/));
-const STANDARD = new Set(`OR NEQ LTE GTE SUB MOD ROUND ABS MIN MAX
+const STANDARD = new Set(`OR NEQ LTE GTE SUB MOD ROUND QUANTIZE ABS MIN MAX
 TAKE REVERSE FILL SORT INDEX-OF MAP FILTER ANY ALL
 TRIM TOKENIZE SUBSTITUTE`.split(/\s+/));
 const REMOVED = new Set(`CEIL SIGN INSERT REPLACE REMOVE SPLIT REORDER UNIQUE CONTAINS
@@ -15,7 +15,7 @@ const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
-const DERIVABLE = new Set(`OR NEQ LTE GTE SUB MOD ROUND ABS MIN MAX
+const DERIVABLE = new Set(`OR NEQ LTE GTE SUB MOD ROUND QUANTIZE ABS MIN MAX
 TAKE REVERSE INDEX-OF TRIM TOKENIZE SUBSTITUTE`.split(/\s+/));
 const OPERATIONAL = new Set('MAP FILTER ANY ALL FILL SORT'.split(/\s+/));
 
@@ -42,7 +42,7 @@ for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: une
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
 if (kernelWords.size !== 35) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 35`);
-if (standardWords.size !== 22) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 22`);
+if (standardWords.size !== 23) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 23`);
 
 const isPhaseOne = contracts.migration?.betaFreezePhase === 1;
 if (isPhaseOne) {
@@ -51,7 +51,7 @@ if (isPhaseOne) {
   for (const name of setDifference(REMOVED, pendingRemoval)) errors.push(`${name}: missing from phase 1 removal set`);
   for (const name of setDifference(pendingRemoval, REMOVED)) errors.push(`${name}: unclassified Word is not in the removal set`);
 } else {
-  if (words.length !== 57) errors.push(`canonical inventory has ${words.length} Words; expected 57`);
+  if (words.length !== 58) errors.push(`canonical inventory has ${words.length} Words; expected 58`);
   for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 }
 
@@ -124,7 +124,7 @@ if (errors.length) {
   process.exit(1);
 }
 console.log('[minimal-core] 35/35 Semantic Kernel Words have executable witnesses.');
-console.log('[minimal-core] 22/22 Standard Words have complete contracts and law witnesses.');
+console.log('[minimal-core] 23/23 Standard Words have complete contracts and law witnesses.');
 console.log(
   `[minimal-core] ${DERIVABLE.size}/${DERIVABLE.size} derivable Standards carry a Kernel-only witness; ` +
     `${OPERATIONAL.size}/${OPERATIONAL.size} operational Standards state a native retention reason.`,

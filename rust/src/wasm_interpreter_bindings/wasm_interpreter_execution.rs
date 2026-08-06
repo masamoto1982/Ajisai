@@ -43,6 +43,21 @@ impl AjisaiInterpreter {
                 // orphaned output from surfacing at the head of the next run.
                 set_js_prop(&obj, "output", &(self.interpreter.collect_output().into()));
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
+                // An ERROR result carries no `userWords`, which is the
+                // protocol's way of saying the run committed nothing to the
+                // dictionary. The run said otherwise while it was going: every
+                // `DEF` it reached printed `Defined word:`, and those lines are
+                // in the `output` above, still claiming a Word the host is
+                // about to discard. Naming what was discarded is what turns the
+                // report back into a true one.
+                let changes = self.interpreter.dictionary_changes_this_run();
+                if !changes.is_empty() {
+                    let names = js_sys::Array::new();
+                    for name in changes {
+                        names.push(&JsValue::from_str(name));
+                    }
+                    set_js_prop(&obj, "discardedDictionaryChanges", &names);
+                }
             }
         }
         Ok(obj.into())

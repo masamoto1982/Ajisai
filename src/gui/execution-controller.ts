@@ -7,6 +7,7 @@ import type {
 import {
     createExecutionSnapshot,
     collectUserWords,
+    describeFailedRunOutput,
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
@@ -151,7 +152,7 @@ export const createExecutionController = (
         } else {
             // Keep whatever the run printed before it failed: the host reports
             // it on the error path, and the error is written below it.
-            showError(result.message || 'Unknown error', result.output || '');
+            showError(result.message || 'Unknown error', describeFailedRunOutput(result));
             if (diagnosis) showInfo(diagnosis, true);
             return;
         }

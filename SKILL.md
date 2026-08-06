@@ -163,8 +163,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-57 canonical Words in one flat Core dictionary, of which
-35 form the Semantic Kernel and 22 are Standard Words. Both are
+58 canonical Words in one flat Core dictionary, of which
+35 form the Semantic Kernel and 23 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -189,12 +189,13 @@ no module system and nothing to import.
 | `MOD` | arithmetic | Modulo (remainder) of two numeric values. — e.g. `7 3 %` |
 | `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
+| `QUANTIZE` | arithmetic | Round to the nearest multiple of 1/d, bounding the denominator by d. — e.g. `[ 119/125 32/125 ] 10 QUANTIZE` |
 | `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
 | `NEG` | math | Numeric negation. — e.g. `2 NEG` |
 | `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |
 | `MAX` | math | Larger of two numbers. — e.g. `1 2 MAX` |
 | `SQRT` | math | Exact square root of a non-negative rational. — e.g. `2 SQRT` |
-| `GET` | vector | Extract one element of a vector by index. — e.g. `[ 10 20 30 ] [ 0 ] GET` |
+| `GET` | vector | Select elements of a vector by index. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
 | `TAKE` | vector | Take the first N or last -N elements of a vector. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
 | `CONCAT` | vector | Flatten and concatenate two vectors. — e.g. `[ 1 2 ] [ 3 4 ] CONCAT` |

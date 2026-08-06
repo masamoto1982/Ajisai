@@ -17,7 +17,12 @@
 
 import { describe, expect, it } from 'vitest';
 import type { AjisaiInterpreter, ExecuteResult, UserWord, Value } from '../wasm-interpreter-types';
-import { collectUserWords, createExecutionSnapshot, syncInterpreterState } from './interpreter-execution-utils';
+import {
+    collectUserWords,
+    createExecutionSnapshot,
+    describeFailedRunOutput,
+    syncInterpreterState
+} from './interpreter-execution-utils';
 import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 
 const num = (n: number): Value =>
@@ -155,5 +160,57 @@ describe('execution round trip with user words present', () => {
 
         expect(changes.dictionaryChanged).toBe(true);
         expect(changes.dictionarySheetId).toBe('user');
+    });
+});
+
+// A failed run's `Defined word:` lines outlive the definitions they announce:
+// `syncInterpreterState` ignores an ERROR result, so the session keeps its
+// pre-run dictionary. The tester who hit this lost seven definitions and only
+// noticed when `LOOKUP` answered `Unknown word` for a name the log said had
+// been defined.
+describe('describeFailedRunOutput', () => {
+    it('cancels the success lines of a run whose definitions were discarded', () => {
+        const reported = describeFailedRunOutput({
+            status: 'ERROR',
+            error: true,
+            output: 'Defined word: GY\nDefined word: LR\n',
+            discardedDictionaryChanges: ['GY', 'LR']
+        } as ExecuteResult);
+
+        expect(reported).toContain('Defined word: GY');
+        expect(reported).toContain('Rolled back 2 dictionary changes: GY, LR.');
+        // The correction reads after the claims it corrects, not before them.
+        expect(reported.indexOf('Rolled back')).toBeGreaterThan(reported.indexOf('Defined word: LR'));
+    });
+
+    it('counts a single change in the singular', () => {
+        const reported = describeFailedRunOutput({
+            status: 'ERROR',
+            error: true,
+            output: 'Defined word: GY\n',
+            discardedDictionaryChanges: ['GY']
+        } as ExecuteResult);
+
+        expect(reported).toContain('Rolled back 1 dictionary change: GY.');
+    });
+
+    it('leaves a failed run that changed no dictionary untouched', () => {
+        const reported = describeFailedRunOutput({
+            status: 'ERROR',
+            error: true,
+            output: 'partial trace\n'
+        } as ExecuteResult);
+
+        expect(reported).toBe('partial trace\n');
+    });
+
+    it('reports the correction alone when the run printed nothing else', () => {
+        const reported = describeFailedRunOutput({
+            status: 'ERROR',
+            error: true,
+            discardedDictionaryChanges: ['GY']
+        } as ExecuteResult);
+
+        expect(reported.startsWith('Rolled back 1 dictionary change: GY.')).toBe(true);
     });
 });

@@ -158,9 +158,11 @@ const PROJECTING_WORDS: &[&str] = &[
     "MOD",
     "NIL-REASON",
     "NUM",
+    "QUANTIZE",
     "RANGE",
     "ROUND",
     "SQRT",
+    "STR",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a
@@ -198,6 +200,90 @@ fn projecting_word_set_matches_registry() {
     );
 }
 
+/// Run `code`, require it to land on a NIL, and answer the reason that NIL
+/// carries. Shared by every Bubble-creation probe below: a projection is
+/// "NIL with the reason the contract registers" (LANG.FAILURE.PROJECT), so
+/// every probe asks the same two questions and only the reason differs.
+async fn projected_reason(code: &str) -> Option<String> {
+    let mut interp = Interpreter::new();
+    interp
+        .execute(code)
+        .await
+        .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+    let answer = interp
+        .stack
+        .last()
+        .expect("a projecting Word pushes an answer");
+    assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
+    answer
+        .absence_metadata()
+        .and_then(|absence| absence.reason.as_ref())
+        .map(|reason| reason.as_protocol_str().to_string())
+}
+
+/// Run `code` and answer the Text it leaves on top, for the non-projecting
+/// half of a probe.
+async fn text_answer(code: &str) -> Option<String> {
+    let mut interp = Interpreter::new();
+    interp
+        .execute(code)
+        .await
+        .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+    crate::interpreter::value_extraction_helpers::value_as_string(interp.stack.last().unwrap())
+}
+
+/// `QUANTIZE` projects on the condition it declares: a denominator that is not
+/// a positive integer is a well-formed operand outside the Word's domain, so it
+/// yields a reasoned NIL rather than an error — the `SQRT` of a negative rule.
+/// Malformed use (an operand that is not a single number at all) still raises.
+#[tokio::test]
+async fn bubble_creation_quantize_projects_on_a_denominator_outside_its_domain() {
+    for code in ["7 0 QUANTIZE", "7 -4 QUANTIZE", "7 3/2 QUANTIZE"] {
+        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
+    }
+
+    let mut malformed = Interpreter::new();
+    assert!(
+        malformed.execute("7 'ten' QUANTIZE").await.is_err(),
+        "a denominator that is not a number at all is malformed use, not a domain miss"
+    );
+}
+
+/// `STR` projects on the condition it declares: the sealed numeric grammar
+/// writes integers and ratios, so an exact irrational has no lexeme and there
+/// is no text to answer with.
+///
+/// It used to answer anyway, with a continued-fraction convergent — `2 SQRT STR`
+/// gave `'665857/470832'`, so `2 SQRT STR NUM` was a *different number* than
+/// `2 SQRT` with nothing on the stack to say so. That silence was worst inside
+/// `REFLECT`-based partial application, where `STR` is how a runtime value
+/// becomes a token: building a closure over an exact irrational quietly
+/// substituted a rational look-alike for it.
+#[tokio::test]
+async fn bubble_creation_str_projects_on_a_number_with_no_lexeme() {
+    for code in [
+        "2 SQRT STR",
+        "2 SQRT 3 SQRT ADD STR",
+        "[ 1 2 ] 2 SQRT MUL STR",
+    ] {
+        assert_eq!(
+            projected_reason(code).await.as_deref(),
+            Some("invalidEncoding")
+        );
+    }
+
+    // An exact real that collapses to a rational *does* have a lexeme, and a
+    // rational is spelled exactly. Only the irrational case projects.
+    assert_eq!(text_answer("4 SQRT STR").await.as_deref(), Some("2"));
+
+    // The escape hatch is a Word, not a silent default: the caller names the
+    // resolution, so the approximation is visible in the source.
+    assert_eq!(
+        text_answer("2 SQRT 10000 QUANTIZE STR").await.as_deref(),
+        Some("7071/5000")
+    );
+}
+
 /// `NIL-REASON` projects on the condition it declares: a value that is not an
 /// operational NIL carrying a reason has no reason to read, so the answer is
 /// NIL rather than an error. A reasoned NIL answers with its reason string.
@@ -212,31 +298,17 @@ fn projecting_word_set_matches_registry() {
 #[tokio::test]
 async fn bubble_creation_nil_reason_projects_on_a_reasonless_value() {
     for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
-        let mut interp = Interpreter::new();
-        interp
-            .execute(code)
-            .await
-            .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
-        let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
-        assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
         assert_eq!(
-            answer
-                .absence_metadata()
-                .and_then(|absence| absence.reason.as_ref())
-                .map(|reason| reason.as_protocol_str()),
-            Some("notAvailable"),
-            "`{code}` must project the reason its contract registers"
+            projected_reason(code).await.as_deref(),
+            Some("notAvailable")
         );
     }
 
     // Reading the projected NIL is what makes the registered reason
     // observable from inside the language.
-    let mut interp = Interpreter::new();
-    interp.execute("5 NIL-REASON NIL-REASON").await.unwrap();
-    let named = interp.stack.last().expect("NIL-REASON pushes an answer");
     assert_eq!(
-        crate::interpreter::value_extraction_helpers::value_as_string(named),
-        Some("notAvailable".to_string()),
+        text_answer("5 NIL-REASON NIL-REASON").await.as_deref(),
+        Some("notAvailable"),
         "the projected NIL must name its own reason"
     );
 

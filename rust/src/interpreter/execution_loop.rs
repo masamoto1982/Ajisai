@@ -437,6 +437,7 @@ impl Interpreter {
         self.runtime_limits.check_source_bytes(code.len())?;
         self.execution_step_count = 0;
         self.numeric_work_used = 0;
+        self.dictionary_changes_this_run.clear();
         // Source entry is the one place a token has a position, so it is the
         // one place the positions are recorded. They are index-aligned with
         // `tokens` and consumed by the depth-1 cursor in `execute_section_core`.
