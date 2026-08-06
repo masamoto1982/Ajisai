@@ -20,14 +20,6 @@ export interface DisplayState {
     readonly mainOutput: string;
 }
 
-export interface DisplayCallbacks {
-    /// Discard every value on the stack. The Stack area offers this because the
-    /// stack persists between runs — which is what a REPL should do — and until
-    /// there was a button for it the only way to drop a leftover intermediate
-    /// was the full reset, which takes the User dictionary with it.
-    readonly onClearStack?: () => void;
-}
-
 export interface Display {
     readonly init: () => void;
     readonly renderExecutionResult: (result: ExecuteResult) => void;
@@ -682,10 +674,7 @@ const renderJsonExportLinks = (jsonExportCommands: readonly string[], outputDisp
     });
 };
 
-export const createDisplay = (
-    elements: DisplayElements,
-    callbacks: DisplayCallbacks = {}
-): Display => {
+export const createDisplay = (elements: DisplayElements): Display => {
     let mainOutput = '';
     let mathViewEnabled = readMathViewPreference();
     let lastStack: Value[] = [];
@@ -717,22 +706,8 @@ export const createDisplay = (
         panel.appendChild(wrapper);
     };
 
-    const createClearButton = (): void => {
-        const panel = elements.stackDisplay.parentElement;
-        if (!panel || !callbacks.onClearStack || panel.querySelector('.stack-clear-btn')) return;
-
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'stack-clear-btn';
-        button.textContent = 'Clear';
-        button.title = 'Discard every value on the stack (the dictionary is kept)';
-        button.addEventListener('click', () => callbacks.onClearStack?.());
-        panel.appendChild(button);
-    };
-
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
-        createClearButton();
         createLatexToggle();
         AUDIO_ENGINE.init().catch(console.error);
     };
@@ -845,6 +820,11 @@ export const createDisplay = (
         const display = elements.stackDisplay;
         clearElement(display);
 
+        // The clear control follows the same rule the editor's does: it is not
+        // drawn when there is nothing to clear. The flag goes on the panel
+        // because the button is a sibling of the display, not a child.
+        display.parentElement?.classList.toggle('is-empty-stack', lastStack.length === 0);
+
         if (lastStack.length === 0) {
             display.classList.add('is-empty');
             const message = document.createElement('div');
@@ -866,15 +846,6 @@ export const createDisplay = (
         lastStack.forEach((item, index) => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
-            // Depth from the top, so the operand a word will read next is 0.
-            // The area flows bottom-up and wrap-reverse, which puts the top at
-            // the *right end of the top row* — readable while everything fits
-            // on one line and unreadable the moment it wraps. A number per
-            // value answers "which one is the top" without depending on where
-            // the row broke.
-            const depth = lastStack.length - 1 - index;
-            elem.dataset.stackDepth = String(depth);
-            if (depth === 0) elem.classList.add('stack-item-top');
             try {
                 const mathNode = mathViewEnabled ? renderMathValueNode(item) : null;
                 elem.appendChild(mathNode ?? renderStackValueNode(item, 1, budget));

@@ -161,19 +161,7 @@ export const createGUI = (): GUI => {
         mobile = createMobileHandler(extractMobileElements(elements), {
             onModeChange: (mode) => layoutController.setArea(mode)
         });
-        display = createDisplay(extractDisplayElements(elements), {
-            // Clearing the stack keeps the dictionary, which is the whole point
-            // of having it separate from the full reset. The handler reads
-            // `persistence` at call time because it is assigned further down.
-            onClearStack: () => {
-                const interpreter = INTERPRETER_CLIENT.getOptional();
-                if (!interpreter) return;
-                interpreter.clear_stack();
-                updateAllDisplays();
-                display.renderInfo('Stack cleared', false);
-                void persistence?.saveCurrentState();
-            }
-        });
+        display = createDisplay(extractDisplayElements(elements));
         display.init();
         updateEditorPlaceholder(elements, mobile);
 
@@ -257,6 +245,17 @@ export const createGUI = (): GUI => {
             persistence,
             switchArea: (mode) => layoutController.setArea(mode),
             updateAllDisplays,
+            // Clearing the stack keeps the dictionary — that is the whole point
+            // of having it apart from Reset — so it is the interpreter's
+            // `clear_stack` and nothing else, followed by a redraw and a save.
+            clearStack: () => {
+                const interpreter = INTERPRETER_CLIENT.getOptional();
+                if (!interpreter) return;
+                interpreter.clear_stack();
+                updateAllDisplays();
+                display.renderInfo('Stack cleared', false);
+                void persistence.saveCurrentState();
+            },
             doSwitchDictionarySheet,
             layoutController
         });

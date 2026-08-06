@@ -37,6 +37,7 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     'Run → Shift+Enter',
     'Step → Ctrl+Enter',
     'Format → Shift+Alt+F',
+    'Clear stack → Shift+Alt+C',
     'Suggestions → Ctrl+Space',
     'Recall → Ctrl+Up / Ctrl+Down',
     'Reset → Ctrl+Alt+Enter',
