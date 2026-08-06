@@ -21,6 +21,7 @@ export interface ExecutionCallbacks {
     readonly updateEditorValue: (value: string) => void;
     readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
+    readonly highlightSourceRange: (start: number, end: number) => void;
     readonly showDocumentation: (text: string) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
@@ -52,6 +53,7 @@ export const createExecutionController = (
         updateEditorValue,
         insertEditorText,
         showInfo,
+        highlightSourceRange,
         showDocumentation,
         showError,
         showExecutionResult,
@@ -65,6 +67,7 @@ export const createExecutionController = (
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
         extractEditorValue,
         showInfo,
+        highlightSourceRange,
         showError,
         showExecutionResult,
         updateDisplays,

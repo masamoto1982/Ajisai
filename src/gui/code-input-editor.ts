@@ -21,6 +21,13 @@ export interface Editor {
      * panel and leave Abort alone.
      */
     readonly dismissSuggestions: () => boolean;
+    /**
+     * Select the character range `[start, end)` of the *trimmed* source — the
+     * text `extractValue` returns — and scroll it into view. Step mode uses
+     * this to point at the token it is about to run; an empty range collapses
+     * the selection, which is how step mode says it has finished.
+     */
+    readonly revealRange: (start: number, end: number) => void;
     readonly registerContentChangeCallback: (callback: (content: string) => void) => void;
 }
 
@@ -473,6 +480,22 @@ export const createEditor = (
         return true;
     };
 
+    // Offsets arrive measured against the trimmed source (what `extractValue`
+    // hands out), so they are shifted by whatever leading whitespace the raw
+    // value carries before being applied to the textarea. Selecting the range
+    // is the whole mechanism: a textarea scrolls its selection into view, so
+    // the token being stepped stays visible without an overlay to keep in sync
+    // with the text.
+    const revealRange = (start: number, end: number): void => {
+        const raw = element.value;
+        const offset = raw.length - raw.trimStart().length;
+        const from = Math.min(offset + start, raw.length);
+        const to = Math.min(offset + end, raw.length);
+        focusElement(element);
+        updateSelectionRange(element, from, to);
+        syncLastKnownSelection();
+    };
+
     return {
         extractValue,
         updateValue,
@@ -483,6 +506,7 @@ export const createEditor = (
         format,
         focus,
         dismissSuggestions,
+        revealRange,
         registerContentChangeCallback
     };
 };
