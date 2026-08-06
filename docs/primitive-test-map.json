@@ -7,7 +7,7 @@
     "primitives": 23,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 17,
-    "distinct_conformance_cases": 60
+    "distinct_conformance_cases": 61
   },
   "primitives": [
     {
@@ -204,14 +204,15 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
       "status": "accepted",
-      "derived_word_count": 5,
+      "derived_word_count": 6,
       "law_test_count": 5,
-      "conformance_case_count": 2,
+      "conformance_case_count": 3,
       "derived_words": [
         "core.exact-real.sqrt",
         "core.floor",
         "core.mod",
         "core.num",
+        "core.quantize",
         "core.round"
       ],
       "law_tests": [
@@ -223,6 +224,7 @@
       ],
       "conformance_cases": [
         "standard-mod",
+        "standard-quantize",
         "standard-round"
       ]
     },
@@ -325,9 +327,9 @@
       "algebraic_family": "bubble",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 14,
+      "derived_word_count": 15,
       "law_test_count": 4,
-      "conformance_case_count": 13,
+      "conformance_case_count": 14,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
@@ -341,6 +343,7 @@
         "core.mod",
         "core.mul",
         "core.neq",
+        "core.quantize",
         "core.round",
         "core.sub"
       ],
@@ -362,6 +365,7 @@
         "standard-lte",
         "standard-mod",
         "standard-neq",
+        "standard-quantize",
         "standard-round",
         "standard-sub"
       ]
