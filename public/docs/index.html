@@ -690,6 +690,8 @@
                         </table>
                     </div>
                     <p><code>KEEP</code> prefixes the <em>next word only</em>, and it carries no symbol — it is written out. That is the whole modifier system: one explicit operation for the non-default behavior, and no Forth-style stack shufflers to go with it. Everything else about how a word behaves is in the word itself, so reading a call means reading a name and at most one prefix.</p>
+                    <p>The word it prefixes may be one of your own, and it means the same thing there: <code>KEEP</code> retains the operands of <strong>the call</strong>, never anything the body happens to use inside itself. Given <code>{ 2 MUL } 'DOUBLE' DEF</code>, <code>5 KEEP DOUBLE</code> is <code>5/1 10/1</code> — the body's own <code>2</code> is the body's business and never reaches your stack.</p>
+                    <p>One consequence is worth keeping in your pocket. A word that gives back exactly what it was handed — <code>{ 1 COLLECT [ 0 ] GET } 'ID' DEF</code>, which wraps a value and unwraps it again — turns <code>KEEP</code> into a copier for <em>any</em> value: <code>'hi' KEEP ID</code> leaves two strings, and the same works for truth values and code blocks, which no arithmetic trick reaches.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -805,7 +807,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">The remaining numeric words live here too: <code>ABS</code> and <code>NEG</code> for sign, <code>MIN</code> and <code>MAX</code> over two numbers, <code>SQRT</code>, and the rounding pair <code>FLOOR</code> and <code>ROUND</code>. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
+                    <p class="ref-note">The remaining numeric words live here too: <code>ABS</code> and <code>NEG</code> for sign, <code>MIN</code> and <code>MAX</code> over two numbers, <code>SQRT</code>, the rounding pair <code>FLOOR</code> and <code>ROUND</code>, and <code>QUANTIZE</code>, which rounds to the nearest multiple of <code>1/d</code> and is the one to reach for in a loop — see <a href="#iterative">Iterative Numerics</a>. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
                 </section>
 
                 <section id="comparison" class="ref-page">
@@ -1185,6 +1187,26 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
+                    <p><code>GET</code> takes as many indices as you give it. One index answers with the element itself; several answer with a vector of the selections, in the order the indices name them — so picking out a few positions, reordering, or reversing is one call, and an index that names nothing leaves a <code>NIL</code> at that position rather than spoiling the rest.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 20 30 40 ] [ 2 0 ] GET</code></td>
+                                    <td><code>[ 30/1 10/1 ]</code></td>
+                                    <td class="notes">The answer follows the indices, not the vector: this is a gather, and the same call shape reorders or permutes.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1521,7 +1543,7 @@
                         </div>
                     </div>
                     <p>When you do need a position rather than a reduction, read it with <code>GET</code>: <code>[ 0 ] GET</code> is the first element and <code>[ -1 ] GET</code> the last, so <code>{ SORT [ -1 ] GET } 'PMAX' DEF</code> answers the larger of a pair. <code>REVERSE</code> is the vector's swap, and <code>TAKE</code> with <code>CONCAT</code> rebuilds a vector from slices of one.</p>
-                    <p class="ref-note">The one duplication device is <code>KEEP</code>. Prefixed to a word that reads one value and pushes one, it leaves the operand underneath the result, so <code>KEEP REVERSE REVERSE</code> is a two-line way to write "copy the vector on top". Prefixed to a two-operand word it keeps <em>both</em> operands, which is rarely what you want: <code>[ 10 3 ] KEEP [ 0 ] GET</code> leaves the index vector on the stack as well.</p>
+                    <p class="ref-note">The one duplication device is <code>KEEP</code>. Prefixed to a word that reads one value and pushes one, it leaves the operand underneath the result, so <code>KEEP REVERSE REVERSE</code> copies the vector on top and <code>KEEP ID</code> — with the identity word of <a href="#stack">Stack and Modifiers</a> — copies a value of any kind at all. Prefixed to a two-operand word it keeps <em>both</em> operands, which is rarely what you want: <code>[ 10 3 ] KEEP [ 0 ] GET</code> leaves the index vector on the stack as well.</p>
 
                     <h3>Code as data</h3>
                     <p>A code block and a vector are <strong>different kinds of value</strong>: a vector is data and is never executable, and <code>EXEC</code> accepts only a code block. <code>REFLECT</code> is the one crossing between them. It turns a code block into a canonical vector of token records — and turns that vector back into the block — without evaluating anything and without consulting the dictionary.</p>
@@ -1567,6 +1589,7 @@
                     <h4>Putting a runtime value inside a block</h4>
                     <p>A block is source, so a value you computed while the program was running is not in it. <code>MAP</code> and <code>FILTER</code> take a block and nothing else, which raises a real question: how do you filter by a threshold you only learn at run time? <code>{ 5 LT }</code> tests against a literal five, and there is no five to write when the number came out of the program.</p>
                     <p><code>REFLECT</code> answers it in both directions. Build the token records for the block you want — with the runtime value converted to its lexeme by <code>STR</code> — and cross back into a block with <code>REFLECT</code>. The result is an ordinary block, and every word that takes one accepts it.</p>
+                    <p class="ref-note">This is the one place where a number without a lexeme shows up as a limit. The numeric grammar writes integers and ratios, so an exact irrational such as <code>2 SQRT</code> has no spelling for <code>STR</code> to produce and <code>STR</code> answers <code>NIL</code> with reason <code>invalidEncoding</code> rather than a rational that is nearly it. To embed one, choose a resolution and say so: <code>2 SQRT 10000 QUANTIZE STR</code> is <code>'7071/5000'</code>, and the approximation is in your source where you can see it.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1879,10 +1902,84 @@ COND</code></td>
                     <p class="ref-note">Word names are case-insensitive (<code>add10</code> and <code>ADD10</code> are the same word) and conventionally follow an action-object style such as <code>APPLY-GAIN</code>. How a name is matched to a definition is the subject of <a href="#dictionaries">Dictionaries and Word Identity</a>.</p>
                 </section>
 
+
+                <section id="iterative" class="ref-page">
+                    <h2>Iterative Numerics</h2>
+                    <p>Exact arithmetic changes what a loop costs. Every other section of this Reference is about what a program <em>means</em>; this one is about what repeating it <em>costs</em>, because that is the one place where exactness asks something of you in return.</p>
+                    <h3>Where the cost comes from</h3>
+                    <p>An exact rational is stored as a numerator over a denominator, and a fraction times a fraction has the product of the denominators. Multiply once and nothing happens. Multiply in a loop — which is what gradient descent, Newton&#39;s method, k-means, the power method and every other iterative scheme do — and the denominator grows step over step. Nothing is lost and nothing is approximated; the number is exactly right. It is just that the digits are recording <strong>how the value was computed</strong>, and the history is longer every round.</p>
+                    <p>Here is a relaxation step, <code>x</code> moving a tenth of the way toward 2 each time. <code>DELTA</code> is the correction and <code>STEP</code> applies it; the loop is a <code>FOLD</code> over a range whose elements are only a counter, so the block discards the element and keeps the accumulator.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ 2 SUB 1/10 MUL } 'DELTA' DEF<br>{ KEEP DELTA NEG ADD } 'STEP' DEF<br>[ 0 6 ] RANGE 10 { 2 COLLECT [ 0 ] GET STEP } FOLD</code></td>
+                                    <td><code>7282969/1250000</code></td>
+                                    <td class="notes">Six steps from 10. Already a 7-digit denominator; the value is about 5.83.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p>The shape of the growth is the problem, not the size of any one number. Twenty steps of the same loop answer <code>359418989131512359209/125000000000000000000</code> — 21 digits over 21 digits, for a value near 2.875. Each further step multiplies the denominator by ten again, so the cost per step rises without bound while the answer barely moves. This is worth knowing before you meet it: a loop that runs instantly for thirty iterations can crawl at three hundred.</p>
+                    <h3>QUANTIZE: naming the resolution</h3>
+                    <p><code>QUANTIZE</code> rounds a value to the nearest multiple of <code>1/d</code>, so its denominator divides <code>d</code> and can never grow past it. Applied once per step, it throws away the derivation and keeps the value:</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ 2 SUB 1/10 MUL } 'DELTA' DEF<br>{ KEEP DELTA NEG ADD 1000 QUANTIZE } 'STEP' DEF<br>[ 0 20 ] RANGE 10 { 2 COLLECT [ 0 ] GET STEP } FOLD</code></td>
+                                    <td><code>2877/1000</code></td>
+                                    <td class="notes">Twenty steps, and the denominator is still 1000. The unquantized run answers 2.875351&hellip; — the same number to the resolution that was asked for.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p>This is an approximation, and that is the point: it is one you <strong>wrote down</strong>. The resolution is a literal in the source, at a place you chose, and every value downstream of it is exactly a multiple of <code>1/d</code>. Nothing is rounded behind your back, and nothing decides for you how much precision an answer deserves.</p>
+                    <p><code>QUANTIZE</code> lifts over vectors like the other arithmetic words, so a whole parameter vector is quantized in one call, and at <code>d</code> equal to 1 it is exactly <code>ROUND</code>.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 119/125 32/125 ] 10 QUANTIZE</code></td>
+                                    <td><code>[ 1/1 3/10 ]</code></td>
+                                    <td class="notes">One call per step, whatever the shape of the state.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>A closed form beats a loop</h3>
+                    <p>Before reaching for an iterative method, check whether the problem has a closed form — because in exact arithmetic that is not merely faster, it is a different kind of answer. Least squares, ridge regression with a rational penalty, k-nearest neighbours, naive Bayes over rational probabilities, a Gini-split decision tree, the perceptron and the simplex method all have exact solutions with no iteration in them, and Ajisai returns the coefficients as the rationals they are rather than as the nearest representable float. An <code>R²</code> that comes back as <code>529/532</code> is not an artefact of the language; it is the answer.</p>
+                    <p class="ref-note">Transcendental functions — an exponential, a logarithm, an arbitrary power — are not in the vocabulary, because no rational answer to them exists and Ajisai does not return numbers it cannot justify. Methods built on them (logistic regression, softmax, cross-entropy, a Gaussian likelihood) are outside what this language computes, and <code>SQRT</code> is the one irrational it does construct, exactly, as an algebraic number.</p>
+                </section>
+
                 <section id="dictionaries" class="ref-page">
                     <h2>Dictionaries and Word Identity</h2>
-                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 57 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
-                    <p>Those 57 words divide into a <strong>35-word Semantic Kernel</strong> and <strong>22 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 57 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
+                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 58 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
+                    <p>Those 58 words divide into a <strong>35-word Semantic Kernel</strong> and <strong>23 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 58 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
                     <p>A name resolves in Core or in User, and User never shadows Core. A word&#39;s name is therefore its whole address — there is no qualified form, no dictionary to select, and no way for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same word.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -2021,6 +2118,7 @@ COND</code></td>
                     <li><a href="#cond">Conditionals</a></li>
                     <li><a href="#strings">Strings</a></li>
                     <li><a href="#define">Defining Words</a></li>
+                    <li><a href="#iterative">Iterative Numerics</a></li>
                     <li><a href="#dictionaries">Dictionaries and Word Identity</a></li>
                     <li><a href="#output">Output</a></li>
                 </ul>
