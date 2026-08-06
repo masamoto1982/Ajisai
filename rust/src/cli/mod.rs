@@ -204,6 +204,13 @@ fn error_report(
     trace: Vec<crate::interpreter::error_flow_trace::ErrorFlowEvent>,
     _opts: &Opts,
 ) -> Report {
+    // Every error gets the position, not only the ones raised by a Word: the
+    // execution loop attaches it to the traced diagnosis, and this covers the
+    // rest (a malformed vector literal, a source-entry limit) from the cursor
+    // the interpreter still holds.
+    let diagnosis = diagnosis
+        .clone()
+        .with_source_position(interp.current_source_position());
     let ai = diagnosis.ai_payload(category, None, None, None);
     Report {
         status: "error",
@@ -211,12 +218,19 @@ fn error_report(
         stack_display: stack_display(interp),
         output,
         message: Some(message),
-        diagnosis: Some(diagnosis.clone()),
+        diagnosis: Some(diagnosis),
         ai_diagnostic: Some(ai),
         error_flow_trace: trace,
         runtime_metrics: interp.runtime_metrics(),
         contract_decls: None,
     }
+}
+
+/// Read one `key=value` evidence entry.
+fn evidence_value<'a>(evidence: &'a [String], key: &str) -> Option<&'a str> {
+    evidence
+        .iter()
+        .find_map(|entry| entry.strip_prefix(key)?.strip_prefix('='))
 }
 
 fn print_payloads(interp: &Interpreter) -> Vec<String> {
@@ -519,6 +533,12 @@ fn emit(report: &Report, opts: &Opts) {
         // telling "the word was called with too few operands" apart from "the
         // word consumed more than it should have" — so print them next to the
         // summary rather than only in `--json`.
+        if let (Some(line), Some(column)) = (
+            evidence_value(&diagnosis.evidence, "sourceLine"),
+            evidence_value(&diagnosis.evidence, "sourceColumn"),
+        ) {
+            eprintln!("  at line {}, column {}", line, column);
+        }
         for line in &diagnosis.evidence {
             if line.starts_with("stackLen") {
                 eprintln!("  {}", line);

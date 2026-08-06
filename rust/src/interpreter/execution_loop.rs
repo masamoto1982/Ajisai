@@ -169,128 +169,6 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
 }
 
 impl Interpreter {
-    pub(crate) fn collect_vector(
-        &mut self,
-        tokens: &[Token],
-        start_index: usize,
-    ) -> Result<(Vec<Value>, usize, Interpretation)> {
-        Self::collect_vector_with_depth(tokens, start_index, 1)
-    }
-
-    pub(crate) fn collect_vector_with_depth(
-        tokens: &[Token],
-        start_index: usize,
-        depth: usize,
-    ) -> Result<(Vec<Value>, usize, Interpretation)> {
-        if !matches!(&tokens[start_index], Token::VectorStart) {
-            return Err(AjisaiError::from("Expected vector start"));
-        }
-
-        // Guard against unbounded nesting before recursing. Without this, a few
-        // thousand levels of `[ [ [ ... ] ] ]` from plain source build a value
-        // so deeply nested that recursively displaying or dropping it overflows
-        // the native stack and aborts the process (a WASM trap). Rejecting here
-        // keeps the value — and every later traversal of it — within a depth the
-        // stack can handle, surfaced as a recoverable error.
-        if depth > crate::interpreter::MAX_VECTOR_NESTING_DEPTH {
-            return Err(AjisaiError::from(format!(
-                "Vector nesting too deep (limit {})",
-                crate::interpreter::MAX_VECTOR_NESTING_DEPTH
-            )));
-        }
-
-        let mut values = Vec::new();
-        let mut i = start_index + 1;
-        let mut has_bool: bool = false;
-        let mut has_number: bool = false;
-        let mut has_other: bool = false;
-
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::VectorStart => {
-                    // Hint 伝播フロー:
-                    // collect_vector_with_depth(inner) -> nested_hint
-                    //   -> Value::from_vector_with_hint(nested_values, nested_hint)
-                    //   -> value_to_arena が Value.hint をそのまま Node hint として採用
-                    // これにより、ネスト深度に依存せず明示 hint を維持する。
-                    let (nested_values, consumed, nested_hint) =
-                        Self::collect_vector_with_depth(tokens, i, depth + 1)?;
-                    values.push(Value::from_vector_promoted_with_hint(
-                        nested_values,
-                        nested_hint,
-                    ));
-                    has_other = true;
-                    i += consumed;
-                }
-                Token::VectorEnd => {
-                    let element_hint: Interpretation = if has_other {
-                        Interpretation::Unassigned
-                    } else if has_bool && !has_number {
-                        Interpretation::TruthValue
-                    } else if has_number && !has_bool {
-                        Interpretation::RawNumber
-                    } else {
-                        Interpretation::Unassigned
-                    };
-                    return Ok((values, i - start_index + 1, element_hint));
-                }
-                Token::Number(n) => {
-                    values.push(Value::from_number(
-                        Fraction::from_str(n).map_err(AjisaiError::from)?,
-                    ));
-                    has_number = true;
-                    i += 1;
-                }
-                Token::String(s) => {
-                    values.push(Value::from_string(s));
-                    has_other = true;
-                    i += 1;
-                }
-                Token::Symbol(s) => {
-                    let upper = Self::normalize_symbol(s);
-                    match upper.as_ref() {
-                        "TRUE" => {
-                            values.push(Value::from_bool(true));
-                            has_bool = true;
-                        }
-                        "FALSE" => {
-                            values.push(Value::from_bool(false));
-                            has_bool = true;
-                        }
-                        "NIL" => {
-                            values.push(Value::nil());
-                            has_other = true;
-                        }
-                        _ => {
-                            // LANG.VALUES.VECTOR: inside a Vector literal a name is
-                            // data — its own text as a String — and no dictionary
-                            // lookup occurs. Only TRUE / FALSE / NIL (handled above)
-                            // denote values. This is what makes `[ FOO ]` denote the
-                            // same Vector under every dictionary state instead of
-                            // executing FOO when it happens to be a defined word,
-                            // and it is why a misspelled name here is an element
-                            // rather than an error.
-                            values.push(Value::from_string(s));
-                            has_other = true;
-                        }
-                    }
-                    i += 1;
-                }
-                Token::CondClauseSep => {
-                    // ControlDirective: '|' -> COND-CLAUSE (see surface_forms.rs).
-                    return Err(AjisaiError::from(
-                        "Unexpected '|' separator outside COND clause parsing. \
-                         '|' is control directive sugar for COND-CLAUSE and is meaningful only inside a COND expression.",
-                    ));
-                }
-                _ => {
-                    i += 1;
-                }
-            }
-        }
-        Err(AjisaiError::from("Unclosed vector"))
-    }
-
     /// Synchronous single-line entry point used by the WASM step controller.
     #[cfg(feature = "wasm")]
     pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
@@ -306,10 +184,31 @@ impl Interpreter {
         // the source-entry numeric ceiling; dynamically reflected tokens may
         // not bypass it.
         self.check_source_numeric_literals(&tokens[start_index..])?;
+
+        // Depth 1 is the program's own token stream, the one `source_spans`
+        // describes. A nested block, a word body or a COND clause is a
+        // different stream with no source of its own, so the cursor is left
+        // pointing at the top-level token that reached it — which is exactly
+        // the token a reader needs to be sent to.
+        self.section_depth += 1;
+        let track = self.section_depth == 1 && !self.source_spans.is_empty();
+        let result = self.execute_section_tokens(&tokens[start_index..], start_index, track);
+        self.section_depth -= 1;
+        result
+    }
+
+    fn execute_section_tokens(
+        &mut self,
+        execute_tokens: &[Token],
+        start_index: usize,
+        track_source_position: bool,
+    ) -> Result<usize> {
         let mut i: usize = 0;
-        let execute_tokens: &[Token] = &tokens[start_index..];
 
         while i < execute_tokens.len() {
+            if track_source_position {
+                self.current_source_span = self.source_spans.get(start_index + i).copied();
+            }
             match &execute_tokens[i] {
                 Token::Number(n) => {
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
@@ -409,12 +308,18 @@ impl Interpreter {
                                 }
                                 Err(err) => {
                                     let category = ErrorCategory::from_error(&err);
+                                    // The top-level token that reached this
+                                    // failure. Every frame on the way out pushes
+                                    // an event and the outermost one wins, so
+                                    // the position a reader is sent to is the
+                                    // token they actually wrote.
                                     let diagnosis = DebugDiagnosis::from_error(
                                         &err,
                                         Some(upper.as_ref()),
                                         stack_len_before,
                                         self.stack.len(),
-                                    );
+                                    )
+                                    .with_source_position(self.current_source_span);
                                     self.push_error_flow_trace(ErrorFlowEvent {
                                         kind: ErrorFlowEventKind::WordError,
                                         word: Some(upper.to_string()),
@@ -532,7 +437,12 @@ impl Interpreter {
         self.runtime_limits.check_source_bytes(code.len())?;
         self.execution_step_count = 0;
         self.numeric_work_used = 0;
-        let tokens: Vec<Token> = crate::tokenizer::tokenize(code)?;
+        // Source entry is the one place a token has a position, so it is the
+        // one place the positions are recorded. They are index-aligned with
+        // `tokens` and consumed by the depth-1 cursor in `execute_section_core`.
+        let (tokens, spans) = crate::tokenizer::tokenize_with_spans(code)?;
+        self.source_spans = spans;
+        self.current_source_span = None;
         self.check_source_numeric_literals(&tokens)?;
         let lines: Vec<ExecutionLine> = self.split_tokens_to_lines(&tokens)?;
         self.execute_guard_structure(&lines)?;

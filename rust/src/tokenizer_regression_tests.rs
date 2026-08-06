@@ -434,3 +434,52 @@ mod tokenizer_regression_tests {
         );
     }
 }
+
+// ── Source positions ──────────────────────────────────────────────────────
+// An Ajisai error used to say what went wrong and nothing about where, so
+// finding the fault in a six-line program meant running it a line at a time.
+// The tokenizer now records a 1-based line and column per token, index-aligned
+// with the tokens themselves.
+#[cfg(test)]
+mod source_span_tests {
+    use crate::tokenizer::{tokenize, tokenize_with_spans};
+
+    #[test]
+    fn spans_are_index_aligned_with_tokens() {
+        let source = "1 2 ADD\n[ 3 ] LENGTH";
+        let (tokens, spans) = tokenize_with_spans(source).unwrap();
+        assert_eq!(tokens.len(), spans.len());
+        assert_eq!(tokens, tokenize(source).unwrap(), "the wrapper agrees");
+    }
+
+    #[test]
+    fn a_token_carries_the_line_and_column_it_was_written_at() {
+        let (tokens, spans) = tokenize_with_spans("1 2 ADD\n  BADWORD").unwrap();
+        let index = tokens
+            .iter()
+            .position(|t| matches!(t, crate::types::Token::Symbol(s) if s.as_ref() == "BADWORD"))
+            .expect("BADWORD is a token");
+        assert_eq!(spans[index].line, 2);
+        assert_eq!(spans[index].column, 3, "columns are 1-based characters");
+    }
+
+    #[test]
+    fn a_comment_does_not_shift_the_positions_after_it() {
+        let (tokens, spans) = tokenize_with_spans("# note\n42 ADD").unwrap();
+        let index = tokens
+            .iter()
+            .position(|t| matches!(t, crate::types::Token::Number(n) if n.as_ref() == "42"))
+            .expect("42 is a token");
+        assert_eq!((spans[index].line, spans[index].column), (2, 1));
+    }
+
+    #[test]
+    fn a_string_literal_is_positioned_at_its_opening_quote() {
+        let (tokens, spans) = tokenize_with_spans("PRINT 'hi there'").unwrap();
+        let index = tokens
+            .iter()
+            .position(|t| matches!(t, crate::types::Token::String(_)))
+            .expect("the string is a token");
+        assert_eq!((spans[index].line, spans[index].column), (1, 7));
+    }
+}

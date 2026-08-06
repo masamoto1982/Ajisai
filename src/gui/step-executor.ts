@@ -6,16 +6,23 @@ import {
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
+import { tokenizeWithOffsets, type StepToken } from './step-tokens';
 
 export interface StepState {
     readonly active: boolean;
-    readonly tokens: readonly string[];
+    readonly tokens: readonly StepToken[];
     readonly currentIndex: number;
 }
 
 export interface StepExecutorCallbacks {
     readonly extractEditorValue: () => string;
     readonly showInfo: (text: string, append: boolean) => void;
+    /// Show the reader where execution has got to, by selecting the token that
+    /// is about to run. Step mode used to report only "Step 4/9" and the
+    /// token's text, so following a run meant counting tokens by eye against
+    /// the source — exactly the accounting the step view exists to remove.
+    /// Called with an empty range when step mode ends.
+    readonly highlightSourceRange: (start: number, end: number) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
@@ -36,10 +43,7 @@ const createInitialState = (): StepState => ({
     currentIndex: 0
 });
 
-const tokenize = (code: string): string[] =>
-    code.split(/\s+/).filter(token => token.length > 0);
-
-const createActiveState = (tokens: string[]): StepState => ({
+const createActiveState = (tokens: StepToken[]): StepState => ({
     active: true,
     tokens,
     currentIndex: 0
@@ -66,6 +70,7 @@ export const createStepExecutor = (
     const {
         extractEditorValue,
         showInfo,
+        highlightSourceRange,
         showError,
         showExecutionResult,
         updateDisplays,
@@ -78,6 +83,7 @@ export const createStepExecutor = (
 
     const reset = (): void => {
         state = createInitialState();
+        highlightSourceRange(0, 0);
     };
 
     const abort = (): void => {
@@ -93,7 +99,7 @@ export const createStepExecutor = (
         const code = extractEditorValue();
         if (!code) return;
 
-        const tokens = tokenize(code);
+        const tokens = tokenizeWithOffsets(code);
 
         if (tokens.length === 0) {
             showInfo('No code', true);
@@ -117,13 +123,16 @@ export const createStepExecutor = (
         const token = state.tokens[state.currentIndex]!;
 
         try {
+            // Mark the token before running it, so the highlight always shows
+            // what is *about* to happen rather than what just did.
+            highlightSourceRange(token.start, token.end);
             showInfo(
-                formatStepMessage(state.currentIndex, state.tokens.length, token),
+                formatStepMessage(state.currentIndex, state.tokens.length, token.text),
                 false
             );
 
             const currentState = createExecutionSnapshot(interpreter);
-            const result = await WORKER_MANAGER.execute(token, currentState);
+            const result = await WORKER_MANAGER.execute(token.text, currentState);
 
             try {
                 syncInterpreterState(interpreter, result);

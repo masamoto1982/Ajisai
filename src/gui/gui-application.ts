@@ -233,6 +233,7 @@ export const createGUI = (): GUI => {
             updateEditorValue: (value) => editor.updateValue(value),
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
+            highlightSourceRange: (start, end) => editor.revealRange(start, end),
             showDocumentation: (text) => display.renderDocumentation(text),
             showError: (error, precedingOutput) => display.renderError(error, precedingOutput),
             showExecutionResult: (result) => display.renderExecutionResult(result),

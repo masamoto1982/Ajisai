@@ -40,6 +40,9 @@ impl Interpreter {
         self.tail_self_word = None;
         self.in_tail_context = false;
         self.tail_jump_pending = false;
+        self.source_spans.clear();
+        self.section_depth = 0;
+        self.current_source_span = None;
         // `cond_dispatch_enabled` is a configuration flag, not run state, so it
         // is intentionally not reset here.
         self.word_identities.clear();

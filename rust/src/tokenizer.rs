@@ -1,14 +1,67 @@
 use crate::types::Token;
 
+/// Where a token was written, as a 1-based line and column in characters.
+///
+/// Ajisai errors used to say only what went wrong — `Stack underflow` with no
+/// line, no token and no word — so locating the fault in a six-line program
+/// meant running it a line at a time and bisecting. A span costs one small
+/// record per token at tokenization and nothing at all at run time.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SourceSpan {
+    pub line: u32,
+    pub column: u32,
+}
+
+impl std::fmt::Display for SourceSpan {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "line {}, column {}", self.line, self.column)
+    }
+}
+
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
+    tokenize_with_spans(input).map(|(tokens, _)| tokens)
+}
+
+/// Tokenize, and record where each token was written.
+///
+/// The returned span vector is index-aligned with the token vector, so a
+/// caller holding a token index holds its source position. Only the *source*
+/// entry point produces spans: tokens reconstructed from a stored word body or
+/// from `REFLECT` data were never written anywhere, and inventing a position
+/// for them would be worse than having none.
+pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>), String> {
     let mut tokens = Vec::new();
+    let mut spans: Vec<SourceSpan> = Vec::new();
     let chars: Vec<char> = input.chars().collect();
+
+    // Position of every character, so a token's span is a lookup at the index
+    // it starts on rather than a second scan.
+    let mut positions: Vec<SourceSpan> = Vec::with_capacity(chars.len());
+    let mut line: u32 = 1;
+    let mut column: u32 = 1;
+    for c in &chars {
+        positions.push(SourceSpan { line, column });
+        if *c == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+    let span_at = |index: usize| -> SourceSpan {
+        positions
+            .get(index)
+            .copied()
+            .unwrap_or(SourceSpan { line, column })
+    };
+
     let mut i = 0;
 
     while i < chars.len() {
         if chars[i].is_whitespace() {
             if chars[i] == '\n' && tokens.last() != Some(&Token::LineBreak) {
                 tokens.push(Token::LineBreak);
+                spans.push(span_at(i));
             }
             i += 1;
             continue;
@@ -47,6 +100,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // symbol needs lookahead and none of them splits a word.
         if let Some(token) = structural_token(chars[i]) {
             tokens.push(token);
+            spans.push(span_at(i));
             i += 1;
             continue;
         }
@@ -54,6 +108,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         match parse_string_from_quote(&chars[i..]) {
             QuoteParseResult::StringSuccess(token, consumed) => {
                 tokens.push(token);
+                spans.push(span_at(i));
                 i += consumed;
                 continue;
             }
@@ -80,19 +135,23 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // whole token parses as one, and `/` is a name for the same reason.
         if let Some(token) = parse_number_from_string(&token_str) {
             tokens.push(token);
+            spans.push(span_at(start));
             continue;
         }
 
         if let Some(token) = parse_control_directive_word(&token_str) {
             tokens.push(token);
+            spans.push(span_at(start));
             continue;
         }
 
         tokens.push(Token::Symbol(token_str.into()));
+        spans.push(span_at(start));
     }
 
     if tokens.last() == Some(&Token::LineBreak) {
         tokens.pop();
+        spans.pop();
     }
 
     check_bracket_matching(input)?;
@@ -100,7 +159,12 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     // validator. The source-oriented bracket check above is retained for its
     // precise diagnostics; this call is the shared semantic acceptance gate.
     validate_code_tokens(&tokens)?;
-    Ok(tokens)
+    debug_assert_eq!(
+        tokens.len(),
+        spans.len(),
+        "every token must carry the position it was written at"
+    );
+    Ok((tokens, spans))
 }
 
 /// Validate the structural grammar of an already-tokenized code value.

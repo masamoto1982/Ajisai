@@ -234,6 +234,20 @@ pub struct Interpreter {
     /// and skipped; consumed by the trampoline loop in `execute_word_core_inner`.
     pub(crate) tail_jump_pending: bool,
 
+    // ── Source positions ──────────────────────────────────────────────────
+    /// Where each token of the program currently running was written,
+    /// index-aligned with its token stream. Empty for any entry point that did
+    /// not come from source text.
+    pub(crate) source_spans: Vec<crate::tokenizer::SourceSpan>,
+    /// Nesting depth of `execute_section_core`. Depth 1 is the program's own
+    /// token stream — the only stream `source_spans` describes — so the cursor
+    /// below is maintained there and nowhere else.
+    pub(crate) section_depth: usize,
+    /// The top-level token being executed. An error raised anywhere beneath it
+    /// is attributed here, which is what turns "Stack underflow" into
+    /// "Stack underflow at line 4, column 12, in COND".
+    pub(crate) current_source_span: Option<crate::tokenizer::SourceSpan>,
+
     /// When true (default), `compile_word_definition` lowers `COND` ops with
     /// statically-known clause blocks into `CompiledOp::CondDispatch`, so the
     /// per-call clause collect/clone/split is replaced by a precomputed jump
@@ -324,6 +338,9 @@ impl Interpreter {
             tail_self_word: None,
             in_tail_context: false,
             tail_jump_pending: false,
+            source_spans: Vec::new(),
+            section_depth: 0,
+            current_source_span: None,
             cond_dispatch_enabled: std::env::var("AJISAI_NO_COND_DISPATCH").is_err(),
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
@@ -461,6 +478,12 @@ impl Interpreter {
     /// backward-jump trampoline). Default is on; this is the in-process
     /// equivalent of the `AJISAI_NO_TAIL_CALL` environment switch and exists so
     /// benchmarks can A/B the same interpreter against the legacy recursion path.
+    /// Where in the source the interpreter is, as of the last top-level token
+    /// it began. `None` for an entry point that did not come from source text.
+    pub fn current_source_position(&self) -> Option<crate::tokenizer::SourceSpan> {
+        self.current_source_span
+    }
+
     pub fn set_tail_call_enabled(&mut self, enabled: bool) {
         self.tail_call_enabled = enabled;
     }

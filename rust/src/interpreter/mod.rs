@@ -49,6 +49,7 @@ pub mod interpreter_core;
 mod resolve_word;
 
 mod execution_loop;
+mod vector_literal;
 
 mod execute_builtin;
 
