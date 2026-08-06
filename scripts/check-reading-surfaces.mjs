@@ -45,6 +45,13 @@ const EXAMPLE_NAMES = new Set([
   'ADDW', 'PSUM', 'PDIFF', 'PMAX',
 ]);
 
+// Names the *host* allocates rather than the language: typed alone into the
+// editor, they are acted on by the GUI and never reach the interpreter. The
+// presentation profile has to be able to name them — a control nobody can
+// discover is not documented — and they are correctly absent from the
+// vocabulary registry, which is the whole point being made about them.
+const HOST_COMMANDS = new Set(['RESET', 'CLEAR']);
+
 const SURFACES = ['README.md', 'public/docs/index.html', 'SPECIFICATION.html'];
 
 // Word-shaped: upper-case initial, then the characters an Ajisai name may use.
@@ -105,6 +112,7 @@ for (const path of SURFACES) {
       const token = raw.replace(/\\([|`*_])/g, '$1');
       if (WORD_SHAPED.test(token)) {
         if (known.has(token) || EXAMPLE_NAMES.has(token)) continue;
+        if (HOST_COMMANDS.has(token)) continue;
         // A name may also be written only to say the language does not have it.
         // That was a symbol-only case until the Reference had to answer "where
         // is DUP?", which it answers by naming DUP.
@@ -134,6 +142,6 @@ if (errors.length) {
   process.exitCode = 1;
 } else {
   console.log(
-    `[reading-surfaces] ${SURFACES.length} surfaces name only the ${manifest.entries.length} registered surfaces, ${EXAMPLE_NAMES.size} declared example names and ${UNALLOCATED_MENTIONS.size} declared unallocated mentions.`,
+    `[reading-surfaces] ${SURFACES.length} surfaces name only the ${manifest.entries.length} registered surfaces, ${EXAMPLE_NAMES.size} declared example names, ${HOST_COMMANDS.size} host commands and ${UNALLOCATED_MENTIONS.size} declared unallocated mentions.`,
   );
 }

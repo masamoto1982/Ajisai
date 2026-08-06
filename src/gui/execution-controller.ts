@@ -14,6 +14,7 @@ import { createStepExecutor, StepExecutor } from './step-executor';
 import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 import type { ViewMode } from './mobile-view-switcher';
 import type { ExecutionSurfaceChanges } from './gui-layout-state';
+import { resolveHostCommand } from './host-commands';
 
 export interface ExecutionCallbacks {
     readonly extractEditorValue: () => string;
@@ -22,6 +23,10 @@ export interface ExecutionCallbacks {
     readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly highlightSourceRange: (start: number, end: number) => void;
+    /// Discard every value on the stack, leaving the dictionary alone. Shared
+    /// with the Stack area's `×` and `Shift+Alt+C`, so all three routes are one
+    /// behavior.
+    readonly clearStack: () => void;
     readonly showDocumentation: (text: string) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
@@ -40,9 +45,6 @@ export interface ExecutionController {
     readonly abortExecution: () => void;
 }
 
-const checkIsResetCommand = (code: string): boolean =>
-    code.trim().toUpperCase() === 'RESET';
-
 export const createExecutionController = (
     interpreter: AjisaiInterpreter,
     callbacks: ExecutionCallbacks
@@ -54,6 +56,7 @@ export const createExecutionController = (
         insertEditorText,
         showInfo,
         highlightSourceRange,
+        clearStack,
         showDocumentation,
         showError,
         showExecutionResult,
@@ -63,6 +66,9 @@ export const createExecutionController = (
         updateView,
         updateAfterExecution
     } = callbacks;
+
+    const checkIsUserWord = (name: string): boolean =>
+        interpreter.collect_user_words_info().some(([, word]) => word === name);
 
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
         extractEditorValue,
@@ -157,8 +163,17 @@ export const createExecutionController = (
 
         stepExecutor.reset();
 
-        if (checkIsResetCommand(code)) {
+        const hostCommand = resolveHostCommand(code, checkIsUserWord);
+        if (hostCommand === 'RESET') {
             await executeReset();
+            return;
+        }
+        if (hostCommand === 'CLEAR') {
+            // `clearStack` redraws, reports and saves — the same call the `×`
+            // and the shortcut make — so all this route adds is consuming the
+            // command from the editor, exactly as a successful run does.
+            clearStack();
+            clearEditor(false);
             return;
         }
 
