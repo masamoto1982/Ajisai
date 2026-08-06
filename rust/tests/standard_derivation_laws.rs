@@ -120,6 +120,19 @@ async fn arithmetic_standards_have_kernel_only_witnesses() {
         ("-7 3 MOD", "-7 3 DIV FLOOR 3 MUL NEG -7 ADD"),
         ("5/2 ROUND", "5/2 1/2 ADD FLOOR"),
         ("-5/2 ROUND", "-5/2 NEG 1/2 ADD FLOOR NEG"),
+        // QUANTIZE is ROUND scaled by the denominator: round(x*d)/d. Written
+        // in the Kernel the scaling is explicit, which is the point — the
+        // Standard Word exists so the resolution is named once instead of
+        // spelled out with a magic constant at every step of a loop.
+        ("119/125 10 QUANTIZE", "119/125 10 MUL 1/2 ADD FLOOR 10 DIV"),
+        ("32/125 10 QUANTIZE", "32/125 10 MUL 1/2 ADD FLOOR 10 DIV"),
+        (
+            "-32/125 10 QUANTIZE",
+            "-32/125 NEG 10 MUL 1/2 ADD FLOOR NEG 10 DIV",
+        ),
+        // At d = 1 the two Words coincide, which is the boundary that makes
+        // QUANTIZE a generalization rather than a second rounding rule.
+        ("5/2 1 QUANTIZE", "5/2 1/2 ADD FLOOR"),
         // |x| = sqrt(x*x): exact over the rationals closed under SQRT, so the
         // witness needs no case split on the sign.
         ("-7 ABS", "-7 -7 MUL SQRT"),

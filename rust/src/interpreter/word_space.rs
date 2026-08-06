@@ -99,7 +99,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // materialized length (Phase 3 gives these the runtime water level).
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
-        Floor | Round | Mod => (Linear, false),
+        Floor | Round | Quantize | Mod => (Linear, false),
         Str | Num | Chars | Tokenize | Trim => (Linear, false),
         // Repetition can multiply sizes (pattern × replacement, k × separator).
         Substitute | Join => (Superlinear, false),

@@ -25,10 +25,19 @@ use std::ops::{Deref, Index, IndexMut, RangeBounds};
 ///
 /// Invariant: `values.len() == roles.len()`. Every mutating method preserves it,
 /// and no public API can grow one vector without the other.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default)]
 pub struct Stack {
     values: Vec<Value>,
     roles: Vec<Interpretation>,
+    /// Shallowest depth the stack has reached since the enclosing depth watch
+    /// began — the *operand region* whatever is running has reached into.
+    ///
+    /// This is what lets `KEEP` name the operands of a whole call rather than
+    /// the operands of the first consuming Word inside it: a caller opens a
+    /// watch, runs the call, and the mark that comes back is exactly the floor
+    /// the call touched. Derived bookkeeping, never part of the stack's value;
+    /// `PartialEq` ignores it for that reason.
+    low_water: usize,
 }
 
 impl Stack {
@@ -40,7 +49,12 @@ impl Stack {
     /// value's construction-time `hint` (SPEC §12.1).
     pub fn from_values(values: Vec<Value>) -> Self {
         let roles = values.iter().map(|value| value.hint).collect();
-        Self { values, roles }
+        let low_water = values.len();
+        Self {
+            values,
+            roles,
+            low_water,
+        }
     }
 
     /// Build a stack from position-aligned values and roles. If the lengths
@@ -48,7 +62,36 @@ impl Stack {
     /// `Unassigned`), preserving the length invariant.
     pub fn from_values_and_roles(values: Vec<Value>, mut roles: Vec<Interpretation>) -> Self {
         roles.resize(values.len(), Interpretation::Unassigned);
-        Self { values, roles }
+        let low_water = values.len();
+        Self {
+            values,
+            roles,
+            low_water,
+        }
+    }
+
+    /// Record the depth after a shrink. Growing the stack never lowers the mark,
+    /// so only the shrinking methods call this.
+    fn note_depth(&mut self) {
+        if self.values.len() < self.low_water {
+            self.low_water = self.values.len();
+        }
+    }
+
+    /// Begin watching how deep the stack is reached into, returning the
+    /// enclosing watch's mark so the caller can restore it.
+    pub fn begin_depth_watch(&mut self) -> usize {
+        std::mem::replace(&mut self.low_water, self.values.len())
+    }
+
+    /// End the watch opened by [`Stack::begin_depth_watch`], returning the
+    /// shallowest depth reached while it was open. The enclosing watch inherits
+    /// that floor: a region this one reached into is a region the caller's call
+    /// reached into as well.
+    pub fn end_depth_watch(&mut self, enclosing: usize) -> usize {
+        let reached = self.low_water;
+        self.low_water = enclosing.min(reached);
+        reached
     }
 
     /// Push a value, adopting its construction-time role as the slot role.
@@ -67,7 +110,9 @@ impl Stack {
     /// Pop the top value, discarding its role.
     pub fn pop(&mut self) -> Option<Value> {
         self.roles.pop();
-        self.values.pop()
+        let value = self.values.pop();
+        self.note_depth();
+        value
     }
 
     /// Iterate the stack bottom-to-top as observable `(value, role)` slots —
@@ -82,38 +127,58 @@ impl Stack {
     pub fn pop_slot(&mut self) -> Option<(Value, Interpretation)> {
         let value = self.values.pop()?;
         let role = self.roles.pop().unwrap_or(Interpretation::Unassigned);
+        self.note_depth();
         Some((value, role))
     }
 
     pub fn truncate(&mut self, len: usize) {
         self.values.truncate(len);
         self.roles.truncate(len);
+        self.note_depth();
     }
 
     pub fn clear(&mut self) {
         self.values.clear();
         self.roles.clear();
+        self.note_depth();
     }
 
     pub fn reverse(&mut self) {
         self.values.reverse();
         self.roles.reverse();
+        // Reversal keeps the depth but not the identity of any slot, so no
+        // region below can still be called untouched.
+        self.low_water = 0;
     }
 
     pub fn insert(&mut self, index: usize, value: Value) {
         self.roles.insert(index, value.hint);
         self.values.insert(index, value);
+        if index < self.low_water {
+            self.low_water = index;
+        }
     }
 
     pub fn remove(&mut self, index: usize) -> Value {
         self.roles.remove(index);
-        self.values.remove(index)
+        let value = self.values.remove(index);
+        if index < self.low_water {
+            self.low_water = index;
+        }
+        self.note_depth();
+        value
     }
 
     pub fn split_off(&mut self, at: usize) -> Stack {
         let values = self.values.split_off(at);
         let roles = self.roles.split_off(at);
-        Stack { values, roles }
+        self.note_depth();
+        let low_water = values.len();
+        Stack {
+            values,
+            roles,
+            low_water,
+        }
     }
 
     pub fn extend<I: IntoIterator<Item = Value>>(&mut self, iter: I) {
@@ -128,6 +193,13 @@ impl Stack {
     where
         R: RangeBounds<usize> + Clone,
     {
+        if let std::ops::Bound::Included(&start) = range.start_bound() {
+            if start < self.low_water {
+                self.low_water = start;
+            }
+        } else if matches!(range.start_bound(), std::ops::Bound::Unbounded) {
+            self.low_water = 0;
+        }
         self.roles.drain(range.clone());
         self.values.drain(range)
     }
@@ -193,6 +265,17 @@ impl Stack {
     /// Consume the stack into just its values, dropping roles.
     pub fn into_values(self) -> Vec<Value> {
         self.values
+    }
+}
+
+/// Two stacks are equal when they observe the same `(value, role)` slots. The
+/// depth watermark is bookkeeping about how a stack was reached into, not part
+/// of what it holds, so it is deliberately excluded — shadow validation
+/// compares the compiled and plain routes with this, and the two may reach the
+/// same stack by different routes.
+impl PartialEq for Stack {
+    fn eq(&self, other: &Self) -> bool {
+        self.values == other.values && self.roles == other.roles
     }
 }
 

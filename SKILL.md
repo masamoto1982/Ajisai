@@ -163,8 +163,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-57 canonical Words in one flat Core dictionary, of which
-35 form the Semantic Kernel and 22 are Standard Words. Both are
+58 canonical Words in one flat Core dictionary, of which
+35 form the Semantic Kernel and 23 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -189,6 +189,7 @@ no module system and nothing to import.
 | `MOD` | arithmetic | Modulo (remainder) of two numeric values. — e.g. `7 3 %` |
 | `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
+| `QUANTIZE` | arithmetic | Round to the nearest multiple of 1/d, bounding the denominator by d. — e.g. `[ 119/125 32/125 ] 10 QUANTIZE` |
 | `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
 | `NEG` | math | Numeric negation. — e.g. `2 NEG` |
 | `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |

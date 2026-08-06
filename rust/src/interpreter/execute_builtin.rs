@@ -92,6 +92,30 @@ impl Interpreter {
 
         self.call_stack.push(resolved_name.clone());
 
+        // `KEEP` modifies the *call*, not the first consuming Word inside the
+        // body (SPEC §5.2). Both readings agree for a Core Word, because a Core
+        // Word has no inside; they disagree for a User Word, and the body
+        // reading is the wrong one — `{ 2 * } 'TWICE' DEF` under `5 KEEP TWICE`
+        // let the modifier reach `*`, which then preserved the body's own
+        // literal `2` as if the caller had written it. The answer was `5 2 10`
+        // with no error and no NIL: a silently wrong result from the one
+        // modifier the language has, which is exactly what
+        // LANG.FAILURE.TRICHOTOMY rules out.
+        //
+        // So the modifier is settled here, at the boundary it names. The body
+        // runs in the default consuming mode, a depth watch records how far
+        // into the stack the call reached, and the operands it ate are put back
+        // underneath its results.
+        let keep_call = self.consumption_mode == ConsumptionMode::Keep;
+        let kept_operands: Option<Vec<(Value, Interpretation)>> = keep_call.then(|| {
+            self.stack
+                .iter_slots()
+                .map(|(value, role)| (value.clone(), role))
+                .collect()
+        });
+        self.consumption_mode = ConsumptionMode::Consume;
+        let enclosing_watch = self.stack.begin_depth_watch();
+
         // Internal tail-call elimination ("internal GOTO"): mark this frame as
         // the self-tail-call target, then run its body in a trampoline. A
         // guarded tail self-call (the tail of a COND clause body) sets
@@ -140,9 +164,39 @@ impl Interpreter {
         self.in_tail_context = prev_in_tail;
         self.tail_self_word = prev_tail_self;
 
+        let operand_floor = self.stack.end_depth_watch(enclosing_watch);
+        if let (Some(operands), true) = (kept_operands, result.is_ok()) {
+            self.restore_kept_operands(operands, operand_floor);
+        }
+
         self.call_stack.pop();
         self.call_depth -= 1;
         result
+    }
+
+    /// Put a `KEEP`-ed call's operands back underneath its results.
+    ///
+    /// After the call the stack is `survivors ++ results`, where `survivors` is
+    /// the part below `operand_floor` — the shallowest depth the call reached.
+    /// `operands` is the whole stack as it stood before the call, so everything
+    /// from `operand_floor` up is what the call ate. Splicing that region back
+    /// in leaves `operands ++ results`: operands preserved, result appended.
+    fn restore_kept_operands(
+        &mut self,
+        operands: Vec<(Value, Interpretation)>,
+        operand_floor: usize,
+    ) {
+        if operand_floor >= operands.len() {
+            return;
+        }
+        let results = self.stack.split_off(operand_floor.min(self.stack.len()));
+        for (value, role) in operands.into_iter().skip(operand_floor) {
+            self.stack.push_with_role(value, role);
+        }
+        let (values, roles) = results.into_parts();
+        for (value, role) in values.into_iter().zip(roles) {
+            self.stack.push_with_role(value, role);
+        }
     }
 
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
@@ -322,6 +376,7 @@ impl Interpreter {
             WordId::Fill => tensor_cmds::op_fill(self),
             WordId::Floor => tensor_cmds::op_floor(self),
             WordId::Round => tensor_cmds::op_round(self),
+            WordId::Quantize => tensor_cmds::op_quantize(self),
             WordId::Mod => tensor_cmds::op_mod(self),
             WordId::Str => cast::op_str(self),
             WordId::Num => cast::op_num(self),

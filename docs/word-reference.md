@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **57 Words**, of which **35** form the Semantic Kernel and **22** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **58 Words**, of which **35** form the Semantic Kernel and **23** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -264,6 +264,20 @@ Round to nearest integer (half-up).
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 5/2 ] ROUND`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+
+## `QUANTIZE`
+
+Round to the nearest multiple of 1/d, bounding the denominator by d. An exact number carries its whole history in its denominator, so an iterative method grows one without bound; quantizing each step keeps the representation the size of the answer rather than the size of the computation. Ties round away from zero, matching ROUND. A d that is not a positive integer projects to NIL.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `exactArithmetic`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: denominatorIsNotAPositiveInteger → domainMiss
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `[ 119/125 32/125 ] 10 QUANTIZE`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `ABS`
@@ -632,12 +646,12 @@ Parse text as a number; Bubble/NIL on parse failure.
 
 ## `STR`
 
-Convert a value to its string representation.
+Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. QUANTIZE names an approximation explicitly when one is wanted.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthrough`; projection: noExactLexemeForValue → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`

@@ -174,6 +174,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 5/2 ] ROUND",
     },
     GeneratedCoreWordDoc {
+        name: "QUANTIZE",
+        category: "arithmetic",
+        summary: "Round to the nearest multiple of 1/d, bounding the denominator by d.",
+        role: "Arithmetic primitive: bound the representation size of an exact number.",
+        stack_effect: "[ x ] [ d ] -> [ x' ]",
+        hover_summary: "QUANTIZE — nearest multiple of 1/d",
+        hover_syntax: "[ 119/125 32/125 ] 10 QUANTIZE",
+    },
+    GeneratedCoreWordDoc {
         name: "ABS",
         category: "math",
         summary: "Absolute value of a number.",

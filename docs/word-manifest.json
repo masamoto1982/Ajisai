@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 57,
+    "canonicalWords": 58,
     "semanticKernelWords": 35,
-    "standardWords": 22,
-    "corewords": 57,
+    "standardWords": 23,
+    "corewords": 58,
     "aliases": 13,
     "inputHelpers": 1,
     "surface_forms": 10,
-    "manifestEntries": 81
+    "manifestEntries": 82
   },
   "entries": [
     {
@@ -351,6 +351,24 @@
       "source": "spec/words.json",
       "canonical": "ROUND",
       "coverage_entry_id": "core.round",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.quantize",
+      "kind": "coreword",
+      "surface": "QUANTIZE",
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "QUANTIZE",
+      "coverage_entry_id": "core.quantize",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
