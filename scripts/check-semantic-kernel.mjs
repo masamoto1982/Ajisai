@@ -11,8 +11,31 @@ const fail = (message) => {
 
 // The kernel is a ceiling, not a floor: a shorter specification is always an
 // improvement, a longer one is the regression this gate exists to catch.
+//
+// The budget is normally slack, and then one day it is not. Adding
+// LANG.SOURCE.FRAME took the file to the ceiling exactly, so the next clause
+// added here fails this check on arrival. That is the gate working: the answer
+// is to shorten or merge an existing clause, which is the question "does the
+// specification need this, or does it already say it elsewhere?" asked at the
+// only moment anyone will actually ask it.
+//
+// Two answers that look like fixes are not. Raising the number right after
+// hitting it retires the brake; and reflowing prose to put more words on fewer
+// lines keeps the count down while the specification grows, which is the thing
+// being measured. Raising it deliberately, when the language genuinely has more
+// to say, is a different act and a fine one — it just wants to be a decision
+// rather than a reflex.
+//
+// `headroom` below is reported on every green run, so how close the file is
+// sitting is visible without reading this comment.
+const LINE_BUDGET = 400;
 const lines = language.split('\n').length;
-if (lines > 400) fail(`language-semantics.md has ${lines} lines (maximum 400)`);
+if (lines > LINE_BUDGET) {
+  fail(
+    `language-semantics.md has ${lines} lines (maximum ${LINE_BUDGET}). ` +
+      'Shorten or merge a clause rather than raising the budget; see the note above this check.',
+  );
+}
 
 const clauseIds = new Set([...language.matchAll(/id="[^"]+">(LANG\.[A-Z.]+)/g)].map((match) => match[1]));
 if (clauseIds.size === 0) fail('no language clause IDs found');
@@ -48,7 +71,9 @@ if (words.entries.length > 70) fail(`${words.entries.length} canonical Words (ma
 if (aliases > 16) fail(`${aliases} aliases (maximum 16)`);
 
 if (!process.exitCode) {
+  const headroom = LINE_BUDGET - lines;
+  const budget = headroom === 0 ? 'at the line budget' : `${headroom} lines under budget`;
   console.log(
-    `[semantic-kernel] ${lines} lines, ${clauseIds.size} clauses, ${familyIds.size} families, ${words.entries.length} Words, ${aliases} aliases.`,
+    `[semantic-kernel] ${lines} lines (${budget}), ${clauseIds.size} clauses, ${familyIds.size} families, ${words.entries.length} Words, ${aliases} aliases.`,
   );
 }
