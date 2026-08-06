@@ -116,3 +116,33 @@ fn sort_is_idempotent_and_permutation_invariant() {
     );
     assert_law("sort-rationals", "[ 3 1 2 ] SORT", "[ 1 2 3 ]");
 }
+
+/// `GET` with several indices is the selection each index makes, in the order
+/// they are written — the gather law. Stated against `COLLECT` of the
+/// single-index selections, which is the program a reader had to write before
+/// the index operand accepted more than one position.
+#[test]
+fn get_gathers_in_the_order_its_indices_name() {
+    assert_law(
+        "gather = collect of selections",
+        "[ 10 20 30 40 ] [ 2 0 3 ] GET",
+        "[ 10 20 30 40 ] [ 2 ] GET [ 10 20 30 40 ] [ 0 ] GET \
+         [ 10 20 30 40 ] [ 3 ] GET 3 COLLECT",
+    );
+    // Selecting every position in order is the vector itself, so a gather can
+    // express the identity permutation.
+    assert_law(
+        "gather of the identity permutation",
+        "[ 10 20 30 ] [ 0 1 2 ] GET",
+        "[ 10 20 30 ]",
+    );
+    // A single index still answers with the element, not a one-element vector:
+    // the generalization does not move the existing case.
+    assert_law("one index selects a value", "[ 10 20 30 ] [ 1 ] GET", "20");
+    // Reversal is a gather, which is the point of allowing one.
+    assert_law(
+        "gather can reverse",
+        "[ 10 20 30 ] [ -1 -2 -3 ] GET",
+        "[ 10 20 30 ] REVERSE",
+    );
+}

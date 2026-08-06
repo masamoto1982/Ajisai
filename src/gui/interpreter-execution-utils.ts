@@ -46,6 +46,26 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
         stepLimit: getPlatform().executionConfig.stepLimit
     });
 
+// What a failed run printed, with its dictionary claims corrected.
+//
+// `syncInterpreterState` below ignores an ERROR result, so the session keeps
+// its pre-run dictionary and every `DEF` the failed run reached is discarded —
+// but each of those printed `Defined word: X` on its way through, and those
+// lines are still in the output the error path shows. A reader who believes
+// them finds out only when `LOOKUP` answers `Unknown word` for something the
+// log says exists; the tester who hit this lost seven definitions that way.
+// The correction goes below them, where it cancels what they claimed.
+export const describeFailedRunOutput = (result: ExecuteResult): string => {
+    const output = result.output || '';
+    const discarded = result.discardedDictionaryChanges ?? [];
+    if (discarded.length === 0) return output;
+    const plural = discarded.length === 1 ? '' : 's';
+    const correction =
+        `Rolled back ${discarded.length} dictionary change${plural}: ${discarded.join(', ')}. ` +
+        'The run failed, so the dictionary is unchanged and the lines above it do not hold.';
+    return output ? `${output.replace(/\n*$/, '')}\n${correction}` : correction;
+};
+
 export const syncInterpreterState = (
     interpreter: AjisaiInterpreter,
     result: ExecuteResult

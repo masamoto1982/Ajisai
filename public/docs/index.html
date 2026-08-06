@@ -810,7 +810,7 @@
 
                 <section id="comparison" class="ref-page">
                     <h2>Comparison and Truth Values</h2>
-                    <p>All six ordering relations exist as words. The result is a <strong>truth value</strong>, which is its own kind of value — a Boolean is not a number. Three of the six have a one-character symbol; the other three are written out, because every Ajisai symbol is a single character and the two-character spellings a keyboard suggests for them are not part of the language.</p>
+                    <p>All six ordering relations exist as words. The result is a <strong>truth value</strong>, which is its own kind of value — a Boolean is not a number. Each of the six has a symbol: three of one character and three of two, since a token ends at whitespace or a delimiter and never in the middle, so a two-character name costs the tokenizer nothing.</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -818,11 +818,11 @@
                             </thead>
                             <tbody>
                                 <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">Equal</td></tr>
-                                <tr><td><code>NEQ</code></td><td class="notes">—</td><td class="notes">Not equal</td></tr>
+                                <tr><td><code>NEQ</code></td><td><code>!=</code></td><td class="notes">Not equal</td></tr>
                                 <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">Less than</td></tr>
-                                <tr><td><code>LTE</code></td><td class="notes">—</td><td class="notes">Less than or equal</td></tr>
+                                <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">Less than or equal</td></tr>
                                 <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">Greater than</td></tr>
-                                <tr><td><code>GTE</code></td><td class="notes">—</td><td class="notes">Greater than or equal</td></tr>
+                                <tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td class="notes">Greater than or equal</td></tr>
                             </tbody>
                         </table>
                     </div>

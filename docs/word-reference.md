@@ -352,7 +352,7 @@ Exact square root of a non-negative rational. The result is carried in multiquad
 
 ## `GET`
 
-Extract one element of a vector by index.
+Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -361,7 +361,7 @@ Extract one element of a vector by index.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 10 20 30 ] [ 0 ] GET`
+- **Syntax:** `[ 10 20 30 ] [ 0 2 ] GET`
 - **ERROR conditions:** `nonVector`, `invalidIndex`
 
 ## `LENGTH`

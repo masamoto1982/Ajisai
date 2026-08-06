@@ -1057,12 +1057,12 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Extract one element of a vector by index.",
-        "hover": "GET — extract element at index",
-        "lookup": "Extract one element of a vector by index.",
-        "syntax": "[ 10 20 30 ] [ 0 ] GET",
-        "role": "Random access into vectors and tensors.",
-        "stackEffect": "[ vec ] [ idx ] -> [ elem ]"
+        "summary": "Select elements of a vector by index.",
+        "hover": "GET — select elements at indices",
+        "lookup": "Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed.",
+        "syntax": "[ 10 20 30 ] [ 0 2 ] GET",
+        "role": "Random access into vectors and tensors, one position or many.",
+        "stackEffect": "[ vec ] [ idx.. ] -> [ elem | elems ]"
       },
       "executorKey": "Get",
       "effects": [],

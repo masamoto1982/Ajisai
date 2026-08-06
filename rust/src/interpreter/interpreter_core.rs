@@ -152,6 +152,16 @@ pub struct Interpreter {
     /// reader nothing. A single field meant `'ADD' ?` overwrote whatever was in
     /// the editor with several screens of prose.
     pub(crate) documentation_to_show: Option<String>,
+    /// The dictionary changes this top-level `execute` has made so far, in
+    /// order — `Defined word:` / `Deleted word:` without the prose.
+    ///
+    /// A host that treats a failed run as committing nothing needs to say so:
+    /// the run still printed a success line for every `DEF` it reached, and
+    /// leaving those standing while discarding the Words is a log that claims
+    /// something the session does not contain. The tester who found this lost
+    /// seven definitions and only noticed when `LOOKUP` answered
+    /// `Unknown word`. Cleared at the start of each top-level run.
+    pub(crate) dictionary_changes_this_run: Vec<String>,
     pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
@@ -309,6 +319,7 @@ impl Interpreter {
             host_env,
             definition_to_load: None,
             documentation_to_show: None,
+            dictionary_changes_this_run: Vec::new(),
             consumption_mode: ConsumptionMode::Consume,
             disable_no_change_check: true,
             pending_tokens: None,
@@ -473,6 +484,13 @@ impl Interpreter {
 
     pub fn get_stack(&self) -> &Stack {
         &self.stack
+    }
+
+    /// The Words the current top-level run has defined or deleted, in order.
+    /// A host that discards a failed run's state reports these so its own
+    /// success lines are corrected rather than left standing.
+    pub fn dictionary_changes_this_run(&self) -> &[String] {
+        &self.dictionary_changes_this_run
     }
     /// Enable or disable internal tail-call elimination (the guarded-tail-`COND`
     /// backward-jump trampoline). Default is on; this is the in-process

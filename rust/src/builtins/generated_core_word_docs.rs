@@ -230,11 +230,11 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "GET",
         category: "vector",
-        summary: "Extract one element of a vector by index.",
-        role: "Random access into vectors and tensors.",
-        stack_effect: "[ vec ] [ idx ] -> [ elem ]",
-        hover_summary: "GET — extract element at index",
-        hover_syntax: "[ 10 20 30 ] [ 0 ] GET",
+        summary: "Select elements of a vector by index.",
+        role: "Random access into vectors and tensors, one position or many.",
+        stack_effect: "[ vec ] [ idx.. ] -> [ elem | elems ]",
+        hover_summary: "GET — select elements at indices",
+        hover_syntax: "[ 10 20 30 ] [ 0 2 ] GET",
     },
     GeneratedCoreWordDoc {
         name: "LENGTH",

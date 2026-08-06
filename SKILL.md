@@ -195,7 +195,7 @@ no module system and nothing to import.
 | `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |
 | `MAX` | math | Larger of two numbers. — e.g. `1 2 MAX` |
 | `SQRT` | math | Exact square root of a non-negative rational. — e.g. `2 SQRT` |
-| `GET` | vector | Extract one element of a vector by index. — e.g. `[ 10 20 30 ] [ 0 ] GET` |
+| `GET` | vector | Select elements of a vector by index. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
 | `TAKE` | vector | Take the first N or last -N elements of a vector. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
 | `CONCAT` | vector | Flatten and concatenate two vectors. — e.g. `[ 1 2 ] [ 3 4 ] CONCAT` |
