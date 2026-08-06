@@ -18,7 +18,7 @@ mod test_support;
 use ajisai_core::interpreter::Interpreter;
 use proptest::prelude::*;
 use test_support::generators::{small, user_word_body, user_word_name};
-use test_support::observe::{render, run};
+use test_support::observe::{render, run, run_err};
 
 // ─────────────────────────── observation helpers ───────────────────────────
 
@@ -126,4 +126,130 @@ fn builtin_words_cannot_be_redefined() {
             "redefining built-in {w} must be rejected"
         );
     }
+}
+
+// ────────────────── local bindings — a name with a frame's life ──────────────
+
+/// **A binding names a value, and the name is the value wherever it is
+/// written.** This is the whole point: the stack answers only for the value on
+/// top, so an expression that uses one value twice had no way to say so.
+#[test]
+fn a_binding_names_a_value_for_the_rest_of_the_frame() {
+    assert_eq!(obs("5 'T' BIND T T ADD"), vec!["10/1"]);
+    // Used three times, in an order the stack could not have produced.
+    assert_eq!(obs("[ 2 7 ] [ 'W' 'B' ] BIND W B ADD W MUL"), vec!["18/1"]);
+    // A single-name Vector is the single-name case, as with `GET`'s index.
+    assert_eq!(obs("[ 1 2 ] [ 'A' ] BIND A"), vec!["[ 1/1 2/1 ]"]);
+    // Both operands are consumed: a binding leaves nothing behind.
+    assert_eq!(obs("9 5 'T' BIND"), vec!["9/1"]);
+}
+
+/// **A binding reaches the blocks written in its frame.** A block a Core Word
+/// applies is not a new frame for names — which is what lets a threshold
+/// learned at run time be used inside a predicate, the thing `REFLECT` partial
+/// application was the only answer to.
+#[test]
+fn a_binding_reaches_blocks_written_in_its_frame() {
+    assert_eq!(
+        obs("3 'T' BIND [ 1 2 3 ] { T MUL } MAP"),
+        vec!["[ 3/1 6/1 9/1 ]"]
+    );
+    assert_eq!(obs("3 'T' BIND [ 1 5 9 ] { T LT } FILTER"), vec!["[ 1/1 ]"]);
+    assert_eq!(obs("4 'T' BIND [ 1 2 ] 0 { ADD T ADD } FOLD"), vec!["11/1"]);
+    assert_eq!(obs("5 'T' BIND { T } EXEC"), vec!["5/1"]);
+    // A COND clause is such a block: the isolation COND enforces is of the
+    // stack, and a name is not on the stack.
+    assert_eq!(
+        obs("5 'T' BIND T { 1 GT } { T } { IDLE } { 0 } COND"),
+        vec!["5/1"]
+    );
+    // A block that binds runs in its own scope per evaluation, so the name is
+    // fresh each element rather than a collision on the second.
+    assert_eq!(
+        obs("5 'T' BIND [ 1 2 ] { 'E' BIND E T MUL } MAP"),
+        vec!["[ 5/1 10/1 ]"]
+    );
+}
+
+/// **A binding does not cross a Word call.** A Word's meaning is a function of
+/// its operands and the dictionary; if a caller's names leaked in, it would not
+/// be. The diagnostic says which rule was met rather than claiming the name
+/// does not exist.
+#[test]
+fn a_binding_does_not_cross_a_word_call() {
+    let message = run_err("{ T } 'READS-T' DEF 5 'T' BIND READS-T");
+    assert!(
+        message.contains("bound in another frame"),
+        "expected the scope rule, got: {message}"
+    );
+    // The value reaches the Word the ordinary way, as an operand.
+    assert_eq!(obs("{ 1 ADD } 'INC' DEF 5 'T' BIND T INC"), vec!["6/1"]);
+}
+
+/// **A binding ends with its frame.** A Word that binds leaves no name behind
+/// for its caller, and a run's bindings do not survive into the next one — a
+/// binding that outlived its frame would be the second name space this design
+/// exists not to be.
+#[test]
+fn a_binding_ends_with_its_frame() {
+    let message = run_err("{ 5 'INNER' BIND INNER } 'MAKES' DEF MAKES INNER");
+    assert!(!message.is_empty(), "INNER must not survive the call");
+    // The Word itself still works; only the name is gone afterwards.
+    assert_eq!(
+        obs("{ 5 'INNER' BIND INNER } 'MAKES' DEF MAKES"),
+        vec!["5/1"]
+    );
+}
+
+/// **A name is a Word or a binding, never both** (LANG.DICTIONARY.RESOLUTION).
+/// Both directions are refused, so resolution order settles no contest and a
+/// reader never has to know which one they got.
+#[test]
+fn a_binding_and_a_word_may_not_share_a_name() {
+    for word in ["ADD", "GET", "COND"] {
+        assert!(
+            run_err(&format!("5 '{word}' BIND")).contains("may not shadow"),
+            "a binding must not take the Core name {word}"
+        );
+    }
+    assert!(run_err("{ 1 } 'Q' DEF 5 'Q' BIND").contains("User Word"));
+    assert!(run_err("5 'T' BIND { 1 } 'T' DEF").contains("bound in this frame"));
+}
+
+/// **Destructuring is exact.** A Vector longer than the name list would drop
+/// its tail silently and a shorter one would name nothing; both are the caller
+/// having said something other than what they meant.
+#[test]
+fn destructuring_requires_one_name_per_element() {
+    assert!(!run_err("[ 1 2 3 ] [ 'W' 'B' ] BIND").is_empty());
+    assert!(!run_err("[ 1 ] [ 'W' 'B' ] BIND").is_empty());
+    assert_eq!(obs("[ 1 2 3 ] [ 'A' 'B' 'C' ] BIND C A ADD"), vec!["4/1"]);
+}
+
+/// A bound bubble stays a bubble, with its reason, however many times the name
+/// is read. Binding is not an observation of the value (SPEC §7.12).
+#[test]
+fn binding_preserves_an_absence_and_its_reason() {
+    assert_eq!(
+        obs("1 0 DIV 'B' BIND B NIL-REASON"),
+        vec!["NIL", "'divisionByZero'"]
+    );
+    assert_eq!(obs("1 0 DIV 'B' BIND B B 2 COLLECT"), vec!["[ NIL NIL ]"]);
+}
+
+/// Recursion still terminates, and the trampolined tail call starts each round
+/// with no names — the frame outlives the iteration it belongs to, so the
+/// binding must not.
+#[test]
+fn a_binding_survives_neither_a_recursive_call_nor_a_tail_jump() {
+    let sumto = "{ 'N' BIND N { 0 EQ } { 0 } { IDLE } { N N 1 SUB SUMTO ADD } COND } 'SUMTO' DEF ";
+    assert_eq!(obs(&format!("{sumto} 5 SUMTO")), vec!["15/1"]);
+
+    // Past MAX_USER_WORD_DEPTH, so this is the backward jump rather than a call.
+    let countdown = "{ [ 'ACC' 'N' ] BIND N { 0 EQ } { ACC } \
+                     { IDLE } { ACC N ADD N 1 SUB 2 COLLECT COUNTDOWN } COND } 'COUNTDOWN' DEF ";
+    assert_eq!(
+        obs(&format!("{countdown} [ 0 2000 ] COUNTDOWN")),
+        vec!["2001000/1"]
+    );
 }

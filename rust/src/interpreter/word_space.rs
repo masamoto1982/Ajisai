@@ -104,7 +104,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // Repetition can multiply sizes (pattern × replacement, k × separator).
         Substitute | Join => (Superlinear, false),
         // Dictionary registration copies bounded structure.
-        Def => (Linear, false),
+        Bind | Def => (Linear, false),
         Del | Lookup => (Const, false),
         Print => (Linear, false),
         // The Words promoted out of the deleted MATH and ALGO modules.

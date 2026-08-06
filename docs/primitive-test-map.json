@@ -7,7 +7,7 @@
     "primitives": 23,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 17,
-    "distinct_conformance_cases": 61
+    "distinct_conformance_cases": 63
   },
   "primitives": [
     {
@@ -544,10 +544,11 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 9,
+      "derived_word_count": 10,
       "law_test_count": 3,
-      "conformance_case_count": 5,
+      "conformance_case_count": 7,
       "derived_words": [
+        "core.bind",
         "core.cond",
         "core.def",
         "core.del",
@@ -564,6 +565,8 @@
         "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
+        "core-binding-does-not-cross-a-word-call",
+        "core-binding-names-a-value",
         "core-fold",
         "core-fold-word-name",
         "core-map",
@@ -595,10 +598,11 @@
       "algebraic_family": "dictionary",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 3,
+      "derived_word_count": 4,
       "law_test_count": 1,
-      "conformance_case_count": 1,
+      "conformance_case_count": 3,
       "derived_words": [
+        "core.bind",
         "core.def",
         "core.del",
         "core.structural.record"
@@ -607,6 +611,8 @@
         "rust/tests/naming_resolution_laws.rs"
       ],
       "conformance_cases": [
+        "core-binding-does-not-cross-a-word-call",
+        "core-binding-names-a-value",
         "core-user-definition-resolved"
       ]
     },

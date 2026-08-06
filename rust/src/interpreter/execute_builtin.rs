@@ -1,31 +1,14 @@
 use crate::error::{AjisaiError, Result};
-use crate::kernel::generated::{generated_word, Arity, GeneratedWord, NilPolicy, WordId};
+use crate::kernel::generated::{generated_word, WordId};
 use crate::types::{Interpretation, Token, Value};
 
 use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
-    algo_ops, arithmetic, cast, comparison, control, control_cond, execute_def, execute_del,
-    execute_lookup, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
-    reflection, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
+    algo_ops, arithmetic, bindings, cast, comparison, control, control_cond, execute_def,
+    execute_del, execute_lookup, higher_order, higher_order_fold, io, logic, math_ops,
+    nil_diagnostics, reflection, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
-
-/// What a Word's declared `nilPolicy` requires of the operands on the stack,
-/// decided before its primitive is reached.
-///
-/// The passthrough arm names the bubble by its stack position rather than
-/// carrying the value: the decision is made from a borrow of the stack, and a
-/// position keeps the whole enum a couple of words wide.
-enum NilContract {
-    /// The declaration places no obligation here; run the primitive.
-    Run,
-    /// A NIL operand is malformed use for this Word.
-    Reject,
-    /// A NIL operand is the Word's result; the bubble flows through in place
-    /// of running the primitive. `operands` is the declared operand window to
-    /// unwind, `bubble` the stack index of the NIL that becomes the result.
-    PassThrough { operands: usize, bubble: usize },
-}
 
 #[cfg(feature = "trace-compile")]
 fn trace_compile_metrics(interp: &Interpreter) {
@@ -50,6 +33,16 @@ impl Interpreter {
     fn execute_word_core_inner(&mut self, name: &str) -> Result<()> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
         let name = canonical_name.as_ref();
+
+        // A local binding is read before the dictionary. Nothing can be in both
+        // — `BIND` refuses a Word's name and `DEF` refuses a live binding's —
+        // so the order settles no contest; it is here because a binding is the
+        // cheaper lookup and the more local fact.
+        if let Some((value, role)) = self.lookup_binding(&name.to_uppercase()) {
+            self.stack.push_with_role(value, role);
+            return Ok(());
+        }
+
         let (resolved_name, def) = self.resolve_word_entry(name).ok_or_else(|| {
             let ambiguous = self.check_ambiguity(name);
             if !ambiguous.is_empty() {
@@ -57,6 +50,17 @@ impl Interpreter {
                     "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
                     name.to_uppercase(),
                     ambiguous.join(", ")
+                ))
+            } else if self.binding_exists_beyond_barrier(&name.to_uppercase()) {
+                // The reader can see the name in their own source, so the bare
+                // "unknown word" is the least useful true thing to say. What
+                // went wrong is the scope, and naming it is the difference
+                // between reading the rule and rediscovering it.
+                AjisaiError::from(format!(
+                    "'{}' is bound in another frame. A binding is reachable in the frame that made it \
+                     and in the blocks written there, never inside a Word it calls — pass the value \
+                     as an operand instead.",
+                    name.to_uppercase()
                 ))
             } else {
                 AjisaiError::UnknownWord(name.to_string())
@@ -116,6 +120,11 @@ impl Interpreter {
         self.consumption_mode = ConsumptionMode::Consume;
         let enclosing_watch = self.stack.begin_depth_watch();
 
+        // A Word call is a barrier frame: its body names its own locals and
+        // reads none of the caller's, so what a Word means depends on its
+        // operands and its dictionary and nothing else.
+        self.open_binding_scope(true);
+
         // Internal tail-call elimination ("internal GOTO"): mark this frame as
         // the self-tail-call target, then run its body in a trampoline. A
         // guarded tail self-call (the tail of a COND clause body) sets
@@ -134,6 +143,11 @@ impl Interpreter {
         let result = loop {
             self.in_tail_context = false;
             self.tail_jump_pending = false;
+            // The trampoline re-runs the body as a backward jump rather than a
+            // call, so the frame stays while the iteration it belongs to does
+            // not: the next round starts with no names, exactly as a fresh call
+            // would.
+            self.clear_innermost_bindings();
 
             // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
             // produces the same result whether it went through the compiled
@@ -163,6 +177,7 @@ impl Interpreter {
         self.tail_jump_pending = false;
         self.in_tail_context = prev_in_tail;
         self.tail_self_word = prev_tail_self;
+        self.close_binding_scope();
 
         let operand_floor = self.stack.end_depth_watch(enclosing_watch);
         if let (Some(operands), true) = (kept_operands, result.is_ok()) {
@@ -202,111 +217,6 @@ impl Interpreter {
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
         self.execute_builtin_direct(canonical.as_ref())
-    }
-
-    /// What the Word's declared NIL contract dictates for the operands
-    /// currently on the stack.
-    ///
-    /// `spec/words.json` declares, per Word, what a NIL operand means. Until
-    /// recently each executor decided that for itself, so the declaration was
-    /// decorative: `LENGTH` answered `0` for the length of a NIL while
-    /// declaring `rejectNil`, and `SORT` raised an error while declaring
-    /// `passthrough`. Both directions of that drift are settled here, in one
-    /// place that reads the declaration, so no executor can quietly disagree
-    /// with the canon.
-    ///
-    /// The guard reads the declaration and nothing else — no per-family
-    /// exception table. A Word whose arity is data-dependent carries no fixed
-    /// operand window, so it is left to its executor.
-    fn declared_nil_contract(&self, word: &GeneratedWord) -> NilContract {
-        let Arity::Fixed(arity) = word.stack_inputs else {
-            return NilContract::Run;
-        };
-        let arity = arity as usize;
-        let operands = self.stack.as_slice();
-
-        match word.nil_policy {
-            // `rejectNil` binds every operand position, not just the receiver,
-            // so a NIL anywhere in the declared arity is malformed use. The
-            // window is clamped rather than required: refusing to run touches
-            // nothing, so a short stack can be judged on what it holds.
-            NilPolicy::RejectNil => {
-                let start = operands.len().saturating_sub(arity);
-                if operands[start..].iter().any(|operand| operand.is_nil()) {
-                    NilContract::Reject
-                } else {
-                    NilContract::Run
-                }
-            }
-            // A NIL operand *is* the result: the bubble flows downstream
-            // carrying its reason (SPEC §7.12, LANG.FAILURE.PASSTHROUGH).
-            // `passthroughThenProject` differs only in what non-NIL operands
-            // may yield, so a NIL input takes the same route — projecting an
-            // absence leaves an absence.
-            //
-            // Unlike rejection this synthesises a result and unwinds the
-            // operands, which needs the whole window present; a short stack is
-            // an arity fault, left to the executor to report as underflow.
-            NilPolicy::Passthrough | NilPolicy::PassthroughThenProject => {
-                if operands.len() < arity {
-                    return NilContract::Run;
-                }
-                // The leftmost bubble wins, matching left-to-right evaluation
-                // order and the executor-level helpers it replaces.
-                let window = operands.len() - arity;
-                match operands[window..]
-                    .iter()
-                    .position(|operand| operand.is_nil())
-                {
-                    Some(offset) => NilContract::PassThrough {
-                        operands: arity,
-                        bubble: window + offset,
-                    },
-                    None => NilContract::Run,
-                }
-            }
-            // `createsNil` and `preserveReason` describe what the Word does
-            // with non-NIL operands; `consumeNil` and `inspectNil` make the NIL
-            // itself the Word's subject. None of them constrain dispatch.
-            NilPolicy::CreatesNil
-            | NilPolicy::ConsumeNil
-            | NilPolicy::InspectNil
-            | NilPolicy::PreserveReason => NilContract::Run,
-        }
-    }
-
-    /// Yield the NIL at stack index `bubble` as the Word's result without
-    /// running its primitive, unwinding the declared operand window under the
-    /// active consumption mode (SPEC §5.2): `EAT` removes the operands, `KEEP`
-    /// leaves them in place. The bubble is copied out before the unwind, since
-    /// the unwind is what removes it.
-    fn pass_nil_through(&mut self, operands: usize, bubble: usize) {
-        let result = Value::nil_inheriting_absence_from(&self.stack[bubble]);
-        if self.consumption_mode == ConsumptionMode::Consume {
-            let remaining = self.stack.len() - operands;
-            self.stack.drain(remaining..);
-        }
-        self.stack.push(result);
-    }
-
-    /// Settle the Word's declared NIL contract against the current stack.
-    ///
-    /// `None` means the declaration places no obligation here and the primitive
-    /// must run; `Some(result)` is the Word's outcome, decided without running
-    /// it. Every dispatch path must consult this — a path that skips it is a
-    /// path on which the declaration is decorative again.
-    pub(super) fn apply_declared_nil_contract(
-        &mut self,
-        word: &GeneratedWord,
-    ) -> Option<Result<()>> {
-        match self.declared_nil_contract(word) {
-            NilContract::Run => None,
-            NilContract::Reject => Some(Err(AjisaiError::create_structure_error("a value", "NIL"))),
-            NilContract::PassThrough { operands, bubble } => {
-                self.pass_nil_through(operands, bubble);
-                Some(Ok(()))
-            }
-        }
     }
 
     pub(crate) fn execute_builtin_direct(&mut self, name: &str) -> Result<()> {
@@ -365,6 +275,7 @@ impl Interpreter {
             WordId::Exec => control::op_exec(self),
             WordId::Reflect => reflection::op_reflect(self),
             WordId::Cond => control_cond::op_cond(self),
+            WordId::Bind => bindings::op_bind(self),
             WordId::Def => execute_def::op_def(self),
             WordId::Del => execute_del::op_del(self),
             WordId::Lookup => execute_lookup::op_lookup(self),

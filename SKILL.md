@@ -163,8 +163,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-58 canonical Words in one flat Core dictionary, of which
-35 form the Semantic Kernel and 23 are Standard Words. Both are
+59 canonical Words in one flat Core dictionary, of which
+36 form the Semantic Kernel and 23 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -224,6 +224,7 @@ no module system and nothing to import.
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
+| `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |

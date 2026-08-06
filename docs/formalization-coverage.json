@@ -2389,6 +2389,36 @@
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
     },
     {
+      "id": "core.bind",
+      "kind": "coreword",
+      "surface": "BIND",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §8.2",
+        "SPECIFICATION.html §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-binding-names-a-value",
+        "core-binding-does-not-cross-a-word-call"
+      ],
+      "status": "Formalized",
+      "notes": "BIND extends the frame's local finite partial map with a name, and the map dies with the frame. The same algebra as the dictionary, scoped to LANG.SOURCE.FRAME rather than the session, which is what keeps it from being a second name space.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
+    },
+    {
       "id": "core.def",
       "kind": "coreword",
       "surface": "DEF",

@@ -410,7 +410,25 @@ fn execute_compiled_line(
         .iter()
         .any(|op| matches!(op, CompiledOp::FallbackToken(_)))
     {
-        interp.execute_section_core(&line.source_tokens, 0)?;
+        // A line the compiler could not lower is re-interpreted from its source
+        // tokens, and the interpreted route carries its own tail-call deferral —
+        // but only when `in_tail_context` says the line is in tail position, and
+        // nothing here used to say so. So a body whose last line held any
+        // unresolved symbol lost the trampoline and recursed natively until the
+        // depth guard, which the plain route would have run as a backward jump.
+        //
+        // That was reachable before (a forward reference in the tail line) and
+        // is now ordinary, because a local binding's name is exactly such a
+        // symbol. The condition mirrors `execute_guard_structure`'s: the tail
+        // line of a trampolined word, ending in `COND`.
+        let tail_context = is_tail_line
+            && interp.tail_call_enabled
+            && interp.tail_self_word.is_some()
+            && super::execution_loop::tail_token_is_cond(&line.source_tokens);
+        let previous_tail_context = std::mem::replace(&mut interp.in_tail_context, tail_context);
+        let result = interp.execute_section_core(&line.source_tokens, 0);
+        interp.in_tail_context = previous_tail_context;
+        result?;
         return Ok(());
     }
 

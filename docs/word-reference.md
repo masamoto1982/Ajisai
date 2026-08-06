@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **58 Words**, of which **35** form the Semantic Kernel and **23** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **59 Words**, of which **36** form the Semantic Kernel and **23** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -751,6 +751,20 @@ Set the consumption mode to keep operands.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.MODIFIERS.CONSUMPTION`
 - **Syntax:** `KEEP +`
+
+## `BIND`
+
+Name a value for the rest of the frame that made it. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `dictionary`
+- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
+- **NIL policy:** `consumeNil`; projection: none
+- **Purity / determinism:** `pure` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.SOURCE.FRAME`, `LANG.DICTIONARY.RESOLUTION`
+- **Syntax:** `[ 1 2 3 ] 'XS' BIND`
+- **ERROR conditions:** `nonText`, `nameIsAWord`, `shapeMismatch`
 
 ## `DEF`
 

@@ -78,7 +78,7 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
 /// the tail-call trampoline: only a body line that ends in `COND` carries a
 /// guarded tail self-call eligible for the internal backward jump. Trailing
 /// `LineBreak`s are ignored.
-fn tail_token_is_cond(tokens: &[Token]) -> bool {
+pub(crate) fn tail_token_is_cond(tokens: &[Token]) -> bool {
     for token in tokens.iter().rev() {
         match token {
             Token::LineBreak => continue,
@@ -397,7 +397,14 @@ impl Interpreter {
     /// block is an ordinary call.
     pub(crate) fn execute_nested_block(&mut self, tokens: &[Token]) -> Result<()> {
         let saved_tail_context: bool = std::mem::replace(&mut self.in_tail_context, false);
+        // A transparent frame: the block reads the names of the frame it was
+        // written in, and the names it makes are gone when it ends. That is
+        // what lets a bound threshold be used inside `{ T LT } FILTER` — and
+        // why a `BIND` inside a `MAP` block is a fresh name per element rather
+        // than a collision on the second.
+        self.open_binding_scope(false);
         let result = self.execute_section_core(tokens, 0).map(|_| ());
+        self.close_binding_scope();
         self.in_tail_context = saved_tail_context;
         result
     }
@@ -438,6 +445,7 @@ impl Interpreter {
         self.execution_step_count = 0;
         self.numeric_work_used = 0;
         self.dictionary_changes_this_run.clear();
+        self.reset_binding_scopes();
         // Source entry is the one place a token has a position, so it is the
         // one place the positions are recorded. They are index-aligned with
         // `tokens` and consumed by the depth-1 cursor in `execute_section_core`.

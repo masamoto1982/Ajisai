@@ -1,5 +1,6 @@
 pub mod algo_ops;
 pub mod arithmetic;
+pub(crate) mod bindings;
 pub mod cast;
 pub mod comparison;
 pub(crate) mod compiled_call;
@@ -7,6 +8,7 @@ pub mod compiled_plan;
 pub mod control;
 pub mod control_cond;
 pub mod debug_diagnosis;
+pub(crate) mod declared_nil_contract;
 pub mod epoch;
 pub mod error_flow_trace;
 pub mod execute_def;

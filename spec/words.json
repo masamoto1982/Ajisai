@@ -2216,6 +2216,48 @@
       "vocabularyTier": "kernel"
     },
     {
+      "name": "BIND",
+      "aliases": [],
+      "family": "dictionary",
+      "stack": {
+        "inputs": 2,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "nameIsAWord",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.SOURCE.FRAME",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Name a value for the rest of the frame that made it.",
+        "hover": "BIND — name a value locally",
+        "lookup": "Name a value for the rest of the frame that made it. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.",
+        "syntax": "[ 1 2 3 ] 'XS' BIND",
+        "role": "The one way to name a value without defining a Word.",
+        "stackEffect": "[ x ] [ 'name'.. ] -> [ ]"
+      },
+      "executorKey": "Bind",
+      "effects": [],
+      "partiality": "partial",
+      "category": "dictionary",
+      "vocabularyTier": "kernel"
+    },
+    {
       "name": "DEF",
       "aliases": [],
       "family": "dictionary",
