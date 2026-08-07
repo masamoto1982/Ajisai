@@ -1,8 +1,13 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
+use crate::interpreter::value_extraction_helpers::{
+    extract_word_name_from_value, keep_mode_operands, restore_keep_mode_operands,
+};
 use crate::interpreter::Interpreter;
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
+    // `KEEP` leaves the name on the stack; the Word is still deleted. See
+    // `keep_mode_operands`.
+    let kept = keep_mode_operands(interp, 1);
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name = extract_word_name_from_value(&val)?;
@@ -73,5 +78,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     interp.recompute_word_identities();
     interp.gc_body_store();
     interp.bump_dictionary_epoch();
+    restore_keep_mode_operands(interp, kept);
     Ok(())
 }

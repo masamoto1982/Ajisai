@@ -89,7 +89,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 - Fill a tensor: [ shape... value ]
   `[ 2 2 7 ] FILL` → stack: `[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]`
 - MAP with a { } code block
-  `[ 0 4 ] RANGE { [ 2 ] * } MAP` → stack: `[ 0/1 2/1 4/1 6/1 8/1 ]`
+  `[ 0 4 ] RANGE { [ 2 ] * } MAP` → stack: `[ [ 0/1 ] [ 2/1 ] [ 4/1 ] [ 6/1 ] [ 8/1 ] ]`
 - FILTER keeps matching elements
   `[ 0 10 ] RANGE { 5 > } FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
 - FOLD needs an explicit initial value
@@ -205,7 +205,7 @@ no module system and nothing to import.
 | `FILL` | tensor | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
 | `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
-| `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
+| `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { 2 MUL } MAP` |
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { 2 = } FILTER` |
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
 | `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { 2 = } ANY` |

@@ -243,7 +243,14 @@ fn format_tensor_slice_recursive(data: &[Fraction], shape: &[usize], _depth: usi
     format!("[ {} ]", inner.join(" "))
 }
 
-fn format_code_block(tokens: &[super::Token]) -> String {
+/// Render a code block as the source that would build it: braces included.
+///
+/// The braces are not decoration. A block on the stack used to render as its
+/// bare token text, so `{ 2 MUL }` was drawn `2 MUL` — a form no reader can
+/// tell from a fragment of program, and one that does not read back as the
+/// value it names. `KEEP ID` makes a block on the stack an ordinary sight, so
+/// what is drawn there has to say which of the six domains it is.
+pub(crate) fn format_code_block(tokens: &[super::Token]) -> String {
     use super::Token;
     let token_strs: Vec<String> = tokens
         .iter()
@@ -260,7 +267,10 @@ fn format_code_block(tokens: &[super::Token]) -> String {
             Token::LineBreak => "\n".to_string(),
         })
         .collect();
-    token_strs.join(" ")
+    if token_strs.is_empty() {
+        return "{ }".to_string();
+    }
+    format!("{{ {} }}", token_strs.join(" "))
 }
 
 /// Canonical numeric rendering: every number is shown as a reduced

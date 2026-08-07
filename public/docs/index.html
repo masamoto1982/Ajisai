@@ -553,6 +553,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
+                    <p class="ref-note">A vector literal is a literal all the way through: a bare name written inside <code>[ ]</code> is <strong>its own text</strong>, never a call and never an error, so <code>[ FOO BAR ]</code> is <code>[ 'FOO' 'BAR' ]</code>. That is how a vector of strings is written without quoting each one, and it is also the one thing that surprises readers once they start naming values — see <a href="#name-inside-brackets">A name inside <code>[ ]</code> is text</a>.</p>
                     <p class="ref-note"><code>[ ]</code> is the empty vector — a collection of no values, and an ordinary value you can write, nest, and measure (<code>[ ] LENGTH</code> is <code>0</code>). It is not <code>NIL</code>: <code>NIL</code> is the absence of a value, which is a different thing from a collection that happens to hold none. Operations that come up empty answer <code>[ ]</code> rather than bubbling — <code>[ 1 2 3 ] { 5 GT } FILTER</code> is <code>[ ]</code>.</p>
                 </section>
 
@@ -692,6 +693,8 @@
                     <p><code>KEEP</code> prefixes the <em>next word only</em>, and it carries no symbol — it is written out. That is the whole modifier system: one explicit operation for the non-default behavior, and no Forth-style stack shufflers to go with it. Everything else about how a word behaves is in the word itself, so reading a call means reading a name and at most one prefix.</p>
                     <p>The word it prefixes may be one of your own, and it means the same thing there: <code>KEEP</code> retains the operands of <strong>the call</strong>, never anything the body happens to use inside itself. Given <code>{ 2 MUL } 'DOUBLE' DEF</code>, <code>5 KEEP DOUBLE</code> is <code>5/1 10/1</code> — the body's own <code>2</code> is the body's business and never reaches your stack.</p>
                     <p>One consequence is worth keeping in your pocket. A word that gives back exactly what it was handed — <code>{ 1 COLLECT [ 0 ] GET } 'ID' DEF</code>, which wraps a value and unwraps it again — turns <code>KEEP</code> into a copier for <em>any</em> value: <code>'hi' KEEP ID</code> leaves two strings, and the same works for truth values and code blocks, which no arithmetic trick reaches.</p>
+                    <p>A word that answers with nothing is no exception. <code>BIND</code>, <code>DEF</code>, <code>DEL</code> and <code>LOOKUP</code> push no result, so under <code>KEEP</code> what you are left with is their operands, unchanged: <code>5 KEEP 'X' BIND</code> names the value <em>and</em> leaves <code>5/1 'X'</code> where they were.</p>
+                    <p class="ref-note">The higher-order words are the one exception, and it is worth knowing before you meet it. <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code> and <code>ALL</code> retain the <em>collection</em> they walk and nothing else, so <code>[ 1 2 ] KEEP { 2 MUL } MAP</code> is <code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code> — no block, and for <code>FOLD</code> no starting accumulator either. The block says what the call <em>is</em> rather than being data the call read, and the accumulator has been folded into the answer. Every other word keeps everything it read, <code>[ 10 3 ] KEEP [ 0 ] GET</code> included, which leaves all three of <code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1188,6 +1191,26 @@
                         </div>
                     </div>
                     <p><code>GET</code> takes as many indices as you give it. One index answers with the element itself; several answer with a vector of the selections, in the order the indices name them — so picking out a few positions, reordering, or reversing is one call, and an index that names nothing leaves a <code>NIL</code> at that position rather than spoiling the rest.</p>
+                    <p class="ref-note">Read that rule twice when the index list is computed rather than written, because it means the <em>shape of the answer follows the data</em>: a gather by two indices gives a vector, and a gather by one gives the bare element. A selection that happens to narrow to a single position — the left side of a split, a class with one member — therefore answers with a scalar, and the <code>LENGTH</code> or <code>FOLD</code> written for the vector case fails on it. When you want a vector whatever the count, gather one index at a time and let <code>MAP</code> collect the results, which is a vector of the same length as the index list however long that is:</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 20 30 40 ] 'YS' BIND<br>[ 2 ] { 1 COLLECT 'I' BIND YS I GET } MAP</code></td>
+                                    <td><code>[ 30/1 ]</code></td>
+                                    <td class="notes">One index, and still a vector. With <code>[ 2 0 ]</code> the same line is <code>[ 30/1 10/1 ]</code>, so the code downstream never has two shapes to handle.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1365,6 +1388,7 @@
                 <section id="higher-order" class="ref-page">
                     <h2>Higher-Order Words</h2>
                     <p>A code block <code>{ }</code> is a first-class value. The higher-order words apply a block — or the quoted name of a defined word — across the elements of a vector.</p>
+                    <p class="ref-note">Whatever the block leaves is the mapped element, exactly as it stands. A vector of one element is a vector of one element like any other value, so <code>[ 1 2 ] { 1 COLLECT } MAP</code> is <code>[ [ 1/1 ] [ 2/1 ] ]</code> and <code>[ [ 1 ] [ 2 3 ] ] { REVERSE } MAP</code> is <code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>. Nothing unwraps a result because it happens to be short — a cluster with one point and a row with one output keep their shape all the way through.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1373,7 +1397,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] { [ 2 ] * } MAP</code></td>
+                                    <td><code>[ 1 2 3 ] { 2 MUL } MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">Apply the block to each element.</td>
                                 </tr>
@@ -1392,7 +1416,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ [ 2 ] * } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</code></td>
+                                    <td><code>{ 2 MUL } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">A defined word can be passed by its quoted name.</td>
                                 </tr>
@@ -1498,6 +1522,7 @@
                         </table>
                     </div>
                     <p>So <code>{ + } 'ADDW' DEF</code> followed by <code>3 4 ADDW</code> gives <code>7</code>, and so does <code>3 4 { + } EXEC</code> — both see the whole stack. But <code>100 [ 1 2 ] { + } MAP</code> is a stack underflow: the block sees one element and the <code>100</code> is not in its frame.</p>
+                    <p class="ref-note">When something inside a block fails, the diagnosis names <strong>the word that failed</strong>, not the word that ran the block: <code>[ 1 2 ] { 'x' 1 ADD } MAP</code> reports <code>ADD</code>, with <code>inside MAP</code> beside it and the position of the statement that ran. A word you defined is where that stops — a call to it reports the word, because from the caller&#39;s side that is what failed.</p>
                     <p class="ref-note">A block written <em>inside</em> another block is data where it is written. It is evaluated only when the word that receives it runs it, under that word's row above rather than the enclosing block's — which is why a word may call itself from inside a <code>{ }</code> it hands to <code>MAP</code> or <code>EXEC</code>, and why that call is an ordinary recursive call.</p>
 
                     <h3 id="two-arguments">Writing a word that takes two arguments</h3>
@@ -1546,6 +1571,7 @@
                     <p class="ref-note">The one duplication device is <code>KEEP</code>. Prefixed to a word that reads one value and pushes one, it leaves the operand underneath the result, so <code>KEEP REVERSE REVERSE</code> copies the vector on top and <code>KEEP ID</code> — with the identity word of <a href="#stack">Stack and Modifiers</a> — copies a value of any kind at all. Prefixed to a two-operand word it keeps <em>both</em> operands, which is rarely what you want: <code>[ 10 3 ] KEEP [ 0 ] GET</code> leaves the index vector on the stack as well.</p>
 
                     <h3>Code as data</h3>
+                    <p class="ref-note">A code block sitting on the stack shows the source it was written as, braces and all — <code>{ 2 MUL }</code>, and <code>{ }</code> for the empty one. It is a value of its own kind, so <code>NIL?</code> on it is <code>FALSE</code> and <code>EXEC</code> runs it; if you are copying blocks around with <code>KEEP ID</code>, that is what you will see in the Stack panel.</p>
                     <p>A code block and a vector are <strong>different kinds of value</strong>: a vector is data and is never executable, and <code>EXEC</code> accepts only a code block. <code>REFLECT</code> is the one crossing between them. It turns a code block into a canonical vector of token records — and turns that vector back into the block — without evaluating anything and without consulting the dictionary.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1947,6 +1973,33 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
+                    <h3 id="name-inside-brackets">A name inside <code>[ ]</code> is text, not the value</h3>
+                    <p>This is the one place a binding will surprise you, and it is worth meeting here rather than in your own program. Inside a vector literal a bare name is <strong>its own text</strong> — that is the rule for <code>[ ]</code> generally, and a bound name is no exception. So after <code>3 'K' BIND</code>, <code>[ K ]</code> is the one-element vector <code>[ 'K' ]</code>, not <code>[ 3/1 ]</code>.</p>
+                    <p>It catches people because the idioms of this Reference are written <code>[ 0 ] GET</code> and <code>[ 3 ] TAKE</code>, so the natural next line is <code>XS [ K ] TAKE</code> — and that fails with <code>expected integer, got string</code>. Two ways to say what you meant:</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 'K' BIND [ 1 2 3 4 5 ] K TAKE</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes">Write the name bare. A count or an index may be a plain number, so nothing needs wrapping.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>3 'K' BIND K 1 COLLECT</code></td>
+                                    <td><code>[ 3/1 ]</code></td>
+                                    <td class="notes">When you do want the one-element vector, build it: <code>COLLECT</code> reads the value, where <code>[ ]</code> reads the text.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
                     <h3>How far a name reaches</h3>
                     <p>A binding belongs to the <strong>frame</strong> that made it — the word body, or the run itself if you typed it straight in — and it lives exactly as long. Two rules follow, and between them they are the whole story:</p>
                     <p><strong>A name reaches the blocks written in its frame.</strong> A block that <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>EXEC</code> or a <code>COND</code> clause runs is not a new frame for names, so it reads the ones around it. The isolation those words enforce (see <a href="#blocks-frames">What a block sees</a>) is of the <em>stack</em>, and a name is not on the stack. This is what lets a predicate test against a value the program only learned at run time:</p>
@@ -1973,6 +2026,71 @@ COND</code></td>
                     <p>A word that binds leaves no names behind for its caller, and a run&#39;s bindings are gone when the run ends. That is deliberate: a name that outlived its frame would be a second, editable name space sitting next to the dictionary, and there is one name space here. For data you want to keep, define a word — <code>{ [ 1 2 3 ] } 'XS' DEF</code> — which is the dictionary doing the job it is for.</p>
                     <h3>A name is a word or a binding, never both</h3>
                     <p>You cannot bind a name that a Core or User word already has, and you cannot define a word whose name is currently bound. Both directions are refused, so you never have to work out which one a name resolved through. Short scratch names — <code>W</code>, <code>DX</code>, <code>LIMIT</code> — are exactly right here, and unlike a word name they attract no naming-convention warning: they are local, and their scope is on the screen in front of you.</p>
+                </section>
+
+                <section id="patterns" class="ref-page">
+                    <h2>Words Ajisai Does Not Have</h2>
+                    <p>The vocabulary is 59 words and is meant to stay that way: a word that a user definition already expresses does not belong in Core. So the sums, transposes and argmins that other languages spell as words are spelled here as short phrases, and the ones that come up most are written out below. Each is verified, and each is a fine body for a <code>DEF</code> of your own if you use it twice.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 ] 0 { ADD } FOLD</code></td>
+                                    <td><code>10/1</code></td>
+                                    <td class="notes">Sum. The same shape with <code>MUL</code> and <code>1</code> is a product, and with <code>MIN</code> or <code>MAX</code> an extremum.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] MUL 0 { ADD } FOLD</code></td>
+                                    <td><code>32/1</code></td>
+                                    <td class="notes">Dot product: multiply element-wise, then sum.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A { V MUL 0 { ADD } FOLD } MAP</code></td>
+                                    <td><code>[ 17/1 39/1 ]</code></td>
+                                    <td class="notes">Matrix times vector: one dot product per row.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ [ 1 2 3 ] [ 4 5 6 ] ] 'M' BIND<br>[ 0 2 ] RANGE { 1 COLLECT 'J' BIND M { J GET } MAP } MAP</code></td>
+                                    <td><code>[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]</code></td>
+                                    <td class="notes">Transpose: for each column index, take that position out of every row. The range runs to the last column index.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 4 1 7 1 ] KEEP SORT [ 0 ] GET INDEX-OF</code></td>
+                                    <td><code>1/1</code></td>
+                                    <td class="notes">Argmin: the smallest value, then the first position holding it. <code>[ -1 ] GET</code> instead makes it argmax.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>Ordering by a key, ties and all</h3>
+                    <p>Sorting the values and looking their positions back up is the obvious way to get an ordering, and it is wrong exactly where it matters: with two equal distances, <code>SORT</code> then <code>INDEX-OF</code> finds the same position twice, so "the 3 nearest" can hand you two neighbours or four. Rank each position instead, counting how many positions come before it — earlier value, or equal value and lower index. That is a total order, so the ranks are a permutation and the ordering is exact and stable.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 18 13 1 1 13 2 ] 'DS' BIND<br>[ 0 5 ] RANGE 'IX' BIND<br>IX { 'I' BIND I 1 COLLECT 'IV' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp; DS IV GET 'DI' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp; IX { 'J' BIND J 1 COLLECT 'JV' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DS JV GET 'DJ' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DJ DI LT<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DJ DI EQ J I LT AND<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OR } FILTER LENGTH } MAP 'RANKS' BIND<br>IX { 'P' BIND RANKS P INDEX-OF } MAP 3 TAKE</code></td>
+                                    <td><code>[ 2/1 3/1 5/1 ]</code></td>
+                                    <td class="notes">The 3 nearest of six distances, two of which tie at 1. Drop the <code>3 TAKE</code> for the whole ordering, <code>[ 2/1 3/1 5/1 1/1 4/1 0/1 ]</code>. <code>RANKS</code> is a permutation, so the last line reads it backwards to turn rank-by-position into position-by-rank.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="iterative" class="ref-page">
@@ -2191,6 +2309,7 @@ COND</code></td>
                     <li><a href="#strings">Strings</a></li>
                     <li><a href="#define">Defining Words</a></li>
                     <li><a href="#bindings">Naming a Value</a></li>
+                    <li><a href="#patterns">Words Ajisai Does Not Have</a></li>
                     <li><a href="#iterative">Iterative Numerics</a></li>
                     <li><a href="#dictionaries">Dictionaries and Word Identity</a></li>
                     <li><a href="#output">Output</a></li>

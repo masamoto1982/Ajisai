@@ -255,7 +255,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-modifiers-consumption">LANG.MODIFIERS.CONSUMPTION — The consumption axis</h3>
 
-<p>There is exactly one modifier axis. By default a Word consumes the operands it reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order.</p>
+<p>There is exactly one modifier axis. By default a Word consumes the operands it reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order. A Word whose result is empty is no exception: <code>BIND</code>, <code>DEF</code>, <code>DEL</code> and <code>LOOKUP</code> perform their effect and leave their operands where they were. The higher-order Words are the one exception: under <code>KEEP</code>, <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code> and <code>ALL</code> retain the collection they walk and nothing else, because the CodeBlock states what the call is rather than being data the call read, and <code>FOLD</code>'s initial accumulator has been folded into the answer.</p>
 
 <p>A Word selects operands from the top of the stack, validates its registered contract, computes or projects the result, and then commits consumption according to the axis. ERROR does not masquerade as a successful NIL projection.</p>
 
@@ -305,7 +305,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, and <code>ALL</code> evaluate a CodeBlock once per visited element, in index order, with the block's stack effect isolated to its own operands.</p>
 
-<p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state.</p>
+<p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state. The block's single result is the mapped element as it stands, whatever domain it is in: a Vector of one element is a Vector of one element (LANG.VALUES.DISJOINT), so <code>[ 1 2 ] { 1 COLLECT } MAP</code> answers <code>[ [ 1 ] [ 2 ] ]</code> and no Word unwraps a result on the grounds of its length.</p>
 
 <h3 id="lang-collections-budget">LANG.COLLECTIONS.BUDGET — Materialization</h3>
 

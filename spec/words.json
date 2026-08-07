@@ -1479,7 +1479,7 @@
         "summary": "Apply a code block to each element of a vector.",
         "hover": "MAP — apply block to each element",
         "lookup": "Apply a code block to each element of a vector.",
-        "syntax": "[ 1 2 3 ] { [ 2 ] * } MAP",
+        "syntax": "[ 1 2 3 ] { 2 MUL } MAP",
         "role": "Higher-order primitive: Apply a code block to each element of a vector.",
         "stackEffect": "[ vec ] { body } -> [ mapped ]"
       },

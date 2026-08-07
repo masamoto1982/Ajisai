@@ -118,7 +118,7 @@ shared `types::value_protocol` mapping:
 
 ```json
 {
-  "type": "number | string | boolean | datetime | vector | nil | truthValue | process_handle | supervisor_handle",
+  "type": "number | string | boolean | datetime | vector | nil | truthValue | codeBlock | process_handle | supervisor_handle",
   "value": ...,
   "displayHint": "unassigned | rawNumber | interval | text | truthValue | timestamp | nil | continuedFraction",
   "semantics": { ... }
@@ -132,6 +132,10 @@ shared `types::value_protocol` mapping:
   vectors; interior nodes of rank ≥ 2 carry no `semantics`).
 - The logical Unknown (U) of the three-valued logic serializes as
   `{ "type": "truthValue", "value": "unknown" }` — never as `nil`.
+- A code block serializes as `{ "type": "codeBlock", "value": "{ 2 MUL }" }`:
+  its own domain, carrying the source text `stackDisplay` shows. It used to
+  serialize as `nil`, which drew a block as `NIL` on every host even though
+  `NIL?` answers FALSE for it and `EXEC` runs it.
 - `semantics` (when present): `semanticKind`, `shape`, `capabilities`,
   `origin`, optional `truthValue` (`"true" | "false" | "unknown"`), optional
   `absence` (§6a), and optional `approximate: true` for exact-irrational
@@ -158,6 +162,17 @@ WASM `diagnosis_to_js` boundary:
 - `nextChecks` is the agent's repair checklist: ordered, machine-stable
   labels with human guidance. It is always present (possibly short, never
   fabricated).
+- `where.word` is the Word that *raised* the failure, never the construct it
+  was written in. A failure inside a block a higher-order Word applies is
+  attributed to the Word in the block, with the enclosing Words carried
+  innermost-first in one evidence entry: `insideWords=MAP` (and
+  `insideWords=MAP,FOLD` when nested). Attribution stops at a User Word call —
+  its body is its own business, and naming it keeps the compiled and
+  interpreted routes identical (LANG.AUTHORITY.FREEDOM).
+- `sourceLine` / `sourceColumn` locate the *top-level* token that reached the
+  failure. A block and a Word body are each their own token stream with no
+  source of their own, so for a failure inside one the position is the
+  statement that ran it and `insideWords` says which construct it was.
 - `agreedPrefix` is non-null only for continued-fraction comparisons that
   returned Unknown within budget (SPEC §4.5.0 / §7.4.1): the number of
   leading partial quotients that matched.

@@ -3,7 +3,7 @@ use super::common::{
 };
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::is_vector_value;
-use crate::interpreter::Interpreter;
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Stack;
 use crate::types::Value;
 
@@ -24,17 +24,33 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    let target_val = interp.stack.pop().ok_or_else(|| {
-        interp.stack.push(code_val.clone());
-        AjisaiError::StackUnderflow
-    })?;
+    // `KEEP` retains the collection a higher-order Word walks, the same as
+    // `MAP`, `FILTER` and `FOLD`. `ANY` and `ALL` used to ignore the modifier
+    // outright, so `[ 1 2 3 ] KEEP { 1 GT } ANY` answered with the bare `TRUE`
+    // and the collection was gone — one rule for three of the five Words and
+    // another for the other two.
+    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
+
+    let target_val: Value = if is_keep_mode {
+        interp.stack.last().cloned().ok_or_else(|| {
+            interp.stack.push(code_val.clone());
+            AjisaiError::StackUnderflow
+        })?
+    } else {
+        interp.stack.pop().ok_or_else(|| {
+            interp.stack.push(code_val.clone());
+            AjisaiError::StackUnderflow
+        })?
+    };
 
     if target_val.is_nil() {
         interp.stack.push(Value::from_bool(true));
         return Ok(());
     }
     if !is_vector_value(&target_val) {
-        interp.stack.push(target_val);
+        if !is_keep_mode {
+            interp.stack.push(target_val);
+        }
         interp.stack.push(code_val);
         return Err(AjisaiError::create_structure_error(
             "vector",
@@ -91,7 +107,9 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
     interp.stack = saved_stack;
 
     if let Some(e) = error {
-        interp.stack.push(target_val);
+        if !is_keep_mode {
+            interp.stack.push(target_val);
+        }
         interp.stack.push(code_val);
         return Err(e);
     }

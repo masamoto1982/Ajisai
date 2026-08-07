@@ -165,6 +165,7 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
             reason.as_protocol_str()
         ),
         diagnosis: Some(diagnosis),
+        error_text: String::new(),
     });
 }
 
@@ -308,11 +309,23 @@ impl Interpreter {
                                 }
                                 Err(err) => {
                                     let category = ErrorCategory::from_error(&err);
+                                    let error_text = err.to_string();
+                                    // A failure raised inside a block this Word
+                                    // applied, or inside a User Word's body, is
+                                    // already recorded under the name of the
+                                    // Word that raised it. This frame is the
+                                    // one it happened *inside*, so it adds
+                                    // itself as context and leaves the answer
+                                    // to "which Word failed" alone.
+                                    if self.attribute_enclosing_word(upper.as_ref(), &error_text) {
+                                        return Err(err);
+                                    }
                                     // The top-level token that reached this
-                                    // failure. Every frame on the way out pushes
-                                    // an event and the outermost one wins, so
-                                    // the position a reader is sent to is the
-                                    // token they actually wrote.
+                                    // failure. A block and a Word body are each
+                                    // their own token stream with no source of
+                                    // their own, so the position a reader is
+                                    // sent to is the top-level token they
+                                    // actually wrote.
                                     let diagnosis = DebugDiagnosis::from_error(
                                         &err,
                                         Some(upper.as_ref()),
@@ -329,6 +342,7 @@ impl Interpreter {
                                         stack_len_after: self.stack.len(),
                                         message: format!("word error word={} error={}", upper, err),
                                         diagnosis: Some(diagnosis),
+                                        error_text,
                                     });
                                     return Err(err);
                                 }

@@ -158,6 +158,98 @@ async fn direct_bubble_carries_division_by_zero_reason() {
     assert_eq!(reason, Some(NilReason::DivisionByZero));
 }
 
+/// A failure is attributed to the Word that raised it, and the Words it
+/// happened *inside* are context rather than the answer.
+///
+/// The trace records every frame the error unwound through, and the outermost
+/// one used to win: `[ 1 2 ] { 'x' 1 ADD } MAP` reported `MAP`, and every
+/// next-check line asked about `MAP`'s expected shape for a failure about
+/// `ADD`'s operand. Ten-line blocks made that the whole of debugging.
+#[cfg(test)]
+mod attribution_tests {
+    use crate::interpreter::debug_diagnosis::DebugDiagnosis;
+    use crate::interpreter::Interpreter;
+
+    async fn diagnose(source: &str) -> DebugDiagnosis {
+        let mut interp = Interpreter::new();
+        assert!(
+            interp.execute(source).await.is_err(),
+            "`{source}` was expected to fail"
+        );
+        interp
+            .drain_error_flow_trace()
+            .iter()
+            .rev()
+            .find_map(|event| event.diagnosis.clone())
+            .expect("a failed run records a diagnosis")
+    }
+
+    fn evidence<'a>(diagnosis: &'a DebugDiagnosis, key: &str) -> Option<&'a str> {
+        diagnosis
+            .evidence
+            .iter()
+            .find_map(|e| e.strip_prefix(key)?.strip_prefix('='))
+    }
+
+    #[tokio::test]
+    async fn a_block_failure_names_the_word_in_the_block() {
+        let diagnosis = diagnose("[ 1 2 ] { 'x' 1 ADD } MAP").await;
+        assert_eq!(diagnosis.where_.word.as_deref(), Some("ADD"));
+        assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
+        assert!(
+            diagnosis
+                .next_checks
+                .iter()
+                .any(|c| c.detail.contains("ADD")),
+            "the repair checklist should be about the Word that failed: {:?}",
+            diagnosis.next_checks
+        );
+    }
+
+    #[tokio::test]
+    async fn nested_higher_order_words_chain_innermost_first() {
+        let diagnosis = diagnose("[ [ 1 ] ] { { 'x' 1 ADD } MAP } MAP").await;
+        assert_eq!(diagnosis.where_.word.as_deref(), Some("ADD"));
+        assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP,MAP"));
+    }
+
+    /// Attribution stops at a User Word: from the caller's side the Word is
+    /// what failed. This is also what keeps the compiled and interpreted body
+    /// routes reporting the same Word (LANG.AUTHORITY.FREEDOM).
+    #[tokio::test]
+    async fn a_user_word_body_failure_names_the_user_word() {
+        let diagnosis = diagnose("{ SORT } 'S' DEF 5 S").await;
+        assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
+        assert_eq!(evidence(&diagnosis, "insideWords"), None);
+    }
+
+    #[tokio::test]
+    async fn a_user_word_applied_by_a_higher_order_word_is_still_the_locus() {
+        let diagnosis = diagnose("{ SORT } 'S' DEF [ 1 2 ] 'S' MAP").await;
+        assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
+        assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
+    }
+
+    /// Each half of `expected _, got _` is a noun phrase. `SORT` used to pass a
+    /// whole sentence as the first half, so the rendering read "expected SORT:
+    /// expected vector, got non-vector value, got other format".
+    #[tokio::test]
+    async fn a_structure_error_renders_as_one_sentence() {
+        let mut interp = Interpreter::new();
+        let message = interp
+            .execute("5 SORT")
+            .await
+            .expect_err("SORT on a scalar fails")
+            .to_string();
+        assert_eq!(
+            message,
+            "Structure error: expected vector, got non-vector value"
+        );
+        assert_eq!(message.matches("expected").count(), 1);
+        assert_eq!(message.matches("got").count(), 1);
+    }
+}
+
 /// An error carries where in the source it happened, so a reader is sent to a
 /// line rather than left to bisect the program. The evidence channel already
 /// carries `key=value` facts (`stackLenBefore=`), so the position needed no new

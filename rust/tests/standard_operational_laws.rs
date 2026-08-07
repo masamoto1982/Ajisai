@@ -68,7 +68,7 @@ async fn higher_order_errors_restore_the_original_operand_atomically() {
         assert!(interpreter.execute(&source).await.is_err(), "{word}");
         assert_eq!(
             rendered_stack(&interpreter),
-            ["[ 3/1 1/1 2/1 ]", "UNKNOWN-CALLBACK"],
+            ["[ 3/1 1/1 2/1 ]", "{ UNKNOWN-CALLBACK }"],
             "{word}"
         );
     }

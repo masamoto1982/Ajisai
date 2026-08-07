@@ -1,8 +1,12 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
+use crate::interpreter::value_extraction_helpers::{
+    extract_word_name_from_value, keep_mode_operands, restore_keep_mode_operands,
+};
 use crate::interpreter::Interpreter;
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
+    // `KEEP` leaves the looked-up name on the stack. See `keep_mode_operands`.
+    let kept = keep_mode_operands(interp, 1);
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name_str = extract_word_name_from_value(&name_val)?;
@@ -13,6 +17,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         if def.is_builtin {
             let detailed_info = crate::builtins::lookup_builtin_detail(&name_str);
             interp.documentation_to_show = Some(detailed_info);
+            restore_keep_mode_operands(interp, kept);
             return Ok(());
         }
 
@@ -28,6 +33,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
                 def.description.as_deref(),
             ));
         }
+        restore_keep_mode_operands(interp, kept);
         Ok(())
     } else {
         Err(AjisaiError::UnknownWord(name_str))

@@ -14,7 +14,7 @@ fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
     }
 }
 
-fn pop_vector_and_target(interp: &mut Interpreter, word: &str) -> Result<(Vec<Value>, Value)> {
+fn pop_vector_and_target(interp: &mut Interpreter, _word: &str) -> Result<(Vec<Value>, Value)> {
     let operands = extract_operands(interp, 2)?;
     match operands[0].as_vector_view() {
         Some(view) => {
@@ -23,8 +23,11 @@ fn pop_vector_and_target(interp: &mut Interpreter, word: &str) -> Result<(Vec<Va
         }
         None => {
             restore_operands(interp, operands);
+            // A noun phrase, not a sentence: the template around it already
+            // says "expected _, got _", and the failing Word's name is the
+            // diagnosis locus rather than part of the message.
             Err(AjisaiError::create_structure_error(
-                &format!("{}: expected vector as first operand", word),
+                "vector as first operand",
                 "non-vector value",
             ))
         }

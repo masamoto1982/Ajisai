@@ -501,7 +501,7 @@ Apply a code block to each element of a vector.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] { [ 2 ] * } MAP`
+- **Syntax:** `[ 1 2 3 ] { 2 MUL } MAP`
 - **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
 
 ## `FILTER`

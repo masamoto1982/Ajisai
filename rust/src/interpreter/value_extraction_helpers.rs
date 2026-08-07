@@ -176,6 +176,49 @@ pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
     interp.stack.push(result);
 }
 
+/// The operand slots a Word that answers with nothing is about to eat, when
+/// `KEEP` is in force — `None` in the ordinary consuming mode.
+///
+/// `KEEP` leaves a Word's operands on the stack beneath its result
+/// (LANG.MODIFIERS.CONSUMPTION), and the contract names no exception for a
+/// Word whose result is empty: `5 KEEP 'X' BIND` names the value *and* leaves
+/// `5 'X'` where they were, and `{ 1 } 'W' KEEP DEF` leaves the body and the
+/// name. The consuming-and-answering Words read the modifier while extracting
+/// their operands; a Word with nothing to answer with has nothing to extract
+/// there, so it takes a copy up front and puts it back once the effect has
+/// succeeded. Silently doing neither — which is what `BIND`, `DEF`, `DEL` and
+/// `LOOKUP` used to do — is the one reading the contract does not allow.
+pub(crate) fn keep_mode_operands(
+    interp: &Interpreter,
+    count: usize,
+) -> Option<Vec<(Value, crate::types::Interpretation)>> {
+    if interp.consumption_mode != ConsumptionMode::Keep || interp.stack.len() < count {
+        return None;
+    }
+    let floor = interp.stack.len() - count;
+    Some(
+        interp
+            .stack
+            .iter_slots()
+            .skip(floor)
+            .map(|(value, role)| (value.clone(), role))
+            .collect(),
+    )
+}
+
+/// Put back what [`keep_mode_operands`] took a copy of. Called only after the
+/// Word succeeded: a failed Word reports its own stack, and restoring on top
+/// of that would double the operands it had already pushed back for the
+/// diagnosis.
+pub(crate) fn restore_keep_mode_operands(
+    interp: &mut Interpreter,
+    operands: Option<Vec<(Value, crate::types::Interpretation)>>,
+) {
+    for (value, role) in operands.into_iter().flatten() {
+        interp.stack.push_with_role(value, role);
+    }
+}
+
 pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
     let stack_len = interp.stack.len();
     if stack_len == 0 {
