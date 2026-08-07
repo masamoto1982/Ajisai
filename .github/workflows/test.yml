@@ -79,6 +79,12 @@ jobs:
         # blocklist, so deleting a Word is enough to keep prose honest about it.
         run: npm run check:reading-surfaces
 
+      - name: Tensor Profile contracts and graph IR agree
+        # Profile operators remain outside the frozen Core vocabulary, but their
+        # shape, dtype, numerical, differentiation, and resource contracts are
+        # still machine checked as one coherent semantic surface.
+        run: npm run check:tensor-profile
+
       - name: Verify generated specification surfaces are in sync
         # SPECIFICATION.html is generated from spec/ and must never be hand-edited;
         # the Word reference and Core hover contracts are generated from
