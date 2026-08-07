@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ajisai-lang.org/spec/typed-graph-ir.schema.json",
+  "title": "Ajisai typed SSA/dataflow graph IR",
+  "type": "object",
+  "required": ["schemaVersion", "profiles", "inputs", "nodes", "outputs"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "profiles": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "inputs": {"type": "array", "items": {"$ref": "#/$defs/value"}},
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
+    "outputs": {"type": "array", "items": {"type": "string", "pattern": "^%[A-Za-z0-9_.-]+$"}, "minItems": 1},
+    "artifacts": {"type": "array", "items": {"type": "object", "required": ["semanticId", "contentHash"], "properties": {"semanticId": {"type": "string"}, "contentHash": {"pattern": "^sha256:[0-9a-f]{64}$"}}, "additionalProperties": false}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "tensorType": {
+      "type": "object",
+      "required": ["domain", "dtype", "shape"],
+      "properties": {
+        "domain": {"const": "tensor"},
+        "dtype": {"type": "string", "minLength": 1},
+        "shape": {"type": "array", "items": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$"}]}}
+      },
+      "additionalProperties": false
+    },
+    "value": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {"id": {"type": "string", "pattern": "^%[A-Za-z0-9_.-]+$"}, "type": {"$ref": "#/$defs/tensorType"}},
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "operatorSemanticId", "inputs", "outputs"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^@[A-Za-z0-9_.-]+$"},
+        "operatorSemanticId": {"type": "string", "minLength": 1},
+        "inputs": {"type": "array", "items": {"type": "string", "pattern": "^%[A-Za-z0-9_.-]+$"}},
+        "outputs": {"type": "array", "items": {"$ref": "#/$defs/value"}, "minItems": 1},
+        "attributes": {"type": "object"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

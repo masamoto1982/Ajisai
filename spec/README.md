@@ -10,10 +10,18 @@ it defines Ajisai semantics.
 | `semantic-families.json` | The shared laws Words select |
 | `gui-semantics.md` | Presentation |
 | `host-protocol-v2.schema.json` | The host protocol boundary between them |
+| `tensor-profile-v0.1.md` (`tensor-profile-v0.1.json`, `tensor-profile.schema.json`) | The versioned, opt-in approximate Tensor extension |
+| `typed-graph-ir.schema.json` | The portable typed SSA/dataflow exchange format used by profiles |
 
 The two `.md` sources retain raw HTML blocks so the generated specification
 preserves the existing typography, anchors, tables, and mathematical channels
 without a lossy Markdown migration.
+
+The Tensor Profile is deliberately not part of Core: Core retains its six
+canonical domains, exact Scalars, and frozen vocabulary. A profile document is
+normative only for a program or graph that explicitly selects that profile.
+The initial Rust implementation provides checked shapes and immutable f32/f64
+profile values; it does not expose the profile through Core Word dispatch.
 
 Within the current host protocol version, consumers may receive new optional
 fields, but existing fields, meanings, and tuple shapes cannot be removed,
