@@ -115,10 +115,16 @@ export const createExecutionController = (
                   'sourceColumn'
               )}`
             : '';
+        // The Words the failure happened *inside*, innermost first. A block and
+        // a Word body are each their own token stream with no source of their
+        // own, so the position above is the top-level token that reached the
+        // failure; this says which construct the failing word was written in.
+        const insideWords = evidence(diagnosis.evidence, 'insideWords');
+        const inside = insideWords ? `, inside ${insideWords.split(',').join(', ')}` : '';
         return [
             `[DIAGNOSIS] ${diagnosis.summary}`,
             `Q1 when: ${diagnosis.when}`,
-            `Q2 where: ${where}${at}${depth}`,
+            `Q2 where: ${where}${inside}${at}${depth}`,
             `Q3 why: ${diagnosis.why}`,
             ...diagnosis.nextChecks.map((check) => `next: ${check.label} - ${check.detail}`)
         ].join('\n');

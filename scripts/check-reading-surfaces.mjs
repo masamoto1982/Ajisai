@@ -35,9 +35,9 @@ const EXAMPLE_NAMES = new Set([
   'EXAMPLE', 'AUDIOLIB', 'DICT@WORD', 'EXAMPLE@ADD10', 'EXAMPLE@GREET', 'AUDIOLIB@GREET',
   // literal string contents shown on the stack
   'TEST', "T'ES'T", 'AB', 'CD',
-  // a placeholder name, introduced by the Vector clause to show that `[ FOO ]`
+  // placeholder names, introduced by the Vector clause to show that `[ FOO ]`
   // holds the text FOO whether or not FOO is a defined Word
-  'FOO',
+  'FOO', 'BAR',
   // a deliberate typo, introduced by the Defining Words clause to show that a
   // body's names resolve when the word is called rather than when it is defined
   'TOTALL',
@@ -50,7 +50,9 @@ const EXAMPLE_NAMES = new Set([
   // binding names from the Naming a Value clause. These are locals, not Words:
   // the clause exists to say a binding is not a dictionary entry, so the
   // registry is correctly the wrong place to look for them.
-  'W', 'B', 'A', 'T', 'LIMIT', 'DX', 'XS',
+  'W', 'B', 'A', 'T', 'LIMIT', 'DX', 'XS', 'K', 'I', 'YS',
+  // binding names from the pattern clause, likewise locals rather than Words
+  'RANKS',
 ]);
 
 // Names the *host* allocates rather than the language: typed alone into the

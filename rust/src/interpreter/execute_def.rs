@@ -1,5 +1,7 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
+use crate::interpreter::value_extraction_helpers::{
+    extract_word_name_from_value, keep_mode_operands, restore_keep_mode_operands,
+};
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, ValueData};
 use std::collections::HashSet;
@@ -18,6 +20,11 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
+    // `KEEP` preserves the operands of a Word that answers with nothing too:
+    // `{ 1 } 'W' KEEP DEF` defines the Word and leaves the body and the name
+    // on the stack. See `keep_mode_operands`.
+    let kept = keep_mode_operands(interp, 2);
+
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let name_str = extract_word_name_from_value(&name_val)?;
 
@@ -32,7 +39,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    op_def_inner(interp, &name_str, &tokens)
+    op_def_inner(interp, &name_str, &tokens)?;
+    restore_keep_mode_operands(interp, kept);
+    Ok(())
 }
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {

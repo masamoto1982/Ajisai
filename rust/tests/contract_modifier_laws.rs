@@ -129,6 +129,60 @@ fn keep_over_a_total_identity_word_copies_any_value() {
     assert_eq!(obs(&format!("{id} 7 KEEP ID")), vec!["7/1", "7/1"]);
 }
 
+/// `KEEP` on a higher-order Word retains the collection it walks — and only
+/// that. The block says what the call *is* rather than being data the call
+/// read, and `FOLD`'s accumulator has been folded into the answer, so neither
+/// comes back. All five higher-order Words follow the one rule: `ANY` and
+/// `ALL` used to ignore the modifier outright and answer with a bare Boolean.
+#[test]
+fn keep_on_a_higher_order_word_retains_the_collection() {
+    assert_eq!(
+        obs("[ 1 2 ] KEEP { 2 MUL } MAP"),
+        vec!["[ 1/1 2/1 ]", "[ 2/1 4/1 ]"]
+    );
+    assert_eq!(
+        obs("[ 1 2 3 ] KEEP { 1 GT } FILTER"),
+        vec!["[ 1/1 2/1 3/1 ]", "[ 2/1 3/1 ]"]
+    );
+    assert_eq!(
+        obs("[ 1 2 3 ] 0 KEEP { ADD } FOLD"),
+        vec!["[ 1/1 2/1 3/1 ]", "6/1"]
+    );
+    assert_eq!(
+        obs("[ 1 2 3 ] KEEP { 1 GT } ANY"),
+        vec!["[ 1/1 2/1 3/1 ]", "TRUE"]
+    );
+    assert_eq!(
+        obs("[ 1 2 3 ] KEEP { 1 GT } ALL"),
+        vec!["[ 1/1 2/1 3/1 ]", "FALSE"]
+    );
+    // Every other Word keeps all of its operands, the `GET` of the Reference
+    // included — the higher-order rule is the one exception, not the norm.
+    assert_eq!(
+        obs("[ 10 3 ] KEEP [ 0 ] GET"),
+        vec!["[ 10/1 3/1 ]", "[ 0/1 ]", "10/1"]
+    );
+}
+
+/// Bifurcation has no exception for a Word whose result is empty. `BIND`,
+/// `DEF`, `DEL` and `LOOKUP` answer with nothing, so under `KEEP` the whole
+/// observation is their operands, unchanged and in order — and the effect
+/// still happens. All four used to ignore the modifier outright, which made
+/// `5 KEEP 'X' BIND` indistinguishable from the plain call.
+#[test]
+fn keep_preserves_the_operands_of_a_word_that_answers_with_nothing() {
+    assert_eq!(obs("9 8 5 KEEP 'X' BIND"), vec!["9/1", "8/1", "5/1", "'X'"]);
+    // The name is bound as well as kept: the modifier changes the stack, not
+    // what the Word did.
+    assert_eq!(obs("5 KEEP 'X' BIND X X ADD"), vec!["5/1", "'X'", "10/1"]);
+    assert_eq!(
+        obs("[ 1 2 ] KEEP [ 'A' 'B' ] BIND B"),
+        vec!["[ 1/1 2/1 ]", "[ 'A' 'B' ]", "2/1"]
+    );
+    assert_eq!(obs("{ 7 } 'W' KEEP DEF W"), vec!["{ 7 }", "'W'", "7/1"]);
+    assert_eq!(obs("{ 7 } 'W' DEF 'W' KEEP DEL"), vec!["'W'"]);
+}
+
 /// A `KEEP`-ed call that fails reports the failure. The modifier does not
 /// convert malformed use into a stack that looks like a successful bifurcation.
 #[test]

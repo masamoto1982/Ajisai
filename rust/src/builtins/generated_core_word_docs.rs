@@ -324,7 +324,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Higher-order primitive: Apply a code block to each element of a vector.",
         stack_effect: "[ vec ] { body } -> [ mapped ]",
         hover_summary: "MAP — apply block to each element",
-        hover_syntax: "[ 1 2 3 ] { [ 2 ] * } MAP",
+        hover_syntax: "[ 1 2 3 ] { 2 MUL } MAP",
     },
     GeneratedCoreWordDoc {
         name: "FILTER",

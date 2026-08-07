@@ -188,7 +188,16 @@ pub(crate) fn value_to_protocol(
             let kids = tensor_to_protocol(&data.to_fractions(), shape, effective);
             ("vector", ProtocolValue::Children(kids))
         }
-        ValueData::CodeBlock(_) => ("nil", ProtocolValue::Null),
+        // A code block is a value of its own domain (LANG.VALUES.DISJOINT),
+        // and it used to cross this boundary as `nil` — so a host drew `NIL`
+        // for a block that `NIL?` answers FALSE for and `EXEC` runs. That is
+        // the internal representation leaking as the wrong observation, the
+        // one thing SPEC §2.3's firewall forbids. It carries its source text,
+        // which is what a reader needs and the only thing there is to show.
+        ValueData::CodeBlock(tokens) => (
+            "codeBlock",
+            ProtocolValue::Text(crate::types::display::format_code_block(tokens)),
+        ),
     };
     ProtocolNode {
         type_str,

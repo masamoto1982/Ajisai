@@ -539,6 +539,14 @@ fn emit(report: &Report, opts: &Opts) {
         ) {
             eprintln!("  at line {}, column {}", line, column);
         }
+        // The Words the failure happened *inside*, innermost first. The
+        // position above is the top-level token that reached the failure — a
+        // block and a Word body are each their own token stream with no source
+        // of their own — so this is what says the rest: which Word failed, and
+        // which construct it was written in.
+        if let Some(inside) = evidence_value(&diagnosis.evidence, "insideWords") {
+            eprintln!("  inside {}", inside.replace(',', ", "));
+        }
         for line in &diagnosis.evidence {
             if line.starts_with("stackLen") {
                 eprintln!("  {}", line);

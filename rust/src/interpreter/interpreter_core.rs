@@ -417,6 +417,67 @@ impl Interpreter {
         &self.error_flow_trace_log
     }
 
+    /// Record `word` as the Word a failure happened *inside*, when the frame
+    /// below already recorded that same failure under the name of the Word
+    /// that raised it. Answers whether it did.
+    ///
+    /// An error unwinds through every frame it passed through, and each of
+    /// those frames used to record it again under its own name — so the last
+    /// event, the one every reader takes, named the outermost Word. For
+    /// `[ 1 2 ] { 'x' 1 ADD } MAP` that was `MAP`, and the reader was told to
+    /// check `MAP`'s expected shape for a failure `ADD` raised about its own
+    /// operand. Keeping the innermost attribution and folding the outer frames
+    /// into `insideWords` says both things: what failed, and where it was
+    /// written.
+    pub(crate) fn attribute_enclosing_word(&mut self, word: &str, error_text: &str) -> bool {
+        let Some(last) = self.error_flow_trace_log.last_mut() else {
+            return false;
+        };
+        if last.kind != super::error_flow_trace::ErrorFlowEventKind::WordError
+            || last.error_text != error_text
+        {
+            return false;
+        }
+        // The frame that raised it and the frame recording it are the same
+        // Word: a User Word records its own failure at the call boundary, and
+        // the loop that ran the call then reaches here. Nothing to add — it is
+        // not written inside itself.
+        if last.word.as_deref() == Some(word) {
+            return true;
+        }
+        if let Some(diagnosis) = last.diagnosis.as_mut() {
+            diagnosis.with_enclosing_word(word);
+        }
+        true
+    }
+
+    /// Record a Word's failure in the error-flow trace, attributed to that
+    /// Word and positioned at the top-level token that reached it.
+    pub(crate) fn record_word_failure(
+        &mut self,
+        word: &str,
+        err: &crate::error::AjisaiError,
+        stack_len_before: usize,
+    ) {
+        use super::debug_diagnosis::DebugDiagnosis;
+        use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
+        let stack_len_after = self.stack.len();
+        let diagnosis =
+            DebugDiagnosis::from_error(err, Some(word), stack_len_before, stack_len_after)
+                .with_source_position(self.current_source_span);
+        self.push_error_flow_trace(ErrorFlowEvent {
+            kind: ErrorFlowEventKind::WordError,
+            word: Some(word.to_string()),
+            error_category: Some(crate::error::ErrorCategory::from_error(err)),
+            absence: None,
+            stack_len_before,
+            stack_len_after,
+            message: format!("word error word={} error={}", word, err),
+            diagnosis: Some(diagnosis),
+            error_text: err.to_string(),
+        });
+    }
+
     pub fn clear_error_flow_trace(&mut self) {
         self.error_flow_trace_log.clear();
     }

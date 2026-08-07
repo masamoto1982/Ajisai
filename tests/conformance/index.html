@@ -174,7 +174,7 @@
 
 <section class="ajisai-case" id="core-map" data-category="core">
   <h3>MAP applies a user block element-wise</h3>
-  <pre class="ajisai-source">{ [ 2 ] * } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</pre>
+  <pre class="ajisai-source">{ 2 MUL } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</pre>
   <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -576,6 +576,20 @@
   <h3>MAP applies a code block element-wise, collecting results</h3>
   <pre class="ajisai-source">[ 1 2 3 ] { 2 MUL } MAP</pre>
   <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-map-block-result-shape" data-category="core">
+  <h3>MAP takes the block's result whole, a one-element Vector included</h3>
+  <pre class="ajisai-source">[ 1 2 ] { 1 COLLECT } MAP</pre>
+  <pre class="ajisai-expect-result">[ [ 1/1 ] [ 2/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-map-block-preserves-nesting" data-category="core">
+  <h3>MAP does not unwrap a nested one-element Vector result</h3>
+  <pre class="ajisai-source">[ [ 1 ] [ 2 3 ] ] { REVERSE } MAP</pre>
+  <pre class="ajisai-expect-result">[ [ 1/1 ] [ 3/1 2/1 ] ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1328,6 +1342,27 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-keep-on-a-word-with-no-result" data-category="core">
+  <h3>KEEP retains the operands of a Word that answers with nothing</h3>
+  <pre class="ajisai-source">5 KEEP 'X' BIND X</pre>
+  <pre class="ajisai-expect-result">5/1 'X' 5/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-keep-on-higher-order-word" data-category="core">
+  <h3>KEEP on a higher-order Word retains the collection it walks</h3>
+  <pre class="ajisai-source">[ 1 2 ] KEEP { 2 MUL } MAP</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 ] [ 2/1 4/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-keep-on-predicate-higher-order-word" data-category="core">
+  <h3>The same rule holds for the predicate higher-order Words</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] KEEP { 1 GT } ANY</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: VENT GROUP SKIP (§6.4) ===================== -->
 
 <section class="ajisai-case" id="core-vent-group-skip-atomic" data-category="core">
@@ -1956,9 +1991,9 @@ COND } 'EVENP' DEF
 <section class="ajisai-case" id="reflection-data-exec" data-category="core">
 <h3>Canonical data crosses the boundary before EXEC</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ] REFLECT EXEC</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-data-does-not-execute" data-category="core">
-<h3>REFLECT never evaluates represented code</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ] REFLECT</pre><pre class="ajisai-expect-result">1 2 ADD</pre><div class="ajisai-expect-effects"></div></section>
+<h3>REFLECT never evaluates represented code</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ] REFLECT</pre><pre class="ajisai-expect-result">{ 1 2 ADD }</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-empty-round-trip" data-category="core">
-<h3>Empty CodeBlock round trips</h3><pre class="ajisai-source">{ } REFLECT REFLECT</pre><pre class="ajisai-expect-result"></pre><div class="ajisai-expect-effects"></div></section>
+<h3>Empty CodeBlock round trips</h3><pre class="ajisai-source">{ } REFLECT REFLECT</pre><pre class="ajisai-expect-result">{ }</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-dynamic-def" data-category="core">
 <h3>Canonical data can explicitly define a Word</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'symbol' 'ADD' ] ] REFLECT 'INC-R' DEF 5 INC-R</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-symbol-string-distinct" data-category="core">
@@ -1966,11 +2001,11 @@ COND } 'EVENP' DEF
 <section class="ajisai-case" id="reflection-malformed-errors" data-category="core">
 <h3>Malformed code data is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' 'extra' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">malformed canonical code data</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-keep" data-category="core">
-<h3>KEEP preserves the reflected operand</h3><pre class="ajisai-source">{ 1 } KEEP REFLECT</pre><pre class="ajisai-expect-result">1 [ 'AJISAI-CODE-1' [ 'number' '1' ] ]</pre><div class="ajisai-expect-effects"></div></section>
+<h3>KEEP preserves the reflected operand</h3><pre class="ajisai-source">{ 1 } KEEP REFLECT</pre><pre class="ajisai-expect-result">{ 1 } [ 'AJISAI-CODE-1' [ 'number' '1' ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-lexemes-preserved" data-category="core">
 <h3>REFLECT preserves lexical token spelling</h3><pre class="ajisai-source">{ 1 1/1 1.0 ADD add + 'ADD' } REFLECT</pre><pre class="ajisai-expect-result">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '1/1' ] [ 'number' '1.0' ] [ 'symbol' 'ADD' ] [ 'symbol' 'add' ] [ 'symbol' '+' ] [ 'string' 'ADD' ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-undefined-symbol-is-not-resolved" data-category="core">
-<h3>REFLECT constructs unresolved code without resolving it</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'symbol' 'UNDEFINED-BY-REFLECT' ] ] REFLECT</pre><pre class="ajisai-expect-result">UNDEFINED-BY-REFLECT</pre><div class="ajisai-expect-effects"></div></section>
+<h3>REFLECT constructs unresolved code without resolving it</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'symbol' 'UNDEFINED-BY-REFLECT' ] ] REFLECT</pre><pre class="ajisai-expect-result">{ UNDEFINED-BY-REFLECT }</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-dictionary-independent" data-category="core">
 <h3>Code data is independent of User dictionary state</h3><pre class="ajisai-source">{ FOO-R } REFLECT { 1 } 'FOO-R' DEF { FOO-R } REFLECT EQ</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-wrong-header-errors" data-category="core">

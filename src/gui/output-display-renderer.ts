@@ -408,10 +408,13 @@ const formatValue = (item: Value, depth: number): string => {
             return formatVector(item.value, depth);
         case 'nil':
             return 'NIL';
-        case 'block': {
-            const source = (item as unknown as { source: string }).source || '';
-            return `"${source}"`;
-        }
+        // A code block carries its source text and is drawn as the braces the
+        // user wrote. It used to cross the boundary typed `nil`, so a block on
+        // the stack was drawn `NIL` — indistinguishable from an absence that
+        // `NIL?` answers FALSE for. `KEEP ID` makes a block on the stack an
+        // everyday sight, so the panel has to name the domain it is looking at.
+        case 'codeBlock':
+            return String(item.value ?? '{ }');
         default:
             return JSON.stringify(item.value);
     }

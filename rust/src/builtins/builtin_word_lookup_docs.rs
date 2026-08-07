@@ -238,7 +238,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "MAP",
         behavior: "Pops the code block, then the target vector, applies the\nblock to each element, and pushes the vector of results.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 ] { [ 2 ] * } MAP",
+            code: "[ 1 2 3 ] { 2 MUL } MAP",
             result: "Pushes [ 2 4 6 ].",
         }],
         failure_note: "An element the block cannot produce a value for follows\nthe Bubble Rule: that lane becomes a Bubble/NIL, e.g.\ndividing by zero maps the element to NIL.",

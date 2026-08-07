@@ -18,6 +18,16 @@ pub struct ErrorFlowEvent {
     pub stack_len_after: usize,
     pub message: String,
     pub diagnosis: Option<DebugDiagnosis>,
+    /// The raised error as it renders, for a `WordError`; empty otherwise.
+    ///
+    /// An error unwinds through every frame that reached it, and each frame
+    /// used to record it again under its own name. Comparing what the frame is
+    /// about to record against what the frame below already did is how the
+    /// outer frames are recognised as *enclosing* rather than *failing* — see
+    /// `Interpreter::attribute_enclosing_word`. Matching on the rendered
+    /// `message` instead would be matching on prose that already embeds a word
+    /// name, so the error text is kept as its own field.
+    pub error_text: String,
 }
 
 impl ErrorFlowEvent {

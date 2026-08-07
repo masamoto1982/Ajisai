@@ -102,6 +102,30 @@ impl DebugDiagnosis {
         self.evidence.push(format!("sourceColumn={}", span.column));
         self
     }
+
+    /// Record `word` as a Word the failure happened *inside* — the higher-order
+    /// Word whose block raised it, or the User Word whose body did.
+    ///
+    /// The locus stays where the failure was raised. A block applied by `MAP`
+    /// is not `MAP`'s contract: when `[ 1 2 ] { 'x' 1 ADD } MAP` failed, the
+    /// diagnosis named `MAP` and every next-check line asked about `MAP`'s
+    /// expected shape, while the Word that could not do the work was `ADD`. So
+    /// the enclosing Words are context, kept innermost-first in one evidence
+    /// entry (`insideWords=MAP,FOLD`) rather than overwriting the answer to
+    /// "which Word failed".
+    pub fn with_enclosing_word(&mut self, word: &str) {
+        let entry = self
+            .evidence
+            .iter_mut()
+            .find(|e| e.starts_with("insideWords="));
+        match entry {
+            Some(existing) => {
+                existing.push(',');
+                existing.push_str(word);
+            }
+            None => self.evidence.push(format!("insideWords={}", word)),
+        }
+    }
 }
 
 impl ErrorPhase {

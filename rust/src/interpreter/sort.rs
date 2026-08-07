@@ -89,9 +89,15 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             if !is_keep_mode {
                 interp.stack.push(val);
             }
+            // `expected` and `got` are the two halves of one sentence
+            // ("Structure error: expected _, got _"), so each is a noun
+            // phrase. A whole sentence here rendered as "expected SORT:
+            // expected vector, got non-vector value, got other format" — the
+            // Word's name belongs to the diagnosis locus, which already
+            // carries it.
             return Err(AjisaiError::create_structure_error(
-                "SORT: expected vector, got non-vector value",
-                "other format",
+                "vector",
+                "non-vector value",
             ));
         }
     };

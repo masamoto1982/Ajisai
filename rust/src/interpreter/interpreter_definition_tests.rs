@@ -9,7 +9,7 @@ mod tests {
     async fn test_map_with_increment() {
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("{ [ 1 ] + } 'INC' DEF [ 1 2 3 ] 'INC' MAP")
+            .execute("{ 1 ADD } 'INC' DEF [ 1 2 3 ] 'INC' MAP")
             .await;
         assert!(
             result.is_ok(),
