@@ -10,6 +10,10 @@ to have six canonical value domains, exact Scalars, and its frozen Word set.
 The machine-readable operator contracts in `tensor-profile-v0.1.json` are
 normative alongside this document.
 
+The reference runtime types live in `rust/src/tensor_profile`. They are kept
+outside `KernelValue`; selecting this profile therefore cannot silently make an
+approximate tensor a Core value.
+
 ## Value and conversion boundary
 
 A Tensor is the immutable semantic triple `(dtype, shape, elements)`. Shape is

@@ -20,6 +20,8 @@ without a lossy Markdown migration.
 The Tensor Profile is deliberately not part of Core: Core retains its six
 canonical domains, exact Scalars, and frozen vocabulary. A profile document is
 normative only for a program or graph that explicitly selects that profile.
+The initial Rust implementation provides checked shapes and immutable f32/f64
+profile values; it does not expose the profile through Core Word dispatch.
 
 Within the current host protocol version, consumers may receive new optional
 fields, but existing fields, meanings, and tuple shapes cannot be removed,

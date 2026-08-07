@@ -5,6 +5,7 @@ const schema = JSON.parse(readFileSync('spec/tensor-profile.schema.json', 'utf8'
 const graphSchema = JSON.parse(readFileSync('spec/typed-graph-ir.schema.json', 'utf8'));
 const coreWords = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const prose = readFileSync('spec/tensor-profile-v0.1.md', 'utf8');
+const runtimeDtypes = readFileSync('rust/src/tensor_profile/tensor.rs', 'utf8');
 const errors = [];
 const fail = (message) => errors.push(message);
 
@@ -14,6 +15,10 @@ if (!prose.includes(profile.profile)) fail('normative prose does not name the ma
 if (!graphSchema.properties.profiles) fail('typed graph IR has no explicit profile selection');
 if (profile.implicitCasts !== false) fail('exact Scalar to approximate Tensor conversion must remain explicit');
 if (profile.ambientRng !== false) fail('ambient RNG is forbidden');
+for (const dtype of profile.dtypes) {
+  const rustVariant = dtype[0].toUpperCase() + dtype.slice(1);
+  if (!runtimeDtypes.includes(`    ${rustVariant},`)) fail(`runtime DType is missing ${dtype}`);
+}
 
 const coreNames = new Set(coreWords.entries.map(({ name }) => name));
 const names = new Set();
