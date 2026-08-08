@@ -18,6 +18,7 @@ pub mod interpreter;
 pub mod kernel;
 pub mod semantic;
 pub mod surface_forms;
+pub mod tensor_profile;
 mod tokenizer;
 pub mod types;
 
