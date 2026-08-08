@@ -6,10 +6,11 @@ const OPEN: TensorMemoryBudget = TensorMemoryBudget::new(usize::MAX, usize::MAX)
 fn context() -> GraphValidationContext {
     GraphValidationContext {
         profile_id: "org.ajisai.tensor/0.1".to_owned(),
-        operator_semantics: BTreeMap::from([(
-            "tensor.matmul.v1".to_owned(),
-            OperatorSemantics::Matmul,
-        )]),
+        operator_semantics: BTreeMap::from([
+            ("tensor.matmul.v1".to_owned(), OperatorSemantics::Matmul),
+            ("tensor.exp.v1".to_owned(), OperatorSemantics::Exp),
+            ("tensor.log.v1".to_owned(), OperatorSemantics::Log),
+        ]),
     }
 }
 
@@ -105,4 +106,39 @@ fn execution_unifies_symbolic_dimensions_across_inputs() {
     ]);
     let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
     assert_eq!(outputs["%logits"].shape().dimensions(), &[2, 4]);
+}
+
+#[test]
+fn execution_chains_matmul_exp_and_log_as_ssa_nodes() {
+    let mut graph = example();
+    graph.nodes[0].outputs[0].id = "%matmul".to_owned();
+    let result_type = graph.nodes[0].outputs[0].value_type.clone();
+    graph.nodes.extend([
+        GraphNode {
+            id: "@exp".to_owned(),
+            operator_semantic_id: "tensor.exp.v1".to_owned(),
+            inputs: vec!["%matmul".to_owned()],
+            outputs: vec![GraphValue {
+                id: "%exp".to_owned(),
+                value_type: result_type.clone(),
+            }],
+            attributes: BTreeMap::new(),
+        },
+        GraphNode {
+            id: "@log".to_owned(),
+            operator_semantic_id: "tensor.log.v1".to_owned(),
+            inputs: vec!["%exp".to_owned()],
+            outputs: vec![GraphValue {
+                id: "%logits".to_owned(),
+                value_type: result_type,
+            }],
+            attributes: BTreeMap::new(),
+        },
+    ]);
+    let inputs = BTreeMap::from([
+        ("%left".to_owned(), f32_tensor(vec![2, 3], vec![0.0; 6])),
+        ("%right".to_owned(), f32_tensor(vec![3, 4], vec![0.0; 12])),
+    ]);
+    let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
+    assert_eq!(outputs["%logits"].data(), &TensorData::F32(vec![0.0; 8]));
 }

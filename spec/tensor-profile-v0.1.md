@@ -78,6 +78,11 @@ broadcasting before indexing, and validates output elements and bytes before
 allocating the result buffer. Accelerated kernels may replace this loop only
 under the numerical contract recorded for `tensor.matmul.v1`.
 
+The reference backend also implements the shape-preserving `tensor.exp.v1` and
+`tensor.log.v1` primitives for f32/f64. Their graph contracts require exactly
+one input and one output with identical dtype and shape. IEEE results such as
+NaN and infinity remain Tensor elements and are not converted to NIL.
+
 `execute_graph` is the reference bridge from the exchange IR to that backend.
 It validates the graph before execution, binds symbolic dimensions from runtime
 inputs consistently across the graph, checks concrete input annotations, and

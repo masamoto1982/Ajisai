@@ -51,6 +51,8 @@ for (const operator of exampleOperators) {
   if (!semanticIds.has(operator)) fail(`graph example uses unregistered operator ${operator}`);
 }
 if (!referenceCpu.includes('pub fn matmul(')) fail('reference CPU backend is missing MATMUL');
+if (!referenceCpu.includes('pub fn tensor_exp(')) fail('reference CPU backend is missing EXP');
+if (!referenceCpu.includes('pub fn tensor_log(')) fail('reference CPU backend is missing LOG');
 
 if (errors.length) {
   for (const error of errors) console.error(`[tensor-profile] ${error}`);

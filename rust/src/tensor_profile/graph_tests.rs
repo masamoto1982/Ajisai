@@ -163,3 +163,26 @@ fn committed_example_satisfies_runtime_matmul_contract() {
     .unwrap();
     graph.validate(&context()).unwrap();
 }
+
+#[test]
+fn unary_numeric_operator_must_preserve_declared_type() {
+    let mut graph = valid_graph();
+    graph.nodes = vec![GraphNode {
+        id: "@exp".to_owned(),
+        operator_semantic_id: "tensor.exp.v1".to_owned(),
+        inputs: vec!["%left".to_owned()],
+        outputs: vec![tensor(
+            "%result",
+            vec![SymbolicDimension::Known(2), SymbolicDimension::Known(4)],
+        )],
+        attributes: BTreeMap::new(),
+    }];
+    let mut context = context();
+    context
+        .operator_semantics
+        .insert("tensor.exp.v1".to_owned(), OperatorSemantics::Exp);
+    assert_eq!(
+        graph.validate(&context),
+        Err(GraphValidationError::OutputTypeMismatch("@exp".to_owned()))
+    );
+}

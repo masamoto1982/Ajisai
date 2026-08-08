@@ -145,6 +145,46 @@ pub fn matmul(
     Tensor::new(output_dimensions, data, budget).map_err(Into::into)
 }
 
+/// Reference implementation of `tensor.exp.v1`. IEEE NaN and infinities stay
+/// tensor elements; they are never projected to Core NIL.
+pub fn tensor_exp(
+    input: &Tensor,
+    budget: TensorMemoryBudget,
+) -> Result<Tensor, TensorOperatorError> {
+    map_unary(input, budget, f32::exp, f64::exp)
+}
+
+/// Reference implementation of `tensor.log.v1`. IEEE domain results (including
+/// NaN and negative infinity) remain ordinary approximate tensor elements.
+pub fn tensor_log(
+    input: &Tensor,
+    budget: TensorMemoryBudget,
+) -> Result<Tensor, TensorOperatorError> {
+    map_unary(input, budget, f32::ln, f64::ln)
+}
+
+fn map_unary(
+    input: &Tensor,
+    budget: TensorMemoryBudget,
+    f32_operation: impl Fn(f32) -> f32,
+    f64_operation: impl Fn(f64) -> f64,
+) -> Result<Tensor, TensorOperatorError> {
+    CheckedShape::new(
+        input.shape().dimensions().to_vec(),
+        input.dtype().element_bytes(),
+        budget,
+    )?;
+    let data = match input.data() {
+        TensorData::F32(values) => {
+            TensorData::F32(values.iter().copied().map(f32_operation).collect())
+        }
+        TensorData::F64(values) => {
+            TensorData::F64(values.iter().copied().map(f64_operation).collect())
+        }
+    };
+    Tensor::new(input.shape().dimensions().to_vec(), data, budget).map_err(Into::into)
+}
+
 fn check_rank(rank: usize) -> Result<(), TensorOperatorError> {
     if rank < 2 {
         return Err(TensorOperatorError::Rank {

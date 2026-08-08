@@ -53,3 +53,26 @@ fn reference_matmul_checks_output_bytes_before_allocation() {
         }))
     );
 }
+
+#[test]
+fn reference_exp_and_log_preserve_shape_and_dtype() {
+    let input = f32_tensor(vec![2], vec![0.0, 1.0]);
+    let exponentials = tensor_exp(&input, OPEN).unwrap();
+    assert_eq!(exponentials.shape().dimensions(), &[2]);
+    let logarithms = tensor_log(&exponentials, OPEN).unwrap();
+    let TensorData::F32(values) = logarithms.data() else {
+        panic!("dtype changed")
+    };
+    assert!((values[0] - 0.0).abs() < 1e-6);
+    assert!((values[1] - 1.0).abs() < 1e-6);
+}
+
+#[test]
+fn reference_log_keeps_ieee_domain_states_inside_the_tensor() {
+    let result = tensor_log(&f32_tensor(vec![2], vec![0.0, -1.0]), OPEN).unwrap();
+    let TensorData::F32(values) = result.data() else {
+        panic!("dtype changed")
+    };
+    assert_eq!(values[0], f32::NEG_INFINITY);
+    assert!(values[1].is_nan());
+}

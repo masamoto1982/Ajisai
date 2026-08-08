@@ -1,6 +1,6 @@
 use super::{
-    matmul, Graph, GraphType, GraphValidationContext, GraphValidationError, OperatorSemantics,
-    SymbolicDimension, Tensor, TensorMemoryBudget, TensorOperatorError,
+    matmul, tensor_exp, tensor_log, Graph, GraphType, GraphValidationContext, GraphValidationError,
+    OperatorSemantics, SymbolicDimension, Tensor, TensorMemoryBudget, TensorOperatorError,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -114,6 +114,14 @@ pub fn execute_graph(
                 let left = runtime_value(&values, &node.inputs[0])?;
                 let right = runtime_value(&values, &node.inputs[1])?;
                 matmul(left, right, budget)?
+            }
+            OperatorSemantics::Exp => {
+                let input = runtime_value(&values, &node.inputs[0])?;
+                tensor_exp(input, budget)?
+            }
+            OperatorSemantics::Log => {
+                let input = runtime_value(&values, &node.inputs[0])?;
+                tensor_log(input, budget)?
             }
         };
         check_runtime_type(

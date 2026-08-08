@@ -69,6 +69,8 @@ pub struct GraphValidationContext {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperatorSemantics {
     Matmul,
+    Exp,
+    Log,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -245,7 +247,29 @@ fn validate_operator(
 ) -> Result<(), GraphValidationError> {
     match semantics {
         OperatorSemantics::Matmul => validate_matmul(node, values),
+        OperatorSemantics::Exp | OperatorSemantics::Log => {
+            validate_shape_preserving_unary(node, values)
+        }
     }
+}
+
+fn validate_shape_preserving_unary(
+    node: &GraphNode,
+    values: &BTreeMap<String, GraphType>,
+) -> Result<(), GraphValidationError> {
+    if node.inputs.len() != 1 || node.outputs.len() != 1 {
+        return Err(GraphValidationError::OperatorArity {
+            operator: node.operator_semantic_id.clone(),
+            expected_inputs: 1,
+            actual_inputs: node.inputs.len(),
+            expected_outputs: 1,
+            actual_outputs: node.outputs.len(),
+        });
+    }
+    if node.outputs[0].value_type != values[&node.inputs[0]] {
+        return Err(GraphValidationError::OutputTypeMismatch(node.id.clone()));
+    }
+    Ok(())
 }
 
 fn validate_matmul(
