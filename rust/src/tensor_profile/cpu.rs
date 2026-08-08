@@ -25,6 +25,10 @@ pub enum TensorOperatorError {
         rank: usize,
     },
     DuplicateAxis(usize),
+    ElementwiseBroadcastMismatch {
+        left: Vec<usize>,
+        right: Vec<usize>,
+    },
     Shape(ShapeError),
     Tensor(TensorError),
 }
@@ -61,6 +65,10 @@ impl fmt::Display for TensorOperatorError {
                 write!(f, "reduction axis {axis} is out of range for rank {rank}")
             }
             Self::DuplicateAxis(axis) => write!(f, "reduction axis {axis} is duplicated"),
+            Self::ElementwiseBroadcastMismatch { left, right } => write!(
+                f,
+                "elementwise shapes {left:?} and {right:?} do not broadcast"
+            ),
             Self::Shape(error) => error.fmt(f),
             Self::Tensor(error) => error.fmt(f),
         }

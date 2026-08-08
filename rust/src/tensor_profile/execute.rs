@@ -1,7 +1,8 @@
 use super::{
-    graph::reduction_attributes, matmul, reduce_max, reduce_sum, tensor_exp, tensor_log, Graph,
-    GraphType, GraphValidationContext, GraphValidationError, OperatorSemantics, SymbolicDimension,
-    Tensor, TensorMemoryBudget, TensorOperatorError,
+    graph_operators::reduction_attributes, matmul, reduce_max, reduce_sum, tensor_add, tensor_div,
+    tensor_exp, tensor_log, tensor_mul, tensor_sub, Graph, GraphType, GraphValidationContext,
+    GraphValidationError, OperatorSemantics, SymbolicDimension, Tensor, TensorMemoryBudget,
+    TensorOperatorError,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -134,6 +135,10 @@ pub fn execute_graph(
                 let (axes, keep_dimensions) = reduction_attributes(node)?;
                 reduce_max(input, &axes, keep_dimensions, budget)?
             }
+            OperatorSemantics::Add => binary_node(node, &values, budget, tensor_add)?,
+            OperatorSemantics::Sub => binary_node(node, &values, budget, tensor_sub)?,
+            OperatorSemantics::Mul => binary_node(node, &values, budget, tensor_mul)?,
+            OperatorSemantics::Div => binary_node(node, &values, budget, tensor_div)?,
         };
         check_runtime_type(
             &node.outputs[0].id,
@@ -155,6 +160,17 @@ pub fn execute_graph(
                 .ok_or_else(|| GraphExecutionError::MissingRuntimeValue(id.clone()))
         })
         .collect()
+}
+
+fn binary_node(
+    node: &super::GraphNode,
+    values: &BTreeMap<String, Tensor>,
+    budget: TensorMemoryBudget,
+    operation: fn(&Tensor, &Tensor, TensorMemoryBudget) -> Result<Tensor, TensorOperatorError>,
+) -> Result<Tensor, GraphExecutionError> {
+    let left = runtime_value(values, &node.inputs[0])?;
+    let right = runtime_value(values, &node.inputs[1])?;
+    operation(left, right, budget).map_err(Into::into)
 }
 
 fn runtime_value<'a>(

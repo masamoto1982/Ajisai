@@ -114,3 +114,30 @@ fn reference_reduce_max_preserves_nan_and_uses_negative_infinity_identity() {
         &TensorData::F32(vec![f32::NEG_INFINITY; 2])
     );
 }
+
+#[test]
+fn reference_elementwise_arithmetic_broadcasts_trailing_dimensions() {
+    let matrix = f32_tensor(vec![2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    let column = f32_tensor(vec![2, 1], vec![10.0, 20.0]);
+    assert_eq!(
+        tensor_add(&matrix, &column, OPEN).unwrap().data(),
+        &TensorData::F32(vec![11.0, 12.0, 13.0, 24.0, 25.0, 26.0])
+    );
+    let scalar = f32_tensor(vec![], vec![2.0]);
+    assert_eq!(
+        tensor_mul(&matrix, &scalar, OPEN).unwrap().data(),
+        &TensorData::F32(vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0])
+    );
+}
+
+#[test]
+fn reference_division_keeps_ieee_zero_division_states() {
+    let numerator = f32_tensor(vec![2], vec![1.0, 0.0]);
+    let denominator = f32_tensor(vec![], vec![0.0]);
+    let result = tensor_div(&numerator, &denominator, OPEN).unwrap();
+    let TensorData::F32(values) = result.data() else {
+        panic!("dtype changed")
+    };
+    assert_eq!(values[0], f32::INFINITY);
+    assert!(values[1].is_nan());
+}

@@ -4,13 +4,16 @@
 //! tensors are profile values and never widen Core's exact `Scalar` domain.
 
 mod cpu;
+mod elementwise;
 mod execute;
 mod graph;
+mod graph_operators;
 mod reductions;
 mod shape;
 mod tensor;
 
 pub use cpu::{matmul, tensor_exp, tensor_log, TensorOperatorError};
+pub use elementwise::{tensor_add, tensor_div, tensor_mul, tensor_sub};
 pub use execute::{execute_graph, GraphExecutionError};
 pub use graph::{
     ArtifactReference, Graph, GraphNode, GraphType, GraphValidationContext, GraphValidationError,

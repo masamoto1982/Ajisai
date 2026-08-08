@@ -8,6 +8,7 @@ const prose = readFileSync('spec/tensor-profile-v0.1.md', 'utf8');
 const runtimeDtypes = readFileSync('rust/src/tensor_profile/tensor.rs', 'utf8');
 const referenceCpu = readFileSync('rust/src/tensor_profile/cpu.rs', 'utf8');
 const reductions = readFileSync('rust/src/tensor_profile/reductions.rs', 'utf8');
+const elementwise = readFileSync('rust/src/tensor_profile/elementwise.rs', 'utf8');
 const graphExample = JSON.parse(readFileSync('spec/examples/tiny-matmul.graph.json', 'utf8'));
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -56,6 +57,9 @@ if (!referenceCpu.includes('pub fn tensor_exp(')) fail('reference CPU backend is
 if (!referenceCpu.includes('pub fn tensor_log(')) fail('reference CPU backend is missing LOG');
 if (!reductions.includes('pub fn reduce_sum(')) fail('reference CPU backend is missing REDUCE_SUM');
 if (!reductions.includes('pub fn reduce_max(')) fail('reference CPU backend is missing REDUCE_MAX');
+for (const operation of ['add', 'sub', 'mul', 'div']) {
+  if (!elementwise.includes(`pub fn tensor_${operation}(`)) fail(`reference CPU backend is missing elementwise ${operation.toUpperCase()}`);
+}
 
 if (errors.length) {
   for (const error of errors) console.error(`[tensor-profile] ${error}`);

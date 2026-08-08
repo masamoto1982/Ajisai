@@ -90,6 +90,15 @@ the dtype, and either removes reduced axes or replaces them with dimension one.
 `tensor.reduce_max.v1` uses the same attribute and shape rules, propagates NaN,
 and uses negative infinity as the identity for an empty reduced slice.
 
+`tensor.add.v1`, `tensor.sub.v1`, `tensor.mul.v1`, and `tensor.div.v1` are
+elementwise IEEE operations. Inputs must share a dtype; shapes broadcast from
+the trailing axis using equality-or-one, with no implicit cast. Division by
+zero produces IEEE infinity or NaN inside the Tensor rather than NIL.
+
+Numerically stable softmax is intentionally a library graph composition:
+REDUCE_MAX with retained axes, subtraction, EXP, REDUCE_SUM with retained axes,
+and division. It is not a Core Word or a Tensor Profile primitive.
+
 `execute_graph` is the reference bridge from the exchange IR to that backend.
 It validates the graph before execution, binds symbolic dimensions from runtime
 inputs consistently across the graph, checks concrete input annotations, and

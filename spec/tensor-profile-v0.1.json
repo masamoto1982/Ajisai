@@ -337,6 +337,114 @@
         "compute": "O(count)",
         "memory": "O(count)"
       }
+    },
+    {
+      "name": "ELEMENTWISE_ADD",
+      "semanticId": "tensor.add.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise+",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "add_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "ELEMENTWISE_SUB",
+      "semanticId": "tensor.sub.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise-",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "sub_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "ELEMENTWISE_MUL",
+      "semanticId": "tensor.mul.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise*",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "mul_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "ELEMENTWISE_DIV",
+      "semanticId": "tensor.div.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise/",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "div_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
     }
   ]
 }

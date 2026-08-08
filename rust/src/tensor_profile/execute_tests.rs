@@ -18,6 +18,10 @@ fn context() -> GraphValidationContext {
                 "tensor.reduce_max.v1".to_owned(),
                 OperatorSemantics::ReduceMax,
             ),
+            ("tensor.add.v1".to_owned(), OperatorSemantics::Add),
+            ("tensor.sub.v1".to_owned(), OperatorSemantics::Sub),
+            ("tensor.mul.v1".to_owned(), OperatorSemantics::Mul),
+            ("tensor.div.v1".to_owned(), OperatorSemantics::Div),
         ]),
     }
 }
@@ -205,4 +209,69 @@ fn execution_reduces_max_over_a_graph_axis() {
     ]);
     let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
     assert_eq!(outputs["%max"].data(), &TensorData::F32(vec![5.0, 6.0]));
+}
+
+#[test]
+fn stable_softmax_is_a_graph_composition_not_a_primitive() {
+    let matrix = GraphType::Tensor {
+        dtype: DType::F32,
+        shape: vec![SymbolicDimension::Known(2), SymbolicDimension::Known(3)],
+    };
+    let column = GraphType::Tensor {
+        dtype: DType::F32,
+        shape: vec![SymbolicDimension::Known(2), SymbolicDimension::Known(1)],
+    };
+    let value = |id: &str, value_type: GraphType| GraphValue {
+        id: id.to_owned(),
+        value_type,
+    };
+    let binary = |id: &str, operator: &str, left: &str, right: &str, output: &str| GraphNode {
+        id: id.to_owned(),
+        operator_semantic_id: operator.to_owned(),
+        inputs: vec![left.to_owned(), right.to_owned()],
+        outputs: vec![value(output, matrix.clone())],
+        attributes: BTreeMap::new(),
+    };
+    let reduction = |id: &str, operator: &str, input: &str, output: &str| GraphNode {
+        id: id.to_owned(),
+        operator_semantic_id: operator.to_owned(),
+        inputs: vec![input.to_owned()],
+        outputs: vec![value(output, column.clone())],
+        attributes: BTreeMap::from([
+            ("axes".to_owned(), serde_json::json!([1])),
+            ("keepDimensions".to_owned(), serde_json::json!(true)),
+        ]),
+    };
+    let graph = Graph {
+        schema_version: 1,
+        profiles: vec!["org.ajisai.tensor/0.1".to_owned()],
+        inputs: vec![value("%input", matrix.clone())],
+        nodes: vec![
+            reduction("@max", "tensor.reduce_max.v1", "%input", "%max"),
+            binary("@center", "tensor.sub.v1", "%input", "%max", "%centered"),
+            GraphNode {
+                id: "@exp".to_owned(),
+                operator_semantic_id: "tensor.exp.v1".to_owned(),
+                inputs: vec!["%centered".to_owned()],
+                outputs: vec![value("%exp", matrix.clone())],
+                attributes: BTreeMap::new(),
+            },
+            reduction("@sum", "tensor.reduce_sum.v1", "%exp", "%sum"),
+            binary("@divide", "tensor.div.v1", "%exp", "%sum", "%softmax"),
+        ],
+        outputs: vec!["%softmax".to_owned()],
+        artifacts: vec![],
+    };
+    let inputs = BTreeMap::from([(
+        "%input".to_owned(),
+        f32_tensor(vec![2, 3], vec![1000.0, 1001.0, 1002.0, 1.0, 2.0, 3.0]),
+    )]);
+    let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
+    let TensorData::F32(values) = outputs["%softmax"].data() else {
+        panic!("dtype changed")
+    };
+    for row in values.chunks_exact(3) {
+        assert!((row.iter().sum::<f32>() - 1.0).abs() < 1e-6);
+        assert!(row.iter().all(|value| value.is_finite()));
+    }
 }
