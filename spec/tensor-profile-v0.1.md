@@ -72,6 +72,19 @@ and have broadcast-compatible leading dimensions. Its declared output dtype and
 shape must equal the inferred `[..., M, N]`; merely authoring a plausible output
 annotation is not sufficient.
 
+The reference CPU backend implements that same contract for concrete f32/f64
+tensors. It evaluates each dot product in increasing `K` order, applies batch
+broadcasting before indexing, and validates output elements and bytes before
+allocating the result buffer. Accelerated kernels may replace this loop only
+under the numerical contract recorded for `tensor.matmul.v1`.
+
+`execute_graph` is the reference bridge from the exchange IR to that backend.
+It validates the graph before execution, binds symbolic dimensions from runtime
+inputs consistently across the graph, checks concrete input annotations, and
+returns only the declared SSA outputs. A missing input or a runtime tensor that
+does not satisfy its graph type is an execution error rather than an implicit
+reshape or cast.
+
 Graph identity hashes the canonical graph, operator semantic IDs, tensor types,
 constants, and referenced artifact identities. Backend and device are excluded
 from semantic identity and recorded in the execution receipt instead.

@@ -6,6 +6,7 @@ const graphSchema = JSON.parse(readFileSync('spec/typed-graph-ir.schema.json', '
 const coreWords = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const prose = readFileSync('spec/tensor-profile-v0.1.md', 'utf8');
 const runtimeDtypes = readFileSync('rust/src/tensor_profile/tensor.rs', 'utf8');
+const referenceCpu = readFileSync('rust/src/tensor_profile/cpu.rs', 'utf8');
 const graphExample = JSON.parse(readFileSync('spec/examples/tiny-matmul.graph.json', 'utf8'));
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -49,6 +50,7 @@ const exampleOperators = new Set(graphExample.nodes.map((node) => node.operatorS
 for (const operator of exampleOperators) {
   if (!semanticIds.has(operator)) fail(`graph example uses unregistered operator ${operator}`);
 }
+if (!referenceCpu.includes('pub fn matmul(')) fail('reference CPU backend is missing MATMUL');
 
 if (errors.length) {
   for (const error of errors) console.error(`[tensor-profile] ${error}`);
