@@ -29,6 +29,14 @@ pub enum TensorOperatorError {
         left: Vec<usize>,
         right: Vec<usize>,
     },
+    NonNumericDType {
+        operator: &'static str,
+        dtype: DType,
+    },
+    PredicateDTypeMismatch {
+        operator: &'static str,
+        dtype: DType,
+    },
     Shape(ShapeError),
     Tensor(TensorError),
 }
@@ -69,6 +77,13 @@ impl fmt::Display for TensorOperatorError {
                 f,
                 "elementwise shapes {left:?} and {right:?} do not broadcast"
             ),
+            Self::NonNumericDType { operator, dtype } => {
+                write!(f, "{operator} requires a numeric dtype, received {dtype:?}")
+            }
+            Self::PredicateDTypeMismatch { operator, dtype } => write!(
+                f,
+                "{operator} requires a bool predicate, received {dtype:?}"
+            ),
             Self::Shape(error) => error.fmt(f),
             Self::Tensor(error) => error.fmt(f),
         }
@@ -104,6 +119,7 @@ pub fn matmul(
             right: right.dtype(),
         });
     }
+    require_numeric("MATMUL", left.dtype())?;
     let left_dimensions = left.shape().dimensions();
     let right_dimensions = right.shape().dimensions();
     check_rank(left_dimensions.len())?;
@@ -156,7 +172,7 @@ pub fn matmul(
             |sum, left, right| sum + left * right,
             0.0f64,
         )),
-        _ => unreachable!("dtype equality was checked"),
+        _ => unreachable!("dtype equality and numeric dtype were checked"),
     };
     debug_assert_eq!(data_len(&data), output_shape.element_count());
     Tensor::new(output_dimensions, data, budget).map_err(Into::into)
@@ -168,7 +184,7 @@ pub fn tensor_exp(
     input: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    map_unary(input, budget, f32::exp, f64::exp)
+    map_unary(input, "EXP", budget, f32::exp, f64::exp)
 }
 
 /// Reference implementation of `tensor.log.v1`. IEEE domain results (including
@@ -177,15 +193,37 @@ pub fn tensor_log(
     input: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    map_unary(input, budget, f32::ln, f64::ln)
+    map_unary(input, "LOG", budget, f32::ln, f64::ln)
+}
+
+/// Reference implementation of `tensor.rsqrt.v1`, the reciprocal square root
+/// that normalization layers such as RMSNorm are composed from. It is declared
+/// `bounded` rather than `bitwise`, so a backend may fuse the square root and
+/// reciprocal only within the tolerance recorded for the operator.
+///
+/// The IEEE domain results stay tensor elements: `rsqrt(0)` is positive
+/// infinity and `rsqrt(x < 0)` is NaN, neither of which becomes NIL.
+pub fn tensor_rsqrt(
+    input: &Tensor,
+    budget: TensorMemoryBudget,
+) -> Result<Tensor, TensorOperatorError> {
+    map_unary(
+        input,
+        "RSQRT",
+        budget,
+        |value| value.sqrt().recip(),
+        |value| value.sqrt().recip(),
+    )
 }
 
 fn map_unary(
     input: &Tensor,
+    operator: &'static str,
     budget: TensorMemoryBudget,
     f32_operation: impl Fn(f32) -> f32,
     f64_operation: impl Fn(f64) -> f64,
 ) -> Result<Tensor, TensorOperatorError> {
+    require_numeric(operator, input.dtype())?;
     CheckedShape::new(
         input.shape().dimensions().to_vec(),
         input.dtype().element_bytes(),
@@ -198,8 +236,22 @@ fn map_unary(
         TensorData::F64(values) => {
             TensorData::F64(values.iter().copied().map(f64_operation).collect())
         }
+        TensorData::Bool(_) => unreachable!("numeric dtype was checked"),
     };
     Tensor::new(input.shape().dimensions().to_vec(), data, budget).map_err(Into::into)
+}
+
+/// Reject the predicate dtype wherever an operator's contract says `D` ranges
+/// over the profile's numeric dtypes. Without this the profile's "no implicit
+/// casts" rule would be enforced only by convention.
+pub(crate) fn require_numeric(
+    operator: &'static str,
+    dtype: DType,
+) -> Result<(), TensorOperatorError> {
+    if dtype.is_numeric() {
+        return Ok(());
+    }
+    Err(TensorOperatorError::NonNumericDType { operator, dtype })
 }
 
 fn check_rank(rank: usize) -> Result<(), TensorOperatorError> {
@@ -319,5 +371,6 @@ fn data_len(data: &TensorData) -> usize {
     match data {
         TensorData::F32(values) => values.len(),
         TensorData::F64(values) => values.len(),
+        TensorData::Bool(values) => values.len(),
     }
 }

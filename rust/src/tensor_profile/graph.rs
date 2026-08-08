@@ -71,8 +71,10 @@ pub enum OperatorSemantics {
     Matmul,
     Exp,
     Log,
+    Rsqrt,
     ReduceSum,
     ReduceMax,
+    Where,
     Add,
     Sub,
     Mul,
@@ -95,6 +97,8 @@ pub enum GraphValidationError {
         actual_outputs: usize,
     },
     DTypeMismatch(String),
+    NonNumericDType(String),
+    PredicateDTypeMismatch(String),
     ShapeMismatch(String),
     OutputTypeMismatch(String),
     InvalidSymbolicDimension(String),
@@ -119,6 +123,12 @@ impl fmt::Display for GraphValidationError {
             Self::UnsupportedOperator(id) => write!(f, "unsupported operator semantic ID {id}"),
             Self::OperatorArity { operator, expected_inputs, actual_inputs, expected_outputs, actual_outputs } => write!(f, "{operator} requires {expected_inputs} inputs and {expected_outputs} output(s), received {actual_inputs} and {actual_outputs}"),
             Self::DTypeMismatch(id) => write!(f, "{id} input dtypes do not match"),
+            Self::NonNumericDType(id) => {
+                write!(f, "{id} requires a numeric dtype, received the bool predicate dtype")
+            }
+            Self::PredicateDTypeMismatch(id) => {
+                write!(f, "{id} requires a bool predicate input")
+            }
             Self::ShapeMismatch(message) => write!(f, "shape mismatch: {message}"),
             Self::OutputTypeMismatch(id) => write!(f, "{id} declared output type does not match its inferred type"),
             Self::InvalidSymbolicDimension(symbol) => {

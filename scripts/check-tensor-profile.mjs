@@ -9,6 +9,8 @@ const runtimeDtypes = readFileSync('rust/src/tensor_profile/tensor.rs', 'utf8');
 const referenceCpu = readFileSync('rust/src/tensor_profile/cpu.rs', 'utf8');
 const reductions = readFileSync('rust/src/tensor_profile/reductions.rs', 'utf8');
 const elementwise = readFileSync('rust/src/tensor_profile/elementwise.rs', 'utf8');
+const select = readFileSync('rust/src/tensor_profile/select.rs', 'utf8');
+const graphOperators = readFileSync('rust/src/tensor_profile/graph_operators.rs', 'utf8');
 const graphExample = JSON.parse(readFileSync('spec/examples/tiny-matmul.graph.json', 'utf8'));
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -19,10 +21,17 @@ if (!prose.includes(profile.profile)) fail('normative prose does not name the ma
 if (!graphSchema.properties.profiles) fail('typed graph IR has no explicit profile selection');
 if (profile.implicitCasts !== false) fail('exact Scalar to approximate Tensor conversion must remain explicit');
 if (profile.ambientRng !== false) fail('ambient RNG is forbidden');
-for (const dtype of profile.dtypes) {
+for (const dtype of [...profile.dtypes, profile.predicateDtype]) {
   const rustVariant = dtype[0].toUpperCase() + dtype.slice(1);
   if (!runtimeDtypes.includes(`    ${rustVariant},`)) fail(`runtime DType is missing ${dtype}`);
 }
+// The predicate dtype only stays outside the numeric domain if something
+// mechanically keeps it there: `is_numeric` must exclude it, and both the
+// graph validator and the reference backend must refuse it for arithmetic.
+if (profile.dtypes.includes(profile.predicateDtype)) fail('the predicate dtype must not be listed as a numeric dtype');
+if (!/pub const fn is_numeric\(self\) -> bool \{\s*matches!\(self, Self::F32 \| Self::F64\)/.test(runtimeDtypes)) fail('runtime DType::is_numeric does not exclude the predicate dtype');
+if (!referenceCpu.includes('pub(crate) fn require_numeric(')) fail('reference CPU backend does not gate numeric operators on dtype');
+if (!graphOperators.includes('fn require_numeric(')) fail('graph validation does not gate numeric operators on dtype');
 
 const coreNames = new Set(coreWords.entries.map(({ name }) => name));
 const names = new Set();
@@ -55,6 +64,8 @@ for (const operator of exampleOperators) {
 if (!referenceCpu.includes('pub fn matmul(')) fail('reference CPU backend is missing MATMUL');
 if (!referenceCpu.includes('pub fn tensor_exp(')) fail('reference CPU backend is missing EXP');
 if (!referenceCpu.includes('pub fn tensor_log(')) fail('reference CPU backend is missing LOG');
+if (!referenceCpu.includes('pub fn tensor_rsqrt(')) fail('reference CPU backend is missing RSQRT');
+if (!select.includes('pub fn tensor_where(')) fail('reference CPU backend is missing WHERE');
 if (!reductions.includes('pub fn reduce_sum(')) fail('reference CPU backend is missing REDUCE_SUM');
 if (!reductions.includes('pub fn reduce_max(')) fail('reference CPU backend is missing REDUCE_MAX');
 for (const operation of ['add', 'sub', 'mul', 'div']) {

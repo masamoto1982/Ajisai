@@ -1,4 +1,6 @@
-use super::{CheckedShape, Tensor, TensorData, TensorMemoryBudget, TensorOperatorError};
+use super::{
+    require_numeric, CheckedShape, Tensor, TensorData, TensorMemoryBudget, TensorOperatorError,
+};
 
 pub fn reduce_sum(
     input: &Tensor,
@@ -6,7 +8,14 @@ pub fn reduce_sum(
     keep_dimensions: bool,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    reduce(input, axes, keep_dimensions, budget, Reduction::Sum)
+    reduce(
+        input,
+        axes,
+        keep_dimensions,
+        budget,
+        Reduction::Sum,
+        "REDUCE_SUM",
+    )
 }
 
 pub fn reduce_max(
@@ -15,7 +24,14 @@ pub fn reduce_max(
     keep_dimensions: bool,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    reduce(input, axes, keep_dimensions, budget, Reduction::Maximum)
+    reduce(
+        input,
+        axes,
+        keep_dimensions,
+        budget,
+        Reduction::Maximum,
+        "REDUCE_MAX",
+    )
 }
 
 #[derive(Clone, Copy)]
@@ -30,7 +46,9 @@ fn reduce(
     keep_dimensions: bool,
     budget: TensorMemoryBudget,
     reduction: Reduction,
+    operator: &'static str,
 ) -> Result<Tensor, TensorOperatorError> {
+    require_numeric(operator, input.dtype())?;
     let rank = input.shape().dimensions().len();
     let axes = checked_axes(axes, rank)?;
     let output_dimensions = reduced_shape(input.shape().dimensions(), &axes, keep_dimensions);
@@ -84,6 +102,7 @@ fn reduce(
                 }
             },
         )),
+        (TensorData::Bool(_), _) => unreachable!("numeric dtype was checked"),
     };
     Tensor::new(output_dimensions, data, budget).map_err(Into::into)
 }

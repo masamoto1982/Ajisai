@@ -188,6 +188,85 @@ fn unary_numeric_operator_must_preserve_declared_type() {
 }
 
 #[test]
+fn where_infers_the_three_way_broadcast_of_predicate_and_branches() {
+    let mut graph = valid_graph();
+    graph.inputs.push(GraphValue {
+        id: "%mask".to_owned(),
+        value_type: GraphType::Tensor {
+            dtype: DType::Bool,
+            shape: vec![SymbolicDimension::Known(2), SymbolicDimension::Known(1)],
+        },
+    });
+    graph.nodes = vec![GraphNode {
+        id: "@select".to_owned(),
+        operator_semantic_id: "tensor.where.v1".to_owned(),
+        inputs: vec!["%mask".to_owned(), "%left".to_owned(), "%left".to_owned()],
+        outputs: vec![tensor(
+            "%result",
+            vec![SymbolicDimension::Known(2), SymbolicDimension::Known(3)],
+        )],
+        attributes: BTreeMap::new(),
+    }];
+    let mut context = context();
+    context
+        .operator_semantics
+        .insert("tensor.where.v1".to_owned(), OperatorSemantics::Where);
+    graph.validate(&context).unwrap();
+}
+
+#[test]
+fn where_requires_a_bool_predicate_not_a_numeric_one() {
+    let mut graph = valid_graph();
+    graph.nodes = vec![GraphNode {
+        id: "@select".to_owned(),
+        operator_semantic_id: "tensor.where.v1".to_owned(),
+        inputs: vec!["%left".to_owned(), "%left".to_owned(), "%left".to_owned()],
+        outputs: vec![tensor(
+            "%result",
+            vec![SymbolicDimension::Known(2), SymbolicDimension::Known(3)],
+        )],
+        attributes: BTreeMap::new(),
+    }];
+    let mut context = context();
+    context
+        .operator_semantics
+        .insert("tensor.where.v1".to_owned(), OperatorSemantics::Where);
+    assert_eq!(
+        graph.validate(&context),
+        Err(GraphValidationError::PredicateDTypeMismatch(
+            "@select".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn arithmetic_operators_refuse_the_predicate_dtype_at_validation_time() {
+    let mut graph = valid_graph();
+    graph.inputs[0].value_type = GraphType::Tensor {
+        dtype: DType::Bool,
+        shape: vec![SymbolicDimension::Known(2), SymbolicDimension::Known(3)],
+    };
+    graph.nodes = vec![GraphNode {
+        id: "@rsqrt".to_owned(),
+        operator_semantic_id: "tensor.rsqrt.v1".to_owned(),
+        inputs: vec!["%left".to_owned()],
+        outputs: vec![GraphValue {
+            id: "%result".to_owned(),
+            value_type: graph.inputs[0].value_type.clone(),
+        }],
+        attributes: BTreeMap::new(),
+    }];
+    let mut context = context();
+    context
+        .operator_semantics
+        .insert("tensor.rsqrt.v1".to_owned(), OperatorSemantics::Rsqrt);
+    assert_eq!(
+        graph.validate(&context),
+        Err(GraphValidationError::NonNumericDType("@rsqrt".to_owned()))
+    );
+}
+
+#[test]
 fn reduce_sum_infers_removed_axes_from_attributes() {
     let mut graph = valid_graph();
     graph.nodes = vec![GraphNode {

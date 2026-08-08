@@ -78,6 +78,62 @@ fn reference_log_keeps_ieee_domain_states_inside_the_tensor() {
 }
 
 #[test]
+fn reference_rsqrt_inverts_the_square_root_within_its_declared_tolerance() {
+    let result = tensor_rsqrt(&f32_tensor(vec![3], vec![1.0, 4.0, 0.25]), OPEN).unwrap();
+    assert_eq!(result.shape().dimensions(), &[3]);
+    let TensorData::F32(values) = result.data() else {
+        panic!("dtype changed")
+    };
+    for (actual, expected) in values.iter().zip([1.0, 0.5, 2.0]) {
+        assert!((actual - expected).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn reference_rsqrt_keeps_ieee_domain_states_inside_the_tensor() {
+    let result = tensor_rsqrt(&f32_tensor(vec![2], vec![0.0, -1.0]), OPEN).unwrap();
+    let TensorData::F32(values) = result.data() else {
+        panic!("dtype changed")
+    };
+    assert_eq!(values[0], f32::INFINITY);
+    assert!(values[1].is_nan());
+}
+
+#[test]
+fn numeric_operators_reject_the_predicate_dtype_rather_than_casting_it() {
+    let mask = Tensor::new(vec![2], TensorData::Bool(vec![true, false]), OPEN).unwrap();
+    assert_eq!(
+        tensor_rsqrt(&mask, OPEN),
+        Err(TensorOperatorError::NonNumericDType {
+            operator: "RSQRT",
+            dtype: DType::Bool,
+        })
+    );
+    assert_eq!(
+        tensor_add(&mask, &mask, OPEN),
+        Err(TensorOperatorError::NonNumericDType {
+            operator: "ADD",
+            dtype: DType::Bool,
+        })
+    );
+    assert_eq!(
+        reduce_sum(&mask, &[0], false, OPEN),
+        Err(TensorOperatorError::NonNumericDType {
+            operator: "REDUCE_SUM",
+            dtype: DType::Bool,
+        })
+    );
+    let square = Tensor::new(vec![2, 2], TensorData::Bool(vec![true; 4]), OPEN).unwrap();
+    assert_eq!(
+        matmul(&square, &square, OPEN),
+        Err(TensorOperatorError::NonNumericDType {
+            operator: "MATMUL",
+            dtype: DType::Bool,
+        })
+    );
+}
+
+#[test]
 fn reference_reduce_sum_supports_multiple_axes_and_keep_dimensions() {
     let input = f32_tensor(vec![2, 2, 2], (1..=8).map(|value| value as f32).collect());
     let reduced = reduce_sum(&input, &[0, 2], false, OPEN).unwrap();

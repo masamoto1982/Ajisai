@@ -1,11 +1,13 @@
-use super::{CheckedShape, Tensor, TensorData, TensorMemoryBudget, TensorOperatorError};
+use super::{
+    require_numeric, CheckedShape, Tensor, TensorData, TensorMemoryBudget, TensorOperatorError,
+};
 
 pub fn tensor_add(
     left: &Tensor,
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, budget, |a, b| a + b, |a, b| a + b)
+    binary(left, right, "ADD", budget, |a, b| a + b, |a, b| a + b)
 }
 
 pub fn tensor_sub(
@@ -13,7 +15,7 @@ pub fn tensor_sub(
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, budget, |a, b| a - b, |a, b| a - b)
+    binary(left, right, "SUB", budget, |a, b| a - b, |a, b| a - b)
 }
 
 pub fn tensor_mul(
@@ -21,7 +23,7 @@ pub fn tensor_mul(
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, budget, |a, b| a * b, |a, b| a * b)
+    binary(left, right, "MUL", budget, |a, b| a * b, |a, b| a * b)
 }
 
 pub fn tensor_div(
@@ -29,12 +31,13 @@ pub fn tensor_div(
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, budget, |a, b| a / b, |a, b| a / b)
+    binary(left, right, "DIV", budget, |a, b| a / b, |a, b| a / b)
 }
 
 fn binary(
     left: &Tensor,
     right: &Tensor,
+    operator: &'static str,
     budget: TensorMemoryBudget,
     f32_operation: impl Fn(f32, f32) -> f32,
     f64_operation: impl Fn(f64, f64) -> f64,
@@ -45,6 +48,7 @@ fn binary(
             right: right.dtype(),
         });
     }
+    require_numeric(operator, left.dtype())?;
     let dimensions = broadcast_shape(left.shape().dimensions(), right.shape().dimensions())?;
     let output_shape = CheckedShape::new(dimensions.clone(), left.dtype().element_bytes(), budget)?;
     let data = match (left.data(), right.data()) {
@@ -64,12 +68,15 @@ fn binary(
             &output_shape,
             f64_operation,
         )),
-        _ => unreachable!("dtype equality was checked"),
+        _ => unreachable!("dtype equality and numeric dtype were checked"),
     };
     Tensor::new(dimensions, data, budget).map_err(Into::into)
 }
 
-fn broadcast_shape(left: &[usize], right: &[usize]) -> Result<Vec<usize>, TensorOperatorError> {
+pub(crate) fn broadcast_shape(
+    left: &[usize],
+    right: &[usize],
+) -> Result<Vec<usize>, TensorOperatorError> {
     let rank = left.len().max(right.len());
     let mut output = Vec::with_capacity(rank);
     for offset in (0..rank).rev() {
@@ -110,7 +117,7 @@ fn binary_data<T: Copy>(
         .collect()
 }
 
-fn broadcast_index(output_coordinates: &[usize], input_shape: &CheckedShape) -> usize {
+pub(crate) fn broadcast_index(output_coordinates: &[usize], input_shape: &CheckedShape) -> usize {
     let offset = output_coordinates.len() - input_shape.dimensions().len();
     input_shape
         .dimensions()
@@ -135,7 +142,7 @@ fn trailing_dimension(shape: &[usize], offset: usize) -> Option<usize> {
         .map(|index| shape[index])
 }
 
-fn unravel(mut linear: usize, shape: &[usize]) -> Vec<usize> {
+pub(crate) fn unravel(mut linear: usize, shape: &[usize]) -> Vec<usize> {
     let mut coordinates = vec![0; shape.len()];
     for axis in (0..shape.len()).rev() {
         if shape[axis] != 0 {
