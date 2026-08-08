@@ -1,0 +1,450 @@
+{
+  "schemaVersion": 1,
+  "profile": "org.ajisai.tensor/0.1",
+  "status": "draft",
+  "dtypes": [
+    "f32",
+    "f64"
+  ],
+  "rounding": "nearestTiesToEven",
+  "implicitCasts": false,
+  "ambientRng": false,
+  "operators": [
+    {
+      "name": "CAST",
+      "semanticId": "tensor.cast.v1",
+      "inputs": [
+        "Scalar|Tensor<S>"
+      ],
+      "outputs": [
+        "Tensor<D>"
+      ],
+      "shape": "output=input",
+      "dtype": "D is explicit; Scalar conversion is IEEE-754 nearestTiesToEven",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "cast_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "RESHAPE",
+      "semanticId": "tensor.reshape.v1",
+      "inputs": [
+        "Tensor<D,S>",
+        "Shape<T>"
+      ],
+      "outputs": [
+        "Tensor<D,T>"
+      ],
+      "shape": "product(S)=product(T)",
+      "dtype": "preserve",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "identity",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "reshape_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(1)",
+        "memory": "O(1) logical"
+      }
+    },
+    {
+      "name": "PERMUTE",
+      "semanticId": "tensor.permute.v1",
+      "inputs": [
+        "Tensor<D,S>",
+        "Permutation<P>"
+      ],
+      "outputs": [
+        "Tensor<D,permute(S,P)>"
+      ],
+      "shape": "P is a permutation of axes(S)",
+      "dtype": "preserve",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "identity",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "permute_inverse_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n) worst-case"
+      }
+    },
+    {
+      "name": "MATMUL",
+      "semanticId": "tensor.matmul.v1",
+      "inputs": [
+        "Tensor<D,[...,M,K]>",
+        "Tensor<D,[...,K,N]>"
+      ],
+      "outputs": [
+        "Tensor<D,[...,M,N]>"
+      ],
+      "shape": "leading axes broadcast; contraction K must match",
+      "dtype": "inputs and output share D",
+      "determinism": "bounded",
+      "numeric": {
+        "model": "ieee754OrderedReduction",
+        "absoluteTolerance": 1e-06,
+        "relativeTolerance": 1e-05
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "matmul_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(batch*M*K*N)",
+        "memory": "O(batch*M*N)"
+      }
+    },
+    {
+      "name": "REDUCE_SUM",
+      "semanticId": "tensor.reduce_sum.v1",
+      "inputs": [
+        "Tensor<D,S>"
+      ],
+      "outputs": [
+        "Tensor<D,remove(S,A)>"
+      ],
+      "shape": "A contains unique in-range axes",
+      "dtype": "preserve",
+      "determinism": "bounded",
+      "numeric": {
+        "model": "ieee754OrderedReduction",
+        "absoluteTolerance": 1e-06,
+        "relativeTolerance": 1e-05
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "reduce_sum_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(output)"
+      },
+      "attributes": {
+        "axes": "required unique zero-based integer array",
+        "keepDimensions": "optional boolean; default false"
+      }
+    },
+    {
+      "name": "REDUCE_MAX",
+      "semanticId": "tensor.reduce_max.v1",
+      "inputs": [
+        "Tensor<D,S>"
+      ],
+      "outputs": [
+        "Tensor<D,remove(S,A)>"
+      ],
+      "shape": "A contains unique in-range axes",
+      "dtype": "preserve",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Maximum",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "reduce_max_first_index_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(output)"
+      },
+      "attributes": {
+        "axes": "required unique zero-based integer array",
+        "keepDimensions": "optional boolean; default false"
+      }
+    },
+    {
+      "name": "EXP",
+      "semanticId": "tensor.exp.v1",
+      "inputs": [
+        "Tensor<D,S>"
+      ],
+      "outputs": [
+        "Tensor<D,S>"
+      ],
+      "shape": "preserve",
+      "dtype": "preserve",
+      "determinism": "bounded",
+      "numeric": {
+        "model": "correctlyRoundedOrBounded",
+        "absoluteTolerance": 1e-07,
+        "relativeTolerance": 1e-06
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "exp_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "LOG",
+      "semanticId": "tensor.log.v1",
+      "inputs": [
+        "Tensor<D,S>"
+      ],
+      "outputs": [
+        "Tensor<D,S>"
+      ],
+      "shape": "preserve",
+      "dtype": "preserve",
+      "determinism": "bounded",
+      "numeric": {
+        "model": "ieee754Log",
+        "absoluteTolerance": 1e-07,
+        "relativeTolerance": 1e-06
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "log_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "RSQRT",
+      "semanticId": "tensor.rsqrt.v1",
+      "inputs": [
+        "Tensor<D,S>"
+      ],
+      "outputs": [
+        "Tensor<D,S>"
+      ],
+      "shape": "preserve",
+      "dtype": "preserve",
+      "determinism": "bounded",
+      "numeric": {
+        "model": "ieee754ReciprocalSqrt",
+        "absoluteTolerance": 1e-07,
+        "relativeTolerance": 1e-06
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "rsqrt_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "WHERE",
+      "semanticId": "tensor.where.v1",
+      "inputs": [
+        "Tensor<bool,S>",
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(S,A,B)>"
+      ],
+      "shape": "all inputs broadcast-compatible",
+      "dtype": "value inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "selection",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "where_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "RANDOM_UNIFORM",
+      "semanticId": "tensor.random_uniform.v1",
+      "inputs": [
+        "RngKey256",
+        "Shape<S>",
+        "DType<D>"
+      ],
+      "outputs": [
+        "Tensor<D,S>"
+      ],
+      "shape": "explicit S",
+      "dtype": "explicit D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "counterBasedUniform01",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "none",
+        "rule": null
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "SPLIT_KEY",
+      "semanticId": "tensor.split_key.v1",
+      "inputs": [
+        "RngKey256",
+        "Scalar<count>"
+      ],
+      "outputs": [
+        "Vector<RngKey256>"
+      ],
+      "shape": "output length=count",
+      "dtype": "not applicable",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "cryptographicHashDerivation",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "none",
+        "rule": null
+      },
+      "resource": {
+        "compute": "O(count)",
+        "memory": "O(count)"
+      }
+    },
+    {
+      "name": "ELEMENTWISE_ADD",
+      "semanticId": "tensor.add.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise+",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "add_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "ELEMENTWISE_SUB",
+      "semanticId": "tensor.sub.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise-",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "sub_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "ELEMENTWISE_MUL",
+      "semanticId": "tensor.mul.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise*",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "mul_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "ELEMENTWISE_DIV",
+      "semanticId": "tensor.div.v1",
+      "inputs": [
+        "Tensor<D,A>",
+        "Tensor<D,B>"
+      ],
+      "outputs": [
+        "Tensor<D,broadcast(A,B)>"
+      ],
+      "shape": "all dimensions broadcast-compatible from the trailing axis",
+      "dtype": "inputs and output share D",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "ieee754Elementwise/",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "vjp",
+        "rule": "div_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    }
+  ]
+}
