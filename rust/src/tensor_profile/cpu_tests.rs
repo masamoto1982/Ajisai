@@ -97,3 +97,20 @@ fn reference_reduce_sum_rejects_duplicate_axes() {
         Err(TensorOperatorError::DuplicateAxis(0))
     );
 }
+
+#[test]
+fn reference_reduce_max_preserves_nan_and_uses_negative_infinity_identity() {
+    let input = f32_tensor(vec![2, 3], vec![1.0, f32::NAN, 3.0, -5.0, -2.0, -7.0]);
+    let reduced = reduce_max(&input, &[1], false, OPEN).unwrap();
+    let TensorData::F32(values) = reduced.data() else {
+        panic!("dtype changed")
+    };
+    assert!(values[0].is_nan());
+    assert_eq!(values[1], -2.0);
+
+    let empty = f32_tensor(vec![2, 0], vec![]);
+    assert_eq!(
+        reduce_max(&empty, &[1], false, OPEN).unwrap().data(),
+        &TensorData::F32(vec![f32::NEG_INFINITY; 2])
+    );
+}

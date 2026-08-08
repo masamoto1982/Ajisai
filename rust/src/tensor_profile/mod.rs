@@ -6,15 +6,17 @@
 mod cpu;
 mod execute;
 mod graph;
+mod reductions;
 mod shape;
 mod tensor;
 
-pub use cpu::{matmul, reduce_sum, tensor_exp, tensor_log, TensorOperatorError};
+pub use cpu::{matmul, tensor_exp, tensor_log, TensorOperatorError};
 pub use execute::{execute_graph, GraphExecutionError};
 pub use graph::{
     ArtifactReference, Graph, GraphNode, GraphType, GraphValidationContext, GraphValidationError,
     GraphValue, OperatorSemantics, SymbolicDimension,
 };
+pub use reductions::{reduce_max, reduce_sum};
 pub use shape::{CheckedShape, ShapeError, TensorMemoryBudget};
 pub use tensor::{DType, Tensor, TensorData, TensorError};
 

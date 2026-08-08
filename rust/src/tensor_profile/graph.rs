@@ -72,6 +72,7 @@ pub enum OperatorSemantics {
     Exp,
     Log,
     ReduceSum,
+    ReduceMax,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -258,11 +259,13 @@ fn validate_operator(
         OperatorSemantics::Exp | OperatorSemantics::Log => {
             validate_shape_preserving_unary(node, values)
         }
-        OperatorSemantics::ReduceSum => validate_reduce_sum(node, values),
+        OperatorSemantics::ReduceSum | OperatorSemantics::ReduceMax => {
+            validate_reduction(node, values)
+        }
     }
 }
 
-fn validate_reduce_sum(
+fn validate_reduction(
     node: &GraphNode,
     values: &BTreeMap<String, GraphType>,
 ) -> Result<(), GraphValidationError> {

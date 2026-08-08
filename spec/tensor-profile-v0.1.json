@@ -151,8 +151,7 @@
       "name": "REDUCE_MAX",
       "semanticId": "tensor.reduce_max.v1",
       "inputs": [
-        "Tensor<D,S>",
-        "Axes<A>"
+        "Tensor<D,S>"
       ],
       "outputs": [
         "Tensor<D,remove(S,A)>"
@@ -172,6 +171,10 @@
       "resource": {
         "compute": "O(n)",
         "memory": "O(output)"
+      },
+      "attributes": {
+        "axes": "required unique zero-based integer array",
+        "keepDimensions": "optional boolean; default false"
       }
     },
     {

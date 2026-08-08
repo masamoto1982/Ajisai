@@ -14,6 +14,10 @@ fn context() -> GraphValidationContext {
                 "tensor.reduce_sum.v1".to_owned(),
                 OperatorSemantics::ReduceSum,
             ),
+            (
+                "tensor.reduce_max.v1".to_owned(),
+                OperatorSemantics::ReduceMax,
+            ),
         ]),
     }
 }
@@ -173,4 +177,32 @@ fn execution_reduces_a_graph_axis() {
     ]);
     let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
     assert_eq!(outputs["%sum"].data(), &TensorData::F32(vec![6.0, 15.0]));
+}
+
+#[test]
+fn execution_reduces_max_over_a_graph_axis() {
+    let mut graph = example();
+    graph.nodes = vec![GraphNode {
+        id: "@max".to_owned(),
+        operator_semantic_id: "tensor.reduce_max.v1".to_owned(),
+        inputs: vec!["%left".to_owned()],
+        outputs: vec![GraphValue {
+            id: "%max".to_owned(),
+            value_type: GraphType::Tensor {
+                dtype: DType::F32,
+                shape: vec![SymbolicDimension::Known(2)],
+            },
+        }],
+        attributes: BTreeMap::from([("axes".to_owned(), serde_json::json!([1]))]),
+    }];
+    graph.outputs = vec!["%max".to_owned()];
+    let inputs = BTreeMap::from([
+        (
+            "%left".to_owned(),
+            f32_tensor(vec![2, 3], vec![1.0, 5.0, 3.0, 4.0, 2.0, 6.0]),
+        ),
+        ("%right".to_owned(), f32_tensor(vec![3, 4], vec![0.0; 12])),
+    ]);
+    let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
+    assert_eq!(outputs["%max"].data(), &TensorData::F32(vec![5.0, 6.0]));
 }

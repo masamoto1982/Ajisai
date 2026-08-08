@@ -87,6 +87,8 @@ NaN and infinity remain Tensor elements and are not converted to NIL.
 array of unique zero-based axes) and `keepDimensions` (an optional Boolean,
 default `false`). Reduction visits input elements in row-major order, preserves
 the dtype, and either removes reduced axes or replaces them with dimension one.
+`tensor.reduce_max.v1` uses the same attribute and shape rules, propagates NaN,
+and uses negative infinity as the identity for an empty reduced slice.
 
 `execute_graph` is the reference bridge from the exchange IR to that backend.
 It validates the graph before execution, binds symbolic dimensions from runtime
