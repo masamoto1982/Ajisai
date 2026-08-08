@@ -9,7 +9,10 @@ mod tensor;
 
 pub use graph::{
     ArtifactReference, Graph, GraphNode, GraphType, GraphValidationContext, GraphValidationError,
-    GraphValue, SymbolicDimension,
+    GraphValue, OperatorSemantics, SymbolicDimension,
 };
 pub use shape::{CheckedShape, ShapeError, TensorMemoryBudget};
 pub use tensor::{DType, Tensor, TensorData, TensorError};
+
+#[cfg(test)]
+mod graph_tests;

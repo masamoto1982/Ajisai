@@ -66,6 +66,12 @@ ID and every value carries dtype and shape. Reverse-mode autodiff is a graph
 transformation driven by primitive VJP IDs; it is not interpreter tape state.
 Unknown shapes, types, effects, or VJPs are never certified as valid.
 
+The reference validator currently certifies `tensor.matmul.v1`: both inputs
+must share a dtype, have rank at least two, unify their contraction dimension,
+and have broadcast-compatible leading dimensions. Its declared output dtype and
+shape must equal the inferred `[..., M, N]`; merely authoring a plausible output
+annotation is not sufficient.
+
 Graph identity hashes the canonical graph, operator semantic IDs, tensor types,
 constants, and referenced artifact identities. Backend and device are excluded
 from semantic identity and recorded in the execution receipt instead.
