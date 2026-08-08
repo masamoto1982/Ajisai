@@ -1,0 +1,144 @@
+use super::*;
+use std::collections::{BTreeMap, BTreeSet};
+
+const OPEN: TensorMemoryBudget = TensorMemoryBudget::new(usize::MAX, usize::MAX);
+
+fn context() -> GraphValidationContext {
+    GraphValidationContext {
+        profile_id: "org.ajisai.tensor/0.1".to_owned(),
+        operator_semantics: BTreeMap::from([
+            ("tensor.matmul.v1".to_owned(), OperatorSemantics::Matmul),
+            ("tensor.exp.v1".to_owned(), OperatorSemantics::Exp),
+            ("tensor.log.v1".to_owned(), OperatorSemantics::Log),
+        ]),
+    }
+}
+
+fn example() -> Graph {
+    serde_json::from_str(include_str!(
+        "../../../spec/examples/tiny-matmul.graph.json"
+    ))
+    .unwrap()
+}
+
+fn f32_tensor(shape: Vec<usize>, values: Vec<f32>) -> Tensor {
+    Tensor::new(shape, TensorData::F32(values), OPEN).unwrap()
+}
+
+#[test]
+fn committed_graph_executes_end_to_end() {
+    let inputs = BTreeMap::from([
+        (
+            "%left".to_owned(),
+            f32_tensor(vec![2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+        ),
+        (
+            "%right".to_owned(),
+            f32_tensor(
+                vec![3, 4],
+                vec![
+                    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
+                ],
+            ),
+        ),
+    ]);
+    let outputs = execute_graph(&example(), &context(), &inputs, OPEN).unwrap();
+    assert_eq!(
+        outputs.keys().cloned().collect::<BTreeSet<_>>(),
+        BTreeSet::from(["%logits".to_owned()])
+    );
+    assert_eq!(
+        outputs["%logits"].data(),
+        &TensorData::F32(vec![38.0, 44.0, 50.0, 56.0, 83.0, 98.0, 113.0, 128.0])
+    );
+}
+
+#[test]
+fn execution_rejects_missing_input() {
+    let error = execute_graph(&example(), &context(), &BTreeMap::new(), OPEN).unwrap_err();
+    assert_eq!(error, GraphExecutionError::MissingInput("%left".to_owned()));
+}
+
+#[test]
+fn execution_checks_declared_input_dimensions() {
+    let inputs = BTreeMap::from([
+        ("%left".to_owned(), f32_tensor(vec![1, 3], vec![0.0; 3])),
+        ("%right".to_owned(), f32_tensor(vec![3, 4], vec![0.0; 12])),
+    ]);
+    assert_eq!(
+        execute_graph(&example(), &context(), &inputs, OPEN),
+        Err(GraphExecutionError::InputDimensionMismatch {
+            id: "%left".to_owned(),
+            axis: 0,
+            expected: 2,
+            actual: 1,
+        })
+    );
+}
+
+#[test]
+fn execution_unifies_symbolic_dimensions_across_inputs() {
+    let mut graph = example();
+    graph.inputs[0].value_type = GraphType::Tensor {
+        dtype: DType::F32,
+        shape: vec![
+            SymbolicDimension::Symbol("M".to_owned()),
+            SymbolicDimension::Symbol("K".to_owned()),
+        ],
+    };
+    graph.inputs[1].value_type = GraphType::Tensor {
+        dtype: DType::F32,
+        shape: vec![
+            SymbolicDimension::Symbol("K".to_owned()),
+            SymbolicDimension::Symbol("N".to_owned()),
+        ],
+    };
+    graph.nodes[0].outputs[0].value_type = GraphType::Tensor {
+        dtype: DType::F32,
+        shape: vec![
+            SymbolicDimension::Symbol("M".to_owned()),
+            SymbolicDimension::Symbol("N".to_owned()),
+        ],
+    };
+    let inputs = BTreeMap::from([
+        ("%left".to_owned(), f32_tensor(vec![2, 3], vec![0.0; 6])),
+        ("%right".to_owned(), f32_tensor(vec![3, 4], vec![0.0; 12])),
+    ]);
+    let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
+    assert_eq!(outputs["%logits"].shape().dimensions(), &[2, 4]);
+}
+
+#[test]
+fn execution_chains_matmul_exp_and_log_as_ssa_nodes() {
+    let mut graph = example();
+    graph.nodes[0].outputs[0].id = "%matmul".to_owned();
+    let result_type = graph.nodes[0].outputs[0].value_type.clone();
+    graph.nodes.extend([
+        GraphNode {
+            id: "@exp".to_owned(),
+            operator_semantic_id: "tensor.exp.v1".to_owned(),
+            inputs: vec!["%matmul".to_owned()],
+            outputs: vec![GraphValue {
+                id: "%exp".to_owned(),
+                value_type: result_type.clone(),
+            }],
+            attributes: BTreeMap::new(),
+        },
+        GraphNode {
+            id: "@log".to_owned(),
+            operator_semantic_id: "tensor.log.v1".to_owned(),
+            inputs: vec!["%exp".to_owned()],
+            outputs: vec![GraphValue {
+                id: "%logits".to_owned(),
+                value_type: result_type,
+            }],
+            attributes: BTreeMap::new(),
+        },
+    ]);
+    let inputs = BTreeMap::from([
+        ("%left".to_owned(), f32_tensor(vec![2, 3], vec![0.0; 6])),
+        ("%right".to_owned(), f32_tensor(vec![3, 4], vec![0.0; 12])),
+    ]);
+    let outputs = execute_graph(&graph, &context(), &inputs, OPEN).unwrap();
+    assert_eq!(outputs["%logits"].data(), &TensorData::F32(vec![0.0; 8]));
+}
