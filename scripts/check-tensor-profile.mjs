@@ -6,6 +6,7 @@ const graphSchema = JSON.parse(readFileSync('spec/typed-graph-ir.schema.json', '
 const coreWords = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const prose = readFileSync('spec/tensor-profile-v0.1.md', 'utf8');
 const runtimeDtypes = readFileSync('rust/src/tensor_profile/tensor.rs', 'utf8');
+const graphExample = JSON.parse(readFileSync('spec/examples/tiny-matmul.graph.json', 'utf8'));
 const errors = [];
 const fail = (message) => errors.push(message);
 
@@ -42,6 +43,11 @@ for (const operator of profile.operators) {
 
 for (const required of ['CAST', 'MATMUL', 'REDUCE_SUM', 'EXP', 'LOG', 'RANDOM_UNIFORM', 'SPLIT_KEY']) {
   if (!names.has(required)) fail(`minimum profile is missing ${required}`);
+}
+if (!graphExample.profiles.includes(profile.profile)) fail('graph example does not select the Tensor Profile');
+const exampleOperators = new Set(graphExample.nodes.map((node) => node.operatorSemanticId));
+for (const operator of exampleOperators) {
+  if (!semanticIds.has(operator)) fail(`graph example uses unregistered operator ${operator}`);
 }
 
 if (errors.length) {

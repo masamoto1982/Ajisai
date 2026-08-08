@@ -22,6 +22,8 @@ canonical domains, exact Scalars, and frozen vocabulary. A profile document is
 normative only for a program or graph that explicitly selects that profile.
 The initial Rust implementation provides checked shapes and immutable f32/f64
 profile values; it does not expose the profile through Core Word dispatch.
+`examples/tiny-matmul.graph.json` is the smallest executable-format witness for
+the graph schema and is validated against the committed operator registry.
 
 Within the current host protocol version, consumers may receive new optional
 fields, but existing fields, meanings, and tuple shapes cannot be removed,
