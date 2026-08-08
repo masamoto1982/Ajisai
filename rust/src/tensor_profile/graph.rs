@@ -71,6 +71,7 @@ pub enum OperatorSemantics {
     Matmul,
     Exp,
     Log,
+    ReduceSum,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,6 +94,10 @@ pub enum GraphValidationError {
     OutputTypeMismatch(String),
     InvalidSymbolicDimension(String),
     InvalidArtifactHash(String),
+    InvalidAttribute {
+        node: String,
+        attribute: String,
+    },
     NoOutputs,
 }
 
@@ -115,6 +120,9 @@ impl fmt::Display for GraphValidationError {
                 write!(f, "invalid symbolic dimension {symbol}")
             }
             Self::InvalidArtifactHash(hash) => write!(f, "invalid artifact hash {hash}"),
+            Self::InvalidAttribute { node, attribute } => {
+                write!(f, "{node} has an invalid {attribute} attribute")
+            }
             Self::NoOutputs => write!(f, "graph must have at least one output"),
         }
     }
@@ -250,7 +258,83 @@ fn validate_operator(
         OperatorSemantics::Exp | OperatorSemantics::Log => {
             validate_shape_preserving_unary(node, values)
         }
+        OperatorSemantics::ReduceSum => validate_reduce_sum(node, values),
     }
+}
+
+fn validate_reduce_sum(
+    node: &GraphNode,
+    values: &BTreeMap<String, GraphType>,
+) -> Result<(), GraphValidationError> {
+    if node.inputs.len() != 1 || node.outputs.len() != 1 {
+        return Err(GraphValidationError::OperatorArity {
+            operator: node.operator_semantic_id.clone(),
+            expected_inputs: 1,
+            actual_inputs: node.inputs.len(),
+            expected_outputs: 1,
+            actual_outputs: node.outputs.len(),
+        });
+    }
+    let (axes, keep_dimensions) = reduction_attributes(node)?;
+    let GraphType::Tensor { dtype, shape } = &values[&node.inputs[0]];
+    let mut seen = BTreeSet::new();
+    for axis in axes {
+        if axis >= shape.len() || !seen.insert(axis) {
+            return Err(GraphValidationError::InvalidAttribute {
+                node: node.id.clone(),
+                attribute: "axes".to_owned(),
+            });
+        }
+    }
+    let output_shape = shape
+        .iter()
+        .enumerate()
+        .filter_map(|(axis, dimension)| {
+            if seen.contains(&axis) {
+                keep_dimensions.then_some(SymbolicDimension::Known(1))
+            } else {
+                Some(dimension.clone())
+            }
+        })
+        .collect();
+    let inferred = GraphType::Tensor {
+        dtype: *dtype,
+        shape: output_shape,
+    };
+    if node.outputs[0].value_type != inferred {
+        return Err(GraphValidationError::OutputTypeMismatch(node.id.clone()));
+    }
+    Ok(())
+}
+
+pub(crate) fn reduction_attributes(
+    node: &GraphNode,
+) -> Result<(Vec<usize>, bool), GraphValidationError> {
+    let axes = node
+        .attributes
+        .get("axes")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| GraphValidationError::InvalidAttribute {
+            node: node.id.clone(),
+            attribute: "axes".to_owned(),
+        })?
+        .iter()
+        .map(|axis| axis.as_u64().and_then(|axis| usize::try_from(axis).ok()))
+        .collect::<Option<Vec<_>>>()
+        .ok_or_else(|| GraphValidationError::InvalidAttribute {
+            node: node.id.clone(),
+            attribute: "axes".to_owned(),
+        })?;
+    let keep_dimensions = match node.attributes.get("keepDimensions") {
+        Some(value) => value
+            .as_bool()
+            .ok_or_else(|| GraphValidationError::InvalidAttribute {
+                node: node.id.clone(),
+                attribute: "keepDimensions".to_owned(),
+            })?,
+        None => false,
+    };
+    Ok((axes, keep_dimensions))
 }
 
 fn validate_shape_preserving_unary(

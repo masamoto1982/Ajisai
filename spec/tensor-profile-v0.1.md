@@ -83,6 +83,11 @@ The reference backend also implements the shape-preserving `tensor.exp.v1` and
 one input and one output with identical dtype and shape. IEEE results such as
 NaN and infinity remain Tensor elements and are not converted to NIL.
 
+`tensor.reduce_sum.v1` takes one Tensor plus graph attributes `axes` (a required
+array of unique zero-based axes) and `keepDimensions` (an optional Boolean,
+default `false`). Reduction visits input elements in row-major order, preserves
+the dtype, and either removes reduced axes or replaces them with dimension one.
+
 `execute_graph` is the reference bridge from the exchange IR to that backend.
 It validates the graph before execution, binds symbolic dimensions from runtime
 inputs consistently across the graph, checks concrete input annotations, and

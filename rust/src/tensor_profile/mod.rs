@@ -9,7 +9,7 @@ mod graph;
 mod shape;
 mod tensor;
 
-pub use cpu::{matmul, tensor_exp, tensor_log, TensorOperatorError};
+pub use cpu::{matmul, reduce_sum, tensor_exp, tensor_log, TensorOperatorError};
 pub use execute::{execute_graph, GraphExecutionError};
 pub use graph::{
     ArtifactReference, Graph, GraphNode, GraphType, GraphValidationContext, GraphValidationError,

@@ -186,3 +186,21 @@ fn unary_numeric_operator_must_preserve_declared_type() {
         Err(GraphValidationError::OutputTypeMismatch("@exp".to_owned()))
     );
 }
+
+#[test]
+fn reduce_sum_infers_removed_axes_from_attributes() {
+    let mut graph = valid_graph();
+    graph.nodes = vec![GraphNode {
+        id: "@sum".to_owned(),
+        operator_semantic_id: "tensor.reduce_sum.v1".to_owned(),
+        inputs: vec!["%left".to_owned()],
+        outputs: vec![tensor("%result", vec![SymbolicDimension::Known(2)])],
+        attributes: BTreeMap::from([("axes".to_owned(), serde_json::json!([1]))]),
+    }];
+    let mut context = context();
+    context.operator_semantics.insert(
+        "tensor.reduce_sum.v1".to_owned(),
+        OperatorSemantics::ReduceSum,
+    );
+    graph.validate(&context).unwrap();
+}

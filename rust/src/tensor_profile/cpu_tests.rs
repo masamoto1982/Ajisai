@@ -76,3 +76,24 @@ fn reference_log_keeps_ieee_domain_states_inside_the_tensor() {
     assert_eq!(values[0], f32::NEG_INFINITY);
     assert!(values[1].is_nan());
 }
+
+#[test]
+fn reference_reduce_sum_supports_multiple_axes_and_keep_dimensions() {
+    let input = f32_tensor(vec![2, 2, 2], (1..=8).map(|value| value as f32).collect());
+    let reduced = reduce_sum(&input, &[0, 2], false, OPEN).unwrap();
+    assert_eq!(reduced.shape().dimensions(), &[2]);
+    assert_eq!(reduced.data(), &TensorData::F32(vec![14.0, 22.0]));
+
+    let kept = reduce_sum(&input, &[0, 2], true, OPEN).unwrap();
+    assert_eq!(kept.shape().dimensions(), &[1, 2, 1]);
+    assert_eq!(kept.data(), &TensorData::F32(vec![14.0, 22.0]));
+}
+
+#[test]
+fn reference_reduce_sum_rejects_duplicate_axes() {
+    let input = f32_tensor(vec![2], vec![1.0, 2.0]);
+    assert_eq!(
+        reduce_sum(&input, &[0, 0], false, OPEN),
+        Err(TensorOperatorError::DuplicateAxis(0))
+    );
+}

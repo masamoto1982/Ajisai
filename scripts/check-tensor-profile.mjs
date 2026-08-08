@@ -53,6 +53,7 @@ for (const operator of exampleOperators) {
 if (!referenceCpu.includes('pub fn matmul(')) fail('reference CPU backend is missing MATMUL');
 if (!referenceCpu.includes('pub fn tensor_exp(')) fail('reference CPU backend is missing EXP');
 if (!referenceCpu.includes('pub fn tensor_log(')) fail('reference CPU backend is missing LOG');
+if (!referenceCpu.includes('pub fn reduce_sum(')) fail('reference CPU backend is missing REDUCE_SUM');
 
 if (errors.length) {
   for (const error of errors) console.error(`[tensor-profile] ${error}`);
