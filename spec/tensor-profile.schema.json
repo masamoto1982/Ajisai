@@ -8,6 +8,7 @@
     "profile",
     "status",
     "dtypes",
+    "predicateDtype",
     "rounding",
     "implicitCasts",
     "ambientRng",
@@ -39,6 +40,12 @@
       },
       "minItems": 1,
       "uniqueItems": true
+    },
+    "predicateDtype": {
+      "description": "The selection dtype carried by WHERE predicates and masks. It is deliberately outside `dtypes`: no arithmetic operator accepts it, and `implicitCasts: false` forbids converting between it and a numeric dtype.",
+      "enum": [
+        "bool"
+      ]
     },
     "rounding": {
       "enum": [

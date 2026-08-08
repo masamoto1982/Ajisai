@@ -21,9 +21,13 @@ a finite sequence of non-negative dimensions and elements are stored in
 row-major logical order. Device, allocation, strides, layout, fusion, and
 backend are execution properties, not value identity.
 
-Profile 0.1 supports `f32` and `f64`. An exact Core Scalar enters the approximate
-domain only through `CAST`; no operator performs an implicit Scalar-to-Tensor or
-dtype conversion. `CAST` uses IEEE-754 round-to-nearest, ties-to-even.
+Profile 0.1 supports the numeric dtypes `f32` and `f64`, plus the separate
+predicate dtype `bool`. A predicate carries selection decisions such as an
+attention mask; it is not a numeric element type, and every arithmetic and
+reduction operator rejects it rather than reading a number as truthy or a
+predicate as zero-or-one. An exact Core Scalar enters the approximate domain
+only through `CAST`; no operator performs an implicit Scalar-to-Tensor or dtype
+conversion. `CAST` uses IEEE-754 round-to-nearest, ties-to-even.
 
 Tensor NaN and infinities are floating-point elements, not `NIL`. A resource
 budget failure produces `NIL(spaceExhausted)`. A malformed dtype, rank, axis, or
@@ -78,10 +82,21 @@ broadcasting before indexing, and validates output elements and bytes before
 allocating the result buffer. Accelerated kernels may replace this loop only
 under the numerical contract recorded for `tensor.matmul.v1`.
 
-The reference backend also implements the shape-preserving `tensor.exp.v1` and
-`tensor.log.v1` primitives for f32/f64. Their graph contracts require exactly
-one input and one output with identical dtype and shape. IEEE results such as
-NaN and infinity remain Tensor elements and are not converted to NIL.
+The reference backend also implements the shape-preserving `tensor.exp.v1`,
+`tensor.log.v1`, and `tensor.rsqrt.v1` primitives for f32/f64. Their graph
+contracts require exactly one input and one output with identical dtype and
+shape. IEEE results such as NaN and infinity remain Tensor elements and are not
+converted to NIL, so `rsqrt(0)` is positive infinity and `rsqrt(x < 0)` is NaN.
+`tensor.rsqrt.v1` is `bounded`, not `bitwise`: a backend may fuse the square
+root and the reciprocal only inside the tolerance recorded for the operator.
+
+`tensor.where.v1` selects elementwise between two operands of a common dtype
+`D` under a `bool` predicate. It is the only operator whose inputs deliberately
+do not share a dtype, and the graph validator rejects a numeric predicate
+instead of interpreting nonzero as true. All three operands broadcast against
+one another and the output shape is their three-way broadcast. Selection copies
+the chosen element rather than computing with it, so the negative infinity used
+to mask attention scores can never enter an arithmetic result.
 
 `tensor.reduce_sum.v1` takes one Tensor plus graph attributes `axes` (a required
 array of unique zero-based axes) and `keepDimensions` (an optional Boolean,
@@ -97,7 +112,10 @@ zero produces IEEE infinity or NaN inside the Tensor rather than NIL.
 
 Numerically stable softmax is intentionally a library graph composition:
 REDUCE_MAX with retained axes, subtraction, EXP, REDUCE_SUM with retained axes,
-and division. It is not a Core Word or a Tensor Profile primitive.
+and division. It is not a Core Word or a Tensor Profile primitive. Masked
+attention prefixes that chain with WHERE, and RMS normalization is likewise a
+composition — square, REDUCE_SUM with retained axes, scale to a mean, add
+epsilon, RSQRT, multiply. Neither becomes a primitive by being useful.
 
 `execute_graph` is the reference bridge from the exchange IR to that backend.
 It validates the graph before execution, binds symbolic dimensions from runtime

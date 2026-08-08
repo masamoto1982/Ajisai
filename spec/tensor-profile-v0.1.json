@@ -6,6 +6,7 @@
     "f32",
     "f64"
   ],
+  "predicateDtype": "bool",
   "rounding": "nearestTiesToEven",
   "implicitCasts": false,
   "ambientRng": false,

@@ -7,6 +7,10 @@ use std::fmt;
 pub enum DType {
     F32,
     F64,
+    /// The predicate dtype. It carries selection decisions such as attention
+    /// masks; it is not a numeric element type and no arithmetic operator
+    /// accepts it.
+    Bool,
 }
 
 impl DType {
@@ -14,7 +18,15 @@ impl DType {
         match self {
             Self::F32 => 4,
             Self::F64 => 8,
+            Self::Bool => 1,
         }
+    }
+
+    /// Whether this dtype names an approximate floating-point element type.
+    /// The profile forbids implicit casts, so a predicate never silently
+    /// becomes a number and a number never silently becomes a predicate.
+    pub const fn is_numeric(self) -> bool {
+        matches!(self, Self::F32 | Self::F64)
     }
 }
 
@@ -22,6 +34,7 @@ impl DType {
 pub enum TensorData {
     F32(Vec<f32>),
     F64(Vec<f64>),
+    Bool(Vec<bool>),
 }
 
 impl TensorData {
@@ -29,6 +42,7 @@ impl TensorData {
         match self {
             Self::F32(_) => DType::F32,
             Self::F64(_) => DType::F64,
+            Self::Bool(_) => DType::Bool,
         }
     }
 
@@ -36,6 +50,7 @@ impl TensorData {
         match self {
             Self::F32(values) => values.len(),
             Self::F64(values) => values.len(),
+            Self::Bool(values) => values.len(),
         }
     }
 }
@@ -129,6 +144,15 @@ mod tests {
                 actual: 1
             })
         );
+    }
+
+    #[test]
+    fn predicate_dtype_is_one_byte_and_not_numeric() {
+        let mask = Tensor::new(vec![2], TensorData::Bool(vec![true, false]), OPEN).unwrap();
+        assert_eq!(mask.dtype(), DType::Bool);
+        assert_eq!(DType::Bool.element_bytes(), 1);
+        assert!(!DType::Bool.is_numeric());
+        assert!(DType::F32.is_numeric() && DType::F64.is_numeric());
     }
 
     #[test]

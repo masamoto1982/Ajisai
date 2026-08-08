@@ -1,8 +1,8 @@
 use super::{
     graph_operators::reduction_attributes, matmul, reduce_max, reduce_sum, tensor_add, tensor_div,
-    tensor_exp, tensor_log, tensor_mul, tensor_sub, Graph, GraphType, GraphValidationContext,
-    GraphValidationError, OperatorSemantics, SymbolicDimension, Tensor, TensorMemoryBudget,
-    TensorOperatorError,
+    tensor_exp, tensor_log, tensor_mul, tensor_rsqrt, tensor_sub, tensor_where, Graph, GraphType,
+    GraphValidationContext, GraphValidationError, OperatorSemantics, SymbolicDimension, Tensor,
+    TensorMemoryBudget, TensorOperatorError,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -124,6 +124,16 @@ pub fn execute_graph(
             OperatorSemantics::Log => {
                 let input = runtime_value(&values, &node.inputs[0])?;
                 tensor_log(input, budget)?
+            }
+            OperatorSemantics::Rsqrt => {
+                let input = runtime_value(&values, &node.inputs[0])?;
+                tensor_rsqrt(input, budget)?
+            }
+            OperatorSemantics::Where => {
+                let predicate = runtime_value(&values, &node.inputs[0])?;
+                let on_true = runtime_value(&values, &node.inputs[1])?;
+                let on_false = runtime_value(&values, &node.inputs[2])?;
+                tensor_where(predicate, on_true, on_false, budget)?
             }
             OperatorSemantics::ReduceSum => {
                 let input = runtime_value(&values, &node.inputs[0])?;
