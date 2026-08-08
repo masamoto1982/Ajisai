@@ -1,6 +1,7 @@
 use super::{
-    graph_operators::reduction_attributes, matmul, reduce_max, reduce_sum, tensor_add, tensor_div,
-    tensor_exp, tensor_log, tensor_mul, tensor_rsqrt, tensor_sub, tensor_where, Graph, GraphType,
+    graph_operators::{reduction_attributes, regrid_denominator},
+    matmul, reduce_max, reduce_sum, tensor_add, tensor_div, tensor_exp, tensor_log, tensor_mul,
+    tensor_regrid, tensor_rsqrt, tensor_sub, tensor_where, Graph, GraphType,
     GraphValidationContext, GraphValidationError, OperatorSemantics, SymbolicDimension, Tensor,
     TensorMemoryBudget, TensorOperatorError,
 };
@@ -128,6 +129,10 @@ pub fn execute_graph(
             OperatorSemantics::Rsqrt => {
                 let input = runtime_value(&values, &node.inputs[0])?;
                 tensor_rsqrt(input, budget)?
+            }
+            OperatorSemantics::Regrid => {
+                let input = runtime_value(&values, &node.inputs[0])?;
+                tensor_regrid(input, &regrid_denominator(node)?, budget)?
             }
             OperatorSemantics::Where => {
                 let predicate = runtime_value(&values, &node.inputs[0])?;

@@ -2,6 +2,7 @@ use super::graph::{
     GraphNode, GraphType, GraphValidationError, OperatorSemantics, SymbolicDimension,
 };
 use super::DType;
+use num_bigint::BigInt;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(crate) fn validate_operator(
@@ -12,7 +13,11 @@ pub(crate) fn validate_operator(
     match semantics {
         OperatorSemantics::Matmul => validate_matmul(node, values),
         OperatorSemantics::Exp | OperatorSemantics::Log | OperatorSemantics::Rsqrt => {
-            validate_shape_preserving_unary(node, values)
+            validate_shape_preserving_unary(node, values, DTypeDomain::Approximate)
+        }
+        OperatorSemantics::Regrid => {
+            regrid_denominator(node)?;
+            validate_shape_preserving_unary(node, values, DTypeDomain::Exact)
         }
         OperatorSemantics::ReduceSum | OperatorSemantics::ReduceMax => {
             validate_reduction(node, values)
@@ -25,13 +30,63 @@ pub(crate) fn validate_operator(
     }
 }
 
+/// Which numeric domain an operator's contract is written over.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DTypeDomain {
+    /// Any numeric dtype, exact or approximate.
+    Numeric,
+    /// Approximate only: the operator's value is irrational for rational
+    /// inputs, so there is no exact result to return.
+    Approximate,
+    /// Exact only: the operator acts on a denominator, which the approximate
+    /// dtypes do not have.
+    Exact,
+}
+
 /// The graph validator is the profile's contract certifier, so it — not the
-/// backend — is where a predicate tensor is refused entry to arithmetic.
-fn require_numeric(node: &GraphNode, dtype: DType) -> Result<(), GraphValidationError> {
-    if dtype.is_numeric() {
-        return Ok(());
+/// backend — is where a tensor is refused entry to an operator whose contract
+/// is not written over its dtype. Rejecting here means an unexecutable graph is
+/// never certified as valid in the first place.
+fn require_domain(
+    node: &GraphNode,
+    dtype: DType,
+    domain: DTypeDomain,
+) -> Result<(), GraphValidationError> {
+    if !dtype.is_numeric() {
+        return Err(GraphValidationError::NonNumericDType(node.id.clone()));
     }
-    Err(GraphValidationError::NonNumericDType(node.id.clone()))
+    match domain {
+        DTypeDomain::Numeric => Ok(()),
+        DTypeDomain::Approximate if dtype.is_approximate() => Ok(()),
+        DTypeDomain::Approximate => {
+            Err(GraphValidationError::ExactDTypeUnsupported(node.id.clone()))
+        }
+        DTypeDomain::Exact if dtype.is_exact() => Ok(()),
+        DTypeDomain::Exact => Err(GraphValidationError::ApproximateDTypeUnsupported(
+            node.id.clone(),
+        )),
+    }
+}
+
+fn require_numeric(node: &GraphNode, dtype: DType) -> Result<(), GraphValidationError> {
+    require_domain(node, dtype, DTypeDomain::Numeric)
+}
+
+/// The `denominator` attribute of a `QUANTIZE` node: the grid the operator
+/// rounds onto, and therefore the denominator bound it establishes.
+pub(crate) fn regrid_denominator(node: &GraphNode) -> Result<BigInt, GraphValidationError> {
+    let invalid = || GraphValidationError::InvalidAttribute {
+        node: node.id.clone(),
+        attribute: "denominator".to_owned(),
+    };
+    let denominator = node
+        .attributes
+        .get("denominator")
+        .ok_or_else(invalid)?
+        .as_u64()
+        .filter(|denominator| *denominator > 0)
+        .ok_or_else(invalid)?;
+    Ok(BigInt::from(denominator))
 }
 
 fn validate_elementwise_binary(
@@ -149,6 +204,7 @@ pub(crate) fn reduction_attributes(
 fn validate_shape_preserving_unary(
     node: &GraphNode,
     values: &BTreeMap<String, GraphType>,
+    domain: DTypeDomain,
 ) -> Result<(), GraphValidationError> {
     if node.inputs.len() != 1 || node.outputs.len() != 1 {
         return Err(GraphValidationError::OperatorArity {
@@ -160,7 +216,7 @@ fn validate_shape_preserving_unary(
         });
     }
     let GraphType::Tensor { dtype, .. } = &values[&node.inputs[0]];
-    require_numeric(node, *dtype)?;
+    require_domain(node, *dtype, domain)?;
     if node.outputs[0].value_type != values[&node.inputs[0]] {
         return Err(GraphValidationError::OutputTypeMismatch(node.id.clone()));
     }

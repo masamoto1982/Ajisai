@@ -1,4 +1,6 @@
 use super::{CheckedShape, DType, ShapeError, Tensor, TensorData, TensorError, TensorMemoryBudget};
+use crate::types::fraction::Fraction;
+use num_bigint::BigInt;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,6 +39,19 @@ pub enum TensorOperatorError {
         operator: &'static str,
         dtype: DType,
     },
+    ExactDTypeUnsupported {
+        operator: &'static str,
+        dtype: DType,
+    },
+    ApproximateDTypeUnsupported {
+        operator: &'static str,
+        dtype: DType,
+    },
+    ExactDivisionByZero,
+    EmptyExactReduction {
+        operator: &'static str,
+    },
+    NonPositiveDenominator,
     Shape(ShapeError),
     Tensor(TensorError),
 }
@@ -84,6 +99,24 @@ impl fmt::Display for TensorOperatorError {
                 f,
                 "{operator} requires a bool predicate, received {dtype:?}"
             ),
+            Self::ExactDTypeUnsupported { operator, dtype } => write!(
+                f,
+                "{operator} has no exact value for rational inputs, so it is undefined over {dtype:?}"
+            ),
+            Self::ApproximateDTypeUnsupported { operator, dtype } => write!(
+                f,
+                "{operator} is defined only over exact dtypes, received {dtype:?}"
+            ),
+            Self::ExactDivisionByZero => {
+                write!(f, "exact division by zero has no rational result")
+            }
+            Self::EmptyExactReduction { operator } => write!(
+                f,
+                "{operator} over an empty exact slice has no identity element"
+            ),
+            Self::NonPositiveDenominator => {
+                write!(f, "QUANTIZE requires a positive integer denominator")
+            }
             Self::Shape(error) => error.fmt(f),
             Self::Tensor(error) => error.fmt(f),
         }
@@ -172,6 +205,22 @@ pub fn matmul(
             |sum, left, right| sum + left * right,
             0.0f64,
         )),
+        // The exact contraction accumulates in the same increasing-K order.
+        // Ordering is not a numerical choice here — rational addition is
+        // associative, so the result is order-independent — but keeping one
+        // traversal means the exact and approximate paths cannot drift.
+        (TensorData::Q(left_data), TensorData::Q(right_data)) => TensorData::Q(matmul_data(
+            left_data,
+            right_data,
+            left.shape(),
+            right.shape(),
+            &batch_shape,
+            m,
+            left_k,
+            n,
+            |sum: Fraction, left: Fraction, right: Fraction| sum.add(&left.mul(&right)),
+            Fraction::new(BigInt::from(0), BigInt::from(1)),
+        )),
         _ => unreachable!("dtype equality and numeric dtype were checked"),
     };
     debug_assert_eq!(data_len(&data), output_shape.element_count());
@@ -223,7 +272,7 @@ fn map_unary(
     f32_operation: impl Fn(f32) -> f32,
     f64_operation: impl Fn(f64) -> f64,
 ) -> Result<Tensor, TensorOperatorError> {
-    require_numeric(operator, input.dtype())?;
+    require_approximate(operator, input.dtype())?;
     CheckedShape::new(
         input.shape().dimensions().to_vec(),
         input.dtype().element_bytes(),
@@ -236,7 +285,9 @@ fn map_unary(
         TensorData::F64(values) => {
             TensorData::F64(values.iter().copied().map(f64_operation).collect())
         }
-        TensorData::Bool(_) => unreachable!("numeric dtype was checked"),
+        TensorData::Q(_) | TensorData::Bool(_) => {
+            unreachable!("approximate dtype was checked")
+        }
     };
     Tensor::new(input.shape().dimensions().to_vec(), data, budget).map_err(Into::into)
 }
@@ -252,6 +303,35 @@ pub(crate) fn require_numeric(
         return Ok(());
     }
     Err(TensorOperatorError::NonNumericDType { operator, dtype })
+}
+
+/// Reject the exact dtype for operators whose value is irrational for rational
+/// inputs. `exp`, `ln`, and `x^(-1/2)` leave the rationals for all but trivial
+/// arguments, so there is no exact result to return. Returning an approximate
+/// one instead would be a silent exact-to-approximate conversion, which the
+/// profile forbids; an exact transcendental needs its own contract carrying a
+/// declared precision, which Profile 0.1 does not define.
+pub(crate) fn require_approximate(
+    operator: &'static str,
+    dtype: DType,
+) -> Result<(), TensorOperatorError> {
+    require_numeric(operator, dtype)?;
+    if dtype.is_approximate() {
+        return Ok(());
+    }
+    Err(TensorOperatorError::ExactDTypeUnsupported { operator, dtype })
+}
+
+/// The mirror of [`require_approximate`], for operators that only make sense
+/// over exact values.
+pub(crate) fn require_exact(
+    operator: &'static str,
+    dtype: DType,
+) -> Result<(), TensorOperatorError> {
+    if dtype.is_exact() {
+        return Ok(());
+    }
+    Err(TensorOperatorError::ApproximateDTypeUnsupported { operator, dtype })
 }
 
 fn check_rank(rank: usize) -> Result<(), TensorOperatorError> {
@@ -300,7 +380,7 @@ fn trailing_dimension(shape: &[usize], offset: usize) -> Option<usize> {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn matmul_data<T: Copy>(
+fn matmul_data<T: Clone>(
     left: &[T],
     right: &[T],
     left_shape: &CheckedShape,
@@ -322,10 +402,11 @@ fn matmul_data<T: Copy>(
         let right_row_stride = right_shape.row_major_strides()[right_shape.dimensions().len() - 2];
         for row in 0..m {
             for column in 0..n {
-                let mut sum = zero;
+                let mut sum = zero.clone();
                 for contraction in 0..k {
-                    let left_value = left[left_base + row * left_row_stride + contraction];
-                    let right_value = right[right_base + contraction * right_row_stride + column];
+                    let left_value = left[left_base + row * left_row_stride + contraction].clone();
+                    let right_value =
+                        right[right_base + contraction * right_row_stride + column].clone();
                     sum = multiply_add(sum, left_value, right_value);
                 }
                 output.push(sum);
@@ -371,6 +452,7 @@ fn data_len(data: &TensorData) -> usize {
     match data {
         TensorData::F32(values) => values.len(),
         TensorData::F64(values) => values.len(),
+        TensorData::Q(values) => values.len(),
         TensorData::Bool(values) => values.len(),
     }
 }

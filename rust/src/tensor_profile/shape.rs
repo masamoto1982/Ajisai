@@ -1,17 +1,40 @@
 use std::fmt;
 
 /// Host/device allocation ceilings used before a tensor buffer is allocated.
+///
+/// `max_elements` and `max_bytes` bound how many elements a tensor has and how
+/// much room their fixed-width parts occupy. `max_denominator_bits` bounds
+/// something the other two cannot see: an exact rational element's denominator
+/// lives on the heap and grows with the *length of the computation* that
+/// produced it, not with the tensor's shape. Without a ceiling on it, an
+/// unquantized exact graph does not fail — it slows to a halt inside bignum
+/// arithmetic. Bounding it turns that into a reported contract failure naming
+/// the node that overflowed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TensorMemoryBudget {
     pub max_elements: usize,
     pub max_bytes: usize,
+    pub max_denominator_bits: u64,
 }
 
 impl TensorMemoryBudget {
+    /// A budget with no denominator ceiling. Approximate dtypes have
+    /// fixed-width elements, so they never need one.
     pub const fn new(max_elements: usize, max_bytes: usize) -> Self {
         Self {
             max_elements,
             max_bytes,
+            max_denominator_bits: u64::MAX,
+        }
+    }
+
+    /// Bound the denominator of every exact rational element. This is the
+    /// enforcement half of the growth strategy: the graph must quantize often
+    /// enough to stay under the ceiling it declared.
+    pub const fn with_denominator_bits(self, max_denominator_bits: u64) -> Self {
+        Self {
+            max_denominator_bits,
+            ..self
         }
     }
 }

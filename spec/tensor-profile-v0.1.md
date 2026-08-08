@@ -21,13 +21,30 @@ a finite sequence of non-negative dimensions and elements are stored in
 row-major logical order. Device, allocation, strides, layout, fusion, and
 backend are execution properties, not value identity.
 
-Profile 0.1 supports the numeric dtypes `f32` and `f64`, plus the separate
-predicate dtype `bool`. A predicate carries selection decisions such as an
-attention mask; it is not a numeric element type, and every arithmetic and
-reduction operator rejects it rather than reading a number as truthy or a
-predicate as zero-or-one. An exact Core Scalar enters the approximate domain
-only through `CAST`; no operator performs an implicit Scalar-to-Tensor or dtype
-conversion. `CAST` uses IEEE-754 round-to-nearest, ties-to-even.
+Profile 0.1 supports the approximate numeric dtypes `f32` and `f64`, the exact
+numeric dtype `q`, and the separate predicate dtype `bool`. A predicate carries
+selection decisions such as an attention mask; it is not a numeric element
+type, and every arithmetic and reduction operator rejects it rather than
+reading a number as truthy or a predicate as zero-or-one. An exact Core Scalar
+enters the approximate domain only through `CAST`; no operator performs an
+implicit Scalar-to-Tensor or dtype conversion. `CAST` uses IEEE-754
+round-to-nearest, ties-to-even.
+
+`q` elements are exact rationals. They are the same numbers Core computes with,
+so an exact tensor result is the mathematically exact value and every backend
+must produce the identical rational — there is nothing left for a backend to
+decide. A `q` element is never `NIL`: `NIL` is Core's absence marker, not a
+number, and an exact tensor carrying one is a contract error rather than a
+value.
+
+Each operator declares the numeric domain its contract is written over, as
+`dtypeDomain`. `approximate` means the operator's value is irrational for
+rational inputs, so there is no exact result to return; `exact` means it acts
+on a denominator, which the approximate dtypes do not have; `any` means both.
+For an `any` operator the declared numeric tolerances describe approximate
+evaluation only — exact evaluation is bitwise by construction. Both the graph
+validator and the reference backend reject a dtype outside an operator's
+declared domain, so an unexecutable graph is never certified as valid.
 
 Tensor NaN and infinities are floating-point elements, not `NIL`. A resource
 budget failure produces `NIL(spaceExhausted)`. A malformed dtype, rank, axis, or
@@ -106,9 +123,46 @@ the dtype, and either removes reduced axes or replaces them with dimension one.
 and uses negative infinity as the identity for an empty reduced slice.
 
 `tensor.add.v1`, `tensor.sub.v1`, `tensor.mul.v1`, and `tensor.div.v1` are
-elementwise IEEE operations. Inputs must share a dtype; shapes broadcast from
-the trailing axis using equality-or-one, with no implicit cast. Division by
-zero produces IEEE infinity or NaN inside the Tensor rather than NIL.
+elementwise operations. Inputs must share a dtype; shapes broadcast from the
+trailing axis using equality-or-one, with no implicit cast. Over an approximate
+dtype they are IEEE operations and division by zero produces IEEE infinity or
+NaN inside the Tensor rather than NIL. Over `q` they are exact, and division by
+zero is a contract error: a rational divided by zero has no rational value, so
+none is invented. `tensor.reduce_max.v1` differs for the same reason — the
+approximate path uses negative infinity as the identity of an empty slice, and
+the rationals have no such element, so an empty exact maximum is reported
+rather than answered.
+
+## Bounding exact representation size
+
+An exact rational records the whole history of the computation that produced
+it: denominators multiply under both addition and multiplication, so a chain of
+operations grows one without bound. This is a representation-size problem, not
+an accuracy problem, and Profile 0.1 addresses it explicitly.
+
+`tensor.regrid.v1` rounds every element of a `q` tensor to the nearest multiple
+of `1/d`, where the required `denominator` attribute is a positive integer `d`.
+It is the tensor lifting of Core's `QUANTIZE` word and inherits its tie rule,
+halves away from zero. Rounding is exact and fully specified, so the operator is
+`bitwise` deterministic; each element moves by at most `1/(2d)`.
+
+Two properties make it the profile's growth strategy rather than a convenience.
+Once every element of both operands of a contraction lies on the grid `1/d`,
+each product already carries the denominator `d²`, so the contraction's
+denominator is `d²` regardless of the reduction length — the length drops out.
+Applying `REGRID` once per layer then holds the denominator at `d` across
+depth. Representation size therefore stops depending on either the width or the
+depth of the graph.
+
+`REGRID` declares no VJP. Rounding to a grid has zero derivative almost
+everywhere, and a straight-through estimator is a different function; treating
+one as the other would make a gradient graph disagree with its forward graph,
+so it requires its own contract.
+
+Denominator size is a budgeted resource alongside element and byte counts.
+Every tensor is checked against the declared ceiling as it is constructed, so a
+graph that does not regrid often enough reports the operation that exceeded it
+instead of continuing into unbounded arithmetic.
 
 Numerically stable softmax is intentionally a library graph composition:
 REDUCE_MAX with retained axes, subtraction, EXP, REDUCE_SUM with retained axes,

@@ -72,6 +72,7 @@ pub enum OperatorSemantics {
     Exp,
     Log,
     Rsqrt,
+    Regrid,
     ReduceSum,
     ReduceMax,
     Where,
@@ -98,6 +99,8 @@ pub enum GraphValidationError {
     },
     DTypeMismatch(String),
     NonNumericDType(String),
+    ExactDTypeUnsupported(String),
+    ApproximateDTypeUnsupported(String),
     PredicateDTypeMismatch(String),
     ShapeMismatch(String),
     OutputTypeMismatch(String),
@@ -125,6 +128,13 @@ impl fmt::Display for GraphValidationError {
             Self::DTypeMismatch(id) => write!(f, "{id} input dtypes do not match"),
             Self::NonNumericDType(id) => {
                 write!(f, "{id} requires a numeric dtype, received the bool predicate dtype")
+            }
+            Self::ExactDTypeUnsupported(id) => write!(
+                f,
+                "{id} has no exact value for rational inputs, so it is undefined over the exact dtype"
+            ),
+            Self::ApproximateDTypeUnsupported(id) => {
+                write!(f, "{id} is defined only over the exact dtype")
             }
             Self::PredicateDTypeMismatch(id) => {
                 write!(f, "{id} requires a bool predicate input")

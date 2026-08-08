@@ -4,7 +4,8 @@
   "status": "draft",
   "dtypes": [
     "f32",
-    "f64"
+    "f64",
+    "q"
   ],
   "predicateDtype": "bool",
   "rounding": "nearestTiesToEven",
@@ -22,6 +23,7 @@
       ],
       "shape": "output=input",
       "dtype": "D is explicit; Scalar conversion is IEEE-754 nearestTiesToEven",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "ieee754",
@@ -49,6 +51,7 @@
       ],
       "shape": "product(S)=product(T)",
       "dtype": "preserve",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "identity",
@@ -76,6 +79,7 @@
       ],
       "shape": "P is a permutation of axes(S)",
       "dtype": "preserve",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "identity",
@@ -103,6 +107,7 @@
       ],
       "shape": "leading axes broadcast; contraction K must match",
       "dtype": "inputs and output share D",
+      "dtypeDomain": "any",
       "determinism": "bounded",
       "numeric": {
         "model": "ieee754OrderedReduction",
@@ -129,6 +134,7 @@
       ],
       "shape": "A contains unique in-range axes",
       "dtype": "preserve",
+      "dtypeDomain": "any",
       "determinism": "bounded",
       "numeric": {
         "model": "ieee754OrderedReduction",
@@ -159,6 +165,7 @@
       ],
       "shape": "A contains unique in-range axes",
       "dtype": "preserve",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "ieee754Maximum",
@@ -189,6 +196,7 @@
       ],
       "shape": "preserve",
       "dtype": "preserve",
+      "dtypeDomain": "approximate",
       "determinism": "bounded",
       "numeric": {
         "model": "correctlyRoundedOrBounded",
@@ -215,6 +223,7 @@
       ],
       "shape": "preserve",
       "dtype": "preserve",
+      "dtypeDomain": "approximate",
       "determinism": "bounded",
       "numeric": {
         "model": "ieee754Log",
@@ -241,6 +250,7 @@
       ],
       "shape": "preserve",
       "dtype": "preserve",
+      "dtypeDomain": "approximate",
       "determinism": "bounded",
       "numeric": {
         "model": "ieee754ReciprocalSqrt",
@@ -269,6 +279,7 @@
       ],
       "shape": "all inputs broadcast-compatible",
       "dtype": "value inputs and output share D",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "selection",
@@ -297,6 +308,7 @@
       ],
       "shape": "explicit S",
       "dtype": "explicit D",
+      "dtypeDomain": "approximate",
       "determinism": "bitwise",
       "numeric": {
         "model": "counterBasedUniform01",
@@ -324,6 +336,7 @@
       ],
       "shape": "output length=count",
       "dtype": "not applicable",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "cryptographicHashDerivation",
@@ -351,6 +364,7 @@
       ],
       "shape": "all dimensions broadcast-compatible from the trailing axis",
       "dtype": "inputs and output share D",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "ieee754Elementwise+",
@@ -378,6 +392,7 @@
       ],
       "shape": "all dimensions broadcast-compatible from the trailing axis",
       "dtype": "inputs and output share D",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "ieee754Elementwise-",
@@ -405,6 +420,7 @@
       ],
       "shape": "all dimensions broadcast-compatible from the trailing axis",
       "dtype": "inputs and output share D",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "ieee754Elementwise*",
@@ -432,6 +448,7 @@
       ],
       "shape": "all dimensions broadcast-compatible from the trailing axis",
       "dtype": "inputs and output share D",
+      "dtypeDomain": "any",
       "determinism": "bitwise",
       "numeric": {
         "model": "ieee754Elementwise/",
@@ -441,6 +458,34 @@
       "differentiation": {
         "kind": "vjp",
         "rule": "div_vjp_v1"
+      },
+      "resource": {
+        "compute": "O(n)",
+        "memory": "O(n)"
+      }
+    },
+    {
+      "name": "REGRID",
+      "semanticId": "tensor.regrid.v1",
+      "inputs": [
+        "Tensor<q,S>",
+        "Denominator<d>"
+      ],
+      "outputs": [
+        "Tensor<q,S>"
+      ],
+      "shape": "preserve",
+      "dtype": "preserve",
+      "dtypeDomain": "exact",
+      "determinism": "bitwise",
+      "numeric": {
+        "model": "exactRationalGridRounding",
+        "absoluteTolerance": 0,
+        "relativeTolerance": 0
+      },
+      "differentiation": {
+        "kind": "none",
+        "rule": null
       },
       "resource": {
         "compute": "O(n)",

@@ -10,6 +10,7 @@ const referenceCpu = readFileSync('rust/src/tensor_profile/cpu.rs', 'utf8');
 const reductions = readFileSync('rust/src/tensor_profile/reductions.rs', 'utf8');
 const elementwise = readFileSync('rust/src/tensor_profile/elementwise.rs', 'utf8');
 const select = readFileSync('rust/src/tensor_profile/select.rs', 'utf8');
+const regrid = readFileSync('rust/src/tensor_profile/regrid.rs', 'utf8');
 const graphOperators = readFileSync('rust/src/tensor_profile/graph_operators.rs', 'utf8');
 const graphExample = JSON.parse(readFileSync('spec/examples/tiny-matmul.graph.json', 'utf8'));
 const errors = [];
@@ -29,7 +30,25 @@ for (const dtype of [...profile.dtypes, profile.predicateDtype]) {
 // mechanically keeps it there: `is_numeric` must exclude it, and both the
 // graph validator and the reference backend must refuse it for arithmetic.
 if (profile.dtypes.includes(profile.predicateDtype)) fail('the predicate dtype must not be listed as a numeric dtype');
-if (!/pub const fn is_numeric\(self\) -> bool \{\s*matches!\(self, Self::F32 \| Self::F64\)/.test(runtimeDtypes)) fail('runtime DType::is_numeric does not exclude the predicate dtype');
+if (!/pub const fn is_numeric\(self\) -> bool \{\s*matches!\(self, ([^)]*)\)/.test(runtimeDtypes)) fail('runtime DType::is_numeric is not a simple dtype list');
+else {
+  const numericVariants = runtimeDtypes.match(/pub const fn is_numeric\(self\) -> bool \{\s*matches!\(self, ([^)]*)\)/)[1].split('|').map((v) => v.trim().replace('Self::', '').toLowerCase());
+  const predicateVariant = profile.predicateDtype;
+  if (numericVariants.includes(predicateVariant)) fail('runtime DType::is_numeric does not exclude the predicate dtype');
+  for (const dtype of profile.dtypes) if (!numericVariants.includes(dtype)) fail(`runtime DType::is_numeric omits the declared numeric dtype ${dtype}`);
+}
+// Exactness must be a property of the dtype, not a convention: the domain each
+// operator is written over is declared, and the runtime must gate on it.
+if (!/pub const fn is_exact\(self\) -> bool/.test(runtimeDtypes)) fail('runtime DType does not distinguish exact from approximate dtypes');
+if (!referenceCpu.includes('pub(crate) fn require_approximate(')) fail('reference CPU backend does not gate approximate-only operators');
+if (!referenceCpu.includes('pub(crate) fn require_exact(')) fail('reference CPU backend does not gate exact-only operators');
+if (!graphOperators.includes('fn require_domain(')) fail('graph validation does not gate operators on their declared dtype domain');
+if (!regrid.includes('pub fn tensor_regrid(')) fail('reference CPU backend is missing REGRID');
+for (const operator of profile.operators) {
+  if (operator.dtypeDomain === 'exact' && operator.differentiation.kind !== 'none') fail(`${operator.name} rounds onto a grid, so it cannot declare a VJP`);
+}
+if (!profile.dtypes.some((dtype) => dtype === 'q')) fail('the profile declares no exact dtype for the growth strategy to bound');
+if (!/max_denominator_bits/.test(readFileSync('rust/src/tensor_profile/shape.rs', 'utf8'))) fail('the memory budget carries no denominator ceiling');
 if (!referenceCpu.includes('pub(crate) fn require_numeric(')) fail('reference CPU backend does not gate numeric operators on dtype');
 if (!graphOperators.includes('fn require_numeric(')) fail('graph validation does not gate numeric operators on dtype');
 

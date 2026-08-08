@@ -71,7 +71,7 @@ pub fn tensor_where(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn select<T: Copy>(
+fn select<T: Clone>(
     mask: &[bool],
     on_true: &[T],
     on_false: &[T],
@@ -84,9 +84,9 @@ fn select<T: Copy>(
         .map(|linear| {
             let coordinates = unravel(linear, output_shape.dimensions());
             if mask[broadcast_index(&coordinates, predicate_shape)] {
-                on_true[broadcast_index(&coordinates, true_shape)]
+                on_true[broadcast_index(&coordinates, true_shape)].clone()
             } else {
-                on_false[broadcast_index(&coordinates, false_shape)]
+                on_false[broadcast_index(&coordinates, false_shape)].clone()
             }
         })
         .collect()

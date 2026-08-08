@@ -33,6 +33,7 @@
         "enum": [
           "f32",
           "f64",
+          "q",
           "bf16",
           "f16",
           "i8"
@@ -77,6 +78,7 @@
         "outputs",
         "shape",
         "dtype",
+        "dtypeDomain",
         "determinism",
         "numeric",
         "differentiation",
@@ -112,6 +114,14 @@
         "dtype": {
           "type": "string",
           "minLength": 1
+        },
+        "dtypeDomain": {
+          "description": "Which numeric domain the operator contract is written over. \"approximate\" means the value is irrational for rational inputs, so there is no exact result to return; \"exact\" means the operator acts on a denominator, which the approximate dtypes do not have; \"any\" means both. For \"any\" operators the declared numeric tolerances describe approximate evaluation only — exact evaluation is bitwise by construction.",
+          "enum": [
+            "any",
+            "approximate",
+            "exact"
+          ]
         },
         "determinism": {
           "enum": [

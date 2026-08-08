@@ -1,4 +1,5 @@
 use super::{CheckedShape, ShapeError, TensorMemoryBudget};
+use crate::types::fraction::Fraction;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -7,6 +8,12 @@ use std::fmt;
 pub enum DType {
     F32,
     F64,
+    /// The exact rational dtype. Elements are Core fractions, so every
+    /// arithmetic result is the mathematically exact value rather than a
+    /// rounded one — and the price is that a denominator records the whole
+    /// history of the computation that produced it. `REGRID` is what pays that
+    /// price down; see `docs/dev/rational-tensor-growth-2026-08.md`.
+    Q,
     /// The predicate dtype. It carries selection decisions such as attention
     /// masks; it is not a numeric element type and no arithmetic operator
     /// accepts it.
@@ -14,19 +21,39 @@ pub enum DType {
 }
 
 impl DType {
+    /// The fixed-width footprint of one element. For `Q` this is the element
+    /// handle only: an exact rational's magnitude lives on the heap and is
+    /// bounded by `TensorMemoryBudget::max_denominator_bits` instead, because
+    /// it is a function of the computation rather than of the shape.
     pub const fn element_bytes(self) -> usize {
         match self {
             Self::F32 => 4,
             Self::F64 => 8,
+            Self::Q => core::mem::size_of::<Fraction>(),
             Self::Bool => 1,
         }
     }
 
-    /// Whether this dtype names an approximate floating-point element type.
+    /// Whether this dtype names an element type arithmetic is defined over.
     /// The profile forbids implicit casts, so a predicate never silently
     /// becomes a number and a number never silently becomes a predicate.
     pub const fn is_numeric(self) -> bool {
-        matches!(self, Self::F32 | Self::F64)
+        matches!(self, Self::F32 | Self::F64 | Self::Q)
+    }
+
+    /// Whether results in this dtype are exact. Operators whose value is
+    /// irrational for rational inputs — `EXP`, `LOG`, `RSQRT` — are defined
+    /// only over the approximate dtypes, since there is no exact rational to
+    /// return and silently returning an approximate one would be the implicit
+    /// conversion this profile forbids.
+    pub const fn is_exact(self) -> bool {
+        matches!(self, Self::Q)
+    }
+
+    /// Whether this dtype is numeric and inexact, i.e. carries a declared
+    /// tolerance rather than an exact value.
+    pub const fn is_approximate(self) -> bool {
+        self.is_numeric() && !self.is_exact()
     }
 }
 
@@ -34,6 +61,7 @@ impl DType {
 pub enum TensorData {
     F32(Vec<f32>),
     F64(Vec<f64>),
+    Q(Vec<Fraction>),
     Bool(Vec<bool>),
 }
 
@@ -42,6 +70,7 @@ impl TensorData {
         match self {
             Self::F32(_) => DType::F32,
             Self::F64(_) => DType::F64,
+            Self::Q(_) => DType::Q,
             Self::Bool(_) => DType::Bool,
         }
     }
@@ -50,12 +79,28 @@ impl TensorData {
         match self {
             Self::F32(values) => values.len(),
             Self::F64(values) => values.len(),
+            Self::Q(values) => values.len(),
             Self::Bool(values) => values.len(),
+        }
+    }
+
+    /// The widest denominator carried by any element, in bits. Zero for the
+    /// approximate dtypes, whose elements have no denominator.
+    fn widest_denominator_bits(&self) -> u64 {
+        match self {
+            Self::Q(values) => values
+                .iter()
+                .map(|value| value.denominator().bits())
+                .max()
+                .unwrap_or(0),
+            _ => 0,
         }
     }
 }
 
-/// An immutable, explicitly approximate Tensor Profile value.
+/// An immutable Tensor Profile value. Whether its elements are approximate
+/// or exact is carried by the dtype; either way it is a profile value and
+/// never a Core one.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tensor {
     dtype: DType,
@@ -67,6 +112,8 @@ pub struct Tensor {
 pub enum TensorError {
     Shape(ShapeError),
     ElementCountMismatch { expected: usize, actual: usize },
+    DenominatorBudgetExceeded { requested: u64, limit: u64 },
+    NilExactElement(usize),
 }
 
 impl fmt::Display for TensorError {
@@ -79,6 +126,14 @@ impl fmt::Display for TensorError {
                     "tensor shape requires {expected} elements, received {actual}"
                 )
             }
+            Self::DenominatorBudgetExceeded { requested, limit } => write!(
+                f,
+                "exact element denominator needs {requested} bits, exceeding the limit of {limit}; regrid earlier in the graph"
+            ),
+            Self::NilExactElement(index) => write!(
+                f,
+                "exact tensor element {index} is NIL, which is Core absence rather than a number"
+            ),
         }
     }
 }
@@ -103,6 +158,24 @@ impl Tensor {
             return Err(TensorError::ElementCountMismatch {
                 expected: shape.element_count(),
                 actual: data.len(),
+            });
+        }
+        // A NIL fraction is Core's absence marker, not a number. Admitting one
+        // here would smuggle a Core value domain into a profile tensor, which
+        // is exactly the boundary this module exists to hold.
+        if let TensorData::Q(values) = &data {
+            if let Some(index) = values.iter().position(Fraction::is_nil) {
+                return Err(TensorError::NilExactElement(index));
+            }
+        }
+        // Every operator publishes its result through this constructor, so
+        // checking here is what makes the denominator ceiling unskippable: no
+        // exact tensor can exist without having passed it.
+        let denominator_bits = data.widest_denominator_bits();
+        if denominator_bits > budget.max_denominator_bits {
+            return Err(TensorError::DenominatorBudgetExceeded {
+                requested: denominator_bits,
+                limit: budget.max_denominator_bits,
             });
         }
         Ok(Self { dtype, shape, data })

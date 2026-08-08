@@ -1,13 +1,22 @@
 use super::{
     require_numeric, CheckedShape, Tensor, TensorData, TensorMemoryBudget, TensorOperatorError,
 };
+use crate::types::fraction::Fraction;
 
 pub fn tensor_add(
     left: &Tensor,
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, "ADD", budget, |a, b| a + b, |a, b| a + b)
+    binary(
+        left,
+        right,
+        "ADD",
+        budget,
+        |a, b| a + b,
+        |a, b| a + b,
+        |a, b| a.add(&b),
+    )
 }
 
 pub fn tensor_sub(
@@ -15,7 +24,15 @@ pub fn tensor_sub(
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, "SUB", budget, |a, b| a - b, |a, b| a - b)
+    binary(
+        left,
+        right,
+        "SUB",
+        budget,
+        |a, b| a - b,
+        |a, b| a - b,
+        |a, b| a.sub(&b),
+    )
 }
 
 pub fn tensor_mul(
@@ -23,17 +40,48 @@ pub fn tensor_mul(
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, "MUL", budget, |a, b| a * b, |a, b| a * b)
+    binary(
+        left,
+        right,
+        "MUL",
+        budget,
+        |a, b| a * b,
+        |a, b| a * b,
+        |a, b| a.mul(&b),
+    )
 }
 
+/// Exact division differs from the approximate path in kind, not degree. A
+/// float divided by zero is an IEEE infinity or NaN and stays a tensor
+/// element; a rational divided by zero has no rational value at all, so it is
+/// reported as a contract error instead of being invented.
 pub fn tensor_div(
     left: &Tensor,
     right: &Tensor,
     budget: TensorMemoryBudget,
 ) -> Result<Tensor, TensorOperatorError> {
-    binary(left, right, "DIV", budget, |a, b| a / b, |a, b| a / b)
+    if let TensorData::Q(divisors) = right.data() {
+        // Every element of a broadcast divisor is reached at least once when
+        // the output is non-empty, so a single scan decides this exactly.
+        if !left.shape().dimensions().contains(&0)
+            && !right.shape().dimensions().contains(&0)
+            && divisors.iter().any(Fraction::is_zero)
+        {
+            return Err(TensorOperatorError::ExactDivisionByZero);
+        }
+    }
+    binary(
+        left,
+        right,
+        "DIV",
+        budget,
+        |a, b| a / b,
+        |a, b| a / b,
+        |a, b| a.div(&b),
+    )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn binary(
     left: &Tensor,
     right: &Tensor,
@@ -41,6 +89,7 @@ fn binary(
     budget: TensorMemoryBudget,
     f32_operation: impl Fn(f32, f32) -> f32,
     f64_operation: impl Fn(f64, f64) -> f64,
+    q_operation: impl Fn(Fraction, Fraction) -> Fraction,
 ) -> Result<Tensor, TensorOperatorError> {
     if left.dtype() != right.dtype() {
         return Err(TensorOperatorError::DTypeMismatch {
@@ -67,6 +116,14 @@ fn binary(
             right.shape(),
             &output_shape,
             f64_operation,
+        )),
+        (TensorData::Q(left_data), TensorData::Q(right_data)) => TensorData::Q(binary_data(
+            left_data,
+            right_data,
+            left.shape(),
+            right.shape(),
+            &output_shape,
+            q_operation,
         )),
         _ => unreachable!("dtype equality and numeric dtype were checked"),
     };
@@ -99,7 +156,7 @@ pub(crate) fn broadcast_shape(
     Ok(output)
 }
 
-fn binary_data<T: Copy>(
+fn binary_data<T: Clone>(
     left: &[T],
     right: &[T],
     left_shape: &CheckedShape,
@@ -112,7 +169,7 @@ fn binary_data<T: Copy>(
             let coordinates = unravel(linear, output_shape.dimensions());
             let left_index = broadcast_index(&coordinates, left_shape);
             let right_index = broadcast_index(&coordinates, right_shape);
-            operation(left[left_index], right[right_index])
+            operation(left[left_index].clone(), right[right_index].clone())
         })
         .collect()
 }
