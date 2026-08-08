@@ -43,6 +43,7 @@
     "check:minimal-core": "node scripts/check-minimal-core.mjs",
     "check:version-sync": "node scripts/check-version-sync.mjs",
     "check:runtime-metadata": "node scripts/check-runtime-metadata-source.mjs",
+    "check:tensor-profile": "node scripts/check-tensor-profile.mjs",
     "generate:skill": "node scripts/generate-skill-md.mjs",
     "check:skill": "node scripts/generate-skill-md.mjs --check",
     "primitive:test-map": "node scripts/generate-primitive-test-map.mjs",

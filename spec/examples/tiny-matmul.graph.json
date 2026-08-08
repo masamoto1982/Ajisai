@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "profiles": ["org.ajisai.tensor/0.1"],
+  "inputs": [
+    {"id": "%left", "type": {"domain": "tensor", "dtype": "f32", "shape": [2, 3]}},
+    {"id": "%right", "type": {"domain": "tensor", "dtype": "f32", "shape": [3, 4]}}
+  ],
+  "nodes": [
+    {
+      "id": "@matmul",
+      "operatorSemanticId": "tensor.matmul.v1",
+      "inputs": ["%left", "%right"],
+      "outputs": [
+        {"id": "%logits", "type": {"domain": "tensor", "dtype": "f32", "shape": [2, 4]}}
+      ]
+    }
+  ],
+  "outputs": ["%logits"]
+}
