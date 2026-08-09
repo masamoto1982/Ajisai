@@ -6,6 +6,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -23,6 +24,7 @@ const repoRoot = process.env.AJISAI_REPO
   ? resolve(process.env.AJISAI_REPO)
   : resolve(here, "..", "..");
 const manifestPath = join(repoRoot, "docs", "word-manifest.json");
+const contractsPath = join(repoRoot, "spec", "words.json");
 const skillPath = join(repoRoot, "SKILL.md");
 const rootPackagePath = join(repoRoot, "package.json");
 export const LIMITS = Object.freeze({
@@ -101,19 +103,28 @@ const TOOLS = [
     },
     outputSchema: {
       type: "object",
-      properties: { matches: { type: "array" } },
-      required: ["matches"],
+      additionalProperties: false,
+      properties: {
+        schemaVersion: { type: "integer" },
+        registryDigest: { type: "string", pattern: "^[a-f0-9]{64}$" },
+        matches: { type: "array", items: { type: "object" } },
+      },
+      required: ["schemaVersion", "registryDigest", "matches"],
     },
   },
 ];
 
 let manifestCache;
+let contractsCache;
 let registryDigestCache;
 let engineVersionCache;
 function manifest() { return manifestCache ??= JSON.parse(readFileSync(manifestPath, "utf8")); }
+function contracts() {
+  return contractsCache ??= JSON.parse(readFileSync(contractsPath, "utf8"));
+}
 function registryDigest() {
   return registryDigestCache ??= createHash("sha256")
-    .update(readFileSync(manifestPath))
+    .update(readFileSync(contractsPath))
     .digest("hex");
 }
 function engineVersion() {
@@ -173,14 +184,29 @@ async function runCli(source, command) {
 function wordContract(word) {
   const needle = typeof word === "string" ? word.trim().toUpperCase() : "";
   if (!needle) return fail("Provide a `word`.");
-  const matches = (manifest().entries ?? []).filter((entry) => [entry.surface, entry.short_surface, entry.canonical].some((value) => value?.toUpperCase() === needle));
-  return result({ matches });
+  const matches = (contracts().entries ?? []).filter((entry) =>
+    entry.name.toUpperCase() === needle ||
+    entry.aliases.some((alias) => alias.toUpperCase() === needle)
+  );
+  return result({
+    schemaVersion: contracts().schemaVersion,
+    registryDigest: registryDigest(),
+    matches,
+  });
 }
 
 const RESOURCES = [
   { uri: "ajisai://guide/quickstart", name: "Ajisai agent quickstart", mimeType: "text/markdown" },
   { uri: "ajisai://vocabulary", name: "Ajisai generated Word vocabulary", mimeType: "application/json" },
   { uri: "ajisai://schema/result", name: "Ajisai MCP result contract", mimeType: "application/json" },
+];
+const RESOURCE_TEMPLATES = [
+  {
+    uriTemplate: "ajisai://words/{name}",
+    name: "Ajisai canonical Word contract",
+    description: "The complete spec/words.json contract for a Word or alias.",
+    mimeType: "application/json",
+  },
 ];
 
 export function createServer() {
@@ -195,11 +221,26 @@ export function createServer() {
     return fail(`unknown tool: ${params.name}`);
   });
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: RESOURCES }));
+  server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+    resourceTemplates: RESOURCE_TEMPLATES,
+  }));
   server.setRequestHandler(ReadResourceRequestSchema, async ({ params }) => {
     const uri = params.uri;
     if (uri === "ajisai://guide/quickstart") return { contents: [{ uri, mimeType: "text/markdown", text: readFileSync(skillPath, "utf8") }] };
     if (uri === "ajisai://vocabulary") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(manifest(), null, 2) }] };
     if (uri === "ajisai://schema/result") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(envelopeSchema, null, 2) }] };
+    if (uri.startsWith("ajisai://words/")) {
+      const name = decodeURIComponent(uri.slice("ajisai://words/".length));
+      const contract = wordContract(name);
+      if (contract.isError) throw new Error(contract.content[0].text);
+      return {
+        contents: [{
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(contract.structuredContent, null, 2),
+        }],
+      };
+    }
     throw new Error(`unknown resource: ${uri}`);
   });
   return server;

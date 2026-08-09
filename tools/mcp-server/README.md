@@ -15,7 +15,7 @@ functions outside that domain retain their documented semantics.
 | `compute` | execute source with time, source, output and step limits |
 | `check` | parse, resolve and conservatively verify declared contracts without execution |
 | `infer_contracts` | infer contracts for user-defined Words without execution |
-| `word_contract` | query the generated canonical Word registry |
+| `word_contract` | query the complete canonical `spec/words.json` contract registry |
 
 Execution tools accept source text only. Deliberately omitting file-path input
 prevents an AI tool call from becoming an arbitrary local-file reader. Ajisai
@@ -28,6 +28,11 @@ and `structuredContent`, including the engine version, registry SHA-256 and
 applied limits. Algebraic results carry their canonical `exactTerms` normal
 form; the accompanying rational value is explicitly marked as an approximation
 and is never the canonical result.
+
+The `ajisai://words/{name}` resource template exposes the same complete Word
+contract without a tool call. Contract lookups accept canonical names and
+aliases; their registry digest is calculated from the canonical specification,
+not from a reduced documentation manifest.
 
 ## Setup
 

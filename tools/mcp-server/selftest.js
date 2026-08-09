@@ -33,21 +33,36 @@ check(
 
 const contract = await client.callTool({ name: "word_contract", arguments: { word: "map" } });
 check(
-  "word_contract returns structured registry data",
-  contract.structuredContent?.matches?.some((entry) => entry.surface === "MAP"),
+  "word_contract returns the complete canonical contract",
+  contract.structuredContent?.matches?.some((entry) =>
+    entry.name === "MAP" &&
+    entry.purity === "conditional" &&
+    entry.stack?.inputs === 2
+  ),
 );
 
 const resources = await client.listResources();
 check("publishes guide, vocabulary and result schema as resources", resources.resources.length === 3);
 const guide = await client.readResource({ uri: "ajisai://guide/quickstart" });
 check("quickstart resource reads generated guidance", guide.contents[0]?.text?.includes("Agent Writing Protocol"));
+const templates = await client.listResourceTemplates();
+check(
+  "publishes canonical Word contracts as a resource template",
+  templates.resourceTemplates.some(({ uriTemplate }) => uriTemplate === "ajisai://words/{name}"),
+);
+const mapResource = await client.readResource({ uri: "ajisai://words/MAP" });
+const mapContract = JSON.parse(mapResource.contents[0]?.text ?? "{}");
+check(
+  "Word resource resolves the canonical contract",
+  mapContract.matches?.[0]?.name === "MAP" && mapContract.matches[0]?.nilPolicy,
+);
 
 const compute = await client.callTool({
   name: "compute",
   arguments: { source: "[ 2 ] SQRT" },
 });
 if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
-  console.log("SKIP  compute (build the Ajisai CLI or set AJISAI_BIN for the integration assertion)");
+  check("compute requires a real Ajisai backend", false);
 } else {
   const sqrt = compute.structuredContent?.stack?.[0]?.value?.[0];
   const [exactTerm] = sqrt?.semantics?.exactTerms ?? [];
