@@ -28,6 +28,7 @@ const contractsPath = join(repoRoot, "spec", "words.json");
 const skillPath = join(repoRoot, "SKILL.md");
 const rootPackagePath = join(repoRoot, "package.json");
 const serverPackagePath = join(here, "package.json");
+const resultSchemaPath = join(here, "result.schema.json");
 export const LIMITS = Object.freeze({
   sourceBytes: 64 * 1024,
   wallTimeMs: 5_000,
@@ -57,22 +58,27 @@ const sourceSchema = {
   },
   required: ["source"],
 };
-const envelopeSchema = {
-  type: "object",
-  additionalProperties: true,
-  required: ["schemaVersion", "status", "mcp"],
-  properties: {
-    schemaVersion: { type: "integer" },
-    status: { type: "string", enum: ["ok", "error"] },
-    mcp: {
-      type: "object",
-      required: ["engineVersion", "registryDigest", "limits"],
-      properties: {
-        engineVersion: { type: "string" },
-        registryDigest: { type: "string", pattern: "^[a-f0-9]{64}$" },
-        limits: { type: "object" },
-      },
-    },
+const envelopeSchema = JSON.parse(readFileSync(resultSchemaPath, "utf8"));
+const READ_ONLY_ANNOTATIONS = Object.freeze({
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+});
+const TOOLS = [
+  {
+    name: "compute",
+    description: "Execute a bounded Ajisai program. Use for supported-domain exact rational, decimal, square-root and vector calculations, including reason-carrying NIL results.",
+    inputSchema: sourceSchema,
+    outputSchema: envelopeSchema,
+    annotations: READ_ONLY_ANNOTATIONS,
+  },
+  {
+    name: "check",
+    description: "Parse and resolve Ajisai source without executing it; also verifies declared contracts conservatively.",
+    inputSchema: sourceSchema,
+    outputSchema: envelopeSchema,
+    annotations: READ_ONLY_ANNOTATIONS,
   },
 };
 const TOOLS = [
@@ -95,6 +101,13 @@ const TOOLS = [
     outputSchema: envelopeSchema,
   },
   {
+    name: "infer_contracts",
+    description: "Infer machine-readable contracts for user-defined Words without executing their bodies.",
+    inputSchema: sourceSchema,
+    outputSchema: envelopeSchema,
+    annotations: READ_ONLY_ANNOTATIONS,
+  },
+  {
     name: "word_contract",
     description: "Return the generated canonical registry entry for a Word or alias.",
     inputSchema: {
@@ -113,6 +126,7 @@ const TOOLS = [
       },
       required: ["schemaVersion", "registryDigest", "matches"],
     },
+    annotations: READ_ONLY_ANNOTATIONS,
   },
 ];
 
@@ -265,7 +279,7 @@ export function createServer() {
     const uri = params.uri;
     if (uri === "ajisai://guide/quickstart") return { contents: [{ uri, mimeType: "text/markdown", text: readFileSync(skillPath, "utf8") }] };
     if (uri === "ajisai://vocabulary") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(manifest(), null, 2) }] };
-    if (uri === "ajisai://schema/result") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(envelopeSchema, null, 2) }] };
+    if (uri === "ajisai://schema/result") return { contents: [{ uri, mimeType: "application/json", text: readFileSync(resultSchemaPath, "utf8") }] };
     if (uri.startsWith("ajisai://words/")) {
       const name = decodeURIComponent(uri.slice("ajisai://words/".length));
       const contract = wordContract(name);

@@ -30,6 +30,10 @@ and `structuredContent`, including the engine version, registry SHA-256 and
 applied limits. Algebraic results carry their canonical `exactTerms` normal
 form; the accompanying rational value is explicitly marked as an approximation
 and is never the canonical result.
+The committed `result.schema.json` is both the tools' `outputSchema` and the
+content of `ajisai://schema/result`, preventing the advertised contract and the
+resource documentation from drifting apart. All four tools declare read-only,
+non-destructive and idempotent MCP annotations.
 
 The `ajisai://words/{name}` resource template exposes the same complete Word
 contract without a tool call. Contract lookups accept canonical names and

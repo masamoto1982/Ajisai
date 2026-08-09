@@ -7,6 +7,7 @@
   "bin": { "ajisai-mcp-server": "index.js" },
   "scripts": { "start": "node index.js", "selftest": "node selftest.js" },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ajv": "^8.18.0"
   }
 }

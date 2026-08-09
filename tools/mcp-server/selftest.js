@@ -1,12 +1,25 @@
 #!/usr/bin/env node
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import Ajv2020 from "ajv/dist/2020.js";
 import { createServer, ExecutionGate, LIMITS } from "./index.js";
 
 let failures = 0;
 function check(label, condition) {
   console.log(`${condition ? "PASS" : "FAIL"}  ${label}`);
   if (!condition) failures += 1;
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [key, canonicalJson(child)]),
+    );
+  }
+  return value;
 }
 
 const gate = new ExecutionGate(2);
@@ -38,6 +51,15 @@ check(
     .filter(({ name }) => name !== "word_contract")
     .every(({ outputSchema }) => outputSchema?.required?.includes("mcp")),
 );
+check(
+  "tools advertise safe selection hints",
+  tools.every(({ annotations }) =>
+    annotations?.readOnlyHint === true &&
+    annotations?.destructiveHint === false &&
+    annotations?.idempotentHint === true &&
+    annotations?.openWorldHint === false
+  ),
+);
 
 const contract = await client.callTool({ name: "word_contract", arguments: { word: "map" } });
 check(
@@ -53,6 +75,19 @@ const resources = await client.listResources();
 check("publishes guide, vocabulary and result schema as resources", resources.resources.length === 3);
 const guide = await client.readResource({ uri: "ajisai://guide/quickstart" });
 check("quickstart resource reads generated guidance", guide.contents[0]?.text?.includes("Agent Writing Protocol"));
+const schemaResource = await client.readResource({ uri: "ajisai://schema/result" });
+const resultSchema = JSON.parse(schemaResource.contents[0]?.text ?? "{}");
+const validateResult = new Ajv2020().compile(resultSchema);
+check(
+  "result resource publishes the exact algebraic wire schema",
+  resultSchema.$id === "ajisai://schema/result" &&
+    resultSchema.$defs?.exactTerm?.required?.includes("radicand"),
+);
+check(
+  "tool output and result resource use the same schema",
+  JSON.stringify(canonicalJson(tools.find(({ name }) => name === "compute")?.outputSchema)) ===
+    JSON.stringify(canonicalJson(resultSchema)),
+);
 const templates = await client.listResourceTemplates();
 check(
   "publishes canonical Word contracts as a resource template",
@@ -90,6 +125,7 @@ if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
     compute.structuredContent?.mcp?.engineVersion === "0.2.0-beta.1" &&
       compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000,
   );
+  check("compute satisfies the published result schema", validateResult(compute.structuredContent));
 
   const languageError = await client.callTool({
     name: "compute",
@@ -113,6 +149,10 @@ if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
   check(
     "infer_contracts returns the user Word contract",
     inferred.structuredContent?.contracts?.some((entry) => entry.name === "INC"),
+  );
+  check(
+    "infer_contracts satisfies the published result schema",
+    validateResult(inferred.structuredContent),
   );
 }
 
