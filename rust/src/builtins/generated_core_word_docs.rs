@@ -471,15 +471,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "'a,b,c' ',' TOKENIZE",
     },
     GeneratedCoreWordDoc {
-        name: "SUBSTITUTE",
-        category: "cast",
-        summary: "Replace every occurrence of a substring with another.",
-        role: "Cast primitive: Replace every occurrence of a substring with another.",
-        stack_effect: "[ str ] [ from ] [ to ] -> [ str' ]",
-        hover_summary: "SUBSTITUTE — replace substring occurrences",
-        hover_syntax: "'hello' 'l' 'L' SUBSTITUTE",
-    },
-    GeneratedCoreWordDoc {
         name: "NUM",
         category: "cast",
         summary: "Parse text as a number; Bubble/NIL on parse failure.",
@@ -586,15 +577,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         stack_effect: "[ name ] -> []",
         hover_summary: "DEL — delete user word",
         hover_syntax: "{ [ 1 ] } 'W' DEF 'W' DEL",
-    },
-    GeneratedCoreWordDoc {
-        name: "LOOKUP",
-        category: "dictionary",
-        summary: "Display the documentation for a named word.",
-        role: "Provides word-level guidance from inside Ajisai.",
-        stack_effect: "[ name ] -> []",
-        hover_summary: "LOOKUP — show word documentation",
-        hover_syntax: "'ADD' ?",
     },
     GeneratedCoreWordDoc {
         name: "PRINT",

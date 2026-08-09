@@ -808,7 +808,8 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
-    /// A Core Word's `LOOKUP` entry. Reference text is read rather than run, so
+    /// A Core Word's reference entry, as the host's lookup answered it.
+    /// Reference text is read rather than run, so
     /// it is shown here instead of being written into the editor over whatever
     /// the user was writing. `pre-wrap` is already set on the area, so the
     /// entry's own line structure survives verbatim.

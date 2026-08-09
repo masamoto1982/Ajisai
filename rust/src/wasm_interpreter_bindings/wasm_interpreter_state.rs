@@ -173,6 +173,33 @@ impl AjisaiInterpreter {
             .unwrap_or(JsValue::NULL)
     }
 
+    /// Answer the host's lookup of `name` against the current dictionary.
+    ///
+    /// This is a *query*, not a run. Looking a Word up used to be the Word
+    /// `LOOKUP`, which meant asking what `ADD` does went through `execute` and
+    /// came back on a side channel that no evaluation rule read. The host asks
+    /// here instead, so nothing about a lookup touches the stack, the
+    /// dictionary, or the output buffer.
+    ///
+    /// Returns `{ kind: "documentation" | "definition", text }`, or `NULL` for a
+    /// name the dictionary does not hold — the caller reports the unknown name
+    /// itself, since it is the one that read it off the input.
+    #[wasm_bindgen]
+    pub fn resolve_host_lookup(&self, name: &str) -> JsValue {
+        use crate::interpreter::host_lookup::{resolve_host_lookup, HostLookup};
+
+        let (kind, text) = match resolve_host_lookup(&self.interpreter, name) {
+            Ok(HostLookup::Documentation(text)) => ("documentation", text),
+            Ok(HostLookup::Definition(text)) => ("definition", text),
+            Err(_) => return JsValue::NULL,
+        };
+
+        let obj = js_sys::Object::new();
+        super::set_js_prop(&obj, "kind", &JsValue::from_str(kind));
+        super::set_js_prop(&obj, "text", &JsValue::from_str(&text));
+        obj.into()
+    }
+
     #[wasm_bindgen]
     pub fn remove_word(&mut self, name: &str) {
         let upper_name = name.to_uppercase();

@@ -32,6 +32,22 @@ export interface AjisaiInterpreter {
     collect_core_word_aliases_info(): Array<[string, string, string, string]>;
     collect_input_helper_words_info(): Array<[string, string]>;
     lookup_word_definition(name: string): string | null;
+    /**
+     * Answer the host's lookup of `name` against the current dictionary.
+     *
+     * A *query*, not a run: looking a Word up used to be the Word `LOOKUP`, so
+     * asking what `ADD` does went through `execute` and came back on a field of
+     * the result that no evaluation rule ever read. Asking here touches no
+     * stack, no dictionary and no output.
+     *
+     * `documentation` is a Core Word's reference text, which is read, so it
+     * belongs in the output area. `definition` is a User Word's reconstructed
+     * `DEF`, which is edited, so it belongs in the editor — that is the point of
+     * looking one up. `null` means the dictionary does not hold the name.
+     */
+    resolve_host_lookup(
+        name: string
+    ): { kind: 'documentation' | 'definition'; text: string } | null;
     // The one stack format persistence accepts (SPEC §2.3). `snapshot_stack`
     // captures exact values (CodeBlock, ExactScalar, …) that the observation
     // format used by `collect_stack` cannot round-trip, and
@@ -172,15 +188,6 @@ export interface ExecuteResult {
     message?: string;
     error?: boolean;
     hasMore?: boolean;
-    /** Reconstructed `DEF` source of a User Word, for the editor to load. */
-    definition_to_load?: string;
-    /**
-     * `LOOKUP` reference text for a Core Word, for the output area to display.
-     * Separate from `definition_to_load` because the two want opposite
-     * destinations — a definition is loaded to be edited, documentation is only
-     * read — and routing both into the editor overwrote unsaved code.
-     */
-    documentation?: string;
     inputHelper?: string;
 
     // The observation-format stack, for display only.

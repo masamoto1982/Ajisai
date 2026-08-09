@@ -82,7 +82,7 @@ mod tests {
                 );
             }
         }
-        assert_eq!(alias_count, 13, "spec/words.json declares 13 aliases");
+        assert_eq!(alias_count, 12, "spec/words.json declares 12 aliases");
     }
 
     /// The executor-key equivalence test this module used to carry is gone: it

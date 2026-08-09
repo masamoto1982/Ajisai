@@ -2179,47 +2179,6 @@
       "standardKind": "algorithm"
     },
     {
-      "name": "SUBSTITUTE",
-      "aliases": [],
-      "family": "text",
-      "stack": {
-        "inputs": 3,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonText"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "text",
-      "clauses": [
-        "LANG.VALUES.DISJOINT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Replace every occurrence of a substring with another.",
-        "hover": "SUBSTITUTE — replace substring occurrences",
-        "lookup": "Replace every occurrence of a substring with another.",
-        "syntax": "'hello' 'l' 'L' SUBSTITUTE",
-        "role": "Cast primitive: Replace every occurrence of a substring with another.",
-        "stackEffect": "[ str ] [ from ] [ to ] -> [ str' ]"
-      },
-      "executorKey": "Substitute",
-      "effects": [],
-      "partiality": "partial",
-      "category": "cast",
-      "vocabularyTier": "standard",
-      "standardKind": "algorithm"
-    },
-    {
       "name": "NUM",
       "aliases": [],
       "family": "text",
@@ -2697,51 +2656,6 @@
       "executorKey": "Del",
       "effects": [
         "dictionaryDelete"
-      ],
-      "partiality": "partial",
-      "category": "dictionary",
-      "vocabularyTier": "kernel"
-    },
-    {
-      "name": "LOOKUP",
-      "aliases": [
-        "?"
-      ],
-      "family": "dictionary",
-      "stack": {
-        "inputs": 1,
-        "outputs": 0
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "invalidName",
-        "wordNotFound"
-      ],
-      "purity": "observational",
-      "determinism": "stateRelative",
-      "capability": "none",
-      "hostedEffect": "none",
-      "interpretationRole": "unassigned",
-      "clauses": [
-        "LANG.DICTIONARY.RESOLUTION",
-        "LANG.DICTIONARY.MUTATION"
-      ],
-      "documentation": {
-        "summary": "Display the documentation for a named word.",
-        "hover": "LOOKUP — show word documentation",
-        "lookup": "Display the documentation for a named word.",
-        "syntax": "'ADD' ?",
-        "role": "Provides word-level guidance from inside Ajisai.",
-        "stackEffect": "[ name ] -> []"
-      },
-      "executorKey": "Lookup",
-      "effects": [
-        "dictionaryRead"
       ],
       "partiality": "partial",
       "category": "dictionary",

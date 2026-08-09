@@ -1,3 +1,4 @@
+use ajisai_core::interpreter::host_lookup::resolve_host_lookup;
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::AjisaiError;
 
@@ -77,19 +78,19 @@ async fn removed_beta_words_are_unknown_in_a_compiled_user_word() {
     }
 }
 
-/// `LOOKUP` is the dictionary's own reading surface: it must not describe a
-/// Word the inventory no longer has.
+/// The host's lookup is the dictionary's own reading surface: it must not
+/// describe a Word the inventory no longer has.
 #[tokio::test]
-async fn removed_beta_words_are_unknown_to_lookup() {
+async fn removed_beta_words_are_unknown_to_the_host_lookup() {
     for word in REMOVED_WORDS {
-        let mut interpreter = Interpreter::new();
-        let error = match interpreter.execute(&format!("'{word}' LOOKUP")).await {
-            Ok(()) => panic!("LOOKUP described removed Word {word}"),
+        let interpreter = Interpreter::new();
+        let error = match resolve_host_lookup(&interpreter, word) {
+            Ok(_) => panic!("the host lookup described removed Word {word}"),
             Err(error) => error,
         };
         assert!(
             matches!(error, AjisaiError::UnknownWord(ref name) if name == word),
-            "{word} is still documented by LOOKUP: {error}"
+            "{word} is still documented by the host lookup: {error}"
         );
     }
 }

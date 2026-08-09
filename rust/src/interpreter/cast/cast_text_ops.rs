@@ -127,69 +127,6 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-pub fn op_substitute(interp: &mut Interpreter) -> Result<()> {
-    let to_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let from_val = match interp.stack.pop() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(to_val);
-            return Err(AjisaiError::StackUnderflow);
-        }
-    };
-    let src_val = match interp.stack.pop() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(from_val);
-            interp.stack.push(to_val);
-            return Err(AjisaiError::StackUnderflow);
-        }
-    };
-
-    let restore = |interp: &mut Interpreter, a: Value, b: Value, c: Value| {
-        interp.stack.push(a);
-        interp.stack.push(b);
-        interp.stack.push(c);
-    };
-
-    let check = |label: &str, v: &Value| -> Option<AjisaiError> {
-        if v.is_nil() {
-            return Some(AjisaiError::from(format!(
-                "SUBSTITUTE: expected {}, got Nil",
-                label
-            )));
-        }
-        if !is_string_value(v) {
-            return Some(AjisaiError::from(format!(
-                "SUBSTITUTE: expected {} as String, got {}",
-                label,
-                type_name_of(v)
-            )));
-        }
-        None
-    };
-    if let Some(err) = check("String", &src_val)
-        .or_else(|| check("from", &from_val))
-        .or_else(|| check("to", &to_val))
-    {
-        restore(interp, src_val, from_val, to_val);
-        return Err(err);
-    }
-
-    let src = value_as_string(&src_val).unwrap_or_default();
-    let from = value_as_string(&from_val).unwrap_or_default();
-    let to = value_as_string(&to_val).unwrap_or_default();
-
-    if from.is_empty() {
-        let err = AjisaiError::from("SUBSTITUTE: from pattern must be non-empty");
-        restore(interp, src_val, from_val, to_val);
-        return Err(err);
-    }
-
-    let result = src.replace(from.as_str(), to.as_str());
-    interp.stack.push(Value::from_string(&result));
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,27 +172,6 @@ mod tests {
     async fn tokenize_empty_separator_errors() {
         let mut interp = Interpreter::new();
         let r = interp.execute("'abc' '' TOKENIZE").await;
-        assert!(r.is_err());
-    }
-
-    #[tokio::test]
-    async fn substitute_basic() {
-        let mut interp = Interpreter::new();
-        interp.execute("'hello' 'l' 'L' SUBSTITUTE").await.unwrap();
-        assert_eq!(top_str(&interp), "heLLo");
-    }
-
-    #[tokio::test]
-    async fn substitute_no_match() {
-        let mut interp = Interpreter::new();
-        interp.execute("'hello' 'z' 'Z' SUBSTITUTE").await.unwrap();
-        assert_eq!(top_str(&interp), "hello");
-    }
-
-    #[tokio::test]
-    async fn substitute_empty_from_errors() {
-        let mut interp = Interpreter::new();
-        let r = interp.execute("'hello' '' 'X' SUBSTITUTE").await;
         assert!(r.is_err());
     }
 

@@ -14,9 +14,9 @@
     ],
     "entry_counts": {
       "flow": 20,
-      "identity": 28,
+      "identity": 27,
       "material": 138,
-      "sugar": 28
+      "sugar": 27
     }
   },
   "algebra_primitives": [
@@ -286,7 +286,6 @@
         "TRIM-LEFT",
         "TRIM-RIGHT",
         "TOKENIZE",
-        "SUBSTITUTE",
         "STARTS-WITH?",
         "ENDS-WITH?",
         "NUM"
@@ -300,7 +299,6 @@
         "TRIM-LEFT",
         "TRIM-RIGHT",
         "TOKENIZE",
-        "SUBSTITUTE",
         "STARTS-WITH?",
         "ENDS-WITH?",
         "NUM",
@@ -669,13 +667,13 @@
       "admission_reason": "Accepted as the shared observation schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "missing capability",
-        "LOOKUP",
+        "lookup (host command)",
         "IO@INPUT",
         "MUSIC@EXPLAIN"
       ],
       "can_derive": [
         "missing capability",
-        "LOOKUP",
+        "lookup (host command)",
         "IO@INPUT",
         "MUSIC@EXPLAIN"
       ],
@@ -2234,36 +2232,6 @@
       "standard_relation": "derivable"
     },
     {
-      "id": "core.substitute",
-      "kind": "coreword",
-      "surface": "SUBSTITUTE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-substitute"
-      ],
-      "status": "Formalized",
-      "notes": "Codepoint-sequence replacement transform over all occurrences of a substring.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material",
-      "standard_relation": "derivable"
-    },
-    {
       "id": "core.num",
       "kind": "coreword",
       "surface": "NUM",
@@ -2347,6 +2315,33 @@
       ],
       "algebraic_family": "dictionary",
       "core_tier": "flow"
+    },
+    {
+      "id": "host.lookup",
+      "kind": "host-command",
+      "surface": "lookup (host command)",
+      "classification": "Host",
+      "spec_sections": [
+        "SPECIFICATION.html §8",
+        "SPECIFICATION.html §13"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Reading a Word's reference or source is a host query over the active dictionary: it resolves by the same Core -> user order a program does, answers with a structured observation (documentation, definition, or Unknown), and changes no session state. It was the Word LOOKUP until the vocabulary stopped claiming that reference prose is a value a program can hold.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "observation",
+      "core_tier": "material"
     },
     {
       "id": "core.print",
@@ -2463,33 +2458,6 @@
       ],
       "algebraic_family": "dictionary",
       "core_tier": "flow"
-    },
-    {
-      "id": "core.lookup",
-      "kind": "coreword",
-      "surface": "LOOKUP",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.8",
-        "SPECIFICATION.html §8"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
-      "law_tests": [
-        "rust/tests/naming_resolution_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "LOOKUP observes the active dictionary/name-resolution state and emits structured documentation/diagnostics without changing the dictionary.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.observation.structured-diagnostic"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity"
     },
     {
       "id": "exploratory.child-runtime",
@@ -3494,30 +3462,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "STRING-QUOTE"
-    },
-    {
-      "id": "alias.question",
-      "kind": "symbol_alias",
-      "surface": "?",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for LOOKUP; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "LOOKUP"
     },
     {
       "id": "alias.caret",

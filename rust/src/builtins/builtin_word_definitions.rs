@@ -4,7 +4,7 @@ use crate::coreword_registry::{ExecutionForm, Partiality};
 ///
 /// Documentation and presentation are generated from `spec/words.json`; safety,
 /// partiality, stability, and execution form are projected from the generated
-/// contract. This type assembles those projections for existing GUI and LOOKUP
+/// contract. This type assembles those projections for existing GUI and reference
 /// consumers and owns no parallel source of language facts.
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
@@ -92,7 +92,7 @@ mod tests {
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
             "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "KEEP",
-            "LOOKUP", "VENT", "SQRT", "SORT",
+            "VENT", "SQRT", "SORT",
         ];
 
         for name in required {

@@ -57,12 +57,16 @@ const EXAMPLE_NAMES = new Set([
   'SEED', 'N',
 ]);
 
-// Names the *host* allocates rather than the language: typed alone into the
-// editor, they are acted on by the GUI and never reach the interpreter. The
+// Names the *host* allocates rather than the language: typed into the editor,
+// they are acted on by the GUI and never reach the interpreter. The
 // presentation profile has to be able to name them — a control nobody can
 // discover is not documented — and they are correctly absent from the
 // vocabulary registry, which is the whole point being made about them.
-const HOST_COMMANDS = new Set(['RESET', 'CLEAR']);
+//
+// `LOOKUP` and `?` are here because reference prose is not a value: a program
+// can do nothing with the answer, so asking for it is the reader's action and
+// not a Word. `?` is symbol-shaped, so it is listed in both places.
+const HOST_COMMANDS = new Set(['RESET', 'CLEAR', 'LOOKUP', '?']);
 
 const SURFACES = ['README.md', 'public/docs/index.html', 'SPECIFICATION.html'];
 
@@ -137,6 +141,7 @@ for (const path of SURFACES) {
       // not vocabulary — `''` is the empty string, not a symbol.
       if (token.startsWith("'")) continue;
       if (known.has(token) || UNALLOCATED_MENTIONS.has(token)) continue;
+      if (HOST_COMMANDS.has(token)) continue;
       seen.set(token, (seen.get(token) ?? 0) + 1);
     }
   }

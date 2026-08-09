@@ -693,7 +693,7 @@
                     <p><code>KEEP</code> prefixes the <em>next word only</em>, and it carries no symbol — it is written out. That is the whole modifier system: one explicit operation for the non-default behavior, and no Forth-style stack shufflers to go with it. Everything else about how a word behaves is in the word itself, so reading a call means reading a name and at most one prefix.</p>
                     <p>The word it prefixes may be one of your own, and it means the same thing there: <code>KEEP</code> retains the operands of <strong>the call</strong>, never anything the body happens to use inside itself. Given <code>{ 2 MUL } 'DOUBLE' DEF</code>, <code>5 KEEP DOUBLE</code> is <code>5/1 10/1</code> — the body's own <code>2</code> is the body's business and never reaches your stack.</p>
                     <p>One consequence is worth keeping in your pocket. A word that gives back exactly what it was handed — <code>{ 1 COLLECT [ 0 ] GET } 'ID' DEF</code>, which wraps a value and unwraps it again — turns <code>KEEP</code> into a copier for <em>any</em> value: <code>'hi' KEEP ID</code> leaves two strings, and the same works for truth values and code blocks, which no arithmetic trick reaches.</p>
-                    <p>A word that answers with nothing is no exception. <code>BIND</code>, <code>DEF</code>, <code>DEL</code> and <code>LOOKUP</code> push no result, so under <code>KEEP</code> what you are left with is their operands, unchanged: <code>5 KEEP 'X' BIND</code> names the value <em>and</em> leaves <code>5/1 'X'</code> where they were.</p>
+                    <p>A word that answers with nothing is no exception. <code>BIND</code>, <code>DEF</code> and <code>DEL</code> push no result, so under <code>KEEP</code> what you are left with is their operands, unchanged: <code>5 KEEP 'X' BIND</code> names the value <em>and</em> leaves <code>5/1 'X'</code> where they were.</p>
                     <p class="ref-note">The higher-order words are the one exception, and it is worth knowing before you meet it. <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code> and <code>ALL</code> retain the <em>collection</em> they walk and nothing else, so <code>[ 1 2 ] KEEP { 2 MUL } MAP</code> is <code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code> — no block, and for <code>FOLD</code> no starting accumulator either. The block says what the call <em>is</em> rather than being data the call read, and the accumulator has been folded into the answer. Every other word keeps everything it read, <code>[ 10 3 ] KEEP [ 0 ] GET</code> included, which leaves all three of <code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1691,7 +1691,7 @@ FILTER</code></td>
                 <section id="cond" class="ref-page">
                     <h2>Conditionals</h2>
                     <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is true. In the clause form, <code>|</code> separates the guard from the body and each clause occupies exactly one line; <code>TRUE</code> makes an always-true else guard.</p>
-                    <p>The else clause can also be spelled <code>IDLE</code>, and that is the spelling to prefer. <code>IDLE</code> is not one of the 67 Words and you will not find it in the Dictionary panel: it is a keyword read positionally, meaningful only as a guard, and it means <em>this clause fires when no earlier one did</em>. <code>TRUE</code> reaches the same outcome by pushing a value the guard then reads, which works but says less; <code>IDLE</code> says which clause is the fallback.</p>
+                    <p>The else clause can also be spelled <code>IDLE</code>, and that is the spelling to prefer. <code>IDLE</code> is not one of the 65 Words and you will not find it in the Dictionary panel: it is a keyword read positionally, meaningful only as a guard, and it means <em>this clause fires when no earlier one did</em>. <code>TRUE</code> reaches the same outcome by pushing a value the guard then reads, which works but says less; <code>IDLE</code> says which clause is the fallback.</p>
                     <p class="ref-note"><code>IDLE</code> fires <em>where it is written</em>. Clauses are tried top to bottom and <code>IDLE</code> takes its turn in that order, so anything written below an <code>IDLE</code> is unreachable. Put it last — which is what "fallback" means anyway.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1892,25 +1892,6 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'hello world' 'world' 'ajisai' SUBSTITUTE</code></td>
-                                    <td><code>'hello ajisai'</code></td>
-                                    <td class="notes">Replace every occurrence of a substring.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
                                     <td><code>'a,b,c' ',' TOKENIZE</code></td>
                                     <td><code>[ 'a' 'b' 'c' ]</code></td>
                                     <td class="notes">Split on a separator; <code>JOIN</code> puts the pieces back together.</td>
@@ -2079,7 +2060,7 @@ COND</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>Words Ajisai Does Not Have</h2>
-                    <p>The vocabulary is 67 words and stays small on purpose: a word that a user definition expresses <em>at the same cost</em> does not belong in Core. So the argmins and relaxation loops that other languages spell as words are spelled here as short phrases, and the ones that come up most are written out below. Each is verified, and each is a fine body for a <code>DEF</code> of your own if you use it twice.</p>
+                    <p>The vocabulary is 65 words and stays small on purpose: a word that a user definition expresses <em>at the same cost</em> does not belong in Core. So the argmins and relaxation loops that other languages spell as words are spelled here as short phrases, and the ones that come up most are written out below. Each is verified, and each is a fine body for a <code>DEF</code> of your own if you use it twice.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2217,8 +2198,10 @@ COND</code></td>
 
                 <section id="dictionaries" class="ref-page">
                     <h2>Dictionaries and Word Identity</h2>
-                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 67 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
-                    <p>Those 67 words divide into a <strong>37-word Semantic Kernel</strong> and <strong>30 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 67 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
+                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 65 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
+                    <p>Those 65 words divide into a <strong>36-word Semantic Kernel</strong> and <strong>29 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 65 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and shown when you look the word up.</p>
+                    <p><strong>Looking a word up.</strong> Type <code>&#39;ADD&#39; ?</code> — or <code>&#39;ADD&#39; LOOKUP</code>, or the name unquoted — and run it, and the Playground answers from the dictionary. A Core word&#39;s reference entry appears in the Output area, where you read it; one of your own words comes back into the Input area as the <code>DEF</code> that defines it, ready to edit and run again. This is something the editor does rather than something a program does: nothing is pushed, nothing is consumed, and the answer is prose rather than a value, so there is no word here for a program to call. <code>RESET</code> and <code>CLEAR</code>, typed on their own, are the other two — they discard the session and the stack. If you define a word named <code>?</code>, <code>LOOKUP</code>, <code>RESET</code> or <code>CLEAR</code>, yours wins.</p>
+
                     <p>A name resolves in Core or in User, and User never shadows Core. A word&#39;s name is therefore its whole address — there is no qualified form, no dictionary to select, and no way for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same word.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
