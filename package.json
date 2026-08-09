@@ -14,6 +14,7 @@
     "lint": "eslint .",
     "deadcode": "ts-prune",
     "test": "vitest run",
+    "test:mcp": "npm --prefix tools/mcp-server run selftest",
     "test:watch": "vitest",
     "clean": "rm -rf dist node_modules",
     "tauri": "tauri",
