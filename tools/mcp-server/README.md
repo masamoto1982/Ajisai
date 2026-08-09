@@ -24,7 +24,10 @@ results; only invalid requests and host failures set `isError`.
 
 Static context is available through `ajisai://guide/quickstart`,
 `ajisai://vocabulary`, and `ajisai://schema/result`. Tool calls return both text
-and `structuredContent`, including the registry SHA-256 and applied limits.
+and `structuredContent`, including the engine version, registry SHA-256 and
+applied limits. Algebraic results carry their canonical `exactTerms` normal
+form; the accompanying rational value is explicitly marked as an approximation
+and is never the canonical result.
 
 ## Setup
 

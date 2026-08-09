@@ -139,7 +139,12 @@ shared `types::value_protocol` mapping:
 - `semantics` (when present): `semanticKind`, `shape`, `capabilities`,
   `origin`, optional `truthValue` (`"true" | "false" | "unknown"`), optional
   `absence` (§6a), and optional `approximate: true` for exact-irrational
-  values rendered as a best rational approximation.
+  values rendered as a best rational approximation. Algebraic irrationals also
+  carry the canonical value as `exactTerms`: an array of
+  `{ "numerator": "...", "denominator": "...", "radicand": "..." }`.
+  These arbitrary-precision decimal strings encode the exact normal form
+  `Σ (numerator / denominator) √radicand`; the approximate `value` field is
+  never authoritative when `exactTerms` is present.
 
 ## 4. `diagnosis`
 
