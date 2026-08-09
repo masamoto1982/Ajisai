@@ -80,26 +80,6 @@ const TOOLS = [
     outputSchema: envelopeSchema,
     annotations: READ_ONLY_ANNOTATIONS,
   },
-};
-const TOOLS = [
-  {
-    name: "compute",
-    description: "Execute a bounded Ajisai program. Use for supported-domain exact rational, decimal, square-root and vector calculations, including reason-carrying NIL results.",
-    inputSchema: sourceSchema,
-    outputSchema: envelopeSchema,
-  },
-  {
-    name: "check",
-    description: "Parse and resolve Ajisai source without executing it; also verifies declared contracts conservatively.",
-    inputSchema: sourceSchema,
-    outputSchema: envelopeSchema,
-  },
-  {
-    name: "infer_contracts",
-    description: "Infer machine-readable contracts for user-defined Words without executing their bodies.",
-    inputSchema: sourceSchema,
-    outputSchema: envelopeSchema,
-  },
   {
     name: "infer_contracts",
     description: "Infer machine-readable contracts for user-defined Words without executing their bodies.",
