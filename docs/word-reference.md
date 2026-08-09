@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **67 Words**, of which **37** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **65 Words**, of which **36** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -728,20 +728,6 @@ Split a string into a vector of substrings using a separator.
 - **Syntax:** `'a,b,c' ',' TOKENIZE`
 - **ERROR conditions:** `nonText`, `nonTextSeparator`
 
-## `SUBSTITUTE`
-
-Replace every occurrence of a substring with another.
-
-- **Vocabulary tier:** Standard (`algorithm`)
-- **Family:** `text`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `'hello' 'l' 'L' SUBSTITUTE`
-- **ERROR conditions:** `nonText`
-
 ## `NUM`
 
 Parse text as a number; Bubble/NIL on parse failure.
@@ -905,21 +891,6 @@ Delete a user word from the dictionary.
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
 - **Syntax:** `{ [ 1 ] } 'W' DEF 'W' DEL`
 - **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`
-
-## `LOOKUP`
-
-Display the documentation for a named word.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `dictionary`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `observational` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
-- **Syntax:** `'ADD' ?`
-- **Aliases:** `?`
-- **ERROR conditions:** `invalidName`, `wordNotFound`
 
 ## `PRINT`
 

@@ -74,7 +74,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 67 canonical Words and 13 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 67, a 37-Word Semantic Kernel carries the semantic identity of the language and 30 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
+The vocabulary is 65 canonical Words and 12 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 65, a 36-Word Semantic Kernel carries the semantic identity of the language and 29 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -255,7 +255,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-modifiers-consumption">LANG.MODIFIERS.CONSUMPTION — The consumption axis</h3>
 
-<p>There is exactly one modifier axis. By default a Word consumes the operands it reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order. A Word whose result is empty is no exception: <code>BIND</code>, <code>DEF</code>, <code>DEL</code> and <code>LOOKUP</code> perform their effect and leave their operands where they were. The higher-order Words are the one exception: under <code>KEEP</code>, <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code> and <code>ALL</code> retain the collection they walk and nothing else, because the CodeBlock states what the call is rather than being data the call read, and <code>FOLD</code>'s initial accumulator has been folded into the answer.</p>
+<p>There is exactly one modifier axis. By default a Word consumes the operands it reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order. A Word whose result is empty is no exception: <code>BIND</code>, <code>DEF</code> and <code>DEL</code> perform their effect and leave their operands where they were. The higher-order Words are the one exception: under <code>KEEP</code>, <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code> and <code>ALL</code> retain the collection they walk and nothing else, because the CodeBlock states what the call is rather than being data the call read, and <code>FOLD</code>'s initial accumulator has been folded into the answer.</p>
 
 <p>A Word selects operands from the top of the stack, validates its registered contract, computes or projects the result, and then commits consumption according to the axis. ERROR does not masquerade as a successful NIL projection.</p>
 
@@ -315,7 +315,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 59 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
+<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 65 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. The host's lookup, hover, the Reference, and execution must identify the same canonical entry.</p>
 
 <h3 id="lang-dictionary-mutation">LANG.DICTIONARY.MUTATION — User Words</h3>
 
@@ -331,7 +331,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A Word may have exactly one other effect, and it stays inside the machine: <code>DEF</code> and <code>DEL</code> change the dictionary, under LANG.DICTIONARY.MUTATION. Output emission and dictionary mutation are therefore the two effects, and LANG.MACHINE.ORDER orders both of them against token evaluation.</p>
 
-<p>Every other Word changes nothing: given the same stack and dictionary it produces the same result. <code>LOOKUP</code> reads the dictionary, so it depends on one without changing it. A Word that evaluates a supplied code block has the effects of that block and no others, so it is pure exactly when the block is.</p>
+<p>Every other Word changes nothing: given the same stack and dictionary it produces the same result. A Word that evaluates a supplied code block has the effects of that block and no others, so it is pure exactly when the block is.</p>
 
 <h3 id="lang-source-reflection">LANG.SOURCE.REFLECTION — Explicit code/data reflection</h3>
 

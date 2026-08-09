@@ -7,8 +7,6 @@ use wasm_bindgen::prelude::*;
 impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
-        self.interpreter.definition_to_load = None;
-        self.interpreter.documentation_to_show = None;
         let obj = js_sys::Object::new();
 
         match self.interpreter.execute(code).await {
@@ -18,13 +16,6 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "output", &(output.clone().into()));
                 set_js_prop(&obj, "stack", &(self.collect_stack()));
                 set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
-
-                if let Some(def_str) = self.interpreter.definition_to_load.take() {
-                    set_js_prop(&obj, "definition_to_load", &(def_str.into()));
-                }
-                if let Some(doc) = self.interpreter.documentation_to_show.take() {
-                    set_js_prop(&obj, "documentation", &(doc.into()));
-                }
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
             Err(e) => {

@@ -6,9 +6,9 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, control_cond, execute_def,
-    execute_del, execute_lookup, higher_order, higher_order_fold, io, logic, math_ops,
-    nil_diagnostics, ordering_ops, reflection, shape_ops, sort, tensor_cmds, vector_ops,
-    ConsumptionMode, Interpreter,
+    execute_del, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
+    ordering_ops, reflection, shape_ops, sort, tensor_cmds, vector_ops, ConsumptionMode,
+    Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -295,7 +295,6 @@ impl Interpreter {
             WordId::Bind => bindings::op_bind(self),
             WordId::Def => execute_def::op_def(self),
             WordId::Del => execute_del::op_del(self),
-            WordId::Lookup => execute_lookup::op_lookup(self),
             WordId::Print => io::op_print(self),
             WordId::Take => vector_ops::op_take(self),
             WordId::Reverse => vector_ops::op_reverse(self),
@@ -312,7 +311,6 @@ impl Interpreter {
             WordId::Join => cast::op_join(self),
             WordId::Trim => cast::op_trim(self),
             WordId::Tokenize => cast::op_tokenize(self),
-            WordId::Substitute => cast::op_substitute(self),
             WordId::NilCheck => nil_diagnostics::op_nil_check(self),
             WordId::NilReason => nil_diagnostics::op_nil_reason(self),
             WordId::Abs => math_ops::op_abs(self),

@@ -26,11 +26,19 @@ async fn symbol_aliases_execute_same_as_canonical_words() {
     assert_same_stack("7 2 %", "7 2 MOD").await;
 }
 #[tokio::test]
-async fn lookup_alias_canonicalizes_to_english_word() {
+async fn symbol_alias_canonicalizes_to_english_word() {
     use crate::core_word_aliases::canonicalize_core_word_name;
     assert_eq!(canonicalize_core_word_name("+"), "ADD");
-    assert_eq!(canonicalize_core_word_name("?"), "LOOKUP");
     assert_eq!(canonicalize_core_word_name("^"), "VENT");
+}
+
+/// `?` is the host's spelling of a lookup, not a Word alias, so canonicalization
+/// leaves it alone. It used to fold to `LOOKUP`; if it still did, a User Word
+/// named `?` would resolve to a Word that no longer exists.
+#[tokio::test]
+async fn the_lookup_mark_is_not_a_word_alias() {
+    use crate::core_word_aliases::canonicalize_core_word_name;
+    assert_eq!(canonicalize_core_word_name("?"), "?");
 }
 
 /// Lexical / structural surface forms are documented as named concepts but are

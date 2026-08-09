@@ -222,6 +222,27 @@ export class AjisaiInterpreter {
         return ret;
     }
     /**
+     * Answer the host's lookup of `name` against the current dictionary.
+     *
+     * This is a *query*, not a run. Looking a Word up used to be the Word
+     * `LOOKUP`, which meant asking what `ADD` does went through `execute` and
+     * came back on a side channel that no evaluation rule read. The host asks
+     * here instead, so nothing about a lookup touches the stack, the
+     * dictionary, or the output buffer.
+     *
+     * Returns `{ kind: "documentation" | "definition", text }`, or `NULL` for a
+     * name the dictionary does not hold — the caller reports the unknown name
+     * itself, since it is the one that read it off the input.
+     * @param {string} name
+     * @returns {any}
+     */
+    resolve_host_lookup(name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ajisaiinterpreter_resolve_host_lookup(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
      * Restore a stack from a `snapshot_stack` payload, reinstating exact
      * values (CodeBlock, ExactScalar, …) and their stack-position roles.
      * @param {string} snapshot_json

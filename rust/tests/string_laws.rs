@@ -4,8 +4,7 @@
 //! `docs/dev/ajisai-mathematical-formalization.md` §9-octies I.2 (Phase 9):
 //! a string literal `'abc'` is a **String**, one of the six disjoint domains of
 //! LANG.VALUES.DISJOINT, and the empty String is one of its values. The text
-//! words (`STR`/`NUM`/`CHR`/`CHARS`/`JOIN`/`TRIM`/`TOKENIZE`/`SUBSTITUTE`/
-//! `STARTS-WITH?`/`ENDS-WITH?`) are Core Words.
+//! words (`STR`/`NUM`/`CHARS`/`JOIN`/`TRIM`/`TOKENIZE`) are Core Words.
 //!
 //! Observation is firewall-clean: text is read through the pure `render` (a
 //! String renders `'…'` from its domain, with no role consulted); predicates
@@ -73,14 +72,6 @@ proptest! {
         prop_assert_eq!(obs1(&format!("{n} STR")), format!("'{n}'"));
     }
 
-    /// **`SUBSTITUTE` of a token by itself is the identity**, and a fresh token
-    /// not present leaves the text unchanged (no-op replacements).
-    #[test]
-    fn substitute_identity(w in ascii_word()) {
-        // replacing every 'a' with 'a' changes nothing.
-        prop_assert_eq!(obs1(&format!("'{w}' 'a' 'a' SUBSTITUTE")), format!("'{w}'"));
-    }
-
     /// **`CHARS` of a word has one element per codepoint, and `JOIN` of two
     /// char-vectors concatenates** (free monoid on codepoints):
     /// `(u CHARS) (v CHARS) CONCAT JOIN = uv`. The word lengths start at 1: a
@@ -119,7 +110,7 @@ proptest! {
 #[test]
 fn the_empty_string_is_a_string() {
     assert_eq!(obs1("''"), "''");
-    assert_eq!(obs1("'ab' 'ab' '' SUBSTITUTE"), "''");
+    assert_eq!(obs1("'   ' TRIM"), "''");
     assert_eq!(obs1("[ '' 'ab' ] JOIN"), "'ab'");
 }
 

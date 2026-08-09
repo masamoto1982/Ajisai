@@ -108,11 +108,15 @@ fn aq_ver_007_c_effectful_words_must_not_be_safe_preview() {
     }
 }
 
-/// The documented `LOOKUP` exception is gone with the bool it was an
-/// exception to. `LOOKUP` reads the dictionary, which the specification
-/// calls `stateRelative` — reproducible for one interpreter snapshot,
-/// which is not the same as deterministic. Saying so directly costs
-/// nothing and removes the only per-Word exception this file carried.
+/// The vocabulary currently holds no `observational` Word: `LOOKUP` was the
+/// only one, and looking a Word up is the host's job now, not a program's. The
+/// loop below therefore has no subjects today, and it is kept deliberately —
+/// `observational` remains a contract a future Word may declare, and this is
+/// where what that declaration obliges is written down. A Word that reads the
+/// session's state must say which state (`effects`), must be `stateRelative`
+/// rather than deterministic — reproducible for one interpreter snapshot is not
+/// the same as reproducible — and must stay out of auto preview, where it would
+/// run against a snapshot the reader never asked about.
 #[test]
 fn aq_ver_007_d_observational_words_read_state_and_do_not_auto_preview() {
     let registry = get_builtin_word_registry();

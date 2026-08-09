@@ -24,6 +24,7 @@ export const ajisaiinterpreter_new: () => number;
 export const ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
 export const ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
 export const ajisaiinterpreter_reset: (a: number) => any;
+export const ajisaiinterpreter_resolve_host_lookup: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_restore_stack_snapshot: (a: number, b: number, c: number) => [number, number];
 export const ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
 export const ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;

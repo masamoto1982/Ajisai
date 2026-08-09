@@ -43,7 +43,6 @@ const KERNEL_WORDS: &[&str] = &[
     "KEEP",
     "DEF",
     "DEL",
-    "LOOKUP",
     "PRINT",
     "REFLECT",
 ];
@@ -209,11 +208,6 @@ async fn text_standards_have_kernel_only_witnesses() {
             "'a,b,c' ',' TOKENIZE",
             "'a,b,c' CHARS [ 0 ] GET 'a,b,c' CHARS [ 2 ] GET \
              'a,b,c' CHARS [ 4 ] GET 3 COLLECT",
-        ),
-        (
-            "'hello' 'l' 'L' SUBSTITUTE",
-            "'hello' CHARS [ 0 ] GET 'hello' CHARS [ 1 ] GET 'L' 'L' \
-             'hello' CHARS [ 4 ] GET 5 COLLECT JOIN",
         ),
     ] {
         equivalent(native, witness).await;

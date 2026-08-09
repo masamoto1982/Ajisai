@@ -163,8 +163,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-67 canonical Words in one flat Core dictionary, of which
-37 form the Semantic Kernel and 30 are Standard Words. Both are
+65 canonical Words in one flat Core dictionary, of which
+36 form the Semantic Kernel and 29 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -222,7 +222,6 @@ no module system and nothing to import.
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
 | `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
-| `SUBSTITUTE` | cast | Replace every occurrence of a substring with another. — e.g. `'hello' 'l' 'L' SUBSTITUTE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
@@ -235,7 +234,6 @@ no module system and nothing to import.
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
-| `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |
 | `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
 | `REFLECT` | reflection | Reflect a CodeBlock into canonical code data, or canonical code data into a CodeBlock. — e.g. `CodeBlock REFLECT
 code-data REFLECT` |
@@ -251,7 +249,6 @@ code-data REFLECT` |
 | `>=` | symbol alias | shorthand for `GTE` |
 | `!=` | symbol alias | shorthand for `NEQ` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
-| `?` | symbol alias | shorthand for `LOOKUP` |
 | `^` | syntax sugar | shorthand for `VENT` |
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
 | `\|` | control directive | COND-CLAUSE — only inside the construct that defines it |

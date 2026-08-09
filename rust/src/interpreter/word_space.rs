@@ -101,11 +101,11 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // Rounding/number casts: output bounded by operand digit count.
         Floor | Round | Quantize | Mod => (Linear, false),
         Str | Num | Chars | Tokenize | Trim => (Linear, false),
-        // Repetition can multiply sizes (pattern × replacement, k × separator).
-        Substitute | Join => (Superlinear, false),
+        // Repetition can multiply sizes (k × separator).
+        Join => (Superlinear, false),
         // Dictionary registration copies bounded structure.
         Bind | Def => (Linear, false),
-        Del | Lookup => (Const, false),
+        Del => (Const, false),
         Print => (Linear, false),
         // The Words promoted out of the deleted MATH and ALGO modules.
         Abs | Neg | Min | Max | Sqrt => (Linear, false),

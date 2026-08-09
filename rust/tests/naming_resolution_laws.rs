@@ -15,7 +15,9 @@
 
 mod test_support;
 
+use ajisai_core::interpreter::host_lookup::{resolve_host_lookup, HostLookup};
 use ajisai_core::interpreter::Interpreter;
+use ajisai_core::types::Interpretation;
 use proptest::prelude::*;
 use test_support::generators::{small, user_word_body, user_word_name};
 use test_support::observe::{render, run, run_err};
@@ -251,5 +253,82 @@ fn a_binding_survives_neither_a_recursive_call_nor_a_tail_jump() {
     assert_eq!(
         obs(&format!("{countdown} [ 0 2000 ] COUNTDOWN")),
         vec!["2001000/1"]
+    );
+}
+
+// ── The host's lookup reads the same dictionary ────────────────────────────
+// Looking a Word up is a host query rather than a Word (it used to be `LOOKUP`,
+// whose whole result was a channel to the editor that no evaluation rule read).
+// Moving it out of the vocabulary must not move it off the dictionary: it
+// resolves by the same `Core → user` order, and it answers with a structured
+// observation — documentation, a definition, or Unknown — never a leaked host
+// error.
+
+/// A session with `src` already run, to look Words up against.
+fn session(src: &str) -> Interpreter {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("tokio current-thread runtime");
+    rt.block_on(async {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(src)
+            .await
+            .unwrap_or_else(|e| panic!("setup failed: {src:?}: {e}"));
+        interp
+    })
+}
+
+/// **The host lookup resolves what the resolver resolves.** A Core name answers
+/// with reference text, a User name with its source, and a name the dictionary
+/// does not hold answers with neither.
+#[test]
+fn the_host_lookup_resolves_by_the_dictionary_order() {
+    let interp = session("{ 2 MUL } 'DBL' DEF");
+
+    assert!(matches!(
+        resolve_host_lookup(&interp, "ADD"),
+        Ok(HostLookup::Documentation(_))
+    ));
+    assert!(matches!(
+        resolve_host_lookup(&interp, "DBL"),
+        Ok(HostLookup::Definition(_))
+    ));
+}
+
+/// **An unresolvable name is an Unknown observation, not an empty answer.** The
+/// same name is unknown to a program, so the two surfaces cannot disagree about
+/// what the dictionary holds.
+#[test]
+fn the_host_lookup_and_a_program_agree_on_what_is_unknown() {
+    let interp = Interpreter::new();
+    assert!(resolve_host_lookup(&interp, "NO-SUCH-WORD").is_err());
+    assert_eq!(outcome("NO-SUCH-WORD"), Err(()));
+}
+
+/// **A lookup observes and changes nothing.** It is a query, so the stack it
+/// reads across is the same afterwards and the definition it read is still
+/// there to read again.
+#[test]
+fn the_host_lookup_leaves_the_session_untouched() {
+    let interp = session("{ 2 MUL } 'DBL' DEF 7");
+    let before: Vec<String> = interp
+        .get_stack()
+        .iter()
+        .map(|v| render(v, Interpretation::Unassigned))
+        .collect();
+
+    let _ = resolve_host_lookup(&interp, "ADD");
+    let _ = resolve_host_lookup(&interp, "DBL");
+
+    let after: Vec<String> = interp
+        .get_stack()
+        .iter()
+        .map(|v| render(v, Interpretation::Unassigned))
+        .collect();
+    assert_eq!(before, after, "a lookup must not touch the stack");
+    assert!(
+        resolve_host_lookup(&interp, "DBL").is_ok(),
+        "a lookup must not consume the definition it read"
     );
 }

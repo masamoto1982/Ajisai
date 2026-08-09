@@ -71,6 +71,31 @@ export const createExecutionController = (
     const checkIsUserWord = (name: string): boolean =>
         interpreter.collect_user_words_info().some(([, word]) => word === name);
 
+    /// Answer a lookup from the dictionary, without running anything.
+    ///
+    /// The two destinations are opposite, which is why the query says which one
+    /// it means. Reference text is read, so it goes to the output area — it used
+    /// to be written into the editor, where several screens of prose replaced
+    /// whatever the user had typed, and `'ADD' ?` in the middle of writing a
+    /// program lost the program. A User Word's reconstructed `DEF` *is* meant
+    /// for the editor: the point of looking one up is to edit it and define it
+    /// again, and what it replaces is the lookup line that just ran.
+    const showLookup = (name: string): void => {
+        const found = interpreter.resolve_host_lookup(name);
+        if (!found) {
+            showError(`Unknown word: ${name}`);
+            return;
+        }
+        if (found.kind === 'documentation') {
+            showDocumentation(found.text);
+            updateView('output');
+            return;
+        }
+        updateEditorValue(found.text);
+        showInfo(`Showing definition: ${name}`, false);
+        updateView('input');
+    };
+
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
         extractEditorValue,
         showInfo,
@@ -130,27 +155,12 @@ export const createExecutionController = (
         ].join('\n');
     };
 
-    const applyExecutionResult = (result: ExecuteResult, code: string): void => {
+    const applyExecutionResult = (result: ExecuteResult): void => {
         const diagnosis = describeDiagnosis(result);
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);
             showInfo('Input helper inserted', false);
-            updateView('input');
-        } else if (result.documentation) {
-            // Reference text for a Core Word is read, not edited, so it goes to
-            // the output area. It used to be written into the editor, where
-            // several screens of prose replaced whatever the user had typed;
-            // `'ADD' ?` in the middle of writing a program lost the program.
-            showDocumentation(result.documentation);
-            updateView('output');
-        } else if (result.definition_to_load) {
-            // A User Word's reconstructed `DEF` *is* meant for the editor: the
-            // point of looking one up is to edit it and define it again. What it
-            // replaces is the `?` line that just ran.
-            updateEditorValue(result.definition_to_load);
-            const wordName = code.replace(/\?|LOOKUP/gi, "").trim();
-            showInfo(`Showing definition: ${wordName}`, false);
             updateView('input');
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
@@ -171,16 +181,20 @@ export const createExecutionController = (
         stepExecutor.reset();
 
         const hostCommand = resolveHostCommand(code, checkIsUserWord);
-        if (hostCommand === 'RESET') {
+        if (hostCommand?.kind === 'RESET') {
             await executeReset();
             return;
         }
-        if (hostCommand === 'CLEAR') {
+        if (hostCommand?.kind === 'CLEAR') {
             // `clearStack` redraws, reports and saves — the same call the `×`
             // and the shortcut make — so all this route adds is consuming the
             // command from the editor, exactly as a successful run does.
             clearStack();
             clearEditor(false);
+            return;
+        }
+        if (hostCommand?.kind === 'LOOKUP') {
+            showLookup(hostCommand.name);
             return;
         }
 
@@ -199,7 +213,7 @@ export const createExecutionController = (
                 showError(error as Error);
             }
 
-            applyExecutionResult(result, code);
+            applyExecutionResult(result);
             // Read the post-execution surfaces back from the SAME interpreter
             // instance (already updated by syncInterpreterState) so they are
             // compared like-for-like with the pre-execution snapshot. Comparing

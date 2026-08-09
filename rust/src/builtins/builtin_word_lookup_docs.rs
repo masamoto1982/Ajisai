@@ -273,7 +273,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Defines DOUBLE; 5 DOUBLE then pushes 10.",
         }],
         failure_note: "Redefining a built-in word is refused.",
-        related: &["DEL", "LOOKUP"],
+        related: &["DEL"],
     },
     BuiltinLookupDoc {
         word: "DEL",
@@ -283,17 +283,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Defines a word, then removes it from the dictionary.",
         }],
         failure_note: "Deleting a built-in word is refused. So is deleting a word\nother words still depend on.",
-        related: &["DEF", "LOOKUP"],
-    },
-    BuiltinLookupDoc {
-        word: "LOOKUP",
-        behavior: "Pops the word name and loads its documentation into the\neditor. For a user word, the original defining source is\nloaded instead.",
-        examples: &[BuiltinExampleDoc {
-            code: "'ADD' ?",
-            result: "Loads the documentation for ADD into the editor.",
-        }],
-        failure_note: "Unknown words raise an error.",
-        related: &["DEF", "DEL"],
+        related: &["DEF"],
     },
     // ── Output and evaluation ─────────────────────────────────────────────
     BuiltinLookupDoc {

@@ -93,12 +93,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Insert quoted word marker",
     },
     CoreWordAlias {
-        alias: "?",
-        canonical: Some("LOOKUP"),
-        kind: CoreWordAliasKind::SymbolAlias,
-        summary: "Look up and display word definition",
-    },
-    CoreWordAlias {
         alias: "^",
         canonical: Some("VENT"),
         kind: CoreWordAliasKind::SyntaxSugar,

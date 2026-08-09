@@ -55,8 +55,8 @@ impl Value {
     /// The empty String is a String. It used to become
     /// `NilReason::EmptySequence`, which made `''` an absence rather than a
     /// value and forced every text Word to carry an empty special case; a
-    /// domain with no empty element also cannot be closed under `TOKENIZE` or
-    /// `SUBSTITUTE`. NIL means "no value here", and `''` is a perfectly good
+    /// domain with no empty element also cannot be closed under `TRIM` or
+    /// `TOKENIZE`. NIL means "no value here", and `''` is a perfectly good
     /// value with no characters in it.
     pub fn from_string(s: &str) -> Self {
         Self {

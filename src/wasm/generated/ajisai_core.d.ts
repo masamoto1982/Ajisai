@@ -66,6 +66,20 @@ export class AjisaiInterpreter {
      */
     reset_session(): any;
     /**
+     * Answer the host's lookup of `name` against the current dictionary.
+     *
+     * This is a *query*, not a run. Looking a Word up used to be the Word
+     * `LOOKUP`, which meant asking what `ADD` does went through `execute` and
+     * came back on a side channel that no evaluation rule read. The host asks
+     * here instead, so nothing about a lookup touches the stack, the
+     * dictionary, or the output buffer.
+     *
+     * Returns `{ kind: "documentation" | "definition", text }`, or `NULL` for a
+     * name the dictionary does not hold — the caller reports the unknown name
+     * itself, since it is the one that read it off the input.
+     */
+    resolve_host_lookup(name: string): any;
+    /**
      * Restore a stack from a `snapshot_stack` payload, reinstating exact
      * values (CodeBlock, ExactScalar, …) and their stack-position roles.
      */
@@ -136,6 +150,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_reset: (a: number) => any;
+    readonly ajisaiinterpreter_resolve_host_lookup: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_restore_stack_snapshot: (a: number, b: number, c: number) => [number, number];
     readonly ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;

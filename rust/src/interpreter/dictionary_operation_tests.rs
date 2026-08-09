@@ -2,7 +2,17 @@
 
 #[cfg(test)]
 mod tests {
+    use crate::interpreter::host_lookup::{resolve_host_lookup, HostLookup};
     use crate::interpreter::Interpreter;
+
+    /// The host's lookup of `name`, or a panic naming what came back instead.
+    ///
+    /// Looking a Word up is a host query rather than a Word, so these tests ask
+    /// the same way the editor does: no `execute`, no stack, no output.
+    fn host_lookup(interp: &Interpreter, name: &str) -> HostLookup {
+        resolve_host_lookup(interp, name)
+            .unwrap_or_else(|err| panic!("lookup of {name} failed: {err}"))
+    }
 
     #[tokio::test]
     async fn test_cannot_override_builtin_word() {
@@ -268,61 +278,50 @@ mod tests {
 
     #[tokio::test]
     async fn test_lookup_builtin_renders_four_section_template() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("'GET' ?").await;
-        assert!(
-            result.is_ok(),
-            "LOOKUP on built-in GET should succeed: {:?}",
-            result.err()
-        );
+        let interp = Interpreter::new();
         // A Core Word's entry is reference text, not editable source, so it
-        // arrives on the documentation channel — the host shows it rather than
-        // loading it over whatever is in the editor.
-        assert!(
-            interp.definition_to_load.is_none(),
-            "a Core Word's LOOKUP must not be offered as a definition to load"
-        );
-        let loaded = interp
-            .documentation_to_show
-            .take()
-            .expect("documentation_to_show should be set");
+        // comes back as documentation — the host shows it rather than loading
+        // it over whatever is in the editor.
+        let loaded = match host_lookup(&interp, "GET") {
+            HostLookup::Documentation(text) => text,
+            HostLookup::Definition(text) => {
+                panic!("a Core Word must not be offered as a definition to load: {text}")
+            }
+        };
         for section in ["# GET", "Category:", "Summary:", "Role:", "Stack Effect:"] {
             assert!(
                 loaded.contains(section),
-                "Built-in LOOKUP must include '{}' section, got: {}",
+                "a Core Word's entry must include '{}' section, got: {}",
                 section,
                 loaded
             );
         }
         assert!(
             !loaded.contains("] DEF"),
-            "Built-in LOOKUP should not produce a DEF expression, got: {}",
+            "a Core Word's entry should not produce a DEF expression, got: {}",
             loaded
         );
     }
+
     #[tokio::test]
     async fn test_lookup_user_word_loads_def_source() {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
         let _ = interp.collect_output();
-        let result = interp.execute("'DOUBLE' ?").await;
-        assert!(
-            result.is_ok(),
-            "LOOKUP on user word should succeed: {:?}",
-            result.err()
-        );
-        let loaded = interp
-            .definition_to_load
-            .take()
-            .expect("definition_to_load should be set");
+        let loaded = match host_lookup(&interp, "DOUBLE") {
+            HostLookup::Definition(text) => text,
+            HostLookup::Documentation(text) => {
+                panic!("a User Word must come back as editable source: {text}")
+            }
+        };
         assert!(
             loaded.contains("DEF") && loaded.contains("'DOUBLE'"),
-            "User-word LOOKUP should reconstruct DEF source, got: {}",
+            "a User Word's lookup should reconstruct DEF source, got: {}",
             loaded
         );
         assert!(
             !loaded.contains("placeholder"),
-            "User-word LOOKUP should not load placeholder text, got: {}",
+            "a User Word's lookup should not load placeholder text, got: {}",
             loaded
         );
     }
@@ -611,27 +610,27 @@ mod tests {
         );
     }
 
-    // ── LOOKUP must round-trip ────────────────────────────────────────────
+    // ── A looked-up definition must round-trip ────────────────────────────
     // Loading a user word, editing it, and defining it again is the ordinary
-    // way to correct a definition. That only works if what LOOKUP loads is
-    // source `DEF` accepts. It used to wrap the body in `[ ]`: `DEF` rejects a
-    // Vector body outright, and a `|` clause inside `[ ]` does not even
-    // tokenize, so a COND word could not be reloaded at all.
+    // way to correct a definition. That only works if what comes back is source
+    // `DEF` accepts. It used to wrap the body in `[ ]`: `DEF` rejects a Vector
+    // body outright, and a `|` clause inside `[ ]` does not even tokenize, so a
+    // COND word could not be reloaded at all.
 
-    async fn lookup_source(interp: &mut Interpreter, name: &str) -> String {
-        interp.execute(&format!("'{name}' ?")).await.unwrap();
-        let _ = interp.collect_output();
-        interp
-            .definition_to_load
-            .take()
-            .expect("LOOKUP must load a definition")
+    fn lookup_source(interp: &Interpreter, name: &str) -> String {
+        match host_lookup(interp, name) {
+            HostLookup::Definition(text) => text,
+            HostLookup::Documentation(text) => {
+                panic!("a User Word must come back as editable source: {text}")
+            }
+        }
     }
 
     #[tokio::test]
     async fn lookup_of_a_user_word_round_trips_through_def() {
         let mut interp = Interpreter::new();
         interp.execute("{ 2 MUL } 'DBL' DEF").await.unwrap();
-        let loaded = lookup_source(&mut interp, "DBL").await;
+        let loaded = lookup_source(&interp, "DBL");
         assert!(
             loaded.starts_with('{'),
             "the body must be a code block, not a vector: {loaded}"
@@ -650,7 +649,7 @@ mod tests {
             .execute("{\n{ 5 LT | 'small' }\n{ IDLE | 'big' }\nCOND } 'SIZE' DEF")
             .await
             .unwrap();
-        let loaded = lookup_source(&mut interp, "SIZE").await;
+        let loaded = lookup_source(&interp, "SIZE");
         assert!(
             loaded.contains('|'),
             "the clause separator must survive the round trip: {loaded}"
