@@ -1,6 +1,6 @@
-//! Executable Kernel-only witnesses for the 16 `derivable` Standard Words.
+//! Executable Kernel-only witnesses for the `derivable` Standard Words.
 //!
-//! Each pair runs the native Standard Word and a program written in the 35-Word
+//! Each pair runs the native Standard Word and a program written in the
 //! Semantic Kernel alone, then compares the whole observed stack. The witness
 //! establishes that the Standard adds no expressive power over the Kernel; what
 //! it deliberately does not claim is that a User Word would reproduce a native
@@ -214,6 +214,25 @@ async fn text_standards_have_kernel_only_witnesses() {
             "'hello' 'l' 'L' SUBSTITUTE",
             "'hello' CHARS [ 0 ] GET 'hello' CHARS [ 1 ] GET 'L' 'L' \
              'hello' CHARS [ 4 ] GET 5 COLLECT JOIN",
+        ),
+    ] {
+        equivalent(native, witness).await;
+    }
+}
+
+/// `SUM` is `0 { ADD } FOLD` — the same fold, given a name because it is the
+/// phrase every inner product, mean, variance, norm and loss is written with.
+/// Its Core slot is earned on frequency, not on power: the witness below is
+/// exactly the four tokens it replaces.
+#[tokio::test]
+async fn sum_is_the_addition_fold() {
+    for (native, witness) in [
+        ("[ 1 2 3 4 ] SUM", "[ 1 2 3 4 ] 0 { ADD } FOLD"),
+        ("[ ] SUM", "[ ] 0 { ADD } FOLD"),
+        ("[ 1/2 1/3 ] SUM", "[ 1/2 1/3 ] 0 { ADD } FOLD"),
+        (
+            "[ [ 1 2 ] [ 3 4 ] ] SUM",
+            "[ [ 1 2 ] [ 3 4 ] ] 0 { ADD } FOLD",
         ),
     ] {
         equivalent(native, witness).await;

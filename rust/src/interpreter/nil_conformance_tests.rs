@@ -59,6 +59,7 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
+    ("SUM", NilClass::UnaryNil),
     // MOD / FLOOR / ROUND create NIL on a domain miss and are covered
     // by projecting_word_set_matches_registry.
     // The comparison words pass NIL operands through. Comparison itself is
@@ -159,6 +160,8 @@ const PROJECTING_WORDS: &[&str] = &[
     "NIL-REASON",
     "NUM",
     "QUANTIZE",
+    // Probed in `shape_ops`, beside the Word itself.
+    "RANDOM",
     "RANGE",
     "ROUND",
     "SQRT",

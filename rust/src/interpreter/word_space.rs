@@ -109,8 +109,18 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Print => (Linear, false),
         // The Words promoted out of the deleted MATH and ALGO modules.
         Abs | Neg | Min | Max | Sqrt => (Linear, false),
-        Sort => (Linear, true),
+        Sort | Order => (Linear, true),
         IndexOf => (Linear, false),
+        // Ordering, grouping and shape Words: the result is bounded by the
+        // operands' total size, and a vector operand attains the bound.
+        Unique | Tally | Zip | Put | Group => (Linear, true),
+        // A fold to one value; the accumulator's digit count grows with the
+        // input, so linear rather than constant.
+        Sum => (Linear, false),
+        // A value-driven materializer like RANGE and FILL: the *count*
+        // operand's value sets the length, so it takes the runtime water level
+        // rather than a static bound.
+        Random => (Unbounded, true),
         // The positional control directives (SPEC §6.4) never reach a
         // primitive: the execution loop interprets them against the source
         // stream, so they materialize nothing.

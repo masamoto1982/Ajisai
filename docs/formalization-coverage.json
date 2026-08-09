@@ -256,6 +256,21 @@
       "status": "accepted"
     },
     {
+      "id": "algebra.exact-real.seeded-stream",
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "kind": "operation",
+      "description": "Deterministic exact-rational stream in [0,1) generated from an integer seed; a pure function of the seed, with no host entropy and no state carried between calls.",
+      "admission_reason": "Accepted because no composition of the existing vocabulary produces it: the language has no bit mixing and no hash, so a seeded stream is not derivable at any cost. Its exactness and purity are unaffected — the draws are exact rationals and the same seed always draws the same ones.",
+      "introduced_by": [
+        "RANDOM"
+      ],
+      "can_derive": [
+        "RANDOM"
+      ],
+      "status": "accepted"
+    },
+    {
       "id": "algebra.exact-scalar.codepoint-sequence",
       "algebraic_family": "exact-scalar",
       "core_tier": "material",
@@ -1743,31 +1758,6 @@
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
     },
     {
-      "id": "hosted.csprng.deterministic",
-      "kind": "hosted-effect",
-      "surface": "RANDOM",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §7.9",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
-      ],
-      "law_tests": [],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "CSPRNG observations are host-provided and capability-gated.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "crypto.random",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
       "id": "hosted.serial.effects",
       "kind": "hosted-effect",
       "surface": "SERIAL-*",
@@ -2567,6 +2557,249 @@
       "core_tier": "material",
       "standard_relation": "operational",
       "native_retention_reason": "Fixes deterministic ordering and restores the original operand atomically on comparison ERROR."
+    },
+    {
+      "id": "core.order",
+      "kind": "coreword",
+      "surface": "ORDER",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-order"
+      ],
+      "status": "Formalized",
+      "notes": "The stable ascending permutation of an indexed sequence under the budgeted order observation; SORT is this permutation applied.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Ordering with the positions kept. The Kernel-only route ranks each position by counting the positions before it, which is O(n^2) interpreted steps against this Word’s O(n log n) comparisons."
+    },
+    {
+      "id": "core.unique",
+      "kind": "coreword",
+      "surface": "UNIQUE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-unique"
+      ],
+      "status": "Formalized",
+      "notes": "First-occurrence deduplication over value equality, so it applies to domains that carry no order.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Deduplication in one pass; the Kernel-only route rescans the prefix at every position, which is O(n^2)."
+    },
+    {
+      "id": "core.tally",
+      "kind": "coreword",
+      "surface": "TALLY",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-tally"
+      ],
+      "status": "Formalized",
+      "notes": "The occurrence counts aligned positionally with UNIQUE, produced by the same pass so the two cannot disagree.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Counting in the same pass that finds the distinct values; written out it is a second O(n^2) scan that can drift from UNIQUE’s order."
+    },
+    {
+      "id": "core.zip",
+      "kind": "coreword",
+      "surface": "ZIP",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-zip"
+      ],
+      "status": "Formalized",
+      "notes": "Positional bundling of equal-length sequences; transposition and index-walking are the same operation read differently.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.zip",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "One traversal instead of a nested index gather; the Kernel-only route builds an index vector per position and pays a GET for each."
+    },
+    {
+      "id": "core.sum",
+      "kind": "coreword",
+      "surface": "SUM",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_derivation_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-sum"
+      ],
+      "status": "Formalized",
+      "notes": "The ADD fold over the outermost axis, with zero as the empty sum.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.bihomographic"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "derivable"
+    },
+    {
+      "id": "core.put",
+      "kind": "coreword",
+      "surface": "PUT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-put"
+      ],
+      "status": "Formalized",
+      "notes": "Single-position replacement on an indexed sequence; a negative index counts from the end.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Replaces one element without rebuilding the sequence through a per-element conditional or a three-phrase slice-and-rejoin."
+    },
+    {
+      "id": "core.group",
+      "kind": "coreword",
+      "surface": "GROUP",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-group"
+      ],
+      "status": "Formalized",
+      "notes": "Partition of values by a positionally-aligned key, groups in UNIQUE key order.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.reshape-group",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "One traversal instead of a scan of the key vector per distinct key, which is O(n*k) with the index plumbing written by hand."
+    },
+    {
+      "id": "core.random",
+      "kind": "coreword",
+      "surface": "RANDOM",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "kernel-random"
+      ],
+      "status": "Formalized",
+      "notes": "A deterministic exact-rational stream in [0,1) as a pure function of an integer seed; no host entropy and no hidden state.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.seeded-stream",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.algo.index-of",

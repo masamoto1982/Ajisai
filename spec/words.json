@@ -1036,6 +1036,48 @@
       "vocabularyTier": "kernel"
     },
     {
+      "name": "RANDOM",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "spaceExhausted",
+        "reason": "spaceExhausted"
+      },
+      "errorWhen": [
+        "nonInteger",
+        "negativeCount"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.VECTOR",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Count exact rationals in [0,1), determined entirely by the seed.",
+        "hover": "Count exact rationals in [0,1), determined entirely by the seed.",
+        "lookup": "Count exact rationals in [0,1), determined entirely by the seed.",
+        "syntax": "7 3 RANDOM",
+        "role": "A pure, seeded generator: exact rationals, no hidden state, same seed same draw.",
+        "stackEffect": "[ seed ] [ count ] -> [ rationals ]"
+      },
+      "executorKey": "Random",
+      "effects": [],
+      "partiality": "projecting",
+      "category": "math",
+      "vocabularyTier": "kernel"
+    },
+    {
       "name": "GET",
       "aliases": [],
       "family": "collection",
@@ -1409,6 +1451,313 @@
       "effects": [],
       "partiality": "total",
       "acceptedDomain": "flatNumericVector",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
+    },
+    {
+      "name": "ORDER",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonComparableElement"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "The indices that would sort a vector ascending; ties keep their original order.",
+        "hover": "The indices that would sort a vector ascending; ties keep their original order.",
+        "lookup": "The indices that would sort a vector ascending; ties keep their original order.",
+        "syntax": "[ 30 10 20 ] ORDER",
+        "role": "Ordering as a permutation, so a payload can travel with its key.",
+        "stackEffect": "[ vec ] -> [ permutation ]"
+      },
+      "executorKey": "Order",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "flatNumericVector",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
+    },
+    {
+      "name": "UNIQUE",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "The distinct elements of a vector, in first-occurrence order.",
+        "hover": "The distinct elements of a vector, in first-occurrence order.",
+        "lookup": "The distinct elements of a vector, in first-occurrence order.",
+        "syntax": "[ 'a' 'b' 'a' ] UNIQUE",
+        "role": "Distinct values without imposing an order they may not have.",
+        "stackEffect": "[ vec ] -> [ distinct ]"
+      },
+      "executorKey": "Unique",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
+    },
+    {
+      "name": "TALLY",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "How many times each distinct element occurs, in UNIQUE order.",
+        "hover": "How many times each distinct element occurs, in UNIQUE order.",
+        "lookup": "How many times each distinct element occurs, in UNIQUE order.",
+        "syntax": "[ 'a' 'b' 'a' ] TALLY",
+        "role": "UNIQUE's counterpart: the counts that line up with its values.",
+        "stackEffect": "[ vec ] -> [ counts ]"
+      },
+      "executorKey": "Tally",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
+    },
+    {
+      "name": "ZIP",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "vectorLengthMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Bundle equal-length vectors position by position; a matrix transposes.",
+        "hover": "Bundle equal-length vectors position by position; a matrix transposes.",
+        "lookup": "Bundle equal-length vectors position by position; a matrix transposes.",
+        "syntax": "[ [ 1 2 ] [ 3 4 ] ] ZIP",
+        "role": "Positional pairing, which is also transposition and also index-walking.",
+        "stackEffect": "[ [ vec... ] ] -> [ [ tuple... ] ]"
+      },
+      "executorKey": "Zip",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
+    },
+    {
+      "name": "SUM",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "scalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Fold the outermost axis with ADD; the empty vector sums to zero.",
+        "hover": "Fold the outermost axis with ADD; the empty vector sums to zero.",
+        "lookup": "Fold the outermost axis with ADD; the empty vector sums to zero.",
+        "syntax": "[ 1 2 3 ] SUM",
+        "role": "The reduction every inner product, mean, variance and loss is written with.",
+        "stackEffect": "[ vec ] -> [ total ]"
+      },
+      "executorKey": "Sum",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "numeric",
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
+    },
+    {
+      "name": "PUT",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonInteger",
+        "indexOutOfBounds"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "A copy of a vector with the element at one index replaced.",
+        "hover": "A copy of a vector with the element at one index replaced.",
+        "lookup": "A copy of a vector with the element at one index replaced.",
+        "syntax": "[ 1 2 3 ] 1 9 PUT",
+        "role": "Single-position update, without rebuilding the vector by hand.",
+        "stackEffect": "[ vec ] [ idx ] [ x ] -> [ vec ]"
+      },
+      "executorKey": "Put",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
+    },
+    {
+      "name": "GROUP",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "vectorLengthMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Bundle values by the key at the same position, in UNIQUE key order.",
+        "hover": "Bundle values by the key at the same position, in UNIQUE key order.",
+        "lookup": "Bundle values by the key at the same position, in UNIQUE key order.",
+        "syntax": "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP",
+        "role": "Grouping as a vector of vectors, keyed positionally rather than by a map.",
+        "stackEffect": "[ values ] [ keys ] -> [ [ group... ] ]"
+      },
+      "executorKey": "Group",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
       "category": "vector",
       "vocabularyTier": "standard",
       "standardKind": "operational"

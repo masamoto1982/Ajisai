@@ -52,7 +52,9 @@ const EXAMPLE_NAMES = new Set([
   // registry is correctly the wrong place to look for them.
   'W', 'B', 'A', 'T', 'LIMIT', 'DX', 'XS', 'K', 'I', 'YS',
   // binding names from the pattern clause, likewise locals rather than Words
-  'RANKS',
+  'P', 'M', 'D',
+  // the seed and count of the RANDOM clause, written as names to show the shape
+  'SEED', 'N',
 ]);
 
 // Names the *host* allocates rather than the language: typed alone into the
