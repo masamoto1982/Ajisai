@@ -6,7 +6,7 @@
 
 use crate::types::arena::{NodeId, NodeKind, ValueArena};
 use crate::types::value_protocol::{
-    interpretation_protocol_str, value_to_protocol, ProtocolNode, ProtocolValue,
+    exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode, ProtocolValue,
 };
 use crate::types::{Interpretation, Value, ValueData};
 use serde::{Deserialize, Serialize};
@@ -145,23 +145,13 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     // choosing between a thirty-line continued fraction and an approximation.
     // Additive and optional: a host that ignores it sees exactly what it saw
     // before.
-    if let ValueData::ExactScalar(crate::types::exact::ExactReal::Algebraic(algebraic)) =
-        &value.data
-    {
+    if let Some(exact_terms) = exact_terms(value) {
         let terms = js_sys::Array::new();
-        for (coefficient, radicand) in algebraic.normal_form_terms() {
+        for exact_term in exact_terms {
             let term = js_sys::Object::new();
-            set_prop(
-                &term,
-                "numerator",
-                &coefficient.numerator().to_string().into(),
-            );
-            set_prop(
-                &term,
-                "denominator",
-                &coefficient.denominator().to_string().into(),
-            );
-            set_prop(&term, "radicand", &radicand.to_string().into());
+            set_prop(&term, "numerator", &exact_term.numerator.into());
+            set_prop(&term, "denominator", &exact_term.denominator.into());
+            set_prop(&term, "radicand", &exact_term.radicand.into());
             terms.push(&term.into());
         }
         set_prop(&obj, "exactTerms", &terms.into());

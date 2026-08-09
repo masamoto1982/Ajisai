@@ -1,39 +1,48 @@
 # Ajisai MCP server
 
-A thin [Model Context Protocol](https://modelcontextprotocol.io) server that
-exposes Ajisai to AI agents. It holds **no language logic**: every answer
-comes from running the `ajisai` CLI (Phase 1) or reading a generated artifact
-(`SKILL.md` from Phase 2, `docs/word-manifest.json`). Its only dependency is
-the MCP SDK.
+Ajisai's MCP surface makes the language useful as a bounded, deterministic and
+diagnostic computation kernel for AI agents. The server remains a thin adapter:
+the Rust CLI owns language semantics and generated artifacts own vocabulary.
 
-## Tools
+Ajisai promises **exactness in its supported numeric domain**, rather than
+unqualified “no rounding errors”. Operations such as explicit rounding and
+functions outside that domain retain their documented semantics.
 
-| tool | input | returns |
-|---|---|---|
-| `run` | `source` (text) **or** `file` (path) | the CLI's `ajisai run --json` envelope (status, stack, `stackDisplay`, output, diagnosis, errorFlowTrace, aiDiagnostic, runtimeMetrics incl. `energyProxyScore`) |
-| `explain_word` | `word` (e.g. `MAP`, `MUSIC@PLAY`) | matching `docs/word-manifest.json` entries |
-| `skill` | — | the full `SKILL.md` agent writing protocol |
+## Agent surface
+
+| tool | purpose |
+|---|---|
+| `compute` | execute source with time, source, output and step limits |
+| `check` | parse, resolve and conservatively verify declared contracts without execution |
+| `infer_contracts` | infer contracts for user-defined Words without execution |
+| `word_contract` | query the complete canonical `spec/words.json` contract registry |
+
+Execution tools accept source text only. Deliberately omitting file-path input
+prevents an AI tool call from becoming an arbitrary local-file reader. Ajisai
+language errors and reason-carrying `NIL` remain structured, successful MCP
+results; only invalid requests and host failures set `isError`.
+
+Static context is available through `ajisai://guide/quickstart`,
+`ajisai://vocabulary`, and `ajisai://schema/result`. Tool calls return both text
+and `structuredContent`, including the engine version, registry SHA-256 and
+applied limits. Algebraic results carry their canonical `exactTerms` normal
+form; the accompanying rational value is explicitly marked as an approximation
+and is never the canonical result.
+
+The `ajisai://words/{name}` resource template exposes the same complete Word
+contract without a tool call. Contract lookups accept canonical names and
+aliases; their registry digest is calculated from the canonical specification,
+not from a reduced documentation manifest.
 
 ## Setup
 
 ```sh
-cargo build --bin ajisai --manifest-path rust/Cargo.toml   # the CLI it wraps
-cd tools/mcp-server && npm install                          # the MCP SDK
-node selftest.js                                            # optional: end-to-end check
+cargo build --bin ajisai --manifest-path rust/Cargo.toml
+cd tools/mcp-server
+npm install
+npm run selftest
 ```
 
-The server finds the repo (for `SKILL.md` / the manifest) and the CLI binary
-automatically. Override with `AJISAI_REPO` and `AJISAI_BIN` if needed.
-
-## Connect from Claude Code
-
-Add to `~/.claude.json` (or run `claude mcp add`), then restart Claude Code:
-
-```json
-{ "mcpServers": { "ajisai": { "command": "node",
-  "args": ["/ABSOLUTE/PATH/Ajisai/tools/mcp-server/index.js"] } } }
-```
-
-Any other MCP client connects the same way: launch `node index.js` as a
-stdio MCP server. The three tools then appear as `ajisai/run`,
-`ajisai/explain_word`, and `ajisai/skill`.
+Set `AJISAI_BIN` to select another CLI binary or `AJISAI_REPO` to select the
+artifact root. Connect any stdio MCP client to `node /path/to/index.js`. The
+browser playground is independent of this package and remains available.
