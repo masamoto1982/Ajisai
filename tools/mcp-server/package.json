@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Bounded Ajisai computation and contract tools for MCP-compatible AI agents.",
   "engines": { "node": ">=20" },
-  "files": ["index.js", "result.schema.json", "README.md"],
+  "files": ["index.js", "result.schema.json", "README.md", "golden/cases.json"],
   "bin": { "ajisai-mcp-server": "index.js" },
   "scripts": { "start": "node index.js", "selftest": "node selftest.js" },
   "dependencies": {

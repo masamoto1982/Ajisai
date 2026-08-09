@@ -34,6 +34,9 @@ The committed `result.schema.json` is both the tools' `outputSchema` and the
 content of `ajisai://schema/result`, preventing the advertised contract and the
 resource documentation from drifting apart. All four tools declare read-only,
 non-destructive and idempotent MCP annotations.
+The committed `golden/cases.json` fixtures pin observable success, NIL, ERROR,
+algebraic and execution-limit behavior without pinning incidental runtime
+counters.
 
 The `ajisai://words/{name}` resource template exposes the same complete Word
 contract without a tool call. Contract lookups accept canonical names and

@@ -3,6 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import Ajv2020 from "ajv/dist/2020.js";
 import { createServer, ExecutionGate, LIMITS } from "./index.js";
+import { readFileSync } from "node:fs";
 
 let failures = 0;
 function check(label, condition) {
@@ -20,6 +21,14 @@ function canonicalJson(value) {
     );
   }
   return value;
+}
+
+function atPointer(document, pointer) {
+  return pointer
+    .split("/")
+    .slice(1)
+    .map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"))
+    .reduce((value, part) => value?.[part], document);
 }
 
 const gate = new ExecutionGate(2);
@@ -99,6 +108,25 @@ check(
   "Word resource resolves the canonical contract",
   mapContract.matches?.[0]?.name === "MAP" && mapContract.matches[0]?.nilPolicy,
 );
+
+const golden = JSON.parse(
+  readFileSync(new URL("./golden/cases.json", import.meta.url), "utf8"),
+);
+for (const goldenCase of golden.cases) {
+  const observed = await client.callTool({
+    name: "compute",
+    arguments: { source: goldenCase.source },
+  });
+  const mismatches = Object.entries(goldenCase.expect).filter(
+    ([pointer, expected]) =>
+      JSON.stringify(atPointer(observed.structuredContent, pointer)) !==
+      JSON.stringify(expected),
+  );
+  check(
+    `golden: ${goldenCase.name}`,
+    observed.isError !== true && mismatches.length === 0,
+  );
+}
 
 const compute = await client.callTool({
   name: "compute",

@@ -15,13 +15,13 @@ host and shares the value protocol with the native CLI.
 
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
-| P0 — lossless semantic boundary | 35% | 90% | 31.5% |
+| P0 — lossless semantic boundary | 35% | 95% | 33.25% |
 | P1 — local stdio beta | 35% | 60% | 21.0% |
 | P2 — agent evaluation | 20% | 5% | 1.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **53.5%** |
+| **Overall** | **100%** | — | **55.25%** |
 
-### P0 — lossless semantic boundary (90%)
+### P0 — lossless semantic boundary (95%)
 
 Completed:
 
@@ -34,13 +34,13 @@ Completed:
 - Rust unit tests and the real CLI/MCP integration test guard the boundary.
 - The agent CLI contract lists only implemented commands, with a blocking
   source-to-document drift check.
+- Committed golden cases cover success, reason-carrying NIL, language ERROR,
+  algebraic output and execution-budget exhaustion through the real MCP path.
 
 Remaining exit criteria:
 
 - Move the complete agent envelope behind a typed Rust `agent_api` rather than
   normalizing command-specific CLI JSON in Node.
-- Add golden documents covering success, reason-carrying NIL, language ERROR,
-  algebraic output and limit exhaustion.
 
 ### P1 — local stdio beta (60%)
 
