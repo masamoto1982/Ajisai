@@ -151,7 +151,9 @@ jobs:
         # Blocking: builds the actual Rust CLI, drives the server through an
         # in-memory MCP transport, and validates compute/diagnostic/contract
         # results against the same published JSON Schema clients receive.
-        run: npm run test:mcp
+        run: |
+          npm run check:agent-cli-contract
+          npm run test:mcp
 
   rust-test:
     name: Rust Tests

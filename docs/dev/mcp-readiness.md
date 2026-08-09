@@ -15,13 +15,13 @@ host and shares the value protocol with the native CLI.
 
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
-| P0 — lossless semantic boundary | 35% | 80% | 28.0% |
+| P0 — lossless semantic boundary | 35% | 90% | 31.5% |
 | P1 — local stdio beta | 35% | 60% | 21.0% |
 | P2 — agent evaluation | 20% | 5% | 1.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **50.0%** |
+| **Overall** | **100%** | — | **53.5%** |
 
-### P0 — lossless semantic boundary (80%)
+### P0 — lossless semantic boundary (90%)
 
 Completed:
 
@@ -32,13 +32,13 @@ Completed:
   applied limits.
 - The canonical Word registry digest is derived from `spec/words.json`.
 - Rust unit tests and the real CLI/MCP integration test guard the boundary.
+- The agent CLI contract lists only implemented commands, with a blocking
+  source-to-document drift check.
 
 Remaining exit criteria:
 
 - Move the complete agent envelope behind a typed Rust `agent_api` rather than
   normalizing command-specific CLI JSON in Node.
-- Reconcile the broader agent CLI contract document with commands that are
-  actually implemented, then add a CLI-help drift gate.
 - Add golden documents covering success, reason-carrying NIL, language ERROR,
   algebraic output and limit exhaustion.
 
