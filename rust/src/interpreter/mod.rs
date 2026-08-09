@@ -8,6 +8,7 @@ pub mod compiled_plan;
 pub mod control;
 pub mod control_cond;
 pub mod debug_diagnosis;
+mod debug_next_checks;
 pub(crate) mod declared_nil_contract;
 pub mod epoch;
 pub mod error_flow_trace;

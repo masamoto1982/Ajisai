@@ -78,15 +78,20 @@ fn run_cond_core(
             .ok_or(AjisaiError::StackUnderflow)?,
     };
 
-    let mut else_clause: Option<&CondClause> = None;
-
+    // Clauses are tried in the order they were written, and `IDLE` is tried in
+    // that order too: reaching an `IDLE` clause means no clause above it fired,
+    // which is precisely when `IDLE` is defined to fire. It used to be pulled
+    // out of the sequence and deferred to the end, so a clause written *below*
+    // an `IDLE` could win — the one place where reading COND top to bottom gave
+    // the wrong answer. Writing `IDLE` anywhere but last is still poor style,
+    // and now it also means exactly what it looks like.
+    //
     // Hedged guard prefetch is part of the opt-in elastic engine; when it
     // handles the dispatch it returns from here so the greedy loop below is
     // exactly the code that runs in the default build.
     for clause in clauses {
         if is_idle_guard(&clause.guard) {
-            else_clause = Some(clause);
-            continue;
+            return run_clause_body(interp, clause, &target_value, tail_context);
         }
 
         if evaluate_guard_greedy(
@@ -97,10 +102,6 @@ fn run_cond_core(
         )? {
             return run_clause_body(interp, clause, &target_value, tail_context);
         }
-    }
-
-    if let Some(clause) = else_clause {
-        return run_clause_body(interp, clause, &target_value, tail_context);
     }
 
     Err(AjisaiError::CondExhausted)

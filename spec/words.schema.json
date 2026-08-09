@@ -240,6 +240,17 @@
             "projecting"
           ]
         },
+        "acceptedDomain": {
+          "description": "The shape of operand the Word accepts. `partiality` says what happens to an operand the Word accepts; this says which operands those are, and the two together are what a reader needs before calling it. Omitted where the Word takes whatever its family takes.",
+          "type": "string",
+          "enum": [
+            "scalar",
+            "numeric",
+            "flatNumericVector",
+            "vector",
+            "text"
+          ]
+        },
         "purity": {
           "enum": [
             "pure",

@@ -69,7 +69,19 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
     if let Some(h) = hint {
         let len: usize = interp.stack.len();
         if len > 0 {
-            interp.stack.set_role_at(len - 1, h);
+            // `Interval` describes a *number*'s presentation. `SQRT` lifts over
+            // a vector now, and stamping the role on the vector itself rendered
+            // `[ 4 9 ] SQRT` as `[2/1, 3/1]` — a scalar's notation wrapped
+            // around a collection. A collection keeps whatever role it was
+            // built with; the lanes inside it are numbers either way.
+            let stamps_a_scalar_role = matches!(h, Interpretation::Interval);
+            let top_is_collection = interp
+                .stack
+                .last()
+                .is_some_and(|value| value.as_vector_view().is_some());
+            if !(stamps_a_scalar_role && top_is_collection) {
+                interp.stack.set_role_at(len - 1, h);
+            }
         }
     }
 }
@@ -250,7 +262,7 @@ impl Interpreter {
                     }
 
                     if depth != 0 {
-                        return Err(AjisaiError::from("Unclosed code block"));
+                        return Err(AjisaiError::MalformedSource("Unclosed code block".into()));
                     }
 
                     self.stack.push_with_role(
@@ -463,7 +475,11 @@ impl Interpreter {
         // Source entry is the one place a token has a position, so it is the
         // one place the positions are recorded. They are index-aligned with
         // `tokens` and consumed by the depth-1 cursor in `execute_section_core`.
-        let (tokens, spans) = crate::tokenizer::tokenize_with_spans(code)?;
+        // A lexical failure is a fault in the writing, not in any value, so it
+        // is classified as one rather than arriving as an uncategorized
+        // `Custom` whose only next check was "read the message".
+        let (tokens, spans) =
+            crate::tokenizer::tokenize_with_spans(code).map_err(AjisaiError::MalformedSource)?;
         self.source_spans = spans;
         self.current_source_span = None;
         self.check_source_numeric_literals(&tokens)?;

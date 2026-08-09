@@ -208,4 +208,105 @@ mod example_words_tests {
             .expect("FIZZBUZZ should leave the numeric value on the stack");
         assert_eq!(scalar.to_i64().unwrap(), 7);
     }
+
+    /// `IDLE` fires where it is written, not at the end.
+    ///
+    /// The dispatcher used to lift every `IDLE` clause out of the sequence and
+    /// try it only after every other guard had failed, so a clause written
+    /// *below* an `IDLE` could win — the one place where reading a COND top to
+    /// bottom gave the wrong answer. Reaching an `IDLE` means nothing above it
+    /// fired, which is exactly when `IDLE` is defined to fire.
+    #[tokio::test]
+    async fn idle_fires_in_the_order_it_is_written() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("TRUE\n{ IDLE | 1 }\n{ TRUE | 0 }\nCOND")
+            .await;
+        assert!(result.is_ok(), "{:?}", result);
+        assert_eq!(
+            interp.stack[0].as_scalar().unwrap().to_i64().unwrap(),
+            1,
+            "the IDLE written first must win over the TRUE guard below it"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_clause_above_idle_still_wins() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("5\n{ 99 GT | 'a' }\n{ IDLE | 'b' }\n{ 0 GT | 'c' }\nCOND")
+            .await;
+        assert!(result.is_ok(), "{:?}", result);
+        assert_eq!(interp.stack[0].as_text().unwrap(), "b");
+    }
+
+    /// Two or more `|` clauses on one physical line used to be rejected before
+    /// evaluation. Layout is presentation now, so the same COND written flat
+    /// denotes the same program.
+    #[tokio::test]
+    async fn clauses_on_one_line_denote_the_same_program() {
+        let mut flat = Interpreter::new();
+        let mut tall = Interpreter::new();
+        assert!(flat
+            .execute("5 { 3 GT | 'big' } { IDLE | 'small' } COND")
+            .await
+            .is_ok());
+        assert!(tall
+            .execute("5\n{ 3 GT | 'big' }\n{ IDLE | 'small' }\nCOND")
+            .await
+            .is_ok());
+        assert_eq!(
+            flat.stack[0].as_text().unwrap(),
+            tall.stack[0].as_text().unwrap()
+        );
+        assert_eq!(flat.stack[0].as_text().unwrap(), "big");
+    }
+
+    /// A multi-line COND nested inside a Word body used to fail at the *call*
+    /// with "Unclosed code block": the body was split into execution lines at
+    /// every line break, including the ones interior to the block, so the
+    /// first line was the unclosed fragment `{ { 0 GT | 1 }`.
+    #[tokio::test]
+    async fn a_word_body_may_hold_a_multi_line_cond() {
+        let mut interp = Interpreter::new();
+        let define = interp
+            .execute("{ { { 0 GT | 1 }\n{ IDLE | 0 }\nCOND } MAP } 'STEPFN' DEF")
+            .await;
+        assert!(define.is_ok(), "{:?}", define);
+        interp.collect_output();
+
+        let call = interp.execute("[ -1 2 ] STEPFN").await;
+        assert!(call.is_ok(), "{:?}", call);
+        let result = &interp.stack[0];
+        assert_eq!(
+            result.child(0).unwrap().as_scalar().unwrap().to_i64(),
+            Some(0)
+        );
+        assert_eq!(
+            result.child(1).unwrap().as_scalar().unwrap().to_i64(),
+            Some(1)
+        );
+    }
+
+    /// The same rule for a vector literal: a break inside `[ ]` is interior to
+    /// one value, not a separator between two statements.
+    #[tokio::test]
+    async fn a_word_body_may_hold_a_multi_line_vector() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("{ [ 1\n2\n3 ] } 'V3' DEF").await.is_ok());
+        interp.collect_output();
+        assert!(interp.execute("V3").await.is_ok());
+        assert_eq!(interp.stack[0].len(), 3);
+    }
+
+    /// And the rule it must not break: at the body's own level a line break
+    /// still ends a statement.
+    #[tokio::test]
+    async fn a_break_at_body_level_still_separates_statements() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("{ 1 2 ADD\n10 MUL } 'W' DEF").await.is_ok());
+        interp.collect_output();
+        assert!(interp.execute("W").await.is_ok());
+        assert_eq!(interp.stack[0].as_scalar().unwrap().to_i64(), Some(30));
+    }
 }

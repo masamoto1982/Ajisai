@@ -150,13 +150,13 @@ impl Interpreter {
         }
         let upper = name.to_uppercase();
         if self.core_vocabulary.contains_key(&upper) {
-            return Err(AjisaiError::from(format!(
+            return Err(AjisaiError::NameConflict(format!(
                 "Cannot bind '{}': it is a Core Word, and a binding may not shadow one.",
                 upper
             )));
         }
         if self.user_words.contains_key(&upper) {
-            return Err(AjisaiError::from(format!(
+            return Err(AjisaiError::NameConflict(format!(
                 "Cannot bind '{}': it is a User Word. Delete it first, or bind another name.",
                 upper
             )));

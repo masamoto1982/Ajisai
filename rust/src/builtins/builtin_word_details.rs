@@ -2,7 +2,7 @@ use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
 use super::builtin_word_lookup_docs::lookup_builtin_lookup_doc;
 use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
 use crate::coreword_registry::{ExecutionForm, NilPolicy, Partiality};
-use crate::kernel::generated::{generated_word, VocabularyTier};
+use crate::kernel::generated::{generated_word, AcceptedDomain, VocabularyTier};
 
 /// Render the LOOKUP body for a built-in word: the four authored base
 /// sections (Category / Summary / Role / Stack Effect), the authored
@@ -166,8 +166,31 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
                 lines.push("A NIL value keeps its reason through this word.")
             }
         }
+        // The accepted domain qualifies everything above it. `total` says what
+        // happens to an operand the Word accepts, and read alone it promised
+        // more than any Word delivers: `SORT` reported "always produces a
+        // result" while raising on a vector of strings. Stating the domain is
+        // what makes the totality claim true as written.
+        if let Some(domain) = word.accepted_domain {
+            lines.push(accepted_domain_sentence(domain));
+        }
     }
     lines.join("\n")
+}
+
+/// The user-facing sentence for a declared accepted domain.
+fn accepted_domain_sentence(domain: AcceptedDomain) -> &'static str {
+    match domain {
+        AcceptedDomain::Scalar => "Accepts a single number. Any other shape raises an error.",
+        AcceptedDomain::Numeric => {
+            "Accepts a number, or a vector of them at any depth, applied\nelement-wise. Any other shape raises an error."
+        }
+        AcceptedDomain::FlatNumericVector => {
+            "Accepts a flat vector of numbers. A vector holding strings,\ntruth values, NIL, or nested vectors raises an error."
+        }
+        AcceptedDomain::Vector => "Accepts a vector. Any other shape raises an error.",
+        AcceptedDomain::Text => "Accepts text. Any other shape raises an error.",
+    }
 }
 
 /// Side Effects derived from the §7.14 `effects` list declared in
@@ -265,5 +288,45 @@ fn push_indented(out: &mut String, body: &str, indent: &str) {
         out.push_str(indent);
         out.push_str(line);
         out.push('\n');
+    }
+}
+
+#[cfg(test)]
+mod accepted_domain_render_tests {
+    use super::lookup_builtin_detail;
+
+    /// The Failure section used to promise `SORT` "always produces a result",
+    /// which is false of a vector holding a string. The declared accepted
+    /// domain is what makes the totality claim true as written.
+    #[test]
+    fn sort_states_the_shape_it_accepts() {
+        let text = lookup_builtin_detail("SORT");
+        assert!(text.contains("Total: always produces a result."), "{text}");
+        assert!(text.contains("Accepts a flat vector of numbers."), "{text}");
+    }
+
+    #[test]
+    fn min_and_sqrt_state_that_they_lift() {
+        for word in ["MIN", "MAX", "SQRT", "ABS", "NEG"] {
+            let text = lookup_builtin_detail(word);
+            assert!(
+                text.contains("Accepts a number, or a vector of them at any depth"),
+                "{word}: {text}"
+            );
+        }
+    }
+
+    /// A raw Rust escape once reached a reader: SQRT's Role said
+    /// `the multiquadratic \u{221a}d` verbatim.
+    #[test]
+    fn no_lookup_text_leaks_a_rust_unicode_escape() {
+        for word in crate::builtins::builtin_specs() {
+            let text = lookup_builtin_detail(word.name);
+            assert!(
+                !text.contains("\\u{"),
+                "{}: LOOKUP text carries a raw escape:\n{text}",
+                word.name
+            );
+        }
     }
 }

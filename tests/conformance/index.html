@@ -1309,6 +1309,27 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-max-lifts-over-a-vector" data-category="core">
+  <h3>MAX applies element-wise against a scalar (a rectifier)</h3>
+  <pre class="ajisai-source">[ -1 2 -3 ] 0 MAX</pre>
+  <pre class="ajisai-expect-result">[ 0/1 2/1 0/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-min-pairs-two-vectors" data-category="core">
+  <h3>MIN pairs two vectors element-wise</h3>
+  <pre class="ajisai-source">[ 1 5 3 ] [ 4 2 6 ] MIN</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt-lifts-over-a-vector" data-category="core">
+  <h3>SQRT applies element-wise, and a negative lane bubbles alone</h3>
+  <pre class="ajisai-source">[ 4 -1 ] SQRT</pre>
+  <pre class="ajisai-expect-result">[ 2/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-take-exceeds-length-error" data-category="core">
   <h3>TAKE beyond the vector length is an error, not a shorter vector</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] TAKE</pre>
@@ -1378,6 +1399,53 @@
   <h3>A guard reducing to the bare number 1 fires as truthy</h3>
   <pre class="ajisai-source">7 { 1 } { [ 42 ] } COND</pre>
   <pre class="ajisai-expect-result">[ 42/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-idle-fires-in-written-order" data-category="core">
+  <h3>IDLE fires where it is written, not after every other clause</h3>
+  <pre class="ajisai-source">TRUE
+{ IDLE | 1 }
+{ TRUE | 0 }
+COND</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-clause-above-idle-wins" data-category="core">
+  <h3>A clause written above IDLE still wins; one written below it cannot</h3>
+  <pre class="ajisai-source">5
+{ 99 GT | 'a' }
+{ IDLE | 'b' }
+{ 0 GT | 'c' }
+COND</pre>
+  <pre class="ajisai-expect-result">'b'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-one-line-is-the-same-program" data-category="core">
+  <h3>Clause layout is presentation: a COND written flat denotes the same program</h3>
+  <pre class="ajisai-source">5 { 3 GT | 'big' } { IDLE | 'small' } COND</pre>
+  <pre class="ajisai-expect-result">'big'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-word-body-multi-line-cond" data-category="core">
+  <h3>A word body may hold a multi-line COND inside a nested block</h3>
+  <pre class="ajisai-source">{ { { 0 GT | 1 }
+{ IDLE | 0 }
+COND } MAP } 'STEPFN' DEF
+[ -1 2 ] STEPFN</pre>
+  <pre class="ajisai-expect-result">[ 0/1 1/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-word-body-line-break-still-separates" data-category="core">
+  <h3>A line break at the body's own level still separates statements</h3>
+  <pre class="ajisai-source">{ 1 2 ADD
+10 MUL } 'W' DEF
+W</pre>
+  <pre class="ajisai-expect-result">30/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

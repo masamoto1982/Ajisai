@@ -133,10 +133,10 @@ describe('formatAjisaiSource', () => {
     });
 });
 
-// The one layout rule Ajisai enforces is "one `|` clause per line": a COND
-// written on one line does not run at all. Formatting it is therefore the
-// formatter's most useful single action, and it used to be the one thing it
-// declined to do.
+// One `|` clause per line is the canonical written form of a COND. The
+// language accepts a one-line COND too, so this is style rather than repair,
+// but it is the form the reference and every example use: a COND is read down
+// its guards.
 describe('formatAjisaiSource COND clause splitting', () => {
     test('splits a one-line COND into one clause per line', () => {
         expect(formatAjisaiSource('{ { 2 LT | 1 * } { IDLE | 1 - FOO } COND } \'FOO\' DEF'))
@@ -154,8 +154,8 @@ describe('formatAjisaiSource COND clause splitting', () => {
     });
 
     test('clauses inside a word body are split, wherever they are nested', () => {
-        // The rule counts every clause that *begins* on the physical line,
-        // however deep, so the body's own clauses each get one.
+        // Every clause that *begins* on the physical line gets its own,
+        // however deep, so the form is the same at every nesting level.
         expect(formatAjisaiSource("{ { A | 1 } { B | 2 } COND } 'W' DEF"))
             .toBe("{ { A | 1 }\n  { B | 2 } COND } 'W' DEF");
     });

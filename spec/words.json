@@ -853,6 +853,7 @@
       "executorKey": "Abs",
       "effects": [],
       "partiality": "total",
+      "acceptedDomain": "numeric",
       "category": "math",
       "vocabularyTier": "standard",
       "standardKind": "namedPattern"
@@ -896,6 +897,7 @@
       "executorKey": "Neg",
       "effects": [],
       "partiality": "total",
+      "acceptedDomain": "numeric",
       "category": "math",
       "vocabularyTier": "kernel"
     },
@@ -914,8 +916,9 @@
         "reason": null
       },
       "errorWhen": [
-        "stackTargetMode",
-        "nonNumeric"
+        "nonNumeric",
+        "shapeMismatch",
+        "stackTargetMode"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -928,9 +931,9 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Smaller of two numbers.",
+        "summary": "Smaller of two numbers, element-wise with broadcasting.",
         "hover": "Smaller of two numbers.",
-        "lookup": "Smaller of two numbers.",
+        "lookup": "Smaller of two numbers, element-wise with broadcasting.",
         "syntax": "1 2 MIN",
         "role": "Comparison-selected operand; comparison is total, so it always decides.",
         "stackEffect": "[ a ] [ b ] -> [ min ]"
@@ -938,6 +941,7 @@
       "executorKey": "Min",
       "effects": [],
       "partiality": "total",
+      "acceptedDomain": "numeric",
       "category": "math",
       "vocabularyTier": "standard",
       "standardKind": "namedPattern"
@@ -957,8 +961,9 @@
         "reason": null
       },
       "errorWhen": [
-        "stackTargetMode",
-        "nonNumeric"
+        "nonNumeric",
+        "shapeMismatch",
+        "stackTargetMode"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -971,9 +976,9 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Larger of two numbers.",
+        "summary": "Larger of two numbers, element-wise with broadcasting.",
         "hover": "Larger of two numbers.",
-        "lookup": "Larger of two numbers.",
+        "lookup": "Larger of two numbers, element-wise with broadcasting.",
         "syntax": "1 2 MAX",
         "role": "Comparison-selected operand; comparison is total, so it always decides.",
         "stackEffect": "[ a ] [ b ] -> [ max ]"
@@ -981,6 +986,7 @@
       "executorKey": "Max",
       "effects": [],
       "partiality": "total",
+      "acceptedDomain": "numeric",
       "category": "math",
       "vocabularyTier": "standard",
       "standardKind": "namedPattern"
@@ -1015,16 +1021,17 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Exact square root of a non-negative rational.",
+        "summary": "Exact square root of a non-negative rational, element-wise over a vector.",
         "hover": "SQRT — exact square root",
-        "lookup": "Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.",
+        "lookup": "Exact square root of a non-negative rational, element-wise over a vector. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.",
         "syntax": "2 SQRT",
-        "role": "The only Word that leaves the rationals: it produces the multiquadratic \\u{221a}d.",
+        "role": "The only Word that leaves the rationals: it produces the multiquadratic √d.",
         "stackEffect": "[ x ] -> [ sqrt(x) ]"
       },
       "executorKey": "Sqrt",
       "effects": [],
       "partiality": "projecting",
+      "acceptedDomain": "numeric",
       "category": "math",
       "vocabularyTier": "kernel"
     },
@@ -1401,6 +1408,7 @@
       "executorKey": "Sort",
       "effects": [],
       "partiality": "total",
+      "acceptedDomain": "flatNumericVector",
       "category": "vector",
       "vocabularyTier": "standard",
       "standardKind": "operational"

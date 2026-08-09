@@ -292,7 +292,7 @@ This numeric grammar is the single definition of what text denotes a number. A c
 </p>
 
 <p>
-Whitespace separates tokens and is otherwise insignificant, with one exception, which is stated here so that it is not discovered by hitting it: a line break delimits <code>COND</code> clauses. A code block containing a top-level <code>|</code> is a guard clause, and at most one such block may begin on any one line. Two clauses written on the same line are a source error, so the vertical layout of a <code>COND</code> is part of its spelling rather than a convention.
+Whitespace separates tokens and is otherwise insignificant, with one exception, which is stated here so that it is not discovered by hitting it: inside a definition body a line break at the body's own level separates statements. A break written inside a <code>{ }</code> block or a <code>[ ]</code> vector is interior to that value and separates nothing, so a multi-line block is one statement however many lines it spans. <code>COND</code> imposes no layout rule of its own: one <code>|</code> clause per line is the canonical form and the formatter produces it, but a <code>COND</code> written flat denotes the same program.
 </p>
 
 <p>

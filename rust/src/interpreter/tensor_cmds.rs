@@ -224,15 +224,19 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
     if args_val.is_nil() {
         interp.stack.push(args_val);
-        return Err(AjisaiError::from("FILL requires [shape... value] vector"));
+        return Err(AjisaiError::create_structure_error(
+            "[ shape... value ] vector",
+            "NIL",
+        ));
     }
 
     let n = args_val.len();
 
     if n < 2 {
         interp.stack.push(args_val);
-        return Err(AjisaiError::from(
-            "FILL requires [shape... value] (at least 2 elements)",
+        return Err(AjisaiError::create_structure_error(
+            "[ shape... value ] vector of at least 2 elements",
+            &format!("vector of {} element(s)", n),
         ));
     }
 
@@ -240,7 +244,10 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         Some(f) => f,
         None => {
             interp.stack.push(args_val);
-            return Err(AjisaiError::from("FILL value must be a scalar"));
+            return Err(AjisaiError::create_structure_error(
+                "a scalar as the last element of [ shape... value ]",
+                "non-scalar value",
+            ));
         }
     };
 

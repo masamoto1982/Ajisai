@@ -1,12 +1,11 @@
 // Ajisai source formatter.
 //
 // Goal: tidy messy input into the canonical written form without ever changing
-// what the code means. In Ajisai a line break inside a `{ }` block is a
-// statement separator (SPECIFICATION.html 3.5) and each `|` COND clause must
-// occupy exactly one line (3.6), so line breaks are semantically significant.
-// The formatter therefore preserves the line structure exactly and rewrites
-// only the *insignificant* whitespace: the spacing between tokens and the
-// indentation at the start of each line.
+// what the code means. In Ajisai a line break at a definition body's own level
+// is a statement separator (SPECIFICATION.html 3.5), so line breaks are
+// semantically significant. The formatter therefore preserves the line
+// structure exactly and rewrites only the *insignificant* whitespace: the
+// spacing between tokens and the indentation at the start of each line.
 //
 // Per line it:
 //   - collapses runs of spaces/tabs to a single space;
@@ -16,11 +15,11 @@
 //   - re-indents the line by the bracket/block nesting depth open at its start.
 //
 // It adds a line break in exactly one situation: when two or more `|` COND
-// clauses begin on the same line, which the language rejects outright. That is
-// the one layout rule Ajisai enforces, so a formatter that left it alone would
-// decline to fix the only thing it is obliged to fix. If the input contains
-// something it cannot rewrite safely (an unterminated string, or a newline
-// inside a string literal) it returns the input unchanged.
+// clauses begin on the same line. That is a layout choice, not a repair — such
+// a COND runs either way — but one clause per line is the canonical form, and
+// it is the form in which a COND can be read down its guards. If the input
+// contains something it cannot rewrite safely (an unterminated string, or a
+// newline inside a string literal) it returns the input unchanged.
 
 const INDENT_UNIT = '  ';
 
@@ -154,18 +153,15 @@ const isCondClauseBlock = (tokens: string[], start: number): boolean => {
 
 // Break a line so that at most one COND guard clause begins on it.
 //
-// The formatter otherwise never adds a line break, and this is the one place
-// where refusing to add one leaves the source unusable rather than merely
-// untidy: "one `|` clause per line" is the single layout rule the language
-// enforces, and a COND written on one line does not run at all — it fails
-// before evaluation with *COND: | clauses must be written one clause per line*.
-// Splitting is therefore not a style choice imposed on working code; it is the
-// difference between code that runs and code that cannot.
+// The formatter otherwise never adds a line break. It adds one here because a
+// COND read down its guards is a different thing to read than a COND read
+// along a line, and the vertical form is what the reference and every example
+// show. The language accepts both — this is the canonical form, not a repair.
 //
 // The break goes immediately before each clause after the first, and nowhere
 // else, so everything the author wrote stays where they put it. Clauses nested
-// inside a clause body are split the same way, because the rule counts every
-// clause that begins on the physical line however deeply it is nested.
+// inside a clause body are split the same way, so the form is the same at
+// every depth.
 const splitCondClauseLines = (tokens: string[]): string[][] => {
     const out: string[][] = [];
     let current: string[] = [];

@@ -203,7 +203,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "MIN",
         category: "math",
-        summary: "Smaller of two numbers.",
+        summary: "Smaller of two numbers, element-wise with broadcasting.",
         role: "Comparison-selected operand; comparison is total, so it always decides.",
         stack_effect: "[ a ] [ b ] -> [ min ]",
         hover_summary: "Smaller of two numbers.",
@@ -212,7 +212,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "MAX",
         category: "math",
-        summary: "Larger of two numbers.",
+        summary: "Larger of two numbers, element-wise with broadcasting.",
         role: "Comparison-selected operand; comparison is total, so it always decides.",
         stack_effect: "[ a ] [ b ] -> [ max ]",
         hover_summary: "Larger of two numbers.",
@@ -221,8 +221,8 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "SQRT",
         category: "math",
-        summary: "Exact square root of a non-negative rational.",
-        role: "The only Word that leaves the rationals: it produces the multiquadratic \\u{221a}d.",
+        summary: "Exact square root of a non-negative rational, element-wise over a vector.",
+        role: "The only Word that leaves the rationals: it produces the multiquadratic √d.",
         stack_effect: "[ x ] -> [ sqrt(x) ]",
         hover_summary: "SQRT — exact square root",
         hover_syntax: "2 SQRT",

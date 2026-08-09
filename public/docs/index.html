@@ -487,7 +487,7 @@
                         </table>
                     </div>
                     <h3>Where a line break matters</h3>
-                    <p>Whitespace is whitespace: a newline separates tokens exactly as a space does, and a program may be laid out over as many lines as you like. There is <strong>one</strong> exception, and it is worth knowing before you meet it. A <code>COND</code> guard clause — a block containing a top-level <code>|</code> — must start its own line, and at most one such clause may begin on any line. Writing a whole <code>COND</code> on one line is a source error, not a style choice, and the message says so: <em>COND: | clauses must be written one clause per line</em>. See <a href="#cond">Conditionals</a>. Nothing else in the language reads line breaks.</p>
+                    <p>Whitespace is whitespace: a newline separates tokens exactly as a space does, and a program may be laid out over as many lines as you like. There is <strong>one</strong> exception, and it is worth knowing before you meet it. Inside a word body, a line break <em>at the body's own level</em> ends one statement and starts the next. A break written inside a <code>{ }</code> block or a <code>[ ]</code> vector is interior to that value and separates nothing, so a block may span as many lines as it likes and still be one statement. Nothing else in the language reads line breaks — a <code>COND</code> written on one line and the same <code>COND</code> written down the page are the same program.</p>
                     <h3>Number literals</h3>
                     <p>A decimal literal carries at least one digit on <strong>both</strong> sides of the point: <code>0.5</code> and <code>5.0</code> are numbers, while <code>.5</code> and <code>5.</code> are not. The point is therefore never the first or last character of a number, which is what lets a lone <code>.</code> be an ordinary name rather than a truncated literal.</p>
                     <p class="ref-note">A string closes on the quote that sits at a token boundary, which is how a string carries an apostrophe with no escape character: <code>'It's fine'</code> is one string. A quote followed immediately by a name character stays inside the text, so <code>'abc'CHARS</code> is an unclosed string rather than two tokens.</p>
@@ -811,6 +811,7 @@
                         </div>
                     </div>
                     <p class="ref-note">The remaining numeric words live here too: <code>ABS</code> and <code>NEG</code> for sign, <code>MIN</code> and <code>MAX</code> over two numbers, <code>SQRT</code>, the rounding pair <code>FLOOR</code> and <code>ROUND</code>, and <code>QUANTIZE</code>, which rounds to the nearest multiple of <code>1/d</code> and is the one to reach for in a loop — see <a href="#iterative">Iterative Numerics</a>. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
+                    <p class="ref-note">Every one of them lifts. <code>MIN</code>, <code>MAX</code> and <code>SQRT</code> broadcast on the same rule as <code>+</code>, so a rectifier is <code>[ -1 2 -3 ] 0 MAX</code> — <code>[ 0/1 2/1 0/1 ]</code> — a per-feature standard deviation is one <code>SQRT</code> over the vector of variances, and the element-wise smaller of two vectors is <code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>. No <code>MAP</code> and no block: reach for one only when the operation itself is not a numeric word. A lane that misses <code>SQRT</code>'s domain bubbles alone, so <code>[ 4 -1 ] SQRT</code> is <code>[ 2/1 NIL ]</code> rather than a failed vector.</p>
                 </section>
 
                 <section id="comparison" class="ref-page">
@@ -1356,6 +1357,11 @@
                                     <td><code>[ 1/1 2/1 3/1 ]</code></td>
                                     <td class="notes">Keep the first N elements.</td>
                                 </tr>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 5 ] -2 TAKE</code></td>
+                                    <td><code>[ 4/1 5/1 ]</code></td>
+                                    <td class="notes">A negative count takes from the end.</td>
+                                </tr>
                             </tbody>
                         </table>
                         </div>
@@ -1516,12 +1522,13 @@
                                 <tr><td>A word body (<code>DEF</code>)</td><td class="notes">the whole stack</td><td class="notes">whatever it pushes, however many</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">the whole stack</td><td class="notes">whatever it pushes, however many</td></tr>
                                 <tr><td><code>COND</code> guard, and the body that fires</td><td class="notes">one value: the dispatch value, alone</td><td class="notes">exactly one — the top; leaving none is an error, and anything under the top is discarded</td></tr>
-                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">one value: the current element, alone</td><td class="notes">exactly one — the mapped element, or a truth value for the predicate words</td></tr>
-                                <tr><td><code>FOLD</code></td><td class="notes">two values: the accumulator, then the element</td><td class="notes">exactly one: the next accumulator</td></tr>
+                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">one value: the current element, alone</td><td class="notes">exactly one — the mapped element, or a truth value for the predicate words; leaving none is an error, and anything under the top is discarded</td></tr>
+                                <tr><td><code>FOLD</code></td><td class="notes">two values: the accumulator, then the element</td><td class="notes">exactly one: the next accumulator; leaving none is an error, and anything under the top is discarded</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <p>So <code>{ + } 'ADDW' DEF</code> followed by <code>3 4 ADDW</code> gives <code>7</code>, and so does <code>3 4 { + } EXEC</code> — both see the whole stack. But <code>100 [ 1 2 ] { + } MAP</code> is a stack underflow: the block sees one element and the <code>100</code> is not in its frame.</p>
+                    <p class="ref-note">"Anything under the top is discarded" is worth reading twice, because it is silent. A predicate that leaves two values passes: <code>[ 1 2 3 ] { 1 GT TRUE } FILTER</code> keeps everything, because the <code>TRUE</code> on top is the answer and the comparison beneath it is thrown away. Only leaving <em>nothing</em> is an error. If a higher-order block gives an answer you cannot explain, count what it leaves.</p>
                     <p class="ref-note">When something inside a block fails, the diagnosis names <strong>the word that failed</strong>, not the word that ran the block: <code>[ 1 2 ] { 'x' 1 ADD } MAP</code> reports <code>ADD</code>, with <code>inside MAP</code> beside it and the position of the statement that ran. A word you defined is where that stops — a call to it reports the word, because from the caller&#39;s side that is what failed.</p>
                     <p class="ref-note">A block written <em>inside</em> another block is data where it is written. It is evaluated only when the word that receives it runs it, under that word's row above rather than the enclosing block's — which is why a word may call itself from inside a <code>{ }</code> it hands to <code>MAP</code> or <code>EXEC</code>, and why that call is an ordinary recursive call.</p>
 
@@ -1643,7 +1650,8 @@ FILTER</code></td>
                 <section id="cond" class="ref-page">
                     <h2>Conditionals</h2>
                     <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is true. In the clause form, <code>|</code> separates the guard from the body and each clause occupies exactly one line; <code>TRUE</code> makes an always-true else guard.</p>
-                    <p>The else clause can also be spelled <code>IDLE</code>, and that is the spelling to prefer. <code>IDLE</code> is not one of the 57 Words and you will not find it in the Dictionary panel: it is a keyword read positionally, meaningful only as a guard, and it means <em>this clause fires when no earlier one did</em>. <code>TRUE</code> reaches the same outcome by pushing a value the guard then reads, which works but says less; <code>IDLE</code> says which clause is the fallback.</p>
+                    <p>The else clause can also be spelled <code>IDLE</code>, and that is the spelling to prefer. <code>IDLE</code> is not one of the 59 Words and you will not find it in the Dictionary panel: it is a keyword read positionally, meaningful only as a guard, and it means <em>this clause fires when no earlier one did</em>. <code>TRUE</code> reaches the same outcome by pushing a value the guard then reads, which works but says less; <code>IDLE</code> says which clause is the fallback.</p>
+                    <p class="ref-note"><code>IDLE</code> fires <em>where it is written</em>. Clauses are tried top to bottom and <code>IDLE</code> takes its turn in that order, so anything written below an <code>IDLE</code> is unreachable. Put it last — which is what "fallback" means anyway.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1658,7 +1666,7 @@ FILTER</code></td>
 { TRUE | 'positive' }
 COND</code></td>
                                     <td><code>'zero'</code></td>
-                                    <td class="notes">Clause form: guard left of <code>|</code>, body right; one clause per line.</td>
+                                    <td class="notes">Clause form: guard left of <code>|</code>, body right; one clause per line by convention.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1687,7 +1695,7 @@ COND</code></td>
                         </div>
                     </div>
                     <p class="ref-note">Each guard answers <code>TRUE</code> or <code>FALSE</code>, so a clause either fires or does not. If no clause matches and no else clause is present, <code>COND</code> raises an error.</p>
-                    <p class="ref-note">One clause per line is a rule, not a layout preference — it is the only place in the language where a line break is significant (see <a href="#tokens">Tokens and Spelling</a>). Collapsing the clause form onto one line fails before anything runs, with <em>COND: | clauses must be written one clause per line</em>. The pair form above has no <code>|</code> in it and so carries no such rule: it fits on one line.</p>
+                    <p class="ref-note">One clause per line is the canonical form, and the Format button produces it, but it is a layout preference rather than a rule: a <code>COND</code> collapsed onto one line runs and means the same thing. Write it down the page anyway — a <code>COND</code> is read by scanning its guards, and that only works when they are stacked.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

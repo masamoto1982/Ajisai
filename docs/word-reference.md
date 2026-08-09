@@ -310,7 +310,7 @@ Numeric negation.
 
 ## `MIN`
 
-Smaller of two numbers.
+Smaller of two numbers, element-wise with broadcasting.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
@@ -320,11 +320,11 @@ Smaller of two numbers.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `1 2 MIN`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`, `stackTargetMode`
 
 ## `MAX`
 
-Larger of two numbers.
+Larger of two numbers, element-wise with broadcasting.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
@@ -334,11 +334,11 @@ Larger of two numbers.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `1 2 MAX`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`, `stackTargetMode`
 
 ## `SQRT`
 
-Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
+Exact square root of a non-negative rational, element-wise over a vector. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`

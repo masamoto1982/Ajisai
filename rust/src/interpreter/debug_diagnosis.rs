@@ -1,3 +1,4 @@
+use super::debug_next_checks::build_next_checks;
 use crate::error::{AjisaiError, ErrorCategory, NilReason};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,10 +39,13 @@ pub enum CauseClass {
     Domain,
     Index,
     VectorLength,
+    ShapeMismatch,
     NilFlow,
     Environment,
     Effect,
     UserLogic,
+    ResourceLimit,
+    SourceForm,
     ContractViolation,
     OptimizerMismatch,
     InternalInvariant,
@@ -166,10 +170,13 @@ impl CauseClass {
             CauseClass::Domain => "domain",
             CauseClass::Index => "index",
             CauseClass::VectorLength => "vectorLength",
+            CauseClass::ShapeMismatch => "shapeMismatch",
             CauseClass::NilFlow => "nilFlow",
             CauseClass::Environment => "environment",
             CauseClass::Effect => "effect",
             CauseClass::UserLogic => "userLogic",
+            CauseClass::ResourceLimit => "resourceLimit",
+            CauseClass::SourceForm => "sourceForm",
             CauseClass::ContractViolation => "contractViolation",
             CauseClass::OptimizerMismatch => "optimizerMismatch",
             CauseClass::InternalInvariant => "internalInvariant",
@@ -187,8 +194,17 @@ impl CauseClass {
             ErrorCategory::DivisionByZero => CauseClass::Domain,
             ErrorCategory::IndexOutOfBounds => CauseClass::Index,
             ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
-            ErrorCategory::ExecutionLimitExceeded => CauseClass::UserLogic,
-            ErrorCategory::RecursionLimitExceeded => CauseClass::UserLogic,
+            ErrorCategory::ShapeMismatch => CauseClass::ShapeMismatch,
+            ErrorCategory::MalformedSource => CauseClass::SourceForm,
+            ErrorCategory::NameConflict => CauseClass::ContractViolation,
+            // LANG.MACHINE.LIMITS calls the step and recursion budgets host
+            // safety controls rather than language semantics, and the two
+            // answers differ: "the program is wrong" is fixed by rewriting it,
+            // "the program is too big" by raising the budget or by finding a
+            // cheaper shape for the same computation. Filing both under
+            // `userLogic` sent every reader down the first road.
+            ErrorCategory::ExecutionLimitExceeded => CauseClass::ResourceLimit,
+            ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::ModeUnsupported => CauseClass::ContractViolation,
             ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
             ErrorCategory::CondExhausted => CauseClass::UserLogic,
@@ -343,10 +359,13 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         Some(ErrorCategory::DivisionByZero)
         | Some(ErrorCategory::StructureError)
         | Some(ErrorCategory::IndexOutOfBounds)
+        | Some(ErrorCategory::ShapeMismatch)
         | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
         Some(ErrorCategory::UnknownWord)
         | Some(ErrorCategory::StackUnderflow)
         | Some(ErrorCategory::ModeUnsupported)
+        | Some(ErrorCategory::MalformedSource)
+        | Some(ErrorCategory::NameConflict)
         | Some(ErrorCategory::CondExhausted) => "fixProgram",
         Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
         Some(ErrorCategory::ExecutionLimitExceeded)
@@ -451,206 +470,6 @@ fn build_evidence(
     }
     out.push(format!("stackLenBefore={}", stack_len_before));
     out.push(format!("stackLenAfter={}", stack_len_after));
-    out
-}
-
-fn check(label: &str, detail: &str) -> DebugCheck {
-    DebugCheck {
-        label: label.to_string(),
-        detail: detail.to_string(),
-    }
-}
-
-fn build_next_checks(
-    why: &CauseClass,
-    word: Option<&str>,
-    category: Option<&ErrorCategory>,
-) -> Vec<DebugCheck> {
-    let mut out = Vec::new();
-
-    match why {
-        CauseClass::Domain => {
-            if matches!(category, Some(ErrorCategory::DivisionByZero)) {
-                out.push(check(
-                    "Check divisor",
-                    "\"/\" または DIV の右オペランドを確認する",
-                ));
-                out.push(check(
-                    "Check zero is expected",
-                    "0 が正常値としてあり得るなら SAFE / fallback を検討する",
-                ));
-                out.push(check(
-                    "Check divisor origin",
-                    "0 が異常値なら、右オペランドを生成した直前の word を確認する",
-                ));
-            } else {
-                out.push(check(
-                    "Check operand domain",
-                    "演算が許す値域の外に入っていないか確認する",
-                ));
-            }
-        }
-        CauseClass::StackShape => {
-            let word_label = word.unwrap_or("the word");
-            out.push(check(
-                "Check arity",
-                &format!("{} が必要とする入力個数を確認する", word_label),
-            ));
-            out.push(check(
-                "Check stack length",
-                "実行直前のスタック長を確認する",
-            ));
-            out.push(check(
-                "Check upstream consumers",
-                "直前の word が値を消費しすぎていないか確認する",
-            ));
-        }
-        CauseClass::TypoOrUnknownName => {
-            out.push(check("Check spelling", "word 名のスペルを確認する"));
-            out.push(check(
-                "Check alias canonicalization",
-                "alias 展開後の canonical word 名を確認する",
-            ));
-            out.push(check(
-                "Check user definitions",
-                "user word の定義と所属 dictionary を確認する",
-            ));
-        }
-        CauseClass::Environment => {
-            out.push(check("Check environment", "実行環境の前提条件を確認する"));
-        }
-        CauseClass::ValueShape => {
-            let word_label = word.unwrap_or("the word");
-            out.push(check(
-                "Check expected shape",
-                &format!("{} が期待する値の形を確認する", word_label),
-            ));
-            out.push(check(
-                "Check type confusion",
-                "Vector / Scalar / CodeBlock / Nil の取り違えを確認する",
-            ));
-            out.push(check(
-                "Check producer",
-                "直前の word が想定した型の値を生成しているか確認する",
-            ));
-        }
-        CauseClass::Index => {
-            out.push(check(
-                "Check index and length",
-                "index と vector 長を確認する",
-            ));
-            out.push(check(
-                "Check origin convention",
-                "0-origin / 1-origin の取り違えを確認する",
-            ));
-            out.push(check(
-                "Check empty vector",
-                "空 vector が入力されていないか確認する",
-            ));
-        }
-        CauseClass::VectorLength => {
-            out.push(check(
-                "Check operand lengths",
-                "対象の 2 つの vector 長を確認する",
-            ));
-            out.push(check(
-                "Check element-wise contract",
-                "zip / map / element-wise 演算の前提を確認する",
-            ));
-            out.push(check(
-                "Check selective ops",
-                "片方だけ filter や drop が適用されていないか確認する",
-            ));
-        }
-        CauseClass::UserLogic => {
-            if matches!(category, Some(ErrorCategory::ExecutionLimitExceeded)) {
-                out.push(check(
-                    "Check termination",
-                    "無限ループまたは終了条件漏れを確認する",
-                ));
-                out.push(check(
-                    "Check recursion base",
-                    "再帰呼び出しの停止条件を確認する",
-                ));
-                out.push(check(
-                    "Check input size",
-                    "大きすぎる入力に対して想定外の反復が発生していないか確認する",
-                ));
-            } else if matches!(category, Some(ErrorCategory::RecursionLimitExceeded)) {
-                out.push(check(
-                    "Check recursion base",
-                    "再帰呼び出しの停止条件を確認する",
-                ));
-                out.push(check(
-                    "Check tail position",
-                    "COND 節末尾のガード付き末尾再帰 (SPEC 8.4) に書き換えると深度制限を受けない",
-                ));
-            } else if matches!(category, Some(ErrorCategory::CondExhausted)) {
-                out.push(check(
-                    "Check guard coverage",
-                    "COND の全ての分岐条件と else 句を確認する",
-                ));
-            } else {
-                out.push(check(
-                    "Check user logic",
-                    "ユーザーロジックの前提を確認する",
-                ));
-            }
-        }
-        CauseClass::ContractViolation => {
-            if matches!(category, Some(ErrorCategory::ModeUnsupported)) {
-                out.push(check(
-                    "Check supported modes",
-                    "対象 word が現在の mode をサポートしているか確認する",
-                ));
-                out.push(check(
-                    "Check mode confusion",
-                    "Stack mode / Vector mode / Code block mode の取り違えを確認する",
-                ));
-            } else if matches!(category, Some(ErrorCategory::BuiltinProtection)) {
-                out.push(check(
-                    "Check protection",
-                    "built-in word に対する不可変操作が要求されている",
-                ));
-            } else {
-                out.push(check(
-                    "Check contract",
-                    "word の事前条件・事後条件を確認する",
-                ));
-            }
-        }
-        CauseClass::Effect => {
-            out.push(check(
-                "Check effect bookkeeping",
-                "consume / produce の質量保存を確認する",
-            ));
-        }
-        CauseClass::NilFlow => {
-            out.push(check(
-                "Check NIL propagation",
-                "NIL が想定外に流れていないか確認する",
-            ));
-        }
-        CauseClass::OptimizerMismatch => {
-            out.push(check(
-                "Check optimizer assumptions",
-                "最適化前後の意味が一致しているか確認する",
-            ));
-        }
-        CauseClass::InternalInvariant => {
-            out.push(check(
-                "Check internal invariant",
-                "内部不変条件違反が発生している。再現手順を保存し報告する",
-            ));
-        }
-        CauseClass::Unknown => {
-            out.push(check(
-                "Check error message",
-                "Custom エラーの場合は message を直接確認する",
-            ));
-        }
-    }
-
     out
 }
 

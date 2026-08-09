@@ -163,7 +163,7 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
         let diagnosis = DebugDiagnosis::from_error_category(
             ErrorPhase::Tokenize,
             None,
-            None,
+            Some(&ErrorCategory::MalformedSource),
             None,
             0,
             0,
@@ -266,7 +266,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
             let diagnosis = DebugDiagnosis::from_error_category(
                 ErrorPhase::Tokenize,
                 None,
-                None,
+                Some(&ErrorCategory::MalformedSource),
                 None,
                 0,
                 0,

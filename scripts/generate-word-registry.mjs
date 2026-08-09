@@ -59,6 +59,7 @@ const CONTRACT_ENUMS = [
   ['Purity', 'purity', 'Observational purity class (SPEC §7.14).'],
   ['Determinism', 'determinism', 'What the Word\'s result may depend on beyond its operands.'],
   ['VocabularyTier', 'vocabularyTier', 'Where the Word sits in the public Core: the Semantic Kernel or the Standard vocabulary.'],
+  ['AcceptedDomain', 'acceptedDomain', 'The shape of operand the Word accepts, where the specification narrows it.'],
 ];
 
 const enumBlocks = CONTRACT_ENUMS.map(([rustName, field, doc]) => {
@@ -134,6 +135,7 @@ const rows = entries
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
         partiality: ${enumRef('Partiality', word.partiality)},
+        accepted_domain: ${word.acceptedDomain ? `Some(AcceptedDomain::${pascal(word.acceptedDomain)})` : 'None'},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
         vocabulary_tier: ${enumRef('VocabularyTier', word.vocabularyTier)},
@@ -200,6 +202,14 @@ pub struct GeneratedWord {
     /// or project without any NIL-operand rule engaging at all.
     pub projection: Option<&'static str>,
     pub partiality: Partiality,
+    /// The operand shape the Word accepts, where the specification narrows it,
+    /// and \`None\` where the Word takes whatever its family takes.
+    ///
+    /// \`partiality\` answers "what happens to an operand this Word accepts";
+    /// without this field a reader had no way to ask which operands those are,
+    /// so \`SORT\` could read as \`total\` — always produces a result — while
+    /// rejecting a vector of strings outright.
+    pub accepted_domain: Option<AcceptedDomain>,
     pub purity: Purity,
     pub determinism: Determinism,
     /// Which half of the public Core the Word belongs to. Both halves are
