@@ -21,6 +21,8 @@ Execution tools accept source text only. Deliberately omitting file-path input
 prevents an AI tool call from becoming an arbitrary local-file reader. Ajisai
 language errors and reason-carrying `NIL` remain structured, successful MCP
 results; only invalid requests and host failures set `isError`.
+The local server also caps concurrent CLI executions, returning a retryable
+host error instead of allowing an unbounded process fan-out.
 
 Static context is available through `ajisai://guide/quickstart`,
 `ajisai://vocabulary`, and `ajisai://schema/result`. Tool calls return both text

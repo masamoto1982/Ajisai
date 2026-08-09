@@ -27,11 +27,13 @@ const manifestPath = join(repoRoot, "docs", "word-manifest.json");
 const contractsPath = join(repoRoot, "spec", "words.json");
 const skillPath = join(repoRoot, "SKILL.md");
 const rootPackagePath = join(repoRoot, "package.json");
+const serverPackagePath = join(here, "package.json");
 export const LIMITS = Object.freeze({
   sourceBytes: 64 * 1024,
   wallTimeMs: 5_000,
   responseBytes: 1024 * 1024,
   executionSteps: 100_000,
+  concurrentExecutions: 4,
 });
 
 function resolveAjisaiBin() {
@@ -118,6 +120,26 @@ let manifestCache;
 let contractsCache;
 let registryDigestCache;
 let engineVersionCache;
+let serverVersionCache;
+export class ExecutionGate {
+  #active = 0;
+
+  constructor(capacity) {
+    this.capacity = capacity;
+  }
+
+  tryAcquire() {
+    if (this.#active >= this.capacity) return false;
+    this.#active += 1;
+    return true;
+  }
+
+  release() {
+    if (this.#active === 0) throw new Error("execution gate released without a holder");
+    this.#active -= 1;
+  }
+}
+const executionGate = new ExecutionGate(LIMITS.concurrentExecutions);
 function manifest() { return manifestCache ??= JSON.parse(readFileSync(manifestPath, "utf8")); }
 function contracts() {
   return contractsCache ??= JSON.parse(readFileSync(contractsPath, "utf8"));
@@ -130,6 +152,9 @@ function registryDigest() {
 function engineVersion() {
   return engineVersionCache ??= JSON.parse(readFileSync(rootPackagePath, "utf8")).version;
 }
+function serverVersion() {
+  return serverVersionCache ??= JSON.parse(readFileSync(serverPackagePath, "utf8")).version;
+}
 function result(value) { return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], structuredContent: value }; }
 function fail(text) { return { content: [{ type: "text", text }], isError: true }; }
 
@@ -138,13 +163,19 @@ async function runCli(source, command) {
   if (Buffer.byteLength(source, "utf8") > LIMITS.sourceBytes) return fail(`source exceeds ${LIMITS.sourceBytes} UTF-8 bytes`);
   const bin = resolveAjisaiBin();
   if (!bin) return fail("ajisai CLI not found; build rust/ or set AJISAI_BIN.");
-  const scratch = mkdtempSync(join(tmpdir(), "ajisai-mcp-"));
-  const target = join(scratch, "program.ajisai");
-  writeFileSync(target, source.endsWith("\n") ? source : `${source}\n`, { mode: 0o600 });
-  const args = [command, target, "--json"];
-  if (command === "run") args.push("--step-limit", String(LIMITS.executionSteps));
-  if (command === "check") args.push("--contract");
+  if (!executionGate.tryAcquire()) {
+    return fail(
+      `Ajisai execution capacity is full (${LIMITS.concurrentExecutions}); retry later.`,
+    );
+  }
+  let scratch;
   try {
+    scratch = mkdtempSync(join(tmpdir(), "ajisai-mcp-"));
+    const target = join(scratch, "program.ajisai");
+    writeFileSync(target, source.endsWith("\n") ? source : `${source}\n`, { mode: 0o600 });
+    const args = [command, target, "--json"];
+    if (command === "run") args.push("--step-limit", String(LIMITS.executionSteps));
+    if (command === "check") args.push("--contract");
     let stdout;
     try {
       ({ stdout } = await execFileAsync(bin, args, { encoding: "utf8", timeout: LIMITS.wallTimeMs, maxBuffer: LIMITS.responseBytes }));
@@ -178,7 +209,10 @@ async function runCli(source, command) {
       limits: LIMITS,
     };
     return result(envelope);
-  } finally { rmSync(scratch, { recursive: true, force: true }); }
+  } finally {
+    if (scratch) rmSync(scratch, { recursive: true, force: true });
+    executionGate.release();
+  }
 }
 
 function wordContract(word) {
@@ -210,7 +244,10 @@ const RESOURCE_TEMPLATES = [
 ];
 
 export function createServer() {
-  const server = new Server({ name: "ajisai", version: "0.2.0" }, { capabilities: { tools: {}, resources: {} } });
+  const server = new Server(
+    { name: "ajisai", version: serverVersion() },
+    { capabilities: { tools: {}, resources: {} } },
+  );
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
   server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
     const args = params.arguments ?? {};

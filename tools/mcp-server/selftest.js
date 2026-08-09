@@ -1,13 +1,21 @@
 #!/usr/bin/env node
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer } from "./index.js";
+import { createServer, ExecutionGate, LIMITS } from "./index.js";
 
 let failures = 0;
 function check(label, condition) {
   console.log(`${condition ? "PASS" : "FAIL"}  ${label}`);
   if (!condition) failures += 1;
 }
+
+const gate = new ExecutionGate(2);
+check("execution gate admits up to its capacity", gate.tryAcquire() && gate.tryAcquire());
+check("execution gate rejects excess concurrent work", gate.tryAcquire() === false);
+gate.release();
+check("execution gate restores capacity on release", gate.tryAcquire());
+gate.release();
+gate.release();
 
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const server = createServer();
@@ -61,6 +69,11 @@ const compute = await client.callTool({
   name: "compute",
   arguments: { source: "[ 2 ] SQRT" },
 });
+const oversized = await client.callTool({
+  name: "compute",
+  arguments: { source: " ".repeat(LIMITS.sourceBytes + 1) },
+});
+check("compute rejects source beyond its UTF-8 byte limit", oversized.isError === true);
 if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
   check("compute requires a real Ajisai backend", false);
 } else {
