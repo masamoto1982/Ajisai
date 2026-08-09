@@ -331,10 +331,10 @@ export const createEditor = (
                 selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
                 renderSuggestions();
             } else if (e.key === 'Tab') {
-                // Tab accepts; Enter never does. COND requires one `|` clause
-                // per line, so a newline is load-bearing syntax in this
-                // language — an open suggestion panel must not be able to eat
-                // one. It used to: typing `PRINT` opened the panel, and the
+                // Tab accepts; Enter never does. A newline separates
+                // statements in a definition body, so it is load-bearing
+                // syntax in this language — an open suggestion panel must not
+                // be able to eat one. It used to: typing `PRINT` opened the panel, and the
                 // Enter meant to end the line accepted the completion instead,
                 // so the next line's first token was appended to it (`PRINT3`).
                 // Dismissing the panel instead keeps the following Enter,

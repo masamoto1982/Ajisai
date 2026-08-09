@@ -74,7 +74,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 59 canonical Words and 13 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 59, a 36-Word Semantic Kernel carries the semantic identity of the language and 23 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
+The vocabulary is 67 canonical Words and 13 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 67, a 37-Word Semantic Kernel carries the semantic identity of the language and 30 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -104,7 +104,7 @@ This numeric grammar is the single definition of what text denotes a number. A c
 </p>
 
 <p>
-Whitespace separates tokens and is otherwise insignificant, with one exception, which is stated here so that it is not discovered by hitting it: a line break delimits <code>COND</code> clauses. A code block containing a top-level <code>|</code> is a guard clause, and at most one such block may begin on any one line. Two clauses written on the same line are a source error, so the vertical layout of a <code>COND</code> is part of its spelling rather than a convention.
+Whitespace separates tokens and is otherwise insignificant, with one exception, which is stated here so that it is not discovered by hitting it: inside a definition body a line break at the body's own level separates statements. A break written inside a <code>{ }</code> block or a <code>[ ]</code> vector is interior to that value and separates nothing, so a multi-line block is one statement however many lines it spans. <code>COND</code> imposes no layout rule of its own: one <code>|</code> clause per line is the canonical form and the formatter produces it, but a <code>COND</code> written flat denotes the same program.
 </p>
 
 <p>

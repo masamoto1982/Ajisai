@@ -7,7 +7,8 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, control_cond, execute_def,
     execute_del, execute_lookup, higher_order, higher_order_fold, io, logic, math_ops,
-    nil_diagnostics, reflection, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
+    nil_diagnostics, ordering_ops, reflection, shape_ops, sort, tensor_cmds, vector_ops,
+    ConsumptionMode, Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -320,6 +321,14 @@ impl Interpreter {
             WordId::Max => math_ops::op_max(self),
             WordId::Sqrt => math_ops::op_sqrt(self),
             WordId::Sort => sort::op_sort(self),
+            WordId::Order => ordering_ops::op_order(self),
+            WordId::Unique => ordering_ops::op_unique(self),
+            WordId::Tally => ordering_ops::op_tally(self),
+            WordId::Group => ordering_ops::op_group(self),
+            WordId::Zip => shape_ops::op_zip(self),
+            WordId::Sum => shape_ops::op_sum(self),
+            WordId::Put => shape_ops::op_put(self),
+            WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
             // The positional control directives of SPEC §6.4. The execution
             // loop interprets these against the source stream — `VENT` decides

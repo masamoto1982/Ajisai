@@ -67,6 +67,21 @@ fn try_sort_indices(items: &[Value]) -> SortAttempt {
     SortAttempt::Ordered(perm)
 }
 
+/// The ascending, stable index permutation of `items` — `ORDER`'s answer, and
+/// the permutation `SORT` applies to produce its own.
+///
+/// Shared so the two Words cannot disagree about an ordering: `xs ORDER` and
+/// `xs SORT` are the same comparison sequence, read two ways.
+pub(crate) fn order_indices(items: &[Value]) -> Result<Vec<usize>> {
+    match try_sort_indices(items) {
+        SortAttempt::Ordered(perm) => Ok(perm),
+        // Comparison over the exact domain is total (LANG.VALUES.EXACT), so an
+        // undecided pair means an operand outside that domain.
+        SortAttempt::Undecided => Err(AjisaiError::from("element is outside the exact domain")),
+        SortAttempt::Malformed(e) => Err(e),
+    }
+}
+
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 

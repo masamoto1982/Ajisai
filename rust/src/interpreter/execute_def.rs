@@ -66,7 +66,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // keep the two name spaces disjoint at every moment, so a reader never has
     // to know which of the two a name resolved through.
     if interp.lookup_binding(&upper_name).is_some() {
-        return Err(AjisaiError::from(format!(
+        return Err(AjisaiError::NameConflict(format!(
             "Cannot define '{}': the name is bound in this frame. A binding and a Word may not share a name.",
             upper_name
         )));
@@ -170,14 +170,35 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     Ok(())
 }
 
+/// Split a word body into execution lines.
+///
+/// A line break separates *statements*, and a statement is a thing written at
+/// the body's own level. A break written inside a `{ }` block or a `[ ]`
+/// vector is interior to a single value, not a separator between two of them,
+/// so it is carried through into that value's token stream untouched.
+///
+/// Splitting on interior breaks is what used to make a multi-line COND
+/// unusable inside a Word: a body of
+///
+/// ```text
+/// { { 0 GT | 1 }
+/// { IDLE | 0 }
+/// COND } MAP
+/// ```
+///
+/// was cut at the two breaks, leaving `{ { 0 GT | 1 }` as its own "line" —
+/// an unclosed block, and an error raised at the call rather than at the
+/// definition. Depth is the whole rule: at depth 0 a break ends a statement,
+/// below it a break is just a token.
 pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut processed_tokens = Vec::new();
+    let mut depth: usize = 0;
 
     let mut i = 0;
     while i < tokens.len() {
         match &tokens[i] {
-            Token::LineBreak => {
+            Token::LineBreak if depth == 0 => {
                 if !processed_tokens.is_empty() {
                     let execution_line = ExecutionLine {
                         body_tokens: processed_tokens.clone().into(),
@@ -186,7 +207,12 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
                     processed_tokens.clear();
                 }
             }
-            _ => {
+            token => {
+                match token {
+                    Token::BlockStart | Token::VectorStart => depth += 1,
+                    Token::BlockEnd | Token::VectorEnd => depth = depth.saturating_sub(1),
+                    _ => {}
+                }
                 processed_tokens.push(tokens[i].clone());
             }
         }

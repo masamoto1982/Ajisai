@@ -186,7 +186,7 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
     if !delimiters.is_empty() {
         return Err("unclosed code delimiter".into());
     }
-    check_cond_clause_per_line_constraint(tokens)
+    Ok(())
 }
 
 /// Whether `lexeme` is exactly one Number token under the canonical lexer.
@@ -327,56 +327,6 @@ fn closing_bracket(open: char) -> char {
         '{' => '}',
         _ => '?',
     }
-}
-
-fn check_cond_clause_per_line_constraint(tokens: &[Token]) -> Result<(), String> {
-    let mut i: usize = 0;
-    let mut cond_clause_blocks_in_line: usize = 0;
-
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::LineBreak => {
-                cond_clause_blocks_in_line = 0;
-                i += 1;
-            }
-            Token::BlockStart => {
-                let mut depth: i32 = 1;
-                let mut j: usize = i + 1;
-                let mut has_clause_sep: bool = false;
-                while j < tokens.len() && depth > 0 {
-                    match &tokens[j] {
-                        Token::BlockStart => depth += 1,
-                        Token::BlockEnd => depth -= 1,
-                        Token::CondClauseSep if depth == 1 => has_clause_sep = true,
-                        _ => {}
-                    }
-                    j += 1;
-                }
-
-                if has_clause_sep {
-                    cond_clause_blocks_in_line += 1;
-                    if cond_clause_blocks_in_line > 1 {
-                        return Err(
-                            "COND: | clauses must be written one clause per line".to_string()
-                        );
-                    }
-                }
-
-                // Descend into the block (rather than skipping past its
-                // matching `}`) so the one-clause-per-line rule keeps applying
-                // to `|` clauses nested inside a multi-line `{ }` body. Each
-                // BlockStart is still visited exactly once, so no clause is
-                // double-counted, and LineBreaks inside the block reset the
-                // per-line counter as expected.
-                i += 1;
-            }
-            _ => {
-                i += 1;
-            }
-        }
-    }
-
-    Ok(())
 }
 
 enum QuoteParseResult {

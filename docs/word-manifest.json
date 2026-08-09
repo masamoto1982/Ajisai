@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 59,
-    "semanticKernelWords": 36,
-    "standardWords": 23,
-    "corewords": 59,
+    "canonicalWords": 67,
+    "semanticKernelWords": 37,
+    "standardWords": 30,
+    "corewords": 67,
     "aliases": 13,
     "inputHelpers": 1,
     "surface_forms": 10,
-    "manifestEntries": 83
+    "manifestEntries": 91
   },
   "entries": [
     {
@@ -468,6 +468,24 @@
       "classification": "Core"
     },
     {
+      "id": "core.random",
+      "kind": "coreword",
+      "surface": "RANDOM",
+      "category": "math",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "RANDOM",
+      "coverage_entry_id": "core.random",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-real.seeded-stream",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.get",
       "kind": "coreword",
       "surface": "GET",
@@ -621,6 +639,130 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.order",
+      "kind": "coreword",
+      "surface": "ORDER",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "ORDER",
+      "coverage_entry_id": "core.order",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.unique",
+      "kind": "coreword",
+      "surface": "UNIQUE",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "UNIQUE",
+      "coverage_entry_id": "core.unique",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.tally",
+      "kind": "coreword",
+      "surface": "TALLY",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "TALLY",
+      "coverage_entry_id": "core.tally",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.zip",
+      "kind": "coreword",
+      "surface": "ZIP",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "ZIP",
+      "coverage_entry_id": "core.zip",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.zip",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.sum",
+      "kind": "coreword",
+      "surface": "SUM",
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "SUM",
+      "coverage_entry_id": "core.sum",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.bihomographic"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.put",
+      "kind": "coreword",
+      "surface": "PUT",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "PUT",
+      "coverage_entry_id": "core.put",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.group",
+      "kind": "coreword",
+      "surface": "GROUP",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "GROUP",
+      "coverage_entry_id": "core.group",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.reshape-group",
+        "algebra.structure-lift.indexed-sequence"
       ],
       "classification": "Core"
     },

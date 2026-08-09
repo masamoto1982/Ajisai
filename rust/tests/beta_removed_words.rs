@@ -1,6 +1,14 @@
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::AjisaiError;
 
+/// The alpha Words the beta vocabulary freeze retired.
+///
+/// `UNIQUE` is not among them any more. It was cut as one of several
+/// overlapping collection Words; it has since come back on its own terms —
+/// a contract in `spec/words.json`, a law witness, a conformance case — so
+/// asserting it is unknown would assert the opposite of what the language now
+/// says. A retired name returning is a vocabulary decision, and this list
+/// records the decision rather than freezing the first one made.
 const REMOVED_WORDS: &[&str] = &[
     "CEIL",
     "SIGN",
@@ -9,7 +17,6 @@ const REMOVED_WORDS: &[&str] = &[
     "REMOVE",
     "SPLIT",
     "REORDER",
-    "UNIQUE",
     "CONTAINS",
     "STARTS-WITH?",
     "ENDS-WITH?",

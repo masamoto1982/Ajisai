@@ -487,7 +487,7 @@
                         </table>
                     </div>
                     <h3>Where a line break matters</h3>
-                    <p>Whitespace is whitespace: a newline separates tokens exactly as a space does, and a program may be laid out over as many lines as you like. There is <strong>one</strong> exception, and it is worth knowing before you meet it. A <code>COND</code> guard clause — a block containing a top-level <code>|</code> — must start its own line, and at most one such clause may begin on any line. Writing a whole <code>COND</code> on one line is a source error, not a style choice, and the message says so: <em>COND: | clauses must be written one clause per line</em>. See <a href="#cond">Conditionals</a>. Nothing else in the language reads line breaks.</p>
+                    <p>Whitespace is whitespace: a newline separates tokens exactly as a space does, and a program may be laid out over as many lines as you like. There is <strong>one</strong> exception, and it is worth knowing before you meet it. Inside a word body, a line break <em>at the body's own level</em> ends one statement and starts the next. A break written inside a <code>{ }</code> block or a <code>[ ]</code> vector is interior to that value and separates nothing, so a block may span as many lines as it likes and still be one statement. Nothing else in the language reads line breaks — a <code>COND</code> written on one line and the same <code>COND</code> written down the page are the same program.</p>
                     <h3>Number literals</h3>
                     <p>A decimal literal carries at least one digit on <strong>both</strong> sides of the point: <code>0.5</code> and <code>5.0</code> are numbers, while <code>.5</code> and <code>5.</code> are not. The point is therefore never the first or last character of a number, which is what lets a lone <code>.</code> be an ordinary name rather than a truncated literal.</p>
                     <p class="ref-note">A string closes on the quote that sits at a token boundary, which is how a string carries an apostrophe with no escape character: <code>'It's fine'</code> is one string. A quote followed immediately by a name character stays inside the text, so <code>'abc'CHARS</code> is an unclosed string rather than two tokens.</p>
@@ -811,6 +811,8 @@
                         </div>
                     </div>
                     <p class="ref-note">The remaining numeric words live here too: <code>ABS</code> and <code>NEG</code> for sign, <code>MIN</code> and <code>MAX</code> over two numbers, <code>SQRT</code>, the rounding pair <code>FLOOR</code> and <code>ROUND</code>, and <code>QUANTIZE</code>, which rounds to the nearest multiple of <code>1/d</code> and is the one to reach for in a loop — see <a href="#iterative">Iterative Numerics</a>. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
+                    <p class="ref-note"><code>RANDOM</code> lives here too, and it is a function like every other word: <code>7 3 RANDOM</code> draws three exact rationals in [0, 1) determined entirely by the seed <code>7</code>, and draws the same three every time, in every session. There is no hidden state and no host entropy, so nothing about it is at odds with exactness or purity — it composes with <code>ORDER</code> to give a shuffle, <code>SEED N RANDOM ORDER</code>, and with <code>QUANTIZE</code> when you want the draws at a readable resolution.</p>
+                    <p class="ref-note">Every one of them lifts. <code>MIN</code>, <code>MAX</code> and <code>SQRT</code> broadcast on the same rule as <code>+</code>, so a rectifier is <code>[ -1 2 -3 ] 0 MAX</code> — <code>[ 0/1 2/1 0/1 ]</code> — a per-feature standard deviation is one <code>SQRT</code> over the vector of variances, and the element-wise smaller of two vectors is <code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>. No <code>MAP</code> and no block: reach for one only when the operation itself is not a numeric word. A lane that misses <code>SQRT</code>'s domain bubbles alone, so <code>[ 4 -1 ] SQRT</code> is <code>[ 2/1 NIL ]</code> rather than a failed vector.</p>
                 </section>
 
                 <section id="comparison" class="ref-page">
@@ -1356,6 +1358,11 @@
                                     <td><code>[ 1/1 2/1 3/1 ]</code></td>
                                     <td class="notes">Keep the first N elements.</td>
                                 </tr>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 5 ] -2 TAKE</code></td>
+                                    <td><code>[ 4/1 5/1 ]</code></td>
+                                    <td class="notes">A negative count takes from the end.</td>
+                                </tr>
                             </tbody>
                         </table>
                         </div>
@@ -1382,7 +1389,47 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">Further structural words: <code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code>. <code>INDEX-OF</code> searches instead of indexing — <code>[ 10 20 30 ] 20 INDEX-OF</code> is <code>1/1</code>, and a value that is not there is a bubble rather than an error.</p>
+                    <p class="ref-note">Further structural words: <code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>. <code>INDEX-OF</code> searches instead of indexing — <code>[ 10 20 30 ] 20 INDEX-OF</code> is <code>1/1</code>, and a value that is not there is a bubble rather than an error.</p>
+
+                    <h3 id="ordering">Ordering, counting and shape</h3>
+                    <p>Seven words cover the operations that need to look at a whole vector at once. Each of them can be written out in the rest of the vocabulary; each of them, written out, costs asymptotically more, which is the only reason they are words.</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Word</th><th>Example</th><th>Result</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>ORDER</code></td><td><code>[ 30 10 20 ] ORDER</code></td><td class="notes"><code>[ 1/1 2/1 0/1 ]</code> — the positions in ascending order, ties left where they were</td></tr>
+                                <tr><td><code>UNIQUE</code></td><td><code>[ 'b' 'a' 'b' ] UNIQUE</code></td><td class="notes"><code>[ 'b' 'a' ]</code> — distinct values, first occurrence first</td></tr>
+                                <tr><td><code>TALLY</code></td><td><code>[ 'b' 'a' 'b' ] TALLY</code></td><td class="notes"><code>[ 2/1 1/1 ]</code> — the counts, lined up with <code>UNIQUE</code></td></tr>
+                                <tr><td><code>ZIP</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] ZIP</code></td><td class="notes"><code>[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]</code> — position-wise bundling, which is also transposition</td></tr>
+                                <tr><td><code>SUM</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] SUM</code></td><td class="notes"><code>[ 4/1 6/1 ]</code> — fold the outer axis with <code>ADD</code></td></tr>
+                                <tr><td><code>PUT</code></td><td><code>[ 1 2 3 ] 1 9 PUT</code></td><td class="notes"><code>[ 1/1 9/1 3/1 ]</code> — one position replaced; a negative index counts from the end</td></tr>
+                                <tr><td><code>GROUP</code></td><td><code>[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP</code></td><td class="notes"><code>[ [ 1/1 3/1 ] [ 2/1 ] ]</code> — values bundled by key, in <code>UNIQUE</code> key order</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p><code>ORDER</code> is the one to reach for first. <code>SORT</code> answers <em>what</em> the sorted values are and throws away <em>where</em> they came from; <code>ORDER</code> keeps the positions, so anything that has to carry a payload beside its key — the k nearest neighbours, the top k scores, a median's position, a ranking — is <code>ORDER</code> followed by a <code>GET</code>:</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 18 13 1 1 13 2 ] ORDER 3 TAKE 'P' BIND<br>[ 'f' 'e' 'd' 'c' 'b' 'a' ] P GET</code></td>
+                                    <td><code>[ 'd' 'c' 'a' ]</code></td>
+                                    <td class="notes">The labels of the three smallest distances, ties resolved by original position.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note"><code>UNIQUE</code> and <code>TALLY</code> work on any values, not only numbers — labels are usually text — while <code>ORDER</code> and <code>SORT</code> need a flat vector of numbers, because that is what the exact order relation is defined on. <code>GROUP</code> pairs values with keys by position, so its two operands must be the same length.</p>
                 </section>
 
                 <section id="higher-order" class="ref-page">
@@ -1516,12 +1563,13 @@
                                 <tr><td>A word body (<code>DEF</code>)</td><td class="notes">the whole stack</td><td class="notes">whatever it pushes, however many</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">the whole stack</td><td class="notes">whatever it pushes, however many</td></tr>
                                 <tr><td><code>COND</code> guard, and the body that fires</td><td class="notes">one value: the dispatch value, alone</td><td class="notes">exactly one — the top; leaving none is an error, and anything under the top is discarded</td></tr>
-                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">one value: the current element, alone</td><td class="notes">exactly one — the mapped element, or a truth value for the predicate words</td></tr>
-                                <tr><td><code>FOLD</code></td><td class="notes">two values: the accumulator, then the element</td><td class="notes">exactly one: the next accumulator</td></tr>
+                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">one value: the current element, alone</td><td class="notes">exactly one — the mapped element, or a truth value for the predicate words; leaving none is an error, and anything under the top is discarded</td></tr>
+                                <tr><td><code>FOLD</code></td><td class="notes">two values: the accumulator, then the element</td><td class="notes">exactly one: the next accumulator; leaving none is an error, and anything under the top is discarded</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <p>So <code>{ + } 'ADDW' DEF</code> followed by <code>3 4 ADDW</code> gives <code>7</code>, and so does <code>3 4 { + } EXEC</code> — both see the whole stack. But <code>100 [ 1 2 ] { + } MAP</code> is a stack underflow: the block sees one element and the <code>100</code> is not in its frame.</p>
+                    <p class="ref-note">"Anything under the top is discarded" is worth reading twice, because it is silent. A predicate that leaves two values passes: <code>[ 1 2 3 ] { 1 GT TRUE } FILTER</code> keeps everything, because the <code>TRUE</code> on top is the answer and the comparison beneath it is thrown away. Only leaving <em>nothing</em> is an error. If a higher-order block gives an answer you cannot explain, count what it leaves.</p>
                     <p class="ref-note">When something inside a block fails, the diagnosis names <strong>the word that failed</strong>, not the word that ran the block: <code>[ 1 2 ] { 'x' 1 ADD } MAP</code> reports <code>ADD</code>, with <code>inside MAP</code> beside it and the position of the statement that ran. A word you defined is where that stops — a call to it reports the word, because from the caller&#39;s side that is what failed.</p>
                     <p class="ref-note">A block written <em>inside</em> another block is data where it is written. It is evaluated only when the word that receives it runs it, under that word's row above rather than the enclosing block's — which is why a word may call itself from inside a <code>{ }</code> it hands to <code>MAP</code> or <code>EXEC</code>, and why that call is an ordinary recursive call.</p>
 
@@ -1643,7 +1691,8 @@ FILTER</code></td>
                 <section id="cond" class="ref-page">
                     <h2>Conditionals</h2>
                     <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is true. In the clause form, <code>|</code> separates the guard from the body and each clause occupies exactly one line; <code>TRUE</code> makes an always-true else guard.</p>
-                    <p>The else clause can also be spelled <code>IDLE</code>, and that is the spelling to prefer. <code>IDLE</code> is not one of the 57 Words and you will not find it in the Dictionary panel: it is a keyword read positionally, meaningful only as a guard, and it means <em>this clause fires when no earlier one did</em>. <code>TRUE</code> reaches the same outcome by pushing a value the guard then reads, which works but says less; <code>IDLE</code> says which clause is the fallback.</p>
+                    <p>The else clause can also be spelled <code>IDLE</code>, and that is the spelling to prefer. <code>IDLE</code> is not one of the 67 Words and you will not find it in the Dictionary panel: it is a keyword read positionally, meaningful only as a guard, and it means <em>this clause fires when no earlier one did</em>. <code>TRUE</code> reaches the same outcome by pushing a value the guard then reads, which works but says less; <code>IDLE</code> says which clause is the fallback.</p>
+                    <p class="ref-note"><code>IDLE</code> fires <em>where it is written</em>. Clauses are tried top to bottom and <code>IDLE</code> takes its turn in that order, so anything written below an <code>IDLE</code> is unreachable. Put it last — which is what "fallback" means anyway.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1658,7 +1707,7 @@ FILTER</code></td>
 { TRUE | 'positive' }
 COND</code></td>
                                     <td><code>'zero'</code></td>
-                                    <td class="notes">Clause form: guard left of <code>|</code>, body right; one clause per line.</td>
+                                    <td class="notes">Clause form: guard left of <code>|</code>, body right; one clause per line by convention.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1687,7 +1736,7 @@ COND</code></td>
                         </div>
                     </div>
                     <p class="ref-note">Each guard answers <code>TRUE</code> or <code>FALSE</code>, so a clause either fires or does not. If no clause matches and no else clause is present, <code>COND</code> raises an error.</p>
-                    <p class="ref-note">One clause per line is a rule, not a layout preference — it is the only place in the language where a line break is significant (see <a href="#tokens">Tokens and Spelling</a>). Collapsing the clause form onto one line fails before anything runs, with <em>COND: | clauses must be written one clause per line</em>. The pair form above has no <code>|</code> in it and so carries no such rule: it fits on one line.</p>
+                    <p class="ref-note">One clause per line is the canonical form, and the Format button produces it, but it is a layout preference rather than a rule: a <code>COND</code> collapsed onto one line runs and means the same thing. Write it down the page anyway — a <code>COND</code> is read by scanning its guards, and that only works when they are stacked.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2030,7 +2079,7 @@ COND</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>Words Ajisai Does Not Have</h2>
-                    <p>The vocabulary is 59 words and is meant to stay that way: a word that a user definition already expresses does not belong in Core. So the sums, transposes and argmins that other languages spell as words are spelled here as short phrases, and the ones that come up most are written out below. Each is verified, and each is a fine body for a <code>DEF</code> of your own if you use it twice.</p>
+                    <p>The vocabulary is 67 words and stays small on purpose: a word that a user definition expresses <em>at the same cost</em> does not belong in Core. So the argmins and relaxation loops that other languages spell as words are spelled here as short phrases, and the ones that come up most are written out below. Each is verified, and each is a fine body for a <code>DEF</code> of your own if you use it twice.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2039,29 +2088,29 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] 0 { ADD } FOLD</code></td>
-                                    <td><code>10/1</code></td>
-                                    <td class="notes">Sum. The same shape with <code>MUL</code> and <code>1</code> is a product, and with <code>MIN</code> or <code>MAX</code> an extremum.</td>
+                                    <td><code>[ 1 2 3 4 ] 1 { MUL } FOLD</code></td>
+                                    <td><code>24/1</code></td>
+                                    <td class="notes">Product. The sum has its own word — <code>SUM</code> — and the same <code>FOLD</code> shape with <code>MIN</code> or <code>MAX</code> is an extremum.</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] MUL 0 { ADD } FOLD</code></td>
+                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] MUL SUM</code></td>
                                     <td><code>32/1</code></td>
                                     <td class="notes">Dot product: multiply element-wise, then sum.</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A { V MUL 0 { ADD } FOLD } MAP</code></td>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A { V MUL SUM } MAP</code></td>
                                     <td><code>[ 17/1 39/1 ]</code></td>
                                     <td class="notes">Matrix times vector: one dot product per row.</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ [ 1 2 3 ] [ 4 5 6 ] ] 'M' BIND<br>[ 0 2 ] RANGE { 1 COLLECT 'J' BIND M { J GET } MAP } MAP</code></td>
-                                    <td><code>[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]</code></td>
-                                    <td class="notes">Transpose: for each column index, take that position out of every row. The range runs to the last column index.</td>
+                                    <td><code>[ 4 1 7 1 ] ORDER [ 0 ] GET</code></td>
+                                    <td><code>1/1</code></td>
+                                    <td class="notes">Argmin: the first position of the ascending order. <code>[ -1 ] GET</code> instead makes it argmax.</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 4 1 7 1 ] KEEP SORT [ 0 ] GET INDEX-OF</code></td>
-                                    <td><code>1/1</code></td>
-                                    <td class="notes">Argmin: the smallest value, then the first position holding it. <code>[ -1 ] GET</code> instead makes it argmax.</td>
+                                    <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS KEEP SUM XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL SUM XS LENGTH DIV</code></td>
+                                    <td><code>2/1</code></td>
+                                    <td class="notes">Variance: centre, square, average. The standard deviation is one <code>SQRT</code> further.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2071,7 +2120,7 @@ COND</code></td>
                         </div>
                     </div>
                     <h3>Ordering by a key, ties and all</h3>
-                    <p>Sorting the values and looking their positions back up is the obvious way to get an ordering, and it is wrong exactly where it matters: with two equal distances, <code>SORT</code> then <code>INDEX-OF</code> finds the same position twice, so "the 3 nearest" can hand you two neighbours or four. Rank each position instead, counting how many positions come before it — earlier value, or equal value and lower index. That is a total order, so the ranks are a permutation and the ordering is exact and stable.</p>
+                    <p>Sorting the values and looking their positions back up is the obvious way to get an ordering, and it is wrong exactly where it matters: with two equal distances, <code>SORT</code> then <code>INDEX-OF</code> finds the same position twice, so "the 3 nearest" can hand you two neighbours or four. <code>ORDER</code> answers the question <code>SORT</code> throws away — <em>which positions</em>, in order — and answers it stably, so equal keys keep the order they were written in.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2080,9 +2129,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 18 13 1 1 13 2 ] 'DS' BIND<br>[ 0 5 ] RANGE 'IX' BIND<br>IX { 'I' BIND I 1 COLLECT 'IV' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp; DS IV GET 'DI' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp; IX { 'J' BIND J 1 COLLECT 'JV' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DS JV GET 'DJ' BIND<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DJ DI LT<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DJ DI EQ J I LT AND<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OR } FILTER LENGTH } MAP 'RANKS' BIND<br>IX { 'P' BIND RANKS P INDEX-OF } MAP 3 TAKE</code></td>
+                                    <td><code>[ 18 13 1 1 13 2 ] ORDER 3 TAKE</code></td>
                                     <td><code>[ 2/1 3/1 5/1 ]</code></td>
-                                    <td class="notes">The 3 nearest of six distances, two of which tie at 1. Drop the <code>3 TAKE</code> for the whole ordering, <code>[ 2/1 3/1 5/1 1/1 4/1 0/1 ]</code>. <code>RANKS</code> is a permutation, so the last line reads it backwards to turn rank-by-position into position-by-rank.</td>
+                                    <td class="notes">The 3 nearest of six distances, two of which tie at 1. Drop the <code>3 TAKE</code> for the whole ordering, <code>[ 2/1 3/1 5/1 1/1 4/1 0/1 ]</code>. To carry a payload along, bind the permutation and gather with it: <code>XS ORDER 'P' BIND YS P GET</code>.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2168,8 +2217,8 @@ COND</code></td>
 
                 <section id="dictionaries" class="ref-page">
                     <h2>Dictionaries and Word Identity</h2>
-                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 59 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
-                    <p>Those 59 words divide into a <strong>36-word Semantic Kernel</strong> and <strong>23 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 59 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
+                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 67 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
+                    <p>Those 67 words divide into a <strong>37-word Semantic Kernel</strong> and <strong>30 Standard words</strong>. The Kernel words are the ones that build or observe a kind of value, or that are the single explicit way to do something — run a code block, recover from a NIL, change the dictionary, print, cross between code and data. The Standard words give a frequent idea one fixed name and contract: <code>SUB</code>, <code>MIN</code>, <code>SORT</code>, <code>MAP</code>, <code>TRIM</code> and the rest. The division tells you where a word sits in the design; it changes nothing about how you use one. All 67 are ordinary Core words in the same flat dictionary, reached by their plain names, with the same contracts, examples, and error conditions. Each word&#39;s tier is listed in the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a> and reported by <code>LOOKUP</code>.</p>
                     <p>A name resolves in Core or in User, and User never shadows Core. A word&#39;s name is therefore its whole address — there is no qualified form, no dictionary to select, and no way for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same word.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">

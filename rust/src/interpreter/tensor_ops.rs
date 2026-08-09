@@ -168,10 +168,14 @@ pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
         if a_dim == b_dim || a_dim == 1 || b_dim == 1 {
             out[i] = a_dim.max(b_dim);
         } else {
-            return Err(AjisaiError::from(format!(
-                "Cannot broadcast shapes {:?} and {:?}",
-                a, b
-            )));
+            // Report the axis, not just the two shapes. `i` is an index into
+            // the *aligned* rank (shapes are right-aligned, NumPy-style), which
+            // is the axis a reader counts when they look at the value.
+            return Err(AjisaiError::ShapeMismatch {
+                left: a.to_vec(),
+                right: b.to_vec(),
+                axis: i,
+            });
         }
     }
 

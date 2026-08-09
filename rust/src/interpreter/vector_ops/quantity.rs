@@ -16,10 +16,14 @@ fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, u
     // the over-length rejection and the eventual narrowing exact.
     let magnitude: u64 = count.unsigned_abs();
     if magnitude > len as u64 {
-        return Err(AjisaiError::from(format!(
-            "Take count exceeds {} length",
-            target
-        )));
+        // Asking for more than there is, is an index question: the count names
+        // a position past the end. Categorized as one so it lands in the same
+        // family as `GET` past the end and carries the same next checks.
+        return Err(AjisaiError::CountExceedsLength {
+            count,
+            length: len,
+            target: target.to_string(),
+        });
     }
     let take = magnitude as usize;
 

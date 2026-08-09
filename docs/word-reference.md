@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **59 Words**, of which **36** form the Semantic Kernel and **23** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **67 Words**, of which **37** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -310,7 +310,7 @@ Numeric negation.
 
 ## `MIN`
 
-Smaller of two numbers.
+Smaller of two numbers, element-wise with broadcasting.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
@@ -320,11 +320,11 @@ Smaller of two numbers.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `1 2 MIN`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`, `stackTargetMode`
 
 ## `MAX`
 
-Larger of two numbers.
+Larger of two numbers, element-wise with broadcasting.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
@@ -334,11 +334,11 @@ Larger of two numbers.
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `1 2 MAX`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`, `stackTargetMode`
 
 ## `SQRT`
 
-Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
+Exact square root of a non-negative rational, element-wise over a vector. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
@@ -349,6 +349,20 @@ Exact square root of a non-negative rational. The result is carried in multiquad
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `2 SQRT`
 - **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`, `negativeInterval`
+
+## `RANDOM`
+
+Count exact rationals in [0,1), determined entirely by the seed.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `exactArithmetic`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: spaceExhausted → spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `7 3 RANDOM`
+- **ERROR conditions:** `nonInteger`, `negativeCount`
 
 ## `GET`
 
@@ -475,6 +489,104 @@ Return a copy of a vector sorted in ascending order.
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 3 1 2 ] SORT`
 - **ERROR conditions:** `nonVector`, `nonComparableElement`
+
+## `ORDER`
+
+The indices that would sort a vector ascending; ties keep their original order.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 30 10 20 ] ORDER`
+- **ERROR conditions:** `nonVector`, `nonComparableElement`
+
+## `UNIQUE`
+
+The distinct elements of a vector, in first-occurrence order.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 'a' 'b' 'a' ] UNIQUE`
+- **ERROR conditions:** `nonVector`
+
+## `TALLY`
+
+How many times each distinct element occurs, in UNIQUE order.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 'a' 'b' 'a' ] TALLY`
+- **ERROR conditions:** `nonVector`
+
+## `ZIP`
+
+Bundle equal-length vectors position by position; a matrix transposes.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] ZIP`
+- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
+
+## `SUM`
+
+Fold the outermost axis with ADD; the empty vector sums to zero.
+
+- **Vocabulary tier:** Standard (`shorthand`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] SUM`
+- **ERROR conditions:** `nonVector`, `nonNumeric`
+
+## `PUT`
+
+A copy of a vector with the element at one index replaced.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] 1 9 PUT`
+- **ERROR conditions:** `nonVector`, `nonInteger`, `indexOutOfBounds`
+
+## `GROUP`
+
+Bundle values by the key at the same position, in UNIQUE key order.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP`
+- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
 
 ## `INDEX-OF`
 

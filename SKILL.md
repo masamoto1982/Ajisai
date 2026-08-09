@@ -136,8 +136,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck: "Check error message".
   Fix: The first block is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] { predicate } { body } ... COND`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
-  → exit 1, `message: "Cannot broadcast shapes [2] and [3]"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck: "Check error message".
+  → exit 1, `message: "Cannot broadcast shapes [2] and [3]: axis 0 is 2 on the left and 3 on the right, and neither is 1"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
+  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck: "Check the disagreeing axis".
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
   → exit 1, `message: "NUM: expected String, got Boolean"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
@@ -163,8 +163,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-59 canonical Words in one flat Core dictionary, of which
-36 form the Semantic Kernel and 23 are Standard Words. Both are
+67 canonical Words in one flat Core dictionary, of which
+37 form the Semantic Kernel and 30 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -192,9 +192,10 @@ no module system and nothing to import.
 | `QUANTIZE` | arithmetic | Round to the nearest multiple of 1/d, bounding the denominator by d. — e.g. `[ 119/125 32/125 ] 10 QUANTIZE` |
 | `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
 | `NEG` | math | Numeric negation. — e.g. `2 NEG` |
-| `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |
-| `MAX` | math | Larger of two numbers. — e.g. `1 2 MAX` |
-| `SQRT` | math | Exact square root of a non-negative rational. — e.g. `2 SQRT` |
+| `MIN` | math | Smaller of two numbers, element-wise with broadcasting. — e.g. `1 2 MIN` |
+| `MAX` | math | Larger of two numbers, element-wise with broadcasting. — e.g. `1 2 MAX` |
+| `SQRT` | math | Exact square root of a non-negative rational, element-wise over a vector. — e.g. `2 SQRT` |
+| `RANDOM` | math | Count exact rationals in [0,1), determined entirely by the seed. — e.g. `7 3 RANDOM` |
 | `GET` | vector | Select elements of a vector by index. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
 | `TAKE` | vector | Take the first N or last -N elements of a vector. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
@@ -204,6 +205,13 @@ no module system and nothing to import.
 | `RANGE` | vector | Generate a numeric sequence from a [start, end] pair. — e.g. `[ 0 5 ] RANGE` |
 | `FILL` | tensor | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
 | `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
+| `ORDER` | vector | The indices that would sort a vector ascending; ties keep their original order. — e.g. `[ 30 10 20 ] ORDER` |
+| `UNIQUE` | vector | The distinct elements of a vector, in first-occurrence order. — e.g. `[ 'a' 'b' 'a' ] UNIQUE` |
+| `TALLY` | vector | How many times each distinct element occurs, in UNIQUE order. — e.g. `[ 'a' 'b' 'a' ] TALLY` |
+| `ZIP` | vector | Bundle equal-length vectors position by position; a matrix transposes. — e.g. `[ [ 1 2 ] [ 3 4 ] ] ZIP` |
+| `SUM` | arithmetic | Fold the outermost axis with ADD; the empty vector sums to zero. — e.g. `[ 1 2 3 ] SUM` |
+| `PUT` | vector | A copy of a vector with the element at one index replaced. — e.g. `[ 1 2 3 ] 1 9 PUT` |
+| `GROUP` | vector | Bundle values by the key at the same position, in UNIQUE key order. — e.g. `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { 2 MUL } MAP` |
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { 2 = } FILTER` |

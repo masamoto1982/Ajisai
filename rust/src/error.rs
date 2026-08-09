@@ -85,6 +85,9 @@ pub enum ErrorCategory {
     DivisionByZero,
     IndexOutOfBounds,
     VectorLengthMismatch,
+    ShapeMismatch,
+    MalformedSource,
+    NameConflict,
     ExecutionLimitExceeded,
     RecursionLimitExceeded,
     ModeUnsupported,
@@ -102,6 +105,9 @@ impl ErrorCategory {
             ErrorCategory::DivisionByZero => "divisionByZero",
             ErrorCategory::IndexOutOfBounds => "indexOutOfBounds",
             ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
+            ErrorCategory::ShapeMismatch => "shapeMismatch",
+            ErrorCategory::MalformedSource => "malformedSource",
+            ErrorCategory::NameConflict => "nameConflict",
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
             ErrorCategory::ModeUnsupported => "modeUnsupported",
@@ -119,6 +125,10 @@ impl ErrorCategory {
             AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
             AjisaiError::IndexOutOfBounds { .. } => ErrorCategory::IndexOutOfBounds,
             AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
+            AjisaiError::CountExceedsLength { .. } => ErrorCategory::IndexOutOfBounds,
+            AjisaiError::ShapeMismatch { .. } => ErrorCategory::ShapeMismatch,
+            AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
+            AjisaiError::NameConflict(_) => ErrorCategory::NameConflict,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
             AjisaiError::ModeUnsupported { .. } => ErrorCategory::ModeUnsupported,
@@ -205,6 +215,38 @@ pub enum AjisaiError {
         len1: usize,
         len2: usize,
     },
+    /// A count named more elements than the operand has: `[ 1 2 3 ] 5 TAKE`.
+    /// An index question rather than a shape one — the count reaches a position
+    /// past the end — so it is categorized with `IndexOutOfBounds` and carries
+    /// both numbers, which the bare "exceeds vector length" never did.
+    CountExceedsLength {
+        count: i64,
+        length: usize,
+        target: String,
+    },
+    /// Two operands of an element-wise Word have shapes that do not broadcast:
+    /// on some axis they disagree and neither extent is 1.
+    ///
+    /// Distinct from `VectorLengthMismatch`, which is the one-dimensional case
+    /// discovered while walking a ragged value tree. This one carries both full
+    /// shapes and the axis they part on, because with rank ≥ 2 "which operand
+    /// is the wrong shape, and where" is the whole question — and it is the
+    /// most frequent error there is in any program that multiplies matrices.
+    ShapeMismatch {
+        left: Vec<usize>,
+        right: Vec<usize>,
+        axis: usize,
+    },
+    /// Program text that does not parse: an unclosed `{ }` block, a `|` outside
+    /// a clause, a mismatched delimiter. The fault is in the writing, not in
+    /// any value, so it belongs to neither the value-shape nor the user-logic
+    /// families.
+    MalformedSource(String),
+    /// A name was asked to mean two things at once — `BIND` to a name a Word
+    /// already holds, or `DEF` to a name a live binding holds. The two name
+    /// spaces are disjoint by rule (LANG.DICTIONARY.RESOLUTION), so this is a
+    /// rule the program broke, not a value that came out wrong.
+    NameConflict(String),
     ExecutionLimitExceeded {
         limit: usize,
     },
@@ -257,6 +299,30 @@ impl fmt::Display for AjisaiError {
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
             }
+            AjisaiError::CountExceedsLength {
+                count,
+                length,
+                target,
+            } => write!(
+                f,
+                "Take count exceeds {} length: {} requested, {} available",
+                target,
+                count.unsigned_abs(),
+                length
+            ),
+            AjisaiError::ShapeMismatch { left, right, axis } => {
+                write!(
+                    f,
+                    "Cannot broadcast shapes {:?} and {:?}: axis {} is {} on the left and {} on the right, and neither is 1",
+                    left,
+                    right,
+                    axis,
+                    left.get(*axis).copied().unwrap_or(1),
+                    right.get(*axis).copied().unwrap_or(1)
+                )
+            }
+            AjisaiError::MalformedSource(msg) => write!(f, "{}", msg),
+            AjisaiError::NameConflict(msg) => write!(f, "{}", msg),
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
             }
