@@ -1,9 +1,9 @@
 {
   "name": "ajisai-mcp-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "MCP server exposing the Ajisai CLI (run), word manifest (explain_word), and SKILL.md (skill) to AI agents.",
+  "description": "Bounded Ajisai computation and contract tools for MCP-compatible AI agents.",
   "bin": { "ajisai-mcp-server": "index.js" },
   "scripts": { "start": "node index.js", "selftest": "node selftest.js" },
   "dependencies": {

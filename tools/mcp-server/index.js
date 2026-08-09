@@ -1,211 +1,208 @@
 #!/usr/bin/env node
-// Ajisai MCP server — a thin wrapper over the `ajisai` CLI, the word
-// manifest, and SKILL.md. It holds no language logic of its own: every
-// answer is produced by running the CLI (Phase 1) or reading a generated
-// artifact (SKILL.md from Phase 2, docs/word-manifest.json). See README.md.
-//
-// Tools:
-//   run(source | file)  -> the CLI's `ajisai run --json` envelope
-//   explain_word(word)  -> matching docs/word-manifest.json entries
-//   skill()             -> the contents of SKILL.md
+// A deliberately narrow, source-only MCP boundary around the Ajisai CLI.
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
+  ListResourcesRequestSchema,
   ListToolsRequestSchema,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-// ── Locations (overridable by env) ───────────────────────────────────────
-// Repo root defaults to three levels up from this file (tools/mcp-server/).
+const execFileAsync = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.AJISAI_REPO
   ? resolve(process.env.AJISAI_REPO)
   : resolve(here, "..", "..");
-const skillPath = join(repoRoot, "SKILL.md");
 const manifestPath = join(repoRoot, "docs", "word-manifest.json");
+const skillPath = join(repoRoot, "SKILL.md");
+const rootPackagePath = join(repoRoot, "package.json");
+export const LIMITS = Object.freeze({
+  sourceBytes: 64 * 1024,
+  wallTimeMs: 5_000,
+  responseBytes: 1024 * 1024,
+  executionSteps: 100_000,
+});
 
-// The CLI binary: explicit AJISAI_BIN, else the repo debug/release build.
 function resolveAjisaiBin() {
   if (process.env.AJISAI_BIN) return process.env.AJISAI_BIN;
   for (const profile of ["debug", "release"]) {
     const candidate = join(repoRoot, "rust", "target", profile, "ajisai");
     if (existsSync(candidate)) return candidate;
   }
-  return null; // reported per-call so `explain_word`/`skill` still work
+  return null;
 }
 
-// ── Tool definitions (plain JSON Schema; no extra deps) ───────────────────
+const sourceSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    source: {
+      type: "string",
+      maxLength: LIMITS.sourceBytes,
+      description: "Ajisai source text (UTF-8; file paths are not accepted).",
+    },
+  },
+  required: ["source"],
+};
+const envelopeSchema = {
+  type: "object",
+  additionalProperties: true,
+  required: ["schemaVersion", "status", "mcp"],
+  properties: {
+    schemaVersion: { type: "integer" },
+    status: { type: "string", enum: ["ok", "error"] },
+    mcp: {
+      type: "object",
+      required: ["engineVersion", "registryDigest", "limits"],
+      properties: {
+        engineVersion: { type: "string" },
+        registryDigest: { type: "string", pattern: "^[a-f0-9]{64}$" },
+        limits: { type: "object" },
+      },
+    },
+  },
+};
 const TOOLS = [
   {
-    name: "run",
-    description:
-      "Run an Ajisai program through the `ajisai` CLI and return its " +
-      "--json envelope (status, stack, stackDisplay, output, diagnosis, " +
-      "errorFlowTrace, aiDiagnostic, runtimeMetrics). Provide the program " +
-      "as `source`, or a path with `file`.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        source: { type: "string", description: "Ajisai source text to run." },
-        file: { type: "string", description: "Path to a .ajisai file to run." },
-      },
-    },
+    name: "compute",
+    description: "Execute a bounded Ajisai program. Use for supported-domain exact rational, decimal, square-root and vector calculations, including reason-carrying NIL results.",
+    inputSchema: sourceSchema,
+    outputSchema: envelopeSchema,
   },
   {
-    name: "explain_word",
-    description:
-      "Look a word up in the generated word manifest (docs/word-manifest.json) " +
-      "and return its entries: surface, kind, category, module, canonical, and " +
-      "semantic metadata. Matches the bare name or a MODULE@WORD form, " +
-      "case-insensitively.",
+    name: "check",
+    description: "Parse and resolve Ajisai source without executing it; also verifies declared contracts conservatively.",
+    inputSchema: sourceSchema,
+    outputSchema: envelopeSchema,
+  },
+  {
+    name: "infer_contracts",
+    description: "Infer machine-readable contracts for user-defined Words without executing their bodies.",
+    inputSchema: sourceSchema,
+    outputSchema: envelopeSchema,
+  },
+  {
+    name: "word_contract",
+    description: "Return the generated canonical registry entry for a Word or alias.",
     inputSchema: {
       type: "object",
-      properties: {
-        word: { type: "string", description: "Word name, e.g. MAP or MUSIC@PLAY." },
-      },
+      additionalProperties: false,
+      properties: { word: { type: "string", minLength: 1 } },
       required: ["word"],
     },
-  },
-  {
-    name: "skill",
-    description:
-      "Return SKILL.md — the generated, CLI-verified agent writing protocol " +
-      "for Ajisai (run loop, syntax, control flow, NIL/UNKNOWN, examples, " +
-      "common errors, forbidden patterns, and the full word quick reference).",
-    inputSchema: { type: "object", properties: {} },
+    outputSchema: {
+      type: "object",
+      properties: { matches: { type: "array" } },
+      required: ["matches"],
+    },
   },
 ];
 
-// ── Tool handlers ─────────────────────────────────────────────────────────
-function ok(text) {
-  return { content: [{ type: "text", text }] };
+let manifestCache;
+let registryDigestCache;
+let engineVersionCache;
+function manifest() { return manifestCache ??= JSON.parse(readFileSync(manifestPath, "utf8")); }
+function registryDigest() {
+  return registryDigestCache ??= createHash("sha256")
+    .update(readFileSync(manifestPath))
+    .digest("hex");
 }
-function fail(text) {
-  return { content: [{ type: "text", text }], isError: true };
+function engineVersion() {
+  return engineVersionCache ??= JSON.parse(readFileSync(rootPackagePath, "utf8")).version;
 }
+function result(value) { return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], structuredContent: value }; }
+function fail(text) { return { content: [{ type: "text", text }], isError: true }; }
 
-function toolRun(args) {
+async function runCli(source, command) {
+  if (typeof source !== "string" || source.length === 0) return fail("Provide non-empty `source` text.");
+  if (Buffer.byteLength(source, "utf8") > LIMITS.sourceBytes) return fail(`source exceeds ${LIMITS.sourceBytes} UTF-8 bytes`);
   const bin = resolveAjisaiBin();
-  if (!bin) {
-    return fail(
-      "ajisai CLI not found. Build it (`cargo build --bin ajisai` in rust/) " +
-        "or set AJISAI_BIN to the binary path.",
-    );
-  }
-  const source = args?.source;
-  const file = args?.file;
-  if ((source == null) === (file == null)) {
-    return fail("Provide exactly one of `source` or `file`.");
-  }
-
-  let target = file ? resolve(file) : null;
-  let scratch = null;
-  if (source != null) {
-    scratch = mkdtempSync(join(tmpdir(), "ajisai-mcp-"));
-    target = join(scratch, "program.ajisai");
-    writeFileSync(target, source.endsWith("\n") ? source : source + "\n");
-  }
+  if (!bin) return fail("ajisai CLI not found; build rust/ or set AJISAI_BIN.");
+  const scratch = mkdtempSync(join(tmpdir(), "ajisai-mcp-"));
+  const target = join(scratch, "program.ajisai");
+  writeFileSync(target, source.endsWith("\n") ? source : `${source}\n`, { mode: 0o600 });
+  const args = [command, target, "--json"];
+  if (command === "run") args.push("--step-limit", String(LIMITS.executionSteps));
+  if (command === "check") args.push("--contract");
   try {
-    const proc = spawnSync(bin, ["run", target, "--json"], { encoding: "utf8" });
-    if (proc.error) return fail(`failed to run ajisai: ${proc.error.message}`);
-    // The CLI prints exactly one JSON document to stdout (pipe-safe contract).
-    // Pass it through verbatim; a non-zero exit (language error) still carries
-    // a valid JSON envelope, so it is a successful tool call with status:error.
-    const text = proc.stdout && proc.stdout.trim().length > 0
-      ? proc.stdout
-      : (proc.stderr || "(no output)");
-    return ok(text);
-  } finally {
-    if (scratch) rmSync(scratch, { recursive: true, force: true });
-  }
-}
-
-let manifestCache = null;
-function loadManifest() {
-  if (manifestCache) return manifestCache;
-  manifestCache = JSON.parse(readFileSync(manifestPath, "utf8"));
-  return manifestCache;
-}
-
-function toolExplainWord(args) {
-  const word = (args?.word ?? "").trim();
-  if (!word) return fail("Provide a `word` to explain.");
-  let manifest;
-  try {
-    manifest = loadManifest();
-  } catch (e) {
-    return fail(`could not read ${manifestPath}: ${e.message}`);
-  }
-  const needle = word.toUpperCase();
-  const matches = (manifest.entries || []).filter((e) => {
-    const surface = (e.surface ?? "").toUpperCase();
-    const short = (e.short_surface ?? "").toUpperCase();
-    const canonical = (e.canonical ?? "").toUpperCase();
-    return surface === needle || short === needle || canonical === needle;
-  });
-  if (matches.length === 0) {
-    return fail(
-      `No word matching '${word}' in the manifest. ` +
-        "Use the `skill` tool's §9 quick reference to find the right name.",
-    );
-  }
-  return ok(JSON.stringify(matches, null, 2));
-}
-
-function toolSkill() {
-  try {
-    return ok(readFileSync(skillPath, "utf8"));
-  } catch (e) {
-    return fail(
-      `could not read ${skillPath}: ${e.message}. ` +
-        "Generate it with `npm run generate:skill`.",
-    );
-  }
-}
-
-// ── Wire up the server ────────────────────────────────────────────────────
-export function createServer() {
-  const server = new Server(
-    { name: "ajisai", version: "0.1.0" },
-    { capabilities: { tools: {} } },
-  );
-
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
-
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-    switch (name) {
-      case "run":
-        return toolRun(args);
-      case "explain_word":
-        return toolExplainWord(args);
-      case "skill":
-        return toolSkill();
-      default:
-        return fail(`unknown tool: ${name}`);
+    let stdout;
+    try {
+      ({ stdout } = await execFileAsync(bin, args, { encoding: "utf8", timeout: LIMITS.wallTimeMs, maxBuffer: LIMITS.responseBytes }));
+    } catch (error) {
+      // Ajisai language errors intentionally exit 1 with a JSON diagnosis.
+      // Timeouts, max-buffer failures and CLI usage failures are host errors,
+      // even when the child managed to write a partial stdout document.
+      if (error.killed || error.signal) {
+        return fail(`Ajisai exceeded ${LIMITS.wallTimeMs} ms`);
+      }
+      if (error.code !== 1 || !error.stdout) {
+        return fail(`failed to run Ajisai: ${error.message}`);
+      }
+      stdout = error.stdout;
     }
-  });
+    let envelope;
+    try { envelope = JSON.parse(stdout); } catch { return fail("Ajisai returned a non-JSON response."); }
+    // `contract --json` predates the common CLI envelope and returns a bare
+    // array. Normalize it at this adapter boundary so all execution tools
+    // honor their advertised MCP output schema.
+    if (command === "contract") {
+      envelope = {
+        schemaVersion: 1,
+        status: "ok",
+        contracts: envelope,
+      };
+    }
+    envelope.mcp = {
+      engineVersion: engineVersion(),
+      registryDigest: registryDigest(),
+      limits: LIMITS,
+    };
+    return result(envelope);
+  } finally { rmSync(scratch, { recursive: true, force: true }); }
+}
 
+function wordContract(word) {
+  const needle = typeof word === "string" ? word.trim().toUpperCase() : "";
+  if (!needle) return fail("Provide a `word`.");
+  const matches = (manifest().entries ?? []).filter((entry) => [entry.surface, entry.short_surface, entry.canonical].some((value) => value?.toUpperCase() === needle));
+  return result({ matches });
+}
+
+const RESOURCES = [
+  { uri: "ajisai://guide/quickstart", name: "Ajisai agent quickstart", mimeType: "text/markdown" },
+  { uri: "ajisai://vocabulary", name: "Ajisai generated Word vocabulary", mimeType: "application/json" },
+  { uri: "ajisai://schema/result", name: "Ajisai MCP result contract", mimeType: "application/json" },
+];
+
+export function createServer() {
+  const server = new Server({ name: "ajisai", version: "0.2.0" }, { capabilities: { tools: {}, resources: {} } });
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
+  server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
+    const args = params.arguments ?? {};
+    if (params.name === "compute") return runCli(args.source, "run");
+    if (params.name === "check") return runCli(args.source, "check");
+    if (params.name === "infer_contracts") return runCli(args.source, "contract");
+    if (params.name === "word_contract") return wordContract(args.word);
+    return fail(`unknown tool: ${params.name}`);
+  });
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: RESOURCES }));
+  server.setRequestHandler(ReadResourceRequestSchema, async ({ params }) => {
+    const uri = params.uri;
+    if (uri === "ajisai://guide/quickstart") return { contents: [{ uri, mimeType: "text/markdown", text: readFileSync(skillPath, "utf8") }] };
+    if (uri === "ajisai://vocabulary") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(manifest(), null, 2) }] };
+    if (uri === "ajisai://schema/result") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(envelopeSchema, null, 2) }] };
+    throw new Error(`unknown resource: ${uri}`);
+  });
   return server;
 }
 
-// Auto-start over stdio only when invoked as the executable, so the module
-// can be imported (e.g. by selftest.js) without grabbing stdin/stdout.
-const invokedDirectly =
-  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (invokedDirectly) {
-  const transport = new StdioServerTransport();
-  await createServer().connect(transport);
-}
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await createServer().connect(new StdioServerTransport());
