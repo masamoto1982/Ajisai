@@ -56,6 +56,7 @@ npm install
 npm run selftest
 npm run test:pack
 npm run eval
+npm run eval:validate
 npm run eval:traces
 npm run eval:repairs
 ```
@@ -79,6 +80,10 @@ requires the expected structured diagnosis before the revision can count, and
 reports diagnosis-observation and diagnosis-driven repair rates. The seed cases
 cover unknown Words, stack shape and malformed source. Their reference trace is
 also a scorer fixture, not evidence of model performance.
+`eval:validate` rejects duplicate or unknown case IDs, unknown tools, malformed
+JSON pointers and incomplete committed reference traces before scores are
+calculated. This prevents malformed or selectively omitted traces from
+silently producing plausible metrics.
 `npm run test:pack` creates the allowlisted tarball, installs it into an empty
 temporary prefix, imports that installed copy and computes through the real
 backend. The smoke test deliberately points `AJISAI_REPO` at a nonexistent

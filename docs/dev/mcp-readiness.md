@@ -17,9 +17,9 @@ host and shares the value protocol with the native CLI.
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
 | P1 — local stdio beta | 35% | 85% | 29.75% |
-| P2 — agent evaluation | 20% | 35% | 7.0% |
+| P2 — agent evaluation | 20% | 40% | 8.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **71.75%** |
+| **Overall** | **100%** | — | **72.75%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -70,7 +70,7 @@ Remaining exit criteria:
 - Publish a non-private, versioned npm package after the backend is
   self-contained rather than native-binary dependent.
 
-### P2 — agent evaluation (35%)
+### P2 — agent evaluation (40%)
 
 A first versioned prompt corpus now covers tool intent and backend semantics for
 rationals, decimals, algebraics, vector broadcast, NIL, diagnostics, static
@@ -83,6 +83,8 @@ separate repair scorer now requires the expected structured diagnosis before a
 corrected attempt can count, with seed cases for unknown Words, stack shape and
 malformed source. Its perfect reference is a harness fixture; real-model repair
 rates remain unmeasured.
+Corpus and trace contracts now reject duplicate/unknown IDs, unknown tools,
+malformed expectations and incomplete reference fixtures before scoring.
 
 ### P3 — remote service (0%)
 

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "./index.js";
+import { validateCorpus } from "./evaluation-contract.js";
 
 function atPointer(document, pointer) {
   return pointer
@@ -13,6 +14,7 @@ function atPointer(document, pointer) {
 }
 
 const corpus = JSON.parse(readFileSync(new URL("./eval/cases.json", import.meta.url), "utf8"));
+validateCorpus(corpus);
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const server = createServer();
 const client = new Client({ name: "ajisai-eval", version: "1" });

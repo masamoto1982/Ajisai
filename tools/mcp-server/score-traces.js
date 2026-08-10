@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "./index.js";
+import { indexTraces, validateCorpus } from "./evaluation-contract.js";
 
 function atPointer(document, pointer) {
   return pointer.split("/").slice(1)
@@ -17,7 +18,7 @@ if (!tracePath) {
 }
 const corpus = JSON.parse(readFileSync(new URL("./eval/cases.json", import.meta.url), "utf8"));
 const traceDoc = JSON.parse(readFileSync(tracePath, "utf8"));
-const traces = new Map(traceDoc.traces.map((trace) => [trace.caseId, trace]));
+const traces = indexTraces(traceDoc, validateCorpus(corpus));
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const server = createServer();
 const client = new Client({ name: "ajisai-trace-eval", version: "1" });
