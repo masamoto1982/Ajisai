@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Bounded Ajisai computation and contract tools for MCP-compatible AI agents.",
   "engines": { "node": ">=20" },
-  "files": ["index.js", "result.schema.json", "README.md", "golden/cases.json", "eval.js", "eval/cases.json"],
+  "files": ["index.js", "result.schema.json", "README.md", "golden/cases.json", "eval.js", "score-traces.js", "eval/*.json"],
   "bin": { "ajisai-mcp-server": "index.js" },
-  "scripts": { "start": "node index.js", "selftest": "node selftest.js", "eval": "node eval.js" },
+  "scripts": { "start": "node index.js", "selftest": "node selftest.js", "eval": "node eval.js", "eval:traces": "node score-traces.js eval/reference-traces.json --require-perfect" },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.18.0"

@@ -55,6 +55,7 @@ cd tools/mcp-server
 npm install
 npm run selftest
 npm run eval
+npm run eval:traces
 ```
 
 Set `AJISAI_BIN` to select another CLI binary or `AJISAI_REPO` to select the
@@ -65,3 +66,7 @@ browser playground is independent of this package and remains available.
 its expected tool calls against the real backend. It measures backend semantic
 correctness only; model tool selection and source generation require captured
 model traces and are not claimed by this score.
+`score-traces.js` accepts captured model traces in the documented reference
+shape and reports tool-selection accuracy, end-to-end semantic success, missing
+traces and irrelevant-tool rate. The committed reference trace is a harness
+conformance fixture, not a model benchmark result.

@@ -155,6 +155,7 @@ jobs:
           npm run check:agent-cli-contract
           npm run test:mcp
           npm run eval:mcp
+          npm run eval:mcp-traces
 
   rust-test:
     name: Rust Tests

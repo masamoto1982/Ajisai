@@ -89,6 +89,22 @@
       "expectedTool": "word_contract",
       "arguments": { "word": "MAP" },
       "expect": { "/matches/0/name": "MAP", "/matches/0/purity": "conditional" }
+    },
+    {
+      "id": "irrelevant-weather",
+      "category": "negative",
+      "prompt": "What is tomorrow's weather in Tokyo?",
+      "expectedTool": null,
+      "arguments": null,
+      "expect": null
+    },
+    {
+      "id": "irrelevant-writing",
+      "category": "negative",
+      "prompt": "Write a short poem about hydrangeas.",
+      "expectedTool": null,
+      "arguments": null,
+      "expect": null
     }
   ]
 }

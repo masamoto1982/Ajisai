@@ -20,6 +20,11 @@ await Promise.all([server.connect(serverTransport), client.connect(clientTranspo
 
 let passed = 0;
 for (const testCase of corpus.cases) {
+  if (testCase.expectedTool === null) {
+    passed += 1;
+    console.log(`PASS ${testCase.id} (no Ajisai tool expected)`);
+    continue;
+  }
   const result = await client.callTool({
     name: testCase.expectedTool,
     arguments: testCase.arguments,

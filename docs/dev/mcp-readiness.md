@@ -17,9 +17,9 @@ host and shares the value protocol with the native CLI.
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
 | P1 — local stdio beta | 35% | 70% | 24.5% |
-| P2 — agent evaluation | 20% | 15% | 3.0% |
+| P2 — agent evaluation | 20% | 25% | 5.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **62.5%** |
+| **Overall** | **100%** | — | **64.5%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -65,14 +65,16 @@ Remaining exit criteria:
 - Publish a non-private, versioned npm package with clean-install and
   `npm pack` smoke tests on supported Node versions.
 
-### P2 — agent evaluation (15%)
+### P2 — agent evaluation (25%)
 
 A first versioned prompt corpus now covers tool intent and backend semantics for
 rationals, decimals, algebraics, vector broadcast, NIL, diagnostics, static
 checking and contracts. It is intentionally only a seed: expansion to 100–200
-prompts, model-produced tool-call traces, baseline comparisons, tool-selection
-measurements, first-attempt generation rate and diagnosis-driven repair rate
-remain to be implemented.
+prompts remains necessary. A trace scorer now measures tool selection,
+end-to-end semantics, missing traces and irrelevant activation; the committed
+perfect reference trace verifies the scorer only. Real model traces, baseline
+comparisons, first-attempt generation rate and diagnosis-driven repair rate
+remain to be collected.
 
 ### P3 — remote service (0%)
 
