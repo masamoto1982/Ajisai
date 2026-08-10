@@ -10,6 +10,7 @@ only commands and fields emitted by the current native CLI.
 ajisai run <file.ajisai> [--json] [--step-limit <N>]
 ajisai check <file.ajisai> [--json] [--contract]
 ajisai contract <file.ajisai> [--json]
+ajisai agent <compute|check|infer-contracts> <file.ajisai>
 ajisai test <file-or-dir> [--json]
 ajisai repl [--json]
 ajisai version [--json]
@@ -148,6 +149,14 @@ Ajisai Words.
 ```json
 { "schemaVersion": 1, "status": "ok", "version": "0.2.0-beta.1" }
 ```
+
+## `agent`
+
+`agent` is the stable JSON-only host boundary used by the MCP adapter. Its
+`compute`, `check`, and `infer-contracts` operations call the typed Rust agent
+API and always return a schema-versioned object. In particular,
+`infer-contracts` returns the array under `contracts`, avoiding the legacy bare
+array emitted by the compatibility `contract --json` command.
 
 ## Compatibility
 

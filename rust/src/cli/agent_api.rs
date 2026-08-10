@@ -9,11 +9,22 @@ use super::{
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
-use crate::interpreter::Interpreter;
+use crate::interpreter::{Interpreter, RuntimeLimits};
+
+/// Tighter internal-cost profile for untrusted, agent-generated programs.
+pub const LOCAL_AGENT_RUNTIME_LIMITS: RuntimeLimits = RuntimeLimits {
+    max_materialized_elements: 100_000,
+    max_source_bytes: 64 * 1024,
+    max_numeric_literal_digits: 4_096,
+    max_numeric_work: 10_000_000,
+    max_bigint_bits: 262_144,
+    max_algebraic_terms: 4_096,
+};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ComputeOptions {
     pub step_limit: Option<usize>,
+    pub runtime_limits: Option<RuntimeLimits>,
 }
 
 pub struct AgentResponse {
@@ -91,6 +102,9 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
     }
 
     let mut interp = Interpreter::new();
+    if let Some(limits) = options.runtime_limits {
+        interp.set_runtime_limits(limits);
+    }
     if let Some(limit) = options.step_limit {
         interp.set_max_execution_steps(limit);
     }
@@ -238,6 +252,27 @@ mod tests {
         assert_eq!(response.exit_code(), 1);
         assert_eq!(json["status"], "error");
         assert_eq!(json["diagnosis"]["why"], "typoOrUnknownName");
+    }
+
+    #[tokio::test]
+    async fn compute_applies_injected_internal_cost_limits() {
+        let response = compute(
+            "[ 0 11 ] RANGE",
+            ComputeOptions {
+                runtime_limits: Some(RuntimeLimits {
+                    max_materialized_elements: 10,
+                    ..RuntimeLimits::default()
+                }),
+                ..ComputeOptions::default()
+            },
+        )
+        .await;
+        let json = response.to_json();
+        assert_eq!(json["status"], "ok");
+        assert_eq!(
+            json["stack"][0]["semantics"]["absence"]["reason"],
+            "spaceExhausted"
+        );
     }
 
     #[test]

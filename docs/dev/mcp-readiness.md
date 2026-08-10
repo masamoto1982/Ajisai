@@ -15,13 +15,13 @@ host and shares the value protocol with the native CLI.
 
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
-| P0 — lossless semantic boundary | 35% | 98% | 34.30% |
-| P1 — local stdio beta | 35% | 60% | 21.0% |
+| P0 — lossless semantic boundary | 35% | 100% | 35.0% |
+| P1 — local stdio beta | 35% | 70% | 24.5% |
 | P2 — agent evaluation | 20% | 5% | 1.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **56.30%** |
+| **Overall** | **100%** | — | **60.5%** |
 
-### P0 — lossless semantic boundary (98%)
+### P0 — lossless semantic boundary (100%)
 
 Completed:
 
@@ -40,13 +40,12 @@ Completed:
   rendering consumes the same I/O-free report object.
 - Static checking and user-Word contract inference are also available through
   that API; the native JSON commands consume those typed results.
+- The packaged MCP adapter calls the common native `agent` boundary for all
+  three operations; Node no longer normalizes command-specific result shapes.
 
-Remaining exit criteria:
+All P0 exit criteria are complete.
 
-- Make the packaged MCP backend consume the typed API without Node-side
-  command-specific normalization.
-
-### P1 — local stdio beta (60%)
+### P1 — local stdio beta (70%)
 
 Completed:
 
@@ -55,6 +54,8 @@ Completed:
 - Structured output schemas and read-only/idempotent MCP annotations.
 - Static guide, vocabulary, result-schema and per-Word contract resources.
 - Source, wall-time, output, step and concurrency limits.
+- A dedicated Rust agent profile caps materialization, numeric-literal digits,
+  numeric work, BigInt bits and algebraic term growth.
 - Real-backend MCP self-test is a blocking CI quality gate.
 
 Remaining exit criteria:
@@ -63,8 +64,6 @@ Remaining exit criteria:
   retain the native CLI as an optional backend.
 - Publish a non-private, versioned npm package with clean-install and
   `npm pack` smoke tests on supported Node versions.
-- Add explicit algebraic-term, BigInt-bit and materialization limits to the
-  runtime agent profile rather than relying only on existing runtime defaults.
 
 ### P2 — agent evaluation (5%)
 

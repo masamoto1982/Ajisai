@@ -35,6 +35,11 @@ export const LIMITS = Object.freeze({
   responseBytes: 1024 * 1024,
   executionSteps: 100_000,
   concurrentExecutions: 4,
+  materializedElements: 100_000,
+  numericLiteralDigits: 4_096,
+  numericWork: 10_000_000,
+  bigintBits: 262_144,
+  algebraicTerms: 4_096,
 });
 
 function resolveAjisaiBin() {
@@ -167,9 +172,13 @@ async function runCli(source, command) {
     scratch = mkdtempSync(join(tmpdir(), "ajisai-mcp-"));
     const target = join(scratch, "program.ajisai");
     writeFileSync(target, source.endsWith("\n") ? source : `${source}\n`, { mode: 0o600 });
-    const args = [command, target, "--json"];
+    const operation = {
+      run: "compute",
+      check: "check",
+      contract: "infer-contracts",
+    }[command];
+    const args = ["agent", operation, target, "--json"];
     if (command === "run") args.push("--step-limit", String(LIMITS.executionSteps));
-    if (command === "check") args.push("--contract");
     let stdout;
     try {
       ({ stdout } = await execFileAsync(bin, args, { encoding: "utf8", timeout: LIMITS.wallTimeMs, maxBuffer: LIMITS.responseBytes }));
@@ -187,16 +196,6 @@ async function runCli(source, command) {
     }
     let envelope;
     try { envelope = JSON.parse(stdout); } catch { return fail("Ajisai returned a non-JSON response."); }
-    // `contract --json` predates the common CLI envelope and returns a bare
-    // array. Normalize it at this adapter boundary so all execution tools
-    // honor their advertised MCP output schema.
-    if (command === "contract") {
-      envelope = {
-        schemaVersion: 1,
-        status: "ok",
-        contracts: envelope,
-      };
-    }
     envelope.mcp = {
       engineVersion: engineVersion(),
       registryDigest: registryDigest(),

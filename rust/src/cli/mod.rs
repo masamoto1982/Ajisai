@@ -8,6 +8,7 @@
 //! ajisai run <file.ajisai> [--json]
 //! ajisai check <file.ajisai> [--json]     # tokenize + parse + resolve, no execution
 //! ajisai contract <file.ajisai> [--json]  # report inferred word contracts, no execution
+//! ajisai agent <operation> <file.ajisai>   # common JSON envelope for host adapters
 //! ajisai test <file-or-dir> [--json]       # execute `#@` host test directives
 //! ajisai repl [--json]                     # persistent interactive session
 //! ajisai version [--json]
@@ -51,6 +52,8 @@ Commands:
   contract <file.ajisai> [--json] Report each user word's inferred contract
                                   (arity, purity, NIL, determinism) plus a
                                   paste-ready `#:contract` line (no execution)
+  agent <operation> <file.ajisai> Stable source-to-JSON host boundary. Operations:
+                                  compute, check, infer-contracts
   test <file-or-dir> [--json]     Run test files, checking each program against
                                   its `#@` directive comments (status/stack/
                                   output/error). Exit 1 if any test fails
@@ -113,6 +116,7 @@ pub fn run(args: &[String]) -> i32 {
         ("run", [path]) => cmd_run(path, &opts),
         ("check", [path]) => cmd_check(path, &opts),
         ("contract", [path]) => cmd_contract(path, &opts),
+        ("agent", [operation, path]) => cmd_agent(operation, path, &opts),
         ("test", [path]) => test_runner::cmd_test(path, &opts),
         ("repl", []) => repl::cmd_repl(&opts),
         ("version", []) => cmd_version(json),
@@ -163,6 +167,7 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
         &source,
         agent_api::ComputeOptions {
             step_limit: opts.step_limit,
+            runtime_limits: None,
         },
     ));
     emit(response.report(), opts);
@@ -383,6 +388,41 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
         }
     }
     0
+}
+
+/// Common JSON boundary consumed by host adapters. Unlike the compatibility
+/// CLI commands, every operation returns the same top-level envelope shape.
+fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(e) => {
+            eprintln!("ajisai: cannot read {}: {}", path, e);
+            return 2;
+        }
+    };
+    let (document, exit_code) = match operation {
+        "compute" => {
+            let response = block_on(agent_api::compute(
+                &source,
+                agent_api::ComputeOptions {
+                    step_limit: opts.step_limit,
+                    runtime_limits: Some(agent_api::LOCAL_AGENT_RUNTIME_LIMITS),
+                },
+            ));
+            (response.to_json(), response.exit_code())
+        }
+        "check" => {
+            let response = agent_api::check(&source, true);
+            (response.to_json(), response.exit_code())
+        }
+        "infer-contracts" => (agent_api::infer_contracts(&source).to_json(), 0),
+        _ => {
+            eprintln!("unknown agent operation: {operation}");
+            return 2;
+        }
+    };
+    println!("{}", pretty(&document));
+    exit_code
 }
 
 /// execution — this only front-loads the same failure for `check`.

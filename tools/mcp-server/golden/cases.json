@@ -52,6 +52,16 @@
         "/errorFlowTrace/0/kind": "wordError",
         "/errorFlowTrace/0/word": "DOWN"
       }
+    },
+    {
+      "name": "agent materialization ceiling is a reason-carrying NIL",
+      "source": "[ 0 100001 ] RANGE",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "NIL",
+        "/stack/0/semantics/absence/reason": "spaceExhausted",
+        "/errorFlowTrace/0/absence/reason": "spaceExhausted"
+      }
     }
   ]
 }
