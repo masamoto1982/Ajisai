@@ -21,8 +21,16 @@ pub mod surface_forms;
 mod tokenizer;
 pub mod types;
 
+// Host-neutral agent boundary (pure computation, no filesystem/terminal I/O):
+// shared by the native CLI below and the WASM one-shot entry point in
+// `wasm_interpreter_bindings`, so every host renders the identical schema-1
+// envelope (`docs/dev/agent-cli-output-contract.md`).
+#[cfg(feature = "std")]
+pub mod agent;
+
 // Headless agent-facing CLI (the `ajisai` bin target). Native-only: it is
-// host-adapter plumbing over the same interpreter the WASM bindings wrap.
+// host-adapter plumbing (file I/O, terminal rendering, REPL) over
+// `crate::agent`.
 #[cfg(all(feature = "std", not(target_arch = "wasm32")))]
 pub mod cli;
 

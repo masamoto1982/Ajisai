@@ -8,6 +8,7 @@ use crate::interpreter::Interpreter;
 use crate::types::Token;
 use wasm_bindgen::prelude::*;
 
+mod wasm_agent;
 mod wasm_interpreter_execution;
 mod wasm_interpreter_state;
 mod wasm_runtime_metrics;

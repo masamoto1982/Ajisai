@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 
 use crate::interpreter::Interpreter;
 
-use super::{block_on, print_payloads, stack_display, Opts};
+use crate::agent::{block_on, print_payloads, stack_display, Opts};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExpectedStatus {
@@ -194,7 +194,7 @@ fn render_report(outcomes: &[TestOutcome], opts: &Opts) {
             })
             .collect();
         let doc = serde_json::json!({
-            "schemaVersion": super::report::SCHEMA_VERSION,
+            "schemaVersion": crate::agent::report::SCHEMA_VERSION,
             "status": if failed == 0 { "ok" } else { "error" },
             "total": outcomes.len(),
             "passed": passed,

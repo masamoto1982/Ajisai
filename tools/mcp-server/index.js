@@ -10,15 +10,13 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { NativeCliBackend } from "./backend/native-cli.js";
+import { WasmWorkerBackend } from "./backend/wasm-worker.js";
 
-const execFileAsync = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.AJISAI_REPO
   ? resolve(process.env.AJISAI_REPO)
@@ -48,6 +46,32 @@ function resolveAjisaiBin() {
   for (const profile of ["debug", "release"]) {
     const candidate = join(repoRoot, "rust", "target", profile, "ajisai");
     if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+// Backend selection: the packaged WASM worker needs neither `AJISAI_REPO` nor
+// `AJISAI_BIN` and is the self-contained default. A native binary — found via
+// the explicit `AJISAI_BIN` override, or discovered under a checked-out
+// `rust/` (local development, Docker images that build it in) — takes
+// precedence when present. Both backends return the identical schema-1
+// envelope (`docs/dev/agent-cli-output-contract.md`), verified case-by-case in
+// `backend/parity-test.js`, so callers never see which one answered.
+function selectBackend() {
+  const bin = resolveAjisaiBin();
+  if (bin) {
+    return new NativeCliBackend({
+      bin,
+      wallTimeMs: LIMITS.wallTimeMs,
+      responseBytes: LIMITS.responseBytes,
+      executionSteps: LIMITS.executionSteps,
+    });
+  }
+  if (WasmWorkerBackend.isAvailable()) {
+    return new WasmWorkerBackend({
+      wallTimeMs: LIMITS.wallTimeMs,
+      executionSteps: LIMITS.executionSteps,
+    });
   }
   return null;
 }
@@ -161,53 +185,35 @@ function serverVersion() {
 function result(value) { return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], structuredContent: value }; }
 function fail(text) { return { content: [{ type: "text", text }], isError: true }; }
 
-async function runCli(source, command) {
+async function runAgent(source, command) {
   if (typeof source !== "string" || source.length === 0) return fail("Provide non-empty `source` text.");
   if (Buffer.byteLength(source, "utf8") > LIMITS.sourceBytes) return fail(`source exceeds ${LIMITS.sourceBytes} UTF-8 bytes`);
-  const bin = resolveAjisaiBin();
-  if (!bin) return fail("ajisai CLI not found; build rust/ or set AJISAI_BIN.");
+  const backend = selectBackend();
+  if (!backend) {
+    return fail(
+      "Ajisai backend unavailable: no native binary found (build rust/ or set AJISAI_BIN) and the packaged WASM module is missing.",
+    );
+  }
   if (!executionGate.tryAcquire()) {
     return fail(
       `Ajisai execution capacity is full (${LIMITS.concurrentExecutions}); retry later.`,
     );
   }
-  let scratch;
   try {
-    scratch = mkdtempSync(join(tmpdir(), "ajisai-mcp-"));
-    const target = join(scratch, "program.ajisai");
-    writeFileSync(target, source.endsWith("\n") ? source : `${source}\n`, { mode: 0o600 });
-    const operation = {
-      run: "compute",
-      check: "check",
-      contract: "infer-contracts",
-    }[command];
-    const args = ["agent", operation, target, "--json"];
-    if (command === "run") args.push("--step-limit", String(LIMITS.executionSteps));
-    let stdout;
-    try {
-      ({ stdout } = await execFileAsync(bin, args, { encoding: "utf8", timeout: LIMITS.wallTimeMs, maxBuffer: LIMITS.responseBytes }));
-    } catch (error) {
-      // Ajisai language errors intentionally exit 1 with a JSON diagnosis.
-      // Timeouts, max-buffer failures and CLI usage failures are host errors,
-      // even when the child managed to write a partial stdout document.
-      if (error.killed || error.signal) {
-        return fail(`Ajisai exceeded ${LIMITS.wallTimeMs} ms`);
-      }
-      if (error.code !== 1 || !error.stdout) {
-        return fail(`failed to run Ajisai: ${error.message}`);
-      }
-      stdout = error.stdout;
-    }
-    let envelope;
-    try { envelope = JSON.parse(stdout); } catch { return fail("Ajisai returned a non-JSON response."); }
+    const operation = { run: "compute", check: "check", contract: "inferContracts" }[command];
+    const envelope = await backend[operation](source);
     envelope.mcp = {
       engineVersion: engineVersion(),
       registryDigest: registryDigest(),
       limits: LIMITS,
     };
     return result(envelope);
+  } catch (error) {
+    // A backend throw is always a host failure (timeout, spawn/worker
+    // failure, a non-JSON response) — never a translated Ajisai `ERROR`,
+    // which each backend already returns as a normal envelope above.
+    return fail(error.message);
   } finally {
-    if (scratch) rmSync(scratch, { recursive: true, force: true });
     executionGate.release();
   }
 }
@@ -248,9 +254,9 @@ export function createServer() {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
   server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
     const args = params.arguments ?? {};
-    if (params.name === "compute") return runCli(args.source, "run");
-    if (params.name === "check") return runCli(args.source, "check");
-    if (params.name === "infer_contracts") return runCli(args.source, "contract");
+    if (params.name === "compute") return runAgent(args.source, "run");
+    if (params.name === "check") return runAgent(args.source, "check");
+    if (params.name === "infer_contracts") return runAgent(args.source, "contract");
     if (params.name === "word_contract") return wordContract(args.word);
     return fail(`unknown tool: ${params.name}`);
   });

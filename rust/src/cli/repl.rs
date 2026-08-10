@@ -16,7 +16,7 @@ use std::io::{BufRead, Write};
 
 use crate::interpreter::{HostEffect, Interpreter};
 
-use super::{block_on, stack_display, Opts};
+use crate::agent::{block_on, stack_display, Opts};
 
 /// Outcome kind of evaluating one REPL line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
