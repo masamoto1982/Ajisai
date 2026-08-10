@@ -58,6 +58,8 @@ best-effort static Word resolution, and never executes the program. With
 Native `run` obtains this document from the typed, source-only Rust
 `cli::agent_api::compute` boundary. Terminal formatting is a consumer of that
 report and is not part of computation semantics.
+JSON `check` likewise consumes `cli::agent_api::check`; human-readable check
+output remains a terminal-only projection.
 
 ### Stack value nodes
 
@@ -122,6 +124,8 @@ their bodies.
 The MCP adapter normalizes this legacy bare array into its common result
 envelope under `contracts`; the native CLI shape remains unchanged in schema
 version 1.
+The array itself is produced by `cli::agent_api::infer_contracts` so native and
+future embedded hosts share inference rather than reimplementing it.
 
 ## `test`
 
