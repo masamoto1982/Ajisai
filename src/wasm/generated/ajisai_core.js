@@ -331,6 +331,64 @@ export class AjisaiInterpreter {
 if (Symbol.dispose) AjisaiInterpreter.prototype[Symbol.dispose] = AjisaiInterpreter.prototype.free;
 
 /**
+ * Parse and resolve `source` without executing it; also verifies declared
+ * `#:contract` declarations conservatively, matching `ajisai agent check`.
+ * @param {string} source
+ * @returns {string}
+ */
+export function agent_check(source) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agent_check(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Execute one Ajisai source document under the same tightened
+ * agent-profile runtime limits the native `ajisai agent compute` CLI
+ * applies. `step_limit` overrides the default execution step budget when
+ * positive; `0` or omitted keeps the interpreter default.
+ * @param {string} source
+ * @param {number | null} [step_limit]
+ * @returns {Promise<string>}
+ */
+export function agent_compute(source, step_limit) {
+    const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.agent_compute(ptr0, len0, isLikeNone(step_limit) ? Number.MAX_SAFE_INTEGER : (step_limit) >>> 0);
+    return ret;
+}
+
+/**
+ * Infer machine-readable contracts for user-defined Words without
+ * executing their bodies, matching `ajisai agent infer-contracts`.
+ * @param {string} source
+ * @returns {string}
+ */
+export function agent_infer_contracts(source) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agent_infer_contracts(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.
@@ -580,7 +638,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 124, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 138, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014);
             return ret;
         },

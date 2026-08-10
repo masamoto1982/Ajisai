@@ -2,6 +2,9 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wbg_ajisaiinterpreter_free: (a: number, b: number) => void;
+export const agent_check: (a: number, b: number) => [number, number];
+export const agent_compute: (a: number, b: number, c: number) => any;
+export const agent_infer_contracts: (a: number, b: number) => [number, number];
 export const ajisaiinterpreter_clear_io_output_buffer: (a: number) => void;
 export const ajisaiinterpreter_clear_stack: (a: number) => void;
 export const ajisaiinterpreter_collect_builtin_word_registry: (a: number) => any;

@@ -115,6 +115,26 @@ export class AjisaiInterpreter {
 }
 
 /**
+ * Parse and resolve `source` without executing it; also verifies declared
+ * `#:contract` declarations conservatively, matching `ajisai agent check`.
+ */
+export function agent_check(source: string): string;
+
+/**
+ * Execute one Ajisai source document under the same tightened
+ * agent-profile runtime limits the native `ajisai agent compute` CLI
+ * applies. `step_limit` overrides the default execution step budget when
+ * positive; `0` or omitted keeps the interpreter default.
+ */
+export function agent_compute(source: string, step_limit?: number | null): Promise<string>;
+
+/**
+ * Infer machine-readable contracts for user-defined Words without
+ * executing their bodies, matching `ajisai agent infer-contracts`.
+ */
+export function agent_infer_contracts(source: string): string;
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.
@@ -128,6 +148,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_ajisaiinterpreter_free: (a: number, b: number) => void;
+    readonly agent_check: (a: number, b: number) => [number, number];
+    readonly agent_compute: (a: number, b: number, c: number) => any;
+    readonly agent_infer_contracts: (a: number, b: number) => [number, number];
     readonly ajisaiinterpreter_clear_io_output_buffer: (a: number) => void;
     readonly ajisaiinterpreter_clear_stack: (a: number) => void;
     readonly ajisaiinterpreter_collect_builtin_word_registry: (a: number) => any;
