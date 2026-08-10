@@ -158,6 +158,8 @@ jobs:
           npm run test:mcp
           npm run test:mcp-pack
           npm run eval:mcp
+          npm run eval:mcp-performance
+          npm run eval:mcp-number-baseline
           npm run eval:mcp-traces
           npm run eval:mcp-repairs
 

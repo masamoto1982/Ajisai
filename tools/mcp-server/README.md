@@ -57,6 +57,8 @@ npm run selftest
 npm run test:pack
 npm run eval
 npm run eval:validate
+npm run eval:performance
+npm run eval:number-baseline
 npm run eval:traces
 npm run eval:repairs
 ```
@@ -84,6 +86,15 @@ also a scorer fixture, not evidence of model performance.
 JSON pointers and incomplete committed reference traces before scores are
 calculated. This prevents malformed or selectively omitted traces from
 silently producing plausible metrics.
+`eval:performance` measures five post-warmup rounds over seven representative
+compute, check, inference and registry cases. It reports p50/p95/max latency by
+tool and fails when the overall p95 exceeds the committed one-second local
+stdio budget. The measurements describe this adapter and machine, not remote
+service latency.
+`eval:number-baseline` compares canonical results for five selected rational,
+decimal and integer operations with JavaScript `Number`. It includes two
+exactly representable controls as well as known precision-sensitive cases, and
+labels its scope explicitly; it is not a general JavaScript or CAS benchmark.
 `npm run test:pack` creates the allowlisted tarball, installs it into an empty
 temporary prefix, imports that installed copy and computes through the real
 backend. The smoke test deliberately points `AJISAI_REPO` at a nonexistent
