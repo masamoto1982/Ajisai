@@ -8,7 +8,9 @@
 //! ajisai run <file.ajisai> [--json]
 //! ajisai check <file.ajisai> [--json]     # tokenize + parse + resolve, no execution
 //! ajisai contract <file.ajisai> [--json]  # report inferred word contracts, no execution
-//! ajisai coverage <file.ajisai> [--json]  # contract coverage ratio, no execution
+//! ajisai agent <operation> <file.ajisai>   # common JSON envelope for host adapters
+//! ajisai test <file-or-dir> [--json]       # execute `#@` host test directives
+//! ajisai repl [--json]                     # persistent interactive session
 //! ajisai version [--json]
 //! ```
 //!
@@ -20,6 +22,7 @@
 //! interpreter and serializes the existing diagnostic structures. It defines
 //! no language semantics (canonical source: `SPECIFICATION.html`).
 
+pub mod agent_api;
 mod contract_decl;
 mod contract_linearity;
 mod contract_report;
@@ -32,7 +35,7 @@ mod test_runner;
 
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
-use crate::interpreter::{HostEffect, Interpreter, RuntimeMetrics};
+use crate::interpreter::{HostEffect, Interpreter};
 use crate::types::Token;
 use report::Report;
 
@@ -49,6 +52,8 @@ Commands:
   contract <file.ajisai> [--json] Report each user word's inferred contract
                                   (arity, purity, NIL, determinism) plus a
                                   paste-ready `#:contract` line (no execution)
+  agent <operation> <file.ajisai> Stable source-to-JSON host boundary. Operations:
+                                  compute, check, infer-contracts
   test <file-or-dir> [--json]     Run test files, checking each program against
                                   its `#@` directive comments (status/stack/
                                   output/error). Exit 1 if any test fails
@@ -111,6 +116,7 @@ pub fn run(args: &[String]) -> i32 {
         ("run", [path]) => cmd_run(path, &opts),
         ("check", [path]) => cmd_check(path, &opts),
         ("contract", [path]) => cmd_contract(path, &opts),
+        ("agent", [operation, path]) => cmd_agent(operation, path, &opts),
         ("test", [path]) => test_runner::cmd_test(path, &opts),
         ("repl", []) => repl::cmd_repl(&opts),
         ("version", []) => cmd_version(json),
@@ -157,42 +163,15 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
         }
     };
 
-    // Tokenize separately first so a lexical failure is reported with the
-    // accurate `tokenize` phase (execute() folds it into a generic error).
-    if let Err(message) = crate::tokenizer::tokenize(&source) {
-        let diagnosis = DebugDiagnosis::from_error_category(
-            ErrorPhase::Tokenize,
-            None,
-            Some(&ErrorCategory::MalformedSource),
-            None,
-            0,
-            0,
-            Some(message.clone()),
-        );
-        let interp = Interpreter::new();
-        emit(
-            &error_report(
-                &interp,
-                &diagnosis,
-                None,
-                message,
-                Vec::new(),
-                Vec::new(),
-                opts,
-            ),
-            opts,
-        );
-        return 1;
-    }
-
-    let mut interp = Interpreter::new();
-    if let Some(limit) = opts.step_limit {
-        interp.set_max_execution_steps(limit);
-    }
-    let result = block_on(interp.execute(&source));
-    let trace = interp.drain_error_flow_trace();
-    let output = print_payloads(&interp);
-    run_render::render_completed_run(&interp, result, trace, output, opts)
+    let response = block_on(agent_api::compute(
+        &source,
+        agent_api::ComputeOptions {
+            step_limit: opts.step_limit,
+            runtime_limits: None,
+        },
+    ));
+    emit(response.report(), opts);
+    response.exit_code()
 }
 
 fn error_report(
@@ -258,6 +237,11 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
             return 2;
         }
     };
+    if opts.json {
+        let response = agent_api::check(&source, opts.contract);
+        println!("{}", pretty(&response.to_json()));
+        return response.exit_code();
+    }
     let interp = Interpreter::new();
 
     let tokens = match crate::tokenizer::tokenize(&source) {
@@ -358,27 +342,11 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
         .map(|check| check.violated)
         .unwrap_or(false);
 
-    if opts.json {
-        let report = Report {
-            status: if contract_failed { "error" } else { "ok" },
-            stack: serde_json::Value::Array(Vec::new()),
-            stack_display: Vec::new(),
-            output: Vec::new(),
-            message: None,
-            diagnosis: None,
-            ai_diagnostic: None,
-            error_flow_trace: Vec::new(),
-            runtime_metrics: RuntimeMetrics::default(),
-            contract_decls: contract_decls.as_ref().map(|c| c.to_json()),
-        };
-        println!("{}", pretty(&report.to_json()));
-    } else {
-        let status = if contract_failed { "fail" } else { "ok" };
-        println!("{}: {} ({} tokens)", status, path, tokens.len());
-        if let Some(check) = &contract_decls {
-            for finding in &check.findings {
-                eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
-            }
+    let status = if contract_failed { "fail" } else { "ok" };
+    println!("{}: {} ({} tokens)", status, path, tokens.len());
+    if let Some(check) = &contract_decls {
+        for finding in &check.findings {
+            eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
         }
     }
     if contract_failed {
@@ -400,10 +368,11 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
             return 2;
         }
     };
-    let reports = contract_report::report_contracts(&source);
     if opts.json {
-        println!("{}", pretty(&contract_report::reports_json(&reports)));
+        let response = agent_api::infer_contracts(&source);
+        println!("{}", pretty(response.contracts()));
     } else {
+        let reports = contract_report::report_contracts(&source);
         if reports.is_empty() {
             println!("{}: no user words defined", path);
         }
@@ -419,6 +388,41 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
         }
     }
     0
+}
+
+/// Common JSON boundary consumed by host adapters. Unlike the compatibility
+/// CLI commands, every operation returns the same top-level envelope shape.
+fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(e) => {
+            eprintln!("ajisai: cannot read {}: {}", path, e);
+            return 2;
+        }
+    };
+    let (document, exit_code) = match operation {
+        "compute" => {
+            let response = block_on(agent_api::compute(
+                &source,
+                agent_api::ComputeOptions {
+                    step_limit: opts.step_limit,
+                    runtime_limits: Some(agent_api::LOCAL_AGENT_RUNTIME_LIMITS),
+                },
+            ));
+            (response.to_json(), response.exit_code())
+        }
+        "check" => {
+            let response = agent_api::check(&source, true);
+            (response.to_json(), response.exit_code())
+        }
+        "infer-contracts" => (agent_api::infer_contracts(&source).to_json(), 0),
+        _ => {
+            eprintln!("unknown agent operation: {operation}");
+            return 2;
+        }
+    };
+    println!("{}", pretty(&document));
+    exit_code
 }
 
 /// execution — this only front-loads the same failure for `check`.
