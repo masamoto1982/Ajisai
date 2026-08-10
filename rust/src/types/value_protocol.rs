@@ -38,6 +38,38 @@ pub(crate) enum ProtocolValue {
     Children(Vec<ProtocolNode>),
 }
 
+/// One canonical term of an algebraic value's multiquadratic normal form.
+/// Strings keep arbitrary-precision integers lossless at every host boundary.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ProtocolExactTerm {
+    pub(crate) numerator: String,
+    pub(crate) denominator: String,
+    pub(crate) radicand: String,
+}
+
+/// Return the exact wire representation when `value` is an algebraic scalar.
+///
+/// Both the WASM and native CLI serializers call this helper. Keeping the
+/// extraction here prevents one host from exposing the normal form while
+/// another silently returns only its rational approximation.
+pub(crate) fn exact_terms(value: &Value) -> Option<Vec<ProtocolExactTerm>> {
+    let ValueData::ExactScalar(crate::types::exact::ExactReal::Algebraic(algebraic)) = &value.data
+    else {
+        return None;
+    };
+    Some(
+        algebraic
+            .normal_form_terms()
+            .into_iter()
+            .map(|(coefficient, radicand)| ProtocolExactTerm {
+                numerator: coefficient.numerator().to_string(),
+                denominator: coefficient.denominator().to_string(),
+                radicand: radicand.to_string(),
+            })
+            .collect(),
+    )
+}
+
 pub(crate) fn interpretation_protocol_str(hint: Interpretation) -> &'static str {
     match hint {
         Interpretation::Unassigned => "unassigned",
