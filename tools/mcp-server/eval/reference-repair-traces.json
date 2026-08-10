@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "traces": [
+    {
+      "caseId": "repair-unknown-word",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 AD"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 ADD"
+        }
+      }
+    },
+    {
+      "caseId": "repair-stack-underflow",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 ADD"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 ADD"
+        }
+      }
+    },
+    {
+      "caseId": "repair-unclosed-vector",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 1 2"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 1 2 ]"
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # MCP product readiness
 
-Status date: 2026-08-09. This is an implementation tracker, not a language
+Status date: 2026-08-10. This is an implementation tracker, not a language
 specification. Percentages measure completion of the concrete exit criteria
 below; they are not forecasts.
 
@@ -16,10 +16,10 @@ host and shares the value protocol with the native CLI.
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
-| P1 — local stdio beta | 35% | 70% | 24.5% |
-| P2 — agent evaluation | 20% | 25% | 5.0% |
+| P1 — local stdio beta | 35% | 75% | 26.25% |
+| P2 — agent evaluation | 20% | 35% | 7.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **64.5%** |
+| **Overall** | **100%** | — | **68.25%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -45,7 +45,7 @@ Completed:
 
 All P0 exit criteria are complete.
 
-### P1 — local stdio beta (70%)
+### P1 — local stdio beta (75%)
 
 Completed:
 
@@ -57,15 +57,17 @@ Completed:
 - A dedicated Rust agent profile caps materialization, numeric-literal digits,
   numeric work, BigInt bits and algebraic term growth.
 - Real-backend MCP self-test is a blocking CI quality gate.
+- CI packs the allowlisted npm tarball, installs it into an empty prefix and
+  verifies the installed copy against the real backend.
 
 Remaining exit criteria:
 
 - Replace per-call native CLI processes with a packaged WASM worker backend;
   retain the native CLI as an optional backend.
-- Publish a non-private, versioned npm package with clean-install and
-  `npm pack` smoke tests on supported Node versions.
+- Publish a non-private, versioned npm package after the backend and static
+  resources are self-contained rather than repo-path dependent.
 
-### P2 — agent evaluation (25%)
+### P2 — agent evaluation (35%)
 
 A first versioned prompt corpus now covers tool intent and backend semantics for
 rationals, decimals, algebraics, vector broadcast, NIL, diagnostics, static
@@ -73,8 +75,11 @@ checking and contracts. It is intentionally only a seed: expansion to 100–200
 prompts remains necessary. A trace scorer now measures tool selection,
 end-to-end semantics, missing traces and irrelevant activation; the committed
 perfect reference trace verifies the scorer only. Real model traces, baseline
-comparisons, first-attempt generation rate and diagnosis-driven repair rate
-remain to be collected.
+comparisons and first-attempt generation rate remain to be collected. A
+separate repair scorer now requires the expected structured diagnosis before a
+corrected attempt can count, with seed cases for unknown Words, stack shape and
+malformed source. Its perfect reference is a harness fixture; real-model repair
+rates remain unmeasured.
 
 ### P3 — remote service (0%)
 

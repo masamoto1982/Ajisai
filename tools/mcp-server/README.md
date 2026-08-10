@@ -54,8 +54,10 @@ cargo build --bin ajisai --manifest-path rust/Cargo.toml
 cd tools/mcp-server
 npm install
 npm run selftest
+npm run test:pack
 npm run eval
 npm run eval:traces
+npm run eval:repairs
 ```
 
 Set `AJISAI_BIN` to select another CLI binary or `AJISAI_REPO` to select the
@@ -70,3 +72,12 @@ model traces and are not claimed by this score.
 shape and reports tool-selection accuracy, end-to-end semantic success, missing
 traces and irrelevant-tool rate. The committed reference trace is a harness
 conformance fixture, not a model benchmark result.
+`score-repairs.js` replays a failed attempt and its model-produced revision,
+requires the expected structured diagnosis before the revision can count, and
+reports diagnosis-observation and diagnosis-driven repair rates. The seed cases
+cover unknown Words, stack shape and malformed source. Their reference trace is
+also a scorer fixture, not evidence of model performance.
+`npm run test:pack` creates the allowlisted tarball, installs it into an empty
+temporary prefix, imports that installed copy and computes through the real
+backend. The beta package still requires `AJISAI_BIN` and `AJISAI_REPO`; this
+smoke test does not claim a bundled zero-configuration backend.
