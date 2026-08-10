@@ -67,7 +67,7 @@ version and registry provenance are packaged under `assets/`. Connect any
 stdio MCP client to `node /path/to/index.js`. The
 browser playground is independent of this package and remains available.
 
-`eval/cases.json` is the seed agent-evaluation corpus. `npm run eval` executes
+`eval/cases.json` is the 22-prompt seed agent-evaluation corpus. `npm run eval` executes
 its expected tool calls against the real backend. It measures backend semantic
 correctness only; model tool selection and source generation require captured
 model traces and are not claimed by this score.

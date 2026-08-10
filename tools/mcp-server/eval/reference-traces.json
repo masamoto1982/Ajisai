@@ -1,17 +1,151 @@
 {
   "schemaVersion": 1,
   "traces": [
-    { "caseId": "exact-fraction", "selectedTool": "compute", "arguments": { "source": "1 3 /" } },
-    { "caseId": "decimal-no-float", "selectedTool": "compute", "arguments": { "source": "0.1 0.2 +" } },
-    { "caseId": "algebraic-sqrt", "selectedTool": "compute", "arguments": { "source": "2 SQRT" } },
-    { "caseId": "vector-broadcast", "selectedTool": "compute", "arguments": { "source": "[ 1 2 ] 10 +" } },
-    { "caseId": "nil-reason", "selectedTool": "compute", "arguments": { "source": "1 0 /" } },
-    { "caseId": "nil-recovery", "selectedTool": "compute", "arguments": { "source": "1 0 / ^ 42" } },
-    { "caseId": "language-error", "selectedTool": "compute", "arguments": { "source": "FROBNICATE" } },
-    { "caseId": "static-check", "selectedTool": "check", "arguments": { "source": "{ [ 1 ] + } 'INC' DEF" } },
-    { "caseId": "contract-inference", "selectedTool": "infer_contracts", "arguments": { "source": "{ [ 1 ] + } 'INC' DEF" } },
-    { "caseId": "word-contract", "selectedTool": "word_contract", "arguments": { "word": "MAP" } },
-    { "caseId": "irrelevant-weather", "selectedTool": null, "arguments": null },
-    { "caseId": "irrelevant-writing", "selectedTool": null, "arguments": null }
+    {
+      "caseId": "exact-fraction",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 3 /"
+      }
+    },
+    {
+      "caseId": "decimal-no-float",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "0.1 0.2 +"
+      }
+    },
+    {
+      "caseId": "algebraic-sqrt",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "2 SQRT"
+      }
+    },
+    {
+      "caseId": "vector-broadcast",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "[ 1 2 ] 10 +"
+      }
+    },
+    {
+      "caseId": "nil-reason",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 0 /"
+      }
+    },
+    {
+      "caseId": "nil-recovery",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 0 / ^ 42"
+      }
+    },
+    {
+      "caseId": "language-error",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "FROBNICATE"
+      }
+    },
+    {
+      "caseId": "static-check",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "{ [ 1 ] + } 'INC' DEF"
+      }
+    },
+    {
+      "caseId": "contract-inference",
+      "selectedTool": "infer_contracts",
+      "arguments": {
+        "source": "{ [ 1 ] + } 'INC' DEF"
+      }
+    },
+    {
+      "caseId": "word-contract",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "MAP"
+      }
+    },
+    {
+      "caseId": "irrelevant-weather",
+      "selectedTool": null,
+      "arguments": null
+    },
+    {
+      "caseId": "irrelevant-writing",
+      "selectedTool": null,
+      "arguments": null
+    },
+    {
+      "caseId": "reduced-fraction",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "2 8 /"
+      }
+    },
+    {
+      "caseId": "large-integer",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "9007199254740993 1 +"
+      }
+    },
+    {
+      "caseId": "vector-pairwise",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "[ 1 2 ] [ 3 4 ] +"
+      }
+    },
+    {
+      "caseId": "sqrt-domain-nil",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "-1 SQRT"
+      }
+    },
+    {
+      "caseId": "exact-comparison",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 2 LT"
+      }
+    },
+    {
+      "caseId": "integer-modulus",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "10 4 MOD"
+      }
+    },
+    {
+      "caseId": "static-check-error",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "FROBNICATE"
+      }
+    },
+    {
+      "caseId": "alias-word-contract",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "+"
+      }
+    },
+    {
+      "caseId": "irrelevant-translation",
+      "selectedTool": null,
+      "arguments": null
+    },
+    {
+      "caseId": "irrelevant-history",
+      "selectedTool": null,
+      "arguments": null
+    }
   ]
 }
