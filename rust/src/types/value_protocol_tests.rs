@@ -125,6 +125,20 @@ fn exact_scalar_rawnumber_carries_exact_source_in_semantics() {
     );
 }
 
+#[test]
+fn algebraic_exact_terms_are_lossless_decimal_strings() {
+    use crate::types::value_protocol::exact_terms;
+
+    assert_eq!(
+        exact_terms(&sqrt2()).expect("sqrt(2) has an algebraic normal form"),
+        vec![crate::types::value_protocol::ProtocolExactTerm {
+            numerator: "1".to_string(),
+            denominator: "1".to_string(),
+            radicand: "2".to_string(),
+        }]
+    );
+}
+
 /// Under the `ContinuedFraction` role the value is rendered losslessly as
 /// the canonical nested-form string and carries no `semantics` block, so
 /// it is never marked approximate (regression guard: unchanged behavior).
