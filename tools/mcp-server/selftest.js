@@ -1,133 +1,193 @@
 #!/usr/bin/env node
-// End-to-end self-test: drive the real MCP protocol (list tools + call each
-// of the three) over an in-memory transport pair, asserting the wrapper
-// faithfully relays the CLI and the generated artifacts. Run: `npm run selftest`.
-//
-// Requires the ajisai CLI to be built (or AJISAI_BIN set) for the `run`
-// assertions; the manifest/skill assertions only need the committed artifacts.
-
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer } from "./index.js";
+import Ajv2020 from "ajv/dist/2020.js";
+import { createServer, ExecutionGate, LIMITS } from "./index.js";
+import { readFileSync } from "node:fs";
 
 let failures = 0;
-function check(label, cond, detail = "") {
-  if (cond) {
-    console.log(`PASS  ${label}`);
-  } else {
-    failures += 1;
-    console.log(`FAIL  ${label}${detail ? `\n      ${detail}` : ""}`);
-  }
+function check(label, condition) {
+  console.log(`${condition ? "PASS" : "FAIL"}  ${label}`);
+  if (!condition) failures += 1;
 }
 
-const [clientTransport, serverTransport] =
-  InMemoryTransport.createLinkedPair();
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [key, canonicalJson(child)]),
+    );
+  }
+  return value;
+}
+
+function atPointer(document, pointer) {
+  return pointer
+    .split("/")
+    .slice(1)
+    .map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"))
+    .reduce((value, part) => value?.[part], document);
+}
+
+const gate = new ExecutionGate(2);
+check("execution gate admits up to its capacity", gate.tryAcquire() && gate.tryAcquire());
+check("execution gate rejects excess concurrent work", gate.tryAcquire() === false);
+gate.release();
+check("execution gate restores capacity on release", gate.tryAcquire());
+gate.release();
+gate.release();
+
+const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const server = createServer();
 const client = new Client({ name: "selftest", version: "0.0.0" });
-await Promise.all([
-  server.connect(serverTransport),
-  client.connect(clientTransport),
-]);
+await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
-// 1. tools/list exposes exactly the three documented tools.
 const { tools } = await client.listTools();
-const names = tools.map((t) => t.name).sort();
 check(
-  "lists exactly run/explain_word/skill",
-  JSON.stringify(names) === JSON.stringify(["explain_word", "run", "skill"]),
-  `got ${JSON.stringify(names)}`,
+  "exposes the four focused agent tools",
+  JSON.stringify(tools.map(({ name }) => name).sort()) ===
+    JSON.stringify(["check", "compute", "infer_contracts", "word_contract"]),
+);
+check(
+  "every tool rejects undeclared input",
+  tools.every(({ inputSchema }) => inputSchema.additionalProperties === false),
+);
+check(
+  "execution tools advertise structured output",
+  tools
+    .filter(({ name }) => name !== "word_contract")
+    .every(({ outputSchema }) => outputSchema?.required?.includes("mcp")),
+);
+check(
+  "tools advertise safe selection hints",
+  tools.every(({ annotations }) =>
+    annotations?.readOnlyHint === true &&
+    annotations?.destructiveHint === false &&
+    annotations?.idempotentHint === true &&
+    annotations?.openWorldHint === false
+  ),
 );
 
-// 2. skill returns SKILL.md (its generated header is a stable marker).
-const skill = await client.callTool({ name: "skill", arguments: {} });
-const skillText = skill.content?.[0]?.text ?? "";
+const contract = await client.callTool({ name: "word_contract", arguments: { word: "map" } });
 check(
-  "skill returns the generated SKILL.md",
-  skillText.includes("Agent Writing Protocol") && skillText.includes("§9"),
-  `first line: ${skillText.split("\n")[0]}`,
+  "word_contract returns the complete canonical contract",
+  contract.structuredContent?.matches?.some((entry) =>
+    entry.name === "MAP" &&
+    entry.purity === "conditional" &&
+    entry.stack?.inputs === 2
+  ),
 );
 
-// 3. explain_word resolves a core word from the manifest.
-const explain = await client.callTool({
-  name: "explain_word",
-  arguments: { word: "map" },
-});
-let explainEntries = [];
-try {
-  explainEntries = JSON.parse(explain.content?.[0]?.text ?? "[]");
-} catch {
-  /* leave empty -> fails below */
-}
+const resources = await client.listResources();
+check("publishes guide, vocabulary and result schema as resources", resources.resources.length === 3);
+const guide = await client.readResource({ uri: "ajisai://guide/quickstart" });
+check("quickstart resource reads generated guidance", guide.contents[0]?.text?.includes("Agent Writing Protocol"));
+const schemaResource = await client.readResource({ uri: "ajisai://schema/result" });
+const resultSchema = JSON.parse(schemaResource.contents[0]?.text ?? "{}");
+const validateResult = new Ajv2020().compile(resultSchema);
 check(
-  "explain_word(map) returns the MAP coreword entry",
-  Array.isArray(explainEntries) &&
-    explainEntries.some((e) => e.surface === "MAP" && e.kind === "coreword"),
-  `got ${explain.content?.[0]?.text?.slice(0, 80)}`,
+  "result resource publishes the exact algebraic wire schema",
+  resultSchema.$id === "ajisai://schema/result" &&
+    resultSchema.$defs?.exactTerm?.required?.includes("radicand"),
+);
+check(
+  "tool output and result resource use the same schema",
+  JSON.stringify(canonicalJson(tools.find(({ name }) => name === "compute")?.outputSchema)) ===
+    JSON.stringify(canonicalJson(resultSchema)),
+);
+const templates = await client.listResourceTemplates();
+check(
+  "publishes canonical Word contracts as a resource template",
+  templates.resourceTemplates.some(({ uriTemplate }) => uriTemplate === "ajisai://words/{name}"),
+);
+const mapResource = await client.readResource({ uri: "ajisai://words/MAP" });
+const mapContract = JSON.parse(mapResource.contents[0]?.text ?? "{}");
+check(
+  "Word resource resolves the canonical contract",
+  mapContract.matches?.[0]?.name === "MAP" && mapContract.matches[0]?.nilPolicy,
 );
 
-// 4. explain_word on a nonexistent word reports an error result.
-const explainMiss = await client.callTool({
-  name: "explain_word",
-  arguments: { word: "definitely-not-a-word" },
-});
-check("explain_word(unknown) is an error result", explainMiss.isError === true);
-
-// 5. run executes a program and relays the CLI's --json envelope.
-const run = await client.callTool({
-  name: "run",
-  arguments: { source: "[ 1 ] [ 2 ] + PRINT" },
-});
-let runEnvelope = null;
-try {
-  runEnvelope = JSON.parse(run.content?.[0]?.text ?? "{}");
-} catch {
-  /* leave null -> fails below */
-}
-const cliMissing =
-  run.isError && (run.content?.[0]?.text ?? "").includes("CLI not found");
-if (cliMissing) {
-  console.log("SKIP  run (ajisai CLI not built; set AJISAI_BIN or cargo build)");
-} else {
-  check(
-    "run relays a valid --json envelope",
-    runEnvelope && runEnvelope.schemaVersion === 1 && runEnvelope.status === "ok",
-    `got ${run.content?.[0]?.text?.slice(0, 80)}`,
-  );
-  check(
-    "run reports PRINT output and energyProxyScore",
-    runEnvelope &&
-      Array.isArray(runEnvelope.output) &&
-      runEnvelope.output.join(" ").includes("3/1") &&
-      typeof runEnvelope.runtimeMetrics?.vtu?.energyProxyScore === "number",
-    `output: ${JSON.stringify(runEnvelope?.output)}`,
-  );
-
-  // 6. run on a language error still returns a JSON envelope (status:error).
-  const runErr = await client.callTool({
-    name: "run",
-    arguments: { source: "[ 1 ] FROBNICATE" },
+const golden = JSON.parse(
+  readFileSync(new URL("./golden/cases.json", import.meta.url), "utf8"),
+);
+for (const goldenCase of golden.cases) {
+  const observed = await client.callTool({
+    name: "compute",
+    arguments: { source: goldenCase.source },
   });
-  let errEnvelope = null;
-  try {
-    errEnvelope = JSON.parse(runErr.content?.[0]?.text ?? "{}");
-  } catch {
-    /* leave null */
-  }
+  const mismatches = Object.entries(goldenCase.expect).filter(
+    ([pointer, expected]) =>
+      JSON.stringify(atPointer(observed.structuredContent, pointer)) !==
+      JSON.stringify(expected),
+  );
   check(
-    "run surfaces a language error as a status:error envelope",
-    errEnvelope &&
-      errEnvelope.status === "error" &&
-      errEnvelope.diagnosis?.why === "typoOrUnknownName",
-    `got ${runErr.content?.[0]?.text?.slice(0, 80)}`,
+    `golden: ${goldenCase.name}`,
+    observed.isError !== true && mismatches.length === 0,
+  );
+}
+
+const compute = await client.callTool({
+  name: "compute",
+  arguments: { source: "[ 2 ] SQRT" },
+});
+const oversized = await client.callTool({
+  name: "compute",
+  arguments: { source: " ".repeat(LIMITS.sourceBytes + 1) },
+});
+check("compute rejects source beyond its UTF-8 byte limit", oversized.isError === true);
+if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
+  check("compute requires a real Ajisai backend", false);
+} else {
+  const sqrt = compute.structuredContent?.stack?.[0]?.value?.[0];
+  const [exactTerm] = sqrt?.semantics?.exactTerms ?? [];
+  check(
+    "compute preserves the exact algebraic normal form",
+    exactTerm?.numerator === "1" &&
+      exactTerm?.denominator === "1" &&
+      exactTerm?.radicand === "2",
+  );
+  check(
+    "compute reports engine provenance and applied limits",
+    compute.structuredContent?.mcp?.engineVersion === "0.2.0-beta.1" &&
+      compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000 &&
+      compute.structuredContent?.mcp?.limits?.materializedElements === 100000 &&
+      compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&
+      compute.structuredContent?.mcp?.limits?.algebraicTerms === 4096,
+  );
+  check("compute satisfies the published result schema", validateResult(compute.structuredContent));
+
+  const languageError = await client.callTool({
+    name: "compute",
+    arguments: { source: "FROBNICATE" },
+  });
+  check(
+    "Ajisai language errors remain structured non-MCP errors",
+    languageError.isError !== true && languageError.structuredContent?.status === "error",
+  );
+
+  const checked = await client.callTool({
+    name: "check",
+    arguments: { source: "{ [ 1 ] + } 'INC' DEF" },
+  });
+  check("check is execution-free and structured", checked.structuredContent?.status === "ok");
+
+  const inferred = await client.callTool({
+    name: "infer_contracts",
+    arguments: { source: "{ [ 1 ] + } 'INC' DEF" },
+  });
+  check(
+    "infer_contracts returns the user Word contract",
+    inferred.structuredContent?.contracts?.some((entry) => entry.name === "INC"),
+  );
+  check(
+    "infer_contracts satisfies the published result schema",
+    validateResult(inferred.structuredContent),
   );
 }
 
 await client.close();
 await server.close();
-
-console.log("----");
-if (failures > 0) {
-  console.log(`${failures} check(s) failed`);
-  process.exit(1);
-}
+if (failures) process.exit(1);
 console.log("all checks passed");

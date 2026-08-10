@@ -1,39 +1,106 @@
 # Ajisai MCP server
 
-A thin [Model Context Protocol](https://modelcontextprotocol.io) server that
-exposes Ajisai to AI agents. It holds **no language logic**: every answer
-comes from running the `ajisai` CLI (Phase 1) or reading a generated artifact
-(`SKILL.md` from Phase 2, `docs/word-manifest.json`). Its only dependency is
-the MCP SDK.
+Ajisai's MCP surface makes the language useful as a bounded, deterministic and
+diagnostic computation kernel for AI agents. The server remains a thin adapter:
+the Rust CLI owns language semantics and generated artifacts own vocabulary.
 
-## Tools
+Ajisai promises **exactness in its supported numeric domain**, rather than
+unqualified “no rounding errors”. Operations such as explicit rounding and
+functions outside that domain retain their documented semantics.
 
-| tool | input | returns |
-|---|---|---|
-| `run` | `source` (text) **or** `file` (path) | the CLI's `ajisai run --json` envelope (status, stack, `stackDisplay`, output, diagnosis, errorFlowTrace, aiDiagnostic, runtimeMetrics incl. `energyProxyScore`) |
-| `explain_word` | `word` (e.g. `MAP`, `MUSIC@PLAY`) | matching `docs/word-manifest.json` entries |
-| `skill` | — | the full `SKILL.md` agent writing protocol |
+Development status and next-agent instructions are tracked in
+`docs/dev/mcp-readiness.md` and `docs/dev/mcp-claude-code-handoff.md`.
+
+## Agent surface
+
+| tool | purpose |
+|---|---|
+| `compute` | execute source with time, source, output and step limits |
+| `check` | parse, resolve and conservatively verify declared contracts without execution |
+| `infer_contracts` | infer contracts for user-defined Words without execution |
+| `word_contract` | query the complete canonical `spec/words.json` contract registry |
+
+Execution tools accept source text only. Deliberately omitting file-path input
+prevents an AI tool call from becoming an arbitrary local-file reader. Ajisai
+language errors and reason-carrying `NIL` remain structured, successful MCP
+results; only invalid requests and host failures set `isError`.
+All execution tools call the native CLI's common `agent` operation, backed by
+the typed Rust agent API; Node does not reinterpret command-specific results.
+The local server also caps concurrent CLI executions, returning a retryable
+host error instead of allowing an unbounded process fan-out.
+Its Rust agent profile additionally caps materialized elements, numeric-literal
+digits, cumulative numeric work, BigInt bit length and algebraic term count.
+
+Static context is available through `ajisai://guide/quickstart`,
+`ajisai://vocabulary`, and `ajisai://schema/result`. Tool calls return both text
+and `structuredContent`, including the engine version, registry SHA-256 and
+applied limits. Algebraic results carry their canonical `exactTerms` normal
+form; the accompanying rational value is explicitly marked as an approximation
+and is never the canonical result.
+The committed `result.schema.json` is both the tools' `outputSchema` and the
+content of `ajisai://schema/result`, preventing the advertised contract and the
+resource documentation from drifting apart. All four tools declare read-only,
+non-destructive and idempotent MCP annotations.
+The committed `golden/cases.json` fixtures pin observable success, NIL, ERROR,
+algebraic and execution-limit behavior without pinning incidental runtime
+counters.
+
+The `ajisai://words/{name}` resource template exposes the same complete Word
+contract without a tool call. Contract lookups accept canonical names and
+aliases; their registry digest is calculated from the canonical specification,
+not from a reduced documentation manifest.
 
 ## Setup
 
 ```sh
-cargo build --bin ajisai --manifest-path rust/Cargo.toml   # the CLI it wraps
-cd tools/mcp-server && npm install                          # the MCP SDK
-node selftest.js                                            # optional: end-to-end check
+cargo build --bin ajisai --manifest-path rust/Cargo.toml
+cd tools/mcp-server
+npm install
+npm run selftest
+npm run test:pack
+npm run eval
+npm run eval:validate
+npm run eval:performance
+npm run eval:number-baseline
+npm run eval:traces
+npm run eval:repairs
 ```
 
-The server finds the repo (for `SKILL.md` / the manifest) and the CLI binary
-automatically. Override with `AJISAI_REPO` and `AJISAI_BIN` if needed.
+Set `AJISAI_BIN` to select the native CLI binary. `AJISAI_REPO` is only a
+development fallback for locating that binary; vocabulary, contracts, guide,
+version and registry provenance are packaged under `assets/`. Connect any
+stdio MCP client to `node /path/to/index.js`. The
+browser playground is independent of this package and remains available.
 
-## Connect from Claude Code
-
-Add to `~/.claude.json` (or run `claude mcp add`), then restart Claude Code:
-
-```json
-{ "mcpServers": { "ajisai": { "command": "node",
-  "args": ["/ABSOLUTE/PATH/Ajisai/tools/mcp-server/index.js"] } } }
-```
-
-Any other MCP client connects the same way: launch `node index.js` as a
-stdio MCP server. The three tools then appear as `ajisai/run`,
-`ajisai/explain_word`, and `ajisai/skill`.
+`eval/cases.json` is the 22-prompt seed agent-evaluation corpus. `npm run eval` executes
+its expected tool calls against the real backend. It measures backend semantic
+correctness only; model tool selection and source generation require captured
+model traces and are not claimed by this score.
+`score-traces.js` accepts captured model traces in the documented reference
+shape and reports tool-selection accuracy, end-to-end semantic success, missing
+traces and irrelevant-tool rate. The committed reference trace is a harness
+conformance fixture, not a model benchmark result.
+`score-repairs.js` replays a failed attempt and its model-produced revision,
+requires the expected structured diagnosis before the revision can count, and
+reports diagnosis-observation and diagnosis-driven repair rates. The seed cases
+cover unknown Words, stack shape and malformed source. Their reference trace is
+also a scorer fixture, not evidence of model performance.
+`eval:validate` rejects duplicate or unknown case IDs, unknown tools, malformed
+JSON pointers and incomplete committed reference traces before scores are
+calculated. This prevents malformed or selectively omitted traces from
+silently producing plausible metrics.
+`eval:performance` measures five post-warmup rounds over seven representative
+compute, check, inference and registry cases. It reports p50/p95/max latency by
+tool and fails when the overall p95 exceeds the committed one-second local
+stdio budget. The measurements describe this adapter and machine, not remote
+service latency.
+`eval:number-baseline` compares canonical results for five selected rational,
+decimal and integer operations with JavaScript `Number`. It includes two
+exactly representable controls as well as known precision-sensitive cases, and
+labels its scope explicitly; it is not a general JavaScript or CAS benchmark.
+`npm run test:pack` creates the allowlisted tarball, installs it into an empty
+temporary prefix, imports that installed copy and computes through the real
+backend. The smoke test deliberately points `AJISAI_REPO` at a nonexistent
+directory, proving static resources are self-contained. The beta package still
+requires `AJISAI_BIN`; it does not yet claim a bundled zero-configuration
+backend.
