@@ -8,7 +8,8 @@
 //! ajisai run <file.ajisai> [--json]
 //! ajisai check <file.ajisai> [--json]     # tokenize + parse + resolve, no execution
 //! ajisai contract <file.ajisai> [--json]  # report inferred word contracts, no execution
-//! ajisai coverage <file.ajisai> [--json]  # contract coverage ratio, no execution
+//! ajisai test <file-or-dir> [--json]       # execute `#@` host test directives
+//! ajisai repl [--json]                     # persistent interactive session
 //! ajisai version [--json]
 //! ```
 //!
@@ -20,6 +21,7 @@
 //! interpreter and serializes the existing diagnostic structures. It defines
 //! no language semantics (canonical source: `SPECIFICATION.html`).
 
+pub mod agent_api;
 mod contract_decl;
 mod contract_linearity;
 mod contract_report;
@@ -157,42 +159,14 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
         }
     };
 
-    // Tokenize separately first so a lexical failure is reported with the
-    // accurate `tokenize` phase (execute() folds it into a generic error).
-    if let Err(message) = crate::tokenizer::tokenize(&source) {
-        let diagnosis = DebugDiagnosis::from_error_category(
-            ErrorPhase::Tokenize,
-            None,
-            Some(&ErrorCategory::MalformedSource),
-            None,
-            0,
-            0,
-            Some(message.clone()),
-        );
-        let interp = Interpreter::new();
-        emit(
-            &error_report(
-                &interp,
-                &diagnosis,
-                None,
-                message,
-                Vec::new(),
-                Vec::new(),
-                opts,
-            ),
-            opts,
-        );
-        return 1;
-    }
-
-    let mut interp = Interpreter::new();
-    if let Some(limit) = opts.step_limit {
-        interp.set_max_execution_steps(limit);
-    }
-    let result = block_on(interp.execute(&source));
-    let trace = interp.drain_error_flow_trace();
-    let output = print_payloads(&interp);
-    run_render::render_completed_run(&interp, result, trace, output, opts)
+    let response = block_on(agent_api::compute(
+        &source,
+        agent_api::ComputeOptions {
+            step_limit: opts.step_limit,
+        },
+    ));
+    emit(response.report(), opts);
+    response.exit_code()
 }
 
 fn error_report(
