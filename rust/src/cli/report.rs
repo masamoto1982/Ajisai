@@ -13,7 +13,7 @@ use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
 use crate::types::value_protocol::{
-    interpretation_protocol_str, value_to_protocol, ProtocolNode, ProtocolValue,
+    exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode, ProtocolValue,
 };
 use crate::types::{Interpretation, Value, ValueData};
 use serde_json::{json, Map, Value as Json};
@@ -236,5 +236,42 @@ fn semantics_json(value: &Value, effective: Interpretation) -> Json {
     {
         obj.insert("approximate".into(), json!(true));
     }
+    if let Some(terms) = exact_terms(value) {
+        obj.insert(
+            "exactTerms".into(),
+            Json::Array(
+                terms
+                    .into_iter()
+                    .map(|term| {
+                        json!({
+                            "numerator": term.numerator,
+                            "denominator": term.denominator,
+                            "radicand": term.radicand,
+                        })
+                    })
+                    .collect(),
+            ),
+        );
+    }
     Json::Object(obj)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::exact::ExactReal;
+    use crate::types::fraction::Fraction;
+
+    #[test]
+    fn cli_keeps_algebraic_normal_form_beside_approximation() {
+        let sqrt_two = ExactReal::from_sqrt_rational(Fraction::new(2.into(), 1.into()))
+            .expect("sqrt(2) is in the supported algebraic domain");
+        let value = Value::from_exact_real(sqrt_two);
+        let semantics = semantics_json(&value, Interpretation::RawNumber);
+
+        assert_eq!(semantics["approximate"], true);
+        assert_eq!(semantics["exactTerms"][0]["numerator"], "1");
+        assert_eq!(semantics["exactTerms"][0]["denominator"], "1");
+        assert_eq!(semantics["exactTerms"][0]["radicand"], "2");
+    }
 }

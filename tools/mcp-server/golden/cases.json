@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "successful exact rational",
+      "source": "[ 1 ] [ 2 ] +",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "[ 3/1 ]",
+        "/errorFlowTrace": []
+      }
+    },
+    {
+      "name": "reason-carrying NIL is a successful value",
+      "source": "1 0 /",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "NIL",
+        "/errorFlowTrace/0/kind": "nilProduced",
+        "/errorFlowTrace/0/word": "DIV",
+        "/errorFlowTrace/0/absence/reason": "divisionByZero"
+      }
+    },
+    {
+      "name": "language ERROR remains a structured tool result",
+      "source": "FROBNICATE",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "typoOrUnknownName",
+        "/aiDiagnostic/kind": "unknownWord",
+        "/errorFlowTrace/0/kind": "wordError"
+      }
+    },
+    {
+      "name": "algebraic result keeps its normal form",
+      "source": "[ 2 ] SQRT",
+      "expect": {
+        "/status": "ok",
+        "/stack/0/value/0/semantics/approximate": true,
+        "/stack/0/value/0/semantics/exactTerms/0/numerator": "1",
+        "/stack/0/value/0/semantics/exactTerms/0/denominator": "1",
+        "/stack/0/value/0/semantics/exactTerms/0/radicand": "2"
+      }
+    },
+    {
+      "name": "execution budget exhaustion is a language ERROR",
+      "source": "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n200000 DOWN",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "resourceLimit",
+        "/aiDiagnostic/kind": "executionLimitExceeded",
+        "/errorFlowTrace/0/kind": "wordError",
+        "/errorFlowTrace/0/word": "DOWN"
+      }
+    }
+  ]
+}
