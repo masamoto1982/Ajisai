@@ -60,8 +60,10 @@ npm run eval:traces
 npm run eval:repairs
 ```
 
-Set `AJISAI_BIN` to select another CLI binary or `AJISAI_REPO` to select the
-artifact root. Connect any stdio MCP client to `node /path/to/index.js`. The
+Set `AJISAI_BIN` to select the native CLI binary. `AJISAI_REPO` is only a
+development fallback for locating that binary; vocabulary, contracts, guide,
+version and registry provenance are packaged under `assets/`. Connect any
+stdio MCP client to `node /path/to/index.js`. The
 browser playground is independent of this package and remains available.
 
 `eval/cases.json` is the seed agent-evaluation corpus. `npm run eval` executes
@@ -79,5 +81,7 @@ cover unknown Words, stack shape and malformed source. Their reference trace is
 also a scorer fixture, not evidence of model performance.
 `npm run test:pack` creates the allowlisted tarball, installs it into an empty
 temporary prefix, imports that installed copy and computes through the real
-backend. The beta package still requires `AJISAI_BIN` and `AJISAI_REPO`; this
-smoke test does not claim a bundled zero-configuration backend.
+backend. The smoke test deliberately points `AJISAI_REPO` at a nonexistent
+directory, proving static resources are self-contained. The beta package still
+requires `AJISAI_BIN`; it does not yet claim a bundled zero-configuration
+backend.

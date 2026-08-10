@@ -16,10 +16,10 @@ host and shares the value protocol with the native CLI.
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
-| P1 — local stdio beta | 35% | 75% | 26.25% |
+| P1 — local stdio beta | 35% | 85% | 29.75% |
 | P2 — agent evaluation | 20% | 35% | 7.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **68.25%** |
+| **Overall** | **100%** | — | **71.75%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -45,7 +45,7 @@ Completed:
 
 All P0 exit criteria are complete.
 
-### P1 — local stdio beta (75%)
+### P1 — local stdio beta (85%)
 
 Completed:
 
@@ -59,13 +59,16 @@ Completed:
 - Real-backend MCP self-test is a blocking CI quality gate.
 - CI packs the allowlisted npm tarball, installs it into an empty prefix and
   verifies the installed copy against the real backend.
+- The npm package carries generated contracts, vocabulary, guide and engine
+  provenance. A byte-for-byte drift check keeps those assets synchronized, and
+  the package smoke test runs without a repository artifact root.
 
 Remaining exit criteria:
 
 - Replace per-call native CLI processes with a packaged WASM worker backend;
   retain the native CLI as an optional backend.
-- Publish a non-private, versioned npm package after the backend and static
-  resources are self-contained rather than repo-path dependent.
+- Publish a non-private, versioned npm package after the backend is
+  self-contained rather than native-binary dependent.
 
 ### P2 — agent evaluation (35%)
 

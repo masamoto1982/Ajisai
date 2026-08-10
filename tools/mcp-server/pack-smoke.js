@@ -23,7 +23,7 @@ try {
   const packed = JSON.parse(stdout)[0];
   tarball = join(here, packed.filename);
   const paths = new Set(packed.files.map(({ path }) => path));
-  for (const required of ["index.js", "result.schema.json", "eval/cases.json", "score-repairs.js", "eval/repair-cases.json"]) {
+  for (const required of ["index.js", "result.schema.json", "assets/metadata.json", "assets/words.json", "assets/word-manifest.json", "assets/quickstart.md", "eval/cases.json", "score-repairs.js", "eval/repair-cases.json"]) {
     if (!paths.has(required)) throw new Error(`tarball is missing ${required}`);
   }
 
@@ -48,7 +48,8 @@ try {
     symlinkSync(join(here, "node_modules"), join(installed, "node_modules"), "dir");
     console.warn("WARN registry unavailable; used lockfile-installed dependencies");
   }
-  process.env.AJISAI_REPO = repoRoot;
+  // The installed adapter must not read static resources from the checkout.
+  process.env.AJISAI_REPO = join(scratch, "no-repository-here");
   process.env.AJISAI_BIN = join(repoRoot, "rust", "target", "debug", "ajisai");
   const installedEntry = join(scratch, "node_modules", "ajisai-mcp-server", "index.js");
   const installed = await import(pathToFileURL(installedEntry));
@@ -59,6 +60,14 @@ try {
 
   const tools = await client.listTools();
   if (tools.tools.length !== 4) throw new Error("installed package did not expose four tools");
+  const guide = await client.readResource({ uri: "ajisai://guide/quickstart" });
+  if (!guide.contents[0]?.text?.includes("Ajisai")) {
+    throw new Error("installed package did not expose its packaged guide");
+  }
+  const contract = await client.callTool({ name: "word_contract", arguments: { word: "MAP" } });
+  if (contract.structuredContent?.matches?.[0]?.name !== "MAP") {
+    throw new Error("installed package did not expose its packaged Word registry");
+  }
   const computed = await client.callTool({
     name: "compute",
     arguments: { source: "1 3 /" },

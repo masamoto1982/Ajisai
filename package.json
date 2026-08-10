@@ -19,6 +19,7 @@
     "eval:mcp": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval",
     "eval:mcp-traces": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval:traces",
     "eval:mcp-repairs": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval:repairs",
+    "check:mcp-assets": "npm --prefix tools/mcp-server run check:assets",
     "test:watch": "vitest",
     "clean": "rm -rf dist node_modules",
     "tauri": "tauri",

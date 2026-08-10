@@ -23,10 +23,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.AJISAI_REPO
   ? resolve(process.env.AJISAI_REPO)
   : resolve(here, "..", "..");
-const manifestPath = join(repoRoot, "docs", "word-manifest.json");
-const contractsPath = join(repoRoot, "spec", "words.json");
-const skillPath = join(repoRoot, "SKILL.md");
-const rootPackagePath = join(repoRoot, "package.json");
+const assetsPath = join(here, "assets");
+const manifestPath = join(assetsPath, "word-manifest.json");
+const contractsPath = join(assetsPath, "words.json");
+const skillPath = join(assetsPath, "quickstart.md");
+const metadataPath = join(assetsPath, "metadata.json");
 const serverPackagePath = join(here, "package.json");
 const resultSchemaPath = join(here, "result.schema.json");
 export const LIMITS = Object.freeze({
@@ -118,7 +119,7 @@ const TOOLS = [
 let manifestCache;
 let contractsCache;
 let registryDigestCache;
-let engineVersionCache;
+let metadataCache;
 let serverVersionCache;
 export class ExecutionGate {
   #active = 0;
@@ -144,13 +145,16 @@ function contracts() {
   return contractsCache ??= JSON.parse(readFileSync(contractsPath, "utf8"));
 }
 function registryDigest() {
-  return registryDigestCache ??= createHash("sha256")
+  const calculated = registryDigestCache ??= createHash("sha256")
     .update(readFileSync(contractsPath))
     .digest("hex");
+  if (calculated !== metadata().registryDigest) {
+    throw new Error("packaged Word registry digest does not match metadata");
+  }
+  return calculated;
 }
-function engineVersion() {
-  return engineVersionCache ??= JSON.parse(readFileSync(rootPackagePath, "utf8")).version;
-}
+function metadata() { return metadataCache ??= JSON.parse(readFileSync(metadataPath, "utf8")); }
+function engineVersion() { return metadata().engineVersion; }
 function serverVersion() {
   return serverVersionCache ??= JSON.parse(readFileSync(serverPackagePath, "utf8")).version;
 }
