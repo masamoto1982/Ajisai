@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "exact-fraction",
+      "category": "rational",
+      "prompt": "Compute one third exactly.",
+      "expectedTool": "compute",
+      "arguments": { "source": "1 3 /" },
+      "expect": { "/status": "ok", "/stackDisplay/0": "1/3" }
+    },
+    {
+      "id": "decimal-no-float",
+      "category": "decimal",
+      "prompt": "Add 0.1 and 0.2 without binary floating-point error.",
+      "expectedTool": "compute",
+      "arguments": { "source": "0.1 0.2 +" },
+      "expect": { "/status": "ok", "/stackDisplay/0": "3/10" }
+    },
+    {
+      "id": "algebraic-sqrt",
+      "category": "algebraic",
+      "prompt": "Return the exact square root of two.",
+      "expectedTool": "compute",
+      "arguments": { "source": "2 SQRT" },
+      "expect": {
+        "/status": "ok",
+        "/stack/0/semantics/exactTerms/0/radicand": "2"
+      }
+    },
+    {
+      "id": "vector-broadcast",
+      "category": "vector",
+      "prompt": "Add ten to each element of [1, 2].",
+      "expectedTool": "compute",
+      "arguments": { "source": "[ 1 2 ] 10 +" },
+      "expect": { "/status": "ok", "/stackDisplay/0": "[ 11/1 12/1 ]" }
+    },
+    {
+      "id": "nil-reason",
+      "category": "nil",
+      "prompt": "Divide one by zero and explain the defined absence.",
+      "expectedTool": "compute",
+      "arguments": { "source": "1 0 /" },
+      "expect": {
+        "/status": "ok",
+        "/stack/0/semantics/absence/reason": "divisionByZero"
+      }
+    },
+    {
+      "id": "nil-recovery",
+      "category": "nil",
+      "prompt": "Use 42 when division by zero produces NIL.",
+      "expectedTool": "compute",
+      "arguments": { "source": "1 0 / ^ 42" },
+      "expect": { "/status": "ok", "/stackDisplay/0": "42/1" }
+    },
+    {
+      "id": "language-error",
+      "category": "diagnostic",
+      "prompt": "Run a program containing the unknown Word FROBNICATE.",
+      "expectedTool": "compute",
+      "arguments": { "source": "FROBNICATE" },
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "typoOrUnknownName"
+      }
+    },
+    {
+      "id": "static-check",
+      "category": "check",
+      "prompt": "Check this Ajisai definition without executing it.",
+      "expectedTool": "check",
+      "arguments": { "source": "{ [ 1 ] + } 'INC' DEF" },
+      "expect": { "/status": "ok", "/output": [] }
+    },
+    {
+      "id": "contract-inference",
+      "category": "contract",
+      "prompt": "Infer the contract of INC without running its body.",
+      "expectedTool": "infer_contracts",
+      "arguments": { "source": "{ [ 1 ] + } 'INC' DEF" },
+      "expect": { "/status": "ok", "/contracts/0/name": "INC" }
+    },
+    {
+      "id": "word-contract",
+      "category": "registry",
+      "prompt": "Return the canonical contract for MAP.",
+      "expectedTool": "word_contract",
+      "arguments": { "word": "MAP" },
+      "expect": { "/matches/0/name": "MAP", "/matches/0/purity": "conditional" }
+    },
+    {
+      "id": "irrelevant-weather",
+      "category": "negative",
+      "prompt": "What is tomorrow's weather in Tokyo?",
+      "expectedTool": null,
+      "arguments": null,
+      "expect": null
+    },
+    {
+      "id": "irrelevant-writing",
+      "category": "negative",
+      "prompt": "Write a short poem about hydrangeas.",
+      "expectedTool": null,
+      "arguments": null,
+      "expect": null
+    }
+  ]
+}
