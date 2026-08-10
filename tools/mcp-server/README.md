@@ -8,6 +8,9 @@ Ajisai promises **exactness in its supported numeric domain**, rather than
 unqualified “no rounding errors”. Operations such as explicit rounding and
 functions outside that domain retain their documented semantics.
 
+Development status and next-agent instructions are tracked in
+`docs/dev/mcp-readiness.md` and `docs/dev/mcp-claude-code-handoff.md`.
+
 ## Agent surface
 
 | tool | purpose |

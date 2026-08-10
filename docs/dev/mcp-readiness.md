@@ -4,6 +4,9 @@ Status date: 2026-08-10. This is an implementation tracker, not a language
 specification. Percentages measure completion of the concrete exit criteria
 below; they are not forecasts.
 
+The next-agent implementation handoff is
+[`mcp-claude-code-handoff.md`](./mcp-claude-code-handoff.md).
+
 ## Product position
 
 Ajisai's MCP product is a bounded, deterministic and diagnostic computation
