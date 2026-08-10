@@ -15,13 +15,13 @@ host and shares the value protocol with the native CLI.
 
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
-| P0 — lossless semantic boundary | 35% | 95% | 33.25% |
+| P0 — lossless semantic boundary | 35% | 97% | 33.95% |
 | P1 — local stdio beta | 35% | 60% | 21.0% |
 | P2 — agent evaluation | 20% | 5% | 1.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **55.25%** |
+| **Overall** | **100%** | — | **55.95%** |
 
-### P0 — lossless semantic boundary (95%)
+### P0 — lossless semantic boundary (97%)
 
 Completed:
 
@@ -36,11 +36,13 @@ Completed:
   source-to-document drift check.
 - Committed golden cases cover success, reason-carrying NIL, language ERROR,
   algebraic output and execution-budget exhaustion through the real MCP path.
+- Native compute now enters through a typed, source-only Rust `agent_api`; CLI
+  rendering consumes the same I/O-free report object.
 
 Remaining exit criteria:
 
-- Move the complete agent envelope behind a typed Rust `agent_api` rather than
-  normalizing command-specific CLI JSON in Node.
+- Extend the typed Rust `agent_api` to check and contract inference, then make
+  the packaged MCP backend consume that API without Node-side normalization.
 
 ### P1 — local stdio beta (60%)
 

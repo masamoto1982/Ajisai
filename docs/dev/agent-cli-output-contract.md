@@ -55,6 +55,10 @@ best-effort static Word resolution, and never executes the program. With
 `--contract`, `contractDecls` contains the conservative result of comparing
 `#:contract` declarations with inferred contracts.
 
+Native `run` obtains this document from the typed, source-only Rust
+`cli::agent_api::compute` boundary. Terminal formatting is a consumer of that
+report and is not part of computation semantics.
+
 ### Stack value nodes
 
 Stack nodes are produced by the same Rust value-protocol mapping as the WASM
