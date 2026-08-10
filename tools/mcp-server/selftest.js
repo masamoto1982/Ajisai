@@ -151,7 +151,10 @@ if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
   check(
     "compute reports engine provenance and applied limits",
     compute.structuredContent?.mcp?.engineVersion === "0.2.0-beta.1" &&
-      compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000,
+      compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000 &&
+      compute.structuredContent?.mcp?.limits?.materializedElements === 100000 &&
+      compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&
+      compute.structuredContent?.mcp?.limits?.algebraicTerms === 4096,
   );
   check("compute satisfies the published result schema", validateResult(compute.structuredContent));
 

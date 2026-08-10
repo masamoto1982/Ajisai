@@ -167,6 +167,7 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
         &source,
         agent_api::ComputeOptions {
             step_limit: opts.step_limit,
+            runtime_limits: None,
         },
     ));
     emit(response.report(), opts);
@@ -405,6 +406,7 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
                 &source,
                 agent_api::ComputeOptions {
                     step_limit: opts.step_limit,
+                    runtime_limits: Some(agent_api::LOCAL_AGENT_RUNTIME_LIMITS),
                 },
             ));
             (response.to_json(), response.exit_code())

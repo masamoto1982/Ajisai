@@ -46,14 +46,24 @@
             "wallTimeMs",
             "responseBytes",
             "executionSteps",
-            "concurrentExecutions"
+            "concurrentExecutions",
+            "materializedElements",
+            "numericLiteralDigits",
+            "numericWork",
+            "bigintBits",
+            "algebraicTerms"
           ],
           "properties": {
             "sourceBytes": { "type": "integer", "minimum": 1 },
             "wallTimeMs": { "type": "integer", "minimum": 1 },
             "responseBytes": { "type": "integer", "minimum": 1 },
             "executionSteps": { "type": "integer", "minimum": 1 },
-            "concurrentExecutions": { "type": "integer", "minimum": 1 }
+            "concurrentExecutions": { "type": "integer", "minimum": 1 },
+            "materializedElements": { "type": "integer", "minimum": 1 },
+            "numericLiteralDigits": { "type": "integer", "minimum": 1 },
+            "numericWork": { "type": "integer", "minimum": 1 },
+            "bigintBits": { "type": "integer", "minimum": 1 },
+            "algebraicTerms": { "type": "integer", "minimum": 1 }
           }
         }
       }

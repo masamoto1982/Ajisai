@@ -25,6 +25,8 @@ All execution tools call the native CLI's common `agent` operation, backed by
 the typed Rust agent API; Node does not reinterpret command-specific results.
 The local server also caps concurrent CLI executions, returning a retryable
 host error instead of allowing an unbounded process fan-out.
+Its Rust agent profile additionally caps materialized elements, numeric-literal
+digits, cumulative numeric work, BigInt bit length and algebraic term count.
 
 Static context is available through `ajisai://guide/quickstart`,
 `ajisai://vocabulary`, and `ajisai://schema/result`. Tool calls return both text

@@ -35,6 +35,11 @@ export const LIMITS = Object.freeze({
   responseBytes: 1024 * 1024,
   executionSteps: 100_000,
   concurrentExecutions: 4,
+  materializedElements: 100_000,
+  numericLiteralDigits: 4_096,
+  numericWork: 10_000_000,
+  bigintBits: 262_144,
+  algebraicTerms: 4_096,
 });
 
 function resolveAjisaiBin() {
