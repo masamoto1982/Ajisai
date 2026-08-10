@@ -57,6 +57,12 @@ jobs:
         # (R1-1); fails rather than silently re-resolving on lock drift.
         run: npm ci
 
+      - name: Install MCP adapter dependencies
+        # The adapter is an independently lockfile-pinned package. Installing
+        # it explicitly prevents a developer's nested node_modules directory
+        # from hiding lock drift or a missing runtime dependency.
+        run: npm ci --prefix tools/mcp-server
+
       - name: Install ripgrep
         # The semantic firewall greps the source with ripgrep. The runner does
         # not ship it, and without it the firewall would pass without scanning
@@ -140,6 +146,22 @@ jobs:
 
       - name: TypeScript MC/DC tests (Vitest)
         run: npm test
+
+      - name: MCP protocol and real-backend integration
+        # Blocking: builds the actual Rust CLI, drives the server through an
+        # in-memory MCP transport, and validates compute/diagnostic/contract
+        # results against the same published JSON Schema clients receive.
+        run: |
+          npm run check:agent-cli-contract
+          npm run check:mcp-assets
+          npm run check:mcp-evaluation
+          npm run test:mcp
+          npm run test:mcp-pack
+          npm run eval:mcp
+          npm run eval:mcp-performance
+          npm run eval:mcp-number-baseline
+          npm run eval:mcp-traces
+          npm run eval:mcp-repairs
 
   rust-test:
     name: Rust Tests
@@ -265,4 +287,3 @@ jobs:
       - name: Run WASM boundary tests
         working-directory: rust/wasm-tests
         run: wasm-pack test --node
-

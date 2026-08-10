@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "repair-unknown-word",
+      "prompt": "Repair `1 2 AD` using its diagnosis.",
+      "firstAttempt": {
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "typoOrUnknownName",
+          "/diagnosis/where/word": "AD"
+        }
+      },
+      "repairedAttempt": {
+        "expect": {
+          "/status": "ok",
+          "/stackDisplay/0": "3/1"
+        }
+      }
+    },
+    {
+      "id": "repair-stack-underflow",
+      "prompt": "Repair `1 ADD` using its diagnosis.",
+      "firstAttempt": {
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "stackShape",
+          "/diagnosis/where/word": "ADD"
+        }
+      },
+      "repairedAttempt": {
+        "expect": {
+          "/status": "ok",
+          "/stackDisplay/0": "3/1"
+        }
+      }
+    },
+    {
+      "id": "repair-unclosed-vector",
+      "prompt": "Repair malformed `[ 1 2` using its diagnosis.",
+      "firstAttempt": {
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "sourceForm"
+        }
+      },
+      "repairedAttempt": {
+        "expect": {
+          "/status": "ok",
+          "/stackDisplay/0": "[ 1/1 2/1 ]"
+        }
+      }
+    }
+  ]
+}
