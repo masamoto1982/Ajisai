@@ -156,6 +156,7 @@ jobs:
           npm run check:mcp-assets
           npm run check:mcp-evaluation
           npm run test:mcp
+          npm run test:mcp-backends
           npm run test:mcp-pack
           npm run eval:mcp
           npm run eval:mcp-performance
@@ -230,6 +231,35 @@ jobs:
             git --no-pager diff --stat -- src/wasm/generated/
           else
             echo "Committed wasm bundle matches a fresh build."
+          fi
+
+      - name: Detect stale committed MCP wasm bundle (advisory)
+        # Same idea as the browser bundle above, for the Node worker_threads
+        # WASM backend (tools/mcp-server/wasm/generated/, `--target nodejs`).
+        # Advisory only: `backend/parity-test.js` (blocking, quality-gate job)
+        # already proves the committed bundle behaves identically to the
+        # native backend; this only flags that a rebuild would produce
+        # different bytes.
+        continue-on-error: true
+        run: |
+          set -e
+          if ! command -v wasm-pack >/dev/null 2>&1; then
+            bash ./scripts/install-wasm-pack.sh || {
+              echo "::warning::wasm-pack install failed during MCP stale-bundle check; skipping diff."
+              exit 0
+            }
+          fi
+          bash ./scripts/rebuild-mcp-wasm.sh > /tmp/rebuild-mcp-wasm.log 2>&1 || {
+            cat /tmp/rebuild-mcp-wasm.log
+            echo "::warning::MCP wasm rebuild failed during stale-bundle check; skipping diff."
+            exit 0
+          }
+          if ! git diff --quiet -- tools/mcp-server/wasm/generated/; then
+            echo "::warning::Committed tools/mcp-server/wasm/generated/ bundle is stale relative to the Rust source."
+            echo "::warning::Run \`npm run build:mcp-wasm\` and commit the result."
+            git --no-pager diff --stat -- tools/mcp-server/wasm/generated/
+          else
+            echo "Committed MCP wasm bundle matches a fresh build."
           fi
 
   typescript-check:

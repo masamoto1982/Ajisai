@@ -1,8 +1,9 @@
 # MCP product readiness
 
-Status date: 2026-08-10. This is an implementation tracker, not a language
-specification. Percentages measure completion of the concrete exit criteria
-below; they are not forecasts.
+Status date: 2026-08-10 (updated after the packaged WASM backend landed). This
+is an implementation tracker, not a language specification. Percentages
+measure completion of the concrete exit criteria below; they are not
+forecasts.
 
 The next-agent implementation handoff is
 [`mcp-claude-code-handoff.md`](./mcp-claude-code-handoff.md).
@@ -19,10 +20,10 @@ host and shares the value protocol with the native CLI.
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
-| P1 — local stdio beta | 35% | 85% | 29.75% |
+| P1 — local stdio beta | 35% | 95% | 33.25% |
 | P2 — agent evaluation | 20% | 55% | 11.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **75.75%** |
+| **Overall** | **100%** | — | **79.25%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -48,7 +49,7 @@ Completed:
 
 All P0 exit criteria are complete.
 
-### P1 — local stdio beta (85%)
+### P1 — local stdio beta (95%)
 
 Completed:
 
@@ -65,13 +66,46 @@ Completed:
 - The npm package carries generated contracts, vocabulary, guide and engine
   provenance. A byte-for-byte drift check keeps those assets synchronized, and
   the package smoke test runs without a repository artifact root.
+- A host-neutral `rust/src/agent` module (compute/check/infer-contracts,
+  report assembly, contract checking) now compiles for native and `wasm32`
+  alike, with no filesystem or terminal I/O. The native CLI (`rust/src/cli`)
+  is a thin adapter over it; both host paths render the identical schema-1
+  envelope.
+- A one-shot WASM entry point
+  (`rust/src/wasm_interpreter_bindings/wasm_agent.rs`) exposes that module to
+  Node as `agent_compute`/`agent_check`/`agent_infer_contracts`, returning the
+  same JSON envelope text the native `ajisai agent` CLI prints. The browser
+  playground's stateful `AjisaiInterpreter` session API is unchanged and
+  unaffected.
+- The Node adapter now defines a small backend interface
+  (`tools/mcp-server/backend/`) with two implementations: `NativeCliBackend`
+  (a native subprocess per call, as before) and `WasmWorkerBackend` (the WASM
+  entry point run inside a `worker_threads` Worker, one per call, terminated
+  on the existing hard wall-time limit — never run synchronously on the stdio
+  server's main thread). `AJISAI_BIN`/a discoverable local build selects the
+  native backend; otherwise the packaged WASM backend is used, with no
+  `AJISAI_REPO` or `AJISAI_BIN` required.
+- `tools/mcp-server/backend/parity-test.js` (`npm run test:mcp-backends` at
+  the repo root) runs every golden case against both backends directly and
+  asserts they agree on every stable semantic field (status, stack,
+  stackDisplay, diagnosis, aiDiagnostic, errorFlowTrace, output, message,
+  contractDecls), excluding host-specific `runtimeMetrics` counters. All
+  golden cases currently match byte-for-byte between backends.
+- The package smoke test (`pack-smoke.js`) now proves two scenarios against
+  the packed, installed tarball: computation succeeds with neither
+  `AJISAI_REPO` nor `AJISAI_BIN` set (the packaged WASM backend), and separately
+  through an explicit `AJISAI_BIN` (the native/Docker path).
+- `scripts/rebuild-mcp-wasm.sh` (`npm run build:mcp-wasm`) regenerates the
+  committed Node-target WASM bundle
+  (`tools/mcp-server/wasm/generated/`), mirroring `rebuild-wasm.sh` for the
+  browser build.
 
-Remaining exit criteria:
+Remaining exit criterion:
 
-- Replace per-call native CLI processes with a packaged WASM worker backend;
-  retain the native CLI as an optional backend.
-- Publish a non-private, versioned npm package after the backend is
-  self-contained rather than native-binary dependent.
+- Publish a non-private, versioned npm package. The backend is now
+  self-contained rather than native-binary dependent, so the previous
+  technical blocker is resolved; publishing itself is a deliberate release
+  decision this PR does not make.
 
 ### P2 — agent evaluation (55%)
 

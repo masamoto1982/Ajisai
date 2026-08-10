@@ -57,10 +57,16 @@ best-effort static Word resolution, and never executes the program. With
 `#:contract` declarations with inferred contracts.
 
 Native `run` obtains this document from the typed, source-only Rust
-`cli::agent_api::compute` boundary. Terminal formatting is a consumer of that
+`agent::api::compute` boundary. Terminal formatting is a consumer of that
 report and is not part of computation semantics.
-JSON `check` likewise consumes `cli::agent_api::check`; human-readable check
+JSON `check` likewise consumes `agent::api::check`; human-readable check
 output remains a terminal-only projection.
+`agent::api` (`rust/src/agent/`) has no filesystem or terminal I/O and
+compiles for `wasm32` as well as native, so the WASM one-shot entry point
+(`rust/src/wasm_interpreter_bindings/wasm_agent.rs`, consumed by the MCP
+adapter's `worker_threads` backend) renders the identical envelope; the
+native CLI (`rust/src/cli`) is a thin file/terminal adapter over the same
+module.
 
 ### Stack value nodes
 
@@ -125,8 +131,9 @@ their bodies.
 The MCP adapter normalizes this legacy bare array into its common result
 envelope under `contracts`; the native CLI shape remains unchanged in schema
 version 1.
-The array itself is produced by `cli::agent_api::infer_contracts` so native and
-future embedded hosts share inference rather than reimplementing it.
+The array itself is produced by `agent::api::infer_contracts` so native and
+other embedded hosts (including the WASM one-shot entry point) share inference
+rather than reimplementing it.
 
 ## `test`
 

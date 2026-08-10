@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "build:wasm": "bash ./scripts/rebuild-wasm.sh",
+    "build:mcp-wasm": "bash ./scripts/rebuild-mcp-wasm.sh",
     "build:web": "AJISAI_BUILD_TARGET=web vite build",
     "watch": "tsc --watch",
     "dev": "vite",
@@ -15,6 +16,7 @@
     "deadcode": "ts-prune",
     "test": "vitest run",
     "test:mcp": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run selftest",
+    "test:mcp-backends": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run test:backends",
     "test:mcp-pack": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run test:pack",
     "eval:mcp": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval",
     "eval:mcp-traces": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && npm --prefix tools/mcp-server run eval:traces",

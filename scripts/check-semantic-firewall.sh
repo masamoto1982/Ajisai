@@ -51,6 +51,9 @@ check_absent \
 #   - tests and benches (globs below)
 #   - rust/src/elastic/            trace + hedged engine (feature-gated)
 #   - rust/src/cli/                agent-facing --json contract / explain
+#   - rust/src/agent/              host-neutral agent boundary (same --json
+#                                   contract as cli/, shared with the WASM
+#                                   one-shot entry point)
 #   - wasm_interpreter_bindings/   machine protocol keys (metric names)
 #   - trace eprintln ("[trace-*", "[hedged]"), panics/expect, cfg attrs
 # The pattern is applied to string literals only, so code comments stay free
@@ -61,7 +64,7 @@ check_user_visible_absent() {
   echo "[semantic-firewall] checking: user-visible ${description}"
   if rg -n --color never "\"[^\"]*(${pattern})[^\"]*\"" \
       rust/src src \
-      -g '!*test*' -g '!**/elastic/**' -g '!**/cli/**' \
+      -g '!*test*' -g '!**/elastic/**' -g '!**/cli/**' -g '!**/agent/**' \
       -g '!**/wasm_interpreter_bindings/**' -g '!**/benches/**' \
       -g '!**/route_equivalence.rs' -g '!src/wasm/generated/**' \
     | rg -v '\.expect\(|eprintln!|\[trace-|debug_assert|panic!|#\[cfg\(feature'

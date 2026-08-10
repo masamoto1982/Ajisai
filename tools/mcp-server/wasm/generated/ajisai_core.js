@@ -1,6 +1,6 @@
 /* @ts-self-types="./ajisai_core.d.ts" */
 
-export class AjisaiInterpreter {
+class AjisaiInterpreter {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
         this.__wbg_ptr = 0;
@@ -329,6 +329,7 @@ export class AjisaiInterpreter {
     }
 }
 if (Symbol.dispose) AjisaiInterpreter.prototype[Symbol.dispose] = AjisaiInterpreter.prototype.free;
+exports.AjisaiInterpreter = AjisaiInterpreter;
 
 /**
  * Parse and resolve `source` without executing it; also verifies declared
@@ -336,7 +337,7 @@ if (Symbol.dispose) AjisaiInterpreter.prototype[Symbol.dispose] = AjisaiInterpre
  * @param {string} source
  * @returns {string}
  */
-export function agent_check(source) {
+function agent_check(source) {
     let deferred2_0;
     let deferred2_1;
     try {
@@ -350,6 +351,7 @@ export function agent_check(source) {
         wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
 }
+exports.agent_check = agent_check;
 
 /**
  * Execute one Ajisai source document under the same tightened
@@ -360,12 +362,13 @@ export function agent_check(source) {
  * @param {number | null} [step_limit]
  * @returns {Promise<string>}
  */
-export function agent_compute(source, step_limit) {
+function agent_compute(source, step_limit) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.agent_compute(ptr0, len0, isLikeNone(step_limit) ? Number.MAX_SAFE_INTEGER : (step_limit) >>> 0);
     return ret;
 }
+exports.agent_compute = agent_compute;
 
 /**
  * Infer machine-readable contracts for user-defined Words without
@@ -373,7 +376,7 @@ export function agent_compute(source, step_limit) {
  * @param {string} source
  * @returns {string}
  */
-export function agent_infer_contracts(source) {
+function agent_infer_contracts(source) {
     let deferred2_0;
     let deferred2_1;
     try {
@@ -387,6 +390,7 @@ export function agent_infer_contracts(source) {
         wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
 }
+exports.agent_infer_contracts = agent_infer_contracts;
 
 /**
  * Install console_error_panic_hook so any panic on the WASM side
@@ -395,9 +399,10 @@ export function agent_infer_contracts(source) {
  * Idempotent (`set_once`). Called from the TS loader exactly once
  * right after wasm-bindgen `init`.
  */
-export function init_panic_hook() {
+function init_panic_hook() {
     wasm.init_panic_hook();
 }
+exports.init_panic_hook = init_panic_hook;
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
@@ -876,15 +881,7 @@ function takeFromExternrefTable0(idx) {
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 cachedTextDecoder.decode();
-const MAX_SAFARI_DECODE_BYTES = 2146435072;
-let numBytesDecoded = 0;
 function decodeText(ptr, len) {
-    numBytesDecoded += len;
-    if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES) {
-        cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
-        cachedTextDecoder.decode();
-        numBytesDecoded = len;
-    }
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 
@@ -903,96 +900,9 @@ if (!('encodeInto' in cachedTextEncoder)) {
 
 let WASM_VECTOR_LEN = 0;
 
-let wasmModule, wasmInstance, wasm;
-function __wbg_finalize_init(instance, module) {
-    wasmInstance = instance;
-    wasm = instance.exports;
-    wasmModule = module;
-    cachedDataViewMemory0 = null;
-    cachedUint8ArrayMemory0 = null;
-    wasm.__wbindgen_start();
-    return wasm;
-}
-
-async function __wbg_load(module, imports) {
-    if (typeof Response === 'function' && module instanceof Response) {
-        if (typeof WebAssembly.instantiateStreaming === 'function') {
-            try {
-                return await WebAssembly.instantiateStreaming(module, imports);
-            } catch (e) {
-                const validResponse = module.ok && expectedResponseType(module.type);
-
-                if (validResponse && module.headers.get('Content-Type') !== 'application/wasm') {
-                    console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);
-
-                } else { throw e; }
-            }
-        }
-
-        const bytes = await module.arrayBuffer();
-        return await WebAssembly.instantiate(bytes, imports);
-    } else {
-        const instance = await WebAssembly.instantiate(module, imports);
-
-        if (instance instanceof WebAssembly.Instance) {
-            return { instance, module };
-        } else {
-            return instance;
-        }
-    }
-
-    function expectedResponseType(type) {
-        switch (type) {
-            case 'basic': case 'cors': case 'default': return true;
-        }
-        return false;
-    }
-}
-
-function initSync(module) {
-    if (wasm !== undefined) return wasm;
-
-
-    if (module !== undefined) {
-        if (Object.getPrototypeOf(module) === Object.prototype) {
-            ({module} = module)
-        } else {
-            console.warn('using deprecated parameters for `initSync()`; pass a single object instead')
-        }
-    }
-
-    const imports = __wbg_get_imports();
-    if (!(module instanceof WebAssembly.Module)) {
-        module = new WebAssembly.Module(module);
-    }
-    const instance = new WebAssembly.Instance(module, imports);
-    return __wbg_finalize_init(instance, module);
-}
-
-async function __wbg_init(module_or_path) {
-    if (wasm !== undefined) return wasm;
-
-
-    if (module_or_path !== undefined) {
-        if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
-            ({module_or_path} = module_or_path)
-        } else {
-            console.warn('using deprecated parameters for the initialization function; pass a single object instead')
-        }
-    }
-
-    if (module_or_path === undefined) {
-        module_or_path = new URL('ajisai_core_bg.wasm', import.meta.url);
-    }
-    const imports = __wbg_get_imports();
-
-    if (typeof module_or_path === 'string' || (typeof Request === 'function' && module_or_path instanceof Request) || (typeof URL === 'function' && module_or_path instanceof URL)) {
-        module_or_path = fetch(module_or_path);
-    }
-
-    const { instance, module } = await __wbg_load(await module_or_path, imports);
-
-    return __wbg_finalize_init(instance, module);
-}
-
-export { initSync, __wbg_init as default };
+const wasmPath = `${__dirname}/ajisai_core_bg.wasm`;
+const wasmBytes = require('fs').readFileSync(wasmPath);
+const wasmModule = new WebAssembly.Module(wasmBytes);
+let wasmInstance = new WebAssembly.Instance(wasmModule, __wbg_get_imports());
+let wasm = wasmInstance.exports;
+wasm.__wbindgen_start();

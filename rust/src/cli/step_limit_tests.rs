@@ -76,7 +76,7 @@ fn lowered_step_limit_sandboxes_a_simple_program() {
 fn lowered_budget_raises_execution_limit_exceeded() {
     let mut interp = Interpreter::new();
     interp.set_max_execution_steps(10);
-    let err = super::block_on(interp.execute(SIMPLE_PROGRAM))
+    let err = crate::agent::block_on(interp.execute(SIMPLE_PROGRAM))
         .expect_err("a 10-step budget must stop this program");
     assert!(
         matches!(err, AjisaiError::ExecutionLimitExceeded { limit: 10 }),
