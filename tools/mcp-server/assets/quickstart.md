@@ -68,25 +68,38 @@ Rationals are exact and their display is exact too:
 2 3 / 1 3 / +
 ```
 
-An irrational square root is where display and value part company. Read
-`stack[…].semantics.exactTerms` — a list of `{ numerator, denominator,
-radicand }` terms, arbitrary-precision integers as strings. That is the
-canonical value, and for `2 SQRT` it is exactly one term: `1/1 · √2`.
+An irrational square root is where display and value part company. On the
+result of
 
 ```ajisai tool=compute status=ok
 2 SQRT
 ```
 
-Two things on that same result are **not** the value, and reading either as if
-it were will mislead you:
+read either of these two fields, in this order:
+
+- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`. Read this
+  first. It is a display: read it, do not parse it.
+- **`semantics.exactTerms`** — the value itself: a list of
+  `{ numerator, denominator, radicand }` terms meaning `Σ (n/d)·√radicand`,
+  arbitrary-precision integers as strings. Compute with this.
+
+They are the same fact in two shapes and always appear together. Two *other*
+fields on that same result are **not** the value, and reading either as if it
+were will mislead you:
 
 - `stackDisplay` shows the canonical continued fraction, truncated at a display
-  budget (`( 1 ( 2 ( 2 …)`). It is a rendering, and a truncated one.
+  budget (`( 1 ( 2 ( 2 …)`). It is a rendering, and an incomplete one.
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 
-Comparisons decide on the exact value regardless, so let Ajisai do the deciding
-rather than comparing displays or approximations yourself:
+Neither `exactDisplay` nor `exactTerms` appears on a plain rational or a vector
+of rationals — there is no radical to write, and `stackDisplay` is already
+exact for those.
+
+One caution about `exactDisplay`: it writes the stored form faithfully, so two
+values that *are* equal can be written differently — `8 SQRT` gives
+`"sqrt(8)"` and `2 SQRT 2 SQRT +` gives `"2/1*sqrt(2)"`. Never compare these
+strings to decide equality. Ask Ajisai, which decides on the exact value:
 
 ```ajisai tool=compute status=ok stack="TRUE"
 8 SQRT 2 SQRT 2 SQRT + =
@@ -229,7 +242,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 - Sorting is a plain Core word
   `[ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
 - Exact square root takes a bare scalar
-  `2 SQRT` → stack: `( 1 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ...) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )`
+  `2 SQRT` → exact value: `sqrt(2)` (the stack display is its continued fraction)
 - The KEEP modifier makes the next word non-consuming
   `[ 5 ] KEEP PRINT` → prints `[ 5/1 ]`; stack: `[ 5/1 ]`
 

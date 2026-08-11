@@ -1,6 +1,6 @@
 # MCP product readiness
 
-Status date: 2026-08-11 (updated after the declared-limit, provenance and
+Status date: 2026-08-11 (updated after the algebraic short-display work; before that, declared-limit, provenance and
 host-failure work). This is an implementation tracker, not a language
 specification. Percentages measure completion of the concrete exit criteria
 below; they are not forecasts.
@@ -168,6 +168,38 @@ Completed:
   a stored envelope naming only the engine could not say which adapter wrote
   it — so a missing field was indistinguishable from a field that adapter
   version never sent.
+- **An algebraic value can be read without decoding anything.**
+  `semantics.exactDisplay` writes the multiquadratic normal form as one short
+  string — `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)` —
+  beside the `exactTerms` it renders. Both derive from a single extraction in
+  `value_protocol.rs`, both host serializers emit them together, and
+  `result.schema.json` states the pairing as `dependentRequired`, so the wire
+  cannot carry one without the other.
+
+  What it replaces is not a missing field but a misleading first impression:
+  the two renderings a consumer meets before the terms are `stackDisplay` (the
+  SPEC §4.2.3 continued fraction, *truncated at a display budget* — ~194
+  characters for √2, ending in `...)`) and the node's own `value` (a rational
+  approximation flagged `approximate`). One looks complete and is not; the
+  other looks exact and is not. Neither is changed: `stackDisplay` remains the
+  shared projection the CLI, REPL and playground render, and altering it stays
+  a spec-level decision.
+
+  Recorded rather than smoothed over: `exactDisplay` renders the *stored* form,
+  and the stored form is not canonical for equality — `8 SQRT` holds `{1/1, 8}`
+  while `2 SQRT 2 SQRT +` holds `{2/1, 2}`, and `=` decides they are equal.
+  Reducing the display would make it disagree with the terms beside it, so the
+  README, the quickstart and the schema all say instead that comparison decides
+  equality and string comparison does not.
+
+  Golden coverage: a scaled algebraic value, a multi-term algebraic value, and
+  a rational and a vector of rationals pinned to carry *neither* field — the
+  golden runner gained `expectAbsent` for that, since a missing pointer and a
+  pointer holding `null` were previously indistinguishable. The backend parity
+  test compares the whole `stack`, so native/WASM agreement on the new field is
+  covered case by case. The SKILL.md generator now shows the short form for an
+  algebraic example, cutting the §6 `2 SQRT` line from ~194 characters to 62
+  while still printing only what the real interpreter returned.
 - `ajisai://guide/quickstart` is now an MCP preface plus the generated
   `SKILL.md`, not `SKILL.md` alone. The generated guide opens on a CLI run
   loop a connected client cannot issue and never states which of the four

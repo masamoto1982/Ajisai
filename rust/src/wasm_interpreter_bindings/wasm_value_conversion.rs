@@ -6,7 +6,8 @@
 
 use crate::types::arena::{NodeId, NodeKind, ValueArena};
 use crate::types::value_protocol::{
-    exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode, ProtocolValue,
+    exact_display, exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode,
+    ProtocolValue,
 };
 use crate::types::{Interpretation, Value, ValueData};
 use serde::{Deserialize, Serialize};
@@ -171,6 +172,9 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     // choosing between a thirty-line continued fraction and an approximation.
     // Additive and optional: a host that ignores it sees exactly what it saw
     // before.
+    if let Some(display) = exact_display(value) {
+        set_prop(&obj, "exactDisplay", &display.into());
+    }
     if let Some(exact_terms) = exact_terms(value) {
         let terms = js_sys::Array::new();
         for exact_term in exact_terms {

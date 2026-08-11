@@ -139,6 +139,58 @@ fn algebraic_exact_terms_are_lossless_decimal_strings() {
     );
 }
 
+/// `exactDisplay` renders the same normal form `exactTerms` carries, short
+/// enough to read. The continued-fraction projection a consumer meets first is
+/// truncated and the node's own `value` is an approximation, so this is the
+/// only rendering of an algebraic value that is both short and complete.
+///
+/// Every rendering decision is pinned here rather than through the CLI,
+/// because both host serializers call this one function and neither adds any
+/// formatting of its own.
+#[test]
+fn algebraic_exact_display_writes_the_normal_form_short() {
+    use crate::types::exact::ExactReal;
+    use crate::types::value_protocol::{exact_display, exact_terms};
+
+    let display = |value: &Value| exact_display(value).expect("an algebraic value renders short");
+    let sqrt_of = |n: i64| {
+        Value::from_exact_real(
+            ExactReal::from_sqrt_rational(frac(n)).expect("a supported algebraic square root"),
+        )
+    };
+
+    // A unit coefficient is left unwritten: `1/1*sqrt(2)` says nothing more.
+    assert_eq!(display(&sqrt2()), "sqrt(2)");
+
+    // A non-unit coefficient keeps Ajisai's own `numerator/denominator`
+    // rendering. `2*sqrt(2)` would be the only place in the language where a
+    // number is written without its denominator.
+    let two_sqrt2 = match sqrt2().data {
+        ValueData::ExactScalar(ExactReal::Algebraic(algebraic)) => {
+            match algebraic.mul_fraction(&Fraction::new(2.into(), 1.into())) {
+                crate::types::exact::AlgebraicResult::Irrational(scaled) => {
+                    Value::from_exact_real(ExactReal::Algebraic(scaled))
+                }
+                other => panic!("2·√2 stays irrational, got {other:?}"),
+            }
+        }
+        ref other => panic!("√2 is an algebraic ExactScalar, got {other:?}"),
+    };
+    assert_eq!(display(&two_sqrt2), "2/1*sqrt(2)");
+
+    // Present exactly when `exactTerms` is: one fact in two shapes, so a
+    // reader is never left choosing which field to believe.
+    for value in [scalar(3), vector(vec![scalar(1)]), Value::nil()] {
+        assert_eq!(exact_display(&value), None, "{value:?} has no normal form");
+        assert_eq!(exact_terms(&value), None, "{value:?} has no normal form");
+    }
+
+    // The stored form is rendered faithfully, including the case where two
+    // equal values hold different terms. Reducing `sqrt(8)` to `2/1*sqrt(2)`
+    // here would make the string disagree with the `exactTerms` beside it.
+    assert_eq!(display(&sqrt_of(8)), "sqrt(8)");
+}
+
 /// Under the `ContinuedFraction` role the value is rendered losslessly as
 /// the canonical nested-form string and carries no `semantics` block, so
 /// it is never marked approximate (regression guard: unchanged behavior).
