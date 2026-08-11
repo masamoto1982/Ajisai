@@ -1,5 +1,9 @@
 {
   "schemaVersion": 1,
+  "provenance": {
+    "source": "referenceFixture",
+    "note": "Hand-written diagnosis-driven repair trace built to pass score-repairs.js. It proves the scorer runs end to end; it is not a model result."
+  },
   "traces": [
     {
       "caseId": "repair-unknown-word",

@@ -13,9 +13,12 @@
   "engines": { "node": ">=20" },
   "files": ["index.js", "doctor.js", "host-error.js", "word-candidates.js", "backend/*.js", "result.schema.json", "README.md", "assets/*", "golden/cases.json", "golden/limits.json", "golden/limit-cases.js", "eval.js", "benchmark.js", "number-baseline.js", "evaluation-contract.js", "validate-evaluation.js", "score-traces.js", "score-repairs.js", "eval/*.json", "wasm/generated/*"],
   "bin": { "ajisai-mcp-server": "index.js" },
-  "scripts": { "start": "node index.js", "sync:assets": "node sync-assets.js", "check:assets": "node sync-assets.js --check", "prepack": "node sync-assets.js --check", "selftest": "node selftest.js", "test:pack": "node pack-smoke.js", "eval:validate": "node validate-evaluation.js && node evaluation-contract.test.js", "eval": "node eval.js", "eval:performance": "node benchmark.js --require-budget", "eval:number-baseline": "node number-baseline.js --require-ajisai-exact", "eval:traces": "node score-traces.js eval/reference-traces.json --require-perfect", "eval:repairs": "node score-repairs.js eval/reference-repair-traces.json --require-perfect", "test:backends": "node backend/parity-test.js" },
+  "scripts": { "start": "node index.js", "sync:assets": "node sync-assets.js", "check:assets": "node sync-assets.js --check", "prepack": "node sync-assets.js --check", "selftest": "node selftest.js", "test:pack": "node pack-smoke.js", "eval:validate": "node validate-evaluation.js && node evaluation-contract.test.js && node capture-traces.test.js", "eval": "node eval.js", "eval:capture": "node capture-traces.js", "eval:performance": "node benchmark.js --require-budget", "eval:number-baseline": "node number-baseline.js --require-ajisai-exact", "eval:traces": "node score-traces.js eval/reference-traces.json --require-perfect", "eval:repairs": "node score-repairs.js eval/reference-repair-traces.json --require-perfect", "test:backends": "node backend/parity-test.js" },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.18.0"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.116.0"
   }
 }

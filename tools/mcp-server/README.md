@@ -280,8 +280,35 @@ semantic correctness only; model tool selection and source generation require
 captured model traces and are not claimed by this score.
 `score-traces.js` accepts captured model traces in the documented reference
 shape and reports tool-selection accuracy, end-to-end semantic success, missing
-traces and irrelevant-tool rate. The committed reference trace is a harness
-conformance fixture, not a model benchmark result.
+traces and irrelevant-tool rate.
+
+Every trace document declares what produced it. `provenance.source` is either
+`referenceFixture` — a hand-written trace built to pass the scorer, whose
+perfect result describes the scorer and nothing else — or `model`, a real
+capture, which must additionally record the model id, prompt-template digest,
+tool-choice setting, capture time, and the server, engine and registry versions
+it ran against. A document without that block is rejected rather than scored,
+because the same numbers mean "the harness works" or "the model performs this
+well" depending on an answer the file was not carrying. The scorers print the
+provenance alongside the metrics, so a score copied out of a log still says
+which it is.
+
+`--require-perfect` is only valid on a `referenceFixture`. It asserts that the
+scorer runs end to end; pointing it at a model trace would turn the first clean
+run into a committed claim that the model is perfect, which is the one thing
+this corpus is least entitled to say. A model trace is scored and reported,
+never asserted.
+
+**No model baseline has been collected.** `npm run eval:capture` drives a real
+model over the four tools — one call per corpus case, `tool_choice: auto` so
+the irrelevant-intent cases can correctly produce no call — and writes a
+`model` trace under `eval/traces/`, kept apart from the committed fixtures so no
+directory listing presents the two as the same kind of artifact. It resolves
+credentials the way the Anthropic SDK does (`ANTHROPIC_API_KEY`,
+`ANTHROPIC_AUTH_TOKEN`, or an `ant auth login` profile) and, finding none,
+exits non-zero having written nothing. `capture-traces.test.js` exercises the
+harness against a scripted client; it tests prompt assembly and tool-call
+extraction, not a model.
 `score-repairs.js` replays a failed attempt and its model-produced revision,
 requires the expected structured diagnosis before the revision can count, and
 reports diagnosis-observation and diagnosis-driven repair rates. The seed cases

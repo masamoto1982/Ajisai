@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "./index.js";
-import { indexTraces, validateCorpus } from "./evaluation-contract.js";
+import { indexTraces, mayAssertPerfect, traceProvenance, validateCorpus } from "./evaluation-contract.js";
 
 function atPointer(document, pointer) {
   return pointer.split("/").slice(1)
@@ -34,6 +34,7 @@ if (!tracePath) {
 const corpus = JSON.parse(readFileSync(new URL("./eval/repair-cases.json", import.meta.url), "utf8"));
 const traceDoc = JSON.parse(readFileSync(tracePath, "utf8"));
 const traces = indexTraces(traceDoc, validateCorpus(corpus, { repair: true }), { repair: true });
+const provenance = traceProvenance(traceDoc);
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const server = createServer();
 const client = new Client({ name: "ajisai-repair-eval", version: "1" });
@@ -67,11 +68,26 @@ try {
 const total = corpus.cases.length;
 const metrics = {
   schemaVersion: 1,
+  // Travels with the numbers: a repair rate copied out of a log still says
+  // whether it describes a model or the scorer that grades one.
+  provenance,
+  measures: provenance.source === "referenceFixture"
+    ? "scorer conformance only — not model performance"
+    : `model performance for ${provenance.modelId}`,
   cases: total,
   missingTraces: missing,
   diagnosisObservedRate: diagnosesObserved / total,
   diagnosisDrivenRepairRate: repairsSucceeded / total,
 };
 console.log(JSON.stringify(metrics, null, 2));
-if (process.argv.includes("--require-perfect") &&
-    (missing !== 0 || diagnosesObserved !== total || repairsSucceeded !== total)) process.exit(1);
+if (process.argv.includes("--require-perfect")) {
+  // See score-traces.js: perfection is asserted of the harness, never of a model.
+  if (!mayAssertPerfect(traceDoc)) {
+    console.error(
+      "--require-perfect asserts scorer conformance and is only valid for a referenceFixture trace; " +
+        "a model trace is reported, never asserted.",
+    );
+    process.exit(2);
+  }
+  if (missing !== 0 || diagnosesObserved !== total || repairsSucceeded !== total) process.exit(1);
+}
