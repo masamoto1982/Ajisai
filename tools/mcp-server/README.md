@@ -14,56 +14,68 @@ Host-by-host resource ceilings are compared in `docs/dev/mcp-host-profiles.md`.
 
 ## Install and connect
 
+> **Not on npm yet.** `ajisai-mcp-server` is unpublished, so `npm install -g
+> ajisai-mcp-server` and `npx -y ajisai-mcp-server` do not resolve. Publishing
+> is a release decision, not a missing feature; until it is made, connect from
+> a checkout as below. This section will lead with the registry recipe on the
+> day `npm view ajisai-mcp-server version` answers.
+
+Requirements: **Node 20 or newer**, and a checkout of this repository. Nothing
+else — no build step, no `cargo`, no native binary. The WASM backend is
+committed under `wasm/generated/`, so a fresh clone computes immediately.
+
 ```sh
-npm install -g ajisai-mcp-server
+git clone https://github.com/masamoto1982/Ajisai.git
+cd Ajisai/tools/mcp-server
+npm install
+node index.js --doctor     # exits 0 when this copy can actually compute
 ```
 
-No build step and no native binary are required: the packaged WASM backend
-ships inside the package.
-
 Most MCP clients take a JSON server entry. Claude Desktop
-(`claude_desktop_config.json`), Claude Code (`.mcp.json`), and Cursor
+(`claude_desktop_config.json`), Claude Code (`.mcp.json`) and Cursor
 (`.cursor/mcp.json`) all use this shape:
 
 ```json
 {
   "mcpServers": {
     "ajisai": {
-      "command": "npx",
-      "args": ["-y", "ajisai-mcp-server"]
-    }
-  }
-}
-```
-
-A globally installed copy, or a checkout, can be named directly instead:
-
-```json
-{
-  "mcpServers": {
-    "ajisai": {
-      "command": "ajisai-mcp-server"
-    }
-  }
-}
-```
-
-```json
-{
-  "mcpServers": {
-    "ajisai": {
       "command": "node",
-      "args": ["/path/to/Ajisai/tools/mcp-server/index.js"],
-      "env": { "AJISAI_BIN": "/path/to/Ajisai/rust/target/release/ajisai" }
+      "args": ["/path/to/Ajisai/tools/mcp-server/index.js"]
     }
   }
 }
 ```
 
-`AJISAI_BIN` is optional and selects a native `ajisai` binary instead of the
-packaged WASM backend — useful in a Docker image that builds one in.
-`AJISAI_REPO` is a development-only fallback for discovering a locally built
-binary without naming it.
+That is the whole configuration. No `env` block is needed, and pointing
+`AJISAI_BIN` at a native binary — as an earlier version of this file did in its
+only working example — is an optional override, not a prerequisite:
+
+- `AJISAI_BIN` selects a native `ajisai` binary instead of the packaged WASM
+  backend, which is how a Docker image that builds one in should be wired.
+- `AJISAI_REPO` is a development-only fallback for discovering a locally built
+  binary without naming it.
+
+Both backends answer identically (see [Backends and
+provenance](#backends-and-provenance)); the override is about deployment, not
+about results.
+
+### Checking an installation
+
+The server is silent when it is healthy, which makes it indistinguishable from
+one that is wedged. The same executable answers for itself:
+
+```sh
+node index.js --version    # adapter version, engine version, registry digest
+node index.js --doctor     # Node, assets, backend and two real computations
+node index.js --help
+```
+
+`--doctor` exits 0 when every check passes and 1 when any fails, so it can gate
+a container start or a support request. It computes `2 3 / 1 3 / +` and
+`2 SQRT` through the selected backend: a server that starts and loads its
+assets but answers wrongly is still broken, and only running something proves
+otherwise. With no arguments the process speaks MCP on stdin/stdout and writes
+nothing else there.
 
 ## Agent surface
 
@@ -132,10 +144,16 @@ finishing mid-session silently moved later calls onto a different execution
 path, with nothing in the response saying so. Parity is what makes the two
 answers equal; provenance is what would make an unequal one investigable.
 
-Every result also carries `mcp.engineVersion`, `mcp.registryDigest` and the
-applied `mcp.limits`. The packaged registry is verified against its recorded
-digest at **startup**, so a corrupt asset stops the server rather than
-surfacing as a generic failure on whichever request touched it first.
+Every result also carries `mcp.serverVersion`, `mcp.engineVersion`,
+`mcp.registryDigest` and the applied `mcp.limits`. The two versions are two
+separately released components: `serverVersion` is this Node adapter, and
+`engineVersion` is the Ajisai language it speaks for. A saved result used to
+name only the second, so a field missing from an archived envelope could not be
+told apart from a field that adapter version never sent.
+
+The packaged registry is verified against its recorded digest at **startup**,
+so a corrupt asset stops the server rather than surfacing as a generic failure
+on whichever request touched it first.
 
 ## Limits
 
@@ -162,6 +180,16 @@ and `ajisai://limits`. The `ajisai://words/{name}` template exposes the same
 complete Word contract as `word_contract` without a tool call. Contract lookups
 accept canonical names and aliases; their registry digest is calculated from
 the canonical specification, not from a reduced documentation manifest.
+
+`ajisai://guide/quickstart` is an MCP preface (`mcp-quickstart.md`) followed by
+the generated writing protocol (`SKILL.md`), joined by `sync-assets.js`. The
+guide used to be `SKILL.md` alone, which opens on a CLI run loop — `ajisai run
+file --json`, commands a connected client cannot issue — and never says which
+of the four tools to call, so a model that read it first learned the language
+before it learned the interface. The preface answers tool selection, result
+branching and the algebraic-value trap in one screen, then hands off. Its own
+examples are executed against the live backend by the self-test, the same
+guarantee the generator gives the half below it.
 
 All four tools declare read-only, non-destructive and idempotent MCP
 annotations.
@@ -216,12 +244,21 @@ service latency.
 decimal and integer operations with JavaScript `Number`. It includes two
 exactly representable controls as well as known precision-sensitive cases, and
 labels its scope explicitly; it is not a general JavaScript or CAS benchmark.
-`npm run test:pack` creates the allowlisted tarball, installs it into an empty
-temporary prefix and imports that installed copy. It computes through the
-real backend twice: first with neither `AJISAI_REPO` nor `AJISAI_BIN` set,
-proving the installed package computes through its packaged, self-contained
-WASM backend with no repository and no native binary in reach; then again
-with an explicit `AJISAI_BIN`, proving the native/Docker override path still
-works.
+`npm run test:pack` creates the allowlisted tarball and installs it into an
+empty temporary prefix, then exercises that installed copy four ways: importing
+`createServer` with neither `AJISAI_REPO` nor `AJISAI_BIN` set, proving it
+computes through its packaged, self-contained WASM backend with no repository
+and no native binary in reach; **launching the `ajisai-mcp-server` bin through
+`node_modules/.bin`**, which is how every documented client entry starts it;
+running `--doctor` on the installed package; and finally spawning that bin
+again with an explicit `AJISAI_BIN`, asserting `mcp.backend.kind` is
+`nativeCli`.
+
+The last two of those are spawned processes on purpose. The backend is resolved
+once per process, so setting `AJISAI_BIN` and constructing a second server in
+the same process reused the WASM backend the first scenario had already fixed —
+the native assertion passed on machines with no native binary at all. Because
+it is now real, `npm run test:pack` needs one built; `npm run test:mcp-pack`
+from the repository root builds it first.
 
 The browser playground is independent of this package and remains available.

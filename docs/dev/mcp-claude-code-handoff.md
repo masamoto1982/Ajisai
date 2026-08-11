@@ -1,6 +1,6 @@
 # Ajisai MCP development handoff for Claude Code
 
-Updated: 2026-08-11
+Updated: 2026-08-11 (MCP onboarding: bin entry, --doctor, serverVersion, quickstart)
 
 - Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
 - Host profiles: [`mcp-host-profiles.md`](./mcp-host-profiles.md)
@@ -75,7 +75,19 @@ names or spawn diagnostics into it; that belongs on stderr, and
 ### MCP adapter
 
 - `tools/mcp-server/index.js`: stdio server, four tools, Resources, execution
-  gate, startup backend selection, asset validation and MCP provenance.
+  gate, startup backend selection, asset validation and MCP provenance. Its
+  entry-point guard compares **real** paths: the bin is reached through a
+  `node_modules/.bin` symlink, and a `resolve()`-only comparison silently made
+  every launch-by-name a no-op.
+- `tools/mcp-server/doctor.js`: `--version`, `--doctor`, `--help`. Reached only
+  when arguments are present, never once a transport is open. It is the one
+  surface that deliberately prints host detail — paths, versions, spawn
+  failures — because an operator is reading it.
+- `tools/mcp-server/mcp-quickstart.md`: hand-written MCP preface that
+  `sync-assets.js` composes with `SKILL.md` into `assets/quickstart.md`. Its
+  fenced ```ajisai blocks carry `tool=`/`status=`/`stack=` attributes and are
+  executed against the live backend by the self-test, so the guidance a model
+  is told to trust cannot quietly stop being true.
 - `tools/mcp-server/host-error.js`: the host-failure vocabulary. A new failure
   mode needs a code here and in `result.schema.json`, not a new prose string.
 - `tools/mcp-server/result.schema.json`: the single `outputSchema` for all four
@@ -132,7 +144,29 @@ measurement behind it**. Do not report it as one.
 
 ## 5. Recommended next pull request
 
-P1 backend work is done. The two highest-value threads now:
+P1 backend work and P1 onboarding are done (see the readiness tracker's P1
+section for the bin-entry, `--doctor`, `serverVersion` and quickstart items).
+Two threads remain queued behind them, in this order:
+
+0. **A short agent-facing display for algebraic values.** `2 SQRT` answers with
+   the correct `exactTerms`, and with two things beside it that a model reads
+   first and should not: `stackDisplay` is the canonical continued fraction
+   *truncated at a display budget* (~194 characters for √2, with a `...)`
+   marker), and `value` is a rational approximation
+   (`768398401/543339720`) marked `semantics.approximate: true`. The packaged
+   quickstart now warns about both, which is mitigation, not a fix.
+
+   The fix is an additional short, unambiguous rendering — `sqrt(2)` — carried
+   next to `exactTerms` in the same `semantics` block, so the relationship
+   between the display and the value it renders is structural rather than
+   asserted. Do **not** rename or reshape `stackDisplay`: it is the SPEC §4.2.3
+   continued-fraction projection shared with the CLI, the REPL and the
+   playground, and changing it is a separate, spec-level decision. Do not call
+   the new field "canonical" either — `exactTerms` is the canonical value, and
+   a display string named canonical invites exactly the substitution this
+   boundary exists to prevent. Add golden cases for a rational, a vector and a
+   multi-term algebraic value, and assert native/WASM agreement on the new
+   field.
 
 1. **Recalibrate the numeric work meter** so the declared size ceilings bind
    before the wall clock. Today `numericWork`, `bigintBits` and
@@ -145,6 +179,20 @@ P1 backend work is done. The two highest-value threads now:
    pass through the algebraic size guard at all, so a large integer product is
    bounded only by `executionSteps`.
 2. **Collect real model traces** (see §6). The harness is not the bottleneck.
+
+3. **Compact the tool response, without breaking the text mirror.** The same
+   result is serialized into both `content[0].text` and `structuredContent`:
+   2,988 bytes total for an exact rational, 14,003 for an unknown-Word
+   diagnosis. The mirroring itself should stay — MCP asks a tool with an output
+   schema to also return the serialized JSON as text, so a text-only client
+   still receives the whole result, and replacing that text with a prose
+   summary would drop information those clients have no other way to reach.
+   What can go is padding: `JSON.stringify(value, null, 2)` alone accounts for
+   roughly 28–36% of the text, and always-null fields (`message`,
+   `diagnosis`, `aiDiagnostic`, `contractDecls` on a plain success) account for
+   more. Measure before and after on the evaluation corpus and re-run the
+   repair scorer; a reduction that lowers the diagnosis-observation rate is not
+   a win.
 
 Do not add MCP tools without demonstrated need. A `trace` tool mirroring the
 playground's step mode, and the unused `prompts` capability, are both plausible
@@ -232,7 +280,14 @@ but do not silently raise the committed budget to fix a regression.
   of supported-domain exactness, vector/dataflow semantics and diagnostics.
 - Do not claim `reference-traces.json` represents an LLM.
 - Do not hand-edit packaged assets; regenerate with `sync:assets` and check the
-  resulting diff.
+  resulting diff. `assets/quickstart.md` is composed from `mcp-quickstart.md`
+  and `SKILL.md`; edit the preface source, never the composed file.
+- Do not test a launch path by importing `createServer`. That is not what a
+  client does, and it is why a bin entry that served nothing survived a self
+  test, a pack smoke test and a release-readiness review.
+- Do not assert on a backend selection made after the first call in the same
+  process. The backend is resolved once and cached, so a second in-process
+  server ignores a changed `AJISAI_BIN` — spawn a process instead.
 - Do not let a `nextChecks` locale carry another locale's language, and do not
   match on its display text anywhere; `code` is the stable identifier.
 - Do not delete or subordinate the browser playground to the MCP package.

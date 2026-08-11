@@ -2,9 +2,11 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import Ajv2020 from "ajv/dist/2020.js";
-import { CAPACITY_WAIT_MS, createServer, ExecutionGate, LIMITS } from "./index.js";
+import { CAPACITY_WAIT_MS, createServer, ExecutionGate, LIMITS, serverVersion } from "./index.js";
+import { runCli } from "./doctor.js";
 import { coveredLimitNames, limitCases } from "./golden/limit-cases.js";
 import { HOST_ERRORS } from "./host-error.js";
+import { SKILL_BOUNDARY } from "./sync-assets.js";
 import { readFileSync } from "node:fs";
 
 let failures = 0;
@@ -117,6 +119,7 @@ check(
 check(
   "word_contract carries the same provenance as an execution result",
   contract.structuredContent?.mcp?.registryDigest?.length === 64 &&
+    contract.structuredContent?.mcp?.serverVersion === serverVersion() &&
     contract.structuredContent?.suggestions?.length === 0,
 );
 
@@ -139,8 +142,68 @@ check(
   limitsResource.profile === "mcp-local-stdio" &&
     JSON.stringify(limitsResource.limits) === JSON.stringify(LIMITS),
 );
+// The adapter and the engine are separately versioned, and a stored result
+// naming only the engine cannot say which adapter produced it.
+check(
+  "the host profile resource names the adapter version as well as the engine",
+  limitsResource.serverVersion === serverVersion() &&
+    limitsResource.engineVersion !== undefined &&
+    typeof serverVersion() === "string",
+);
 const guide = await client.readResource({ uri: "ajisai://guide/quickstart" });
-check("quickstart resource reads generated guidance", guide.contents[0]?.text?.includes("Agent Writing Protocol"));
+const guideText = guide.contents[0]?.text ?? "";
+check("quickstart resource reads generated guidance", guideText.includes("Agent Writing Protocol"));
+
+// The served guide leads with the MCP interface, not with the CLI run loop the
+// generated protocol opens on. A connected client cannot issue `ajisai run`,
+// and a model that met that first learned the language before learning which
+// of the four tools to call.
+const [preface] = guideText.split(SKILL_BOUNDARY);
+check(
+  "the quickstart opens with MCP tool selection, not the CLI run loop",
+  preface.length > 0 && preface.length < guideText.length &&
+    ["compute", "check", "infer_contracts", "word_contract"].every((tool) =>
+      preface.includes(`\`${tool}\``)
+    ) &&
+    !preface.includes("ajisai run"),
+);
+check(
+  "the quickstart distinguishes every outcome class a caller must branch on",
+  ["`ok`", "`error`", "`hostError`", "NIL", "exactTerms"].every((token) =>
+    preface.includes(token)
+  ),
+);
+
+// Every example in the hand-written preface runs against the live backend. The
+// generated half is verified by its generator against the real interpreter;
+// this is the same guarantee for the half a human wrote, so guidance the model
+// is told to trust cannot quietly stop being true.
+const prefaceExamples = [...preface.matchAll(/^```ajisai([^\n]*)\n([\s\S]*?)^```$/gm)].map(
+  ([, attributes, source]) => ({
+    source: source.trim(),
+    expect: Object.fromEntries(
+      [...attributes.matchAll(/(\w+)=("[^"]*"|\S+)/g)].map(([, key, raw]) => [
+        key,
+        raw.startsWith('"') ? raw.slice(1, -1) : raw,
+      ]),
+    ),
+  }),
+);
+check("the quickstart preface carries executable examples", prefaceExamples.length >= 5);
+for (const { source, expect } of prefaceExamples) {
+  const observed = await client.callTool({
+    name: expect.tool ?? "compute",
+    arguments: { source },
+  });
+  const structured = observed.structuredContent;
+  const statusAgrees = structured?.status === (expect.status ?? "ok");
+  const stackAgrees =
+    expect.stack === undefined || (structured?.stackDisplay ?? []).join(" ") === expect.stack;
+  check(`quickstart example: ${source.replaceAll("\n", " ")}`, statusAgrees && stackAgrees);
+  if (!statusAgrees || !stackAgrees) {
+    console.error(`  got status=${structured?.status} stack=${JSON.stringify(structured?.stackDisplay)}`);
+  }
+}
 const schemaResource = await client.readResource({ uri: "ajisai://schema/result" });
 const resultSchema = JSON.parse(schemaResource.contents[0]?.text ?? "{}");
 const validateResult = new Ajv2020().compile(resultSchema);
@@ -272,7 +335,8 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
   );
   check(
     "compute reports engine provenance and applied limits",
-    compute.structuredContent?.mcp?.engineVersion === "0.2.0-beta.1" &&
+    compute.structuredContent?.mcp?.serverVersion === serverVersion() &&
+      compute.structuredContent?.mcp?.engineVersion === "0.2.0-beta.1" &&
       compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000 &&
       compute.structuredContent?.mcp?.limits?.materializedElements === 100000 &&
       compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&
@@ -339,6 +403,44 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     validateResult(inferred.structuredContent),
   );
 }
+
+// The terminal command line. A stdio server is silent whether it is healthy or
+// wedged, so `--doctor` is the only thing that tells an operator which; and it
+// has to answer through an exit code, because that is what a script reads.
+async function cli(...argv) {
+  const lines = [];
+  const code = await runCli(argv, (line) => lines.push(line));
+  return { code, text: lines.join("\n") };
+}
+const version = await cli("--version");
+check(
+  "--version names the adapter, the engine and the registry",
+  version.code === 0 &&
+    version.text.includes(`ajisai-mcp-server ${serverVersion()}`) &&
+    /engine \d/.test(version.text) &&
+    /registry [a-f0-9]{16}/.test(version.text),
+);
+const help = await cli("--help");
+check(
+  "--help documents every command the binary accepts",
+  help.code === 0 && ["--doctor", "--version", "--help"].every((flag) => help.text.includes(flag)),
+);
+const doctorRun = await cli("--doctor");
+check(
+  "--doctor exercises the real backend and exits 0 when healthy",
+  doctorRun.code === 0 &&
+    doctorRun.text.includes("checks passed") &&
+    !doctorRun.text.includes("FAIL"),
+);
+check(
+  "--doctor proves exactness rather than only reporting that it started",
+  doctorRun.text.includes("2 3 / 1 3 / + = 1/1") && doctorRun.text.includes("exactTerms"),
+);
+const unknownFlag = await cli("--frobnicate");
+check(
+  "an unrecognized option is named and exits non-zero rather than serving",
+  unknownFlag.code === 2 && unknownFlag.text.includes("--frobnicate"),
+);
 
 await client.close();
 await server.close();
