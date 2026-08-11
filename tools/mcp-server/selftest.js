@@ -313,6 +313,52 @@ for (const limit of limitCases()) {
   }
 }
 
+// The two halves of a result, and the padding between them.
+//
+// MCP asks a tool with an output schema to also return the serialized JSON in
+// a text block, so a text-only client receives the whole result rather than a
+// summary of it. That makes the text a *mirror*: if it ever stops being the
+// same object, the two kinds of client stop seeing the same answer. These pin
+// the mirror, and pin the padding that used to cost a third of it.
+const mirrored = await client.callTool({ name: "compute", arguments: { source: "1 3 /" } });
+check(
+  "the text block is the structured result, not a summary of it",
+  JSON.stringify(JSON.parse(mirrored.content?.[0]?.text ?? "null")) ===
+    JSON.stringify(mirrored.structuredContent),
+);
+check(
+  "the text block carries no indentation padding",
+  typeof mirrored.content?.[0]?.text === "string" &&
+    !/\n\s/.test(mirrored.content[0].text),
+);
+// An optional field with nothing in it is absent, not `null`. A plain success
+// used to advertise `diagnosis`, `aiDiagnostic`, `message` and
+// `contractDecls`, all empty — four diagnostic-sounding fields pointing at
+// nothing.
+check(
+  "a successful result carries no null-valued fields",
+  Object.values(mirrored.structuredContent ?? {}).every((field) => field !== null) &&
+    !("diagnosis" in (mirrored.structuredContent ?? {})),
+);
+// Compaction must not cost a text-only client the outcome distinction, which
+// is the whole reason the text is the serialized result rather than prose.
+for (const [label, call] of [
+  ["a value", { name: "compute", arguments: { source: "1 3 /" } }],
+  ["a reason-carrying NIL", { name: "compute", arguments: { source: "1 0 /" } }],
+  ["a language error", { name: "compute", arguments: { source: "FROBNICATE" } }],
+  ["a host failure", { name: "compute", arguments: { source: "" } }],
+]) {
+  const observed = await client.callTool(call);
+  const text = JSON.parse(observed.content?.[0]?.text ?? "null");
+  check(
+    `a text-only client can still identify ${label}`,
+    typeof text?.status === "string" &&
+      text.status === observed.structuredContent?.status &&
+      (text.status !== "hostError" || typeof text.error?.code === "string") &&
+      (text.status !== "error" || typeof text.diagnosis?.why === "string"),
+  );
+}
+
 const compute = await client.callTool({
   name: "compute",
   arguments: { source: "[ 2 ] SQRT" },

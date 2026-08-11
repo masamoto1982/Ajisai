@@ -285,8 +285,44 @@ function provenance() {
   };
 }
 
+/**
+ * Drop the envelope fields whose value is `null`.
+ *
+ * The backend fills every slot of the schema-1 envelope on every answer, so a
+ * successful `compute` used to advertise `message: null`, `diagnosis: null`,
+ * `aiDiagnostic: null` and `contractDecls: null` — four diagnostic-sounding
+ * fields inviting a reader to look at nothing. Absence says the same thing in
+ * no bytes, and `result.schema.json` requires only `schemaVersion` and
+ * `status`, so nothing that was promised stops being there.
+ *
+ * Top level only, and deliberately so. Recursing would save a further ~4% on
+ * the largest diagnosis and would turn one stated rule into a transformation a
+ * reader has to apply mentally to every nested object; the rule is worth more
+ * than the bytes. The backend's own envelope is untouched — this is the
+ * adapter's presentation of it, which is why the native/WASM parity test,
+ * which compares what the backends return, is unaffected.
+ */
+function withoutEmptyFields(value) {
+  return Object.fromEntries(Object.entries(value).filter(([, field]) => field !== null));
+}
+
+/**
+ * One result, in the two shapes MCP asks for.
+ *
+ * `structuredContent` is what a caller branches on. `content` carries the
+ * *same* object serialized, because the specification asks a tool with an
+ * output schema to also return the serialized JSON in a text block for
+ * backwards compatibility — a text-only client has no other way to reach any
+ * of this. Replacing that text with a prose summary would have been the one
+ * compaction that actually loses information, so what shrank instead is
+ * padding: the two-space indentation this used to be written with cost about a
+ * third of the text and told a machine nothing.
+ *
+ * Both shapes are built from one object, so the mirror cannot drift.
+ */
 function envelope(value) {
-  return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], structuredContent: value };
+  const result = withoutEmptyFields(value);
+  return { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
 }
 
 /**
@@ -316,7 +352,7 @@ function fail(error, context = "tool call") {
     // Provenance itself is what failed; the error block above already says so.
   }
   return {
-    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+    content: [{ type: "text", text: JSON.stringify(payload) }],
     structuredContent: payload,
     isError: true,
   };

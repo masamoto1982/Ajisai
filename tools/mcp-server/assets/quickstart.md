@@ -41,6 +41,9 @@ its contents as `source`.
 4. On `hostError`: branch on `error.code`, and retry only if `error.retryable`
    is true. `mcp.limits` states every ceiling that applies.
 
+A field carrying no value is **absent**, not `null`: a successful result simply
+has no `diagnosis`. Test for presence.
+
 Do not collapse these into "it worked / it broke". Retrying a division by zero
 and rewriting a program that merely timed out are both wasted turns.
 

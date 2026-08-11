@@ -1,6 +1,6 @@
 # Ajisai MCP development handoff for Claude Code
 
-Updated: 2026-08-11 (algebraic exactDisplay; previously MCP onboarding)
+Updated: 2026-08-11 (response compaction; previously algebraic exactDisplay, MCP onboarding)
 
 - Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
 - Host profiles: [`mcp-host-profiles.md`](./mcp-host-profiles.md)
@@ -126,8 +126,11 @@ names or spawn diagnostics into it; that belongs on stderr, and
   harness fixture, not model evidence.
 - `evaluation-contract.js` and `validate-evaluation.js`: reject malformed,
   duplicated or selectively incomplete evaluation data.
-- `benchmark.js` and `eval/performance.json`: post-warmup local latency gate;
-  current committed p95 budget is 1 second.
+- `benchmark.js` and `eval/performance.json`: post-warmup local latency gate
+  (committed p95 budget 1 second) and response-size gate
+  (`medianResponseBytesBudget`). Response bytes are deterministic for a fixed
+  corpus and engine, so that budget is exact — lower it when a response
+  genuinely shrinks, never raise it to make a regression pass.
 - `number-baseline.js` and `eval/number-baseline.json`: deliberately narrow
   comparison with JavaScript `Number`, including exact controls. Do not present
   it as a general language or CAS benchmark.
@@ -153,10 +156,9 @@ measurement behind it**. Do not report it as one.
 
 ## 5. Recommended next pull request
 
-P1 backend work, P1 onboarding and the algebraic short display are done (see
-the readiness tracker's P1 section for the bin-entry, `--doctor`,
-`serverVersion`, quickstart and `exactDisplay` items). Three threads remain, in
-this order:
+P1 backend work, P1 onboarding, the algebraic short display and response
+compaction are done (see the readiness tracker's P1 section). Three threads
+remain, in this order:
 
 1. **Recalibrate the numeric work meter** so the declared size ceilings bind
    before the wall clock. Today `numericWork`, `bigintBits` and
@@ -170,19 +172,16 @@ this order:
    bounded only by `executionSteps`.
 2. **Collect real model traces** (see §6). The harness is not the bottleneck.
 
-3. **Compact the tool response, without breaking the text mirror.** The same
-   result is serialized into both `content[0].text` and `structuredContent`:
-   2,988 bytes total for an exact rational, 14,003 for an unknown-Word
-   diagnosis. The mirroring itself should stay — MCP asks a tool with an output
-   schema to also return the serialized JSON as text, so a text-only client
-   still receives the whole result, and replacing that text with a prose
-   summary would drop information those clients have no other way to reach.
-   What can go is padding: `JSON.stringify(value, null, 2)` alone accounts for
-   roughly 28–36% of the text, and always-null fields (`message`,
-   `diagnosis`, `aiDiagnostic`, `contractDecls` on a plain success) account for
-   more. Measure before and after on the evaluation corpus and re-run the
-   repair scorer; a reduction that lowers the diagnosis-observation rate is not
-   a win.
+3. **Provenance size, if it ever becomes the constraint.** Considered and
+   rejected during the response-compaction work, recorded so it is not
+   re-derived from scratch: on the *smallest* results the `mcp` block is the
+   single largest field (416 bytes of a 1,165-byte exact-rational result), and
+   about 290 of those are `limits`, identical on every response and already
+   published at `ajisai://limits`. Dropping it would shrink small responses by
+   a quarter — and would cost exactly what provenance is for, since a stored
+   result would no longer say which ceilings produced it. Do not trade that for
+   bytes without a demonstrated cost; `registryDigest` and the version pair are
+   even less compressible and even more load-bearing.
 
 Do not add MCP tools without demonstrated need. A `trace` tool mirroring the
 playground's step mode, and the unused `prompts` capability, are both plausible
@@ -287,6 +286,15 @@ but do not silently raise the committed budget to fix a regression.
   normal form, and reducing it would make the string disagree with the
   `exactTerms` printed beside it — trading a surprise a reader can see for one
   they cannot.
+- Do not replace the text content block with a prose summary. MCP asks a tool
+  with an output schema to also return the serialized JSON there, and it is the
+  only route a text-only client has to the result. Compaction means removing
+  padding, not information.
+- Do not prune empty arrays or all-zero `runtimeMetrics` to save bytes. Both
+  were measured (≈1 and ≈7 points of median respectively) and both make
+  presence conditional, so `output.length` starts throwing on exactly the
+  results that have nothing to report. `null`-valued fields are different:
+  absent and `null` mean the same thing to every reader.
 - Do not let a `nextChecks` locale carry another locale's language, and do not
   match on its display text anywhere; `code` is the stable identifier.
 - Do not delete or subordinate the browser playground to the MCP package.

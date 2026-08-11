@@ -102,6 +102,32 @@ All four tools answer with the same envelope (`result.schema.json`, also served
 as `ajisai://schema/result`), so one schema describes every result a caller can
 receive and there is no second contract to keep in step.
 
+### What a result costs
+
+Every result arrives twice: as `structuredContent`, which a caller branches on,
+and serialized into a text content block, because MCP asks a tool with an
+output schema to also return the serialized JSON that way — a text-only client
+has no other route to any of it. That mirror stays. Replacing it with a prose
+summary is the one compaction that would actually lose information, and the
+self-test pins that a text-only client can still tell a value, a
+reason-carrying NIL, a language error and a host failure apart from the text
+alone.
+
+What was removed instead is padding. The text used to be written with
+two-space indentation, which cost about a third of it and told a machine
+nothing, and an optional field carrying no value used to be sent as `null` —
+so a plain success advertised `message`, `diagnosis`, `aiDiagnostic` and
+`contractDecls`, all empty. Those fields are now absent. **Test for presence,
+not for `null`.** Nested fields are untouched: one stated rule at the top level
+is worth more than the ~4% recursing would add.
+
+Measured across the seven benchmark cases, the text block's median fell 32%
+(1,618 → 1,094 bytes) and the whole response's 22% (3,049 → 2,376).
+`npm run eval:performance` reports both and fails against a committed
+`medianResponseBytesBudget`, so the padding cannot come back unnoticed. The
+budget is a ceiling to lower when a response genuinely shrinks, never one to
+raise so a regression passes.
+
 A host failure is machine-readable: `error.code` is a stable identifier
 (`invalidRequest`, `unknownTool`, `sourceTooLarge`, `backendUnavailable`,
 `capacityExhausted`, `timeout`, `responseTooLarge`, `malformedBackendResponse`,
@@ -268,8 +294,12 @@ silently producing plausible metrics.
 `eval:performance` measures five post-warmup rounds over seven representative
 compute, check, inference and registry cases. It reports p50/p95/max latency by
 tool and fails when the overall p95 exceeds the committed one-second local
-stdio budget. The measurements describe this adapter and machine, not remote
-service latency.
+stdio budget. It also reports median and maximum response size — for the whole
+result and for its text block alone — and fails against
+`medianResponseBytesBudget`; response bytes are deterministic for a fixed
+corpus and engine, so unlike the latency figures that gate is exact and
+reproducible. The latency measurements describe this adapter and machine, not
+remote service latency.
 `eval:number-baseline` compares canonical results for five selected rational,
 decimal and integer operations with JavaScript `Number`. It includes two
 exactly representable controls as well as known precision-sensitive cases, and

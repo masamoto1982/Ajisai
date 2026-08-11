@@ -1,6 +1,6 @@
 # MCP product readiness
 
-Status date: 2026-08-11 (updated after the algebraic short-display work; before that, declared-limit, provenance and
+Status date: 2026-08-11 (updated after the response-compaction work; before that, algebraic short display, declared-limit, provenance and
 host-failure work). This is an implementation tracker, not a language
 specification. Percentages measure completion of the concrete exit criteria
 below; they are not forecasts.
@@ -168,6 +168,39 @@ Completed:
   a stored envelope naming only the engine could not say which adapter wrote
   it — so a missing field was indistinguishable from a field that adapter
   version never sent.
+- **A result costs less without saying less.** Two-space indentation on the
+  text content block cost about a third of it, and an optional field carrying
+  no value was sent as `null`, so a plain success advertised `message`,
+  `diagnosis`, `aiDiagnostic` and `contractDecls`, all empty. Both are gone.
+  Across the seven benchmark cases the text block's median fell 32%
+  (1,618 → 1,094 bytes) and the whole response's 22% (3,049 → 2,376), measured
+  before and after on the same corpus.
+
+  What did **not** change is the mirroring. MCP asks a tool with an output
+  schema to also return the serialized JSON in a text block, and that is a
+  text-only client's only route to the result — so replacing it with a prose
+  summary, which is what the original proposal asked for, is the one compaction
+  that loses information. The self-test now pins that a text-only client can
+  still tell a value, a reason-carrying NIL, a language error and a host
+  failure apart from the text alone, and that the text parses back to exactly
+  the structured result.
+
+  Consequently the proposal's ">= 50% content reduction" target is **not met**,
+  and deliberately so: 32% is what is available without removing information.
+  The remaining levers were measured and declined — pruning empty arrays
+  (≈1 point) and dropping all-zero `runtimeMetrics` (≈7 points) both make a
+  field's presence conditional, so `output.length` would start throwing on
+  exactly the results that have nothing to report. Nested `null` pruning
+  (≈4 points on the largest diagnosis) was declined for a different reason: it
+  turns one stated rule into a transformation a reader must apply mentally to
+  every nested object.
+
+  `eval:performance` now reports median and maximum response size alongside
+  latency and fails against a committed `medianResponseBytesBudget`, so the
+  padding cannot return unnoticed. Response bytes are deterministic for a fixed
+  corpus and engine, so that gate is exact rather than machine-dependent.
+  Diagnosis-observation and diagnosis-driven repair rates were re-scored after
+  the change and are unmoved.
 - **An algebraic value can be read without decoding anything.**
   `semantics.exactDisplay` writes the multiquadratic normal form as one short
   string — `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)` —
