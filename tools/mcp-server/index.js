@@ -11,7 +11,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NativeCliBackend } from "./backend/native-cli.js";
@@ -236,7 +236,7 @@ function manifest() { return manifestCache ??= JSON.parse(readFileSync(manifestP
 function contracts() {
   return contractsCache ??= JSON.parse(readFileSync(contractsPath, "utf8"));
 }
-function registryDigest() {
+export function registryDigest() {
   const calculated = registryDigestCache ??= createHash("sha256")
     .update(readFileSync(contractsPath))
     .digest("hex");
@@ -250,14 +250,25 @@ function registryDigest() {
   return calculated;
 }
 function metadata() { return metadataCache ??= JSON.parse(readFileSync(metadataPath, "utf8")); }
-function engineVersion() { return metadata().engineVersion; }
-function serverVersion() {
+export function engineVersion() { return metadata().engineVersion; }
+export function serverVersion() {
   return serverVersionCache ??= JSON.parse(readFileSync(serverPackagePath, "utf8")).version;
+}
+export function packageEngines() {
+  return JSON.parse(readFileSync(serverPackagePath, "utf8")).engines ?? {};
 }
 
 /**
- * Provenance every answer carries: which engine, which registry, which of the
- * two interchangeable backends actually ran, and the limits that were applied.
+ * Provenance every answer carries: which adapter, which engine, which
+ * registry, which of the two interchangeable backends actually ran, and the
+ * limits that were applied.
+ *
+ * `serverVersion` and `engineVersion` are two independently versioned
+ * components — this adapter and the Ajisai language it speaks for — and a
+ * saved result used to name only the second. Which adapter produced a stored
+ * envelope decided whether a field was absent because the engine cannot
+ * answer it or because this version of the server never sent it, and that
+ * question was unanswerable from the result alone.
  *
  * The backend identifier does not weaken the abstraction the two backends
  * share — parity testing is what guarantees they agree. It is what makes a
@@ -266,6 +277,7 @@ function serverVersion() {
 function provenance() {
   const selected = backend();
   return {
+    serverVersion: serverVersion(),
     engineVersion: engineVersion(),
     registryDigest: registryDigest(),
     backend: { kind: selected?.kind ?? null },
@@ -456,6 +468,7 @@ export function createServer() {
           text: JSON.stringify(
             {
               profile: "mcp-local-stdio",
+              serverVersion: serverVersion(),
               engineVersion: engineVersion(),
               backend: { kind: backend()?.kind ?? null },
               limits: LIMITS,
@@ -484,13 +497,59 @@ export function createServer() {
   return server;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+/**
+ * Whether this module was the process entry point.
+ *
+ * `resolve()` normalizes a path; it does not follow symlinks. Every documented
+ * way of launching this package by name — `npx ajisai-mcp-server`, a client
+ * spawning the installed `ajisai-mcp-server` command — runs it through
+ * `node_modules/.bin/ajisai-mcp-server`, a *symlink*, so `argv[1]` was the
+ * link and `import.meta.url` was its target. The comparison was false, the
+ * guard did not fire, and the process exited 0 having served nothing: a client
+ * saw a server that started, offered no tools and reported no error. Only
+ * naming `index.js` directly ever worked, which is why the self-test and the
+ * pack smoke test — both of which import `createServer` rather than launch the
+ * binary — never saw it. Comparing real paths is what makes the bin entry the
+ * same entry point as the file.
+ */
+function isEntryPoint() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  const self = fileURLToPath(import.meta.url);
+  if (resolve(entry) === self) return true;
   try {
-    await createServer().connect(new StdioServerTransport());
-  } catch (error) {
-    // Startup faults are the operator's to fix, and a stdio server that keeps
-    // running while unable to answer is worse than one that does not start.
-    console.error(`[ajisai-mcp] failed to start: ${error.detail ?? error.message}`);
-    process.exit(1);
+    return realpathSync(entry) === self;
+  } catch {
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
+  // Any argument means a human at a terminal, not a client opening a session:
+  // `--version`, `--doctor`, `--help`, or a mistake worth naming rather than
+  // ignoring. The terminal commands live in `doctor.js` so the server path
+  // never loads them, and they are never reached once a transport is open —
+  // the stdout MCP frames travel over stays free of diagnostics.
+  //
+  // Deliberately not awaited: `doctor.js` imports back from this module, so
+  // awaiting the import here would suspend this module's evaluation waiting
+  // for a module that is waiting for this one. Continuing lets evaluation
+  // finish first, which is what resolves the cycle.
+  if (process.argv.length > 2) {
+    import("./doctor.js")
+      .then(async ({ runCli }) => process.exit(await runCli(process.argv.slice(2))))
+      .catch((error) => {
+        console.error(`[ajisai-mcp] ${error.detail ?? error.message}`);
+        process.exit(1);
+      });
+  } else {
+    try {
+      await createServer().connect(new StdioServerTransport());
+    } catch (error) {
+      // Startup faults are the operator's to fix, and a stdio server that keeps
+      // running while unable to answer is worse than one that does not start.
+      console.error(`[ajisai-mcp] failed to start: ${error.detail ?? error.message}`);
+      process.exit(1);
+    }
   }
 }

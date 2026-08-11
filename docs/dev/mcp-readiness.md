@@ -93,10 +93,20 @@ Completed:
   stackDisplay, diagnosis, aiDiagnostic, errorFlowTrace, output, message,
   contractDecls), excluding host-specific `runtimeMetrics` counters. All
   golden cases currently match byte-for-byte between backends.
-- The package smoke test (`pack-smoke.js`) now proves two scenarios against
-  the packed, installed tarball: computation succeeds with neither
-  `AJISAI_REPO` nor `AJISAI_BIN` set (the packaged WASM backend), and separately
-  through an explicit `AJISAI_BIN` (the native/Docker path).
+- The package smoke test (`pack-smoke.js`) proves four scenarios against the
+  packed, installed tarball: computation with neither `AJISAI_REPO` nor
+  `AJISAI_BIN` set (the packaged WASM backend); the `ajisai-mcp-server` bin
+  serving MCP when **launched by name** through `node_modules/.bin`;
+  `--doctor` passing on the installed copy; and an explicit `AJISAI_BIN`
+  selecting the native backend, asserted through `mcp.backend.kind`.
+
+  The last scenario previously proved nothing. The backend is resolved once
+  per process, so setting `AJISAI_BIN` and constructing a second in-process
+  server reused the WASM backend the first scenario had already fixed — the
+  "native/Docker path" assertion passed on a machine with no native binary at
+  all. Both native scenarios are now spawned processes, and `npm run test:pack`
+  consequently requires a built binary (the root `npm run test:mcp-pack`
+  builds it first).
 - `scripts/rebuild-mcp-wasm.sh` (`npm run build:mcp-wasm`) regenerates the
   committed Node-target WASM bundle
   (`tools/mcp-server/wasm/generated/`), mirroring `rebuild-wasm.sh` for the
@@ -137,9 +147,41 @@ Completed:
 - `tools/mcp-server/package.json` is no longer `private`, carries repository,
   licence and publish metadata, and the README gives copy-pasteable client
   configuration JSON.
+- **The bin entry actually starts the server.** The entry-point guard compared
+  `resolve(process.argv[1])` with `import.meta.url`, and `resolve()` does not
+  follow symlinks — so every launch through `node_modules/.bin`
+  (`npx -y ajisai-mcp-server`, a bare `"command": "ajisai-mcp-server"`) fell
+  through the guard and exited 0 having served nothing: a client saw a server
+  that started, offered no tools and reported no error. Only naming `index.js`
+  directly ever worked. The self-test and the pack smoke test both imported
+  `createServer` rather than launching the executable, so nothing covered the
+  path both npm-based README recipes used. Real paths are compared now, and
+  `pack-smoke.js` spawns the installed bin.
+- The server answers for itself from a terminal: `--version` (adapter version,
+  engine version, registry digest), `--doctor` (Node floor, packaged assets,
+  backend selection and two real computations through the selected backend,
+  exit 0/1) and `--help`. Terminal commands are reached only when arguments
+  are present and never after a transport opens, so server-mode stdout stays
+  protocol-only.
+- Results and the `ajisai://limits` resource carry `mcp.serverVersion` beside
+  `mcp.engineVersion`. The adapter and the engine are separately released, and
+  a stored envelope naming only the engine could not say which adapter wrote
+  it — so a missing field was indistinguishable from a field that adapter
+  version never sent.
+- `ajisai://guide/quickstart` is now an MCP preface plus the generated
+  `SKILL.md`, not `SKILL.md` alone. The generated guide opens on a CLI run
+  loop a connected client cannot issue and never states which of the four
+  tools to call. The preface covers tool selection, the `ok`/`error`/
+  `hostError` branch, reason-carrying NIL, and the algebraic-value trap
+  (`exactTerms` is the value; `stackDisplay` is a *truncated* continued
+  fraction and `value` is a marked rational approximation). Every example in
+  it is executed against the live backend by the self-test.
 
 All P1 exit criteria are complete. `npm publish` itself remains a release
-decision, not an implementation gap.
+decision, not an implementation gap — and the README now says so in place of
+an `npm install -g ajisai-mcp-server` recipe that resolved to E404, leading
+instead with the checkout path, which needs no build because the WASM bundle
+is committed.
 
 Known gap, recorded rather than papered over: `numericWork`, `bigintBits` and
 `algebraicTerms` are declared truthfully but are **not reachable at their
