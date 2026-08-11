@@ -313,8 +313,15 @@
     "semantics": {
       "type": "object",
       "additionalProperties": true,
+      "description": "Value metadata. For an algebraic irrational, `exactTerms` is the value and `exactDisplay` writes those same terms short; the node's own `value` is a rational approximation (`approximate: true`) and `stackDisplay` is a continued fraction truncated at a display budget.",
+      "dependentRequired": { "exactTerms": ["exactDisplay"], "exactDisplay": ["exactTerms"] },
       "properties": {
         "approximate": { "const": true },
+        "exactDisplay": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The normal form as one short string: `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)`. A display — read it, compute with `exactTerms`. It renders the stored terms faithfully, so two values `=` decides are equal may still be written differently (`sqrt(8)` and `2/1*sqrt(2)`)."
+        },
         "exactTerms": {
           "type": "array",
           "minItems": 1,

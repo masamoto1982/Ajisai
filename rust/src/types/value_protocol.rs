@@ -10,6 +10,8 @@
 
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
+use num_bigint::BigInt;
+use num_traits::{One, Zero};
 
 /// Pure, side-effect-free description of the protocol object consumers
 /// receive for a stack value: its `type`, `value`, and `displayHint`,
@@ -53,13 +55,8 @@ pub(crate) struct ProtocolExactTerm {
 /// extraction here prevents one host from exposing the normal form while
 /// another silently returns only its rational approximation.
 pub(crate) fn exact_terms(value: &Value) -> Option<Vec<ProtocolExactTerm>> {
-    let ValueData::ExactScalar(crate::types::exact::ExactReal::Algebraic(algebraic)) = &value.data
-    else {
-        return None;
-    };
     Some(
-        algebraic
-            .normal_form_terms()
+        algebraic_normal_form(value)?
             .into_iter()
             .map(|(coefficient, radicand)| ProtocolExactTerm {
                 numerator: coefficient.numerator().to_string(),
@@ -68,6 +65,93 @@ pub(crate) fn exact_terms(value: &Value) -> Option<Vec<ProtocolExactTerm>> {
             })
             .collect(),
     )
+}
+
+/// The multiquadratic normal form Σ c_m √m behind an algebraic scalar, or
+/// `None` for every other value.
+///
+/// Both `exact_terms` and `exact_display` derive from this one extraction, so
+/// the wire never carries a short rendering of terms it did not also send, or
+/// terms without the rendering — the two fields are one fact in two shapes.
+fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
+    let ValueData::ExactScalar(crate::types::exact::ExactReal::Algebraic(algebraic)) = &value.data
+    else {
+        return None;
+    };
+    Some(algebraic.normal_form_terms())
+}
+
+/// The exact value written short: `sqrt(2)`, `3/2*sqrt(5)`, `1/1 + sqrt(2)`.
+///
+/// A consumer reading an algebraic result top-down meets two renderings of the
+/// number before it meets the number, and neither is it. `stackDisplay` is the
+/// SPEC §4.2.3 continued fraction *truncated at a display budget* — √2 runs to
+/// ~194 characters and ends in `...)` — and the node's own `value` is a
+/// rational approximation, flagged `approximate`. Each is correct as what it
+/// is and misleading as what it resembles: the first looks complete and is
+/// not, the second looks exact and is not. Reading either as the value is the
+/// mistake this field removes.
+///
+/// It is a **display**, and deliberately not called canonical: `exactTerms` is
+/// the value, this is one way of writing it, and the pairing is what says so.
+/// Read it; do not parse it. Term order is the normal form's own ascending
+/// radicand order, so the string is deterministic and identical across hosts.
+///
+/// It renders the stored normal form faithfully, which means it inherits that
+/// form's one surprise: `8 SQRT` stores as `{1/1, 8}` and `2 SQRT 2 SQRT +` as
+/// `{2/1, 2}`, so two values Ajisai's `=` decides are equal — and they are —
+/// can be written `sqrt(8)` and `2/1*sqrt(2)`. Reducing the display would only
+/// move the discrepancy, by making the string disagree with the `exactTerms`
+/// beside it. Comparison is what decides equality here; string equality is not.
+pub(crate) fn exact_display(value: &Value) -> Option<String> {
+    let terms = algebraic_normal_form(value)?;
+    // An algebraic irrational always has at least one term (a term-free normal
+    // form would have demoted to Tier 0). Writing the zero rather than an
+    // empty string keeps the field readable if that invariant ever moves.
+    if terms.is_empty() {
+        return Some("0/1".to_string());
+    }
+    let mut rendered = String::new();
+    for (index, (coefficient, radicand)) in terms.iter().enumerate() {
+        let negative = !coefficient.is_positive() && !coefficient.is_zero();
+        if index == 0 {
+            if negative {
+                rendered.push('-');
+            }
+        } else {
+            rendered.push_str(if negative { " - " } else { " + " });
+        }
+        rendered.push_str(&term_display(coefficient, radicand));
+    }
+    Some(rendered)
+}
+
+/// One `c√m` term, sign already emitted by the caller.
+///
+/// The coefficient keeps Ajisai's own `numerator/denominator` rendering rather
+/// than collapsing `2/1` to `2`: every other number the language displays is
+/// written that way, and a display that quietly switches conventions for
+/// algebraic values is a second thing to learn.
+fn term_display(coefficient: &Fraction, radicand: &BigInt) -> String {
+    let numerator = coefficient.numerator();
+    let magnitude = format!(
+        "{}/{}",
+        if numerator < BigInt::zero() {
+            -numerator
+        } else {
+            numerator
+        },
+        coefficient.denominator(),
+    );
+    // The monomial `1` keys the rational part of the normal form: there is no
+    // radical to write, only the coefficient.
+    if radicand.is_one() {
+        return magnitude;
+    }
+    if magnitude == "1/1" {
+        return format!("sqrt({radicand})");
+    }
+    format!("{magnitude}*sqrt({radicand})")
 }
 
 pub(crate) fn interpretation_protocol_str(hint: Interpretation) -> &'static str {

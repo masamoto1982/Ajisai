@@ -59,8 +59,56 @@
         "/stack/0/value/0/semantics/approximate": true,
         "/stack/0/value/0/semantics/exactTerms/0/numerator": "1",
         "/stack/0/value/0/semantics/exactTerms/0/denominator": "1",
-        "/stack/0/value/0/semantics/exactTerms/0/radicand": "2"
+        "/stack/0/value/0/semantics/exactTerms/0/radicand": "2",
+        "/stack/0/value/0/semantics/exactDisplay": "sqrt(2)"
       }
+    },
+    {
+      "name": "a scaled algebraic value writes its coefficient",
+      "source": "1 2 / SQRT",
+      "expect": {
+        "/status": "ok",
+        "/stack/0/semantics/exactDisplay": "1/2*sqrt(2)",
+        "/stack/0/semantics/exactTerms/0/numerator": "1",
+        "/stack/0/semantics/exactTerms/0/denominator": "2",
+        "/stack/0/semantics/exactTerms/0/radicand": "2"
+      }
+    },
+    {
+      "name": "a multi-term algebraic value writes every term",
+      "source": "2 SQRT 3 SQRT +",
+      "expect": {
+        "/status": "ok",
+        "/stack/0/semantics/exactDisplay": "sqrt(2) + sqrt(3)",
+        "/stack/0/semantics/exactTerms/0/radicand": "2",
+        "/stack/0/semantics/exactTerms/1/radicand": "3"
+      }
+    },
+    {
+      "name": "a rational carries no algebraic rendering",
+      "source": "2 3 / 1 3 / +",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "1/1"
+      },
+      "expectAbsent": [
+        "/stack/0/semantics/exactDisplay",
+        "/stack/0/semantics/exactTerms",
+        "/stack/0/semantics/approximate"
+      ]
+    },
+    {
+      "name": "a vector of rationals carries no algebraic rendering",
+      "source": "[ 1 2 3 ] [ 4 5 6 ] +",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "[ 5/1 7/1 9/1 ]"
+      },
+      "expectAbsent": [
+        "/stack/0/semantics/exactDisplay",
+        "/stack/0/value/0/semantics/exactDisplay",
+        "/stack/0/value/0/semantics/exactTerms"
+      ]
     },
     {
       "name": "execution budget exhaustion is a language ERROR",

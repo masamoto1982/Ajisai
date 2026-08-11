@@ -13,7 +13,8 @@ use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
 use crate::types::value_protocol::{
-    exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode, ProtocolValue,
+    exact_display, exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode,
+    ProtocolValue,
 };
 use crate::types::{Interpretation, Value, ValueData};
 use serde_json::{json, Map, Value as Json};
@@ -252,6 +253,12 @@ fn semantics_json(value: &Value, effective: Interpretation) -> Json {
     {
         obj.insert("approximate".into(), json!(true));
     }
+    // The same normal form in two shapes: the terms a consumer computes with,
+    // and one short string a reader can take in. Emitted together because they
+    // are derived together — see `value_protocol::exact_display`.
+    if let Some(display) = exact_display(value) {
+        obj.insert("exactDisplay".into(), json!(display));
+    }
     if let Some(terms) = exact_terms(value) {
         obj.insert(
             "exactTerms".into(),
@@ -289,5 +296,9 @@ mod tests {
         assert_eq!(semantics["exactTerms"][0]["numerator"], "1");
         assert_eq!(semantics["exactTerms"][0]["denominator"], "1");
         assert_eq!(semantics["exactTerms"][0]["radicand"], "2");
+        // The short rendering of those same terms. Without it the only two
+        // things a reader meets before them are a truncated continued
+        // fraction and a rational approximation.
+        assert_eq!(semantics["exactDisplay"], "sqrt(2)");
     }
 }

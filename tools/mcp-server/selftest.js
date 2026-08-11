@@ -173,6 +173,19 @@ check(
     preface.includes(token)
   ),
 );
+// The short rendering only helps if the section teaching algebraic values
+// reaches it before the two renderings that mislead, so the order is part of
+// the fix rather than a stylistic choice. Scoped to that section: `§2` names
+// `stackDisplay` first for good reason, and that is not what this is about.
+const algebraicSection = preface
+  .split(/^## /m)
+  .find((section) => section.includes("exactDisplay")) ?? "";
+check(
+  "the quickstart reaches the short algebraic rendering before the misleading ones",
+  algebraicSection.indexOf("exactDisplay") <= algebraicSection.indexOf("exactTerms") &&
+    algebraicSection.indexOf("exactDisplay") < algebraicSection.indexOf("stackDisplay") &&
+    algebraicSection.includes("approximate"),
+);
 
 // Every example in the hand-written preface runs against the live backend. The
 // generated half is verified by its generator against the real interpreter;
@@ -242,10 +255,22 @@ for (const goldenCase of golden.cases) {
       JSON.stringify(atPointer(observed.structuredContent, pointer)) !==
       JSON.stringify(expected),
   );
+  // A field that must *not* be there. `expect` cannot say this: a missing
+  // pointer and a pointer holding `null` both stringify to the same thing, so
+  // "absent" and "present and null" were indistinguishable. `exactDisplay` and
+  // `exactTerms` are meaningless on a rational — a short algebraic rendering
+  // of a number that has no radical would be a field inviting a reader to
+  // wonder what it means — and this is what pins their absence.
+  const unexpected = (goldenCase.expectAbsent ?? []).filter(
+    (pointer) => atPointer(observed.structuredContent, pointer) !== undefined,
+  );
   check(
     `golden: ${goldenCase.name}`,
-    observed.isError !== true && mismatches.length === 0,
+    observed.isError !== true && mismatches.length === 0 && unexpected.length === 0,
   );
+  if (mismatches.length || unexpected.length) {
+    console.error(`  mismatched=${JSON.stringify(mismatches)} unexpectedly present=${JSON.stringify(unexpected)}`);
+  }
 }
 
 // Every declared limit must be accounted for by name. A limit an agent plans
@@ -332,6 +357,14 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     exactTerm?.numerator === "1" &&
       exactTerm?.denominator === "1" &&
       exactTerm?.radicand === "2",
+  );
+  // The same normal form written short. Everything else on this result that
+  // looks like the value is not: `stackDisplay` is a continued fraction cut
+  // off at a display budget, and `value` is a rational approximation.
+  check(
+    "compute writes the algebraic value short beside the terms it renders",
+    sqrt?.semantics?.exactDisplay === "sqrt(2)" &&
+      compute.structuredContent?.stackDisplay?.[0]?.includes("...)") === true,
   );
   check(
     "compute reports engine provenance and applied limits",

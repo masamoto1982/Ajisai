@@ -115,6 +115,36 @@ Saturating `concurrentExecutions` queues the caller for up to a second before
 answering `capacityExhausted`, so an ordinary burst becomes back-pressure
 rather than a retry loop the caller has to write.
 
+### Reading an algebraic value
+
+`2 SQRT` answers with four renderings of one number, and two of them mislead.
+On the stack node, read either of:
+
+| field | what it is |
+|---|---|
+| `semantics.exactDisplay` | the value written short: `"sqrt(2)"`, `"2/1*sqrt(2)"`, `"sqrt(2) - sqrt(3)"` |
+| `semantics.exactTerms` | the value itself: `Σ (numerator/denominator)·√radicand`, arbitrary-precision integers as strings |
+
+They are one fact in two shapes, derived from the same extraction, and the
+result schema requires each whenever the other is present — so a reader never
+has to decide which to believe. Compute with `exactTerms`; `exactDisplay` is a
+display, meant to be read rather than parsed.
+
+The two that mislead are the ones a consumer meets first. `stackDisplay` is the
+SPEC §4.2.3 continued fraction **truncated at a display budget** — √2 runs to
+~194 characters and ends in `...)`, so it looks complete and is not — and the
+node's own `value` is a rational approximation flagged `semantics.approximate`,
+so it looks exact and is not. Neither field changed; `exactDisplay` is what
+makes reading them unnecessary.
+
+`exactDisplay` renders the stored normal form faithfully, which means equal
+values can be written differently: `8 SQRT` gives `"sqrt(8)"` and
+`2 SQRT 2 SQRT +` gives `"2/1*sqrt(2)"`, and `=` decides they are the same
+number. Reducing the display would only move the discrepancy, by making the
+string disagree with the `exactTerms` beside it. Comparison decides equality
+here; string comparison does not. Neither field appears on a rational or a
+vector of rationals, whose `stackDisplay` is already exact.
+
 ### Diagnostics
 
 An unknown Word answers with `diagnosis.candidates` — the closest known names,

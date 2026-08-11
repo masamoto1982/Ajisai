@@ -109,7 +109,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 - Sorting is a plain Core word
   `[ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
 - Exact square root takes a bare scalar
-  `2 SQRT` → stack: `( 1 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ...) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )`
+  `2 SQRT` → exact value: `sqrt(2)` (the stack display is its continued fraction)
 - The KEEP modifier makes the next word non-consuming
   `[ 5 ] KEEP PRINT` → prints `[ 5/1 ]`; stack: `[ 5/1 ]`
 

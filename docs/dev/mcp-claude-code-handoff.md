@@ -1,6 +1,6 @@
 # Ajisai MCP development handoff for Claude Code
 
-Updated: 2026-08-11 (MCP onboarding: bin entry, --doctor, serverVersion, quickstart)
+Updated: 2026-08-11 (algebraic exactDisplay; previously MCP onboarding)
 
 - Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
 - Host profiles: [`mcp-host-profiles.md`](./mcp-host-profiles.md)
@@ -25,7 +25,7 @@ documented semantics.
 The browser playground is a supported, independent host. **Do not remove,
 replace or weaken it while building the MCP product.** Native CLI, WASM and MCP
 must continue to agree on shared value-protocol semantics, especially
-`exactTerms`.
+`exactTerms` and its `exactDisplay` rendering.
 
 ## 2. Semantics that must survive every adapter
 
@@ -40,8 +40,14 @@ Keep these distinctions at the wire boundary:
 
 Never translate every Ajisai `ERROR` into `isError`; that discards the language's
 diagnostic model. Never serialize arbitrary-precision integers as JSON numbers.
-For algebraic values, `semantics.exactTerms` is canonical and the rational
-approximation is only a convenience representation.
+For algebraic values, `semantics.exactTerms` is the value and the rational
+approximation is only a convenience representation; `semantics.exactDisplay`
+writes those same terms short and is present in exactly the cases they are.
+
+One nuance to keep straight when documenting this: `exactTerms` is the exact
+*stored* form, not a canonical form for equality. `8 SQRT` holds `{1/1, 8}` and
+`2 SQRT 2 SQRT +` holds `{2/1, 2}`, and `=` decides they are the same number.
+Never suggest comparing terms — or `exactDisplay` strings — to decide equality.
 
 A host failure is machine-readable in both directions: `error.code` is stable
 and the message is model-facing. Do not put host paths, environment-variable
@@ -65,8 +71,11 @@ names or spawn diagnostics into it; that belongs on stderr, and
   Every entry needs a stable `code` and both locales; the tests in
   `debug_next_checks_tests.rs` fail if either locale carries the other's
   language.
-- `rust/src/types/value_protocol.rs`: shared exact-value protocol helpers,
-  including algebraic `exact_terms`.
+- `rust/src/types/value_protocol.rs`: shared exact-value protocol helpers.
+  `exact_terms` and `exact_display` both derive from one `algebraic_normal_form`
+  extraction, which is what makes "present in exactly the same cases" a
+  structural property rather than a convention two serializers must remember.
+  The result schema states the same pairing as `dependentRequired`.
 - `rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs`: WASM exposure
   of the same exact-term representation.
 - `docs/dev/agent-cli-output-contract.md`: implemented native agent envelope,
@@ -144,29 +153,10 @@ measurement behind it**. Do not report it as one.
 
 ## 5. Recommended next pull request
 
-P1 backend work and P1 onboarding are done (see the readiness tracker's P1
-section for the bin-entry, `--doctor`, `serverVersion` and quickstart items).
-Two threads remain queued behind them, in this order:
-
-0. **A short agent-facing display for algebraic values.** `2 SQRT` answers with
-   the correct `exactTerms`, and with two things beside it that a model reads
-   first and should not: `stackDisplay` is the canonical continued fraction
-   *truncated at a display budget* (~194 characters for √2, with a `...)`
-   marker), and `value` is a rational approximation
-   (`768398401/543339720`) marked `semantics.approximate: true`. The packaged
-   quickstart now warns about both, which is mitigation, not a fix.
-
-   The fix is an additional short, unambiguous rendering — `sqrt(2)` — carried
-   next to `exactTerms` in the same `semantics` block, so the relationship
-   between the display and the value it renders is structural rather than
-   asserted. Do **not** rename or reshape `stackDisplay`: it is the SPEC §4.2.3
-   continued-fraction projection shared with the CLI, the REPL and the
-   playground, and changing it is a separate, spec-level decision. Do not call
-   the new field "canonical" either — `exactTerms` is the canonical value, and
-   a display string named canonical invites exactly the substitution this
-   boundary exists to prevent. Add golden cases for a rational, a vector and a
-   multi-term algebraic value, and assert native/WASM agreement on the new
-   field.
+P1 backend work, P1 onboarding and the algebraic short display are done (see
+the readiness tracker's P1 section for the bin-entry, `--doctor`,
+`serverVersion`, quickstart and `exactDisplay` items). Three threads remain, in
+this order:
 
 1. **Recalibrate the numeric work meter** so the declared size ceilings bind
    before the wall clock. Today `numericWork`, `bigintBits` and
@@ -288,6 +278,15 @@ but do not silently raise the committed budget to fix a regression.
 - Do not assert on a backend selection made after the first call in the same
   process. The backend is resolved once and cached, so a second in-process
   server ignores a changed `AJISAI_BIN` — spawn a process instead.
+- Do not change shared `rust/src/types/value_protocol.rs` without rebuilding
+  **both** committed WASM bundles (`npm run build:mcp-wasm` and
+  `npm run build:wasm`). They are checked in, so a value-protocol change that
+  rebuilds only the MCP one leaves the playground silently a version behind on
+  a field the CLI already sends.
+- Do not reduce `exactDisplay` to a canonical form. It renders the stored
+  normal form, and reducing it would make the string disagree with the
+  `exactTerms` printed beside it — trading a surprise a reader can see for one
+  they cannot.
 - Do not let a `nextChecks` locale carry another locale's language, and do not
   match on its display text anywhere; `code` is the stable identifier.
 - Do not delete or subordinate the browser playground to the MCP package.
