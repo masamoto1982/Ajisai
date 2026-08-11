@@ -181,7 +181,7 @@ mod tests {
         let mut exec = Interpreter::new();
         exec.set_runtime_limits(limits);
         let error = exec.execute(&format!("{data} EXEC")).await.unwrap_err();
-        assert!(error.to_string().contains("numeric literal"));
+        assert!(error.to_string().contains("numericLiteralDigits"));
 
         let mut def = Interpreter::new();
         def.set_runtime_limits(limits);
@@ -189,7 +189,7 @@ mod tests {
             .execute(&format!("{data} 'TOO-BIG' DEF"))
             .await
             .unwrap_err();
-        assert!(error.to_string().contains("numeric literal"));
+        assert!(error.to_string().contains("numericLiteralDigits"));
         assert!(!def.user_words.contains_key("TOO-BIG"));
 
         let mut higher_order = Interpreter::new();
@@ -198,6 +198,6 @@ mod tests {
             .execute(&format!("[ 1 ] {data} MAP"))
             .await
             .unwrap_err();
-        assert!(error.to_string().contains("numeric literal"));
+        assert!(error.to_string().contains("numericLiteralDigits"));
     }
 }

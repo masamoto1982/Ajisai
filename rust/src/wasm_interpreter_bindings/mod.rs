@@ -57,4 +57,32 @@ impl AjisaiInterpreter {
             current_step_code: String::new(),
         }
     }
+
+    /// The resource ceilings this interpreter is actually running under, as
+    /// JSON, under the same names every other Ajisai host publishes them by.
+    ///
+    /// SPEC §2.5 makes limits a host safety control rather than value
+    /// semantics, so two conforming hosts legitimately disagree about them —
+    /// and they do: the playground runs the interpreter defaults while the MCP
+    /// agent profile is an order of magnitude tighter. That is only a trap for
+    /// someone who prototypes here and runs there while neither host says what
+    /// it applies. Read from the live interpreter rather than from a constant,
+    /// so what is displayed is what is enforced.
+    #[wasm_bindgen]
+    pub fn host_profile(&self) -> String {
+        let limits = self.interpreter.runtime_limits();
+        serde_json::json!({
+            "profile": "browser-playground",
+            "limits": {
+                "sourceBytes": limits.max_source_bytes,
+                "executionSteps": self.interpreter.max_execution_steps(),
+                "materializedElements": limits.max_materialized_elements,
+                "numericLiteralDigits": limits.max_numeric_literal_digits,
+                "numericWork": limits.max_numeric_work,
+                "bigintBits": limits.max_bigint_bits,
+                "algebraicTerms": limits.max_algebraic_terms,
+            },
+        })
+        .to_string()
+    }
 }

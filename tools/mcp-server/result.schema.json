@@ -1,13 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ajisai://schema/result",
-  "title": "Ajisai MCP execution result",
+  "title": "Ajisai MCP result",
+  "description": "One envelope for every Ajisai MCP tool result. `status` separates the three outcomes the boundary keeps distinct: a successful run (which includes a reason-carrying NIL), an Ajisai language error carrying its diagnosis, and a failure of the host rather than of the program.",
   "type": "object",
   "additionalProperties": true,
-  "required": ["schemaVersion", "status", "mcp"],
+  "required": ["schemaVersion", "status"],
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "hostError" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["error"] },
+      "else": { "required": ["mcp"] }
+    }
+  ],
   "properties": {
     "schemaVersion": { "type": "integer", "minimum": 1 },
-    "status": { "type": "string", "enum": ["ok", "error"] },
+    "status": { "type": "string", "enum": ["ok", "error", "hostError"] },
     "stack": {
       "type": "array",
       "items": { "$ref": "#/$defs/protocolNode" }
@@ -24,23 +35,54 @@
       "type": "array",
       "items": { "type": "object" }
     },
-    "diagnosis": { "type": ["object", "null"] },
+    "diagnosis": {
+      "oneOf": [{ "$ref": "#/$defs/diagnosis" }, { "type": "null" }]
+    },
     "errorFlowTrace": { "type": "array" },
     "aiDiagnostic": { "type": ["object", "null"] },
     "runtimeMetrics": { "type": "object" },
+    "error": { "$ref": "#/$defs/hostError" },
+    "registrySchemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version of the packaged Word registry (`word_contract` only). Distinct from the envelope's own `schemaVersion`."
+    },
+    "matches": {
+      "type": "array",
+      "description": "Canonical registry entries matching the requested Word or alias (`word_contract` only).",
+      "items": { "$ref": "#/$defs/wordContract" }
+    },
+    "suggestions": {
+      "type": "array",
+      "description": "Registry names closest to an unmatched request, best match first (`word_contract` only). Empty whenever `matches` is non-empty.",
+      "items": { "type": "string" }
+    },
     "mcp": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["engineVersion", "registryDigest", "limits"],
+      "required": ["engineVersion", "registryDigest", "backend", "limits"],
       "properties": {
         "engineVersion": { "type": "string", "minLength": 1 },
         "registryDigest": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
         },
+        "backend": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "description": "Which of the two interchangeable backends answered. They are semantically equivalent — `backend/parity-test.js` asserts it case by case — so this identifies the execution path for auditing, not a difference in meaning.",
+          "properties": {
+            "kind": {
+              "type": ["string", "null"],
+              "enum": ["nativeCli", "wasmWorker", null]
+            }
+          }
+        },
         "limits": {
           "type": "object",
           "additionalProperties": false,
+          "description": "The host profile applied to this call. Every entry is pinned by a case in `golden/limits.json`.",
           "required": [
             "sourceBytes",
             "wallTimeMs",
@@ -70,6 +112,167 @@
     }
   },
   "$defs": {
+    "hostError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "description": "A failure of the host, never of the Ajisai program. `code` is the stable identifier to branch on; `message` is safe to show a model and deliberately carries no host paths, environment-variable names or spawn detail.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "invalidRequest",
+            "unknownTool",
+            "sourceTooLarge",
+            "backendUnavailable",
+            "capacityExhausted",
+            "timeout",
+            "responseTooLarge",
+            "malformedBackendResponse",
+            "backendFailure",
+            "registryUnavailable"
+          ]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "retryAfterMs": { "type": "integer", "minimum": 0 },
+        "limit": {
+          "type": "string",
+          "description": "The declared `mcp.limits` entry this failure is about, when it is about one.",
+          "enum": ["sourceBytes", "wallTimeMs", "responseBytes", "concurrentExecutions"]
+        }
+      }
+    },
+    "localizedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en", "ja"],
+      "properties": {
+        "en": { "type": "string" },
+        "ja": { "type": "string" }
+      }
+    },
+    "debugCheck": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["code", "title", "detail"],
+      "description": "One repair step. Match on `code`; `title` and `detail` are display text and may be reworded or gain locales.",
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "detail": { "$ref": "#/$defs/localizedText" }
+      }
+    },
+    "resourceLimitFacts": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["resource", "limit"],
+      "description": "Which declared ceiling a resource-limit failure crossed. `resource` names an entry of `mcp.limits`.",
+      "properties": {
+        "resource": {
+          "type": "string",
+          "enum": [
+            "sourceBytes",
+            "numericLiteralDigits",
+            "numericWork",
+            "bigintBits",
+            "algebraicTerms",
+            "executionSteps"
+          ]
+        },
+        "limit": { "type": "integer", "minimum": 0 },
+        "observed": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "diagnosis": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "when": { "type": "string" },
+        "why": { "type": "string" },
+        "summary": { "type": "string" },
+        "where": { "type": "object" },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "nextChecks": { "type": "array", "items": { "$ref": "#/$defs/debugCheck" } },
+        "agreedPrefix": { "type": ["integer", "null"] },
+        "candidates": {
+          "type": "array",
+          "description": "Known Words closest to an unrecognized name, best match first. Empty for every other cause class.",
+          "items": { "type": "string" }
+        },
+        "resourceLimit": {
+          "oneOf": [{ "$ref": "#/$defs/resourceLimitFacts" }, { "type": "null" }]
+        }
+      }
+    },
+    "wordContract": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "aliases",
+        "family",
+        "stack",
+        "consumption",
+        "nilPolicy",
+        "projection",
+        "purity",
+        "determinism",
+        "category",
+        "documentation"
+      ],
+      "description": "One canonical entry of the generated `spec/words.json` registry, reproduced verbatim.",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "family": { "type": "string" },
+        "category": { "type": "string" },
+        "vocabularyTier": { "type": "string" },
+        "purity": { "type": "string" },
+        "determinism": { "type": "string" },
+        "partiality": { "type": "string" },
+        "capability": { "type": "string" },
+        "hostedEffect": { "type": "string" },
+        "interpretationRole": { "type": "string" },
+        "consumption": { "type": "string" },
+        "nilPolicy": { "type": "string" },
+        "executorKey": { "type": "string" },
+        "effects": { "type": "array", "items": { "type": "string" } },
+        "clauses": { "type": "array", "items": { "type": "string" } },
+        "errorWhen": { "type": "array" },
+        "stack": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["inputs", "outputs"],
+          "properties": {
+            "inputs": { "type": "integer", "minimum": 0 },
+            "outputs": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "projection": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["when"],
+          "properties": {
+            "when": { "type": "string" },
+            "reason": { "type": ["string", "null"] }
+          }
+        },
+        "documentation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["summary"],
+          "properties": {
+            "summary": { "type": "string" },
+            "hover": { "type": "string" },
+            "lookup": { "type": "string" },
+            "syntax": { "type": "string" },
+            "role": { "type": "string" },
+            "stackEffect": { "type": "string" }
+          }
+        }
+      }
+    },
     "integerString": {
       "type": "string",
       "pattern": "^-?(0|[1-9][0-9]*)$"

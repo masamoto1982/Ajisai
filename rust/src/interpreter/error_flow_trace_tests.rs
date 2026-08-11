@@ -113,7 +113,7 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
     assert!(payload
         .next_checks
         .iter()
-        .any(|check| check.label == "Check divisor"));
+        .any(|check| check.code == "checkDivisor"));
 }
 
 #[tokio::test]
@@ -200,7 +200,7 @@ mod attribution_tests {
             diagnosis
                 .next_checks
                 .iter()
-                .any(|c| c.detail.contains("ADD")),
+                .any(|c| c.detail.en.contains("ADD") && c.detail.ja.contains("ADD")),
             "the repair checklist should be about the Word that failed: {:?}",
             diagnosis.next_checks
         );

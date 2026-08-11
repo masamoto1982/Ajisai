@@ -277,11 +277,16 @@ function renderCommonErrors() {
     .map((entry) => {
       const json = expectError(entry.code);
       const d = json.diagnosis;
-      const firstCheck = d.nextChecks[0]?.label ?? '';
+      // The stable half of a next-check is its code; the display text is
+      // localized and free to be reworded.
+      const firstCheck = d.nextChecks[0]?.code ?? '';
+      const candidates = d.candidates?.length
+        ? ` \`diagnosis.candidates: ${JSON.stringify(d.candidates)}\`.`
+        : '';
       return [
         `- **${entry.title}** — \`${entry.code}\``,
         `  → exit 1, \`message: ${JSON.stringify(json.message)}\`, \`diagnosis: { when: "${d.when}", why: "${d.why}" }\`,`,
-        `  \`aiDiagnostic.recoverability: "${json.aiDiagnostic.recoverability}"\`, first nextCheck: "${firstCheck}".`,
+        `  \`aiDiagnostic.recoverability: "${json.aiDiagnostic.recoverability}"\`, first nextCheck code: \`${firstCheck}\`.${candidates}`,
         `  Fix: ${entry.fix}`,
       ].join('\n');
     })

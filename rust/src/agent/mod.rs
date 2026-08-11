@@ -120,10 +120,20 @@ pub(crate) fn normalize_word(symbol: &str) -> String {
     }
 }
 
+/// The outcome of best-effort static word resolution.
+pub(crate) struct ResolvedWords {
+    /// Unknown words in first-appearance order, deduplicated.
+    pub unknown: Vec<String>,
+    /// Names this file defines for itself. Carried out alongside the unknown
+    /// list so a "did you mean" for a misspelled call can consider the very
+    /// definitions the same source introduces — nothing else knows them, since
+    /// static checking never executes the `DEF`.
+    pub locally_defined: Vec<String>,
+}
+
 /// Best-effort static resolution: a word resolves when it is a builtin, a
-/// canonical alias, or a word the file itself defines via DEF. Returns unknown
-/// words in first-appearance order, deduplicated.
-pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<String> {
+/// canonical alias, or a word the file itself defines via DEF.
+pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedWords {
     use std::collections::HashSet;
 
     let mut locally_known: HashSet<String> = HashSet::new();
@@ -163,7 +173,12 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<Strin
             unknown.push(canonical.into_owned());
         }
     }
-    unknown
+    let mut locally_defined: Vec<String> = locally_known.into_iter().collect();
+    locally_defined.sort();
+    ResolvedWords {
+        unknown,
+        locally_defined,
+    }
 }
 
 /// Poll the interpreter future to completion. `Interpreter::execute` is

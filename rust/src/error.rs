@@ -77,6 +77,45 @@ pub enum NilReason {
     Literal,
 }
 
+/// One named internal-computation ceiling from
+/// [`crate::interpreter::RuntimeLimits`].
+///
+/// A host declares each ceiling separately — the MCP adapter publishes all of
+/// them in `mcp.limits` — so an agent that hits one has to be able to tell
+/// *which* one fired without reading an English sentence. The protocol
+/// spelling is deliberately the same identifier the host profile publishes,
+/// so `resourceLimit.resource` indexes straight into the declared limits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResourceLimit {
+    /// Byte length of one source program (`max_source_bytes`).
+    SourceBytes,
+    /// Digit count of one numeric literal (`max_numeric_literal_digits`).
+    NumericLiteralDigits,
+    /// Accumulated internal numeric work units (`max_numeric_work`).
+    NumericWork,
+    /// Bit length of a BigInt arithmetic result (`max_bigint_bits`).
+    BigintBits,
+    /// Algebraic term count of one exact value (`max_algebraic_terms`).
+    AlgebraicTerms,
+    /// Execution-step budget (`Interpreter::max_execution_steps`). Kept in the
+    /// same vocabulary even though it lives outside `RuntimeLimits`, because a
+    /// host publishes it as one more entry in the same limit table.
+    ExecutionSteps,
+}
+
+impl ResourceLimit {
+    pub fn as_protocol_str(&self) -> &'static str {
+        match self {
+            ResourceLimit::SourceBytes => "sourceBytes",
+            ResourceLimit::NumericLiteralDigits => "numericLiteralDigits",
+            ResourceLimit::NumericWork => "numericWork",
+            ResourceLimit::BigintBits => "bigintBits",
+            ResourceLimit::AlgebraicTerms => "algebraicTerms",
+            ResourceLimit::ExecutionSteps => "executionSteps",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorCategory {
     StackUnderflow,
@@ -89,6 +128,10 @@ pub enum ErrorCategory {
     MalformedSource,
     NameConflict,
     ExecutionLimitExceeded,
+    /// A named `RuntimeLimits` ceiling other than the step budget. Separate
+    /// from `ExecutionLimitExceeded` so "the program never terminated" and
+    /// "one value grew past the declared size ceiling" stop sharing an answer.
+    ResourceLimitExceeded,
     RecursionLimitExceeded,
     ModeUnsupported,
     BuiltinProtection,
@@ -109,6 +152,7 @@ impl ErrorCategory {
             ErrorCategory::MalformedSource => "malformedSource",
             ErrorCategory::NameConflict => "nameConflict",
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
+            ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
             ErrorCategory::ModeUnsupported => "modeUnsupported",
             ErrorCategory::BuiltinProtection => "builtinProtection",
@@ -130,6 +174,7 @@ impl ErrorCategory {
             AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
             AjisaiError::NameConflict(_) => ErrorCategory::NameConflict,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
+            AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
             AjisaiError::ModeUnsupported { .. } => ErrorCategory::ModeUnsupported,
             AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
@@ -250,6 +295,19 @@ pub enum AjisaiError {
     ExecutionLimitExceeded {
         limit: usize,
     },
+    /// A named internal-computation ceiling was crossed: one value grew past
+    /// `max_bigint_bits` / `max_algebraic_terms`, a literal past
+    /// `max_numeric_literal_digits`, a program past `max_source_bytes`, or the
+    /// accumulated work meter past `max_numeric_work`.
+    ///
+    /// Carries the ceiling's own name, its configured value and — when the
+    /// guard measured one — the observed size, so a host can report which of
+    /// the limits it declared actually fired and by how much it was missed.
+    ResourceLimitExceeded {
+        resource: ResourceLimit,
+        limit: u64,
+        observed: Option<u64>,
+    },
     /// The native recursion-depth guard (SPEC §8.4) tripped: `word` reached
     /// `limit` non-tail recursive activations. A runtime safety control of the
     /// same rank as the step budget (§5.3), not language semantics; guarded
@@ -326,6 +384,25 @@ impl fmt::Display for AjisaiError {
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
             }
+            AjisaiError::ResourceLimitExceeded {
+                resource,
+                limit,
+                observed,
+            } => match observed {
+                Some(observed) => write!(
+                    f,
+                    "{} of {} exceeds the limit of {}",
+                    resource.as_protocol_str(),
+                    observed,
+                    limit
+                ),
+                None => write!(
+                    f,
+                    "{} limit ({}) exceeded",
+                    resource.as_protocol_str(),
+                    limit
+                ),
+            },
             AjisaiError::RecursionLimitExceeded { limit, word } => {
                 write!(f, "recursion limit exceeded ({}) in '{}'", limit, word)
             }

@@ -76,11 +76,28 @@ fn diagnosis_to_protocol_js(
     let checks_arr = js_sys::Array::new();
     for c in &diagnosis.next_checks {
         let check_obj = js_sys::Object::new();
-        set_prop(&check_obj, "label", &c.label.clone().into());
-        set_prop(&check_obj, "detail", &c.detail.clone().into());
+        set_prop(&check_obj, "code", &JsValue::from_str(c.code));
+        set_prop(&check_obj, "title", &localized_to_protocol_js(&c.title));
+        set_prop(&check_obj, "detail", &localized_to_protocol_js(&c.detail));
         checks_arr.push(&check_obj);
     }
     set_prop(&obj, "nextChecks", &checks_arr.into());
+
+    let candidates_arr = js_sys::Array::new();
+    for candidate in &diagnosis.candidates {
+        candidates_arr.push(&JsValue::from_str(candidate));
+    }
+    set_prop(&obj, "candidates", &candidates_arr.into());
+
+    if let Some(facts) = &diagnosis.resource_limit {
+        let limit_obj = js_sys::Object::new();
+        set_prop(&limit_obj, "resource", &facts.resource.clone().into());
+        set_prop(&limit_obj, "limit", &(facts.limit as f64).into());
+        if let Some(observed) = facts.observed {
+            set_prop(&limit_obj, "observed", &(observed as f64).into());
+        }
+        set_prop(&obj, "resourceLimit", &limit_obj.into());
+    }
 
     // CF-comparison agreed-prefix (SPEC §4.5.0 / §7.4.1): machine-readable
     // count of leading partial quotients that matched before an Unknown (U)
@@ -88,6 +105,15 @@ fn diagnosis_to_protocol_js(
     if let Some(prefix) = diagnosis.agreed_prefix {
         set_prop(&obj, "agreedPrefix", &(prefix as f64).into());
     }
+    obj.into()
+}
+
+/// One locale-keyed display string. The stable identity of a next-check is its
+/// `code`; this carries only what a host displays.
+fn localized_to_protocol_js(text: &crate::interpreter::debug_diagnosis::LocalizedText) -> JsValue {
+    let obj = js_sys::Object::new();
+    set_prop(&obj, "en", &text.en.clone().into());
+    set_prop(&obj, "ja", &text.ja.clone().into());
     obj.into()
 }
 

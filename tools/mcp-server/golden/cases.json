@@ -28,7 +28,27 @@
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",
         "/aiDiagnostic/kind": "unknownWord",
-        "/errorFlowTrace/0/kind": "wordError"
+        "/errorFlowTrace/0/kind": "wordError",
+        "/diagnosis/nextChecks/0/code": "checkSpelling",
+        "/diagnosis/candidates": []
+      }
+    },
+    {
+      "name": "a misspelled Word names its likely correction",
+      "source": "[ 1 2 3 ] LENGHT",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "typoOrUnknownName",
+        "/diagnosis/candidates/0": "LENGTH"
+      }
+    },
+    {
+      "name": "a misspelled user Word is matched against the live dictionary",
+      "source": "{ [ 2 ] * } 'DOUBLE' DEF [ 3 ] DOUBEL",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "typoOrUnknownName",
+        "/diagnosis/candidates/0": "DOUBLE"
       }
     },
     {
@@ -50,7 +70,8 @@
         "/diagnosis/why": "resourceLimit",
         "/aiDiagnostic/kind": "executionLimitExceeded",
         "/errorFlowTrace/0/kind": "wordError",
-        "/errorFlowTrace/0/word": "DOWN"
+        "/errorFlowTrace/0/word": "DOWN",
+        "/diagnosis/resourceLimit/resource": "executionSteps"
       }
     },
     {
@@ -61,6 +82,10 @@
         "/stackDisplay/0": "NIL",
         "/stack/0/semantics/absence/reason": "spaceExhausted",
         "/errorFlowTrace/0/absence/reason": "spaceExhausted"
+      },
+      "hostDivergence": {
+        "playground": "succeeds, materializing 100002 elements",
+        "why": "The browser playground applies the interpreter's default RuntimeLimits (max_materialized_elements = 1,000,000); this profile applies LOCAL_AGENT_RUNTIME_LIMITS (100,000). Both are correct for their host: SPEC 2.5 makes limits a safety control rather than value semantics, so a conforming host chooses its own. Recorded here so the divergence is a documented decision rather than a surprise for anyone who prototypes in the playground and runs through MCP. See docs/dev/mcp-host-profiles.md."
       }
     }
   ]

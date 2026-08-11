@@ -38,12 +38,27 @@ fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
     let checks_arr = js_sys::Array::new();
     for c in &diagnosis.next_checks {
         let check_obj = js_sys::Object::new();
-        set_js_prop(&check_obj, "label", &(c.label.clone().into()));
-        set_js_prop(&check_obj, "detail", &(c.detail.clone().into()));
+        set_js_prop(&check_obj, "code", &JsValue::from_str(c.code));
+        set_js_prop(&check_obj, "title", &localized_to_js(&c.title));
+        set_js_prop(&check_obj, "detail", &localized_to_js(&c.detail));
         checks_arr.push(&check_obj);
     }
     set_js_prop(&obj, "nextChecks", &checks_arr.into());
 
+    let candidates_arr = js_sys::Array::new();
+    for candidate in &diagnosis.candidates {
+        candidates_arr.push(&JsValue::from_str(candidate));
+    }
+    set_js_prop(&obj, "candidates", &candidates_arr.into());
+
+    obj.into()
+}
+
+/// One locale-keyed display string, shared by every diagnosis surface.
+fn localized_to_js(text: &crate::interpreter::debug_diagnosis::LocalizedText) -> JsValue {
+    let obj = js_sys::Object::new();
+    set_js_prop(&obj, "en", &JsValue::from_str(&text.en));
+    set_js_prop(&obj, "ja", &JsValue::from_str(&text.ja));
     obj.into()
 }
 

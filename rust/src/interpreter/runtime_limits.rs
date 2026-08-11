@@ -19,7 +19,7 @@
 //! not depend on a specific limit value, and all conformance must pass under
 //! the documented defaults (SPEC §2.5).
 
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, ResourceLimit, Result};
 
 /// Default cap on elements a single generative built-in (`RANGE`, `FILL`,
 /// `RESHAPE`, …) may materialize in one call. Mirrors the historical
@@ -107,10 +107,11 @@ impl RuntimeLimits {
     /// tokenization. Returns a diagnosable `AjisaiError` (never a panic/OOM).
     pub fn check_source_bytes(&self, byte_len: usize) -> Result<()> {
         if byte_len > self.max_source_bytes {
-            return Err(AjisaiError::from(format!(
-                "source program of {} bytes exceeds the limit of {} bytes",
-                byte_len, self.max_source_bytes
-            )));
+            return Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::SourceBytes,
+                limit: self.max_source_bytes as u64,
+                observed: Some(byte_len as u64),
+            });
         }
         Ok(())
     }
@@ -120,10 +121,11 @@ impl RuntimeLimits {
     /// digit characters only (sign, radix point, and separators excluded).
     pub fn check_numeric_literal_digits(&self, digit_len: usize) -> Result<()> {
         if digit_len > self.max_numeric_literal_digits {
-            return Err(AjisaiError::from(format!(
-                "numeric literal of {} digits exceeds the limit of {} digits",
-                digit_len, self.max_numeric_literal_digits
-            )));
+            return Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::NumericLiteralDigits,
+                limit: self.max_numeric_literal_digits as u64,
+                observed: Some(digit_len as u64),
+            });
         }
         Ok(())
     }
@@ -134,17 +136,24 @@ impl RuntimeLimits {
     /// multiplying distinct `√p`), or `coeff_bits` past `max_bigint_bits`
     /// (BigInt blow-up). Bounds *accumulation* so operands feeding the next
     /// operation stay sane; the per-operation work is bounded separately by the
-    /// work meter's pre-charge. Maps to `ExecutionLimitExceeded` — an existing
-    /// resource-limit category, per the CS5 plan — never a new category.
+    /// work meter's pre-charge. Each ceiling reports itself by name through
+    /// `ResourceLimitExceeded`: "this value carries too many algebraic terms"
+    /// and "this coefficient is too many bits wide" are separately declared
+    /// limits, and folding both into the step budget's category left a host
+    /// unable to say which of the two an agent had actually hit.
     pub fn check_algebraic_size(&self, term_count: usize, coeff_bits: u64) -> Result<()> {
         if term_count > self.max_algebraic_terms {
-            return Err(AjisaiError::ExecutionLimitExceeded {
-                limit: self.max_algebraic_terms,
+            return Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::AlgebraicTerms,
+                limit: self.max_algebraic_terms as u64,
+                observed: Some(term_count as u64),
             });
         }
         if coeff_bits > self.max_bigint_bits {
-            return Err(AjisaiError::ExecutionLimitExceeded {
-                limit: usize::try_from(self.max_bigint_bits).unwrap_or(usize::MAX),
+            return Err(AjisaiError::ResourceLimitExceeded {
+                resource: ResourceLimit::BigintBits,
+                limit: self.max_bigint_bits,
+                observed: Some(coeff_bits),
             });
         }
         Ok(())

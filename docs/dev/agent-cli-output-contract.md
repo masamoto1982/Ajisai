@@ -10,7 +10,7 @@ only commands and fields emitted by the current native CLI.
 ajisai run <file.ajisai> [--json] [--step-limit <N>]
 ajisai check <file.ajisai> [--json] [--contract]
 ajisai contract <file.ajisai> [--json]
-ajisai agent <compute|check|infer-contracts> <file.ajisai>
+ajisai agent <compute|check|infer-contracts> <file.ajisai|->
 ajisai test <file-or-dir> [--json]
 ajisai repl [--json]
 ajisai version [--json]
@@ -18,6 +18,11 @@ ajisai version [--json]
 
 No other command or option is part of the current CLI contract. In particular,
 this document does not reserve planned commands.
+
+`agent` accepts `-` in place of a path and reads the program from standard
+input, byte for byte, with nothing appended. An embedding host that already
+holds the source needs no temporary file, no writable temporary directory, and
+leaves no program on disk for the duration of the call.
 
 | exit | meaning |
 |---:|---|
@@ -112,9 +117,31 @@ canonical value.
 ### Diagnosis and error flow
 
 `diagnosis` is a structured failure explanation with `when`, `why`, `summary`,
-`where`, `evidence`, `nextChecks`, and `agreedPrefix`. `aiDiagnostic` is its
-machine-oriented classification. Consumers must treat new protocol-string
-variants as opaque values rather than rejecting the report.
+`where`, `evidence`, `nextChecks`, `agreedPrefix`, `candidates`, and
+`resourceLimit`. `aiDiagnostic` is its machine-oriented classification and
+carries `candidates` and `resourceLimit` too. Consumers must treat new
+protocol-string variants as opaque values rather than rejecting the report.
+
+Each `nextChecks` entry is `{ code, title: { en, ja }, detail: { en, ja } }`.
+`code` is the stable identifier — match on it. `title` and `detail` are display
+text, free to be reworded or to gain a locale; a consumer that matched on the
+old flat `label`/`detail` pair was matching on a mixed-language string that was
+neither stable nor localizable.
+
+`candidates` lists known Words closest to a name that did not resolve, best
+match first, and is empty for every other cause class. It considers the
+compiled-in vocabulary, the failing interpreter's own dictionary, and — for
+`check` — the Words the same source defines.
+
+`resourceLimit` is `{ resource, limit, observed }` and is present when a
+declared ceiling fired. `resource` is the ceiling's own name
+(`sourceBytes`, `numericLiteralDigits`, `numericWork`, `bigintBits`,
+`algebraicTerms`, `executionSteps`) — the same identifier a host publishes in
+its limit profile, so "too big" says what was too big and against what. A size
+ceiling reports `aiDiagnostic.kind: "resourceLimitExceeded"` and
+`recoverability: "reduceWorkOrRaiseLimit"`; the step budget keeps
+`executionLimitExceeded` and `addBudgetOrFixRecursion`, because letting the
+program run longer fixes one and not the other.
 
 `errorFlowTrace` records Word errors and reason-carrying NIL production. A
 successful run may therefore have a non-empty trace. Neither NIL nor an Ajisai

@@ -10,6 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LIMITS } from "../index.js";
+import { limitCases } from "../golden/limit-cases.js";
 import { NativeCliBackend } from "./native-cli.js";
 import { WasmWorkerBackend } from "./wasm-worker.js";
 
@@ -51,6 +52,7 @@ const native = new NativeCliBackend({
 const wasm = new WasmWorkerBackend({
   wallTimeMs: LIMITS.wallTimeMs,
   executionSteps: LIMITS.executionSteps,
+  responseBytes: LIMITS.responseBytes,
 });
 
 // Every field of the schema-1 envelope except the host-metrics/provenance
@@ -93,8 +95,38 @@ for (const goldenCase of golden.cases) {
   }
 }
 
+// Limit parity. A ceiling that only one backend applies is invisible to the
+// golden cases above — none of them produces an oversized response — which is
+// exactly how `responseBytes` came to be declared for both backends and
+// enforced by one. Comparing the *outcome class* at each declared boundary is
+// what makes the declaration true of whichever backend answered.
+async function outcome(backend, source) {
+  try {
+    const envelope = await backend.compute(source);
+    return `ok:${envelope.status}`;
+  } catch (error) {
+    return `hostError:${error.code}`;
+  }
+}
+
+for (const limit of limitCases()) {
+  for (const probe of limit.probes) {
+    const [left, right] = await Promise.all([
+      outcome(native, probe.source),
+      outcome(wasm, probe.source),
+    ]);
+    const pass = left === right;
+    console.log(`${pass ? "PASS" : "FAIL"}  limit ${limit.name} (${probe.edge})`);
+    if (!pass) {
+      failures += 1;
+      console.error(`  native: ${left}`);
+      console.error(`  wasm:   ${right}`);
+    }
+  }
+}
+
 if (failures) {
-  console.error(`${failures} golden case(s) diverged between the native and WASM backends.`);
+  console.error(`${failures} case(s) diverged between the native and WASM backends.`);
   process.exit(1);
 }
-console.log("native and WASM backends agree on every golden case's stable fields.");
+console.log("native and WASM backends agree on every golden case and every declared limit boundary.");

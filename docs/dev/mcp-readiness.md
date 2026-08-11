@@ -1,12 +1,14 @@
 # MCP product readiness
 
-Status date: 2026-08-10 (updated after the packaged WASM backend landed). This
-is an implementation tracker, not a language specification. Percentages
-measure completion of the concrete exit criteria below; they are not
-forecasts.
+Status date: 2026-08-11 (updated after the declared-limit, provenance and
+host-failure work). This is an implementation tracker, not a language
+specification. Percentages measure completion of the concrete exit criteria
+below; they are not forecasts.
 
 The next-agent implementation handoff is
-[`mcp-claude-code-handoff.md`](./mcp-claude-code-handoff.md).
+[`mcp-claude-code-handoff.md`](./mcp-claude-code-handoff.md). Host-by-host
+resource ceilings are compared in
+[`mcp-host-profiles.md`](./mcp-host-profiles.md).
 
 ## Product position
 
@@ -20,10 +22,10 @@ host and shares the value protocol with the native CLI.
 | phase | weight | complete | weighted contribution |
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
-| P1 — local stdio beta | 35% | 95% | 33.25% |
+| P1 — local stdio beta | 35% | 100% | 35.0% |
 | P2 — agent evaluation | 20% | 55% | 11.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **79.25%** |
+| **Overall** | **100%** | — | **81.0%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -49,7 +51,7 @@ Completed:
 
 All P0 exit criteria are complete.
 
-### P1 — local stdio beta (95%)
+### P1 — local stdio beta (100%)
 
 Completed:
 
@@ -100,12 +102,54 @@ Completed:
   (`tools/mcp-server/wasm/generated/`), mirroring `rebuild-wasm.sh` for the
   browser build.
 
-Remaining exit criterion:
+- The declared limit table and its enforcement now match. `responseBytes` is
+  applied by both backends on the same units (UTF-8 bytes of the schema-1
+  envelope text) instead of by the native one alone through `execFile`'s
+  `maxBuffer`. `golden/limits.json` holds one entry per declared limit, the
+  self-test fails if that key set and the served `LIMITS` differ, and the
+  backend parity test compares the outcome class at every boundary — which is
+  what the golden cases could never have caught, since none of them produced
+  an oversized response.
+- Named resource ceilings report themselves. `AjisaiError::ResourceLimitExceeded`
+  carries the ceiling's own name, its configured value and the observed size;
+  `diagnosis.resourceLimit` surfaces them under the same identifiers the host
+  publishes in `mcp.limits`. The source-byte and numeric-literal guards used to
+  surface as `Custom` / cause class `unknown`, which told a reader nothing.
+- Host failures are structured. A stable `error.code`, a `retryable` flag and
+  the declared `limit` a failure is about, in an envelope the shared result
+  schema validates. Model-facing messages no longer carry binary paths,
+  environment-variable names or spawn diagnostics; that detail goes to stderr.
+  The self-test's own string-matching on `"CLI not found"` is gone with it.
+- Saturating `concurrentExecutions` queues briefly before answering, so a
+  burst is back-pressure rather than a caller-side retry loop.
+- The backend is selected once at startup and named in `mcp.backend.kind`.
+  Per-request selection meant a `cargo build` finishing mid-session silently
+  moved later calls to a different execution path with nothing saying so.
+- Packaged assets are validated at startup, so a corrupt registry stops the
+  server rather than appearing as a generic failure on some later request.
+- All four tools share one output schema, so `word_contract`'s answer shape is
+  declared rather than discoverable only by calling it, and an unmatched name
+  answers with `suggestions`.
+- The native backend passes source on stdin instead of writing a temporary
+  file with three synchronous calls per request, and no longer appends a
+  newline that made its effective source-byte ceiling one byte tighter than
+  the WASM backend's.
+- `tools/mcp-server/package.json` is no longer `private`, carries repository,
+  licence and publish metadata, and the README gives copy-pasteable client
+  configuration JSON.
 
-- Publish a non-private, versioned npm package. The backend is now
-  self-contained rather than native-binary dependent, so the previous
-  technical blocker is resolved; publishing itself is a deliberate release
-  decision this PR does not make.
+All P1 exit criteria are complete. `npm publish` itself remains a release
+decision, not an implementation gap.
+
+Known gap, recorded rather than papered over: `numericWork`, `bigintBits` and
+`algebraicTerms` are declared truthfully but are **not reachable at their
+declared values** — the work meter charges far less than the operation costs,
+so `wallTimeMs` always fires first. They are pinned in Rust with injected
+ceilings, and `golden/limits.json` marks them `injectedLimit` with the reason.
+Recalibrating the work estimate so the size ceilings bind before the clock is
+the next engine-side task. Two related facts: plain rational arithmetic does
+not pass through the algebraic size guard, and `numericWork` is charged only
+on the exact algebraic path.
 
 ### P2 — agent evaluation (55%)
 
@@ -128,6 +172,15 @@ static-check failure, alias lookup and additional irrelevant intents.
 A reproducible local benchmark now reports p50, p95 and maximum latency across
 compute, checking, inference and registry lookup, with a blocking one-second
 p95 budget after warmup. Remote-service latency remains unmeasured.
+Diagnosis-driven repair now has more to work with: an unknown Word carries
+`diagnosis.candidates` (the closest known names, from the compiled-in
+vocabulary, the live dictionary, and for `check` the Words the same source
+defines), `word_contract` answers an unmatched name with `suggestions`, and
+every next-check carries a stable `code` with locale-separated display text so
+the repair scorer counts an identifier rather than a mixed-language sentence.
+Whether that measurably raises the repair rate is exactly what real model
+traces are still needed to say; no claim is made here on the strength of the
+harness fixtures.
 A deliberately narrow JavaScript `Number` baseline now compares five rational,
 decimal and integer cases, including exactly representable controls. Broader
 SymPy/Wolfram and raw-model comparisons remain outstanding.

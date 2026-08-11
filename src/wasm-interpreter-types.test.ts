@@ -17,10 +17,15 @@ const diagnosis: ProtocolDiagnosis = {
     evidence: ['right operand was zero'],
     nextChecks: [
         {
-            label: 'Check divisor',
-            detail: 'Ensure the divisor is non-zero before division.'
+            code: 'checkDivisor',
+            title: { en: 'Check divisor', ja: '除数を確認する' },
+            detail: {
+                en: 'Ensure the divisor is non-zero before division.',
+                ja: '除算の前に除数が 0 でないことを確認する'
+            }
         }
-    ]
+    ],
+    candidates: []
 };
 
 const absence: ProtocolAbsence = {

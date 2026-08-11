@@ -1,8 +1,9 @@
 # Ajisai MCP development handoff for Claude Code
 
-Updated: 2026-08-10  
-Baseline commit at handoff: `38709cf`  
-Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
+Updated: 2026-08-11
+
+- Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
+- Host profiles: [`mcp-host-profiles.md`](./mcp-host-profiles.md)
 
 This document is the starting point for the next pull request. Read it together
 with `AGENTS.md` files found in the working tree, the readiness tracker, and
@@ -35,22 +36,35 @@ Keep these distinctions at the wire boundary:
 | successful value | normal tool result |
 | `NIL(reason)` | normal tool result carrying its absence reason |
 | Ajisai language `ERROR` | normal structured tool result with diagnosis |
-| invalid MCP request, missing backend, timeout or adapter failure | MCP `isError` |
+| invalid MCP request, missing backend, timeout or adapter failure | MCP `isError`, `status: "hostError"`, stable `error.code` |
 
 Never translate every Ajisai `ERROR` into `isError`; that discards the language's
 diagnostic model. Never serialize arbitrary-precision integers as JSON numbers.
 For algebraic values, `semantics.exactTerms` is canonical and the rational
 approximation is only a convenience representation.
 
+A host failure is machine-readable in both directions: `error.code` is stable
+and the message is model-facing. Do not put host paths, environment-variable
+names or spawn diagnostics into it; that belongs on stderr, and
+`HostError.detail` is where a backend hands it over.
+
 ## 3. Current implementation map
 
 ### Rust semantic boundary
 
-- `rust/src/cli/agent_api.rs`: typed, source-only `compute`, `check` and
+- `rust/src/agent/api.rs`: typed, source-only `compute`, `check` and
   `infer_contracts` boundary. It performs no filesystem or terminal I/O.
-- `rust/src/cli/mod.rs`: native `ajisai agent` command used by the Node adapter.
-- `rust/src/cli/run_render.rs` and `rust/src/cli/report.rs`: shared report
+- `rust/src/cli/mod.rs`: native `ajisai agent` command used by the Node
+  adapter. It accepts `-` for standard input, which is how the adapter passes
+  source.
+- `rust/src/agent/run_render.rs` and `rust/src/agent/report.rs`: shared report
   assembly and JSON serialization.
+- `rust/src/interpreter/word_candidates.rs`: edit-distance "did you mean" for
+  an unrecognized Word name.
+- `rust/src/interpreter/debug_next_checks.rs`: the repair-checklist table.
+  Every entry needs a stable `code` and both locales; the tests in
+  `debug_next_checks_tests.rs` fail if either locale carries the other's
+  language.
 - `rust/src/types/value_protocol.rs`: shared exact-value protocol helpers,
   including algebraic `exact_terms`.
 - `rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs`: WASM exposure
@@ -61,9 +75,14 @@ approximation is only a convenience representation.
 ### MCP adapter
 
 - `tools/mcp-server/index.js`: stdio server, four tools, Resources, execution
-  gate, native subprocess backend and MCP provenance.
-- `tools/mcp-server/result.schema.json`: tool `outputSchema` and the
-  `ajisai://schema/result` Resource; change them together.
+  gate, startup backend selection, asset validation and MCP provenance.
+- `tools/mcp-server/host-error.js`: the host-failure vocabulary. A new failure
+  mode needs a code here and in `result.schema.json`, not a new prose string.
+- `tools/mcp-server/result.schema.json`: the single `outputSchema` for all four
+  tools and the `ajisai://schema/result` Resource; change them together.
+- `tools/mcp-server/golden/limits.json`: one entry per declared limit. The
+  self-test fails if its key set and the served `LIMITS` differ, so a new
+  ceiling cannot be declared without saying how it is exercised.
 - `tools/mcp-server/assets/`: packaged vocabulary, complete Word contracts,
   quickstart and engine/registry metadata.
 - `tools/mcp-server/sync-assets.js`: generates or byte-checks those assets.
@@ -94,49 +113,44 @@ approximation is only a convenience representation.
 
 ## 4. Current readiness and honest interpretation
 
-At handoff the weighted tracker is 75.75%:
+The weighted tracker is 81%:
 
 - P0 semantic boundary: 100%.
-- P1 local stdio beta: 85%.
+- P1 local stdio beta: 100%.
 - P2 agent evaluation: 55%.
 - P3 remote service: 0%, deliberately deferred.
 
-P0 completion means the semantic/wire boundary is ready for continued local
-integration. It does not mean the npm package is zero-configuration. The
-package includes its static Resources, but execution still needs
-`AJISAI_BIN`. P2 reference traces only prove the scorers; no real-model success
-rate has been established yet.
+P1 completion means the package is self-contained (the WASM backend needs
+neither `AJISAI_REPO` nor `AJISAI_BIN`), its declared limits match what it
+enforces, and its failures are structured. It does not mean the package has
+been published; that is a release decision.
+
+P2 reference traces still only prove the scorers. No real-model success rate
+has been established, and the diagnosis work in this round — candidate Words,
+stable check codes — is a plausible improvement to repair rate with **no
+measurement behind it**. Do not report it as one.
 
 ## 5. Recommended next pull request
 
-Prioritize the remaining P1 backend work before adding more surface area:
+P1 backend work is done. The two highest-value threads now:
 
-1. Define a small backend interface in the Node adapter for `compute`, `check`
-   and `infer_contracts`; keep the existing native CLI implementation as one
-   backend.
-2. Add a packaged Node `worker_threads` WASM backend and make it the default
-   only after it emits the same schema-1 envelope as the native agent API.
-3. Terminate the Worker on the existing hard wall-time limit. Do not run WASM
-   synchronously on the stdio server's main thread.
-4. Run every golden case against both backends and compare stable semantic
-   fields, excluding incidental timing/counter differences.
-5. Extend the package smoke test so computation succeeds with neither
-   `AJISAI_REPO` nor `AJISAI_BIN` set. Keep `AJISAI_BIN` as an explicit optional
-   override for native/Docker use.
+1. **Recalibrate the numeric work meter** so the declared size ceilings bind
+   before the wall clock. Today `numericWork`, `bigintBits` and
+   `algebraicTerms` are declared truthfully and are unreachable at their
+   declared values: multiplying two-radical sums grows about twelvefold in
+   wall time per factor while charging a handful of work units, so `wallTimeMs`
+   always fires first. `golden/limits.json` marks all three `injectedLimit`
+   with that reason, and the moment a real boundary source exists they should
+   move to `boundary` coverage. Related: plain rational arithmetic does not
+   pass through the algebraic size guard at all, so a large integer product is
+   bounded only by `executionSteps`.
+2. **Collect real model traces** (see §6). The harness is not the bottleneck.
 
-Important implementation constraint: `rust/src/lib.rs` currently exposes the
-CLI module only for non-WASM targets, while the existing browser
-`AjisaiInterpreter.execute` result is not the native agent envelope. Do not
-paper over that mismatch with a large Node-side normalizer. Prefer extracting a
-host-neutral typed agent/report module in Rust and exporting a one-shot WASM
-entry point that serializes the same envelope. Preserve the playground's
-session-oriented interpreter API alongside it.
+Do not add MCP tools without demonstrated need. A `trace` tool mirroring the
+playground's step mode, and the unused `prompts` capability, are both plausible
+and both premature: show the demand in the evaluation corpus first.
 
-If that refactor is too large for one reviewable PR, first land only the backend
-interface plus native-backend conformance tests. Do not mark P1 complete until
-the installed tarball actually runs without a native binary.
-
-## 6. Work after the WASM backend
+## 6. Work after P1
 
 P2 should then proceed with evidence rather than more perfect fixtures:
 
@@ -171,6 +185,7 @@ npm run check:agent-cli-contract
 npm run check:mcp-assets
 npm run check:mcp-evaluation
 npm run test:mcp
+npm run test:mcp-backends
 npm run test:mcp-pack
 npm run eval:mcp
 npm run eval:mcp-performance
@@ -189,8 +204,9 @@ but do not silently raise the committed budget to fix a regression.
 
 - The change is reviewable and does not add new MCP tools without demonstrated
   need.
-- Native and any new backend return equivalent stable semantic fields for all
-  golden cases.
+- Both backends return equivalent stable semantic fields for all golden cases
+  *and* the same outcome class at every declared limit boundary.
+- Every declared limit still has exactly one `golden/limits.json` entry.
 - `NIL`, language `ERROR`, host failure and timeout remain distinct.
 - Algebraic `exactTerms` survive every tested host boundary.
 - The installed package is tested, not only the repository copy.
@@ -203,12 +219,20 @@ but do not silently raise the committed budget to fix a regression.
 ## 9. Known traps
 
 - Do not accept file paths in MCP execution tools.
-- Do not use blocking `spawnSync` in the stdio server.
+- Do not use blocking `spawnSync` — or any other synchronous I/O — in the
+  stdio server. The native backend passes source on stdin precisely so it needs
+  no temporary file, and must not gain one back.
+- Do not declare a limit without adding its entry to `golden/limits.json`; the
+  self-test will fail, and that is the point.
+- Do not put host detail (paths, environment-variable names, spawn messages)
+  into a model-facing error message. Use `HostError.detail`.
+- Do not re-select the backend per request. It is fixed at startup and reported
+  in `mcp.backend.kind`.
 - Do not treat MCP itself as the competitive moat; the value is the combination
   of supported-domain exactness, vector/dataflow semantics and diagnostics.
 - Do not claim `reference-traces.json` represents an LLM.
 - Do not hand-edit packaged assets; regenerate with `sync:assets` and check the
   resulting diff.
-- Do not publish while `tools/mcp-server/package.json` remains `private` or
-  while execution depends on an unstated local binary.
+- Do not let a `nextChecks` locale carry another locale's language, and do not
+  match on its display text anywhere; `code` is the stable identifier.
 - Do not delete or subordinate the browser playground to the MCP package.
