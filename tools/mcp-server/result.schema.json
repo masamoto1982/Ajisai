@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ajisai://schema/result",
   "title": "Ajisai MCP result",
-  "description": "One envelope for every Ajisai MCP tool result. `status` separates the three outcomes the boundary keeps distinct: a successful run (which includes a reason-carrying NIL), an Ajisai language error carrying its diagnosis, and a failure of the host rather than of the program.",
+  "description": "One envelope for every Ajisai MCP tool result. `status` separates the three outcomes the boundary keeps distinct: a successful run (which includes a reason-carrying NIL), an Ajisai language error carrying its diagnosis, and a failure of the host rather than of the program. An optional field carrying no value is omitted rather than sent as `null`, so `diagnosis`, `aiDiagnostic`, `message` and `contractDecls` are simply absent from a plain success — test for presence, not for `null`. The text content block of a tool result carries this same object serialized, so a text-only client receives the whole result and not a summary of it.",
   "type": "object",
   "additionalProperties": true,
   "required": ["schemaVersion", "status"],
