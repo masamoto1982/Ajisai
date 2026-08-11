@@ -338,13 +338,20 @@ impl Interpreter {
                                     // their own, so the position a reader is
                                     // sent to is the top-level token they
                                     // actually wrote.
-                                    let diagnosis = DebugDiagnosis::from_error(
+                                    let mut diagnosis = DebugDiagnosis::from_error(
                                         &err,
                                         Some(upper.as_ref()),
                                         stack_len_before,
                                         self.stack.len(),
                                     )
                                     .with_source_position(self.current_source_span);
+                                    // A misspelled *user* Word is only
+                                    // knowable here: the compiled-in registry
+                                    // has never heard of it, and this is the
+                                    // frame that holds the live dictionary.
+                                    diagnosis.with_user_vocabulary(
+                                        self.user_words.keys().map(String::as_str),
+                                    );
                                     self.push_error_flow_trace(ErrorFlowEvent {
                                         kind: ErrorFlowEventKind::WordError,
                                         word: Some(upper.to_string()),

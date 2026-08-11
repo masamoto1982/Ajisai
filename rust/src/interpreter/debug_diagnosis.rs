@@ -1,4 +1,5 @@
 use super::debug_next_checks::build_next_checks;
+use super::word_candidates::suggest_words;
 use crate::error::{AjisaiError, ErrorCategory, NilReason};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,10 +53,49 @@ pub enum CauseClass {
     Unknown,
 }
 
+/// One piece of display text in every locale the diagnosis vocabulary is
+/// translated into.
+///
+/// Diagnostics used to carry an English label beside a Japanese sentence in
+/// one string pair, which read as a mixed-language message to a human and as
+/// an unstable, unlocalizable key to a machine. The stable identity now lives
+/// in [`DebugCheck::code`]; this type carries only what is shown.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct LocalizedText {
+    pub en: String,
+    pub ja: String,
+}
+
+impl LocalizedText {
+    pub fn new(en: impl Into<String>, ja: impl Into<String>) -> Self {
+        LocalizedText {
+            en: en.into(),
+            ja: ja.into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct DebugCheck {
-    pub label: String,
-    pub detail: String,
+    /// Stable machine-readable identifier, e.g. `checkSpelling`. A consumer
+    /// keys off this and never off the display text, which is free to change
+    /// wording or gain a locale without breaking anyone.
+    pub code: &'static str,
+    /// Short heading for the check.
+    pub title: LocalizedText,
+    /// What to actually look at.
+    pub detail: LocalizedText,
+}
+
+/// The named ceiling a resource-limit failure crossed, its configured value
+/// and the size that crossed it — the machine-readable half of "the program
+/// is too big", indexed by the same identifier the host publishes in its
+/// declared limit table.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct ResourceLimitFacts {
+    pub resource: String,
+    pub limit: u64,
+    pub observed: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -70,6 +110,10 @@ pub struct AiDiagnosticPayload {
     pub truth_value: Option<String>,
     pub effect: Option<String>,
     pub next_checks: Vec<DebugCheck>,
+    /// Known Words within a small edit distance of an unrecognized name,
+    /// best match first. Empty for every other cause class.
+    pub candidates: Vec<String>,
+    pub resource_limit: Option<ResourceLimitFacts>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,6 +130,14 @@ pub struct DebugDiagnosis {
     /// comparison result. `None` for diagnoses unrelated to CF
     /// comparison. Machine-readable; surfaced as `diagnosis.agreedPrefix`.
     pub agreed_prefix: Option<usize>,
+    /// Known Words within a small edit distance of an unrecognized name, best
+    /// match first. "Check the spelling" without saying what the spelling
+    /// might have been is the one repair hint an agent cannot act on, and the
+    /// vocabulary needed to answer it is already compiled in.
+    pub candidates: Vec<String>,
+    /// Which declared ceiling a resource-limit failure crossed. `None` for
+    /// every other cause class.
+    pub resource_limit: Option<ResourceLimitFacts>,
 }
 
 impl DebugDiagnosis {
@@ -129,6 +181,22 @@ impl DebugDiagnosis {
             }
             None => self.evidence.push(format!("insideWords={}", word)),
         }
+    }
+
+    /// Re-rank the candidate list against names this interpreter knows on top
+    /// of the compiled-in vocabulary — user Words and live bindings.
+    ///
+    /// The static registry answers a misspelled Coreword on its own, but a
+    /// misspelled *user* Word is only knowable at the failure site, which is
+    /// the one place that holds the dictionary.
+    pub fn with_user_vocabulary<'a>(&mut self, names: impl Iterator<Item = &'a str>) {
+        if !matches!(self.why, CauseClass::TypoOrUnknownName) {
+            return;
+        }
+        let Some(word) = self.where_.word.as_deref() else {
+            return;
+        };
+        self.candidates = suggest_words(word, names);
     }
 }
 
@@ -204,6 +272,7 @@ impl CauseClass {
             // cheaper shape for the same computation. Filing both under
             // `userLogic` sent every reader down the first road.
             ErrorCategory::ExecutionLimitExceeded => CauseClass::ResourceLimit,
+            ErrorCategory::ResourceLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::ModeUnsupported => CauseClass::ContractViolation,
             ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
@@ -252,7 +321,7 @@ impl DebugDiagnosis {
         stack_len_after: usize,
     ) -> Self {
         let category = ErrorCategory::from_error(err);
-        Self::from_error_category(
+        let mut diagnosis = Self::from_error_category(
             ErrorPhase::ExecuteWord,
             word,
             Some(&category),
@@ -260,7 +329,9 @@ impl DebugDiagnosis {
             stack_len_before,
             stack_len_after,
             Some(err.to_string()),
-        )
+        );
+        diagnosis.resource_limit = resource_limit_facts(err);
+        diagnosis
     }
 
     pub fn from_error_category(
@@ -288,6 +359,10 @@ impl DebugDiagnosis {
         );
         let evidence = build_evidence(category, nil_reason, stack_len_before, stack_len_after);
         let next_checks = build_next_checks(&why, word, category);
+        let candidates = match (&why, word) {
+            (CauseClass::TypoOrUnknownName, Some(name)) => suggest_words(name, std::iter::empty()),
+            _ => Vec::new(),
+        };
 
         DebugDiagnosis {
             when,
@@ -297,6 +372,8 @@ impl DebugDiagnosis {
             evidence,
             next_checks,
             agreed_prefix: None,
+            candidates,
+            resource_limit: None,
         }
     }
 
@@ -324,6 +401,8 @@ impl DebugDiagnosis {
             ],
             next_checks: Vec::new(),
             agreed_prefix: Some(agreed_prefix),
+            candidates: Vec::new(),
+            resource_limit: None,
         }
     }
     /// Build the AI-facing structured diagnostic payload used by tests, WASM
@@ -350,7 +429,35 @@ impl DebugDiagnosis {
             truth_value: truth_value.map(str::to_string),
             effect: effect.map(str::to_string),
             next_checks: self.next_checks.clone(),
+            candidates: self.candidates.clone(),
+            resource_limit: self.resource_limit.clone(),
         }
+    }
+}
+
+/// The machine-readable facts behind a resource-limit failure, or `None` when
+/// the error is not one.
+fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
+    match err {
+        AjisaiError::ResourceLimitExceeded {
+            resource,
+            limit,
+            observed,
+        } => Some(ResourceLimitFacts {
+            resource: resource.as_protocol_str().to_string(),
+            limit: *limit,
+            observed: *observed,
+        }),
+        // The step budget lives outside `RuntimeLimits` but is published in
+        // the same limit table, so it answers "which ceiling" the same way.
+        AjisaiError::ExecutionLimitExceeded { limit } => Some(ResourceLimitFacts {
+            resource: crate::error::ResourceLimit::ExecutionSteps
+                .as_protocol_str()
+                .to_string(),
+            limit: *limit as u64,
+            observed: None,
+        }),
+        _ => None,
     }
 }
 
@@ -370,6 +477,10 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
         Some(ErrorCategory::ExecutionLimitExceeded)
         | Some(ErrorCategory::RecursionLimitExceeded) => "addBudgetOrFixRecursion",
+        // A size ceiling is not fixed by letting the program run longer: the
+        // work itself has to get smaller, or the host has to declare a larger
+        // ceiling.
+        Some(ErrorCategory::ResourceLimitExceeded) => "reduceWorkOrRaiseLimit",
         Some(ErrorCategory::Custom) | None => match why {
             CauseClass::Environment | CauseClass::Effect => "fixHost",
             CauseClass::NilFlow => "handleUnknownOrNil",

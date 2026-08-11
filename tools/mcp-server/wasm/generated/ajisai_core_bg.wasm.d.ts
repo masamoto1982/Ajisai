@@ -20,6 +20,7 @@ export const ajisaiinterpreter_collect_word_identities: (a: number) => any;
 export const ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_execute_step: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_extract_io_output_buffer: (a: number) => [number, number];
+export const ajisaiinterpreter_host_profile: (a: number) => [number, number];
 export const ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: number) => number;
 export const ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_mark_serial_disconnected: (a: number, b: number, c: number) => void;

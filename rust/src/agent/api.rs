@@ -172,7 +172,8 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
             ),
         };
     }
-    let unknown = resolve_words(&interp, &tokens);
+    let resolved = resolve_words(&interp, &tokens);
+    let unknown = &resolved.unknown;
     if let Some(first) = unknown.first() {
         let message = format!("Unknown words: {}", unknown.join(", "));
         let category = ErrorCategory::UnknownWord;
@@ -188,6 +189,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
         diagnosis
             .evidence
             .push(format!("unknownWords={}", unknown.join(",")));
+        diagnosis.with_user_vocabulary(resolved.locally_defined.iter().map(String::as_str));
         return AgentResponse {
             report: error_report(
                 &interp,

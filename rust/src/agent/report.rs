@@ -96,11 +96,25 @@ pub(crate) fn diagnosis_json(diagnosis: &DebugDiagnosis) -> Json {
         "evidence": diagnosis.evidence,
         "nextChecks": diagnosis.next_checks.iter().map(check_json).collect::<Vec<_>>(),
         "agreedPrefix": diagnosis.agreed_prefix,
+        "candidates": diagnosis.candidates,
+        "resourceLimit": diagnosis.resource_limit.as_ref().map(resource_limit_json),
     })
 }
 
 fn check_json(check: &crate::interpreter::debug_diagnosis::DebugCheck) -> Json {
-    json!({ "label": check.label, "detail": check.detail })
+    json!({
+        "code": check.code,
+        "title": { "en": check.title.en, "ja": check.title.ja },
+        "detail": { "en": check.detail.en, "ja": check.detail.ja },
+    })
+}
+
+fn resource_limit_json(facts: &crate::interpreter::debug_diagnosis::ResourceLimitFacts) -> Json {
+    json!({
+        "resource": facts.resource,
+        "limit": facts.limit,
+        "observed": facts.observed,
+    })
 }
 
 pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
@@ -115,6 +129,8 @@ pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
         "truthValue": payload.truth_value,
         "effect": payload.effect,
         "nextChecks": payload.next_checks.iter().map(check_json).collect::<Vec<_>>(),
+        "candidates": payload.candidates,
+        "resourceLimit": payload.resource_limit.as_ref().map(resource_limit_json),
     })
 }
 

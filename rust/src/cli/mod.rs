@@ -49,8 +49,11 @@ Commands:
   contract <file.ajisai> [--json] Report each user word's inferred contract
                                   (arity, purity, NIL, determinism) plus a
                                   paste-ready `#:contract` line (no execution)
-  agent <operation> <file.ajisai> Stable source-to-JSON host boundary. Operations:
-                                  compute, check, infer-contracts
+  agent <operation> <file.ajisai|->
+                                  Stable source-to-JSON host boundary. Operations:
+                                  compute, check, infer-contracts. `-` reads the
+                                  program from standard input, so an embedding
+                                  host needs no temporary file
   test <file-or-dir> [--json]     Run test files, checking each program against
                                   its `#@` directive comments (status/stack/
                                   output/error). Exit 1 if any test fails
@@ -97,6 +100,9 @@ pub fn run(args: &[String]) -> i32 {
                     return 2;
                 }
             },
+            // A bare `-` is the conventional name for standard input, not an
+            // option; every command that takes a path accepts it as one.
+            "-" => positional.push("-"),
             flag if flag.starts_with('-') => {
                 eprintln!("Unknown option: {}\n\n{}", flag, USAGE);
                 return 2;
@@ -235,7 +241,8 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
         return 1;
     }
 
-    let unknown = resolve_words(&interp, &tokens);
+    let resolved = resolve_words(&interp, &tokens);
+    let unknown = &resolved.unknown;
     if let Some(first) = unknown.first() {
         let message = format!("Unknown words: {}", unknown.join(", "));
         let category = ErrorCategory::UnknownWord;
@@ -251,6 +258,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
         diagnosis
             .evidence
             .push(format!("unknownWords={}", unknown.join(",")));
+        diagnosis.with_user_vocabulary(resolved.locally_defined.iter().map(String::as_str));
         emit(
             &error_report(
                 &interp,
@@ -330,11 +338,28 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
 /// Common JSON boundary consumed by host adapters. Unlike the compatibility
 /// CLI commands, every operation returns the same top-level envelope shape.
 fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
-    let source = match std::fs::read_to_string(path) {
-        Ok(source) => source,
-        Err(e) => {
-            eprintln!("ajisai: cannot read {}: {}", path, e);
-            return 2;
+    // `-` reads the program from standard input. A host adapter that already
+    // holds the source in memory should not have to invent a temporary file to
+    // hand it over: writing one needs a writable temporary directory, leaves
+    // the program on disk for as long as the call runs, and buys nothing the
+    // pipe does not already give.
+    let source = if path == "-" {
+        use std::io::Read;
+        let mut buffer = String::new();
+        match std::io::stdin().read_to_string(&mut buffer) {
+            Ok(_) => buffer,
+            Err(e) => {
+                eprintln!("ajisai: cannot read standard input: {}", e);
+                return 2;
+            }
+        }
+    } else {
+        match std::fs::read_to_string(path) {
+            Ok(source) => source,
+            Err(e) => {
+                eprintln!("ajisai: cannot read {}: {}", path, e);
+                return 2;
+            }
         }
     };
     let (document, exit_code) = match operation {
@@ -407,8 +432,22 @@ fn emit(report: &Report, opts: &Opts) {
                 eprintln!("  {}", line);
             }
         }
+        if !diagnosis.candidates.is_empty() {
+            eprintln!("  did you mean: {}", diagnosis.candidates.join(", "));
+        }
+        if let Some(facts) = &diagnosis.resource_limit {
+            match facts.observed {
+                Some(observed) => eprintln!(
+                    "  limit {}: {} exceeds {}",
+                    facts.resource, observed, facts.limit
+                ),
+                None => eprintln!("  limit {}: {}", facts.resource, facts.limit),
+            }
+        }
+        // The terminal is an English surface; the same checks reach a Japanese
+        // reader through the `ja` locale of the JSON envelope.
         for check in &diagnosis.next_checks {
-            eprintln!("  - {}: {}", check.label, check.detail);
+            eprintln!("  - {}: {}", check.title.en, check.detail.en);
         }
     }
 }

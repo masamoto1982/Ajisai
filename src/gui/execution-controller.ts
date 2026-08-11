@@ -146,12 +146,30 @@ export const createExecutionController = (
         // failure; this says which construct the failing word was written in.
         const insideWords = evidence(diagnosis.evidence, 'insideWords');
         const inside = insideWords ? `, inside ${insideWords.split(',').join(', ')}` : '';
+        // The known Words closest to a name that did not resolve. Telling a
+        // reader to check the spelling without saying what it might have been
+        // is the one hint nobody can act on.
+        const candidates = diagnosis.candidates?.length
+            ? [`did you mean: ${diagnosis.candidates.join(', ')}`]
+            : [];
+        // Which declared ceiling fired, so "too big" says what was too big.
+        const limit = diagnosis.resourceLimit
+            ? [
+                  `limit ${diagnosis.resourceLimit.resource}: ${
+                      diagnosis.resourceLimit.observed ?? '?'
+                  } against ${diagnosis.resourceLimit.limit}`
+              ]
+            : [];
         return [
             `[DIAGNOSIS] ${diagnosis.summary}`,
             `Q1 when: ${diagnosis.when}`,
             `Q2 where: ${where}${inside}${at}${depth}`,
             `Q3 why: ${diagnosis.why}`,
-            ...diagnosis.nextChecks.map((check) => `next: ${check.label} - ${check.detail}`)
+            ...candidates,
+            ...limit,
+            ...diagnosis.nextChecks.map(
+                (check) => `next: ${check.title.en} - ${check.detail.ja}`
+            )
         ].join('\n');
     };
 

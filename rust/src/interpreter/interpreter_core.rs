@@ -450,9 +450,13 @@ impl Interpreter {
         use super::debug_diagnosis::DebugDiagnosis;
         use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
         let stack_len_after = self.stack.len();
-        let diagnosis =
+        let mut diagnosis =
             DebugDiagnosis::from_error(err, Some(word), stack_len_before, stack_len_after)
                 .with_source_position(self.current_source_span);
+        // The compiled-in registry cannot know a user Word, and a misspelled
+        // user Word is exactly the case a fresh vocabulary lookup misses. This
+        // is the one place that holds the live dictionary.
+        diagnosis.with_user_vocabulary(self.user_words.keys().map(String::as_str));
         self.push_error_flow_trace(ErrorFlowEvent {
             kind: ErrorFlowEventKind::WordError,
             word: Some(word.to_string()),
@@ -611,6 +615,13 @@ impl Interpreter {
     /// Override the execution step budget (water level). Raising it lets a
     /// benchmark drive a tail-recursive loop far past the default
     /// `DEFAULT_MAX_EXECUTION_STEPS` to observe O(1)-native-stack iteration.
+    /// The step budget in force. A host that publishes its limit profile has
+    /// to be able to read the value it is actually running under, not restate
+    /// the default and hope no one changed it.
+    pub fn max_execution_steps(&self) -> usize {
+        self.max_execution_steps
+    }
+
     pub fn set_max_execution_steps(&mut self, steps: usize) {
         self.max_execution_steps = steps;
     }
@@ -631,13 +642,16 @@ impl Interpreter {
     /// Charge `units` of internal numeric work to the CS5 work meter and fail
     /// (diagnosably, before the expensive computation runs) if the cumulative
     /// total crosses `runtime_limits.max_numeric_work`. Saturating so the
-    /// counter itself can never overflow. Reused as `ExecutionLimitExceeded`
-    /// (an existing resource-limit category), never a new category.
+    /// counter itself can never overflow. Reports itself by name through
+    /// `ResourceLimitExceeded`, so an agent can tell an exhausted work meter
+    /// from an exhausted step budget without reading the message.
     pub(crate) fn charge_numeric_work(&mut self, units: u64) -> Result<()> {
         self.numeric_work_used = self.numeric_work_used.saturating_add(units);
         if self.numeric_work_used > self.runtime_limits.max_numeric_work {
-            return Err(crate::error::AjisaiError::ExecutionLimitExceeded {
-                limit: usize::try_from(self.runtime_limits.max_numeric_work).unwrap_or(usize::MAX),
+            return Err(crate::error::AjisaiError::ResourceLimitExceeded {
+                resource: crate::error::ResourceLimit::NumericWork,
+                limit: self.runtime_limits.max_numeric_work,
+                observed: Some(self.numeric_work_used),
             });
         }
         Ok(())

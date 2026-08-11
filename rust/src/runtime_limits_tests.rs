@@ -194,9 +194,13 @@ mod runtime_limits_tests {
         assert!(
             matches!(
                 err,
-                crate::error::AjisaiError::ExecutionLimitExceeded { .. }
+                crate::error::AjisaiError::ResourceLimitExceeded {
+                    resource: crate::error::ResourceLimit::AlgebraicTerms,
+                    limit: 3,
+                    ..
+                }
             ),
-            "algebraic-size failure is an execution-limit error, got: {err:?}"
+            "the algebraic-term ceiling must report itself by name, got: {err:?}"
         );
     }
 
@@ -230,9 +234,13 @@ mod runtime_limits_tests {
         assert!(
             matches!(
                 err,
-                crate::error::AjisaiError::ExecutionLimitExceeded { .. }
+                crate::error::AjisaiError::ResourceLimitExceeded {
+                    resource: crate::error::ResourceLimit::NumericWork,
+                    limit: 1,
+                    ..
+                }
             ),
-            "numeric-work failure is an execution-limit error, got: {err:?}"
+            "the numeric-work meter must report itself by name, got: {err:?}"
         );
     }
 

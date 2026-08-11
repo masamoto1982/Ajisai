@@ -11,6 +11,12 @@ export interface UserWord {
 
 export interface AjisaiInterpreter {
     execute(code: string): Promise<ExecuteResult>;
+    /**
+     * The resource ceilings this interpreter is running under, as a JSON
+     * `HostProfile`. Read from the live interpreter, so what a host displays
+     * is what it enforces.
+     */
+    host_profile(): string;
     execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
     // Session reset: reinitializes session state but keeps the cross-reset
@@ -101,6 +107,34 @@ export interface RuntimeMetricsSnapshot {
     artifactCacheEvictionCount: number;
 }
 
+/**
+ * The resource ceilings a host actually applies, published under the same
+ * names every Ajisai host uses. SPEC §2.5 makes limits a host safety control
+ * rather than value semantics, so hosts legitimately differ — which is only
+ * safe to rely on when each one says what it applies.
+ */
+export interface HostProfile {
+    profile: string;
+    limits: Record<string, number>;
+}
+
+/** One display string in every locale the diagnosis vocabulary carries. */
+export interface LocalizedText {
+    en: string;
+    ja: string;
+}
+
+/**
+ * One repair step. `code` is the stable identifier to match on; `title` and
+ * `detail` are display text and may be reworded or gain a locale without
+ * anything downstream changing.
+ */
+export interface ProtocolDebugCheck {
+    code: string;
+    title: LocalizedText;
+    detail: LocalizedText;
+}
+
 export interface ProtocolDiagnosis {
     when: string;
     where: {
@@ -112,10 +146,23 @@ export interface ProtocolDiagnosis {
     why: string;
     summary: string;
     evidence: string[];
-    nextChecks: Array<{
-        label: string;
-        detail: string;
-    }>;
+    nextChecks: ProtocolDebugCheck[];
+    /**
+     * Known Words closest to an unrecognized name, best match first. Empty
+     * for every cause class other than `typoOrUnknownName`.
+     */
+    candidates?: string[];
+    /**
+     * Which declared ceiling a resource-limit failure crossed. `resource`
+     * names an entry of the host's limit profile, so a reader can tell an
+     * exhausted step budget from an oversized value without parsing a
+     * message. Absent for every other cause class.
+     */
+    resourceLimit?: {
+        resource: string;
+        limit: number;
+        observed?: number;
+    };
     /**
      * CF-comparison agreed-prefix length (SPEC §4.5.0 / §7.4.1): the number
      * of leading partial quotients that matched before the partial-quotient

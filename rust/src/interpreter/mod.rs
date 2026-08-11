@@ -35,6 +35,7 @@ pub mod tensor_cmds;
 pub mod tensor_ops;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;
+mod word_candidates;
 pub mod word_contract;
 mod word_contract_lattice;
 #[cfg(test)]
@@ -70,6 +71,8 @@ mod control_cond_tests;
 mod control_exec_eval_tests;
 #[cfg(test)]
 mod control_or_else_tests;
+#[cfg(test)]
+mod debug_next_checks_tests;
 #[cfg(test)]
 mod dependents_index_tests;
 #[cfg(test)]

@@ -259,6 +259,21 @@ header h1 a {
     line-height: 1.5;
 }
 
+/* Which resource profile this host applies. Quieter than the version badge —
+   it is reference information, not identity — with the full ceiling table on
+   hover. */
+.host-profile {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: var(--color-primary);
+    background: transparent;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-button);
+    padding: 0.125rem 0.5rem;
+    line-height: 1.5;
+    cursor: help;
+}
+
 
 footer {
     border-top: var(--border-main);

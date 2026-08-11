@@ -2,7 +2,9 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import Ajv2020 from "ajv/dist/2020.js";
-import { createServer, ExecutionGate, LIMITS } from "./index.js";
+import { CAPACITY_WAIT_MS, createServer, ExecutionGate, LIMITS } from "./index.js";
+import { coveredLimitNames, limitCases } from "./golden/limit-cases.js";
+import { HOST_ERRORS } from "./host-error.js";
 import { readFileSync } from "node:fs";
 
 let failures = 0;
@@ -39,6 +41,20 @@ check("execution gate restores capacity on release", gate.tryAcquire());
 gate.release();
 gate.release();
 
+// Back-pressure: a saturated gate holds a caller briefly rather than turning
+// every burst into a retry loop, and a released slot goes to whoever has been
+// waiting longest.
+const queued = new ExecutionGate(1);
+queued.tryAcquire();
+const waiting = queued.acquire(1_000);
+queued.release();
+check("execution gate hands a released slot to a queued caller", (await waiting) === true);
+queued.release();
+const timedOut = new ExecutionGate(1);
+timedOut.tryAcquire();
+check("execution gate gives up after its wait window", (await timedOut.acquire(20)) === false);
+timedOut.release();
+
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const server = createServer();
 const client = new Client({ name: "selftest", version: "0.0.0" });
@@ -55,10 +71,20 @@ check(
   tools.every(({ inputSchema }) => inputSchema.additionalProperties === false),
 );
 check(
-  "execution tools advertise structured output",
+  "every tool advertises the same structured output contract",
+  tools.every(({ outputSchema }) =>
+    outputSchema?.$id === "ajisai://schema/result" &&
+    outputSchema?.required?.includes("status")
+  ),
+);
+check(
+  "the source input schema states the unit its limit is measured in",
   tools
     .filter(({ name }) => name !== "word_contract")
-    .every(({ outputSchema }) => outputSchema?.required?.includes("mcp")),
+    .every(({ inputSchema }) =>
+      inputSchema.properties.source.maxLength === LIMITS.sourceBytes &&
+      inputSchema.properties.source.description.includes("UTF-8 bytes")
+    ),
 );
 check(
   "tools advertise safe selection hints",
@@ -79,9 +105,40 @@ check(
     entry.stack?.inputs === 2
   ),
 );
+const missWithSuggestion = await client.callTool({
+  name: "word_contract",
+  arguments: { word: "LENGHT" },
+});
+check(
+  "word_contract answers an unmatched name with its closest known Words",
+  missWithSuggestion.structuredContent?.matches?.length === 0 &&
+    missWithSuggestion.structuredContent?.suggestions?.[0] === "LENGTH",
+);
+check(
+  "word_contract carries the same provenance as an execution result",
+  contract.structuredContent?.mcp?.registryDigest?.length === 64 &&
+    contract.structuredContent?.suggestions?.length === 0,
+);
 
 const resources = await client.listResources();
-check("publishes guide, vocabulary and result schema as resources", resources.resources.length === 3);
+check(
+  "publishes guide, vocabulary, result schema and host profile as resources",
+  JSON.stringify(resources.resources.map(({ uri }) => uri).sort()) ===
+    JSON.stringify([
+      "ajisai://guide/quickstart",
+      "ajisai://limits",
+      "ajisai://schema/result",
+      "ajisai://vocabulary",
+    ]),
+);
+const limitsResource = JSON.parse(
+  (await client.readResource({ uri: "ajisai://limits" })).contents[0]?.text ?? "{}",
+);
+check(
+  "the host profile resource serves exactly the limits tool results report",
+  limitsResource.profile === "mcp-local-stdio" &&
+    JSON.stringify(limitsResource.limits) === JSON.stringify(LIMITS),
+);
 const guide = await client.readResource({ uri: "ajisai://guide/quickstart" });
 check("quickstart resource reads generated guidance", guide.contents[0]?.text?.includes("Agent Writing Protocol"));
 const schemaResource = await client.readResource({ uri: "ajisai://schema/result" });
@@ -128,6 +185,46 @@ for (const goldenCase of golden.cases) {
   );
 }
 
+// Every declared limit must be accounted for by name. A limit an agent plans
+// against and a limit the regression suite pins have to be the same set —
+// otherwise the server can add a ceiling nobody ever exercises, which is how
+// `responseBytes` came to be declared for two backends and enforced by one.
+check(
+  "every declared limit has a coverage entry, and every entry a declared limit",
+  JSON.stringify(coveredLimitNames()) === JSON.stringify(Object.keys(LIMITS).sort()),
+);
+for (const limit of limitCases()) {
+  if (limit.coverage === "boundary") {
+    check(
+      `limit ${limit.name}: declared value matches the served profile`,
+      limit.declared === LIMITS[limit.name],
+    );
+    for (const probe of limit.probes) {
+      const observed = await client.callTool({
+        name: "compute",
+        arguments: { source: probe.source },
+      });
+      const mismatches = Object.entries(probe.expect).filter(
+        ([pointer, expected]) =>
+          JSON.stringify(atPointer(observed.structuredContent, pointer)) !==
+          JSON.stringify(expected),
+      );
+      check(`limit ${limit.name} (${probe.edge})`, mismatches.length === 0);
+      if (mismatches.length) console.error(`  ${JSON.stringify(mismatches)}`);
+    }
+  } else {
+    check(
+      `limit ${limit.name}: declared value matches the served profile`,
+      limit.declared === LIMITS[limit.name],
+    );
+    check(
+      `limit ${limit.name}: non-boundary coverage explains itself`,
+      typeof limit.note === "string" && limit.note.length > 0 &&
+        (limit.coverage !== "injectedLimit" || typeof limit.rustTest === "string"),
+    );
+  }
+}
+
 const compute = await client.callTool({
   name: "compute",
   arguments: { source: "[ 2 ] SQRT" },
@@ -137,7 +234,32 @@ const oversized = await client.callTool({
   arguments: { source: " ".repeat(LIMITS.sourceBytes + 1) },
 });
 check("compute rejects source beyond its UTF-8 byte limit", oversized.isError === true);
-if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
+// Host failures are structured, so a caller branches on a code rather than on
+// an English sentence — this file used to match on "CLI not found" itself.
+check(
+  "a host failure is machine-readable and schema-valid",
+  oversized.structuredContent?.status === "hostError" &&
+    oversized.structuredContent?.error?.code === "sourceTooLarge" &&
+    oversized.structuredContent?.error?.retryable === false &&
+    validateResult(oversized.structuredContent),
+);
+check(
+  "a host failure message carries no host paths or environment names",
+  !/AJISAI_(BIN|REPO)|\/(home|usr|tmp)\//.test(oversized.structuredContent?.error?.message ?? ""),
+);
+const badRequest = await client.callTool({ name: "compute", arguments: { source: "" } });
+check(
+  "an invalid request is a host error, not a language error",
+  badRequest.structuredContent?.error?.code === "invalidRequest",
+);
+check(
+  "every declared host-error code is retryable or not, explicitly",
+  Object.values(HOST_ERRORS).every(({ retryable }) => typeof retryable === "boolean") &&
+    HOST_ERRORS.capacityExhausted.retryable === true &&
+    HOST_ERRORS.timeout.retryable === true &&
+    CAPACITY_WAIT_MS > 0,
+);
+if (compute.structuredContent?.error?.code === "backendUnavailable") {
   check("compute requires a real Ajisai backend", false);
 } else {
   const sqrt = compute.structuredContent?.stack?.[0]?.value?.[0];
@@ -156,6 +278,16 @@ if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
       compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&
       compute.structuredContent?.mcp?.limits?.algebraicTerms === 4096,
   );
+  check(
+    "compute names which backend answered",
+    ["nativeCli", "wasmWorker"].includes(compute.structuredContent?.mcp?.backend?.kind),
+  );
+  const second = await client.callTool({ name: "compute", arguments: { source: "[ 2 ] SQRT" } });
+  check(
+    "the backend is fixed for the life of the server",
+    second.structuredContent?.mcp?.backend?.kind ===
+      compute.structuredContent?.mcp?.backend?.kind,
+  );
   check("compute satisfies the published result schema", validateResult(compute.structuredContent));
 
   const languageError = await client.callTool({
@@ -165,6 +297,27 @@ if (compute.isError && compute.content?.[0]?.text?.includes("CLI not found")) {
   check(
     "Ajisai language errors remain structured non-MCP errors",
     languageError.isError !== true && languageError.structuredContent?.status === "error",
+  );
+  // The stable half of a next-check is its code; the display text is free to
+  // be reworded or translated without breaking a consumer or a repair scorer.
+  const [firstCheck] = languageError.structuredContent?.diagnosis?.nextChecks ?? [];
+  check(
+    "diagnostic checks carry a stable code and per-locale display text",
+    firstCheck?.code === "checkSpelling" &&
+      typeof firstCheck?.title?.en === "string" &&
+      typeof firstCheck?.title?.ja === "string" &&
+      typeof firstCheck?.detail?.en === "string" &&
+      typeof firstCheck?.detail?.ja === "string" &&
+      !/[぀-ヿ一-鿿]/.test(firstCheck.detail.en),
+  );
+  const misspelled = await client.callTool({
+    name: "compute",
+    arguments: { source: "[ 1 2 3 ] LENGHT" },
+  });
+  check(
+    "an unknown Word diagnosis names its likely correction",
+    misspelled.structuredContent?.diagnosis?.candidates?.[0] === "LENGTH" &&
+      validateResult(misspelled.structuredContent),
   );
 
   const checked = await client.callTool({

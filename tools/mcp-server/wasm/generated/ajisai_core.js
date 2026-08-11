@@ -150,6 +150,31 @@ class AjisaiInterpreter {
         }
     }
     /**
+     * The resource ceilings this interpreter is actually running under, as
+     * JSON, under the same names every other Ajisai host publishes them by.
+     *
+     * SPEC §2.5 makes limits a host safety control rather than value
+     * semantics, so two conforming hosts legitimately disagree about them —
+     * and they do: the playground runs the interpreter defaults while the MCP
+     * agent profile is an order of magnitude tighter. That is only a trap for
+     * someone who prototypes here and runs there while neither host says what
+     * it applies. Read from the live interpreter rather than from a constant,
+     * so what is displayed is what is enforced.
+     * @returns {string}
+     */
+    host_profile() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.ajisaiinterpreter_host_profile(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * @param {string} name
      * @returns {boolean}
      */
@@ -643,7 +668,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 138, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 139, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014);
             return ret;
         },

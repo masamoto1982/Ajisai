@@ -50,6 +50,19 @@ export class AjisaiInterpreter {
     execute(code: string): Promise<any>;
     execute_step(code: string): any;
     extract_io_output_buffer(): string;
+    /**
+     * The resource ceilings this interpreter is actually running under, as
+     * JSON, under the same names every other Ajisai host publishes them by.
+     *
+     * SPEC §2.5 makes limits a host safety control rather than value
+     * semantics, so two conforming hosts legitimately disagree about them —
+     * and they do: the playground runs the interpreter defaults while the MCP
+     * agent profile is an order of magnitude tighter. That is only a trap for
+     * someone who prototypes here and runs there while neither host says what
+     * it applies. Read from the live interpreter rather than from a constant,
+     * so what is displayed is what is enforced.
+     */
+    host_profile(): string;
     is_safe_preview_word(name: string): boolean;
     lookup_word_definition(name: string): any;
     /**
@@ -166,6 +179,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_execute_step: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_extract_io_output_buffer: (a: number) => [number, number];
+    readonly ajisaiinterpreter_host_profile: (a: number) => [number, number];
     readonly ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: number) => number;
     readonly ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_mark_serial_disconnected: (a: number, b: number, c: number) => void;
