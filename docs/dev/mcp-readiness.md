@@ -1,6 +1,6 @@
 # MCP product readiness
 
-Status date: 2026-08-11 (updated after the trace-provenance and capture-harness work; before that, response compaction, algebraic short display, declared-limit, provenance and
+Status date: 2026-08-11 (updated after the work-meter recalibration; before that, trace provenance, response compaction, algebraic short display and
 host-failure work). This is an implementation tracker, not a language
 specification. Percentages measure completion of the concrete exit criteria
 below; they are not forecasts.
@@ -248,15 +248,41 @@ an `npm install -g ajisai-mcp-server` recipe that resolved to E404, leading
 instead with the checkout path, which needs no build because the WASM bundle
 is committed.
 
-Known gap, recorded rather than papered over: `numericWork`, `bigintBits` and
-`algebraicTerms` are declared truthfully but are **not reachable at their
-declared values** — the work meter charges far less than the operation costs,
-so `wallTimeMs` always fires first. They are pinned in Rust with injected
-ceilings, and `golden/limits.json` marks them `injectedLimit` with the reason.
-Recalibrating the work estimate so the size ceilings bind before the clock is
-the next engine-side task. Two related facts: plain rational arithmetic does
-not pass through the algebraic size guard, and `numericWork` is charged only
-on the exact algebraic path.
+**The work meter prices operand width now, not operation count.** It used to
+charge a term-pair count, so multiplying two 4096-digit numbers and two
+one-digit numbers cost the same unit — a meter that cannot see the size of the
+numbers cannot bound the thing it exists to bound. Work is charged in
+limb-multiply units, and an algebraic term pair carries a measured constant
+because it is not one bignum multiply but a coefficient product, a radicand
+product, a square-free decomposition against a growing basis and an ordered-map
+insert. On the reference container the rational and algebraic paths now run at
+~57,000-86,000 units/ms; before, they differed by about 1400x, so a ceiling
+calibrated for one was meaningless for the other.
+
+**Plain rational arithmetic is charged and bounded for the first time.** The
+scalar fast path returns before the exact-real path that did the charging, so
+Tier 0 work reached neither the meter nor any size ceiling: 400 chained
+multiplications of a 4096-digit literal — 0.4% of the `executionSteps` budget —
+spent 40 seconds building a multi-megabyte integer in silence. The same chain
+is refused at ~1.5 seconds by `bigintBits`, which now reports itself by name.
+Ordinary arithmetic is unaffected and pinned so: the heaviest ordinary case
+measured charges 8,192 units.
+
+Known gap, and a **larger** one than the round that found it fixed: an
+operation inside a `MAP` or `FOLD` block never reaches the meter.
+`[ 1 20000 ] RANGE [ 1 ] { * } FOLD` computes a 77,000-digit factorial in
+580 ms charged zero, with no ceiling firing. Chained arithmetic written out in
+source is bounded; the same arithmetic written as a loop is not, which is the
+shape a real program uses.
+
+That gap is also what keeps `numericWork`, `bigintBits` and `algebraicTerms`
+marked `injectedLimit` rather than `boundary`. Without a charged loop
+construct, no source inside the 64 KiB `sourceBytes` budget accumulates enough
+work to reach them. A second ordering problem sits behind it: with width-based
+pricing the twelve doublings needed to reach 4096 algebraic terms are charged
+~16,000,000 units, so `numericWork` at 10,000,000 fires first — the three
+ceilings have to be ordered so each is independently observable.
+`golden/limits.json` carries the measurements.
 
 ### P2 — agent evaluation (57%)
 

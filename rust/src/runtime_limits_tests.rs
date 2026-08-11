@@ -258,4 +258,95 @@ mod runtime_limits_tests {
         let mut interp4 = Interpreter::new();
         assert!(interp4.execute("2 SQRT 3 SQRT +").await.is_ok());
     }
+
+    // ── the work meter prices operand size, not operation count ────────────
+
+    #[tokio::test]
+    async fn tier_zero_multiplication_is_charged() {
+        // The scalar fast path returns before the exact-real path that does the
+        // charging, so a chain of big-integer multiplications used to be
+        // metered at zero and bounded only by the step budget — which counts
+        // words, not the size of the numbers in them. Four hundred of these,
+        // 0.4% of that budget, spent forty seconds building a multi-megabyte
+        // integer with every size ceiling silent.
+        let big = "9".repeat(512);
+        let mut interp = Interpreter::new();
+        interp
+            .execute(&format!("1 {big} * {big} *"))
+            .await
+            .expect("ordinary big-integer work still succeeds");
+        assert!(
+            interp.numeric_work_used > 0,
+            "a wide rational multiply must reach the meter, charged {}",
+            interp.numeric_work_used
+        );
+    }
+
+    #[tokio::test]
+    async fn work_is_priced_by_operand_width_not_operation_count() {
+        // Two multiplications, identical in count and in every other respect;
+        // the meter used to charge them the same. It is the width that makes
+        // one of them expensive, so it is the width the meter has to see.
+        async fn charge(source: &str) -> u64 {
+            let mut interp = Interpreter::new();
+            interp.execute(source).await.expect("source computes");
+            interp.numeric_work_used
+        }
+        let narrow = charge("2 3 *").await;
+        let wide = charge(&format!("{} {} *", "9".repeat(2048), "9".repeat(2048))).await;
+        assert!(
+            wide > narrow * 100,
+            "a 2048-digit product must cost far more than a one-digit product, got {wide} vs {narrow}"
+        );
+    }
+
+    #[tokio::test]
+    async fn tier_zero_growth_is_bounded_by_the_bigint_ceiling() {
+        // `bigintBits` had no path that reached it from ordinary rational
+        // arithmetic. It does now, and it reports itself by name.
+        let big = "9".repeat(4096);
+        let mut interp = with_limits(RuntimeLimits {
+            max_bigint_bits: 20_000,
+            ..RuntimeLimits::default()
+        });
+        let err = interp
+            .execute(&format!("1 {big} * {big} *"))
+            .await
+            .expect_err("a product past the bit ceiling must error");
+        assert!(
+            matches!(
+                err,
+                crate::error::AjisaiError::ResourceLimitExceeded {
+                    resource: crate::error::ResourceLimit::BigintBits,
+                    limit: 20_000,
+                    ..
+                }
+            ),
+            "the BigInt ceiling must report itself by name, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn ordinary_arithmetic_stays_far_below_the_meter() {
+        // The meter only earns its place if it is invisible to real programs.
+        for source in [
+            "1 3 /",
+            "0.1 0.2 +",
+            "2 SQRT",
+            "[ 1 2 ] 10 +",
+            "8 SQRT 2 SQRT 2 SQRT + =",
+            "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *",
+        ] {
+            let mut interp = Interpreter::new();
+            interp
+                .execute(source)
+                .await
+                .expect("ordinary source computes");
+            assert!(
+                interp.numeric_work_used < 100_000,
+                "`{source}` charged {} units, which is not ordinary",
+                interp.numeric_work_used
+            );
+        }
+    }
 }

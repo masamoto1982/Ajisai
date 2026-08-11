@@ -136,6 +136,18 @@ impl Algebraic {
             .unwrap_or(0)
     }
 
+    /// The largest radicand bit-length across the normal form.
+    ///
+    /// The companion to `max_coefficient_bits`, and the half that matters most
+    /// for pricing: multiplying two-radical sums leaves every coefficient at
+    /// ±1 while the *radicands* multiply, so the work of a term pair is driven
+    /// by monomial width even when the coefficients say the value is tiny.
+    /// Iterates the term keys directly rather than going through
+    /// `normal_form_terms`, which allocates — this is charged per operation.
+    pub fn max_radicand_bits(&self) -> u64 {
+        self.terms.keys().map(|m| m.bits()).max().unwrap_or(0)
+    }
+
     /// Structural identity of the stored normal form — same basis, same
     /// term map. Cheaper than semantic equality (`==`, which rebases) and
     /// used where a conservative "unchanged?" check suffices; a false

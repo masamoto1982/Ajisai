@@ -1,4 +1,8 @@
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::runtime_limits::{
+    binary_numeric_work, exact_work_bits, fraction_result_bits, fraction_work_bits,
+    ALGEBRAIC_PAIR_UNITS,
+};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
@@ -115,12 +119,28 @@ fn push_exact_real_schema_result(
     // so the error leaves the stack intact.
     let ta = a_exact.algebraic_term_count() as u64;
     let tb = b_exact.algebraic_term_count() as u64;
+    // Each term pair costs a bignum operation, so the pair count is multiplied
+    // by what one pair actually costs. Charging the pair count alone priced a
+    // 4096-digit coefficient and a one-digit coefficient identically.
+    //
+    // `exact_work_bits` covers radicands as well as coefficients: in the
+    // canonical explosion — repeatedly multiplying two-radical sums — every
+    // coefficient stays ±1 while the radicands multiply, so a
+    // coefficient-only width would have gone on reporting the cheapest
+    // possible operand for the most expensive cascade there is.
+    let pair = binary_numeric_work(exact_work_bits(&a_exact), exact_work_bits(&b_exact), true)
+        .saturating_mul(ALGEBRAIC_PAIR_UNITS);
     let work = match schema {
-        ExactArithmeticSchema::Mul => ta.saturating_mul(tb),
+        ExactArithmeticSchema::Mul => ta.saturating_mul(tb).saturating_mul(pair),
         // Division inverts `b` (conjugation recursion, ~term² inner products)
         // and multiplies; bound by both.
-        ExactArithmeticSchema::Div => ta.saturating_mul(tb).saturating_add(tb.saturating_mul(tb)),
-        ExactArithmeticSchema::Add | ExactArithmeticSchema::Sub => ta.saturating_add(tb),
+        ExactArithmeticSchema::Div => ta
+            .saturating_mul(tb)
+            .saturating_add(tb.saturating_mul(tb))
+            .saturating_mul(pair),
+        ExactArithmeticSchema::Add | ExactArithmeticSchema::Sub => {
+            ta.saturating_add(tb).saturating_mul(pair)
+        }
     };
     interp.charge_numeric_work(work)?;
 
@@ -238,8 +258,32 @@ fn push_scalar_fastpath_result(
         return Ok(false);
     }
 
+    // Tier 0 arithmetic is priced on the same meter as Tier 1, and used not to
+    // be priced at all: this path returns before the exact-real path that does
+    // the charging, so a chain of big-integer multiplications was bounded only
+    // by the step budget — which counts words, not the size of the numbers in
+    // them. Charged before the operation runs and before the operands are
+    // consumed, so a refusal leaves the stack intact.
+    let multiplicative = matches!(
+        schema,
+        ExactArithmeticSchema::Mul | ExactArithmeticSchema::Div
+    );
+    interp.charge_numeric_work(binary_numeric_work(
+        fraction_work_bits(&a.fraction),
+        fraction_work_bits(&b.fraction),
+        multiplicative,
+    ))?;
+
     let result = match schema.fraction(&a.fraction, &b.fraction) {
-        Ok(result) => build_scalar_fast_result(result, &a.wrap),
+        Ok(result) => {
+            // Bound accumulation, so the operand feeding the next multiply is
+            // still a sane size. Without this the chain above grows without any
+            // ceiling naming itself.
+            interp
+                .runtime_limits
+                .check_bigint_bits(fraction_result_bits(&result))?;
+            build_scalar_fast_result(result, &a.wrap)
+        }
         Err(AjisaiError::DivisionByZero) => division_by_zero_bubble(),
         Err(error) => return Err(error),
     };

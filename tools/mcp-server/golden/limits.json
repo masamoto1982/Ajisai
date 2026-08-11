@@ -10,34 +10,68 @@
     "sourceBytes": {
       "coverage": "boundary",
       "declared": 65536,
-      "under": { "kind": "generatedSource", "generator": "spaces", "bytes": 65536, "expect": { "/status": "ok" } },
+      "under": {
+        "kind": "generatedSource",
+        "generator": "spaces",
+        "bytes": 65536,
+        "expect": {
+          "/status": "ok"
+        }
+      },
       "over": {
         "kind": "generatedSource",
         "generator": "spaces",
         "bytes": 65537,
-        "expect": { "/status": "hostError", "/error/code": "sourceTooLarge", "/error/limit": "sourceBytes", "/error/retryable": false }
+        "expect": {
+          "/status": "hostError",
+          "/error/code": "sourceTooLarge",
+          "/error/limit": "sourceBytes",
+          "/error/retryable": false
+        }
       },
       "note": "Rejected by the adapter on UTF-8 byte length before a backend is entered. The engine applies the same 65536-byte ceiling as `ResourceLimitExceeded { resource: sourceBytes }` if a host ever forwards a larger program."
     },
     "wallTimeMs": {
       "coverage": "boundary",
       "declared": 5000,
-      "under": { "kind": "source", "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *", "expect": { "/status": "ok" } },
+      "under": {
+        "kind": "source",
+        "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *",
+        "expect": {
+          "/status": "ok"
+        }
+      },
       "over": {
         "kind": "source",
         "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + *",
-        "expect": { "/status": "hostError", "/error/code": "timeout", "/error/limit": "wallTimeMs", "/error/retryable": true }
+        "expect": {
+          "/status": "hostError",
+          "/error/code": "timeout",
+          "/error/limit": "wallTimeMs",
+          "/error/retryable": true
+        }
       },
       "note": "The over case is a product of four two-radical sums. Its cost grows roughly twelvefold per additional factor, so it is many times over the ceiling rather than marginally over it; the under case completes in well under a second."
     },
     "responseBytes": {
       "coverage": "boundary",
       "declared": 1048576,
-      "under": { "kind": "source", "source": "[ 0 1000 ] RANGE", "expect": { "/status": "ok" } },
+      "under": {
+        "kind": "source",
+        "source": "[ 0 1000 ] RANGE",
+        "expect": {
+          "/status": "ok"
+        }
+      },
       "over": {
         "kind": "source",
         "source": "[ 0 10000 ] RANGE",
-        "expect": { "/status": "hostError", "/error/code": "responseTooLarge", "/error/limit": "responseBytes", "/error/retryable": false }
+        "expect": {
+          "/status": "hostError",
+          "/error/code": "responseTooLarge",
+          "/error/limit": "responseBytes",
+          "/error/retryable": false
+        }
       },
       "note": "Both backends measure the same thing: UTF-8 bytes of the schema-1 envelope text. `backend/parity-test.js` runs this pair against both, which is what the native-only `maxBuffer` implementation could never have shown."
     },
@@ -47,7 +81,9 @@
       "under": {
         "kind": "source",
         "source": "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n1000 DOWN",
-        "expect": { "/status": "ok" }
+        "expect": {
+          "/status": "ok"
+        }
       },
       "over": {
         "kind": "source",
@@ -69,7 +105,14 @@
     "materializedElements": {
       "coverage": "boundary",
       "declared": 100000,
-      "under": { "kind": "source", "source": "[ 0 99999 ] RANGE LENGTH", "expect": { "/status": "ok", "/stackDisplay/0": "100000/1" } },
+      "under": {
+        "kind": "source",
+        "source": "[ 0 99999 ] RANGE LENGTH",
+        "expect": {
+          "/status": "ok",
+          "/stackDisplay/0": "100000/1"
+        }
+      },
       "over": {
         "kind": "source",
         "source": "[ 0 100001 ] RANGE",
@@ -85,7 +128,14 @@
     "numericLiteralDigits": {
       "coverage": "boundary",
       "declared": 4096,
-      "under": { "kind": "generatedSource", "generator": "digits", "digits": 4096, "expect": { "/status": "ok" } },
+      "under": {
+        "kind": "generatedSource",
+        "generator": "digits",
+        "digits": 4096,
+        "expect": {
+          "/status": "ok"
+        }
+      },
       "over": {
         "kind": "generatedSource",
         "generator": "digits",
@@ -104,19 +154,19 @@
       "coverage": "injectedLimit",
       "declared": 10000000,
       "rustTest": "rust/src/runtime_limits_tests.rs::runaway_numeric_work_is_charged_and_rejected_before_computing",
-      "note": "Bounds exact algebraic (Tier 1) arithmetic only, and the per-operation estimate it charges is far cheaper than the operation. At 10,000,000 units the wall clock always arrives first — see the `wallTimeMs` over case, which spends about a thousand units before it is killed. The declared value is the configured ceiling and is reported truthfully; it is not a bound a caller can observe at this profile. Recalibrating the estimate is engine work tracked in docs/dev/mcp-readiness.md."
+      "note": "Charged on every rational and algebraic multiply, priced in limb-multiply units so operand *width* is what costs. The estimate used to charge a term-pair count, which priced a 4096-digit coefficient and a one-digit one identically. Measured on the reference container both paths now run at ~57,000-86,000 units/ms, where they previously differed by about 1400x. Still injectedLimit rather than boundary: arithmetic inside MAP/FOLD blocks reaches the meter at zero (see the bigintBits note), so no source within the 64 KiB sourceBytes budget accumulates 10,000,000 units. Reaching it needs a charged loop construct."
     },
     "bigintBits": {
       "coverage": "injectedLimit",
       "declared": 262144,
       "rustTest": "rust/src/runtime_limits_tests.rs::algebraic_term_explosion_is_rejected_at_a_low_injected_limit",
-      "note": "Bounds the coefficient width of exact algebraic (Tier 1) values. Plain rational arithmetic does not pass through this guard, so a large integer product is bounded by `executionSteps` rather than by this ceiling. Reaching it through the algebraic path costs more wall time than the profile allows."
+      "note": "Bounds the width of any exact arithmetic result, rational as well as algebraic. Plain rational arithmetic used to pass through no size guard at all: 400 chained multiplications of a 4096-digit literal, 0.4% of the executionSteps budget, spent 40 seconds building a multi-megabyte integer with every ceiling silent. That path is charged and bounded now, and the same chain is refused at ~1.5 seconds. Still injectedLimit rather than boundary for one reason: a source reaching 262,144 bits through the charged path does not fit in the 64 KiB sourceBytes budget, because the loop constructs that would express it compactly charge nothing. Arithmetic inside a block never reaches the meter, so [ 1 20000 ] RANGE [ 1 ] { * } FOLD computes a 77,000-digit factorial in 580 ms metered at zero. Closing that is the next engine task, and it is a larger gap than the one this round fixed."
     },
     "algebraicTerms": {
       "coverage": "injectedLimit",
       "declared": 4096,
       "rustTest": "rust/src/runtime_limits_tests.rs::algebraic_term_explosion_is_rejected_at_a_low_injected_limit",
-      "note": "Reaching 4096 terms needs twelve doublings of a two-radical sum; measured cost grows about twelvefold per doubling, so `wallTimeMs` fires many orders of magnitude earlier. Pinned with an injected three-term ceiling instead."
+      "note": "Reaching 4096 terms needs twelve doublings of a two-radical sum. With work priced by width the cascade is charged about 16,000,000 units before the twelfth doubling lands, so numericWork at its declared 10,000,000 now fires first: this ceiling remains unreachable, for a different reason than before. Ordering the two so each is independently observable is part of the same follow-up as the block-arithmetic gap."
     }
   }
 }

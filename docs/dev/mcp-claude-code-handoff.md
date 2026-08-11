@@ -1,6 +1,6 @@
 # Ajisai MCP development handoff for Claude Code
 
-Updated: 2026-08-11 (trace provenance + capture harness; previously response compaction, exactDisplay, onboarding)
+Updated: 2026-08-11 (work-meter recalibration; previously trace provenance, response compaction, exactDisplay, onboarding)
 
 - Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
 - Host profiles: [`mcp-host-profiles.md`](./mcp-host-profiles.md)
@@ -163,6 +163,21 @@ measurement behind it**. Do not report it as one.
 P1 backend work, P1 onboarding, the algebraic short display and response
 compaction are done (see the readiness tracker's P1 section). Three threads
 remain, in this order:
+
+0. **Charge arithmetic inside blocks.** Found while recalibrating the work
+   meter and *not* fixed there, because it is bigger than what that round
+   touched: an operation inside a `MAP` or `FOLD` block never reaches the
+   meter. `[ 1 20000 ] RANGE [ 1 ] { * } FOLD` computes a 77,000-digit
+   factorial in 580 ms charged **zero** units, with no size ceiling firing.
+   Chained arithmetic written out in source is charged and bounded; the same
+   arithmetic written as a loop is not, which is the shape any real program
+   would use.
+
+   This is also what blocks the remaining `injectedLimit` entries from
+   becoming real boundary cases: without a charged loop construct, no source
+   inside the 64 KiB `sourceBytes` budget can accumulate enough work to reach
+   `numericWork`, and none can reach `bigintBits` either. Fix this first, then
+   the boundary sources follow. `golden/limits.json` records the measurements.
 
 1. **Recalibrate the numeric work meter** so the declared size ceilings bind
    before the wall clock. Today `numericWork`, `bigintBits` and

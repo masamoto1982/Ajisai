@@ -20,6 +20,8 @@
 //! the documented defaults (SPEC §2.5).
 
 use crate::error::{AjisaiError, ResourceLimit, Result};
+use crate::types::exact::ExactReal;
+use crate::types::fraction::Fraction;
 
 /// Default cap on elements a single generative built-in (`RANGE`, `FILL`,
 /// `RESHAPE`, …) may materialize in one call. Mirrors the historical
@@ -48,8 +50,64 @@ pub const DEFAULT_MAX_NUMERIC_LITERAL_DIGITS: usize = 4_096;
 
 /// Default cap on accumulated internal numeric work units charged through the
 /// work meter (algebraic products, reciprocal recursion, precision doubling,
-/// enclosure refinement). Consumed by the work meter in the CS5 follow-up.
+/// enclosure refinement).
 pub const DEFAULT_MAX_NUMERIC_WORK: u64 = 1_000_000_000;
+
+/// Width of the machine word the bignum arithmetic underneath actually works
+/// in. Work is priced in limb×limb products because that is what a bignum
+/// multiply costs.
+pub const WORK_LIMB_BITS: u64 = 64;
+
+/// Limbs needed to hold `bits`, never zero — every operation costs at least one.
+///
+/// This is the unit the work meter counts in, and the reason it counts in this
+/// unit rather than in operations: the meter used to charge a *term-pair*
+/// count, which prices the loop and ignores the size of the numbers inside it.
+/// Multiplying two 4096-digit integers and two single-digit ones both charged
+/// one unit while differing by orders of magnitude in cost, so the meter could
+/// not bound the thing it exists to bound.
+pub fn work_limbs(bits: u64) -> u64 {
+    bits.div_ceil(WORK_LIMB_BITS).max(1)
+}
+
+/// What one algebraic term pair costs, in limb-multiply units.
+///
+/// A Tier 1 term pair is not one bignum multiply. It multiplies two
+/// coefficients *and* two radicands, then square-free-decomposes the product
+/// against a basis that grows with the number of distinct primes in play, and
+/// inserts the result into an ordered term map. Measured against the rational
+/// path — which is one bignum multiply and therefore the meter's natural unit —
+/// a term pair costs roughly three orders of magnitude more. Without this
+/// factor the two paths ran on the same meter at wildly different prices, so a
+/// ceiling calibrated for one was meaningless for the other.
+///
+/// Empirical, and rounded to a power of two. It was chosen by measuring both
+/// paths on one container: the rational chain charged ~80,000 units/ms and the
+/// algebraic cascade ~56 units/ms, a ratio near 1,400. The exact figure is a
+/// property of that machine and this `num-bigint`, and the meter only needs to
+/// be right to within the order of magnitude that keeps a ceiling meaningful
+/// for both paths. It is deliberately *not* pinned by a timing test: a wall
+/// clock in CI would be flaky, and a stale constant is a worse failure than an
+/// unpinned one only if nobody re-measures — so re-measure when either path's
+/// representation changes.
+pub const ALGEBRAIC_PAIR_UNITS: u64 = 1_024;
+
+/// The work a binary bignum operation of these two operand widths costs.
+///
+/// Multiplication and division are limb×limb (schoolbook is what `num-bigint`
+/// uses at these sizes); addition and subtraction are linear in the wider
+/// operand. Deliberately an *upper bound* on the real cost and deliberately
+/// cheap to compute: it is charged before the operation runs, so a runaway
+/// computation is refused rather than measured.
+pub fn binary_numeric_work(left_bits: u64, right_bits: u64, multiplicative: bool) -> u64 {
+    let left = work_limbs(left_bits);
+    let right = work_limbs(right_bits);
+    if multiplicative {
+        left.saturating_mul(right)
+    } else {
+        left.max(right)
+    }
+}
 
 /// Default cap on the bit length of a BigInt arithmetic result. ~300k decimal
 /// digits — generous for exact rationals, but bounded so a doubling cascade
@@ -59,6 +117,36 @@ pub const DEFAULT_MAX_BIGINT_BITS: u64 = 1_000_000;
 /// Default cap on the number of algebraic terms a single continued-fraction /
 /// polynomial value may carry. Consumed by the work meter in the follow-up.
 pub const DEFAULT_MAX_ALGEBRAIC_TERMS: usize = 100_000;
+
+/// Operand width for the work meter on an exact (Tier 0 or Tier 1) value:
+/// the wider of what it stores in coefficients and in radicands.
+pub fn exact_work_bits(value: &ExactReal) -> u64 {
+    match value {
+        ExactReal::Algebraic(a) => a.max_coefficient_bits().max(a.max_radicand_bits()),
+        other => other.max_coefficient_bits(),
+    }
+}
+
+/// Operand width for the work meter, without paying to measure a small one.
+///
+/// `Fraction` keeps machine-word values in a `Small` representation, which is
+/// the overwhelming majority of ordinary arithmetic; asking a `BigInt` for its
+/// bit length on every add in a hot loop would cost more than the guard saves.
+/// A small fraction is one limb by definition.
+pub fn fraction_work_bits(f: &Fraction) -> u64 {
+    if f.is_small() {
+        return 1;
+    }
+    fraction_result_bits(f)
+}
+
+/// The width a fraction actually occupies: the wider of its two halves.
+pub fn fraction_result_bits(f: &Fraction) -> u64 {
+    if f.is_nil() {
+        return 0;
+    }
+    f.numerator().bits().max(f.denominator().bits())
+}
 
 /// Unified internal-computation-cost ceilings (CS5).
 ///
@@ -149,11 +237,24 @@ impl RuntimeLimits {
                 observed: Some(term_count as u64),
             });
         }
-        if coeff_bits > self.max_bigint_bits {
+        self.check_bigint_bits(coeff_bits)
+    }
+
+    /// Reject an arithmetic result wider than `max_bigint_bits`.
+    ///
+    /// Split out of `check_algebraic_size` because it is not an algebraic
+    /// concern: a plain rational product blows a coefficient up exactly the
+    /// same way, and used to reach this ceiling through no path at all. A
+    /// repeated-multiplication chain was bounded only by the *step* budget,
+    /// which prices word count — so four hundred multiplications, 0.4% of that
+    /// budget, could spend tens of seconds building a multi-megabyte integer
+    /// while every size ceiling stayed silent.
+    pub fn check_bigint_bits(&self, bits: u64) -> Result<()> {
+        if bits > self.max_bigint_bits {
             return Err(AjisaiError::ResourceLimitExceeded {
                 resource: ResourceLimit::BigintBits,
                 limit: self.max_bigint_bits,
-                observed: Some(coeff_bits),
+                observed: Some(bits),
             });
         }
         Ok(())
