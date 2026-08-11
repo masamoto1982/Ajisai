@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "./index.js";
-import { indexTraces, validateCorpus } from "./evaluation-contract.js";
+import { indexTraces, mayAssertPerfect, traceProvenance, validateCorpus } from "./evaluation-contract.js";
 
 function atPointer(document, pointer) {
   return pointer.split("/").slice(1)
@@ -19,6 +19,7 @@ if (!tracePath) {
 const corpus = JSON.parse(readFileSync(new URL("./eval/cases.json", import.meta.url), "utf8"));
 const traceDoc = JSON.parse(readFileSync(tracePath, "utf8"));
 const traces = indexTraces(traceDoc, validateCorpus(corpus));
+const provenance = traceProvenance(traceDoc);
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const server = createServer();
 const client = new Client({ name: "ajisai-trace-eval", version: "1" });
@@ -66,6 +67,12 @@ const total = corpus.cases.length;
 const negative = corpus.cases.filter((testCase) => testCase.expectedTool === null).length;
 const metrics = {
   schemaVersion: 1,
+  // What produced these traces travels with the numbers, so a score copied out
+  // of a log still says whether it describes a model or the scorer.
+  provenance,
+  measures: provenance.source === "referenceFixture"
+    ? "scorer conformance only — not model performance"
+    : `model performance for ${provenance.modelId}`,
   cases: total,
   missingTraces: missing,
   toolSelectionAccuracy: selectedCorrectly / total,
@@ -73,7 +80,18 @@ const metrics = {
   irrelevantToolRate: negative === 0 ? 0 : irrelevantActivations / negative,
 };
 console.log(JSON.stringify(metrics, null, 2));
-if (process.argv.includes("--require-perfect") &&
-    (missing !== 0 || semanticSuccess !== total || irrelevantActivations !== 0)) {
-  process.exit(1);
+if (process.argv.includes("--require-perfect")) {
+  // Asserting perfection is a statement about the *harness*. Allowing it on a
+  // model trace would turn the first clean run into a committed claim that the
+  // model is perfect — the exact overstatement this corpus exists to avoid.
+  if (!mayAssertPerfect(traceDoc)) {
+    console.error(
+      "--require-perfect asserts scorer conformance and is only valid for a referenceFixture trace; " +
+        "a model trace is reported, never asserted.",
+    );
+    process.exit(2);
+  }
+  if (missing !== 0 || semanticSuccess !== total || irrelevantActivations !== 0) {
+    process.exit(1);
+  }
 }

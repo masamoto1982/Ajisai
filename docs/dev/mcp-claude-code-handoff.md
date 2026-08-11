@@ -1,6 +1,6 @@
 # Ajisai MCP development handoff for Claude Code
 
-Updated: 2026-08-11 (response compaction; previously algebraic exactDisplay, MCP onboarding)
+Updated: 2026-08-11 (trace provenance + capture harness; previously response compaction, exactDisplay, onboarding)
 
 - Current tracker: [`mcp-readiness.md`](./mcp-readiness.md)
 - Host profiles: [`mcp-host-profiles.md`](./mcp-host-profiles.md)
@@ -118,7 +118,11 @@ names or spawn diagnostics into it; that belongs on stderr, and
 
 - `eval/cases.json`: 22 intent/semantic cases.
 - `eval/reference-traces.json`: scorer-conformance fixture, **not a real model
-  result**.
+  result** — and now says so in its own `provenance` block rather than only in
+  prose here.
+- `capture-traces.js` and `capture-traces.test.js`: the capture harness and its
+  scripted-client test. The test proves prompt assembly and tool-call
+  extraction; it is not a model measurement, and says so when it passes.
 - `score-traces.js`: tool selection, semantic success, missing trace and
   irrelevant activation metrics.
 - `eval/repair-cases.json`, `eval/reference-repair-traces.json` and
@@ -137,11 +141,11 @@ names or spawn diagnostics into it; that belongs on stderr, and
 
 ## 4. Current readiness and honest interpretation
 
-The weighted tracker is 81%:
+The weighted tracker is 81.4%:
 
 - P0 semantic boundary: 100%.
 - P1 local stdio beta: 100%.
-- P2 agent evaluation: 55%.
+- P2 agent evaluation: 57%.
 - P3 remote service: 0%, deliberately deferred.
 
 P1 completion means the package is self-contained (the WASM backend needs
@@ -170,7 +174,20 @@ remain, in this order:
    move to `boundary` coverage. Related: plain rational arithmetic does not
    pass through the algebraic size guard at all, so a large integer product is
    bounded only by `executionSteps`.
-2. **Collect real model traces** (see §6). The harness is not the bottleneck.
+2. **Collect real model traces** (see §6). The harness is not the bottleneck,
+   and as of this round neither is the tooling: `npm run eval:capture` drives a
+   real model over the four tools and writes a `model`-provenance trace under
+   `eval/traces/`. **What is missing is credentials** — it resolves them the way
+   the Anthropic SDK does and, finding none, exits non-zero having written
+   nothing. Run it once to establish the baseline, then re-run it under the same
+   model, prompt digest and tool-choice setting to compare against.
+
+   The separation is now enforced rather than documented: a trace document is
+   rejected unless it declares `provenance.source`, a `model` trace must record
+   what makes it re-runnable, and `--require-perfect` is refused on anything
+   that is not a `referenceFixture`. Do not weaken any of those to make a run
+   pass — the flag asserts that the *scorer* works, and there is no
+   corresponding assertion to make about a model.
 
 3. **Provenance size, if it ever becomes the constraint.** Considered and
    rejected during the response-compaction work, recorded so it is not

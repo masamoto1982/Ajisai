@@ -1,5 +1,9 @@
 {
   "schemaVersion": 1,
+  "provenance": {
+    "source": "referenceFixture",
+    "note": "Hand-written tool-selection trace built to pass score-traces.js. It proves the scorer runs end to end; it is not a model result and its perfect score describes nothing about any model."
+  },
   "traces": [
     {
       "caseId": "exact-fraction",

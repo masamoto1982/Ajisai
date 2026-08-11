@@ -1,6 +1,6 @@
 # MCP product readiness
 
-Status date: 2026-08-11 (updated after the response-compaction work; before that, algebraic short display, declared-limit, provenance and
+Status date: 2026-08-11 (updated after the trace-provenance and capture-harness work; before that, response compaction, algebraic short display, declared-limit, provenance and
 host-failure work). This is an implementation tracker, not a language
 specification. Percentages measure completion of the concrete exit criteria
 below; they are not forecasts.
@@ -23,9 +23,9 @@ host and shares the value protocol with the native CLI.
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
 | P1 — local stdio beta | 35% | 100% | 35.0% |
-| P2 — agent evaluation | 20% | 55% | 11.0% |
+| P2 — agent evaluation | 20% | 57% | 11.4% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **81.0%** |
+| **Overall** | **100%** | — | **81.4%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -258,7 +258,35 @@ the next engine-side task. Two related facts: plain rational arithmetic does
 not pass through the algebraic size guard, and `numericWork` is charged only
 on the exact algebraic path.
 
-### P2 — agent evaluation (55%)
+### P2 — agent evaluation (57%)
+
+**A trace now says what produced it, and the harness that produces one exists.**
+Every trace document declares `provenance.source` — `referenceFixture` or
+`model` — and a `model` trace must additionally record the model id, prompt
+digest, tool-choice setting, capture time and the server/engine/registry
+versions it ran against. Documents without that block are rejected rather than
+scored; the scorers print the provenance beside the metrics; and
+`--require-perfect` is refused on anything that is not a fixture, because that
+flag asserts the *scorer* runs and there is no matching assertion to make about
+a model. Until this round the fixture and a real capture were the same shape, so
+a fixture's `toolSelectionAccuracy: 1` could be read — or reported — as a model
+result.
+
+`npm run eval:capture` drives a real model over the four published tool
+definitions, one call per corpus case at `tool_choice: auto` so the
+irrelevant-intent cases can correctly produce no call, and writes to
+`eval/traces/`, apart from the committed fixtures.
+
+**No baseline has been collected, and the percentage above reflects that.** The
+capture harness resolves credentials the way the Anthropic SDK does and, finding
+none, exits non-zero having written nothing — a file that looks like a trace and
+is not one would be worse than no file. Everything P2 still needs is downstream
+of running it: first-attempt generation rate, diagnosis-observation and repair
+rates for a real model, and the before/after comparison the `exactDisplay` and
+response-compaction rounds are owed. The 2-point movement is for tooling and
+enforcement, not for evidence.
+
+#### Earlier P2 work
 
 A first versioned prompt corpus now covers tool intent and backend semantics for
 rationals, decimals, algebraics, vector broadcast, NIL, diagnostics, static
