@@ -187,7 +187,7 @@ fn main() {
         "{:>8} {:>8} {:>10} {:>9} {:>12}",
         "factors", "terms", "units", "run ms", "render ms"
     );
-    for factors in 1..=5 {
+    for factors in 1..=6 {
         let measurement = measure(
             format!("algebraic product of {factors}"),
             &algebraic_product(factors),

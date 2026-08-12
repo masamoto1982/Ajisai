@@ -43,7 +43,7 @@
       },
       "over": {
         "kind": "source",
-        "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + *",
+        "source": "[ 0 99999 ] RANGE UNIQUE LENGTH",
         "expect": {
           "/status": "hostError",
           "/error/code": "timeout",
@@ -51,7 +51,7 @@
           "/error/retryable": true
         }
       },
-      "note": "The over case is a product of four two-radical sums. Its cost grows roughly twelvefold per additional factor, so it is many times over the ceiling rather than marginally over it; the under case completes in well under a second."
+      "note": "The over case was a product of four two-radical sums until the continued-fraction expansion got a work budget. It spent 14s, of which essentially all was *rendering* a 16-term value that took 0.1ms to compute, so it stopped being a wallTimeMs case the moment writing a value down stopped costing seconds; it now answers in 18ms. What replaces it is `UNIQUE`, which is quadratic and priced by nothing: 5k/10k/20k/40k elements take 97ms/388ms/1.86s/7.0s, and at the 100,000-element materialization ceiling it takes about 48s -- ten times over, so the case is decisively over rather than marginally. That it is the best remaining candidate is itself the finding: the work meter prices arithmetic, and the collection Words do real work that no ceiling counts."
     },
     "responseBytes": {
       "coverage": "boundary",
@@ -151,22 +151,62 @@
       }
     },
     "numericWork": {
-      "coverage": "injectedLimit",
+      "coverage": "boundary",
       "declared": 10000000,
-      "rustTest": "rust/src/runtime_limits_tests.rs::runaway_numeric_work_is_charged_and_rejected_before_computing",
-      "note": "Charged on every rational and algebraic operation in every operand shape, priced as lanes x limb-multiply units. Every schema is priced limb x limb, addition included: Ajisai's `+` is *rational* addition, `(ad + cb)/(bd)` plus a gcd, which is three multiplications and a Euclid rather than anything linear. Pricing it linearly was measurably backwards -- on the reference container a 4096-digit addition takes 745us against the same-width multiplication's 366us, and used to be charged 213 units against that multiplication's 45,369. That is a 4,500x pricing error in the dangerous direction, on the one path with no other bound: a chain of wide additions could spend the whole wallTimeMs budget while this meter read a fraction of a percent. Corrected, the same path charges ~66,000 units/ms instead of ~286. Still injectedLimit rather than boundary: reaching 10,000,000 units needs either many cheap lanes (bounded by maxMaterializedElements, and slow enough that wallTimeMs decides the case first) or wide multiplication (which crosses bigintBits at 4,096 limbs by construction before it gets here). `cargo run --release --example work_meter_calibration` prints the rates; interpreter/work_meter_calibration_tests.rs pins their shape without a wall clock."
+      "under": {
+        "kind": "source",
+        "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * 59 SQRT 61 SQRT + * 67 SQRT 71 SQRT + * 73 SQRT 79 SQRT + * 83 SQRT 89 SQRT + *",
+        "expect": {
+          "/status": "ok"
+        }
+      },
+      "over": {
+        "kind": "source",
+        "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * 59 SQRT 61 SQRT + * 67 SQRT 71 SQRT + * 73 SQRT 79 SQRT + * 83 SQRT 89 SQRT + * 97 SQRT 101 SQRT + *",
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "resourceLimit",
+          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/diagnosis/resourceLimit/resource": "numericWork",
+          "/diagnosis/resourceLimit/limit": 10000000,
+          "/diagnosis/resourceLimit/observed": 16799744
+        }
+      },
+      "note": "Charged on every rational and algebraic operation in every operand shape, priced as lanes x limb-multiply units, addition included -- Ajisai's `+` is rational addition, three multiplications and a gcd, not anything linear. The pair is a multiquadratic cascade: twelve two-radical factors reach 4,096 terms for about 8.4M units and succeed, the thirteenth doubling costs 16,799,744 and is refused by name. This was `injectedLimit` for three rounds and three different reasons -- arithmetic outside the scalar path was not charged at all, then the refusal's 27MB envelope became `responseTooLarge`, then the twelfth doubling could not be reached because *rendering* 32 terms took 147s. All three are fixed, and the ceiling is observable at its declared value for the first time."
     },
     "bigintBits": {
-      "coverage": "injectedLimit",
+      "coverage": "boundary",
       "declared": 262144,
-      "rustTest": "rust/src/runtime_limits_tests.rs::algebraic_term_explosion_is_rejected_at_a_low_injected_limit",
-      "note": "Bounds the width of any exact arithmetic result, rational as well as algebraic, in every operand shape. Plain rational arithmetic used to pass through no size guard at all: 400 chained multiplications of a 4096-digit literal, 0.4% of the executionSteps budget, spent 40 seconds building a multi-megabyte integer with every ceiling silent. Then the scalar-shaped path was charged and the shape axis was left open -- only push_scalar_fastpath_result and push_exact_real_schema_result charged, both requiring both operands to be scalar-shaped, so [ 1 21000 ] RANGE [ 1 ] { * } FOLD returned a 271,233-bit integer metered at zero while the same fold with a scalar accumulator was refused. Charging and size-checking now sit at the dispatch entry (interpreter/arithmetic_meter.rs), priced as lanes x operand width, so a scalar is the one-lane case of the same formula and both folds are refused at the same 10,000,573 units. Still injectedLimit rather than boundary for the ordering reason given under numericWork: repeated multiplication by a 4096-digit literal crosses 262,144 bits at about the same point it crosses 10,000,000 work units, so a boundary pair here would be pinned five percent away from a different ceiling and would break confusingly when either price is re-measured."
+      "under": {
+        "kind": "generatedSource",
+        "generator": "widePowers",
+        "digits": 4096,
+        "multiplications": 19,
+        "expect": {
+          "/status": "ok"
+        }
+      },
+      "over": {
+        "kind": "generatedSource",
+        "generator": "widePowers",
+        "digits": 4096,
+        "multiplications": 20,
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "resourceLimit",
+          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/diagnosis/resourceLimit/resource": "bigintBits",
+          "/diagnosis/resourceLimit/limit": 262144,
+          "/diagnosis/resourceLimit/observed": 272133
+        }
+      },
+      "note": "Bounds the width of any exact arithmetic result, rational as well as algebraic, in every operand shape. Nineteen multiplications by a 4096-digit literal reach 77,824 digits and succeed; the twentieth would reach 272,133 bits and is refused by name, in about 16ms and 4.2KB of source. The literal is parsed once into a user word, so the pair tests this ceiling rather than `numericLiteralDigits` or the O(n^2) decimal parse. Reaching it costs roughly 9.5M work units, just under `numericWork`'s 10,000,000 -- the two sit close together because building an N-limb integer by multiplication costs about N^2/4 limb-operations by construction, so size and work grow together on this path. Keep that in mind before re-pricing either."
     },
     "algebraicTerms": {
       "coverage": "injectedLimit",
       "declared": 4096,
       "rustTest": "rust/src/runtime_limits_tests.rs::algebraic_term_explosion_is_rejected_at_a_low_injected_limit",
-      "note": "Reaching 4096 terms needs twelve doublings of a two-radical sum. It is not reachable, and the reason is not the work meter: computing the value is nearly free while *writing it down* is not. stackDisplay is a continued fraction (SPEC 4.2.3), and expanding one needs enclosure refinement that grows with the term count. Measured on the reference container, at 2/4/8/16/32 terms the run takes 0.1ms throughout while the render takes 5ms / 57ms / 951ms / 9.1s / 147s -- about 12x per doubling. wallTimeMs 5000 is therefore exhausted somewhere around 16 terms, eight doublings short of this ceiling, and it is exhausted by a timeout that names nothing. Pricing or bounding the display expansion is the open task; until then this ceiling is declared but unreachable, and the number to trust for what an agent can actually build is roughly 16 terms, not 4096."
+      "note": "Reaching 4096 terms is a twelve-factor multiquadratic cascade, and it now computes and renders in about 26ms -- before the continued-fraction expansion got a work budget it was unreachable by eight doublings, because *displaying* 32 terms took 147s. What still hides this ceiling is the one ordering that remains: the thirteenth doubling, which is what would first exceed 4,096 terms, costs 16,799,744 work units against `numericWork`'s 10,000,000, so `numericWork` names itself first. It is a policy question rather than a defect -- a `max_numeric_work` above ~17,000,000 would expose this ceiling at its declared value -- and it is recorded rather than acted on because raising the work an agent program may do is a decision about the host profile, not about the meter."
     }
   }
 }

@@ -334,28 +334,57 @@ a dense `i64` lane (~6,400 units/ms) by `maxMaterializedElements` — 10,000,000
 units of lane work is about 1.6 s, inside `wallTimeMs`. What mattered was that
 no *unbounded* path sat far below the rest, and none does now.
 
-**The dominant cost of an algebraic value is not charged by anything, because
-it is not computation.** Building one is nearly free; writing it down is not.
-`stackDisplay` is a continued fraction (SPEC §4.2.3), and expanding one needs
-enclosure refinement that grows with the term count. Measured at 2 / 4 / 8 / 16
-/ 32 terms, the run takes 0.1 ms throughout while the render takes 5 ms / 57 ms
-/ 951 ms / 9.1 s / 147 s — about 12× per doubling. So `wallTimeMs` is exhausted
-around 16 terms, **eight doublings short of the declared `algebraicTerms` of
-4,096**, and exhausted by a timeout that names nothing. That is also why the
-`wallTimeMs` golden over-case works: it spends 14 s, essentially all of it in
-rendering a 16-term value that took 0.1 ms to compute.
+**Writing a value down is budgeted by work now, not by term count.** The
+dominant cost of an algebraic value was never computing it. `stackDisplay` is a
+continued fraction (SPEC §4.2.3), and expanding one needs enclosure refinement
+that grows with the term count; the budget was 32 partial quotients however
+much each cost. Measured at 2 / 4 / 8 / 16 / 32 terms, the run took 0.1 ms
+throughout while the render took 5 ms / 57 ms / 951 ms / 9.1 s / **147 s** —
+about 12× per doubling, priced by nothing, and caught only by `wallTimeMs`,
+which answers with a timeout that names nothing.
 
-So `numericWork`, `bigintBits` and `algebraicTerms` stay `injectedLimit`, now
-for three separate and understood reasons. `numericWork` is reachable only by
-cheap lanes (slow enough that `wallTimeMs` decides first) or by wide
-multiplication (which crosses `bigintBits` at 4,096 limbs by construction on
-the way). `bigintBits` sits on that same growth path. `algebraicTerms` is
-declared eight doublings past what any program can display. Pricing or
-bounding the display expansion is the next task, and it is the one that would
-move two of the three. `golden/limits.json` carries the measurements,
+`CF_OBSERVATION_WORK_BUDGET` makes it a work budget, charged per
+floor-and-reciprocate step at `terms³ × limbs` before the step runs. The same
+table now reads 4.7 ms / 18.9 ms / 4.9 ms / 5.8 ms / 0.0 ms. `2 SQRT` still
+expands to all 32 quotients — the common case pays nothing — while a value too
+dear to expand renders the `...)` truncation it was always entitled to, or the
+`( ...)` undetermined marker when not even `a0` is affordable. Nothing is lost:
+for an algebraic value the CF is a rendering and `exactTerms` is the value. The
+same budget bounds `best_rational_approximation`, which feeds the
+`approximate: true` rational on the wire through the identical expansion.
+
+**Seven ceilings had `boundary` coverage; nine do now.** With the display cost
+bounded, both of the limits that were shadowed by it became reachable at their
+declared values:
+
+- `numericWork` — a twelve-factor multiquadratic cascade reaches 4,096 terms
+  for ~8.4M units and succeeds; the thirteenth doubling costs 16,799,744 and is
+  refused by name. It had been `injectedLimit` for three rounds and three
+  different reasons: arithmetic outside the scalar path was not charged at all,
+  then the refusal's 27 MB envelope became `responseTooLarge`, then the twelfth
+  doubling could not be reached because rendering 32 terms took 147 s.
+- `bigintBits` — nineteen multiplications by a 4096-digit literal reach 77,824
+  digits and succeed; the twentieth reaches 272,133 bits and is refused by
+  name, in ~16 ms and 4.2 KB of source.
+
+`algebraicTerms` is the one that remains, and the reason is now a single
+sentence: the thirteenth doubling, which is what would first exceed 4,096
+terms, costs 16.8M work units against `numericWork`'s 10,000,000, so
+`numericWork` names itself first. A `max_numeric_work` above ~17M would expose
+it — a decision about the host profile rather than about the meter, so it is
+recorded rather than taken.
+
+**What replaced the `wallTimeMs` over-case is itself a finding.** That case was
+the four-factor product, and it stopped timing out the moment rendering
+stopped costing seconds — it now answers in 18 ms. The best remaining candidate
+is `UNIQUE`, which is quadratic and priced by nothing: 5k / 10k / 20k / 40k
+elements take 97 ms / 388 ms / 1.86 s / 7.0 s, and at the 100,000-element
+materialization ceiling about 48 s. The work meter prices arithmetic; the
+collection Words do real work that no ceiling counts, and that is the next
+thing in this family. `golden/limits.json` carries the measurements,
 `examples/work_meter_calibration` reproduces them, and
-`interpreter/work_meter_calibration_tests.rs` pins the shape of the pricing
-without a wall clock in CI.
+`interpreter/work_meter_calibration_tests.rs` plus
+`types/exact/cf_budget_tests.rs` pin the shapes without a wall clock in CI.
 
 ### P2 — agent evaluation (57%)
 

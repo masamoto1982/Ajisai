@@ -83,9 +83,14 @@ pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
         ValueData::ExactScalar(er) => match er.partial_quotients() {
             Some(qs) => (qs, false), // collapsed to rational
             None => {
-                let qs = er.partial_quotients_bounded(CF_DISPLAY_BUDGET);
-                let truncated = qs.len() == CF_DISPLAY_BUDGET;
-                (qs, truncated)
+                // Reaching this arm means the value did not collapse to a
+                // rational, so its expansion does not terminate and what comes
+                // back is always a prefix — however short. Reading truncation
+                // off the length was right only while the budget was a term
+                // count; now that it is a work budget, a value too expensive to
+                // expand returns fewer quotients and would otherwise have been
+                // rendered as if complete.
+                (er.partial_quotients_bounded(CF_DISPLAY_BUDGET), true)
             }
         },
         // Non-scalar values fall back to the structural rendering.
@@ -302,16 +307,18 @@ fn format_exact_real(er: &ExactReal) -> String {
             None => {
                 let qs = er.partial_quotients_bounded(CF_DISPLAY_BUDGET);
                 if qs.is_empty() {
-                    // The emitter could not determine even a0 within the
-                    // display budget (a rare Gosper transform — e.g. a product
-                    // of equal surds that is exactly rational but whose CF the
-                    // streaming algorithm does not resolve in budget). Render
-                    // the undetermined-CF marker rather than an empty `( )` or
-                    // an approximate `~` rational.
+                    // Not even `a0` was affordable: either a rare Gosper
+                    // transform the streaming algorithm does not resolve, or a
+                    // value carrying so many algebraic terms that one
+                    // floor-and-reciprocate step exceeds the whole expansion
+                    // budget. Render the undetermined-CF marker rather than an
+                    // empty `( )` or an approximate `~` rational — `exactTerms`
+                    // beside it still carries the value exactly.
                     "( ...)".to_string()
                 } else {
-                    let truncated = qs.len() == CF_DISPLAY_BUDGET;
-                    render_cf_nested(&qs, truncated)
+                    // Always a prefix: this arm is only reached for a value
+                    // whose expansion does not terminate.
+                    render_cf_nested(&qs, true)
                 }
             }
         },
