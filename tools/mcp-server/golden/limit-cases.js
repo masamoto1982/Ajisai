@@ -21,6 +21,23 @@ function materialize(probe) {
     if (probe.generator === "digits") {
       return `[ ${"9".repeat(probe.digits)} ]`;
     }
+    if (probe.generator === "algebraicCascade") {
+      // `(√p₁+√q₁)·(√p₂+√q₂)·…` — the term count doubles with every factor,
+      // and multiplying surds is the only way to grow one. `repetitions`
+      // applies the same cascade through a user word N times, which
+      // accumulates work without growing any single value: the difference
+      // between testing a size ceiling and testing the cumulative one.
+      const pairs = [
+        [2, 3], [5, 7], [11, 13], [17, 19], [23, 29], [31, 37],
+        [41, 43], [47, 53], [59, 61], [67, 71], [73, 79], [83, 89],
+      ];
+      const cascade = pairs
+        .slice(0, probe.factors)
+        .map(([left, right], index) => `${left} SQRT ${right} SQRT +${index > 0 ? " *" : ""}`)
+        .join(" ");
+      if (!probe.repetitions) return cascade;
+      return `{ ${cascade} } 'C' DEF${" C".repeat(probe.repetitions)}`;
+    }
     if (probe.generator === "widePowers") {
       // One 4096-digit literal, parsed once into a user word, multiplied in N
       // times. Each product widens the accumulator by the literal's width, so

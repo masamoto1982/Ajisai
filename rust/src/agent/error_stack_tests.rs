@@ -136,4 +136,45 @@ mod error_stack_tests {
             "the success path is deliberately untouched"
         );
     }
+
+    /// Eighteen 256-term algebraic values, refused by the work meter.
+    const REPEATED_CASCADE: &str = "{ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * \
+17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * \
+47 SQRT 53 SQRT + * } 'C' DEF C C C C C C C C C C C C C C C C C C C";
+
+    #[tokio::test]
+    async fn eliding_an_algebraic_value_drops_the_part_that_is_large() {
+        // For an algebraic value the number lives in `semantics.exactTerms`,
+        // while `value` is only the marked approximation — so dropping `value`
+        // and keeping `semantics` dropped the cheap half and kept the expensive
+        // one. Eighteen 256-term values came to 388 KB with seventeen of them
+        // reported as elided.
+        let report = agent_json(REPEATED_CASCADE).await;
+        assert_eq!(report["status"], "error");
+        assert!(
+            compact_len(&report) < 128 * 1024,
+            "an elided algebraic stack must actually shrink; got {} bytes",
+            compact_len(&report)
+        );
+        let elided = report["stack"]
+            .as_array()
+            .expect("an array")
+            .iter()
+            .find(|node| node.get("elided").is_some())
+            .expect("something was elided");
+        assert!(
+            elided["semantics"].get("exactTerms").is_none()
+                && elided["semantics"].get("exactDisplay").is_none(),
+            "the exact form is the value, and an elided slot carries no value"
+        );
+        assert_eq!(
+            elided["elided"]["algebraicTerms"], 256,
+            "how much was there is said in the record instead, so nothing goes \
+             missing silently"
+        );
+        assert_eq!(
+            elided["semantics"]["semanticKind"], "number",
+            "what kind of value it was still survives"
+        );
+    }
 }

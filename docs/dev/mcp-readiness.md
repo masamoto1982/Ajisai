@@ -367,12 +367,46 @@ declared values:
   digits and succeed; the twentieth reaches 272,133 bits and is refused by
   name, in ~16 ms and 4.2 KB of source.
 
-`algebraicTerms` is the one that remains, and the reason is now a single
-sentence: the thirteenth doubling, which is what would first exceed 4,096
-terms, costs 16.8M work units against `numericWork`'s 10,000,000, so
-`numericWork` names itself first. A `max_numeric_work` above ~17M would expose
-it — a decision about the host profile rather than about the meter, so it is
-recorded rather than taken.
+**All ten declared ceilings are live now, and a test says so.**
+`algebraicTerms` was the last one shadowed: the doubling that would first
+exceed 4,096 terms charges 16,799,744 units against a 10,000,000 work budget,
+so `numericWork` answered every time and the term ceiling had never fired in
+its life.
+
+The three are not independent dials. Building a large *exact* value requires
+work — not as an implementation artifact but as what exactness means, since
+every digit and every term was actually computed — so each size ceiling carries
+a minimum work cost, and any profile is subject to
+`work_to_reach(size ceiling) < max_numeric_work`. Violating it declares a
+ceiling nothing can hit: the program is still refused, but under the wrong
+name, and the name is what an agent repairs from — "you exceeded the work
+budget" and "stop multiplying surds like that" are different instructions.
+
+It is satisfied by lowering the size ceiling rather than raising the work
+budget, because the work ceiling bounds a *run* and a size ceiling bounds one
+value *inside* it: a control that catches a specific shape faster and with a
+better name belongs inside the general one, not above it. Raising
+`max_numeric_work` to ~20M would also have worked, at the price of doubling the
+compute an agent may spend per call and eroding the property that a named
+ceiling fires before the anonymous `wallTimeMs` timeout.
+
+`max_algebraic_terms` is now **512**, derived rather than rounded: `exactTerms`
+for 512 terms is 31,745 bytes, 3.0% of `responseBytes`, where 4,096 terms was
+278,110 bytes and 26.5% — a quarter of the whole response for one number that
+renders as `( ...)` and that no computation wants. Nine two-radical factors
+reach 512 terms and succeed; the tenth doubling is refused by name in ~13 ms at
+21% of the work budget, so a re-measure of `ALGEBRAIC_PAIR_UNITS` cannot
+silently change which ceiling answers. `max_bigint_bits` is deliberately *not*
+lowered alongside it: 78,913 digits is a number a program can want, and its 14%
+margin to `numericWork` is a measurement to record, not a defect to fix by
+mutilating a useful limit. Treating the two as a matched pair would have been
+tidiness rather than correctness.
+
+`rust/src/agent/profile_liveness_tests.rs` is the part that matters. It fails
+the build if any declared size ceiling sits past what the work budget can pay
+for, and if the work ceiling stops being reachable once the size ceilings bind.
+Three rounds of external review did not find this, because nothing checked it.
+Now something does.
 
 **A ceiling now reports the number it judges by.**
 `runtimeMetrics.executionSteps` was read from a `RuntimeMetrics` field that no

@@ -419,7 +419,7 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
       compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000 &&
       compute.structuredContent?.mcp?.limits?.materializedElements === 100000 &&
       compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&
-      compute.structuredContent?.mcp?.limits?.algebraicTerms === 4096,
+      compute.structuredContent?.mcp?.limits?.algebraicTerms === 512,
   );
   check(
     "compute names which backend answered",

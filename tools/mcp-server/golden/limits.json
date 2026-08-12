@@ -154,25 +154,29 @@
       "coverage": "boundary",
       "declared": 10000000,
       "under": {
-        "kind": "source",
-        "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * 59 SQRT 61 SQRT + * 67 SQRT 71 SQRT + * 73 SQRT 79 SQRT + * 83 SQRT 89 SQRT + *",
+        "kind": "generatedSource",
+        "generator": "algebraicCascade",
+        "factors": 8,
+        "repetitions": 18,
         "expect": {
           "/status": "ok"
         }
       },
       "over": {
-        "kind": "source",
-        "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * 59 SQRT 61 SQRT + * 67 SQRT 71 SQRT + * 73 SQRT 79 SQRT + * 83 SQRT 89 SQRT + * 97 SQRT 101 SQRT + *",
+        "kind": "generatedSource",
+        "generator": "algebraicCascade",
+        "factors": 8,
+        "repetitions": 19,
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
           "/aiDiagnostic/kind": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "numericWork",
           "/diagnosis/resourceLimit/limit": 10000000,
-          "/diagnosis/resourceLimit/observed": 16799744
+          "/diagnosis/resourceLimit/observed": 10194944
         }
       },
-      "note": "Charged on every rational and algebraic operation in every operand shape, priced as lanes x limb-multiply units, addition included -- Ajisai's `+` is rational addition, three multiplications and a gcd, not anything linear. The pair is a multiquadratic cascade: twelve two-radical factors reach 4,096 terms for about 8.4M units and succeed, the thirteenth doubling costs 16,799,744 and is refused by name. This was `injectedLimit` for three rounds and three different reasons -- arithmetic outside the scalar path was not charged at all, then the refusal's 27MB envelope became `responseTooLarge`, then the twelfth doubling could not be reached because *rendering* 32 terms took 147s. All three are fixed, and the ceiling is observable at its declared value for the first time."
+      "note": "Charged on every rational and algebraic operation in every operand shape, priced as lanes x limb-multiply units, addition included -- Ajisai's `+` is rational addition, three multiplications and a gcd, not anything linear. The pair applies one 256-term cascade eighteen times against nineteen: work accumulates while no single value grows, which is the shape only a *cumulative* ceiling can catch, and keeps this pair from testing `algebraicTerms` or `bigintBits` by accident. It was `injectedLimit` for three rounds and three different reasons -- arithmetic outside the scalar path was not charged at all, then the refusal's 27MB envelope became `responseTooLarge`, then the cascade that reaches it could not be built because *rendering* 32 terms took 147s."
     },
     "bigintBits": {
       "coverage": "boundary",
@@ -203,10 +207,30 @@
       "note": "Bounds the width of any exact arithmetic result, rational as well as algebraic, in every operand shape. Nineteen multiplications by a 4096-digit literal reach 77,824 digits and succeed; the twentieth would reach 272,133 bits and is refused by name, in about 16ms and 4.2KB of source. The literal is parsed once into a user word, so the pair tests this ceiling rather than `numericLiteralDigits` or the O(n^2) decimal parse. Reaching it costs roughly 9.5M work units, just under `numericWork`'s 10,000,000 -- the two sit close together because building an N-limb integer by multiplication costs about N^2/4 limb-operations by construction, so size and work grow together on this path. Keep that in mind before re-pricing either."
     },
     "algebraicTerms": {
-      "coverage": "injectedLimit",
-      "declared": 4096,
-      "rustTest": "rust/src/runtime_limits_tests.rs::algebraic_term_explosion_is_rejected_at_a_low_injected_limit",
-      "note": "Reaching 4096 terms is a twelve-factor multiquadratic cascade, and it now computes and renders in about 26ms -- before the continued-fraction expansion got a work budget it was unreachable by eight doublings, because *displaying* 32 terms took 147s. What still hides this ceiling is the one ordering that remains: the thirteenth doubling, which is what would first exceed 4,096 terms, costs 16,799,744 work units against `numericWork`'s 10,000,000, so `numericWork` names itself first. It is a policy question rather than a defect -- a `max_numeric_work` above ~17,000,000 would expose this ceiling at its declared value -- and it is recorded rather than acted on because raising the work an agent program may do is a decision about the host profile, not about the meter."
+      "coverage": "boundary",
+      "declared": 512,
+      "under": {
+        "kind": "generatedSource",
+        "generator": "algebraicCascade",
+        "factors": 9,
+        "expect": {
+          "/status": "ok"
+        }
+      },
+      "over": {
+        "kind": "generatedSource",
+        "generator": "algebraicCascade",
+        "factors": 10,
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "resourceLimit",
+          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/diagnosis/resourceLimit/resource": "algebraicTerms",
+          "/diagnosis/resourceLimit/limit": 512,
+          "/diagnosis/resourceLimit/observed": 1024
+        }
+      },
+      "note": "Nine two-radical factors reach 512 terms and succeed; the tenth doubling reaches 1,024 and is refused by name, in about 13ms. The declared value was 4,096 and had never fired in its life: the doubling that would first exceed it charges 16,799,744 units against a 10,000,000 work budget, so `numericWork` always answered first. Lowering it rather than raising the work budget keeps the hierarchy right -- a size ceiling bounds one value *inside* a run the work ceiling bounds -- and 512 is derived rather than rounded: `exactTerms` for 512 terms is 31,745 bytes, 3.0% of `responseBytes`, where 4,096 terms was 278,110 bytes and 26.5%, a quarter of the whole response for one number that renders as `( ...)` and that no computation wants. `rust/src/agent/profile_liveness_tests.rs` now fails the build if any size ceiling is declared past what the work budget can pay for."
     }
   }
 }
