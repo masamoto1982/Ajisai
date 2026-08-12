@@ -131,7 +131,29 @@
    ]
   },
   "runtimeMetrics": {
-   "type": "object"
+   "type": "object",
+   "description": "How the runtime went about its work: which cache answered, which fast path fired, how often a plan was rebuilt. Optimizer observations, not budgets — read `resourceUsage` for what a ceiling would judge. `executionSteps` appears in both and carries the same reading; it is kept here for compatibility and belongs in `resourceUsage`."
+  },
+  "resourceUsage": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "What this run spent of the budgets that could have refused it. Every key names a key of `mcp.limits` and carries the same number the ceiling compared against — read from the counter the check reads, not a parallel copy — so an agent can subtract one from the other and know what it has left. Only the accumulating ceilings appear: `bigintBits` and `algebraicTerms` are checked per result and never accumulated, so there is no peak to report and none is invented.",
+   "required": [
+    "executionSteps",
+    "numericWork"
+   ],
+   "properties": {
+    "executionSteps": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Words executed, against the `executionSteps` ceiling."
+    },
+    "numericWork": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Internal arithmetic work charged, in limb-multiply units, against the `numericWork` ceiling."
+    }
+   }
   },
   "error": {
    "$ref": "#/$defs/hostError"

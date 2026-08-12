@@ -1,0 +1,142 @@
+//! A resource an agent plans against has to report the number it is judged by.
+//!
+//! `runtimeMetrics.executionSteps` was read from a `RuntimeMetrics` field that
+//! no code ever wrote, sitting beside the `Interpreter::execution_step_count`
+//! every limit check increments. Two counters for one fact, and the reported
+//! one was the one that was always zero — so a 21,000-step fold and an empty
+//! program described their work identically, and the ceiling an agent was
+//! supposed to budget against could not be observed at all.
+
+#[cfg(test)]
+mod resource_usage_tests {
+    use crate::agent::api::{compute, ComputeOptions, LOCAL_AGENT_RUNTIME_LIMITS};
+    use serde_json::Value as Json;
+
+    async fn agent_json(source: &str) -> Json {
+        compute(
+            source,
+            ComputeOptions {
+                step_limit: None,
+                runtime_limits: Some(LOCAL_AGENT_RUNTIME_LIMITS),
+            },
+        )
+        .await
+        .to_json()
+    }
+
+    fn steps(report: &Json) -> u64 {
+        report["resourceUsage"]["executionSteps"]
+            .as_u64()
+            .expect("executionSteps is a number")
+    }
+
+    #[tokio::test]
+    async fn every_kind_of_execution_reports_the_steps_it_took() {
+        // Each of these runs Words; none of them could ever report having done
+        // so. A recursive word, a fold, and a fold through `MAP` cover the
+        // dispatch routes that reach `execute_word_core`.
+        for source in [
+            "2 3 / 1 3 / +",
+            "{ [ 2 ] * } 'DOUBLE' DEF [ 3 ] DOUBLE",
+            "[ 1 20 ] RANGE 1 { * } FOLD",
+            "[ 1 20 ] RANGE { [ 2 ] * } MAP",
+            "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n50 DOWN",
+        ] {
+            let report = agent_json(source).await;
+            assert!(
+                steps(&report) > 0,
+                "`{source}` executed Words and reported {} steps",
+                steps(&report)
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn more_work_reports_more_steps() {
+        // Not merely non-zero: the number has to move with the work, or it is
+        // a constant dressed up as a measurement.
+        let short = steps(&agent_json("[ 1 10 ] RANGE 1 { * } FOLD").await);
+        let long = steps(&agent_json("[ 1 200 ] RANGE 1 { * } FOLD").await);
+        assert!(
+            long > short * 10,
+            "twenty times the fold must cost far more steps, got {long} against {short}"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_reported_steps_are_the_ones_the_ceiling_judged() {
+        // The point of a single counter: what a refusal says it observed and
+        // what the report says was spent are the same reading.
+        let report = agent_json(
+            "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n200000 DOWN",
+        )
+        .await;
+        assert_eq!(report["status"], "error");
+        let limit = report["diagnosis"]["resourceLimit"]["limit"]
+            .as_u64()
+            .expect("the step ceiling names its limit");
+        assert_eq!(
+            report["diagnosis"]["resourceLimit"]["resource"], "executionSteps",
+            "the step ceiling must be what fired"
+        );
+        assert!(
+            steps(&report) >= limit,
+            "a run refused at {limit} steps must report having reached it, got {}",
+            steps(&report)
+        );
+    }
+
+    #[tokio::test]
+    async fn numeric_work_is_reported_beside_the_steps() {
+        let report = agent_json("[ 1 20 ] RANGE 1 { * } FOLD").await;
+        assert!(
+            report["resourceUsage"]["numericWork"]
+                .as_u64()
+                .expect("numericWork is a number")
+                > 0,
+            "a fold of twenty multiplications charged the meter and must say so"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_program_that_does_nothing_reports_nothing() {
+        // The other half of "the number moves with the work": zero has to be
+        // reachable, or non-zero proves nothing.
+        let report = agent_json("42").await;
+        assert_eq!(report["status"], "ok");
+        assert_eq!(steps(&report), 0, "a bare literal executes no Word");
+        assert_eq!(report["resourceUsage"]["numericWork"], 0);
+    }
+
+    #[tokio::test]
+    async fn every_reported_usage_names_a_declared_ceiling() {
+        // `resourceUsage` earns its separation from `runtimeMetrics` by this
+        // property: each key is a budget the host declares, so an agent can
+        // subtract. A key here with no ceiling behind it would be an optimizer
+        // counter in the wrong object.
+        let report = agent_json("[ 1 20 ] RANGE 1 { * } FOLD").await;
+        let usage = report["resourceUsage"]
+            .as_object()
+            .expect("resourceUsage is an object");
+        for key in usage.keys() {
+            assert!(
+                matches!(key.as_str(), "executionSteps" | "numericWork"),
+                "`{key}` is reported as a resource but names no ceiling the \
+                 interpreter enforces; peaks for `bigintBits` and \
+                 `algebraicTerms` are checked per result and never accumulated, \
+                 so there is nothing to report for them yet"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn the_compatibility_alias_agrees_with_the_resource_it_mirrors() {
+        // `runtimeMetrics.executionSteps` stays where it was — removing a field
+        // is what a schema version is for — and now carries the same reading.
+        let report = agent_json("[ 1 20 ] RANGE 1 { * } FOLD").await;
+        assert_eq!(
+            report["runtimeMetrics"]["executionSteps"], report["resourceUsage"]["executionSteps"],
+            "one counter, however many places report it"
+        );
+    }
+}

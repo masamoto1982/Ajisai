@@ -51,6 +51,7 @@ Both commands emit schema version 1:
   "errorFlowTrace": [],
   "aiDiagnostic": null,
   "runtimeMetrics": {},
+  "resourceUsage": {},
   "contractDecls": null,
   "stackElided": null
 }
@@ -73,6 +74,36 @@ compiles for `wasm32` as well as native, so the WASM one-shot entry point
 adapter's `worker_threads` backend) renders the identical envelope; the
 native CLI (`rust/src/cli`) is a thin file/terminal adapter over the same
 module.
+
+### What the run cost, and what the runtime did
+
+Two objects, because they answer different questions.
+
+`resourceUsage` is **what this run spent of the budgets that could have refused
+it**. Every key names a key of the host's declared limit profile and carries the
+same number the ceiling compared against — read from the counter the check
+reads, not a parallel copy — so an agent can subtract one from the other and
+know what it has left.
+
+```json
+{ "executionSteps": 22, "numericWork": 20 }
+```
+
+Only the accumulating ceilings appear. `bigintBits` and `algebraicTerms` are
+checked per result and never accumulated, so there is no peak to report, and
+none is invented: a field carrying a number nothing measured is exactly the
+defect this object exists to fix.
+
+`runtimeMetrics` is **how the runtime went about it** — which cache answered,
+which fast path fired, how often a plan was rebuilt. Optimizer observations,
+useful for understanding a slowdown and useless for planning against a limit.
+
+`runtimeMetrics.executionSteps` appears in both and carries the same reading. It
+stays there because removing a field is what a schema version is for; it belongs
+in `resourceUsage`. That it sat in the optimizer object is how it went unnoticed
+that nothing ever wrote it: the value was `0` for every program ever run, beside
+the `Interpreter::execution_step_count` that every limit check increments. Two
+counters for one fact, and the reported one was the one that was always zero.
 
 ### An error report that cannot afford its stack
 

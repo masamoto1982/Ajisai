@@ -374,6 +374,27 @@ terms, costs 16.8M work units against `numericWork`'s 10,000,000, so
 it — a decision about the host profile rather than about the meter, so it is
 recorded rather than taken.
 
+**A ceiling now reports the number it judges by.**
+`runtimeMetrics.executionSteps` was read from a `RuntimeMetrics` field that no
+code ever wrote, sitting beside the `Interpreter::execution_step_count` every
+limit check increments. Two counters for one fact, and the reported one was the
+one that was always zero — a 21,000-step fold and an empty program described
+their work identically, and the ceiling an agent was told to plan against could
+not be observed at all. The phantom field is gone and the report reads the
+counter the check reads.
+
+Alongside it, `resourceUsage` separates *what a run spent* from *how the runtime
+went about it*. Every key names a `mcp.limits` key and carries the same number
+the ceiling compared against, so an agent can subtract:
+`{ "executionSteps": 22, "numericWork": 20 }`. Only the accumulating ceilings
+appear — `bigintBits` and `algebraicTerms` are checked per result and never
+accumulated, so there is no peak to report, and none is invented, which is the
+same discipline that made the phantom field a defect rather than a feature.
+`runtimeMetrics.executionSteps` stays as a compatibility alias carrying the
+same reading, because removing a field is what a schema version is for; that it
+lived in the optimizer object beside cache-hit counters is how nobody noticed
+it was constant.
+
 **What replaced the `wallTimeMs` over-case is itself a finding.** That case was
 the four-factor product, and it stopped timing out the moment rendering
 stopped costing seconds — it now answers in 18 ms. The best remaining candidate

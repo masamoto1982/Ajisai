@@ -34,7 +34,14 @@ impl AjisaiInterpreter {
             &num(m.compiled_plan_cache_miss_count),
         );
         set_js_prop(&obj, "tailCallJumpCount", &num(m.tail_call_jump_count));
-        set_js_prop(&obj, "executionSteps", &num(m.execution_steps));
+        // Read from the counter the step ceiling itself reads. It used to come
+        // from a field of `RuntimeMetrics` that nothing ever wrote, so the
+        // Playground's step count was zero for every program it had ever run.
+        set_js_prop(
+            &obj,
+            "executionSteps",
+            &num(self.interpreter.resource_usage().execution_steps),
+        );
 
         obj.into()
     }
