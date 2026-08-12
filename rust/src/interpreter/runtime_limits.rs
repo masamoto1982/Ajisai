@@ -92,21 +92,32 @@ pub fn work_limbs(bits: u64) -> u64 {
 /// representation changes.
 pub const ALGEBRAIC_PAIR_UNITS: u64 = 1_024;
 
-/// The work a binary bignum operation of these two operand widths costs.
+/// The work a binary exact-arithmetic operation of these two operand widths
+/// costs, in limb-multiply units.
 ///
-/// Multiplication and division are limb×limb (schoolbook is what `num-bigint`
-/// uses at these sizes); addition and subtraction are linear in the wider
-/// operand. Deliberately an *upper bound* on the real cost and deliberately
-/// cheap to compute: it is charged before the operation runs, so a runaway
-/// computation is refused rather than measured.
-pub fn binary_numeric_work(left_bits: u64, right_bits: u64, multiplicative: bool) -> u64 {
-    let left = work_limbs(left_bits);
-    let right = work_limbs(right_bits);
-    if multiplicative {
-        left.saturating_mul(right)
-    } else {
-        left.max(right)
-    }
+/// Every schema is priced limb×limb, including addition and subtraction. That
+/// looks wrong for a moment and is the whole point: Ajisai's `+` is *rational*
+/// addition, not integer addition. `a/b + c/d` cross-multiplies into
+/// `(ad + cb)/(bd)` and then normalizes by a gcd — three multiplications and a
+/// Euclid, none of them linear in the wider operand.
+///
+/// Pricing it as linear was not a rounding error. Measured on the reference
+/// container with the literal parsed once (`examples/work_meter_calibration`),
+/// a 4096-digit rational addition takes 745 µs — *twice* what a multiplication
+/// of the same width takes — and used to be charged 213 units against that
+/// multiplication's ~430,000. A meter that prices the cheaper operation four
+/// thousand times higher than the dearer one is not bounding anything; it was
+/// possible to spend the whole `wallTimeMs` budget on additions while the work
+/// meter read a fraction of a percent.
+///
+/// Deliberately an upper bound on the real cost and deliberately cheap to
+/// compute: it is charged before the operation runs, so a runaway computation
+/// is refused rather than measured. The bound is loosest for very wide
+/// multiplications, where `num-bigint` switches to Karatsuba and beats the
+/// limb×limb estimate — over-charging is the safe direction, and
+/// `examples/work_meter_calibration` is where to see by how much.
+pub fn binary_numeric_work(left_bits: u64, right_bits: u64) -> u64 {
+    work_limbs(left_bits).saturating_mul(work_limbs(right_bits))
 }
 
 /// What the work meter needs to know about one operand, independent of the
@@ -156,20 +167,13 @@ impl OperandWork {
 ///
 /// `pair_units` is what one lane pair costs *above* the bignum operation: 1 for
 /// a rational pair, and the term-pair count times [`ALGEBRAIC_PAIR_UNITS`] for
-/// an algebraic one. A scalar operation is `lanes = 1` of this and is charged
-/// exactly what the scalar-only meter charged before, which is what keeps the
-/// existing calibration — and the ordinary-work regression pinned against it —
-/// meaningful across this change.
-pub fn broadcast_numeric_work(
-    left: OperandWork,
-    right: OperandWork,
-    multiplicative: bool,
-    pair_units: u64,
-) -> u64 {
+/// an algebraic one. A scalar operation is `lanes = 1` of this, so shape
+/// changes nothing about the price.
+pub fn broadcast_numeric_work(left: OperandWork, right: OperandWork, pair_units: u64) -> u64 {
     // Broadcast repeats the narrower operand across the wider one, so the
     // wider lane count is how many operations actually run.
     let lanes = left.lanes.max(right.lanes).max(1);
-    binary_numeric_work(left.bits, right.bits, multiplicative)
+    binary_numeric_work(left.bits, right.bits)
         .saturating_mul(pair_units)
         .saturating_mul(lanes)
 }

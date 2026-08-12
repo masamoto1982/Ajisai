@@ -316,23 +316,46 @@ never reasons: `diagnosis`, `aiDiagnostic`, `errorFlowTrace`, `message` and
 `runtimeMetrics` are never touched, and a successful result is never elided at
 all — it *is* its stack, so an oversized one is still honestly refused.
 
-`numericWork`, `bigintBits` and `algebraicTerms` stay `injectedLimit`, and for
-the first time the reason is neither "it is not charged" nor "the diagnosis
-does not survive". It is a **calibration** question. A source reaching
-10,000,000 units exists inside the `sourceBytes` budget —
-`[ 0 99999 ] RANGE` plus 101 additions charges 10,100,000 and is refused by
-name in about 7 KB — but it spends 5.2 s on the reference container's debug
-build, past the 5,000 ms `wallTimeMs`, so `wallTimeMs` would decide the case
-instead. The prices disagree because the meter charges one unit per one-limb
-lane while a boxed per-element operation costs far more wall time than a limb
-multiply: that path runs at roughly 7,700 units/ms against the 57,000–86,000
-the scalar chains were calibrated at. Widening operands instead of multiplying
-lanes swaps which ceiling fires — reaching 10,000,000 units by repeated
-multiplication needs an operand wider than 4,096 limbs by construction, so
-`bigintBits` arrives first. Ordering the three so each is independently
-reachable inside `wallTimeMs` is the open question. `golden/limits.json`
-carries the measurements, and `docs/dev/mcp-reevaluation-2026-08-12.md` carries
-the reproduction.
+**Rational addition is priced as the multiplication it performs.** It was
+priced as linear — `max(limbs)`, the cost of an *integer* add. Ajisai's `+` is
+rational: `a/b + c/d` is `(ad + cb)/(bd)` and then a gcd, three multiplications
+and a Euclid. Measured with the literal parsed once
+(`cargo run --release --example work_meter_calibration`), a 4096-digit addition
+takes **745 µs** against the same-width multiplication's **366 µs** — and used
+to be charged **213 units** against that multiplication's **45,369**. A 4,500×
+pricing error, in the dangerous direction, on the one path with no other bound:
+a chain of wide additions could spend the whole `wallTimeMs` budget while the
+meter read a fraction of a percent. Corrected, that path charges ~66,000
+units/ms instead of ~286, and every schema is now one price at one width.
+
+The remaining spread is between paths bounded by something else: a scalar
+operation on machine words (~940 units/ms) is bounded by `executionSteps`, and
+a dense `i64` lane (~6,400 units/ms) by `maxMaterializedElements` — 10,000,000
+units of lane work is about 1.6 s, inside `wallTimeMs`. What mattered was that
+no *unbounded* path sat far below the rest, and none does now.
+
+**The dominant cost of an algebraic value is not charged by anything, because
+it is not computation.** Building one is nearly free; writing it down is not.
+`stackDisplay` is a continued fraction (SPEC §4.2.3), and expanding one needs
+enclosure refinement that grows with the term count. Measured at 2 / 4 / 8 / 16
+/ 32 terms, the run takes 0.1 ms throughout while the render takes 5 ms / 57 ms
+/ 951 ms / 9.1 s / 147 s — about 12× per doubling. So `wallTimeMs` is exhausted
+around 16 terms, **eight doublings short of the declared `algebraicTerms` of
+4,096**, and exhausted by a timeout that names nothing. That is also why the
+`wallTimeMs` golden over-case works: it spends 14 s, essentially all of it in
+rendering a 16-term value that took 0.1 ms to compute.
+
+So `numericWork`, `bigintBits` and `algebraicTerms` stay `injectedLimit`, now
+for three separate and understood reasons. `numericWork` is reachable only by
+cheap lanes (slow enough that `wallTimeMs` decides first) or by wide
+multiplication (which crosses `bigintBits` at 4,096 limbs by construction on
+the way). `bigintBits` sits on that same growth path. `algebraicTerms` is
+declared eight doublings past what any program can display. Pricing or
+bounding the display expansion is the next task, and it is the one that would
+move two of the three. `golden/limits.json` carries the measurements,
+`examples/work_meter_calibration` reproduces them, and
+`interpreter/work_meter_calibration_tests.rs` pins the shape of the pricing
+without a wall clock in CI.
 
 ### P2 — agent evaluation (57%)
 
