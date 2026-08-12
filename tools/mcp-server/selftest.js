@@ -463,6 +463,44 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
       validateResult(misspelled.structuredContent),
   );
 
+  // An error report's answer is its diagnosis; the stack is residual state.
+  // `[ 0 99999 ] RANGE LENGHT` is a one-character typo holding a
+  // 100,000-element vector, which serialized in full is ~27 MB — so before the
+  // stack was elided the whole result became `responseTooLarge` and the reader
+  // was told its answer was too big rather than that it had misspelled
+  // `LENGTH`. The residue is what gives way, never the reason.
+  const hugeResidue = await client.callTool({
+    name: "compute",
+    arguments: { source: "[ 0 99999 ] RANGE LENGHT" },
+  });
+  const hugeResidueBytes = Buffer.byteLength(
+    JSON.stringify(hugeResidue.structuredContent ?? {}),
+    "utf8",
+  );
+  check(
+    "a diagnosis survives a failing stack too large to send",
+    hugeResidue.isError !== true &&
+      hugeResidue.structuredContent?.status === "error" &&
+      hugeResidue.structuredContent?.diagnosis?.candidates?.[0] === "LENGTH" &&
+      hugeResidueBytes < LIMITS.responseBytes &&
+      validateResult(hugeResidue.structuredContent),
+  );
+  check(
+    "an elided slot keeps its position and says what it dropped",
+    hugeResidue.structuredContent?.stackElided?.reason === "errorStackBudget" &&
+      hugeResidue.structuredContent?.stackElided?.slots?.[0]?.index === 0 &&
+      hugeResidue.structuredContent?.stackElided?.slots?.[0]?.elements === 100000 &&
+      hugeResidue.structuredContent?.stack?.[0]?.type === "vector" &&
+      hugeResidue.structuredContent?.stack?.[0]?.value === null &&
+      hugeResidue.structuredContent?.stack?.length ===
+        hugeResidue.structuredContent?.stackDisplay?.length,
+  );
+  check(
+    "an ordinary error is not elided at all",
+    misspelled.structuredContent?.stackElided === undefined &&
+      !("elided" in (misspelled.structuredContent?.stack?.[0] ?? {})),
+  );
+
   const checked = await client.callTool({
     name: "check",
     arguments: { source: "{ [ 1 ] + } 'INC' DEF" },

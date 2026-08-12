@@ -297,20 +297,42 @@ units its scalar twin costs. A 1,000-lane vector multiply charges 1,000 — four
 orders of magnitude below the ceiling, which is what keeps ordinary array work
 untouched.
 
-What still keeps `numericWork`, `bigintBits` and `algebraicTerms` marked
-`injectedLimit` rather than `boundary` is the response, not the program.
-`numericWork` is reachable from source, as the fold above shows — but the
-refusal serializes the failing stack (a 21,000-element vector and a partial
-product of 81,000 digits) into a 5.7 MB envelope, which the `responseBytes`
-ceiling of 1 MiB converts into `responseTooLarge`. The engine names
-`numericWork`; the agent is told the answer was too big. A boundary case needs
-the diagnosis to survive the wire, so an elision rule for failing stacks is the
-prerequisite for reclassifying either limit. A second ordering problem sits
-behind that: with width-based pricing the twelve doublings needed to reach 4096
-algebraic terms are charged ~16,000,000 units, so `numericWork` at 10,000,000
-fires first — the three ceilings have to be ordered so each is independently
-observable. `golden/limits.json` carries the measurements, and
-`docs/dev/mcp-reevaluation-2026-08-12.md` carries the reproduction.
+**A refusal now reports its resource rather than its residue.** It did not.
+The fold above is refused by name, but the stack at that moment held a
+21,000-element vector and an 81,649-digit partial product, so the envelope came
+to 5,773,682 bytes — of which 5,571,973 were the stack — and the 1 MiB
+`responseBytes` ceiling turned the whole thing into `responseTooLarge`. The
+engine said `numericWork`; the agent was told its *answer* was too big, which
+points it at shrinking output when the fix is to compute less.
+
+An error report's answer is its diagnosis; the stack is residual state, and
+`agent::error_stack` is where that distinction is spent. On `status: "error"`
+only, slots whose values do not fit a 64 KiB budget are replaced in place —
+`value` becomes `null`, `type`/`displayHint`/`semantics` still say what the
+value was, and an `elided` record says what was dropped, repeated at the
+envelope level as `stackElided`. The fold answers in 7,470 bytes with
+`diagnosis.resourceLimit.resource: "numericWork"` intact. Values give way,
+never reasons: `diagnosis`, `aiDiagnostic`, `errorFlowTrace`, `message` and
+`runtimeMetrics` are never touched, and a successful result is never elided at
+all — it *is* its stack, so an oversized one is still honestly refused.
+
+`numericWork`, `bigintBits` and `algebraicTerms` stay `injectedLimit`, and for
+the first time the reason is neither "it is not charged" nor "the diagnosis
+does not survive". It is a **calibration** question. A source reaching
+10,000,000 units exists inside the `sourceBytes` budget —
+`[ 0 99999 ] RANGE` plus 101 additions charges 10,100,000 and is refused by
+name in about 7 KB — but it spends 5.2 s on the reference container's debug
+build, past the 5,000 ms `wallTimeMs`, so `wallTimeMs` would decide the case
+instead. The prices disagree because the meter charges one unit per one-limb
+lane while a boxed per-element operation costs far more wall time than a limb
+multiply: that path runs at roughly 7,700 units/ms against the 57,000–86,000
+the scalar chains were calibrated at. Widening operands instead of multiplying
+lanes swaps which ceiling fires — reaching 10,000,000 units by repeated
+multiplication needs an operand wider than 4,096 limbs by construction, so
+`bigintBits` arrives first. Ordering the three so each is independently
+reachable inside `wallTimeMs` is the open question. `golden/limits.json`
+carries the measurements, and `docs/dev/mcp-reevaluation-2026-08-12.md` carries
+the reproduction.
 
 ### P2 — agent evaluation (57%)
 

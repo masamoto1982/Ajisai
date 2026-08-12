@@ -51,7 +51,8 @@ Both commands emit schema version 1:
   "errorFlowTrace": [],
   "aiDiagnostic": null,
   "runtimeMetrics": {},
-  "contractDecls": null
+  "contractDecls": null,
+  "stackElided": null
 }
 ```
 
@@ -72,6 +73,63 @@ compiles for `wasm32` as well as native, so the WASM one-shot entry point
 adapter's `worker_threads` backend) renders the identical envelope; the
 native CLI (`rust/src/cli`) is a thin file/terminal adapter over the same
 module.
+
+### An error report that cannot afford its stack
+
+An error report carries two different things. The **diagnosis** is the answer:
+why the program stopped and what to do about it. The **stack** is residual
+state — whatever the program happened to be holding at the time. When the two
+together exceed what a host will accept, sending the residue and losing the
+answer is the wrong trade.
+
+So on `status: "error"` only, slots whose values do not fit a byte budget are
+replaced in place: `value` becomes `null`, `type`, `displayHint` and
+`semantics` still say what the value was, and an `elided` record says what was
+dropped.
+
+```json
+{
+  "type": "vector",
+  "value": null,
+  "displayHint": "unassigned",
+  "semantics": { "shape": "vector", "semanticKind": "collection" },
+  "elided": { "reason": "errorStackBudget", "approxBytes": 27178011, "elements": 100000 }
+}
+```
+
+The envelope repeats it at the top level as `stackElided`, so one field answers
+"was anything dropped":
+
+```json
+{
+  "reason": "errorStackBudget",
+  "budgetBytes": 65536,
+  "slots": [ { "index": 0, "approxBytes": 27178011, "elements": 100000 } ]
+}
+```
+
+Four rules make this safe to rely on.
+
+- **Errors only.** A successful result *is* its stack; truncating it would
+  change the answer. An oversized success stays oversized, and a host that
+  cannot deliver it says so (`responseTooLarge`) rather than quietly shrinking
+  it.
+- **Values are dropped, never reasons.** `diagnosis`, `aiDiagnostic`,
+  `errorFlowTrace`, `message` and `runtimeMetrics` are never elided.
+- **Slots keep their index.** A dropped slot is replaced, never removed, so
+  `stack` and `stackDisplay` stay the same length as the real stack and a
+  diagnosis that points at stack depth still points at the same thing.
+  `stackDisplay` carries a matching `<elided …>` marker, so a text-only reader
+  learns the same facts.
+- **An ordinary error is untouched.** The budget is 64 KiB — one sixteenth of
+  the MCP adapter's 1 MiB `responseBytes` ceiling — and an ordinary diagnosis
+  is roughly 15 KiB in total, so `stackElided` is absent and nothing changes
+  byte for byte. It appears as `null` here and is omitted entirely from the MCP
+  envelope, which drops null top-level fields.
+
+Distinguishing an elided slot from a genuine `NIL`: a `NIL` has
+`type: "nil"` and carries `semantics.absence`; an elided slot keeps the real
+domain in `type` and carries `elided`.
 
 ### Stack value nodes
 

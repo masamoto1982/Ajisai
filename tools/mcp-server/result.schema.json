@@ -1,344 +1,694 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "ajisai://schema/result",
-  "title": "Ajisai MCP result",
-  "description": "One envelope for every Ajisai MCP tool result. `status` separates the three outcomes the boundary keeps distinct: a successful run (which includes a reason-carrying NIL), an Ajisai language error carrying its diagnosis, and a failure of the host rather than of the program. An optional field carrying no value is omitted rather than sent as `null`, so `diagnosis`, `aiDiagnostic`, `message` and `contractDecls` are simply absent from a plain success — test for presence, not for `null`. The text content block of a tool result carries this same object serialized, so a text-only client receives the whole result and not a summary of it.",
-  "type": "object",
-  "additionalProperties": true,
-  "required": ["schemaVersion", "status"],
-  "allOf": [
-    {
-      "if": {
-        "properties": { "status": { "const": "hostError" } },
-        "required": ["status"]
-      },
-      "then": { "required": ["error"] },
-      "else": { "required": ["mcp"] }
-    }
-  ],
-  "properties": {
-    "schemaVersion": { "type": "integer", "minimum": 1 },
-    "status": { "type": "string", "enum": ["ok", "error", "hostError"] },
-    "stack": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/protocolNode" }
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "ajisai://schema/result",
+ "title": "Ajisai MCP result",
+ "description": "One envelope for every Ajisai MCP tool result. `status` separates the three outcomes the boundary keeps distinct: a successful run (which includes a reason-carrying NIL), an Ajisai language error carrying its diagnosis, and a failure of the host rather than of the program. An optional field carrying no value is omitted rather than sent as `null`, so `diagnosis`, `aiDiagnostic`, `message` and `contractDecls` are simply absent from a plain success — test for presence, not for `null`. The text content block of a tool result carries this same object serialized, so a text-only client receives the whole result and not a summary of it.",
+ "type": "object",
+ "additionalProperties": true,
+ "required": [
+  "schemaVersion",
+  "status"
+ ],
+ "allOf": [
+  {
+   "if": {
+    "properties": {
+     "status": {
+      "const": "hostError"
+     }
     },
-    "stackDisplay": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "output": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "contracts": {
-      "type": "array",
-      "items": { "type": "object" }
-    },
-    "diagnosis": {
-      "oneOf": [{ "$ref": "#/$defs/diagnosis" }, { "type": "null" }]
-    },
-    "errorFlowTrace": { "type": "array" },
-    "aiDiagnostic": { "type": ["object", "null"] },
-    "runtimeMetrics": { "type": "object" },
-    "error": { "$ref": "#/$defs/hostError" },
-    "registrySchemaVersion": {
-      "type": "integer",
-      "minimum": 1,
-      "description": "Schema version of the packaged Word registry (`word_contract` only). Distinct from the envelope's own `schemaVersion`."
-    },
-    "matches": {
-      "type": "array",
-      "description": "Canonical registry entries matching the requested Word or alias (`word_contract` only).",
-      "items": { "$ref": "#/$defs/wordContract" }
-    },
-    "suggestions": {
-      "type": "array",
-      "description": "Registry names closest to an unmatched request, best match first (`word_contract` only). Empty whenever `matches` is non-empty.",
-      "items": { "type": "string" }
-    },
-    "mcp": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["serverVersion", "engineVersion", "registryDigest", "backend", "limits"],
-      "properties": {
-        "serverVersion": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Version of this MCP adapter — a separate component from the Ajisai engine below it. A stored result names both, so a missing field can be told apart from a field this adapter version never sent."
-        },
-        "engineVersion": { "type": "string", "minLength": 1 },
-        "registryDigest": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
-        },
-        "backend": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind"],
-          "description": "Which of the two interchangeable backends answered. They are semantically equivalent — `backend/parity-test.js` asserts it case by case — so this identifies the execution path for auditing, not a difference in meaning.",
-          "properties": {
-            "kind": {
-              "type": ["string", "null"],
-              "enum": ["nativeCli", "wasmWorker", null]
-            }
-          }
-        },
-        "limits": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "The host profile applied to this call. Every entry is pinned by a case in `golden/limits.json`.",
-          "required": [
-            "sourceBytes",
-            "wallTimeMs",
-            "responseBytes",
-            "executionSteps",
-            "concurrentExecutions",
-            "materializedElements",
-            "numericLiteralDigits",
-            "numericWork",
-            "bigintBits",
-            "algebraicTerms"
-          ],
-          "properties": {
-            "sourceBytes": { "type": "integer", "minimum": 1 },
-            "wallTimeMs": { "type": "integer", "minimum": 1 },
-            "responseBytes": { "type": "integer", "minimum": 1 },
-            "executionSteps": { "type": "integer", "minimum": 1 },
-            "concurrentExecutions": { "type": "integer", "minimum": 1 },
-            "materializedElements": { "type": "integer", "minimum": 1 },
-            "numericLiteralDigits": { "type": "integer", "minimum": 1 },
-            "numericWork": { "type": "integer", "minimum": 1 },
-            "bigintBits": { "type": "integer", "minimum": 1 },
-            "algebraicTerms": { "type": "integer", "minimum": 1 }
-          }
-        }
-      }
-    }
+    "required": [
+     "status"
+    ]
+   },
+   "then": {
+    "required": [
+     "error"
+    ]
+   },
+   "else": {
+    "required": [
+     "mcp"
+    ]
+   }
+  }
+ ],
+ "properties": {
+  "schemaVersion": {
+   "type": "integer",
+   "minimum": 1
   },
-  "$defs": {
-    "hostError": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["code", "message", "retryable"],
-      "description": "A failure of the host, never of the Ajisai program. `code` is the stable identifier to branch on; `message` is safe to show a model and deliberately carries no host paths, environment-variable names or spawn detail.",
-      "properties": {
-        "code": {
-          "type": "string",
-          "enum": [
-            "invalidRequest",
-            "unknownTool",
-            "sourceTooLarge",
-            "backendUnavailable",
-            "capacityExhausted",
-            "timeout",
-            "responseTooLarge",
-            "malformedBackendResponse",
-            "backendFailure",
-            "registryUnavailable"
-          ]
-        },
-        "message": { "type": "string" },
-        "retryable": { "type": "boolean" },
-        "retryAfterMs": { "type": "integer", "minimum": 0 },
-        "limit": {
-          "type": "string",
-          "description": "The declared `mcp.limits` entry this failure is about, when it is about one.",
-          "enum": ["sourceBytes", "wallTimeMs", "responseBytes", "concurrentExecutions"]
-        }
-      }
+  "status": {
+   "type": "string",
+   "enum": [
+    "ok",
+    "error",
+    "hostError"
+   ]
+  },
+  "stack": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/protocolNode"
+   }
+  },
+  "stackDisplay": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "stackElided": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "description": "Present on an `error` whose failing stack was too large to send in full. An error report's answer is its diagnosis; the stack is residual state, so the values of the slots that do not fit a byte budget are dropped and this record says which. Absent whenever nothing was dropped, which is every success and every ordinary error. A successful result is never elided: it *is* its stack, and an oversized one is reported as `responseTooLarge` instead.",
+   "properties": {
+    "reason": {
+     "type": "string",
+     "const": "errorStackBudget"
     },
-    "localizedText": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["en", "ja"],
-      "properties": {
-        "en": { "type": "string" },
-        "ja": { "type": "string" }
-      }
+    "budgetBytes": {
+     "type": "integer",
+     "minimum": 1
     },
-    "debugCheck": {
+    "slots": {
+     "type": "array",
+     "description": "One entry per dropped slot, in stack order.",
+     "items": {
       "type": "object",
-      "additionalProperties": true,
-      "required": ["code", "title", "detail"],
-      "description": "One repair step. Match on `code`; `title` and `detail` are display text and may be reworded or gain locales.",
       "properties": {
-        "code": { "type": "string", "minLength": 1 },
-        "title": { "$ref": "#/$defs/localizedText" },
-        "detail": { "$ref": "#/$defs/localizedText" }
+       "index": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Position in `stack` and `stackDisplay`. Slots keep their index: a dropped slot is replaced in place, never removed, so a diagnosis that points at stack depth still points at the same thing."
+       },
+       "approxBytes": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Roughly what the slot would have serialized to, counted without building the text."
+       },
+       "elements": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Direct children, for a collection. Absent for a leaf."
+       }
       }
+     }
+    }
+   }
+  },
+  "output": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "contracts": {
+   "type": "array",
+   "items": {
+    "type": "object"
+   }
+  },
+  "diagnosis": {
+   "oneOf": [
+    {
+     "$ref": "#/$defs/diagnosis"
     },
-    "resourceLimitFacts": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": ["resource", "limit"],
-      "description": "Which declared ceiling a resource-limit failure crossed. `resource` names an entry of `mcp.limits`.",
-      "properties": {
-        "resource": {
-          "type": "string",
-          "enum": [
-            "sourceBytes",
-            "numericLiteralDigits",
-            "numericWork",
-            "bigintBits",
-            "algebraicTerms",
-            "executionSteps"
-          ]
-        },
-        "limit": { "type": "integer", "minimum": 0 },
-        "observed": { "type": ["integer", "null"], "minimum": 0 }
+    {
+     "type": "null"
+    }
+   ]
+  },
+  "errorFlowTrace": {
+   "type": "array"
+  },
+  "aiDiagnostic": {
+   "type": [
+    "object",
+    "null"
+   ]
+  },
+  "runtimeMetrics": {
+   "type": "object"
+  },
+  "error": {
+   "$ref": "#/$defs/hostError"
+  },
+  "registrySchemaVersion": {
+   "type": "integer",
+   "minimum": 1,
+   "description": "Schema version of the packaged Word registry (`word_contract` only). Distinct from the envelope's own `schemaVersion`."
+  },
+  "matches": {
+   "type": "array",
+   "description": "Canonical registry entries matching the requested Word or alias (`word_contract` only).",
+   "items": {
+    "$ref": "#/$defs/wordContract"
+   }
+  },
+  "suggestions": {
+   "type": "array",
+   "description": "Registry names closest to an unmatched request, best match first (`word_contract` only). Empty whenever `matches` is non-empty.",
+   "items": {
+    "type": "string"
+   }
+  },
+  "mcp": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "serverVersion",
+    "engineVersion",
+    "registryDigest",
+    "backend",
+    "limits"
+   ],
+   "properties": {
+    "serverVersion": {
+     "type": "string",
+     "minLength": 1,
+     "description": "Version of this MCP adapter — a separate component from the Ajisai engine below it. A stored result names both, so a missing field can be told apart from a field this adapter version never sent."
+    },
+    "engineVersion": {
+     "type": "string",
+     "minLength": 1
+    },
+    "registryDigest": {
+     "type": "string",
+     "pattern": "^[a-f0-9]{64}$"
+    },
+    "backend": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "kind"
+     ],
+     "description": "Which of the two interchangeable backends answered. They are semantically equivalent — `backend/parity-test.js` asserts it case by case — so this identifies the execution path for auditing, not a difference in meaning.",
+     "properties": {
+      "kind": {
+       "type": [
+        "string",
+        "null"
+       ],
+       "enum": [
+        "nativeCli",
+        "wasmWorker",
+        null
+       ]
       }
+     }
     },
-    "diagnosis": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "when": { "type": "string" },
-        "why": { "type": "string" },
-        "summary": { "type": "string" },
-        "where": { "type": "object" },
-        "evidence": { "type": "array", "items": { "type": "string" } },
-        "nextChecks": { "type": "array", "items": { "$ref": "#/$defs/debugCheck" } },
-        "agreedPrefix": { "type": ["integer", "null"] },
-        "candidates": {
-          "type": "array",
-          "description": "Known Words closest to an unrecognized name, best match first. Empty for every other cause class.",
-          "items": { "type": "string" }
-        },
-        "resourceLimit": {
-          "oneOf": [{ "$ref": "#/$defs/resourceLimitFacts" }, { "type": "null" }]
-        }
+    "limits": {
+     "type": "object",
+     "additionalProperties": false,
+     "description": "The host profile applied to this call. Every entry is pinned by a case in `golden/limits.json`.",
+     "required": [
+      "sourceBytes",
+      "wallTimeMs",
+      "responseBytes",
+      "executionSteps",
+      "concurrentExecutions",
+      "materializedElements",
+      "numericLiteralDigits",
+      "numericWork",
+      "bigintBits",
+      "algebraicTerms"
+     ],
+     "properties": {
+      "sourceBytes": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "wallTimeMs": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "responseBytes": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "executionSteps": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "concurrentExecutions": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "materializedElements": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "numericLiteralDigits": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "numericWork": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "bigintBits": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "algebraicTerms": {
+       "type": "integer",
+       "minimum": 1
       }
+     }
+    }
+   }
+  }
+ },
+ "$defs": {
+  "hostError": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "code",
+    "message",
+    "retryable"
+   ],
+   "description": "A failure of the host, never of the Ajisai program. `code` is the stable identifier to branch on; `message` is safe to show a model and deliberately carries no host paths, environment-variable names or spawn detail.",
+   "properties": {
+    "code": {
+     "type": "string",
+     "enum": [
+      "invalidRequest",
+      "unknownTool",
+      "sourceTooLarge",
+      "backendUnavailable",
+      "capacityExhausted",
+      "timeout",
+      "responseTooLarge",
+      "malformedBackendResponse",
+      "backendFailure",
+      "registryUnavailable"
+     ]
     },
-    "wordContract": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "name",
-        "aliases",
-        "family",
-        "stack",
-        "consumption",
-        "nilPolicy",
-        "projection",
-        "purity",
-        "determinism",
-        "category",
-        "documentation"
-      ],
-      "description": "One canonical entry of the generated `spec/words.json` registry, reproduced verbatim.",
-      "properties": {
-        "name": { "type": "string", "minLength": 1 },
-        "aliases": { "type": "array", "items": { "type": "string" } },
-        "family": { "type": "string" },
-        "category": { "type": "string" },
-        "vocabularyTier": { "type": "string" },
-        "purity": { "type": "string" },
-        "determinism": { "type": "string" },
-        "partiality": { "type": "string" },
-        "capability": { "type": "string" },
-        "hostedEffect": { "type": "string" },
-        "interpretationRole": { "type": "string" },
-        "consumption": { "type": "string" },
-        "nilPolicy": { "type": "string" },
-        "executorKey": { "type": "string" },
-        "effects": { "type": "array", "items": { "type": "string" } },
-        "clauses": { "type": "array", "items": { "type": "string" } },
-        "errorWhen": { "type": "array" },
-        "stack": {
-          "type": "object",
-          "additionalProperties": true,
-          "required": ["inputs", "outputs"],
-          "properties": {
-            "inputs": { "type": "integer", "minimum": 0 },
-            "outputs": { "type": "integer", "minimum": 0 }
-          }
-        },
-        "projection": {
-          "type": "object",
-          "additionalProperties": true,
-          "required": ["when"],
-          "properties": {
-            "when": { "type": "string" },
-            "reason": { "type": ["string", "null"] }
-          }
-        },
-        "documentation": {
-          "type": "object",
-          "additionalProperties": true,
-          "required": ["summary"],
-          "properties": {
-            "summary": { "type": "string" },
-            "hover": { "type": "string" },
-            "lookup": { "type": "string" },
-            "syntax": { "type": "string" },
-            "role": { "type": "string" },
-            "stackEffect": { "type": "string" }
-          }
-        }
+    "message": {
+     "type": "string"
+    },
+    "retryable": {
+     "type": "boolean"
+    },
+    "retryAfterMs": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "limit": {
+     "type": "string",
+     "description": "The declared `mcp.limits` entry this failure is about, when it is about one.",
+     "enum": [
+      "sourceBytes",
+      "wallTimeMs",
+      "responseBytes",
+      "concurrentExecutions"
+     ]
+    }
+   }
+  },
+  "localizedText": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "en",
+    "ja"
+   ],
+   "properties": {
+    "en": {
+     "type": "string"
+    },
+    "ja": {
+     "type": "string"
+    }
+   }
+  },
+  "debugCheck": {
+   "type": "object",
+   "additionalProperties": true,
+   "required": [
+    "code",
+    "title",
+    "detail"
+   ],
+   "description": "One repair step. Match on `code`; `title` and `detail` are display text and may be reworded or gain locales.",
+   "properties": {
+    "code": {
+     "type": "string",
+     "minLength": 1
+    },
+    "title": {
+     "$ref": "#/$defs/localizedText"
+    },
+    "detail": {
+     "$ref": "#/$defs/localizedText"
+    }
+   }
+  },
+  "resourceLimitFacts": {
+   "type": "object",
+   "additionalProperties": true,
+   "required": [
+    "resource",
+    "limit"
+   ],
+   "description": "Which declared ceiling a resource-limit failure crossed. `resource` names an entry of `mcp.limits`.",
+   "properties": {
+    "resource": {
+     "type": "string",
+     "enum": [
+      "sourceBytes",
+      "numericLiteralDigits",
+      "numericWork",
+      "bigintBits",
+      "algebraicTerms",
+      "executionSteps"
+     ]
+    },
+    "limit": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "observed": {
+     "type": [
+      "integer",
+      "null"
+     ],
+     "minimum": 0
+    }
+   }
+  },
+  "diagnosis": {
+   "type": "object",
+   "additionalProperties": true,
+   "properties": {
+    "when": {
+     "type": "string"
+    },
+    "why": {
+     "type": "string"
+    },
+    "summary": {
+     "type": "string"
+    },
+    "where": {
+     "type": "object"
+    },
+    "evidence": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "nextChecks": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/debugCheck"
+     }
+    },
+    "agreedPrefix": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "candidates": {
+     "type": "array",
+     "description": "Known Words closest to an unrecognized name, best match first. Empty for every other cause class.",
+     "items": {
+      "type": "string"
+     }
+    },
+    "resourceLimit": {
+     "oneOf": [
+      {
+       "$ref": "#/$defs/resourceLimitFacts"
+      },
+      {
+       "type": "null"
       }
+     ]
+    }
+   }
+  },
+  "wordContract": {
+   "type": "object",
+   "additionalProperties": true,
+   "required": [
+    "name",
+    "aliases",
+    "family",
+    "stack",
+    "consumption",
+    "nilPolicy",
+    "projection",
+    "purity",
+    "determinism",
+    "category",
+    "documentation"
+   ],
+   "description": "One canonical entry of the generated `spec/words.json` registry, reproduced verbatim.",
+   "properties": {
+    "name": {
+     "type": "string",
+     "minLength": 1
     },
-    "integerString": {
-      "type": "string",
-      "pattern": "^-?(0|[1-9][0-9]*)$"
+    "aliases": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
     },
-    "rational": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["numerator", "denominator"],
-      "properties": {
-        "numerator": { "$ref": "#/$defs/integerString" },
-        "denominator": {
-          "type": "string",
-          "pattern": "^[1-9][0-9]*$"
-        }
+    "family": {
+     "type": "string"
+    },
+    "category": {
+     "type": "string"
+    },
+    "vocabularyTier": {
+     "type": "string"
+    },
+    "purity": {
+     "type": "string"
+    },
+    "determinism": {
+     "type": "string"
+    },
+    "partiality": {
+     "type": "string"
+    },
+    "capability": {
+     "type": "string"
+    },
+    "hostedEffect": {
+     "type": "string"
+    },
+    "interpretationRole": {
+     "type": "string"
+    },
+    "consumption": {
+     "type": "string"
+    },
+    "nilPolicy": {
+     "type": "string"
+    },
+    "executorKey": {
+     "type": "string"
+    },
+    "effects": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "clauses": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "errorWhen": {
+     "type": "array"
+    },
+    "stack": {
+     "type": "object",
+     "additionalProperties": true,
+     "required": [
+      "inputs",
+      "outputs"
+     ],
+     "properties": {
+      "inputs": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "outputs": {
+       "type": "integer",
+       "minimum": 0
       }
+     }
     },
-    "exactTerm": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["numerator", "denominator", "radicand"],
-      "properties": {
-        "numerator": { "$ref": "#/$defs/integerString" },
-        "denominator": {
-          "type": "string",
-          "pattern": "^[1-9][0-9]*$"
-        },
-        "radicand": {
-          "type": "string",
-          "pattern": "^[1-9][0-9]*$"
-        }
+    "projection": {
+     "type": "object",
+     "additionalProperties": true,
+     "required": [
+      "when"
+     ],
+     "properties": {
+      "when": {
+       "type": "string"
+      },
+      "reason": {
+       "type": [
+        "string",
+        "null"
+       ]
       }
+     }
+    },
+    "documentation": {
+     "type": "object",
+     "additionalProperties": true,
+     "required": [
+      "summary"
+     ],
+     "properties": {
+      "summary": {
+       "type": "string"
+      },
+      "hover": {
+       "type": "string"
+      },
+      "lookup": {
+       "type": "string"
+      },
+      "syntax": {
+       "type": "string"
+      },
+      "role": {
+       "type": "string"
+      },
+      "stackEffect": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  },
+  "integerString": {
+   "type": "string",
+   "pattern": "^-?(0|[1-9][0-9]*)$"
+  },
+  "rational": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "numerator",
+    "denominator"
+   ],
+   "properties": {
+    "numerator": {
+     "$ref": "#/$defs/integerString"
+    },
+    "denominator": {
+     "type": "string",
+     "pattern": "^[1-9][0-9]*$"
+    }
+   }
+  },
+  "exactTerm": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "numerator",
+    "denominator",
+    "radicand"
+   ],
+   "properties": {
+    "numerator": {
+     "$ref": "#/$defs/integerString"
+    },
+    "denominator": {
+     "type": "string",
+     "pattern": "^[1-9][0-9]*$"
+    },
+    "radicand": {
+     "type": "string",
+     "pattern": "^[1-9][0-9]*$"
+    }
+   }
+  },
+  "semantics": {
+   "type": "object",
+   "additionalProperties": true,
+   "description": "Value metadata. For an algebraic irrational, `exactTerms` is the value and `exactDisplay` writes those same terms short; the node's own `value` is a rational approximation (`approximate: true`) and `stackDisplay` is a continued fraction truncated at a display budget.",
+   "dependentRequired": {
+    "exactTerms": [
+     "exactDisplay"
+    ],
+    "exactDisplay": [
+     "exactTerms"
+    ]
+   },
+   "properties": {
+    "approximate": {
+     "const": true
+    },
+    "exactDisplay": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The normal form as one short string: `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)`. A display — read it, compute with `exactTerms`. It renders the stored terms faithfully, so two values `=` decides are equal may still be written differently (`sqrt(8)` and `2/1*sqrt(2)`)."
+    },
+    "exactTerms": {
+     "type": "array",
+     "minItems": 1,
+     "items": {
+      "$ref": "#/$defs/exactTerm"
+     }
+    }
+   }
+  },
+  "protocolNode": {
+   "type": "object",
+   "additionalProperties": true,
+   "required": [
+    "type",
+    "value",
+    "displayHint"
+   ],
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "value": {},
+    "displayHint": {
+     "type": "string"
     },
     "semantics": {
-      "type": "object",
-      "additionalProperties": true,
-      "description": "Value metadata. For an algebraic irrational, `exactTerms` is the value and `exactDisplay` writes those same terms short; the node's own `value` is a rational approximation (`approximate: true`) and `stackDisplay` is a continued fraction truncated at a display budget.",
-      "dependentRequired": { "exactTerms": ["exactDisplay"], "exactDisplay": ["exactTerms"] },
-      "properties": {
-        "approximate": { "const": true },
-        "exactDisplay": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The normal form as one short string: `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)`. A display — read it, compute with `exactTerms`. It renders the stored terms faithfully, so two values `=` decides are equal may still be written differently (`sqrt(8)` and `2/1*sqrt(2)`)."
-        },
-        "exactTerms": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/exactTerm" }
-        }
-      }
+     "$ref": "#/$defs/semantics"
     },
-    "protocolNode": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": ["type", "value", "displayHint"],
-      "properties": {
-        "type": { "type": "string" },
-        "value": {},
-        "displayHint": { "type": "string" },
-        "semantics": { "$ref": "#/$defs/semantics" }
+    "elided": {
+     "type": "object",
+     "description": "Present when this slot's value was dropped to keep an error report deliverable. `type`, `displayHint` and `semantics` still describe what the value was; `value` is `null`. Tell this apart from a genuine `NIL` by `type`, which names the real domain, and by this field's presence.",
+     "properties": {
+      "reason": {
+       "type": "string",
+       "const": "errorStackBudget"
+      },
+      "approxBytes": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "elements": {
+       "type": "integer",
+       "minimum": 0
       }
+     }
     }
+   }
   }
+ }
 }

@@ -43,6 +43,10 @@ pub(crate) struct Report {
     /// field. Prebuilt JSON so `report` stays decoupled from the declaration
     /// types.
     pub contract_decls: Option<Json>,
+    /// Which stack slots an error report dropped the values of, and why
+    /// (`agent::error_stack`). `None` whenever nothing was dropped, which is
+    /// every success and every ordinary error.
+    pub stack_elided: Option<Json>,
 }
 
 impl Report {
@@ -63,6 +67,7 @@ impl Report {
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
             "contractDecls": self.contract_decls,
+            "stackElided": self.stack_elided,
         })
     }
 }
@@ -189,7 +194,7 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
 
 /// JSON rendering of a `ProtocolNode` — the same shape `protocol_to_js`
 /// produces for the GUI: `{ type, value, displayHint, semantics? }`.
-fn protocol_node_json(node: &ProtocolNode) -> Json {
+pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
     let mut obj = Map::new();
     obj.insert(
         "displayHint".into(),
@@ -218,7 +223,7 @@ fn protocol_node_json(node: &ProtocolNode) -> Json {
 
 /// JSON rendering of the per-value `semantics` block — mirrors
 /// `value_semantics_to_js` at the WASM boundary.
-fn semantics_json(value: &Value, effective: Interpretation) -> Json {
+pub(super) fn semantics_json(value: &Value, effective: Interpretation) -> Json {
     let mut obj = Map::new();
     obj.insert(
         "semanticKind".into(),

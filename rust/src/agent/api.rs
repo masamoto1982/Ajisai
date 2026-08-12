@@ -219,6 +219,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
             error_flow_trace: Vec::new(),
             runtime_metrics: crate::interpreter::RuntimeMetrics::default(),
             contract_decls: contract_decls.as_ref().map(|result| result.to_json()),
+            stack_elided: None,
         },
     }
 }
