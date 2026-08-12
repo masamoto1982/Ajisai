@@ -68,11 +68,11 @@ pub(crate) fn charge_binary_schema(
     right: OperandWork,
 ) -> Result<()> {
     let algebraic = left.terms > 0 || right.terms > 0;
-    let (multiplicative, pair_units) = if algebraic {
+    let pair_units = if algebraic {
         // A term pair is not one bignum multiply — it is a coefficient product,
         // a radicand product, a square-free decomposition against a growing
-        // basis and an ordered-map insert — so every schema's inner bignum work
-        // is priced as a product and carries the measured constant.
+        // basis and an ordered-map insert — so it carries the measured
+        // constant on top of the bignum work each pair performs.
         let left_terms = left.terms.max(1);
         let right_terms = right.terms.max(1);
         let pairs = match schema {
@@ -86,23 +86,12 @@ pub(crate) fn charge_binary_schema(
                 left_terms.saturating_add(right_terms)
             }
         };
-        (true, pairs.saturating_mul(ALGEBRAIC_PAIR_UNITS))
+        pairs.saturating_mul(ALGEBRAIC_PAIR_UNITS)
     } else {
-        (
-            matches!(
-                schema,
-                ExactArithmeticSchema::Mul | ExactArithmeticSchema::Div
-            ),
-            1,
-        )
+        1
     };
 
-    interp.charge_numeric_work(broadcast_numeric_work(
-        left,
-        right,
-        multiplicative,
-        pair_units,
-    ))
+    interp.charge_numeric_work(broadcast_numeric_work(left, right, pair_units))
 }
 
 /// The widest lane of a dense tensor. Its lanes are `i64` by construction, so

@@ -66,26 +66,20 @@ pub(super) struct ElidedStack {
 }
 
 pub(super) fn elided_error_stack(interp: &Interpreter) -> ElidedStack {
-    let slots: Vec<(ProtocolNode, String)> = interp
+    // The protocol node is built for every slot, because it is what says which
+    // domain the value belonged to and an elided slot still reports that. What
+    // is *not* built for a slot the budget cannot afford is its JSON and its
+    // display string — which is where the bytes are. Deciding from the node
+    // instead of from the serialized text is the difference between throwing
+    // away 27 MB and never building it: `[ 0 99999 ] RANGE LENGHT` spent 1.5 s
+    // rendering a stack it was about to discard, close enough to `wallTimeMs`
+    // that a slow host would have seen a timeout instead of its typo.
+    let slots: Vec<ProtocolNode> = interp
         .get_stack()
         .iter_slots()
-        .map(|(value, role)| {
-            (
-                value_to_protocol(value, Some(role)),
-                crate::types::display::format_with_hint(value, role),
-            )
-        })
+        .map(|(value, role)| value_to_protocol(value, Some(role)))
         .collect();
-
-    let rendered: Vec<Json> = slots
-        .iter()
-        .map(|(node, _)| protocol_node_json(node))
-        .collect();
-    let costs: Vec<usize> = slots
-        .iter()
-        .zip(rendered.iter())
-        .map(|((_, display), node_json)| json_wire_bytes(node_json) + display.len())
-        .collect();
+    let costs: Vec<usize> = slots.iter().map(node_wire_bytes).collect();
 
     // Fill from the top down. The operands a failure names are the ones nearest
     // the top, so when the budget cannot hold everything it is the top that is
@@ -99,22 +93,15 @@ pub(super) fn elided_error_stack(interp: &Interpreter) -> ElidedStack {
             keep[index] = true;
         }
     }
-
-    if keep.iter().all(|kept| *kept) {
-        return ElidedStack {
-            stack: Json::Array(rendered),
-            stack_display: slots.into_iter().map(|(_, display)| display).collect(),
-            elided: None,
-        };
-    }
+    let all_kept = keep.iter().all(|kept| *kept);
 
     let mut stack = Vec::with_capacity(slots.len());
     let mut stack_display = Vec::with_capacity(slots.len());
     let mut elided_slots = Vec::new();
-    for (index, ((node, display), node_json)) in slots.iter().zip(rendered).enumerate() {
+    for (index, node) in slots.iter().enumerate() {
         if keep[index] {
-            stack.push(node_json);
-            stack_display.push(display.clone());
+            stack.push(protocol_node_json(node));
+            stack_display.push(render_slot(interp, index));
             continue;
         }
         let elements = element_count(node);
@@ -140,11 +127,61 @@ pub(super) fn elided_error_stack(interp: &Interpreter) -> ElidedStack {
     ElidedStack {
         stack: Json::Array(stack),
         stack_display,
-        elided: Some(json!({
-            "reason": "errorStackBudget",
-            "budgetBytes": MAX_ERROR_STACK_BYTES,
-            "slots": elided_slots,
-        })),
+        elided: (!all_kept).then(|| {
+            json!({
+                "reason": "errorStackBudget",
+                "budgetBytes": MAX_ERROR_STACK_BYTES,
+                "slots": elided_slots,
+            })
+        }),
+    }
+}
+
+/// The display string for one slot, rendered only when the slot is kept.
+fn render_slot(interp: &Interpreter, index: usize) -> String {
+    interp
+        .get_stack()
+        .iter_slots()
+        .nth(index)
+        .map(|(value, role)| crate::types::display::format_with_hint(value, role))
+        .unwrap_or_default()
+}
+
+/// Bytes one protocol node adds around its own value: the `semantics` block,
+/// the `type` and `displayHint` strings, and the punctuation between them.
+///
+/// Measured against `protocol_node_json`, and deliberately applied to interior
+/// nodes too even though those carry no `semantics` — over-estimating elides a
+/// little sooner, which is the safe direction for a budget whose whole job is
+/// to keep a diagnosis deliverable.
+const NODE_ENVELOPE_BYTES: usize = 256;
+
+/// Serialized size of a slot, estimated from the node rather than from the
+/// text — so a slot about to be discarded is never serialized to find out how
+/// big it was.
+///
+/// The payload is counted twice because a slot is sent twice: once as a value
+/// in `stack` and once as text in `stackDisplay`, and the budget covers both.
+/// Counting it once let an 81,649-digit integer through on the strength of its
+/// `stack` node alone, and the display of the same number then doubled the
+/// report.
+fn node_wire_bytes(node: &ProtocolNode) -> usize {
+    NODE_ENVELOPE_BYTES + 2 * node_payload_bytes(node)
+}
+
+fn node_payload_bytes(node: &ProtocolNode) -> usize {
+    match &node.value {
+        ProtocolValue::Null => 4,
+        ProtocolValue::Bool(_) => 5,
+        ProtocolValue::Text(text) => text.len() + 2,
+        ProtocolValue::Number {
+            numerator,
+            denominator,
+        } => numerator.len() + denominator.len() + 32,
+        ProtocolValue::Children(children) => children
+            .iter()
+            .map(|child| NODE_ENVELOPE_BYTES / 2 + node_payload_bytes(child))
+            .sum(),
     }
 }
 
@@ -187,33 +224,5 @@ fn element_count(node: &ProtocolNode) -> Option<usize> {
     match &node.value {
         ProtocolValue::Children(children) => Some(children.len()),
         _ => None,
-    }
-}
-
-/// Serialized length of `value` in the compact form the wire uses.
-///
-/// Computed by walking the tree rather than by serializing it, so measuring a
-/// slot the report is about to discard does not first build the megabytes of
-/// text that discarding it exists to avoid.
-fn json_wire_bytes(value: &Json) -> usize {
-    match value {
-        Json::Null => 4,
-        Json::Bool(true) => 4,
-        Json::Bool(false) => 5,
-        Json::Number(number) => number.to_string().len(),
-        Json::String(text) => text.len() + 2,
-        Json::Array(items) => {
-            // brackets, plus one comma between each pair
-            2 + items.len().saturating_sub(1) + items.iter().map(json_wire_bytes).sum::<usize>()
-        }
-        Json::Object(entries) => {
-            // braces, plus one comma between each pair; each entry is a quoted
-            // key, a colon, and its value
-            2 + entries.len().saturating_sub(1)
-                + entries
-                    .iter()
-                    .map(|(key, value)| key.len() + 3 + json_wire_bytes(value))
-                    .sum::<usize>()
-        }
     }
 }

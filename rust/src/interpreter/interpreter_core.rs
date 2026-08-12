@@ -631,6 +631,15 @@ impl Interpreter {
         &self.runtime_limits
     }
 
+    /// Internal numeric work charged by this `execute`, in limb-multiply units.
+    ///
+    /// The meter's price is only meaningful if the rate it charges at can be
+    /// *measured* rather than asserted, and a rate needs both halves: the units
+    /// and the wall clock. `examples/work_meter_calibration.rs` reads this one.
+    pub fn numeric_work_used(&self) -> u64 {
+        self.numeric_work_used
+    }
+
     /// Override the internal-computation-cost ceilings. Used by tests to inject
     /// small limits that fire a guard without allocating anything huge, and by
     /// hosts that need a tighter or looser envelope. Child runtimes spawned

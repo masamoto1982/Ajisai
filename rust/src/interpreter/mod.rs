@@ -47,6 +47,8 @@ mod word_identity_tests;
 pub mod word_space;
 #[cfg(test)]
 mod word_space_tests;
+#[cfg(test)]
+mod work_meter_calibration_tests;
 // Re-exported only for the host-only `cli` consumers (receipt / lockfile source
 // identity); `content_digest` itself is used internally by `word_identity`, so
 // gate just this re-export to the same target as `cli` to stay wasm-clean.
