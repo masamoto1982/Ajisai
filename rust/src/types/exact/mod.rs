@@ -11,6 +11,8 @@ mod algebraic_floor;
 #[cfg(test)]
 mod algebraic_tests;
 pub(crate) mod basis;
+#[cfg(test)]
+mod cf_budget_tests;
 pub mod computable;
 pub mod observation;
 pub mod pi;
