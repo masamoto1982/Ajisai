@@ -18,7 +18,16 @@ pub const LOCAL_AGENT_RUNTIME_LIMITS: RuntimeLimits = RuntimeLimits {
     max_numeric_literal_digits: 4_096,
     max_numeric_work: 10_000_000,
     max_bigint_bits: 262_144,
-    max_algebraic_terms: 4_096,
+    // Not a round number: 512 terms is 3.0% of `responseBytes` in `exactTerms`
+    // (4,096 was 26.5% — a quarter of the whole response for one value), and
+    // sixteen doublings past the point where the continued fraction stops being
+    // readable at all. It is also *live*: the doubling that crosses it charges
+    // 2,113,536 units, a fifth of `max_numeric_work`, so this ceiling names
+    // itself instead of being pre-empted. At 4,096 it could not — the doubling
+    // that would first exceed it costs 16,799,744 against a 10,000,000 budget,
+    // so `numericWork` always answered first and this limit was a claim rather
+    // than a control. See `profile_liveness_tests`.
+    max_algebraic_terms: 512,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

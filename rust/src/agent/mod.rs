@@ -13,6 +13,8 @@ pub(crate) mod contract_report;
 mod error_stack;
 #[cfg(test)]
 mod error_stack_tests;
+#[cfg(test)]
+mod profile_liveness_tests;
 pub(crate) mod report;
 #[cfg(test)]
 mod resource_usage_tests;

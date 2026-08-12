@@ -42,6 +42,7 @@ use serde_json::{json, Map, Value as Json};
 
 use crate::interpreter::Interpreter;
 use crate::types::value_protocol::{value_to_protocol, ProtocolNode, ProtocolValue};
+use crate::types::ValueData;
 
 use super::report::{protocol_node_json, semantics_json};
 
@@ -169,8 +170,13 @@ fn node_wire_bytes(node: &ProtocolNode) -> usize {
     NODE_ENVELOPE_BYTES + 2 * node_payload_bytes(node)
 }
 
+/// Bytes one algebraic term costs in `semantics.exactTerms`: a numerator, a
+/// denominator and a radicand, quoted and keyed. Measured at 62 on a
+/// 512-term value.
+const EXACT_TERM_BYTES: usize = 64;
+
 fn node_payload_bytes(node: &ProtocolNode) -> usize {
-    match &node.value {
+    let value_bytes = match &node.value {
         ProtocolValue::Null => 4,
         ProtocolValue::Bool(_) => 5,
         ProtocolValue::Text(text) => text.len() + 2,
@@ -182,6 +188,31 @@ fn node_payload_bytes(node: &ProtocolNode) -> usize {
             .iter()
             .map(|child| NODE_ENVELOPE_BYTES / 2 + node_payload_bytes(child))
             .sum(),
+    };
+    // An algebraic value's `value` is its *approximate* rational — small — while
+    // the number itself lives in `semantics.exactTerms`, which is the opposite
+    // of small. Estimating the semantics block at a flat constant let eighteen
+    // 512-term values through a 64 KiB budget as if they were 300 bytes each,
+    // and the report came to 387 KB.
+    value_bytes + exact_terms_bytes(node)
+}
+
+/// Terms an algebraic value carries, for the record of what was dropped: with
+/// `exactTerms` gone from an elided slot, this is what says how much there was.
+fn algebraic_term_count(node: &ProtocolNode) -> Option<usize> {
+    match &node.semantics.as_ref()?.data {
+        ValueData::ExactScalar(exact) => Some(exact.algebraic_term_count()),
+        _ => None,
+    }
+}
+
+fn exact_terms_bytes(node: &ProtocolNode) -> usize {
+    let Some(source) = &node.semantics else {
+        return 0;
+    };
+    match &source.data {
+        ValueData::ExactScalar(exact) => exact.algebraic_term_count() * EXACT_TERM_BYTES,
+        _ => 0,
     }
 }
 
@@ -201,10 +232,20 @@ fn elided_node_json(node: &ProtocolNode, approx_bytes: usize, elements: Option<u
         )),
     );
     if let Some(source) = &node.semantics {
-        obj.insert(
-            "semantics".into(),
-            semantics_json(source, node.display_hint),
-        );
+        // For an algebraic value the number itself lives in
+        // `semantics.exactTerms`, not in `value` — `value` is only the marked
+        // approximation. Eliding `value` and keeping `semantics` therefore
+        // dropped the cheap half and kept the expensive one: eighteen 512-term
+        // values still came to 388 KB with seventeen of them "elided". What a
+        // reader needs from a dropped slot is what kind of value it was, which
+        // is everything in the block except the exact form; the term count goes
+        // into the `elided` record instead, so nothing is silently missing.
+        let mut semantics = semantics_json(source, node.display_hint);
+        if let Some(object) = semantics.as_object_mut() {
+            object.remove("exactTerms");
+            object.remove("exactDisplay");
+        }
+        obj.insert("semantics".into(), semantics);
     }
     obj.insert("type".into(), json!(node.type_str));
     obj.insert("value".into(), Json::Null);
@@ -213,6 +254,9 @@ fn elided_node_json(node: &ProtocolNode, approx_bytes: usize, elements: Option<u
     record.insert("approxBytes".into(), json!(approx_bytes));
     if let Some(elements) = elements {
         record.insert("elements".into(), json!(elements));
+    }
+    if let Some(terms) = algebraic_term_count(node) {
+        record.insert("algebraicTerms".into(), json!(terms));
     }
     obj.insert("elided".into(), Json::Object(record));
     Json::Object(obj)

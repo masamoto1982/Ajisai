@@ -40,7 +40,7 @@ export const LIMITS = Object.freeze({
   numericLiteralDigits: 4_096,
   numericWork: 10_000_000,
   bigintBits: 262_144,
-  algebraicTerms: 4_096,
+  algebraicTerms: 512,
 });
 /**
  * How long a saturated server waits for an execution slot before answering
