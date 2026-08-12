@@ -10,7 +10,7 @@
 
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
-use crate::interpreter::{Interpreter, RuntimeMetrics};
+use crate::interpreter::{Interpreter, ResourceUsage, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
 use crate::types::value_protocol::{
     exact_display, exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode,
@@ -38,6 +38,9 @@ pub(crate) struct Report {
     pub ai_diagnostic: Option<AiDiagnosticPayload>,
     pub error_flow_trace: Vec<ErrorFlowEvent>,
     pub runtime_metrics: RuntimeMetrics,
+    /// What the run spent of the budgets that can refuse it. Read from the
+    /// counters the ceilings read, so it cannot disagree with them.
+    pub resource_usage: ResourceUsage,
     /// Per-word contract declarations checked against inference
     /// (`check --contract`, P2). `None` unless the user opted in; additive
     /// field. Prebuilt JSON so `report` stays decoupled from the declaration
@@ -65,7 +68,8 @@ impl Report {
                 .map(error_flow_event_json)
                 .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
-            "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
+            "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics, &self.resource_usage),
+            "resourceUsage": resource_usage_json(&self.resource_usage),
             "contractDecls": self.contract_decls,
             "stackElided": self.stack_elided,
         })
@@ -174,9 +178,10 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
     Json::Object(obj)
 }
 
-pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
-    // Diagnostics only: these counters describe work the runtime was observed
-    // to do. Reading them changes no result, and no Word reads them.
+pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics, usage: &ResourceUsage) -> Json {
+    // Diagnostics only: these counters describe *how* the runtime went about
+    // its work — which cache answered, which fast path fired. Reading them
+    // changes no result, and no Word reads them.
     json!({
         "compiledPlanBuildCount": metrics.compiled_plan_build_count,
         "compiledPlanCacheHitCount": metrics.compiled_plan_cache_hit_count,
@@ -188,7 +193,26 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
         "resolveCacheMissCount": metrics.resolve_cache_miss_count,
         "resolveCacheInvalidationCount": metrics.resolve_cache_invalidation_count,
         "tailCallJumpCount": metrics.tail_call_jump_count,
-        "executionSteps": metrics.execution_steps,
+        // Kept here, and equal to `resourceUsage.executionSteps`, because
+        // removing a field is what a schema version is for. It belongs in
+        // `resourceUsage`: an optimizer counter and a budget an agent plans
+        // against are different kinds of fact, and mixing them is how this one
+        // went unnoticed while reporting zero for every program ever run.
+        "executionSteps": usage.execution_steps,
+    })
+}
+
+/// What the run spent of the budgets that could have refused it, in the keys
+/// the host declares those budgets under.
+///
+/// Separate from `runtimeMetrics` on purpose. Every key here names a
+/// `mcp.limits` key and carries the same number the ceiling compared against,
+/// so an agent can subtract one from the other and know what it has left; no
+/// key here is an internal routing counter, and no counter there is a budget.
+pub(crate) fn resource_usage_json(usage: &ResourceUsage) -> Json {
+    json!({
+        "executionSteps": usage.execution_steps,
+        "numericWork": usage.numeric_work,
     })
 }
 

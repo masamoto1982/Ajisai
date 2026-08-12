@@ -32,6 +32,7 @@ pub(crate) fn completed_run_report(
             ai_diagnostic: None,
             error_flow_trace: trace,
             runtime_metrics: interp.runtime_metrics(),
+            resource_usage: interp.resource_usage(),
             contract_decls: None,
             stack_elided: None,
         },

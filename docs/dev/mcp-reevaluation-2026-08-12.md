@@ -58,7 +58,20 @@
 >   どの上限も課金していない**（5k/10k/20k/40k で 97 ms / 388 ms / 1.86 s / 7.0 s、
 >   材料化上限の 100,000 要素で約 48 秒）。work meter は算術を課金するが、
 >   コレクション系 Word の実作業はどの上限も数えていない。これがこの系統の次の課題。
-> - **P0-2 は未着手。**
+> - **P0-2（§5）実装済み。** `RuntimeMetrics.execution_steps` は誰も書かない
+>   幻のフィールドだったので削除し、報告は上限判定が読む
+>   `Interpreter::execution_step_count` から直接取る。カウンターは 1 本になった。
+>   型付き `resourceUsage`（`executionSteps` / `numericWork` の 2 キー）を
+>   `runtimeMetrics` から分離して追加。`peakBigintBits` / `peakAlgebraicTerms` は
+>   §5.2 の判断どおり載せていない —— 両上限は結果ごとの検査で累積を持たないので、
+>   報告すべきピークが実装に存在しない。`runtimeMetrics.executionSteps` は
+>   schemaVersion を上げないため互換で残し、同じ値を返す。
+>
+> **改訂版提案書の P0 3 件（P0-1' / P0-2 / P0-3）はこれで完了。**
+> 残る既知課題は §6 の較正まわりから派生した 2 件:
+> `algebraicTerms` の順序づけ（13 段目が 16.8M 単位で `numericWork` が先に名乗る、
+> ホストプロファイルの方針判断）と、コレクション系 Word の未課金
+> （`UNIQUE` は O(n²)、材料化上限で約 48 秒、どの上限も数えていない）。
 
 ## 0. この文書の位置づけ
 

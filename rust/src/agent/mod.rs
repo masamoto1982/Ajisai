@@ -14,6 +14,8 @@ mod error_stack;
 #[cfg(test)]
 mod error_stack_tests;
 pub(crate) mod report;
+#[cfg(test)]
+mod resource_usage_tests;
 pub(crate) mod run_render;
 
 use crate::error::ErrorCategory;
@@ -65,6 +67,7 @@ pub(crate) fn error_report(
         ai_diagnostic: Some(ai),
         error_flow_trace: trace,
         runtime_metrics: interp.runtime_metrics(),
+        resource_usage: interp.resource_usage(),
         contract_decls: None,
         stack_elided: residue.elided,
     }

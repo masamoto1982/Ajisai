@@ -149,6 +149,17 @@
         "/stack/0/type": "vector",
         "/stack/0/elided/reason": "errorStackBudget"
       }
+    },
+    {
+      "name": "a run reports the resources it actually spent",
+      "source": "[ 1 20 ] RANGE 1 { * } FOLD",
+      "expect": {
+        "/status": "ok",
+        "/resourceUsage/executionSteps": 22,
+        "/resourceUsage/numericWork": 20,
+        "/runtimeMetrics/executionSteps": 22
+      },
+      "comment": "RANGE and FOLD are one step each and the block's `*` runs twenty times: 22. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
     }
   ]
 }

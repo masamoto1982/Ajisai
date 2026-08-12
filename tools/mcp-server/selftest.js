@@ -463,6 +463,30 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
       validateResult(misspelled.structuredContent),
   );
 
+  // A ceiling an agent plans against has to report the number it is judged by.
+  // `runtimeMetrics.executionSteps` was read from a struct field nothing ever
+  // wrote, so every program that ever ran reported 0 steps — beside the counter
+  // every limit check increments.
+  const spent = await client.callTool({
+    name: "compute",
+    arguments: { source: "[ 1 20 ] RANGE 1 { * } FOLD" },
+  });
+  const usage = spent.structuredContent?.resourceUsage;
+  check(
+    "a run reports the resources it actually spent",
+    usage?.executionSteps === 22 &&
+      usage?.numericWork === 20 &&
+      validateResult(spent.structuredContent),
+  );
+  check(
+    "every reported resource names a declared limit",
+    Object.keys(usage ?? {}).every((key) => key in LIMITS),
+  );
+  check(
+    "the compatibility alias agrees with the resource it mirrors",
+    spent.structuredContent?.runtimeMetrics?.executionSteps === usage?.executionSteps,
+  );
+
   // An error report's answer is its diagnosis; the stack is residual state.
   // `[ 0 99999 ] RANGE LENGHT` is a one-character typo holding a
   // 100,000-element vector, which serialized in full is ~27 MB — so before the

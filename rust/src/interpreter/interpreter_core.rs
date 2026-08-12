@@ -110,6 +110,18 @@ impl Default for ValidationPolicy {
     }
 }
 
+/// Counters describing how the runtime went about its work: which cache
+/// answered, which fast path fired, how often a plan was rebuilt.
+///
+/// These are optimizer observations and nothing else. What a *ceiling* measures
+/// does not live here — it lives on the interpreter, where the ceiling reads
+/// it, and reaches an observer through `Interpreter::resource_usage`. That
+/// separation is the point: this struct used to carry an `execution_steps`
+/// field that no code ever wrote, sitting beside the real
+/// `Interpreter::execution_step_count` that every limit check increments. Two
+/// counters for one fact, and the one that got reported was the one that was
+/// always zero — so a 21,000-step fold and an empty program described their
+/// work identically.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RuntimeMetrics {
     pub compiled_plan_build_count: u64,
@@ -122,7 +134,25 @@ pub struct RuntimeMetrics {
     pub resolve_cache_miss_count: u64,
     pub resolve_cache_invalidation_count: u64,
     pub tail_call_jump_count: u64,
+}
+
+/// What this run spent of the budgets that can refuse it.
+///
+/// Every field here is the *same* value the corresponding ceiling compares
+/// against — read from the counter the check reads, not from a parallel copy —
+/// and every field's name is a key of the host's declared limit profile. An
+/// agent that plans against `mcp.limits` can therefore subtract.
+///
+/// Deliberately only the two that exist. `bigintBits` and `algebraicTerms` are
+/// checked per result and never accumulated, so there is no peak to report;
+/// inventing fields for them would mean reporting a number nothing measured,
+/// which is the defect this type was introduced to fix.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ResourceUsage {
+    /// Words executed, against `executionSteps`.
     pub execution_steps: u64,
+    /// Internal arithmetic work charged, against `numericWork`.
+    pub numeric_work: u64,
 }
 
 pub struct Interpreter {
@@ -638,6 +668,19 @@ impl Interpreter {
     /// and the wall clock. `examples/work_meter_calibration.rs` reads this one.
     pub fn numeric_work_used(&self) -> u64 {
         self.numeric_work_used
+    }
+
+    /// What this run spent of the budgets that can refuse it.
+    ///
+    /// Read from the counters the ceilings themselves read. There is no second
+    /// copy to fall out of step, because reporting a resource and enforcing it
+    /// are two readings of one number — which is the whole content of this
+    /// method, and the reason it exists.
+    pub fn resource_usage(&self) -> ResourceUsage {
+        ResourceUsage {
+            execution_steps: self.execution_step_count as u64,
+            numeric_work: self.numeric_work_used,
+        }
     }
 
     /// Override the internal-computation-cost ceilings. Used by tests to inject

@@ -218,6 +218,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
             ai_diagnostic: None,
             error_flow_trace: Vec::new(),
             runtime_metrics: crate::interpreter::RuntimeMetrics::default(),
+            resource_usage: crate::interpreter::ResourceUsage::default(),
             contract_decls: contract_decls.as_ref().map(|result| result.to_json()),
             stack_elided: None,
         },
