@@ -1,7 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::runtime_limits::{
-    binary_numeric_work, exact_work_bits, fraction_result_bits, fraction_work_bits,
-    ALGEBRAIC_PAIR_UNITS,
+use crate::interpreter::arithmetic_meter::{
+    charge_binary_schema, check_result_size, measure_operand,
 };
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
@@ -16,7 +15,7 @@ use crate::types::{DenseTensor, Interpretation, SparseTensor, Value, ValueData};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
-enum ExactArithmeticSchema {
+pub(crate) enum ExactArithmeticSchema {
     Add,
     Sub,
     Mul,
@@ -84,13 +83,14 @@ fn push_simd_schema_result(
     schema: ExactArithmeticSchema,
     a: &Value,
     b: &Value,
-) -> bool {
+) -> Result<bool> {
     let Some((result, _parallel_used)) = simd_schema_candidate(schema, a, b) else {
-        return false;
+        return Ok(false);
     };
+    check_result_size(interp, &result)?;
     consume_stacktop_binary(interp);
     interp.stack.push(result);
-    true
+    Ok(true)
 }
 
 fn push_exact_real_schema_result(
@@ -111,55 +111,20 @@ fn push_exact_real_schema_result(
         return Ok(false);
     };
 
-    // CS5: charge the internal work of this exact operation *before* running
-    // it, so a runaway algebraic computation (e.g. repeatedly multiplying
-    // distinct √p to explode the term count) fails at `max_numeric_work`
-    // instead of grinding for minutes. The estimate upper-bounds the term-pair
-    // work each schema performs. Charged with the operands still on the stack,
-    // so the error leaves the stack intact.
-    let ta = a_exact.algebraic_term_count() as u64;
-    let tb = b_exact.algebraic_term_count() as u64;
-    // Each term pair costs a bignum operation, so the pair count is multiplied
-    // by what one pair actually costs. Charging the pair count alone priced a
-    // 4096-digit coefficient and a one-digit coefficient identically.
-    //
-    // `exact_work_bits` covers radicands as well as coefficients: in the
-    // canonical explosion — repeatedly multiplying two-radical sums — every
-    // coefficient stays ±1 while the radicands multiply, so a
-    // coefficient-only width would have gone on reporting the cheapest
-    // possible operand for the most expensive cascade there is.
-    let pair = binary_numeric_work(exact_work_bits(&a_exact), exact_work_bits(&b_exact), true)
-        .saturating_mul(ALGEBRAIC_PAIR_UNITS);
-    let work = match schema {
-        ExactArithmeticSchema::Mul => ta.saturating_mul(tb).saturating_mul(pair),
-        // Division inverts `b` (conjugation recursion, ~term² inner products)
-        // and multiplies; bound by both.
-        ExactArithmeticSchema::Div => ta
-            .saturating_mul(tb)
-            .saturating_add(tb.saturating_mul(tb))
-            .saturating_mul(pair),
-        ExactArithmeticSchema::Add | ExactArithmeticSchema::Sub => {
-            ta.saturating_add(tb).saturating_mul(pair)
-        }
+    // The work of this operation was charged at the dispatch entry, before any
+    // route was chosen — see `charge_binary_schema`.
+    let result = match schema.exact_real(&a_exact, &b_exact) {
+        Some(r) => Value::from_exact_real(r),
+        None => division_by_zero_bubble(),
     };
-    interp.charge_numeric_work(work)?;
-
-    let result = schema.exact_real(&a_exact, &b_exact);
     // Bound accumulation: reject a result whose term count or coefficient
     // bit-length crosses the ceiling, before it is consumed and pushed (so a
     // limit failure leaves the operands on the stack, not a corrupted partial
     // state).
-    if let Some(ref r) = result {
-        interp
-            .runtime_limits
-            .check_algebraic_size(r.algebraic_term_count(), r.max_coefficient_bits())?;
-    }
+    check_result_size(interp, &result)?;
 
     consume_stacktop_binary(interp);
-    match result {
-        Some(r) => interp.stack.push(Value::from_exact_real(r)),
-        None => interp.stack.push(division_by_zero_bubble()),
-    }
+    interp.stack.push(result);
     Ok(true)
 }
 
@@ -258,35 +223,17 @@ fn push_scalar_fastpath_result(
         return Ok(false);
     }
 
-    // Tier 0 arithmetic is priced on the same meter as Tier 1, and used not to
-    // be priced at all: this path returns before the exact-real path that does
-    // the charging, so a chain of big-integer multiplications was bounded only
-    // by the step budget — which counts words, not the size of the numbers in
-    // them. Charged before the operation runs and before the operands are
-    // consumed, so a refusal leaves the stack intact.
-    let multiplicative = matches!(
-        schema,
-        ExactArithmeticSchema::Mul | ExactArithmeticSchema::Div
-    );
-    interp.charge_numeric_work(binary_numeric_work(
-        fraction_work_bits(&a.fraction),
-        fraction_work_bits(&b.fraction),
-        multiplicative,
-    ))?;
-
+    // The work of this operation was charged at the dispatch entry, before any
+    // route was chosen — see `charge_binary_schema`.
     let result = match schema.fraction(&a.fraction, &b.fraction) {
-        Ok(result) => {
-            // Bound accumulation, so the operand feeding the next multiply is
-            // still a sane size. Without this the chain above grows without any
-            // ceiling naming itself.
-            interp
-                .runtime_limits
-                .check_bigint_bits(fraction_result_bits(&result))?;
-            build_scalar_fast_result(result, &a.wrap)
-        }
+        Ok(result) => build_scalar_fast_result(result, &a.wrap),
         Err(AjisaiError::DivisionByZero) => division_by_zero_bubble(),
         Err(error) => return Err(error),
     };
+    // Bound accumulation, so the operand feeding the next multiply is still a
+    // sane size. Without this the chain above grows without any ceiling naming
+    // itself.
+    check_result_size(interp, &result)?;
     if interp.consumption_mode == ConsumptionMode::Consume {
         interp.stack.pop();
         interp.stack.pop();
@@ -307,16 +254,33 @@ fn apply_exact_arithmetic_schema(
         return Ok(());
     }
 
+    // Charged once, here, before a route is chosen. Which route runs is an
+    // optimization decision and unobservable by LANG.AUTHORITY.FREEDOM; a
+    // safety control priced per route made it observable, as the difference
+    // between `2 3 *` and `[ 2 ] 3 *`.
+    if interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let (left, right) = {
+            let slots = interp.stack.as_slice();
+            (
+                measure_operand(&slots[stack_len - 2]),
+                measure_operand(&slots[stack_len - 1]),
+            )
+        };
+        charge_binary_schema(interp, schema, left, right)?;
+    }
+
     if push_scalar_fastpath_result(interp, schema)? {
         return Ok(());
     }
 
     if let Some((a, b)) = stacktop_pair(interp) {
-        if push_simd_schema_result(interp, schema, &a, &b) {
+        if push_simd_schema_result(interp, schema, &a, &b)? {
             return Ok(());
         }
         if matches!(schema, ExactArithmeticSchema::Mul) {
             if let Some(result) = sparse_mul_candidate(&a, &b) {
+                check_result_size(interp, &result)?;
                 consume_stacktop_binary(interp);
                 interp.stack.push(result);
                 return Ok(());
@@ -348,12 +312,19 @@ fn apply_exact_arithmetic_schema(
         let a_val = &operands[0];
         let b_val = &operands[1];
 
-        match apply_binary_broadcast_with_metrics(
+        let computed = apply_binary_broadcast_with_metrics(
             a_val,
             b_val,
             |a, b| schema.fraction(a, b),
             Some(&mut interp.runtime_metrics),
-        ) {
+        );
+        // Bound accumulation before the result is pushed; on a refusal the
+        // operands go back, exactly as for any other failure of this arm.
+        let computed = computed.and_then(|result| {
+            check_result_size(interp, &result)?;
+            Ok(result)
+        });
+        match computed {
             Ok(result) => {
                 push_result(interp, result);
                 return Ok(());
@@ -557,6 +528,10 @@ fn push_exact_real_broadcast_result(
     } else {
         apply_exact_real_recursive_broadcast(a, b, schema)?
     };
+    // Irrational lanes are where the term count explodes, and this route used
+    // to reach no size ceiling at all: `algebraicTerms` was a limit a vector
+    // literal turned off.
+    check_result_size(interp, &result)?;
     consume_stacktop_binary(interp);
     push_result(interp, result);
     Ok(true)
@@ -631,12 +606,13 @@ where
     let a_val = &operands[0];
     let b_val = &operands[1];
 
-    let result = match apply_binary_broadcast_with_metrics(
-        a_val,
-        b_val,
-        op,
-        Some(&mut interp.runtime_metrics),
-    ) {
+    let computed =
+        apply_binary_broadcast_with_metrics(a_val, b_val, op, Some(&mut interp.runtime_metrics));
+    let computed = computed.and_then(|result| {
+        check_result_size(interp, &result)?;
+        Ok(result)
+    });
+    let result = match computed {
         Ok(r) => r,
         Err(e) => {
             if !is_keep_mode {
@@ -658,6 +634,30 @@ where
 /// The same schema, NIL rule and broadcast the `ADD` Word applies, factored out
 /// so `SUM` folds with exactly the addition `0 { ADD } FOLD` would have used
 /// rather than a second, nearly-identical one.
+/// `a + b`, charged and bounded on the interpreter's meter.
+///
+/// `SUM` is a fold, so it is the one Word whose whole job is to accumulate —
+/// and it was the one route that could not be metered, because the value-level
+/// helper it folds with had no interpreter to charge against. A summation over
+/// a vector of wide rationals grew without any ceiling naming itself.
+pub(crate) fn add_values_metered(interp: &mut Interpreter, a: &Value, b: &Value) -> Result<Value> {
+    if a.is_nil() {
+        return Ok(a.clone());
+    }
+    if b.is_nil() {
+        return Ok(b.clone());
+    }
+    charge_binary_schema(
+        interp,
+        ExactArithmeticSchema::Add,
+        measure_operand(a),
+        measure_operand(b),
+    )?;
+    let result = add_values(a, b)?;
+    check_result_size(interp, &result)?;
+    Ok(result)
+}
+
 pub(crate) fn add_values(a: &Value, b: &Value) -> Result<Value> {
     if a.is_nil() {
         return Ok(a.clone());

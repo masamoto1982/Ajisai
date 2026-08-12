@@ -109,6 +109,71 @@ pub fn binary_numeric_work(left_bits: u64, right_bits: u64, multiplicative: bool
     }
 }
 
+/// What the work meter needs to know about one operand, independent of the
+/// shape it arrived in.
+///
+/// The meter used to read a `Fraction` and stop there, which made it a meter on
+/// the *representation* rather than on the arithmetic: `2 3 *` was charged and
+/// `[ 2 ] 3 *` was free, because the second one leaves the scalar path and
+/// every other path charged nothing. Whether an operand is stored as a scalar,
+/// a one-element vector or an N-lane tensor is an internal decision
+/// (LANG.AUTHORITY.FREEDOM says it is unobservable), and a safety control whose
+/// price turns on an unobservable decision is not a control. A broadcast
+/// performs one operation per lane, so lanes are what it is charged for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OperandWork {
+    /// Numeric leaves the operand carries. A scalar is one lane.
+    pub lanes: u64,
+    /// The widest leaf, in bits.
+    pub bits: u64,
+    /// The largest algebraic term count among the leaves, or 0 when every leaf
+    /// is rational.
+    pub terms: u64,
+}
+
+impl OperandWork {
+    /// The measure of a single rational leaf.
+    pub const fn leaf(bits: u64) -> Self {
+        Self {
+            lanes: 1,
+            bits,
+            terms: 0,
+        }
+    }
+
+    /// Combine sibling leaves: lanes add, width and term count take the worst.
+    pub fn join(self, other: Self) -> Self {
+        Self {
+            lanes: self.lanes.saturating_add(other.lanes),
+            bits: self.bits.max(other.bits),
+            terms: self.terms.max(other.terms),
+        }
+    }
+}
+
+/// The work a binary arithmetic operation costs across every lane a broadcast
+/// will touch.
+///
+/// `pair_units` is what one lane pair costs *above* the bignum operation: 1 for
+/// a rational pair, and the term-pair count times [`ALGEBRAIC_PAIR_UNITS`] for
+/// an algebraic one. A scalar operation is `lanes = 1` of this and is charged
+/// exactly what the scalar-only meter charged before, which is what keeps the
+/// existing calibration — and the ordinary-work regression pinned against it —
+/// meaningful across this change.
+pub fn broadcast_numeric_work(
+    left: OperandWork,
+    right: OperandWork,
+    multiplicative: bool,
+    pair_units: u64,
+) -> u64 {
+    // Broadcast repeats the narrower operand across the wider one, so the
+    // wider lane count is how many operations actually run.
+    let lanes = left.lanes.max(right.lanes).max(1);
+    binary_numeric_work(left.bits, right.bits, multiplicative)
+        .saturating_mul(pair_units)
+        .saturating_mul(lanes)
+}
+
 /// Default cap on the bit length of a BigInt arithmetic result. ~300k decimal
 /// digits — generous for exact rationals, but bounded so a doubling cascade
 /// cannot blow up to gigabytes. Consumed by the work meter in the follow-up.

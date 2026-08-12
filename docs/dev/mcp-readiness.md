@@ -268,42 +268,48 @@ is refused at ~1.5 seconds by `bigintBits`, which now reports itself by name.
 Ordinary arithmetic is unaffected and pinned so: the heaviest ordinary case
 measured charges 8,192 units.
 
-Known gap, and a **larger** one than the round that found it fixed: what a
-charge depends on is the *shape* of the operands, not the code around them.
-Only two sites in the engine charge — `push_scalar_fastpath_result` and
-`push_exact_real_schema_result` — and both are reached only when both operands
-are scalar-shaped. Every other route out of `apply_exact_arithmetic_schema`
+**A charge no longer depends on the shape of its operands.** It used to. Two
+sites in the engine charged — `push_scalar_fastpath_result` and
+`push_exact_real_schema_result` — and both were reached only when both operands
+were scalar-shaped. Every other route out of `apply_exact_arithmetic_schema`
 (SIMD, sparse, rational broadcast, and the exact-real recursive broadcast that
-carries irrational lanes) charges nothing and checks no size ceiling, and
-`add_values` — what `SUM` folds with — has no interpreter to charge against at
-all.
+carries irrational lanes) charged nothing and checked no size ceiling, and
+`add_values` — what `SUM` folds with — had no interpreter to charge against at
+all. So `2 3 *` was priced at 1 unit and `[ 2 ] 3 *` at nothing, and
+`algebraicTerms` was a ceiling a vector literal switched off.
 
-An earlier version of this section blamed `MAP`/`FOLD` blocks. That is wrong,
-and measurably so. `[ 1 21000 ] RANGE 1 { * } FOLD` is refused with
-`numericWork of 10000573 exceeds the limit of 10000000`; the same fold written
-through a user word (`'MULW' FOLD`) and through `EXEC` is charged to the same
-unit. Higher-order application is already path-invariant. What escapes is
+An earlier version of this section blamed `MAP`/`FOLD` blocks, and that was
+wrong. `[ 1 21000 ] RANGE 1 { * } FOLD` was refused all along with
+`numericWork of 10000573 exceeds the limit of 10000000`, and the same fold
+through a user word or through `EXEC` was charged to the same unit —
+higher-order application was already path-invariant. What escaped was
 `[ 1 21000 ] RANGE [ 1 ] { * } FOLD`, whose only difference is a vector-shaped
-accumulator: it returns a 271,233-bit integer charged zero, past a declared
-`bigintBits` of 262,144. Straight-line source escapes the same way —
-`[ 2 ] 2 * 2 * 2 * 2 *` charges nothing with no block in sight. The invariant
-to fix is that the same arithmetic costs the same whether its operands are
-scalars, length-1 vectors, or N-lane tensors.
+accumulator: a 271,233-bit integer past a declared `bigintBits` of 262,144,
+charged zero. Straight-line source escaped identically, with no block in sight.
 
-That gap is also what keeps `numericWork`, `bigintBits` and `algebraicTerms`
-marked `injectedLimit` rather than `boundary`, though for a narrower reason
-than "no source can reach them": `numericWork` *is* reachable from source, as
-the fold above shows. What blocks the boundary pair is the response, not the
-program. The refusal serializes the failing stack — a 21,000-element vector and
-a partial product of 81,000 digits — into a 5.7 MB envelope, which the
-`responseBytes` ceiling of 1 MiB converts into `responseTooLarge`. The engine
-names `numericWork`; the agent is told the answer was too big. A boundary case
-needs the diagnosis to survive the wire, so an elision rule for failing stacks
-is a prerequisite for reclassifying either limit. A second ordering problem
-sits behind that: with width-based pricing the twelve doublings needed to reach
-4096 algebraic terms are charged ~16,000,000 units, so `numericWork` at
-10,000,000 fires first — the three ceilings have to be ordered so each is
-independently observable. `golden/limits.json` carries the measurements, and
+Charging and size-checking now live in `interpreter/arithmetic_meter.rs`, at
+the dispatch entry rather than inside the routes it dispatches to. Work is
+priced as lanes × operand width, so a scalar is the one-lane case of the same
+formula and the existing calibration is unchanged: the heaviest ordinary case
+still charges exactly 8,192 units, `2 3 *` and `[ 2 ] 3 *` both charge 1, and
+`[ 1 21000 ] RANGE [ 1 ] { * } FOLD` is now refused at the same 10,000,573
+units its scalar twin costs. A 1,000-lane vector multiply charges 1,000 — four
+orders of magnitude below the ceiling, which is what keeps ordinary array work
+untouched.
+
+What still keeps `numericWork`, `bigintBits` and `algebraicTerms` marked
+`injectedLimit` rather than `boundary` is the response, not the program.
+`numericWork` is reachable from source, as the fold above shows — but the
+refusal serializes the failing stack (a 21,000-element vector and a partial
+product of 81,000 digits) into a 5.7 MB envelope, which the `responseBytes`
+ceiling of 1 MiB converts into `responseTooLarge`. The engine names
+`numericWork`; the agent is told the answer was too big. A boundary case needs
+the diagnosis to survive the wire, so an elision rule for failing stacks is the
+prerequisite for reclassifying either limit. A second ordering problem sits
+behind that: with width-based pricing the twelve doublings needed to reach 4096
+algebraic terms are charged ~16,000,000 units, so `numericWork` at 10,000,000
+fires first — the three ceilings have to be ordered so each is independently
+observable. `golden/limits.json` carries the measurements, and
 `docs/dev/mcp-reevaluation-2026-08-12.md` carries the reproduction.
 
 ### P2 — agent evaluation (57%)

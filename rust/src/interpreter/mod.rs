@@ -1,5 +1,6 @@
 pub mod algo_ops;
 pub mod arithmetic;
+pub(crate) mod arithmetic_meter;
 pub(crate) mod bindings;
 pub mod cast;
 pub mod comparison;
@@ -65,6 +66,8 @@ pub(crate) mod nil_diagnostics;
 mod algo_ops_tests;
 #[cfg(test)]
 mod arithmetic_exact_div_tests;
+#[cfg(test)]
+mod arithmetic_meter_tests;
 #[cfg(test)]
 mod control_cond_tests;
 #[cfg(test)]

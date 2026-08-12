@@ -112,7 +112,7 @@ pub fn op_sum(interp: &mut Interpreter) -> Result<()> {
     // makes `SUM` a fold rather than a partial operation.
     let mut total = Value::from_int(0);
     for item in &items {
-        match crate::interpreter::arithmetic::add_values(&total, item) {
+        match crate::interpreter::arithmetic::add_values_metered(interp, &total, item) {
             Ok(next) => total = next,
             Err(e) => {
                 restore(interp, value);
