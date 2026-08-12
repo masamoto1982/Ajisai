@@ -10,6 +10,9 @@ pub mod api;
 pub(crate) mod contract_decl;
 mod contract_linearity;
 pub(crate) mod contract_report;
+mod error_stack;
+#[cfg(test)]
+mod error_stack_tests;
 pub(crate) mod report;
 pub(crate) mod run_render;
 
@@ -49,10 +52,13 @@ pub(crate) fn error_report(
         .clone()
         .with_source_position(interp.current_source_position());
     let ai = diagnosis.ai_payload(category, None, None, None);
+    // The residue a failed run was holding is not worth the diagnosis that
+    // explains it — see `agent::error_stack`.
+    let residue = error_stack::elided_error_stack(interp);
     Report {
         status: "error",
-        stack: report::stack_json(interp),
-        stack_display: stack_display(interp),
+        stack: residue.stack,
+        stack_display: residue.stack_display,
         output,
         message: Some(message),
         diagnosis: Some(diagnosis),
@@ -60,6 +66,7 @@ pub(crate) fn error_report(
         error_flow_trace: trace,
         runtime_metrics: interp.runtime_metrics(),
         contract_decls: None,
+        stack_elided: residue.elided,
     }
 }
 

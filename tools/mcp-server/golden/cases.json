@@ -135,6 +135,20 @@
         "playground": "succeeds, materializing 100002 elements",
         "why": "The browser playground applies the interpreter's default RuntimeLimits (max_materialized_elements = 1,000,000); this profile applies LOCAL_AGENT_RUNTIME_LIMITS (100,000). Both are correct for their host: SPEC 2.5 makes limits a safety control rather than value semantics, so a conforming host chooses its own. Recorded here so the divergence is a documented decision rather than a surprise for anyone who prototypes in the playground and runs through MCP. See docs/dev/mcp-host-profiles.md."
       }
+    },
+    {
+      "name": "a huge failing stack does not cost the diagnosis",
+      "source": "[ 0 99999 ] RANGE LENGHT",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "typoOrUnknownName",
+        "/diagnosis/candidates/0": "LENGTH",
+        "/stackElided/reason": "errorStackBudget",
+        "/stackElided/slots/0/index": 0,
+        "/stackElided/slots/0/elements": 100000,
+        "/stack/0/type": "vector",
+        "/stack/0/elided/reason": "errorStackBudget"
+      }
     }
   ]
 }

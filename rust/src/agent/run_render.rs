@@ -33,6 +33,7 @@ pub(crate) fn completed_run_report(
             error_flow_trace: trace,
             runtime_metrics: interp.runtime_metrics(),
             contract_decls: None,
+            stack_elided: None,
         },
         Err(err) => {
             let message = err.to_string();
