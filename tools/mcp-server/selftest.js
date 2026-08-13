@@ -2,7 +2,14 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import Ajv2020 from "ajv/dist/2020.js";
-import { CAPACITY_WAIT_MS, createServer, ExecutionGate, LIMITS, serverVersion } from "./index.js";
+import {
+  CAPACITY_WAIT_MS,
+  createBackend,
+  createServer,
+  ExecutionGate,
+  LIMITS,
+  serverVersion,
+} from "./index.js";
 import { runCli } from "./doctor.js";
 import { coveredLimitNames, limitCases } from "./golden/limit-cases.js";
 import { HOST_ERRORS } from "./host-error.js";
@@ -313,6 +320,28 @@ for (const limit of limitCases()) {
   }
 }
 
+// `wallTimeMs` is a deadline the adapter holds around execution, not a budget
+// the engine spends, and since the collection meter landed no source program
+// reaches it — the named ceilings answer first, which is the outcome they exist
+// for. So it is exercised the way the other host gate is: through the server's
+// own machinery, with the deadline moved to where a real program misses it. A
+// ceiling that cannot be observed at all is a claim, whichever kind it is.
+const impatient = createBackend({ wallTimeMs: 1 });
+if (impatient) {
+  let timedOut = null;
+  try {
+    await impatient.compute("[ 0 99999 ] RANGE SORT LENGTH");
+  } catch (error) {
+    timedOut = error;
+  }
+  check(
+    "limit wallTimeMs (hostGate): the adapter deadline answers `timeout`",
+    timedOut?.code === "timeout" && timedOut?.retryable === true,
+  );
+} else {
+  check("limit wallTimeMs (hostGate): a backend is available to exercise it", false);
+}
+
 // The two halves of a result, and the padding between them.
 //
 // MCP asks a tool with an output schema to also return the serialized JSON in
@@ -476,6 +505,9 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
     "a run reports the resources it actually spent",
     usage?.executionSteps === 22 &&
       usage?.numericWork === 20 &&
+      // 20 elements materialized by `RANGE`, at 17 units each: the collection
+      // meter sees the vector the fold walks, which no ceiling counted before.
+      usage?.collectionWork === 340 &&
       validateResult(spent.structuredContent),
   );
   check(

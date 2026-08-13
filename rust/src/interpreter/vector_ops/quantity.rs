@@ -53,7 +53,14 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
         if target_val.is_nil() {
             0
         } else if target_val.is_vector() {
-            extract_vector_elements(&target_val).len()
+            // `Value::len()` reads the count. This used to call
+            // `extract_vector_elements`, which deep-copies the whole element
+            // vector out of the `Cow` and then asks the copy for its length —
+            // 18 ms and 100,000 element clones to answer a question the header
+            // already holds. Measured by
+            // `examples/collection_word_calibration`; a Word documented O(1)
+            // was the third most expensive linear Word in the family.
+            target_val.len()
         } else {
             if !is_keep_mode {
                 interp.stack.push(target_val);
@@ -79,6 +86,18 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             return Err(e);
         }
     };
+
+    // Priced on the prefix `TAKE` will copy, not on the vector it was handed:
+    // taking 100 elements out of 100,000 copies 100 of them. The count is
+    // clamped here only for pricing; `compute_take_bounds` still decides
+    // whether an over-long count is an error.
+    let wanted = count.unsigned_abs() as usize;
+    if let Err(e) =
+        crate::interpreter::collection_meter::charge_stacktop_copy(interp, |len| wanted.min(len))
+    {
+        interp.stack.push(count_val);
+        return Err(e);
+    }
 
     let result =
         with_stacktop_vector_target_with_arg(interp, &count_val, is_keep_mode, |vector_val| {

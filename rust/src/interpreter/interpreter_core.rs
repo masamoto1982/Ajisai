@@ -153,6 +153,9 @@ pub struct ResourceUsage {
     pub execution_steps: u64,
     /// Internal arithmetic work charged, against `numericWork`.
     pub numeric_work: u64,
+    /// Element operations charged inside collection Words, against
+    /// `collectionWork`.
+    pub collection_work: u64,
 }
 
 pub struct Interpreter {
@@ -210,6 +213,11 @@ pub struct Interpreter {
     /// algebraic computation fails at `runtime_limits.max_numeric_work` rather
     /// than running for minutes. Reset per top-level `execute`.
     pub(crate) numeric_work_used: u64,
+    /// Cumulative collection work charged this `execute`. A collection Word
+    /// loops inside Rust and costs one execution step however many elements it
+    /// touches, so this is the only counter that can see it. Reset per
+    /// top-level `execute`, like the numeric meter beside it.
+    pub(crate) collection_work_used: u64,
 
     pub(crate) next_registration_order: u64,
 
@@ -354,6 +362,7 @@ impl Interpreter {
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             runtime_limits: super::runtime_limits::RuntimeLimits::default(),
             numeric_work_used: 0,
+            collection_work_used: 0,
             next_registration_order: 1,
             global_epoch: 0,
             dictionary_epoch: 0,
@@ -670,6 +679,15 @@ impl Interpreter {
         self.numeric_work_used
     }
 
+    /// Collection work charged by this `execute`, in element-operation units.
+    ///
+    /// Read by `examples/collection_word_calibration.rs` for the same reason
+    /// the numeric counter is read by its own calibration: a price is only
+    /// meaningful against a measured rate.
+    pub fn collection_work_used(&self) -> u64 {
+        self.collection_work_used
+    }
+
     /// What this run spent of the budgets that can refuse it.
     ///
     /// Read from the counters the ceilings themselves read. There is no second
@@ -680,6 +698,7 @@ impl Interpreter {
         ResourceUsage {
             execution_steps: self.execution_step_count as u64,
             numeric_work: self.numeric_work_used,
+            collection_work: self.collection_work_used,
         }
     }
 

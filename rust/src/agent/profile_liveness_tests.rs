@@ -144,4 +144,36 @@ mod profile_liveness_tests {
              ceiling; got `{resource}` at {spent} of {budget}"
         );
     }
+
+    #[tokio::test]
+    async fn the_collection_ceiling_is_reachable_inside_the_materialization_one() {
+        // The same liveness property, on the axis the collection meter added.
+        // `max_collection_work` has to be reachable by a vector the
+        // `materializedElements` ceiling admits — otherwise the collection
+        // ceiling is declared past what the host will ever let a program build,
+        // and the quadratic scan it exists to stop stays unnamed. The ordering
+        // here runs the other way from the size ceilings above: the *work*
+        // ceiling has to bind first, because a vector this size is legal and it
+        // is what is done to it that is not.
+        let (resource, _, _) = refused_by("[ 0 99999 ] RANGE UNIQUE").await;
+        assert_eq!(
+            resource, "collectionWork",
+            "a quadratic scan over a vector `materializedElements` permits must \
+             be refused by name; got `{resource}`"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_materialization_ceiling_is_still_what_bounds_a_bare_vector() {
+        // And the other direction: building the largest permitted vector, and
+        // walking it once, must stay inside the collection budget. If a linear
+        // Word over a legal vector could not run, the collection price would be
+        // bounding the wrong thing.
+        let (resource, _, _) = refused_by("[ 0 99999 ] RANGE REVERSE LENGTH").await;
+        assert_eq!(
+            resource, "<none: the program succeeded>",
+            "one linear pass over the largest permitted vector must be \
+             affordable; got `{resource}`"
+        );
+    }
 }

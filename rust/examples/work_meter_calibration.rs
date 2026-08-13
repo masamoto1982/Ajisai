@@ -45,6 +45,7 @@ fn unbounded() -> RuntimeLimits {
         max_source_bytes: 64 * 1024 * 1024,
         max_numeric_literal_digits: 1_000_000,
         max_numeric_work: u64::MAX,
+        max_collection_work: u64::MAX,
         max_bigint_bits: u64::MAX,
         max_algebraic_terms: usize::MAX,
     }

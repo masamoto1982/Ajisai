@@ -78,6 +78,19 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
+    // One index selects one element; several select that many. Priced on what
+    // is selected rather than on the vector's length — `GET` is the one Word in
+    // the family whose cost does not track the operand it is handed.
+    if let Err(e) =
+        crate::interpreter::collection_meter::charge_copy_of(interp, &target_val, indices.len())
+    {
+        if !is_keep_mode {
+            interp.stack.push(target_val);
+        }
+        interp.stack.push(index_val);
+        return Err(e);
+    }
+
     // An index that names nothing projects where it stands: with one index
     // that is the whole result, and with several it is one NIL among the
     // selected elements, so the answer keeps the shape of the request and the

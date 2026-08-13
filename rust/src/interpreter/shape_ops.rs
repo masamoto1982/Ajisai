@@ -67,6 +67,20 @@ pub fn op_zip(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
+    // A transpose copies every cell exactly once, so the price is the whole
+    // grid: rows x width, measured on the rows rather than on the outer vector
+    // (whose "elements" are the rows themselves).
+    let cell_units = columns
+        .iter()
+        .map(|column| {
+            crate::interpreter::collection_meter::element_cost_of_slice(column).copies(column.len())
+        })
+        .fold(0u64, u64::saturating_add);
+    if let Err(e) = crate::interpreter::collection_meter::charge(interp, cell_units) {
+        restore(interp, value);
+        return Err(e);
+    }
+
     let out: Vec<Value> = (0..width)
         .map(|position| {
             Value::from_vector(
@@ -150,6 +164,19 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(value);
         }
     };
+
+    // `PUT` answers with a copy of the vector, one element replaced, so it
+    // copies the whole thing however small the edit is.
+    if let Err(e) =
+        crate::interpreter::collection_meter::charge_copy_of(interp, &target, target.len())
+    {
+        if !keep {
+            interp.stack.push(target);
+            interp.stack.push(index_value);
+            interp.stack.push(replacement);
+        }
+        return Err(e);
+    }
 
     let mut items = match target.as_vector_view() {
         Some(view) => view.into_owned(),
@@ -284,6 +311,13 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
             .stack
             .push(Value::nil_with_reason(NilReason::SpaceExhausted));
         return Ok(());
+    }
+
+    if let Err(e) =
+        crate::interpreter::collection_meter::charge_materialization(interp, count as usize)
+    {
+        put_back(interp, &seed_value, &count_value);
+        return Err(e);
     }
 
     let mut state = seed as u64;

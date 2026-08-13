@@ -93,6 +93,17 @@ pub enum ResourceLimit {
     NumericLiteralDigits,
     /// Accumulated internal numeric work units (`max_numeric_work`).
     NumericWork,
+    /// Accumulated collection work units (`max_collection_work`) — the element
+    /// copies, comparisons and equality probes a collection Word performs
+    /// inside a single execution step.
+    ///
+    /// Separate from `NumericWork` because the two count different things and
+    /// prescribe different fixes. `numericWork` counts limb multiplies and says
+    /// "compute less"; this counts element operations and says "work over a
+    /// smaller collection". Folding them into one number would leave an agent
+    /// unable to tell a wide arithmetic chain from a large `UNIQUE`, and would
+    /// send it to shrink the wrong thing.
+    CollectionWork,
     /// Bit length of a BigInt arithmetic result (`max_bigint_bits`).
     BigintBits,
     /// Algebraic term count of one exact value (`max_algebraic_terms`).
@@ -109,6 +120,7 @@ impl ResourceLimit {
             ResourceLimit::SourceBytes => "sourceBytes",
             ResourceLimit::NumericLiteralDigits => "numericLiteralDigits",
             ResourceLimit::NumericWork => "numericWork",
+            ResourceLimit::CollectionWork => "collectionWork",
             ResourceLimit::BigintBits => "bigintBits",
             ResourceLimit::AlgebraicTerms => "algebraicTerms",
             ResourceLimit::ExecutionSteps => "executionSteps",

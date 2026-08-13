@@ -298,6 +298,12 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     };
+    if let Err(e) = crate::interpreter::collection_meter::charge_materialization(interp, total_size)
+    {
+        interp.stack.push(args_val);
+        return Err(e);
+    }
+
     let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
 
     let result = build_nested_value(&data, &shape);

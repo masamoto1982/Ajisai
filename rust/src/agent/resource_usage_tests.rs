@@ -99,6 +99,37 @@ mod resource_usage_tests {
     }
 
     #[tokio::test]
+    async fn collection_work_is_reported_and_tracks_the_data_not_the_length() {
+        // The property the whole collection meter exists for: the same Word over
+        // the same number of elements costs what the *data* costs. 16,000
+        // elements with one distinct value is a linear scan; 16,000 distinct
+        // values is a quadratic one, and a price read off the element count
+        // alone could not tell them apart.
+        let uniform = agent_json("[ 0 15999 ] RANGE { 1 MOD } MAP UNIQUE LENGTH").await;
+        assert_eq!(uniform["status"], "ok");
+        let uniform_work = uniform["resourceUsage"]["collectionWork"]
+            .as_u64()
+            .expect("collectionWork is a number");
+        assert!(
+            uniform_work > 0,
+            "a scan of 16,000 elements charged nothing"
+        );
+
+        let distinct = agent_json("[ 0 15999 ] RANGE UNIQUE LENGTH").await;
+        assert_eq!(
+            distinct["diagnosis"]["resourceLimit"]["resource"], "collectionWork",
+            "16,000 distinct values is 128M probes and must be refused by name"
+        );
+        assert!(
+            distinct["resourceUsage"]["collectionWork"]
+                .as_u64()
+                .expect("collectionWork is a number")
+                > uniform_work * 50,
+            "the same Word over the same element count must charge for the data"
+        );
+    }
+
+    #[tokio::test]
     async fn a_program_that_does_nothing_reports_nothing() {
         // The other half of "the number moves with the work": zero has to be
         // reachable, or non-zero proves nothing.
@@ -106,6 +137,7 @@ mod resource_usage_tests {
         assert_eq!(report["status"], "ok");
         assert_eq!(steps(&report), 0, "a bare literal executes no Word");
         assert_eq!(report["resourceUsage"]["numericWork"], 0);
+        assert_eq!(report["resourceUsage"]["collectionWork"], 0);
     }
 
     #[tokio::test]
@@ -120,7 +152,10 @@ mod resource_usage_tests {
             .expect("resourceUsage is an object");
         for key in usage.keys() {
             assert!(
-                matches!(key.as_str(), "executionSteps" | "numericWork"),
+                matches!(
+                    key.as_str(),
+                    "executionSteps" | "numericWork" | "collectionWork"
+                ),
                 "`{key}` is reported as a resource but names no ceiling the \
                  interpreter enforces; peaks for `bigintBits` and \
                  `algebraicTerms` are checked per result and never accumulated, \

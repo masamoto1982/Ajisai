@@ -40,6 +40,16 @@ fn pop_vector_and_target(interp: &mut Interpreter, _word: &str) -> Result<(Vec<V
 pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
     require_stack_top(interp, "INDEX-OF")?;
     let (vector, target) = pop_vector_and_target(interp, "INDEX-OF")?;
+    // A linear search, priced at its worst case — the miss, which is the only
+    // outcome that has to walk the whole vector. The count is known before the
+    // scan starts, unlike the distinct-value scans, so this is a pre-charge.
+    let units = crate::interpreter::collection_meter::element_cost_of_slice(&vector)
+        .probe()
+        .saturating_mul(vector.len() as u64);
+    if let Err(e) = crate::interpreter::collection_meter::charge(interp, units) {
+        restore_operands(interp, vec![Value::from_vector(vector), target]);
+        return Err(e);
+    }
     match vector.iter().position(|elem| elem == &target) {
         Some(index) => {
             push_result(interp, Value::from_int(index as i64));
