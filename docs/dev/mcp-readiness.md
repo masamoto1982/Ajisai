@@ -1,7 +1,9 @@
 # MCP product readiness
 
-Status date: 2026-08-11 (updated after the work-meter recalibration; before that, trace provenance, response compaction, algebraic short display and
-host-failure work). This is an implementation tracker, not a language
+Status date: 2026-08-13 (updated after the collection-word billing round;
+before that, the work-meter recalibration, trace provenance, response
+compaction, algebraic short display and host-failure work). This is an
+implementation tracker, not a language
 specification. Percentages measure completion of the concrete exit criteria
 below; they are not forecasts.
 
@@ -367,7 +369,7 @@ declared values:
   digits and succeed; the twentieth reaches 272,133 bits and is refused by
   name, in ~16 ms and 4.2 KB of source.
 
-**All ten declared ceilings are live now, and a test says so.**
+**All declared ceilings are live now, and a test says so.**
 `algebraicTerms` was the last one shadowed: the doubling that would first
 exceed 4,096 terms charges 16,799,744 units against a 10,000,000 work budget,
 so `numericWork` answered every time and the term ceiling had never fired in
@@ -420,7 +422,7 @@ counter the check reads.
 Alongside it, `resourceUsage` separates *what a run spent* from *how the runtime
 went about it*. Every key names a `mcp.limits` key and carries the same number
 the ceiling compared against, so an agent can subtract:
-`{ "executionSteps": 22, "numericWork": 20 }`. Only the accumulating ceilings
+`{ "executionSteps": 22, "numericWork": 20, "collectionWork": 340 }`. Only the accumulating ceilings
 appear — `bigintBits` and `algebraicTerms` are checked per result and never
 accumulated, so there is no peak to report, and none is invented, which is the
 same discipline that made the phantom field a defect rather than a feature.
@@ -429,17 +431,58 @@ same reading, because removing a field is what a schema version is for; that it
 lived in the optimizer object beside cache-hit counters is how nobody noticed
 it was constant.
 
-**What replaced the `wallTimeMs` over-case is itself a finding.** That case was
-the four-factor product, and it stopped timing out the moment rendering
-stopped costing seconds — it now answers in 18 ms. The best remaining candidate
-is `UNIQUE`, which is quadratic and priced by nothing: 5k / 10k / 20k / 40k
-elements take 97 ms / 388 ms / 1.86 s / 7.0 s, and at the 100,000-element
-materialization ceiling about 48 s. The work meter prices arithmetic; the
-collection Words do real work that no ceiling counts, and that is the next
-thing in this family. `golden/limits.json` carries the measurements,
-`examples/work_meter_calibration` reproduces them, and
-`interpreter/work_meter_calibration_tests.rs` plus
-`types/exact/cf_budget_tests.rs` pin the shapes without a wall clock in CI.
+**What replaced the `wallTimeMs` over-case was itself a finding, and it has now
+been acted on.** That case was the four-factor product, and it stopped timing
+out the moment rendering stopped costing seconds. The candidate that replaced
+it was `UNIQUE`, which was quadratic and priced by nothing: 48 s at the
+100,000-element materialization ceiling, as *one* execution step out of a
+hundred thousand. The work meter priced arithmetic, and the collection Words did
+real work that no ceiling counted.
+
+**`collectionWork` is the eleventh declared ceiling, and it closes that.** What
+it charges is deliberately not the element count, because measurement ruled
+that out: the same `UNIQUE` over the same 16,000 elements costs 0.52 ms with one
+distinct value and 682 ms with sixteen thousand — a factor of 1,300 no length
+can see — an element that is itself a 64-element vector costs 41x more to probe
+when the elements share a prefix than when they differ at the first position,
+and an algebraic element costs 3.0 µs to compare against 5.8 ns for a machine
+word. So the price is *operations × the measured cost of one element*: leaves
+per element, limbs per leaf, and 512 units for an algebraic one. The copy and
+comparison families know their operation count before they start and are
+pre-charged at the entry; the equality scans do not — the count is the distinct
+count, which is what the scan is finding out — and are charged per element
+against the distinct values already in hand, which bounds that element's probes.
+`[ 0 99999 ] RANGE UNIQUE` is now refused by name in 164 ms. The derivation,
+including what it over-charges and by how much, is in
+[`collection-word-billing-2026-08-13.md`](./collection-word-billing-2026-08-13.md);
+`examples/collection_word_calibration` reproduces every table in it.
+
+**With that, no source program reaches `wallTimeMs`, and its coverage moved to
+`hostGate`.** The slowest program the named ceilings admit runs about 1.4 s
+(≈0.7 s of `numericWork` plus ≈0.65 s of `collectionWork` at each meter's
+slowest measured path), so 5,000 ms is now a backstop on their sum rather than
+the thing that catches expensive programs — which is what a wall clock should
+be. It is exercised through the adapter that enforces it, against a backend
+built with a 1 ms deadline. Finding a source-program boundary pair for it again
+would mean a ceiling had gone quiet.
+
+**One measurement found a defect rather than a price.** `LENGTH` reads a count
+and is documented O(1), but `extract_vector_elements` deep-copied the whole
+element vector to call `.len()` on the copy: 18 ms and 100,000 clones at the
+materialization ceiling, and the third most expensive linear Word in the family.
+It reads the header now and charges nothing.
+
+`golden/limits.json` carries the measurements,
+`examples/work_meter_calibration` and `examples/collection_word_calibration`
+reproduce them, and `interpreter/work_meter_calibration_tests.rs`,
+`interpreter/collection_meter_tests.rs` plus `types/exact/cf_budget_tests.rs`
+pin the shapes without a wall clock in CI.
+
+**Still unpriced, and recorded rather than fixed**: the text family. `STR` on a
+BigInt is a decimal conversion, quadratic in the digit count — the output-side
+mirror of `numericLiteralDigits`. At the widths `bigintBits` admits it measures
+in the tens of milliseconds rather than seconds, so it is a follow-up and not a
+hole of the size this round closed.
 
 ### P2 — agent evaluation (57%)
 

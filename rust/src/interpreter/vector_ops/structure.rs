@@ -105,12 +105,32 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
+    // Both halves are copied into the join, so both are priced. Charged before
+    // the copy runs, with the operands put back first so a refusal leaves the
+    // stack the way the program wrote it.
+    let units = crate::interpreter::collection_meter::element_cost(&operands[0])
+        .copies(operands[0].len())
+        .saturating_add(
+            crate::interpreter::collection_meter::element_cost(&operands[1])
+                .copies(operands[1].len()),
+        );
+    if let Err(e) = crate::interpreter::collection_meter::charge(interp, units) {
+        if !is_keep_mode {
+            for operand in operands {
+                interp.stack.push(operand);
+            }
+        }
+        return Err(e);
+    }
+
     interp.stack.push(concat_values(&operands[0], &operands[1]));
     Ok(())
 }
 
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    crate::interpreter::collection_meter::charge_stacktop_copy(interp, |len| len)?;
 
     let reversed = with_stacktop_vector_target_no_arg(interp, is_keep_mode, |vector_val| {
         let mut v = extract_vector_elements(vector_val).to_vec();
@@ -171,6 +191,17 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
+    // Materializing an element costs what copying one costs: the elements are
+    // freshly built rather than cloned, but they are the same boxed values, and
+    // a program can ask for them as often as it likes. Charged before the
+    // allocation, with the argument put back on a refusal.
+    if let Err(e) =
+        crate::interpreter::collection_meter::charge_materialization(interp, element_count as usize)
+    {
+        interp.stack.push(args_val);
+        return Err(e);
+    }
+
     let mut range_vec = Vec::with_capacity(element_count as usize);
     let mut current = start;
 
@@ -218,6 +249,11 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < count {
         interp.stack.push(count_val);
         return Err(AjisaiError::StackUnderflow);
+    }
+
+    if let Err(e) = crate::interpreter::collection_meter::charge_materialization(interp, count) {
+        interp.stack.push(count_val);
+        return Err(e);
     }
 
     let collected: Vec<Value> = interp

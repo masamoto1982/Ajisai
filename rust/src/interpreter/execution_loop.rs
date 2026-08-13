@@ -477,6 +477,7 @@ impl Interpreter {
         self.runtime_limits.check_source_bytes(code.len())?;
         self.execution_step_count = 0;
         self.numeric_work_used = 0;
+        self.collection_work_used = 0;
         self.dictionary_changes_this_run.clear();
         self.reset_binding_scopes();
         // Source entry is the one place a token has a position, so it is the

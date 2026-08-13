@@ -140,7 +140,8 @@
    "description": "What this run spent of the budgets that could have refused it. Every key names a key of `mcp.limits` and carries the same number the ceiling compared against — read from the counter the check reads, not a parallel copy — so an agent can subtract one from the other and know what it has left. Only the accumulating ceilings appear: `bigintBits` and `algebraicTerms` are checked per result and never accumulated, so there is no peak to report and none is invented.",
    "required": [
     "executionSteps",
-    "numericWork"
+    "numericWork",
+    "collectionWork"
    ],
    "properties": {
     "executionSteps": {
@@ -152,6 +153,11 @@
      "type": "integer",
      "minimum": 0,
      "description": "Internal arithmetic work charged, in limb-multiply units, against the `numericWork` ceiling."
+    },
+    "collectionWork": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Element operations charged inside collection Words — copies, order comparisons and equality probes — against the `collectionWork` ceiling. Priced from the operand, so an element that is wide, nested or algebraic costs more than a machine word; a collection Word loops inside one execution step, so this is the only counter that can see it."
     }
    }
   },
@@ -235,6 +241,7 @@
       "materializedElements",
       "numericLiteralDigits",
       "numericWork",
+      "collectionWork",
       "bigintBits",
       "algebraicTerms"
      ],
@@ -268,6 +275,10 @@
        "minimum": 1
       },
       "numericWork": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "collectionWork": {
        "type": "integer",
        "minimum": 1
       },
@@ -385,6 +396,7 @@
       "sourceBytes",
       "numericLiteralDigits",
       "numericWork",
+      "collectionWork",
       "bigintBits",
       "algebraicTerms",
       "executionSteps"

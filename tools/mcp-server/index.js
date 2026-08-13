@@ -39,6 +39,7 @@ export const LIMITS = Object.freeze({
   materializedElements: 100_000,
   numericLiteralDigits: 4_096,
   numericWork: 10_000_000,
+  collectionWork: 20_000_000,
   bigintBits: 262_144,
   algebraicTerms: 512,
 });
@@ -76,21 +77,28 @@ function resolveAjisaiBin() {
 // deterministic kernel whose execution path could change under it between two
 // identical calls, with nothing in the response saying so. Parity keeps the
 // two answers equal; provenance is what makes an unequal one diagnosable.
-export function createBackend() {
+// `overrides` exists for one caller: the selftest's `wallTimeMs` case. That
+// ceiling is a deadline the adapter holds around execution, not a budget the
+// engine spends, so the only honest way to exercise it is to build a backend
+// with a deadline short enough that a real program misses it — the server's own
+// admission path, with one number moved. Every other caller passes nothing and
+// gets the declared profile.
+export function createBackend(overrides = {}) {
+  const profile = { ...LIMITS, ...overrides };
   const bin = resolveAjisaiBin();
   if (bin) {
     return new NativeCliBackend({
       bin,
-      wallTimeMs: LIMITS.wallTimeMs,
-      responseBytes: LIMITS.responseBytes,
-      executionSteps: LIMITS.executionSteps,
+      wallTimeMs: profile.wallTimeMs,
+      responseBytes: profile.responseBytes,
+      executionSteps: profile.executionSteps,
     });
   }
   if (WasmWorkerBackend.isAvailable()) {
     return new WasmWorkerBackend({
-      wallTimeMs: LIMITS.wallTimeMs,
-      executionSteps: LIMITS.executionSteps,
-      responseBytes: LIMITS.responseBytes,
+      wallTimeMs: profile.wallTimeMs,
+      executionSteps: profile.executionSteps,
+      responseBytes: profile.responseBytes,
     });
   }
   return null;

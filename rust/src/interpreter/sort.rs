@@ -122,6 +122,17 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
+    // Priced before the sort runs: the comparison count is `n⌈log₂n⌉` at worst
+    // and does not depend on the data, so this is a pre-charge in the same
+    // sense the arithmetic meter's is.
+    if let Err(e) = crate::interpreter::collection_meter::charge_comparison_sort(interp, &children)
+    {
+        if !is_keep_mode {
+            interp.stack.push(val);
+        }
+        return Err(e);
+    }
+
     match try_sort_indices(&children) {
         SortAttempt::Ordered(perm) => {
             let sorted_v: Vec<Value> = reorder_values_by_permutation(&children, &perm);

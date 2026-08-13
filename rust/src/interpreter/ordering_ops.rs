@@ -10,6 +10,7 @@
 //! question.
 
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::{Interpretation, Value};
@@ -75,6 +76,11 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
+    if let Err(e) = charge_comparison_sort(interp, &items) {
+        restore(interp, value);
+        return Err(e);
+    }
+
     match order_indices(&items) {
         Ok(perm) => {
             let out: Vec<Value> = perm
@@ -100,15 +106,25 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
 /// Equality is value equality, so this works over the domains `SORT` does not:
 /// class labels are usually text, and a grouping key is whatever the data
 /// says it is.
-fn distinct_with_counts(items: &[Value]) -> Vec<(Value, usize)> {
+///
+/// The scan is `n × distinct`, and `distinct` is the thing the scan is finding
+/// out, so the charge is taken per element rather than at the entry — against
+/// the number of distinct values in hand, which bounds the probes that element
+/// can make. See `collection_meter::ScanMeter`.
+fn distinct_with_counts(interp: &mut Interpreter, items: &[Value]) -> Result<Vec<(Value, usize)>> {
+    let meter = ScanMeter::new(items);
     let mut out: Vec<(Value, usize)> = Vec::new();
     for item in items {
+        meter.charge_scan_of(interp, out.len())?;
         match out.iter_mut().find(|(seen, _)| seen == item) {
             Some((_, count)) => *count += 1,
-            None => out.push((item.clone(), 1)),
+            None => {
+                meter.charge_retained(interp)?;
+                out.push((item.clone(), 1));
+            }
         }
     }
-    out
+    Ok(out)
 }
 
 /// `UNIQUE ( [ vec ] -> [ distinct ] )`: the distinct elements in
@@ -123,12 +139,16 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(value);
         return Ok(());
     }
-    match elements_of(&value, "vector") {
-        Ok(items) => {
-            let out: Vec<Value> = distinct_with_counts(&items)
-                .into_iter()
-                .map(|(value, _)| value)
-                .collect();
+    let items = match elements_of(&value, "vector") {
+        Ok(items) => items,
+        Err(e) => {
+            restore(interp, value);
+            return Err(e);
+        }
+    };
+    match distinct_with_counts(interp, &items) {
+        Ok(distinct) => {
+            let out: Vec<Value> = distinct.into_iter().map(|(value, _)| value).collect();
             interp
                 .stack
                 .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
@@ -153,9 +173,16 @@ pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(value);
         return Ok(());
     }
-    match elements_of(&value, "vector") {
-        Ok(items) => {
-            let out: Vec<Value> = distinct_with_counts(&items)
+    let items = match elements_of(&value, "vector") {
+        Ok(items) => items,
+        Err(e) => {
+            restore(interp, value);
+            return Err(e);
+        }
+    };
+    match distinct_with_counts(interp, &items) {
+        Ok(distinct) => {
+            let out: Vec<Value> = distinct
                 .into_iter()
                 .map(|(_, count)| Value::from_int(count as i64))
                 .collect();
@@ -215,11 +242,29 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
+    // Two prices, because `GROUP` does two things: it scans the keys for a
+    // match (`n × distinct`, charged per key against the groups in hand) and it
+    // copies every value into a bucket (`n`, charged as each one lands).
+    let key_meter = ScanMeter::new(&keys);
+    let value_meter = ScanMeter::new(&values);
     let mut groups: Vec<(Value, Vec<Value>)> = Vec::new();
     for (value, key) in values.iter().zip(keys.iter()) {
+        let charged = key_meter
+            .charge_scan_of(interp, groups.len())
+            .and_then(|()| value_meter.charge_retained(interp));
+        if let Err(e) = charged {
+            put_back(interp, &values_value, &keys_value);
+            return Err(e);
+        }
         match groups.iter_mut().find(|(seen, _)| seen == key) {
             Some((_, bucket)) => bucket.push(value.clone()),
-            None => groups.push((key.clone(), vec![value.clone()])),
+            None => {
+                if let Err(e) = key_meter.charge_retained(interp) {
+                    put_back(interp, &values_value, &keys_value);
+                    return Err(e);
+                }
+                groups.push((key.clone(), vec![value.clone()]));
+            }
         }
     }
 

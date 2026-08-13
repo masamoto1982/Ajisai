@@ -79,6 +79,7 @@ impl AjisaiInterpreter {
                 "materializedElements": limits.max_materialized_elements,
                 "numericLiteralDigits": limits.max_numeric_literal_digits,
                 "numericWork": limits.max_numeric_work,
+                "collectionWork": limits.max_collection_work,
                 "bigintBits": limits.max_bigint_bits,
                 "algebraicTerms": limits.max_algebraic_terms,
             },

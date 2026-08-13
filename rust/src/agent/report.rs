@@ -213,6 +213,7 @@ pub(crate) fn resource_usage_json(usage: &ResourceUsage) -> Json {
     json!({
         "executionSteps": usage.execution_steps,
         "numericWork": usage.numeric_work,
+        "collectionWork": usage.collection_work,
     })
 }
 

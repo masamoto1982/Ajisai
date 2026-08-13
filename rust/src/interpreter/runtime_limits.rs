@@ -178,6 +178,117 @@ pub fn broadcast_numeric_work(left: OperandWork, right: OperandWork, pair_units:
         .saturating_mul(lanes)
 }
 
+/// What one boxed element copy costs, in collection units.
+///
+/// A collection unit is the cheapest thing this meter counts: one equality
+/// probe between two machine-word scalars, measured at 5.8 ns for a 16,000
+/// element `UNIQUE` and 9.1 ns at 100,000 — call it 6 ns.
+///
+/// Copying one element costs 80 ns at 4,000 elements and 389 ns at 100,000; the
+/// spread is the allocator and the cache, not the copy. 16 units (~96 ns) sits
+/// inside that range and is the smallest power of two that keeps the dearest
+/// measured copy — 100,000 elements through `REVERSE`, 38.9 ms — charging
+/// 43,700 units/ms, above the 30,800 units/ms floor of the scan family and well
+/// above the 14,465 units/ms floor the arithmetic meter already accepts on an
+/// unbounded path.
+///
+/// Empirical, and re-measured by `examples/collection_word_calibration`.
+pub const COLLECTION_COPY_UNITS: u64 = 16;
+
+/// What comparing one *algebraic* element costs, in collection units.
+///
+/// `Algebraic::eq` is `Algebraic::cmp`: deciding it rebases both sides over a
+/// common refinement of their radical bases, which is nothing like a limb
+/// compare. Measured at 3.0 µs through `UNIQUE` and 3.3 µs through `SORT`
+/// (after correcting for Rust's sort detecting the already-ascending run that
+/// `[ 2 n ] RANGE { SQRT } MAP` produces) — 500 to 550 units at 6 ns each.
+///
+/// Distinct from [`ALGEBRAIC_PAIR_UNITS`], which prices an algebraic *product*.
+/// A product and a comparison are different operations and the measurements
+/// disagree by a factor of two; one constant serving both would be a rounding
+/// of two numbers into one.
+pub const ALGEBRAIC_ELEMENT_UNITS: u64 = 512;
+
+/// Default cap on accumulated collection work units.
+///
+/// Set to twice [`DEFAULT_MAX_NUMERIC_WORK`], which is what makes the two
+/// ceilings bound the same amount of *time* rather than the same number of
+/// units: the numeric meter's slowest unbounded path charges 14,465 units/ms
+/// and this one's charges 30,800, so a budget twice as large buys roughly the
+/// same wall clock. The agent profile scales both down together for the same
+/// reason (`LOCAL_AGENT_RUNTIME_LIMITS`), and `wallTimeMs` remains the backstop
+/// that bounds their sum.
+pub const DEFAULT_MAX_COLLECTION_WORK: u64 = 2 * DEFAULT_MAX_NUMERIC_WORK;
+
+/// The units a collection Word is charged for touching one element, given the
+/// measure of the operand it came from.
+///
+/// Two prices, because the measurements are two different shapes. Copying is
+/// `constant + width`: duplicating a 213-limb BigInt costs 3.4x what
+/// duplicating a machine word does, not 213x, because the wide part is a
+/// memcpy. Comparing is `width`: an equality test walks limbs until they
+/// differ, so it is the width that is traversed, not a constant plus it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ElementCost {
+    /// Numeric leaves one element carries. 1 for a scalar; `k` for an element
+    /// that is itself a `k`-element vector, because an equality test on that
+    /// element is a loop over `k` leaves and a copy of it copies `k` of them.
+    pub leaves: u64,
+    /// What one leaf costs to look at: limbs for a rational, and
+    /// `terms × ALGEBRAIC_ELEMENT_UNITS` for an algebraic, whichever is dearer.
+    pub width: u64,
+}
+
+impl ElementCost {
+    /// The cost of one element in a collection of `element_count` elements
+    /// whose combined measure is `work`.
+    ///
+    /// `OperandWork::lanes` counts leaves across the whole operand, so the
+    /// leaves *per element* are that divided by the element count — which is
+    /// how a vector of 4,000 sixty-four-element rows is told apart from a
+    /// vector of 256,000 scalars, two operands with the same leaf count and a
+    /// 64x difference in what one element costs to compare.
+    pub fn measure(work: OperandWork, element_count: usize) -> Self {
+        let elements = (element_count as u64).max(1);
+        let width = work_limbs(work.bits).max(work.terms.saturating_mul(ALGEBRAIC_ELEMENT_UNITS));
+        Self {
+            leaves: (work.lanes / elements).max(1),
+            width: width.max(1),
+        }
+    }
+
+    /// What one equality probe or order comparison against one element costs.
+    pub fn probe(self) -> u64 {
+        self.leaves.saturating_mul(self.width)
+    }
+
+    /// What copying one element into a result costs.
+    pub fn copy(self) -> u64 {
+        self.leaves
+            .saturating_mul(COLLECTION_COPY_UNITS.saturating_add(self.width))
+    }
+
+    /// What copying `count` elements costs.
+    pub fn copies(self, count: usize) -> u64 {
+        self.copy().saturating_mul(count as u64)
+    }
+
+    /// What a comparison sort over `count` elements costs at its worst case.
+    ///
+    /// `n⌈log₂n⌉` is the bound, not the count Rust's sort actually performs —
+    /// it detects sorted runs and can finish in `n`. A safety control prices
+    /// the worst case, because the input that reaches it is the one that did
+    /// not have a sorted run.
+    pub fn comparison_sort(self, count: usize) -> u64 {
+        let n = count as u64;
+        let depth = u64::from(n.max(1).ilog2()) + 1;
+        self.probe()
+            .saturating_mul(n)
+            .saturating_mul(depth)
+            .saturating_add(self.copies(count))
+    }
+}
+
 /// Default cap on the bit length of a BigInt arithmetic result. ~300k decimal
 /// digits — generous for exact rationals, but bounded so a doubling cascade
 /// cannot blow up to gigabytes. Consumed by the work meter in the follow-up.
@@ -238,6 +349,11 @@ pub struct RuntimeLimits {
     /// Max accumulated internal numeric work units. Consumed by the work meter
     /// in the CS5 follow-up.
     pub max_numeric_work: u64,
+    /// Max accumulated collection work units: the element copies, comparisons
+    /// and equality probes performed *inside* collection Words, which the step
+    /// budget cannot see because each such Word is one step however much it
+    /// does.
+    pub max_collection_work: u64,
     /// Max bit length of a BigInt arithmetic result. Consumed by the work meter
     /// in the CS5 follow-up.
     pub max_bigint_bits: u64,
@@ -253,6 +369,7 @@ impl Default for RuntimeLimits {
             max_source_bytes: DEFAULT_MAX_SOURCE_BYTES,
             max_numeric_literal_digits: DEFAULT_MAX_NUMERIC_LITERAL_DIGITS,
             max_numeric_work: DEFAULT_MAX_NUMERIC_WORK,
+            max_collection_work: DEFAULT_MAX_COLLECTION_WORK,
             max_bigint_bits: DEFAULT_MAX_BIGINT_BITS,
             max_algebraic_terms: DEFAULT_MAX_ALGEBRAIC_TERMS,
         }

@@ -32,26 +32,9 @@
       "note": "Rejected by the adapter on UTF-8 byte length before a backend is entered. The engine applies the same 65536-byte ceiling as `ResourceLimitExceeded { resource: sourceBytes }` if a host ever forwards a larger program."
     },
     "wallTimeMs": {
-      "coverage": "boundary",
+      "coverage": "hostGate",
       "declared": 5000,
-      "under": {
-        "kind": "source",
-        "source": "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *",
-        "expect": {
-          "/status": "ok"
-        }
-      },
-      "over": {
-        "kind": "source",
-        "source": "[ 0 99999 ] RANGE UNIQUE LENGTH",
-        "expect": {
-          "/status": "hostError",
-          "/error/code": "timeout",
-          "/error/limit": "wallTimeMs",
-          "/error/retryable": true
-        }
-      },
-      "note": "The over case was a product of four two-radical sums until the continued-fraction expansion got a work budget. It spent 14s, of which essentially all was *rendering* a 16-term value that took 0.1ms to compute, so it stopped being a wallTimeMs case the moment writing a value down stopped costing seconds; it now answers in 18ms. What replaces it is `UNIQUE`, which is quadratic and priced by nothing: 5k/10k/20k/40k elements take 97ms/388ms/1.86s/7.0s, and at the 100,000-element materialization ceiling it takes about 48s -- ten times over, so the case is decisively over rather than marginally. That it is the best remaining candidate is itself the finding: the work meter prices arithmetic, and the collection Words do real work that no ceiling counts."
+      "note": "Enforced by the adapter around execution (`backend/native-cli.js` spawn timeout, `backend/wasm-worker.js` worker deadline) and exercised through it in selftest.js, which drives a backend built with a 1 ms deadline against a program that cannot finish in one. It stopped being reachable through a source program when the collection meter landed, and that is the point rather than a regression: the over case used to be `[ 0 99999 ] RANGE UNIQUE LENGTH`, 48 seconds of quadratic scanning that no ceiling counted, and it is now refused by `collectionWork` in 164 ms. With every path named, the slowest program the other ceilings admit runs about 1.4 s -- `numericWork` buys ~0.7 s at its slowest charged path and `collectionWork` ~0.65 s at its own -- so 5,000 ms is a backstop on their sum, which is what a wall clock should be. Do not go looking for a source-program boundary pair for it; finding one would mean a ceiling had gone quiet again."
     },
     "responseBytes": {
       "coverage": "boundary",
@@ -177,6 +160,31 @@
         }
       },
       "note": "Charged on every rational and algebraic operation in every operand shape, priced as lanes x limb-multiply units, addition included -- Ajisai's `+` is rational addition, three multiplications and a gcd, not anything linear. The pair applies one 256-term cascade eighteen times against nineteen: work accumulates while no single value grows, which is the shape only a *cumulative* ceiling can catch, and keeps this pair from testing `algebraicTerms` or `bigintBits` by accident. It was `injectedLimit` for three rounds and three different reasons -- arithmetic outside the scalar path was not charged at all, then the refusal's 27MB envelope became `responseTooLarge`, then the cascade that reaches it could not be built because *rendering* 32 terms took 147s."
+    },
+    "collectionWork": {
+      "coverage": "boundary",
+      "declared": 20000000,
+      "under": {
+        "kind": "source",
+        "source": "[ 0 6290 ] RANGE UNIQUE LENGTH",
+        "expect": {
+          "/status": "ok",
+          "/stackDisplay/0": "6291/1"
+        }
+      },
+      "over": {
+        "kind": "source",
+        "source": "[ 0 6291 ] RANGE UNIQUE LENGTH",
+        "expect": {
+          "/status": "error",
+          "/diagnosis/why": "resourceLimit",
+          "/aiDiagnostic/kind": "resourceLimitExceeded",
+          "/diagnosis/resourceLimit/resource": "collectionWork",
+          "/diagnosis/resourceLimit/limit": 20000000,
+          "/diagnosis/resourceLimit/observed": 20005397
+        }
+      },
+      "note": "The element copies, order comparisons and equality probes a collection Word performs inside a single execution step -- the work the step budget cannot see, because such a Word is one step however many elements it touches. `UNIQUE` scans the distinct values found so far for each element, so 6,291 distinct values is 19,785,195 probes and passes while 6,292 crosses on the last one. What is charged is deliberately not the element count: the same Word over the same 16,000 elements measured 0.52 ms with one distinct value and 682 ms with sixteen thousand, so the price is operations x the measured cost of one element -- leaves per element, limbs per leaf, and 512 units for an algebraic one, which compares 500x slower than a machine word. `LENGTH` is on both sides to keep the under case inside `responseBytes`; it charges nothing, being O(1) again as of this change. Derived in docs/dev/collection-word-billing-2026-08-13.md."
     },
     "bigintBits": {
       "coverage": "boundary",

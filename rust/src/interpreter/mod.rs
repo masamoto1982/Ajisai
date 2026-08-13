@@ -3,6 +3,7 @@ pub mod arithmetic;
 pub(crate) mod arithmetic_meter;
 pub(crate) mod bindings;
 pub mod cast;
+pub(crate) mod collection_meter;
 pub mod comparison;
 pub(crate) mod compiled_call;
 pub mod compiled_plan;
@@ -70,6 +71,8 @@ mod algo_ops_tests;
 mod arithmetic_exact_div_tests;
 #[cfg(test)]
 mod arithmetic_meter_tests;
+#[cfg(test)]
+mod collection_meter_tests;
 #[cfg(test)]
 mod control_cond_tests;
 #[cfg(test)]

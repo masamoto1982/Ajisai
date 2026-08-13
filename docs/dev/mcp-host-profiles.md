@@ -1,6 +1,6 @@
 # Ajisai host resource profiles
 
-Status date: 2026-08-11.
+Status date: 2026-08-13.
 
 Ajisai's resource ceilings are **host safety controls, not language semantics**
 (`SPECIFICATION.html` §2.5). A conforming host chooses its own, and all
@@ -26,9 +26,17 @@ to trust a document that could drift:
 | `executionSteps` | 100,000 | 100,000 | Words executed |
 | `materializedElements` | 100,000 | 1,000,000 | elements one generative Word may build |
 | `numericLiteralDigits` | 4,096 | 4,096 | digits in one numeric literal |
-| `numericWork` | 10,000,000 | 1,000,000,000 | accumulated internal work units, exact algebraic arithmetic only |
-| `bigintBits` | 262,144 | 1,000,000 | coefficient width of one exact algebraic value |
-| `algebraicTerms` | 4,096 | 100,000 | term count of one exact algebraic value |
+| `numericWork` | 10,000,000 | 1,000,000,000 | accumulated arithmetic work, in limb-multiply units, in every operand shape |
+| `collectionWork` | 20,000,000 | 2,000,000,000 | accumulated element operations inside collection Words — copies, order comparisons, equality probes |
+| `bigintBits` | 262,144 | 1,000,000 | coefficient width of one exact arithmetic result |
+| `algebraicTerms` | 512 | 100,000 | term count of one exact algebraic value |
+
+The two work ceilings are not the same number because they do not count the
+same thing, and setting them equal would have made one of them mean something
+different from the other. They are set to bound the same amount of *time*: at
+each meter's slowest measured path — 14,465 units/ms for `numericWork`, 30,800
+for `collectionWork` — 10,000,000 and 20,000,000 both buy about 0.7 s. Their
+sum is what `wallTimeMs` backstops.
 
 The MCP server declares four further ceilings that exist only at the adapter,
 because they bound the *call* rather than the computation: `wallTimeMs`
@@ -47,8 +55,11 @@ These are decisions, not defects. Each is recorded where it can be seen:
   (`tools/mcp-server/golden/cases.json`).
 - **A 1 MiB program** runs in the playground and is refused by the MCP server
   as `sourceTooLarge`.
-- **A five-second computation** completes in the playground and is killed by
-  the MCP server as `timeout`.
+- **A five-second computation** completes in the playground and is refused by
+  the MCP server. Since the work meters cover every expensive path it is
+  refused *by name* — `numericWork` or `collectionWork` — rather than by the
+  clock; the playground's budgets are a hundred times larger, so the same
+  program runs there.
 
 The practical consequence is worth stating plainly: **a program prototyped in
 the playground can behave differently through MCP.** It will never compute a
@@ -67,29 +78,42 @@ Three kinds of coverage appear there:
 - **`boundary`** — a real source just under the declared value that succeeds,
   and one just over it that fails in the stated way. Run against the live
   server on every self-test, and compared across both backends in
-  `backend/parity-test.js`. Covers `sourceBytes`, `wallTimeMs`,
-  `responseBytes`, `executionSteps`, `materializedElements` and
-  `numericLiteralDigits`.
+  `backend/parity-test.js`. Covers `sourceBytes`, `responseBytes`,
+  `executionSteps`, `materializedElements`, `numericLiteralDigits`,
+  `numericWork`, `collectionWork`, `bigintBits` and `algebraicTerms`.
 - **`hostGate`** — enforced by the adapter's admission path rather than by a
-  program. Covers `concurrentExecutions`.
+  program, and exercised through that path in `selftest.js`. Covers
+  `concurrentExecutions` and `wallTimeMs`.
 - **`injectedLimit`** — pinned in Rust with a small injected ceiling, because
-  the declared value is not reachable within `wallTimeMs`. Covers
-  `numericWork`, `bigintBits` and `algebraicTerms`.
+  the declared value is not reachable within `wallTimeMs`. Covers nothing at
+  present.
 
-The third group deserves the blunt version. `numericWork`, `bigintBits` and
-`algebraicTerms` bound exact algebraic (Tier 1) values only, and the
-per-operation cost the work meter charges is far below what the operation
-actually costs: a product of two-radical sums grows about twelvefold in wall
-time per additional factor while charging only a few work units. At the
-declared values, `wallTimeMs` always arrives first. The numbers reported in
-`mcp.limits` are the configured ceilings and are reported truthfully; they are
-not bounds a caller can observe at this profile. Recalibrating the work
-estimate so the size ceilings bind before the clock is engine work tracked in
-[`mcp-readiness.md`](./mcp-readiness.md).
+Every declared ceiling now has coverage of one of the first two kinds, which
+was not true for most of this document's life. Three earlier revisions recorded
+the opposite state, and the reasons are worth keeping because each was a
+different defect:
 
-Two related gaps, recorded for the same reason:
+- `numericWork` was charged only on the scalar arithmetic path, so any operand
+  in vector or tensor shape ran free — a ceiling turned off by a representation
+  decision the language says is unobservable. It is now charged at one entry
+  for every shape, priced as lanes × limb-multiply units.
+- `algebraicTerms` was declared at 4,096, which the work budget could not pay
+  to reach: the doubling that first exceeds it costs 16,799,744 units against
+  10,000,000, so `numericWork` always answered first. Lowered to 512, and
+  `rust/src/agent/profile_liveness_tests.rs` now fails the build if any size
+  ceiling is declared past what the work budget can reach.
+- `wallTimeMs` really was the ceiling that arrived first for anything
+  expensive, because the expensive things were unpriced. The last of them was
+  the collection family: `[ 0 99999 ] RANGE UNIQUE` is quadratic and took 48
+  seconds as *one* execution step, which is why the clock was the only thing
+  that noticed. With `collectionWork` charging it, the same program is refused
+  by name in 164 ms, and no source program reaches the clock any more — so
+  `wallTimeMs` moved to `hostGate`, exercised against a backend built with a
+  1 ms deadline.
 
-- Plain rational arithmetic does not pass through the algebraic size guard, so
-  a large integer product is bounded by `executionSteps` rather than by
-  `bigintBits`.
-- `numericWork` is charged only on the exact algebraic path.
+What the work meters charge is documented where it was measured:
+[`collection-word-billing-2026-08-13.md`](./collection-word-billing-2026-08-13.md)
+for the collection prices, and `rust/examples/work_meter_calibration.rs` /
+`rust/examples/collection_word_calibration.rs` for the measurements themselves.
+Both are runnable: re-measure rather than trust the constants when a
+representation changes.

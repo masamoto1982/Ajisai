@@ -17,6 +17,13 @@ pub const LOCAL_AGENT_RUNTIME_LIMITS: RuntimeLimits = RuntimeLimits {
     max_source_bytes: 64 * 1024,
     max_numeric_literal_digits: 4_096,
     max_numeric_work: 10_000_000,
+    // Twice the numeric budget, which is what makes the two bound the same
+    // amount of *time* rather than the same number of units: the numeric
+    // meter's slowest unbounded path charges 14,465 units/ms and the collection
+    // meter's charges 30,800, so 10M and 20M both buy about 0.7 s. Their sum
+    // leaves `wallTimeMs` 5,000 a 3.7x margin. Derived in
+    // `docs/dev/collection-word-billing-2026-08-13.md` §6.
+    max_collection_work: 20_000_000,
     max_bigint_bits: 262_144,
     // Not a round number: 512 terms is 3.0% of `responseBytes` in `exactTerms`
     // (4,096 was 26.5% — a quarter of the whole response for one value), and
