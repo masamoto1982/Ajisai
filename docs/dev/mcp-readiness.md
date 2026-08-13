@@ -1,11 +1,11 @@
 # MCP product readiness
 
-Status date: 2026-08-13 (updated after the collection-word billing round;
-before that, the work-meter recalibration, trace provenance, response
-compaction, algebraic short display and host-failure work). This is an
-implementation tracker, not a language
-specification. Percentages measure completion of the concrete exit criteria
-below; they are not forecasts.
+Status date: 2026-08-13 (updated after the P1-1 corpus round and the
+collection-word billing round; before that, the work-meter recalibration, trace
+provenance, response compaction, algebraic short display and host-failure
+work). This is an implementation tracker, not a language specification.
+Percentages measure completion of the concrete exit criteria below; they are
+not forecasts.
 
 The next-agent implementation handoff is
 [`mcp-claude-code-handoff.md`](./mcp-claude-code-handoff.md). Host-by-host
@@ -503,33 +503,71 @@ definitions, one call per corpus case at `tool_choice: auto` so the
 irrelevant-intent cases can correctly produce no call, and writes to
 `eval/traces/`, apart from the committed fixtures.
 
+**The corpus is now bilingual and 130 prompts, and every metric the baseline
+will report exists and is exercised.** Three changes, all of them things a
+credential does not gate:
+
+- **日英 1:1.** Every case carries an `en` and a `ja` prompt naming the same
+  task, so both askings share one expected tool and one expected result. The
+  scorers report per language and publish the difference as `languageGap`.
+  Ajisai is a Japanese-authored language with an English tool surface, so "does
+  a Japanese prompt reach the same tool with the same source" is a product
+  question; a single-language corpus could not ask it. The contract rejects a
+  pair whose two sides are the same string — a copied prompt would score twice
+  and report a comparison it never made.
+- **65 cases, 130 prompts** (was 22 and 22), inside the 100–200 target this
+  tracker has carried since the corpus was seeded. The new cases are the
+  collection family (16), higher-order (5), text (5), the four resource
+  ceilings, four diagnostic shapes, and two more irrelevant-intent cases. Every
+  reference argument is verified against the real engine by `npm run eval:mcp`.
+- **First-attempt generation rate is its own metric.** It was folded into
+  `semanticSuccessRate`, which required the right tool *and* the right source,
+  so a tool-selection failure and a code-generation failure were reported as one
+  number and neither was named. They have different repairs, so they are now
+  counted separately — generation over the positive cases only, since a case
+  whose correct answer is no call has nothing to generate.
+
+`eval/reference-traces.json` is now generated from the corpus
+(`npm run eval:reference-traces`, drift-checked in `eval:validate`): a perfect
+fixture *is* the corpus answering itself, and hand-maintaining 130 of them meant
+a new case failed `--require-perfect` for a reason that had nothing to do with
+the scorer it asserts.
+
+The repair corpus gained the ceiling the collection round added. The claim that
+`collectionWork` is worth being a ceiling of its own is that it sends a repair
+at the collection rather than at the arithmetic; `repair-collection-ceiling`
+makes that measurable, and its source contains no arithmetic at all, so a
+repaired attempt that succeeds can only have shrunk the collection.
+
 **No baseline has been collected, and the percentage above reflects that.** The
 capture harness resolves credentials the way the Anthropic SDK does and, finding
 none, exits non-zero having written nothing — a file that looks like a trace and
-is not one would be worse than no file. Everything P2 still needs is downstream
-of running it: first-attempt generation rate, diagnosis-observation and repair
-rates for a real model, and the before/after comparison the `exactDisplay` and
-response-compaction rounds are owed. The 2-point movement is for tooling and
-enforcement, not for evidence.
+is not one would be worse than no file. **This is the only thing P1-1 is still
+waiting on, and it is not a code change.** Downstream of one run: first-attempt
+generation rate, the language gap, diagnosis-observation and repair rates for a
+real model, and the before/after comparison the `exactDisplay` and
+response-compaction rounds are owed. The movement here is for corpus and
+metrics, not for evidence — no number in this section describes a model.
 
 #### Earlier P2 work
 
 A first versioned prompt corpus now covers tool intent and backend semantics for
 rationals, decimals, algebraics, vector broadcast, NIL, diagnostics, static
-checking and contracts. It is intentionally only a seed: expansion to 100–200
-prompts remains necessary. A trace scorer now measures tool selection,
-end-to-end semantics, missing traces and irrelevant activation; the committed
-perfect reference trace verifies the scorer only. Real model traces, baseline
-comparisons and first-attempt generation rate remain to be collected. A
+checking and contracts. It was intentionally only a seed; the expansion to
+100–200 prompts it called for is done (130, above). A trace scorer now measures
+tool selection, end-to-end semantics, missing traces and irrelevant activation;
+the committed perfect reference trace verifies the scorer only. Real model
+traces and baseline comparisons remain to be collected; first-attempt
+generation rate is now a metric of its own, still unmeasured against a model. A
 separate repair scorer now requires the expected structured diagnosis before a
-corrected attempt can count, with seed cases for unknown Words, stack shape and
-malformed source. Its perfect reference is a harness fixture; real-model repair
-rates remain unmeasured.
+corrected attempt can count, with cases for unknown Words, stack shape,
+malformed source and the collection-work ceiling. Its perfect reference is a
+harness fixture; real-model repair rates remain unmeasured.
 Corpus and trace contracts now reject duplicate/unknown IDs, unknown tools,
 malformed expectations and incomplete reference fixtures before scoring.
-The selection corpus now has 22 prompts, adding large-integer precision,
-rational reduction, pairwise vectors, domain NIL, exact comparison, modulus,
-static-check failure, alias lookup and additional irrelevant intents.
+The selection corpus reached 22 prompts in that round, adding large-integer
+precision, rational reduction, pairwise vectors, domain NIL, exact comparison,
+modulus, static-check failure, alias lookup and additional irrelevant intents.
 A reproducible local benchmark now reports p50, p95 and maximum latency across
 compute, checking, inference and registry lookup, with a blocking one-second
 p95 budget after warmup. Remote-service latency remains unmeasured.

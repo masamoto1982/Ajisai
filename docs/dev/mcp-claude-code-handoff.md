@@ -116,7 +116,8 @@ names or spawn diagnostics into it; that belongs on stderr, and
 
 ### Evaluation
 
-- `eval/cases.json`: 22 intent/semantic cases.
+- `eval/cases.json`: 65 intent/semantic cases, each asked in English and
+  Japanese (130 prompts).
 - `eval/reference-traces.json`: scorer-conformance fixture, **not a real model
   result** — and now says so in its own `provenance` block rather than only in
   prose here.

@@ -1,6 +1,25 @@
 const TOOL_NAMES = new Set(["compute", "check", "infer_contracts", "word_contract"]);
 
 /**
+ * The languages every corpus case is asked in.
+ *
+ * Ajisai is written in Japanese and its tool descriptions are published in
+ * English, so "does a Japanese prompt reach the same tool with the same source
+ * as its English twin" is a product question rather than a translation detail.
+ * Pairing is what makes it answerable: both prompts name the same task, so the
+ * expected tool and the expected result are shared, and any difference in the
+ * score is a difference in the model's reading of the *language* and nothing
+ * else. A corpus with only one language cannot ask the question at all, which
+ * is the state this replaced.
+ */
+export const LANGUAGES = Object.freeze(["en", "ja"]);
+
+/** The key a trace is filed under: one case, asked once per language. */
+export function traceKey(caseId, language) {
+  return `${caseId}:${language}`;
+}
+
+/**
  * What produced a set of traces — the field that decides what its score means.
  *
  * `referenceFixture` is a hand-written conformance trace: scoring it proves the
@@ -67,6 +86,42 @@ function requirePointers(expect, label) {
   }
 }
 
+/**
+ * Every case is asked in every language, and the two askings are not the same
+ * string.
+ *
+ * The identical-prompt check is the one that earns its place. A pair whose
+ * Japanese side is the English side copied across still validates as "both
+ * languages present" and still scores twice, so the corpus would report a
+ * language comparison it never made — the same class of defect as a fixture
+ * scored as a model result. Requiring them to differ does not prove a
+ * translation is good; it proves one was attempted.
+ */
+function requirePrompts(testCase) {
+  const prompts = testCase.prompts;
+  if (!prompts || typeof prompts !== "object" || Array.isArray(prompts)) {
+    throw new Error(`${testCase.id} needs a prompts object keyed by language`);
+  }
+  const declared = Object.keys(prompts).sort();
+  if (JSON.stringify(declared) !== JSON.stringify([...LANGUAGES].sort())) {
+    throw new Error(
+      `${testCase.id} must be asked in exactly ${LANGUAGES.join(", ")}; got ${declared.join(", ") || "nothing"}`,
+    );
+  }
+  for (const language of LANGUAGES) {
+    if (typeof prompts[language] !== "string" || prompts[language].trim().length === 0) {
+      throw new Error(`${testCase.id} needs a non-empty ${language} prompt`);
+    }
+  }
+  const distinct = new Set(LANGUAGES.map((language) => prompts[language].trim()));
+  if (distinct.size !== LANGUAGES.length) {
+    throw new Error(
+      `${testCase.id} repeats the same prompt text in more than one language, so its ` +
+        `per-language scores would compare nothing`,
+    );
+  }
+}
+
 export function validateCorpus(document, { repair = false } = {}) {
   requireDocument(document, "evaluation corpus", "cases");
   const ids = new Set();
@@ -76,9 +131,7 @@ export function validateCorpus(document, { repair = false } = {}) {
     }
     if (ids.has(testCase.id)) throw new Error(`duplicate evaluation case id: ${testCase.id}`);
     ids.add(testCase.id);
-    if (typeof testCase.prompt !== "string" || testCase.prompt.length === 0) {
-      throw new Error(`${testCase.id} needs a non-empty prompt`);
-    }
+    requirePrompts(testCase);
     if (repair) {
       requirePointers(testCase.firstAttempt?.expect, `${testCase.id}.firstAttempt`);
       requirePointers(testCase.repairedAttempt?.expect, `${testCase.id}.repairedAttempt`);
@@ -116,14 +169,23 @@ export function indexTraces(document, caseIds, { repair = false } = {}) {
   const traces = new Map();
   for (const trace of document.traces) {
     if (!caseIds.has(trace?.caseId)) throw new Error(`trace has unknown caseId: ${trace?.caseId}`);
-    if (traces.has(trace.caseId)) throw new Error(`duplicate trace caseId: ${trace.caseId}`);
-    if (repair) {
-      validateAttempt(trace.firstAttempt, `${trace.caseId}.firstAttempt`, false);
-      validateAttempt(trace.repairedAttempt, `${trace.caseId}.repairedAttempt`, false);
-    } else {
-      validateAttempt(trace, trace.caseId, true);
+    // A trace that does not say which language produced it cannot be filed
+    // against the right half of a pair, and silently filing it against both
+    // would report one asking as two.
+    if (!LANGUAGES.includes(trace?.language)) {
+      throw new Error(
+        `${trace.caseId} trace must record which of ${LANGUAGES.join(", ")} it was asked in`,
+      );
     }
-    traces.set(trace.caseId, trace);
+    const key = traceKey(trace.caseId, trace.language);
+    if (traces.has(key)) throw new Error(`duplicate trace for ${key}`);
+    if (repair) {
+      validateAttempt(trace.firstAttempt, `${key}.firstAttempt`, false);
+      validateAttempt(trace.repairedAttempt, `${key}.repairedAttempt`, false);
+    } else {
+      validateAttempt(trace, key, true);
+    }
+    traces.set(key, trace);
   }
   return traces;
 }

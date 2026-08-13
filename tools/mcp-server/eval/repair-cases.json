@@ -1,55 +1,83 @@
 {
-  "schemaVersion": 1,
-  "cases": [
-    {
-      "id": "repair-unknown-word",
-      "prompt": "Repair `1 2 AD` using its diagnosis.",
-      "firstAttempt": {
-        "expect": {
-          "/status": "error",
-          "/diagnosis/why": "typoOrUnknownName",
-          "/diagnosis/where/word": "AD"
-        }
-      },
-      "repairedAttempt": {
-        "expect": {
-          "/status": "ok",
-          "/stackDisplay/0": "3/1"
-        }
-      }
-    },
-    {
-      "id": "repair-stack-underflow",
-      "prompt": "Repair `1 ADD` using its diagnosis.",
-      "firstAttempt": {
-        "expect": {
-          "/status": "error",
-          "/diagnosis/why": "stackShape",
-          "/diagnosis/where/word": "ADD"
-        }
-      },
-      "repairedAttempt": {
-        "expect": {
-          "/status": "ok",
-          "/stackDisplay/0": "3/1"
-        }
-      }
-    },
-    {
-      "id": "repair-unclosed-vector",
-      "prompt": "Repair malformed `[ 1 2` using its diagnosis.",
-      "firstAttempt": {
-        "expect": {
-          "/status": "error",
-          "/diagnosis/why": "sourceForm"
-        }
-      },
-      "repairedAttempt": {
-        "expect": {
-          "/status": "ok",
-          "/stackDisplay/0": "[ 1/1 2/1 ]"
-        }
-      }
+ "schemaVersion": 1,
+ "cases": [
+  {
+   "id": "repair-unknown-word",
+   "prompts": {
+    "en": "Repair `1 2 AD` using its diagnosis.",
+    "ja": "`1 2 AD` を、その診断を使って直してください。"
+   },
+   "firstAttempt": {
+    "expect": {
+     "/status": "error",
+     "/diagnosis/why": "typoOrUnknownName",
+     "/diagnosis/where/word": "AD"
     }
-  ]
+   },
+   "repairedAttempt": {
+    "expect": {
+     "/status": "ok",
+     "/stackDisplay/0": "3/1"
+    }
+   }
+  },
+  {
+   "id": "repair-stack-underflow",
+   "prompts": {
+    "en": "Repair `1 ADD` using its diagnosis.",
+    "ja": "`1 ADD` を、その診断を使って直してください。"
+   },
+   "firstAttempt": {
+    "expect": {
+     "/status": "error",
+     "/diagnosis/why": "stackShape",
+     "/diagnosis/where/word": "ADD"
+    }
+   },
+   "repairedAttempt": {
+    "expect": {
+     "/status": "ok",
+     "/stackDisplay/0": "3/1"
+    }
+   }
+  },
+  {
+   "id": "repair-unclosed-vector",
+   "prompts": {
+    "en": "Repair malformed `[ 1 2` using its diagnosis.",
+    "ja": "壊れたソース `[ 1 2` を、その診断を使って直してください。"
+   },
+   "firstAttempt": {
+    "expect": {
+     "/status": "error",
+     "/diagnosis/why": "sourceForm"
+    }
+   },
+   "repairedAttempt": {
+    "expect": {
+     "/status": "ok",
+     "/stackDisplay/0": "[ 1/1 2/1 ]"
+    }
+   }
+  },
+  {
+   "id": "repair-collection-ceiling",
+   "prompts": {
+    "en": "Deduplicate the integers from 0 to 99999 and count them. If Ajisai refuses, read the diagnosis and retry within the limit it names.",
+    "ja": "0 から 99999 までの整数を重複除去して数えてください。Ajisai が拒否したら、診断を読んで、示された上限の内側で再試行してください。"
+   },
+   "firstAttempt": {
+    "expect": {
+     "/status": "error",
+     "/diagnosis/why": "resourceLimit",
+     "/diagnosis/resourceLimit/resource": "collectionWork"
+    }
+   },
+   "repairedAttempt": {
+    "expect": {
+     "/status": "ok"
+    }
+   }
+  }
+ ]
 }

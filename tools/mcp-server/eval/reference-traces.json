@@ -1,155 +1,1025 @@
 {
-  "schemaVersion": 1,
-  "provenance": {
-    "source": "referenceFixture",
-    "note": "Hand-written tool-selection trace built to pass score-traces.js. It proves the scorer runs end to end; it is not a model result and its perfect score describes nothing about any model."
+ "schemaVersion": 1,
+ "provenance": {
+  "source": "referenceFixture",
+  "note": "Generated tool-selection trace built to pass score-traces.js: every case answered with its own reference arguments, in both languages. It proves the scorer runs end to end; it is not a model result and its perfect score describes nothing about any model. Regenerate with `npm run eval:reference-traces` in tools/mcp-server."
+ },
+ "traces": [
+  {
+   "caseId": "exact-fraction",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 3 /"
+   }
   },
-  "traces": [
-    {
-      "caseId": "exact-fraction",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "1 3 /"
-      }
-    },
-    {
-      "caseId": "decimal-no-float",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "0.1 0.2 +"
-      }
-    },
-    {
-      "caseId": "algebraic-sqrt",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "2 SQRT"
-      }
-    },
-    {
-      "caseId": "vector-broadcast",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "[ 1 2 ] 10 +"
-      }
-    },
-    {
-      "caseId": "nil-reason",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "1 0 /"
-      }
-    },
-    {
-      "caseId": "nil-recovery",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "1 0 / ^ 42"
-      }
-    },
-    {
-      "caseId": "language-error",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "FROBNICATE"
-      }
-    },
-    {
-      "caseId": "static-check",
-      "selectedTool": "check",
-      "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
-      }
-    },
-    {
-      "caseId": "contract-inference",
-      "selectedTool": "infer_contracts",
-      "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
-      }
-    },
-    {
-      "caseId": "word-contract",
-      "selectedTool": "word_contract",
-      "arguments": {
-        "word": "MAP"
-      }
-    },
-    {
-      "caseId": "irrelevant-weather",
-      "selectedTool": null,
-      "arguments": null
-    },
-    {
-      "caseId": "irrelevant-writing",
-      "selectedTool": null,
-      "arguments": null
-    },
-    {
-      "caseId": "reduced-fraction",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "2 8 /"
-      }
-    },
-    {
-      "caseId": "large-integer",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "9007199254740993 1 +"
-      }
-    },
-    {
-      "caseId": "vector-pairwise",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "[ 1 2 ] [ 3 4 ] +"
-      }
-    },
-    {
-      "caseId": "sqrt-domain-nil",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "-1 SQRT"
-      }
-    },
-    {
-      "caseId": "exact-comparison",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "1 2 LT"
-      }
-    },
-    {
-      "caseId": "integer-modulus",
-      "selectedTool": "compute",
-      "arguments": {
-        "source": "10 4 MOD"
-      }
-    },
-    {
-      "caseId": "static-check-error",
-      "selectedTool": "check",
-      "arguments": {
-        "source": "FROBNICATE"
-      }
-    },
-    {
-      "caseId": "alias-word-contract",
-      "selectedTool": "word_contract",
-      "arguments": {
-        "word": "+"
-      }
-    },
-    {
-      "caseId": "irrelevant-translation",
-      "selectedTool": null,
-      "arguments": null
-    },
-    {
-      "caseId": "irrelevant-history",
-      "selectedTool": null,
-      "arguments": null
-    }
-  ]
+  {
+   "caseId": "exact-fraction",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 3 /"
+   }
+  },
+  {
+   "caseId": "decimal-no-float",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "0.1 0.2 +"
+   }
+  },
+  {
+   "caseId": "decimal-no-float",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "0.1 0.2 +"
+   }
+  },
+  {
+   "caseId": "algebraic-sqrt",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "2 SQRT"
+   }
+  },
+  {
+   "caseId": "algebraic-sqrt",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "2 SQRT"
+   }
+  },
+  {
+   "caseId": "vector-broadcast",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 ] 10 +"
+   }
+  },
+  {
+   "caseId": "vector-broadcast",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 ] 10 +"
+   }
+  },
+  {
+   "caseId": "nil-reason",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 0 /"
+   }
+  },
+  {
+   "caseId": "nil-reason",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 0 /"
+   }
+  },
+  {
+   "caseId": "nil-recovery",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 0 / ^ 42"
+   }
+  },
+  {
+   "caseId": "nil-recovery",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 0 / ^ 42"
+   }
+  },
+  {
+   "caseId": "language-error",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "FROBNICATE"
+   }
+  },
+  {
+   "caseId": "language-error",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "FROBNICATE"
+   }
+  },
+  {
+   "caseId": "static-check",
+   "language": "en",
+   "selectedTool": "check",
+   "arguments": {
+    "source": "{ [ 1 ] + } 'INC' DEF"
+   }
+  },
+  {
+   "caseId": "static-check",
+   "language": "ja",
+   "selectedTool": "check",
+   "arguments": {
+    "source": "{ [ 1 ] + } 'INC' DEF"
+   }
+  },
+  {
+   "caseId": "contract-inference",
+   "language": "en",
+   "selectedTool": "infer_contracts",
+   "arguments": {
+    "source": "{ [ 1 ] + } 'INC' DEF"
+   }
+  },
+  {
+   "caseId": "contract-inference",
+   "language": "ja",
+   "selectedTool": "infer_contracts",
+   "arguments": {
+    "source": "{ [ 1 ] + } 'INC' DEF"
+   }
+  },
+  {
+   "caseId": "word-contract",
+   "language": "en",
+   "selectedTool": "word_contract",
+   "arguments": {
+    "word": "MAP"
+   }
+  },
+  {
+   "caseId": "word-contract",
+   "language": "ja",
+   "selectedTool": "word_contract",
+   "arguments": {
+    "word": "MAP"
+   }
+  },
+  {
+   "caseId": "reduced-fraction",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "2 8 /"
+   }
+  },
+  {
+   "caseId": "reduced-fraction",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "2 8 /"
+   }
+  },
+  {
+   "caseId": "large-integer",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "9007199254740993 1 +"
+   }
+  },
+  {
+   "caseId": "large-integer",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "9007199254740993 1 +"
+   }
+  },
+  {
+   "caseId": "vector-pairwise",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 ] [ 3 4 ] +"
+   }
+  },
+  {
+   "caseId": "vector-pairwise",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 ] [ 3 4 ] +"
+   }
+  },
+  {
+   "caseId": "sqrt-domain-nil",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "-1 SQRT"
+   }
+  },
+  {
+   "caseId": "sqrt-domain-nil",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "-1 SQRT"
+   }
+  },
+  {
+   "caseId": "exact-comparison",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 2 LT"
+   }
+  },
+  {
+   "caseId": "exact-comparison",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 2 LT"
+   }
+  },
+  {
+   "caseId": "integer-modulus",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "10 4 MOD"
+   }
+  },
+  {
+   "caseId": "integer-modulus",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "10 4 MOD"
+   }
+  },
+  {
+   "caseId": "static-check-error",
+   "language": "en",
+   "selectedTool": "check",
+   "arguments": {
+    "source": "FROBNICATE"
+   }
+  },
+  {
+   "caseId": "static-check-error",
+   "language": "ja",
+   "selectedTool": "check",
+   "arguments": {
+    "source": "FROBNICATE"
+   }
+  },
+  {
+   "caseId": "alias-word-contract",
+   "language": "en",
+   "selectedTool": "word_contract",
+   "arguments": {
+    "word": "+"
+   }
+  },
+  {
+   "caseId": "alias-word-contract",
+   "language": "ja",
+   "selectedTool": "word_contract",
+   "arguments": {
+    "word": "+"
+   }
+  },
+  {
+   "caseId": "sort-ascending",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 3 1 2 ] SORT"
+   }
+  },
+  {
+   "caseId": "sort-ascending",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 3 1 2 ] SORT"
+   }
+  },
+  {
+   "caseId": "unique-labels",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 'a' 'b' 'a' ] UNIQUE"
+   }
+  },
+  {
+   "caseId": "unique-labels",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 'a' 'b' 'a' ] UNIQUE"
+   }
+  },
+  {
+   "caseId": "tally-labels",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 'a' 'b' 'a' ] TALLY"
+   }
+  },
+  {
+   "caseId": "tally-labels",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 'a' 'b' 'a' ] TALLY"
+   }
+  },
+  {
+   "caseId": "group-by-key",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP"
+   }
+  },
+  {
+   "caseId": "group-by-key",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP"
+   }
+  },
+  {
+   "caseId": "order-permutation",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 30 10 20 ] ORDER"
+   }
+  },
+  {
+   "caseId": "order-permutation",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 30 10 20 ] ORDER"
+   }
+  },
+  {
+   "caseId": "range-sequence",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 0 4 ] RANGE"
+   }
+  },
+  {
+   "caseId": "range-sequence",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 0 4 ] RANGE"
+   }
+  },
+  {
+   "caseId": "sum-vector",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 ] SUM"
+   }
+  },
+  {
+   "caseId": "sum-vector",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 ] SUM"
+   }
+  },
+  {
+   "caseId": "zip-transpose",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ [ 1 2 ] [ 3 4 ] ] ZIP"
+   }
+  },
+  {
+   "caseId": "zip-transpose",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ [ 1 2 ] [ 3 4 ] ] ZIP"
+   }
+  },
+  {
+   "caseId": "take-prefix",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
+   }
+  },
+  {
+   "caseId": "take-prefix",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
+   }
+  },
+  {
+   "caseId": "concat-vectors",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 ] [ 3 4 ] CONCAT"
+   }
+  },
+  {
+   "caseId": "concat-vectors",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 ] [ 3 4 ] CONCAT"
+   }
+  },
+  {
+   "caseId": "reverse-vector",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] REVERSE"
+   }
+  },
+  {
+   "caseId": "reverse-vector",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] REVERSE"
+   }
+  },
+  {
+   "caseId": "length-count",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] LENGTH"
+   }
+  },
+  {
+   "caseId": "length-count",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] LENGTH"
+   }
+  },
+  {
+   "caseId": "index-of-value",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 10 20 30 ] 20 INDEX-OF"
+   }
+  },
+  {
+   "caseId": "index-of-value",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 10 20 30 ] 20 INDEX-OF"
+   }
+  },
+  {
+   "caseId": "get-element",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 10 20 30 ] [ 1 ] GET"
+   }
+  },
+  {
+   "caseId": "get-element",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 10 20 30 ] [ 1 ] GET"
+   }
+  },
+  {
+   "caseId": "put-element",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] 1 9 PUT"
+   }
+  },
+  {
+   "caseId": "put-element",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] 1 9 PUT"
+   }
+  },
+  {
+   "caseId": "fill-matrix",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 2 2 0 ] FILL"
+   }
+  },
+  {
+   "caseId": "fill-matrix",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 2 2 0 ] FILL"
+   }
+  },
+  {
+   "caseId": "map-double",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] { 2 * } MAP"
+   }
+  },
+  {
+   "caseId": "map-double",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] { 2 * } MAP"
+   }
+  },
+  {
+   "caseId": "filter-even",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 ] { 2 MOD 0 = } FILTER"
+   }
+  },
+  {
+   "caseId": "filter-even",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 ] { 2 MOD 0 = } FILTER"
+   }
+  },
+  {
+   "caseId": "fold-product",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 ] 1 { * } FOLD"
+   }
+  },
+  {
+   "caseId": "fold-product",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 4 ] 1 { * } FOLD"
+   }
+  },
+  {
+   "caseId": "any-predicate",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] { 2 = } ANY"
+   }
+  },
+  {
+   "caseId": "any-predicate",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] { 2 = } ANY"
+   }
+  },
+  {
+   "caseId": "all-predicate",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 2 4 ] { 2 MOD 0 = } ALL"
+   }
+  },
+  {
+   "caseId": "all-predicate",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 2 4 ] { 2 MOD 0 = } ALL"
+   }
+  },
+  {
+   "caseId": "chars-split",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'hi' CHARS"
+   }
+  },
+  {
+   "caseId": "chars-split",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'hi' CHARS"
+   }
+  },
+  {
+   "caseId": "join-chars",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 'h' 'i' ] JOIN"
+   }
+  },
+  {
+   "caseId": "join-chars",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 'h' 'i' ] JOIN"
+   }
+  },
+  {
+   "caseId": "tokenize-csv",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'a,b,c' ',' TOKENIZE"
+   }
+  },
+  {
+   "caseId": "tokenize-csv",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'a,b,c' ',' TOKENIZE"
+   }
+  },
+  {
+   "caseId": "num-parse",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'42' NUM"
+   }
+  },
+  {
+   "caseId": "num-parse",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'42' NUM"
+   }
+  },
+  {
+   "caseId": "str-render",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "42 STR"
+   }
+  },
+  {
+   "caseId": "str-render",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "42 STR"
+   }
+  },
+  {
+   "caseId": "sqrt-perfect-square",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "9 SQRT"
+   }
+  },
+  {
+   "caseId": "sqrt-perfect-square",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "9 SQRT"
+   }
+  },
+  {
+   "caseId": "sum-of-two-roots",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "2 SQRT 3 SQRT +"
+   }
+  },
+  {
+   "caseId": "sum-of-two-roots",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "2 SQRT 3 SQRT +"
+   }
+  },
+  {
+   "caseId": "third-times-three",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 3 / 3 *"
+   }
+  },
+  {
+   "caseId": "third-times-three",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 3 / 3 *"
+   }
+  },
+  {
+   "caseId": "decimal-equality",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "0.1 0.2 + 0.3 EQ"
+   }
+  },
+  {
+   "caseId": "decimal-equality",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "0.1 0.2 + 0.3 EQ"
+   }
+  },
+  {
+   "caseId": "boolean-and",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "TRUE FALSE AND"
+   }
+  },
+  {
+   "caseId": "boolean-and",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "TRUE FALSE AND"
+   }
+  },
+  {
+   "caseId": "disjoint-domains",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'A' [ 65 ] EQ"
+   }
+  },
+  {
+   "caseId": "disjoint-domains",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "'A' [ 65 ] EQ"
+   }
+  },
+  {
+   "caseId": "nil-is-detectable",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 0 / NIL?"
+   }
+  },
+  {
+   "caseId": "nil-is-detectable",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 0 / NIL?"
+   }
+  },
+  {
+   "caseId": "ceiling-collection-work",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+   }
+  },
+  {
+   "caseId": "ceiling-collection-work",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+   }
+  },
+  {
+   "caseId": "ceiling-numeric-work",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "{ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * } 'C' DEF C C C C C C C C C C C C C C C C C C C"
+   }
+  },
+  {
+   "caseId": "ceiling-numeric-work",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "{ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * } 'C' DEF C C C C C C C C C C C C C C C C C C C"
+   }
+  },
+  {
+   "caseId": "ceiling-materialization",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 0 100001 ] RANGE"
+   }
+  },
+  {
+   "caseId": "ceiling-materialization",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 0 100001 ] RANGE"
+   }
+  },
+  {
+   "caseId": "ceiling-execution-steps",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n200000 DOWN"
+   }
+  },
+  {
+   "caseId": "ceiling-execution-steps",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n200000 DOWN"
+   }
+  },
+  {
+   "caseId": "shape-mismatch",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] [ 1 2 ] +"
+   }
+  },
+  {
+   "caseId": "shape-mismatch",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2 3 ] [ 1 2 ] +"
+   }
+  },
+  {
+   "caseId": "stack-shape-error",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 ADD"
+   }
+  },
+  {
+   "caseId": "stack-shape-error",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "1 ADD"
+   }
+  },
+  {
+   "caseId": "malformed-source",
+   "language": "en",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2"
+   }
+  },
+  {
+   "caseId": "malformed-source",
+   "language": "ja",
+   "selectedTool": "compute",
+   "arguments": {
+    "source": "[ 1 2"
+   }
+  },
+  {
+   "caseId": "unique-word-contract",
+   "language": "en",
+   "selectedTool": "word_contract",
+   "arguments": {
+    "word": "UNIQUE"
+   }
+  },
+  {
+   "caseId": "unique-word-contract",
+   "language": "ja",
+   "selectedTool": "word_contract",
+   "arguments": {
+    "word": "UNIQUE"
+   }
+  },
+  {
+   "caseId": "irrelevant-weather",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-weather",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-writing",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-writing",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-translation",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-translation",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-history",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-history",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-recipe",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-recipe",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-opinion",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-opinion",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  }
+ ]
 }

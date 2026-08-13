@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { captureAll, captureCase, DEFAULT_MODEL, SYSTEM_PROMPT, toolDefinitions } from "./capture-traces.js";
-import { indexTraces, mayAssertPerfect, validateCorpus } from "./evaluation-contract.js";
+import { LANGUAGES, indexTraces, mayAssertPerfect, validateCorpus } from "./evaluation-contract.js";
 
 const tools = await toolDefinitions();
 assert.deepEqual(
@@ -45,14 +45,20 @@ const compute = {
 const noTool = { content: [{ type: "text", text: "That isn't arithmetic." }], stop_reason: "end_turn" };
 
 const client = scriptedClient([compute, noTool]);
+const bilingual = {
+  id: "exact-fraction",
+  prompts: { en: "Compute one third exactly.", ja: "3 分の 1 を厳密に計算して。" },
+};
 const positive = await captureCase(client, {
   model: DEFAULT_MODEL,
   tools,
-  testCase: { id: "exact-fraction", prompt: "Compute one third exactly." },
+  testCase: bilingual,
+  language: "en",
 });
 assert.deepEqual(positive.selectedTool, "compute");
 assert.deepEqual(positive.arguments, { source: "1 3 /" });
 assert.deepEqual(positive.observed, { toolCalls: 1, stopReason: "tool_use" });
+assert.equal(positive.language, "en", "a trace records which asking produced it");
 
 // The negative half of the corpus. A model that answers an irrelevant prompt
 // without touching Ajisai is *correct*, so this has to record `null` rather
@@ -60,13 +66,26 @@ assert.deepEqual(positive.observed, { toolCalls: 1, stopReason: "tool_use" });
 const negative = await captureCase(client, {
   model: DEFAULT_MODEL,
   tools,
-  testCase: { id: "irrelevant-translation", prompt: "Translate hello into French." },
+  testCase: {
+    id: "irrelevant-translation",
+    prompts: { en: "Translate hello into French.", ja: "hello をフランス語に訳して。" },
+  },
+  language: "ja",
 });
 assert.equal(negative.selectedTool, null);
 assert.deepEqual(negative.arguments, {});
 
-const [request] = client.requests;
+const [request, japaneseRequest] = client.requests;
 assert.equal(request.system, SYSTEM_PROMPT);
+assert.equal(
+  request.messages[0].content,
+  bilingual.prompts.en,
+  "the English asking sends the English prompt",
+);
+assert.ok(
+  /フランス語/.test(japaneseRequest.messages[0].content),
+  "the Japanese asking sends the Japanese prompt, not a translated-at-runtime one",
+);
 // Forcing a tool call would make every irrelevant-intent case an automatic
 // failure of the one metric that measures restraint.
 assert.deepEqual(request.tool_choice, { type: "auto" });
@@ -80,12 +99,21 @@ const corpus = JSON.parse(
 );
 const ids = validateCorpus(corpus);
 const document = await captureAll({
-  client: scriptedClient([compute]),
+  client: scriptedClient([compute, compute]),
   model: DEFAULT_MODEL,
   tools,
   cases: [corpus.cases[0]],
 });
-assert.equal(indexTraces(document, ids).size, 1, "the captured document validates as a trace");
+assert.equal(
+  indexTraces(document, ids).size,
+  LANGUAGES.length,
+  "one case is asked once per language, and both askings validate as traces",
+);
+assert.deepEqual(
+  document.traces.map(({ language }) => language),
+  [...LANGUAGES],
+  "a pair is captured case-major, so an interrupted run never leaves half a pair",
+);
 assert.equal(document.provenance.source, "model");
 assert.equal(mayAssertPerfect(document), false, "a capture can be reported, never asserted perfect");
 for (const field of ["modelId", "promptTemplateDigest", "toolChoice", "capturedAt", "serverVersion", "engineVersion", "registryDigest"]) {
