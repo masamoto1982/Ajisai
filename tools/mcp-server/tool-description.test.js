@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+// The tool descriptions are the entry surface, so they are checked like one.
+//
+// With `tool_choice: auto` these four strings are the only text a caller reads
+// before its first call — the quickstart and the vocabulary are resources it
+// has to *decide* to fetch, and the measured baseline says it does not. That
+// makes a description that omits part of the product indistinguishable, from
+// the caller's side, from a product that lacks it: of 118 prompts, 21 produced
+// no call at all, twelve of those asking for collection work the description
+// never mentioned.
+//
+// So two properties are pinned here, both cheap and both checkable without a
+// model:
+//
+//   * every Word family the registry declares is represented, so a family
+//     added later cannot silently go unannounced;
+//   * every Word name the descriptions mention actually exists, so the entry
+//     surface never does to a caller what the caller did to us — send it after
+//     a name that was never there.
+
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { TOOLS } from "./index.js";
+
+const registry = JSON.parse(
+  readFileSync(new URL("./assets/words.json", import.meta.url), "utf8"),
+);
+const known = new Set();
+for (const entry of registry.entries) {
+  known.add(entry.name);
+  for (const alias of entry.aliases ?? []) known.add(alias);
+}
+const descriptions = TOOLS.map(({ description }) => description).join("\n");
+
+// ── every family is represented ─────────────────────────────────────────
+//
+// A family counts as announced when the surface names at least one of its
+// Words. Requiring the family's own label instead would pin the marketing
+// wording rather than the coverage, and `booleanLogic` is not a phrase anyone
+// should have to write.
+const families = new Map();
+for (const entry of registry.entries) {
+  if (!families.has(entry.family)) families.set(entry.family, []);
+  families.get(entry.family).push(entry.name);
+}
+
+// The families a caller reaches through `source` text. `dictionary`, `output`,
+// `reflection`, `control` and `stackModifier` are spelled inside a program
+// rather than chosen between, and `DEF` is named for the one case — defining a
+// Word — a caller has to know is possible at all.
+const MUST_ANNOUNCE = [
+  "exactArithmetic",
+  "comparison",
+  "booleanLogic",
+  "collection",
+  "higherOrder",
+  "text",
+  "absence",
+];
+
+const missing = MUST_ANNOUNCE.filter((family) => {
+  const names = families.get(family) ?? [];
+  return !names.some((name) => new RegExp(`\\b${escapeRegExp(name)}\\b`).test(descriptions));
+});
+assert.deepEqual(
+  missing,
+  [],
+  `the tool descriptions announce no Word of ${missing.join(", ")}; a caller reading only them ` +
+    "cannot know the engine does that, and the baseline measured exactly that cost",
+);
+
+// ── and every name they mention is real ─────────────────────────────────
+//
+// Uppercase tokens that look like Words. `NIL?` and `INDEX-OF` carry
+// punctuation, so the pattern has to admit `?` and `-` without swallowing
+// ordinary prose or the `RPN`/`MCP` style acronyms, which are excluded by
+// being absent from the registry only if they were meant as Words — hence the
+// allow-list rather than a cleverer regex.
+const NOT_WORDS = new Set(["RPN", "MCP", "JSON", "UTF", "NIL_", "I", "O"]);
+const mentioned = [...descriptions.matchAll(/\b[A-Z][A-Z-]*\??/g)]
+  .map(([token]) => token)
+  .filter((token) => token.length > 1 && !NOT_WORDS.has(token));
+const unknown = [...new Set(mentioned)].filter((token) => !known.has(token));
+assert.deepEqual(
+  unknown,
+  [],
+  `the tool descriptions name ${unknown.join(", ")}, which the registry does not have. ` +
+    "Sending a caller after a Word that does not exist is the failure the baseline " +
+    "spent 46 of 118 turns on; the entry surface must not commit it too",
+);
+
+function escapeRegExp(text) {
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+console.log(
+  `tool descriptions announce ${MUST_ANNOUNCE.length} Word families and name ` +
+    `${new Set(mentioned).size} Words, all of which exist`,
+);

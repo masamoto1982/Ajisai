@@ -1,11 +1,12 @@
 # MCP product readiness
 
-Status date: 2026-08-13 (updated after the resource-progress diagnosis fix, the
-first model baseline, the P1-1 corpus round and the collection-word billing
-round; before that, the work-meter recalibration, trace provenance, response
-compaction, algebraic short display and host-failure work). This is an implementation tracker, not a language specification.
-Percentages measure completion of the concrete exit criteria below; they are
-not forecasts.
+Status date: 2026-08-13 (updated after the P1-2 entry-surface round, the
+resource-progress diagnosis fix, the first model baseline, the P1-1 corpus round
+and the collection-word billing round; before that, the work-meter
+recalibration, trace provenance, response compaction, algebraic short display
+and host-failure work). This is an implementation tracker, not a language
+specification. Percentages measure completion of the concrete exit criteria
+below; they are not forecasts.
 
 The next-agent implementation handoff is
 [`mcp-claude-code-handoff.md`](./mcp-claude-code-handoff.md). Host-by-host
@@ -575,6 +576,53 @@ itself (`10 MOD 4`, sorting three integers, the length of a three-element
 vector). For an engine whose whole proposition is that a model's own arithmetic
 should not be trusted, **that is the product finding of this round**, and it is
 the evidence P1-2's quickstart work was waiting for.
+
+**Read case by case, the 67 have two causes, and neither is reluctance.**
+
+- The 21 that called nothing land where the `compute` description did not
+  reach. It said "exact rational, decimal, square-root and vector
+  calculations" — the numeric third of the product — and never mentioned
+  collections, higher-order blocks or text. Twelve of the 21 asked for
+  collection work. A caller reading only that description cannot tell the
+  engine sorts, deduplicates or groups, so declining was the correct reading of
+  what it was told.
+- The 46 that called only `word_contract` called it *twice*, at names Ajisai
+  has never had: `vec-add`, `v+`, `vec-map`, `group-by`, `nil-or`,
+  `nil-default`, `dict`. Those are not a model refusing to use the engine —
+  they are a model trying to and not knowing what anything is called. Nothing
+  readable before the first call named a single Word, because the vocabulary
+  lives in `ajisai://vocabulary` (45 KB) and the Word table inside the 26 KB
+  quickstart, and a caller has to *decide* to fetch either.
+
+Both are entry-surface defects, and the entry surface is smaller than it looks:
+with `tool_choice: auto`, the four tool descriptions are the only text read
+before the first call. So that is where the fix went. `compute` now names every
+family and the Words in them, says names are exact and case-sensitive, and
+points at `ajisai://vocabulary`; `word_contract` says the whole list is one
+resource read away instead of leaving probing as the only visible option. The
+quickstart preface opens with the same table (§0) and is 7,176 bytes, inside the
+8 KB the reevaluation set for it.
+
+`tool-description.test.js` keeps both properties: every Word family the registry
+declares must be announced by at least one of its Words, and every name the
+descriptions mention must exist. The second is the failure the baseline
+measured, pointed at ourselves — an entry surface that sends a caller after a
+Word that is not there.
+
+**The effect of this is not measured.** The credential that took the baseline
+has been rotated, so the after-capture has not been run. What exists is a
+hypothesis with a mechanism to test it: re-run `npm run eval:capture` and
+`score-traces.js` against the same 130 prompts and compare. Until that happens
+the numbers in the table above stand as the only measurement, and this round's
+change is a described change, not a demonstrated improvement.
+
+The `assets/quickstart.md` resource is deliberately **not** split. The
+reevaluation left the 8 KB target open to be judged on size alone; the baseline
+supplies the argument. It is fetched on demand rather than injected, so its 26 KB
+costs nothing unless read, and a caller that fetches it wants the Word table.
+The measured failure was too little information reaching the caller before its
+first call, not too much after — splitting the reference into halves it has to
+discover separately runs the wrong way.
 
 **Two harness defects were found by the first capture and fixed before the
 number above was taken.** Both had to be, because both made the metric measure

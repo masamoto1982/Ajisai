@@ -139,10 +139,26 @@ const READ_ONLY_ANNOTATIONS = Object.freeze({
   idempotentHint: true,
   openWorldHint: false,
 });
-const TOOLS = [
+export const TOOLS = [
   {
     name: "compute",
-    description: "Execute a bounded Ajisai program. Use for supported-domain exact rational, decimal, square-root and vector calculations, including reason-carrying NIL results.",
+    // Every word of this is load-bearing, and the length is deliberate: with
+    // `tool_choice: auto` these four descriptions are the *only* text a caller
+    // reads before deciding. The measured baseline (`eval/traces/`) says what
+    // the previous one cost. It named the numeric domain and stopped there, so
+    // of 118 prompts, 21 produced no call at all — twelve of them collection
+    // work, which the description never mentioned — and another 46 were spent
+    // guessing Word names in the registry (`vec-add`, `group-by`, `nil-or`,
+    // `dict`: none exist) because nothing readable before the first call said
+    // what the Words are called. Naming the families and the Words in them is
+    // the cheapest thing that answers both.
+    description:
+      "Execute a bounded Ajisai program and return its stack. Ajisai is postfix (RPN) and its numbers are exact rationals closed under square root — no floats, so results are reproducible and comparisons decide. " +
+      "Its 65 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR ROUND ABS NEG MIN MAX SQRT SUM), comparison (EQ NEQ LT LTE GT GTE), boolean logic (AND OR NOT), " +
+      "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE TALLY GROUP ZIP RANGE FILL TAKE CONCAT REVERSE LENGTH GET PUT INDEX-OF), " +
+      "higher-order blocks (MAP FILTER FOLD ANY ALL), text (CHARS JOIN TOKENIZE TRIM NUM STR), and absence (NIL NIL? VENT), plus DEF to name your own. " +
+      "Word names are exact and case-sensitive; the full list is the ajisai://vocabulary resource and word_contract answers a near-miss with suggestions, so look a name up rather than guessing it. " +
+      "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: transcendentals, floats, I/O, and general-purpose programming.",
     inputSchema: sourceSchema,
     outputSchema: envelopeSchema,
     annotations: READ_ONLY_ANNOTATIONS,
@@ -163,7 +179,15 @@ const TOOLS = [
   },
   {
     name: "word_contract",
-    description: "Return the generated canonical registry entry for a Word or alias. An unmatched name answers with the closest known Words in `suggestions`.",
+    // The baseline's second failure mode was 46 turns spent here, two guesses
+    // at a time, at names no Ajisai vocabulary ever had. Answering a miss with
+    // `suggestions` was already right; what was missing was any hint that the
+    // whole list is one resource read away, so a caller that does not know the
+    // name has something better to do than guess again.
+    description:
+      "Return the generated canonical registry entry for a Word or alias — its arity, purity, NIL policy and contract. " +
+      "An unmatched name answers with the closest known Words in `suggestions`. " +
+      "To see every Word at once instead of probing one name at a time, read the ajisai://vocabulary resource.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
