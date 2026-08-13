@@ -127,7 +127,21 @@ const sourceSchema = {
       // rejected as `sourceTooLarge`, which is why the effective unit is
       // stated in the description rather than left to be inferred.
       maxLength: LIMITS.sourceBytes,
-      description: `Ajisai source text (file paths are not accepted). The effective limit is ${LIMITS.sourceBytes} UTF-8 bytes, so non-ASCII text reaches it at fewer characters than maxLength suggests.`,
+      // The four rules below are not a syntax summary — they are the four
+      // mistakes a real model actually made, counted. After the entry-surface
+      // round moved tool selection from 0.469 to 0.862, 31 of 130 prompts
+      // reached `compute` and handed it source that did not run, and eight of
+      // those were the quote character alone. Each rule was executed against
+      // the engine before being written here, which corrected two guesses:
+      // `[1 2 3]` without inner spaces is fine, and so is `[ 1, 2, 3 ]`.
+      // Stating rules that are not real would cost the caller the same turn the
+      // missing ones do.
+      description:
+        `Ajisai source text (file paths are not accepted). The effective limit is ${LIMITS.sourceBytes} UTF-8 bytes, so non-ASCII text reaches it at fewer characters than maxLength suggests. ` +
+        "Syntax is postfix: operands first, then the Word — `1 2 ADD`, `[ 1 2 3 ] LENGTH`. " +
+        "A string is single-quoted (`'hi'`, never \"hi\"). " +
+        "A block passed to MAP/FILTER/FOLD/ANY/ALL is in braces (`[ 1 2 3 4 ] { 2 MOD 0 = } FILTER`), not brackets. " +
+        "A Word's operand shape is part of its contract and is worth checking with word_contract when unsure — several take a vector where one number looks natural, e.g. `[ 0 4 ] RANGE` and `[ [ 1 2 ] [ 3 4 ] ] ZIP`.",
     },
   },
   required: ["source"],

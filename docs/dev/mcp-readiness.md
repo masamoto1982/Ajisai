@@ -634,14 +634,23 @@ prompts now reach `compute` and hand it source that does not produce the
 expected result, and the mistakes are four concrete syntax rules rather than
 misunderstandings of the domain:
 
-| the model wrote | Ajisai wants |
-|---|---|
-| `["a" "b" "a"] UNIQUE` | `[ 'a' 'b' 'a' ] UNIQUE` — single quotes |
-| `[1 2 3 4] …` | `[ 1 2 3 4 ] …` — brackets are tokens and need spaces |
-| `[ 2 MOD 0 EQ ] FILTER` | `{ 2 MOD 0 = } FILTER` — a block is braces |
-| `5 RANGE` | `[ 0 4 ] RANGE` — `RANGE` takes a bounds vector |
+| the model wrote | Ajisai wants | n |
+|---|---|---:|
+| `"hi" CHARS` | `'hi' CHARS` — a string is single-quoted | 8 |
+| `[ 2 MOD 0 EQ ] FILTER` | `{ 2 MOD 0 = } FILTER` — a block is braces | 4 |
+| `5 RANGE` | `[ 0 4 ] RANGE` — `RANGE` takes a bounds vector | 4 |
+| `[ 1 2 ] [ 3 4 ] ZIP` | `[ [ 1 2 ] [ 3 4 ] ] ZIP` — one vector of vectors | 1 |
 
-Every one of those is in the writing protocol, and the writing protocol is
+Each of those was run against the engine before being written down, which
+corrected two guesses made from reading the sources alone: `[1 2 3]` without
+inner spaces is **fine**, and so is `[ 1, 2, 3 ]` with commas. Neither is a
+cause. The quote character is, and it is the single largest one.
+
+The rest of the 31 are not syntax: a wrong Word for the job (`INDEX-OF` where
+`{ 2 = } ANY` was asked for), an invented one (`OVER`), and one case answered as
+a different question. Those are not fixable by stating a rule.
+
+The four rules are all in the writing protocol, and the writing protocol is
 inside the 26 KB resource the caller does not fetch. That is the same shape as
 the defect this round fixed, one level down: the information exists and does not
 reach the surface that is read. It is the obvious next lever, and it is now
