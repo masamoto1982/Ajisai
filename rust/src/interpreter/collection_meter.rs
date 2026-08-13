@@ -31,7 +31,7 @@
 //! number is an upper bound on the probes the element will perform, so a
 //! refusal still happens before the work rather than after it.
 
-use crate::error::Result;
+use crate::error::{AjisaiError, ResourceProgress, Result, PROGRESS_UNIT_ELEMENTS};
 use crate::interpreter::arithmetic_meter::measure_operand;
 use crate::interpreter::runtime_limits::{ElementCost, OperandWork};
 use crate::interpreter::Interpreter;
@@ -51,10 +51,15 @@ use crate::types::Value;
 pub(crate) fn charge(interp: &mut Interpreter, units: u64) -> Result<()> {
     interp.collection_work_used = interp.collection_work_used.saturating_add(units);
     if interp.collection_work_used > interp.runtime_limits.max_collection_work {
-        return Err(crate::error::AjisaiError::ResourceLimitExceeded {
+        return Err(AjisaiError::ResourceLimitExceeded {
             resource: crate::error::ResourceLimit::CollectionWork,
             limit: interp.runtime_limits.max_collection_work,
             observed: Some(interp.collection_work_used),
+            // Filled in by `ScanMeter` for the operations charged as they go.
+            // A pre-charged copy or sort has nothing to add: its `observed`
+            // already includes the whole operation's cost, so it says how far
+            // over the request was without any help.
+            progress: None,
         });
     }
     Ok(())
@@ -155,6 +160,7 @@ pub(crate) fn charge_comparison_sort(interp: &mut Interpreter, items: &[Value]) 
 pub(crate) struct ScanMeter {
     probe_units: u64,
     copy_units: u64,
+    total: u64,
 }
 
 impl ScanMeter {
@@ -164,22 +170,59 @@ impl ScanMeter {
         Self {
             probe_units: cost.probe(),
             copy_units: cost.copy(),
+            total: items.len() as u64,
         }
     }
 
-    /// Charge, before scanning one element, for probing `candidates` of them.
+    /// Charge, before scanning element number `completed`, for probing
+    /// `candidates` of them.
     ///
     /// `candidates` is the number of distinct values found so far, which is the
     /// most probes this element can perform. An element that matches early is
     /// over-charged — by 2x on average over a uniform match, and not at all
     /// when every element is distinct or every element is equal, the two ends
     /// the ceiling exists to separate.
-    pub(crate) fn charge_scan_of(&self, interp: &mut Interpreter, candidates: usize) -> Result<()> {
+    ///
+    /// `completed` is how many elements are already behind it, and it is what
+    /// makes a refusal here actionable. Because this meter charges as it goes,
+    /// `observed` on the way out is always a hair over the limit however far
+    /// over the request really was, so it cannot say how much smaller the input
+    /// needs to be. `completed` can: the budget bought exactly this many
+    /// elements of this data. See `error::ResourceProgress`.
+    pub(crate) fn charge_scan_of(
+        &self,
+        interp: &mut Interpreter,
+        completed: usize,
+        candidates: usize,
+    ) -> Result<()> {
         charge(interp, self.probe_units.saturating_mul(candidates as u64))
+            .map_err(|error| self.with_progress(error, completed))
     }
 
     /// Charge for retaining one element in the result.
-    pub(crate) fn charge_retained(&self, interp: &mut Interpreter) -> Result<()> {
-        charge(interp, self.copy_units)
+    pub(crate) fn charge_retained(&self, interp: &mut Interpreter, completed: usize) -> Result<()> {
+        charge(interp, self.copy_units).map_err(|error| self.with_progress(error, completed))
+    }
+
+    /// Attach how far the scan got to the ceiling it just crossed.
+    fn with_progress(&self, error: AjisaiError, completed: usize) -> AjisaiError {
+        match error {
+            AjisaiError::ResourceLimitExceeded {
+                resource,
+                limit,
+                observed,
+                progress: None,
+            } => AjisaiError::ResourceLimitExceeded {
+                resource,
+                limit,
+                observed,
+                progress: Some(ResourceProgress {
+                    completed: completed as u64,
+                    total: self.total,
+                    unit: PROGRESS_UNIT_ELEMENTS,
+                }),
+            },
+            other => other,
+        }
     }
 }

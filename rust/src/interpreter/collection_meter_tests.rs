@@ -239,6 +239,86 @@ mod collection_meter_tests {
     }
 
     #[tokio::test]
+    async fn a_scan_refusal_says_how_far_it_got_and_that_size_fits() {
+        // The property the whole `progress` field exists for. `observed` on a
+        // meter charged as it goes is always a hair over `limit` — it cannot
+        // say how much smaller the input has to be, and a real model reading it
+        // proportionally retried 100,000 elements as 99,999 and failed again.
+        // `completed` is the answer rather than a hint at it: the budget bought
+        // exactly that many elements, so re-running with that many must succeed.
+        let budget = 1_000_000;
+        let mut interp = Interpreter::new();
+        interp.set_runtime_limits(RuntimeLimits {
+            max_collection_work: budget,
+            ..RuntimeLimits::default()
+        });
+        let err = interp
+            .execute("[ 0 9999 ] RANGE UNIQUE")
+            .await
+            .expect_err("ten thousand distinct values is far past this budget");
+        let AjisaiError::ResourceLimitExceeded {
+            observed, progress, ..
+        } = err
+        else {
+            panic!("expected a resource-limit refusal, got {err:?}");
+        };
+        let progress = progress.expect("an incrementally charged refusal reports its progress");
+        assert_eq!(progress.total, 10_000);
+        assert_eq!(progress.unit, "elements");
+        assert!(
+            progress.completed > 0 && progress.completed < progress.total,
+            "the scan stopped part way, at {} of {}",
+            progress.completed,
+            progress.total
+        );
+        // The defect this replaced, stated as an assertion: `observed` alone
+        // looks like a rounding error however far over the request was.
+        let overshoot = observed.expect("a work ceiling reports what it spent") - budget;
+        assert!(
+            overshoot * 100 < budget,
+            "observed overshoots by under 1% even at 10x the affordable input, \
+             which is exactly why it cannot be read proportionally: {overshoot}"
+        );
+
+        // And the advertised size really does fit.
+        let mut retry = Interpreter::new();
+        retry.set_runtime_limits(RuntimeLimits {
+            max_collection_work: budget,
+            ..RuntimeLimits::default()
+        });
+        retry
+            .execute(&format!("[ 0 {} ] RANGE UNIQUE", progress.completed - 1))
+            .await
+            .unwrap_or_else(|e| {
+                panic!(
+                    "retrying with the {} elements the refusal advertised must succeed, got {e:?}",
+                    progress.completed
+                )
+            });
+    }
+
+    #[tokio::test]
+    async fn a_pre_charged_refusal_reports_no_progress() {
+        // The other half: a copy or a sort is charged in full before it runs,
+        // so its `observed` already includes the whole operation's cost and
+        // says how far over the request was on its own. Inventing a progress
+        // figure there would be reporting a measurement nothing took.
+        let mut interp = Interpreter::new();
+        interp.set_runtime_limits(RuntimeLimits {
+            max_collection_work: 1_000,
+            ..RuntimeLimits::default()
+        });
+        let err = interp
+            .execute("[ 0 9999 ] RANGE")
+            .await
+            .expect_err("materializing ten thousand elements is past this budget");
+        let AjisaiError::ResourceLimitExceeded { progress, .. } = err else {
+            panic!("expected a resource-limit refusal, got {err:?}");
+        };
+        assert!(progress.is_none(), "a pre-charge has no partial progress");
+    }
+
+    #[tokio::test]
     async fn the_budget_admits_what_it_declares() {
         // The other half of a live ceiling. A scan whose charge is inside the
         // budget has to run, or the number is not the number it says it is.

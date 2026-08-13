@@ -364,6 +364,15 @@ a ceiling named for collections should send a repair at the collection, and its
 source contains no arithmetic, so a repaired attempt that succeeds can only
 have shrunk the collection. Their reference trace is
 also a scorer fixture, not evidence of model performance.
+When a refusal comes from a ceiling charged as the operation proceeds — the
+collection scans — `diagnosis.resourceLimit` carries a `progress`
+`{ completed, total, unit }` alongside `observed`. It exists because `observed`
+cannot serve there: such a meter stops the instant the budget is crossed, so it
+reads a hair over the limit however far over the request was, and a reader
+taking it proportionally under-corrects wildly. `completed` is the size that
+fits. Measured against a real model, adding it moved the diagnosis-driven repair
+rate from 0.750 to 1.000 on the same corpus.
+
 `eval:validate` rejects duplicate or unknown case IDs, unknown tools, malformed
 JSON pointers and incomplete committed reference traces before scores are
 calculated. This prevents malformed or selectively omitted traces from

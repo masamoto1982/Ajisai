@@ -385,6 +385,7 @@ impl RuntimeLimits {
                 resource: ResourceLimit::SourceBytes,
                 limit: self.max_source_bytes as u64,
                 observed: Some(byte_len as u64),
+                progress: None,
             });
         }
         Ok(())
@@ -399,6 +400,7 @@ impl RuntimeLimits {
                 resource: ResourceLimit::NumericLiteralDigits,
                 limit: self.max_numeric_literal_digits as u64,
                 observed: Some(digit_len as u64),
+                progress: None,
             });
         }
         Ok(())
@@ -421,6 +423,7 @@ impl RuntimeLimits {
                 resource: ResourceLimit::AlgebraicTerms,
                 limit: self.max_algebraic_terms as u64,
                 observed: Some(term_count as u64),
+                progress: None,
             });
         }
         self.check_bigint_bits(coeff_bits)
@@ -441,6 +444,7 @@ impl RuntimeLimits {
                 resource: ResourceLimit::BigintBits,
                 limit: self.max_bigint_bits,
                 observed: Some(bits),
+                progress: None,
             });
         }
         Ok(())

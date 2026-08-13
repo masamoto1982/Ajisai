@@ -96,6 +96,11 @@ pub struct ResourceLimitFacts {
     pub resource: String,
     pub limit: u64,
     pub observed: Option<u64>,
+    /// How far an incrementally charged operation got before it was refused.
+    /// `None` for every ceiling whose `observed` is a real measurement of a
+    /// real size; present exactly where `observed` cannot say how far over the
+    /// request was. See `error::ResourceProgress`.
+    pub progress: Option<crate::error::ResourceProgress>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -443,10 +448,12 @@ fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
             resource,
             limit,
             observed,
+            progress,
         } => Some(ResourceLimitFacts {
             resource: resource.as_protocol_str().to_string(),
             limit: *limit,
             observed: *observed,
+            progress: *progress,
         }),
         // The step budget lives outside `RuntimeLimits` but is published in
         // the same limit table, so it answers "which ceiling" the same way.
@@ -456,6 +463,7 @@ fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
                 .to_string(),
             limit: *limit as u64,
             observed: None,
+            progress: None,
         }),
         _ => None,
     }

@@ -388,7 +388,7 @@
     "resource",
     "limit"
    ],
-   "description": "Which declared ceiling a resource-limit failure crossed. `resource` names an entry of `mcp.limits`.",
+   "description": "Which declared ceiling a resource-limit failure crossed. `resource` names an entry of `mcp.limits`. `observed` is what crossed it — a real measured size for the size ceilings, but for a cumulative work ceiling only the budget spent at the moment of refusal, which sits a hair over `limit` however far over the request was. Where that is so, `progress` carries the number to act on instead.",
    "properties": {
     "resource": {
      "type": "string",
@@ -412,6 +412,29 @@
       "null"
      ],
      "minimum": 0
+    },
+    "progress": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "completed",
+      "total",
+      "unit"
+     ],
+     "description": "How far an operation charged as it goes had got when its budget ran out. Present only where `observed` cannot say how much smaller the input must be; absent for every ceiling whose `observed` is a real size. `completed` is the answer rather than a hint at it: the budget bought exactly that many units of this data, so retrying with that many is what fits.",
+     "properties": {
+      "completed": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "total": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "unit": {
+       "type": "string"
+      }
+     }
     }
    }
   },

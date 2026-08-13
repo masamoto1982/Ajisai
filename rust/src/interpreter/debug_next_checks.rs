@@ -286,6 +286,19 @@ pub(crate) fn build_next_checks(
                         "diagnosis.resourceLimit に、超過した上限の名前・設定値・実測値が入っている",
                     ),
                 ));
+                // The one check carrying a number to act on. A meter charged as
+                // it goes stops the instant the budget is crossed, so
+                // `observed` sits a hair over `limit` however far over the
+                // request was; reading it proportionally is what made a real
+                // model retry 100,000 elements as 99,999 and fail again.
+                out.push(check(
+                    "checkHowFarItGot",
+                    ("Check how far it got", "どこまで進んだかを確認する"),
+                    (
+                        "When diagnosis.resourceLimit.progress is present, the budget bought exactly `completed` of `total` units: retry with that many, not slightly fewer. `observed` cannot tell you how much to cut, because a meter charged as it goes stops the moment it crosses.",
+                        "diagnosis.resourceLimit.progress があるとき、予算で処理できたのは total のうち completed 単位ちょうど。少し減らすのではなく、その数で再試行する。逐次課金のメーターは超えた瞬間に止まるので、observed からは削る量が分からない",
+                    ),
+                ));
                 out.push(check(
                     "checkValueGrowth",
                     ("Check value growth", "値の増大を確認する"),

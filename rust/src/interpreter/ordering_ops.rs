@@ -114,12 +114,12 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
 fn distinct_with_counts(interp: &mut Interpreter, items: &[Value]) -> Result<Vec<(Value, usize)>> {
     let meter = ScanMeter::new(items);
     let mut out: Vec<(Value, usize)> = Vec::new();
-    for item in items {
-        meter.charge_scan_of(interp, out.len())?;
+    for (completed, item) in items.iter().enumerate() {
+        meter.charge_scan_of(interp, completed, out.len())?;
         match out.iter_mut().find(|(seen, _)| seen == item) {
             Some((_, count)) => *count += 1,
             None => {
-                meter.charge_retained(interp)?;
+                meter.charge_retained(interp, completed)?;
                 out.push((item.clone(), 1));
             }
         }
@@ -248,10 +248,10 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
     let key_meter = ScanMeter::new(&keys);
     let value_meter = ScanMeter::new(&values);
     let mut groups: Vec<(Value, Vec<Value>)> = Vec::new();
-    for (value, key) in values.iter().zip(keys.iter()) {
+    for (completed, (value, key)) in values.iter().zip(keys.iter()).enumerate() {
         let charged = key_meter
-            .charge_scan_of(interp, groups.len())
-            .and_then(|()| value_meter.charge_retained(interp));
+            .charge_scan_of(interp, completed, groups.len())
+            .and_then(|()| value_meter.charge_retained(interp, completed));
         if let Err(e) = charged {
             put_back(interp, &values_value, &keys_value);
             return Err(e);
@@ -259,7 +259,7 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
         match groups.iter_mut().find(|(seen, _)| seen == key) {
             Some((_, bucket)) => bucket.push(value.clone()),
             None => {
-                if let Err(e) = key_meter.charge_retained(interp) {
+                if let Err(e) = key_meter.charge_retained(interp, completed) {
                     put_back(interp, &values_value, &keys_value);
                     return Err(e);
                 }

@@ -120,11 +120,23 @@ fn check_json(check: &crate::interpreter::debug_diagnosis::DebugCheck) -> Json {
 }
 
 fn resource_limit_json(facts: &crate::interpreter::debug_diagnosis::ResourceLimitFacts) -> Json {
-    json!({
+    let mut out = json!({
         "resource": facts.resource,
         "limit": facts.limit,
         "observed": facts.observed,
-    })
+    });
+    // Emitted only where it exists, never as a null. A ceiling whose `observed`
+    // is a real size says everything it has to say without it, and a key that
+    // is present-but-empty invites a reader to treat "no progress recorded" as
+    // "no progress made".
+    if let Some(progress) = facts.progress {
+        out["progress"] = json!({
+            "completed": progress.completed,
+            "total": progress.total,
+            "unit": progress.unit,
+        });
+    }
+    out
 }
 
 pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
