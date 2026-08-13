@@ -114,6 +114,35 @@ pub enum ResourceLimit {
     ExecutionSteps,
 }
 
+/// How far an incrementally charged operation had got when its budget ran out.
+///
+/// For a *size* ceiling `observed` is the whole story: `bigintBits` observing
+/// 272,133 against a limit of 262,144 is a real measurement of a real value,
+/// visibly 4% over. A *cumulative work* ceiling charged as it goes cannot say
+/// that — it stops the instant the budget is crossed, so `observed` reads a
+/// hair over `limit` whether the caller asked for one element too many or
+/// fifteen times too many.
+///
+/// Not a harmless imprecision: measured against a real model (`eval/traces/`),
+/// reading it proportionally is exactly what happens. Refused at 0.02% over
+/// while deduplicating 100,000 integers, the model retried with 99,999 and then
+/// 99,979 and failed both times; it needed a 94% cut and nothing in the refusal
+/// pointed there. Reporting where the scan stopped is the answer rather than a
+/// hint at it — the budget bought exactly `completed` elements of this data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub struct ResourceProgress {
+    /// Units of `unit` fully processed before the budget ran out.
+    pub completed: u64,
+    /// Units of `unit` the operation was asked for.
+    pub total: u64,
+    /// What is being counted. `"elements"` for the collection scans, which are
+    /// the only operations charged incrementally today.
+    pub unit: &'static str,
+}
+
+/// The unit the collection scans count in.
+pub const PROGRESS_UNIT_ELEMENTS: &str = "elements";
+
 impl ResourceLimit {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
@@ -319,6 +348,10 @@ pub enum AjisaiError {
         resource: ResourceLimit,
         limit: u64,
         observed: Option<u64>,
+        /// How far the refused operation had got, when the operation is one
+        /// that is charged as it goes. `None` everywhere else — see
+        /// [`ResourceProgress`] for why the distinction is the whole point.
+        progress: Option<ResourceProgress>,
     },
     /// The native recursion-depth guard (SPEC §8.4) tripped: `word` reached
     /// `limit` non-tail recursive activations. A runtime safety control of the
@@ -400,14 +433,31 @@ impl fmt::Display for AjisaiError {
                 resource,
                 limit,
                 observed,
+                progress,
             } => match observed {
-                Some(observed) => write!(
-                    f,
-                    "{} of {} exceeds the limit of {}",
-                    resource.as_protocol_str(),
-                    observed,
-                    limit
-                ),
+                // The progress clause carries the repair. Without it the
+                // sentence reads as a near miss on every incrementally charged
+                // ceiling, because that is the only thing `observed` can say
+                // there — see `ResourceProgress`.
+                Some(observed) => match progress {
+                    Some(progress) => write!(
+                        f,
+                        "{} of {} exceeds the limit of {} after {} of {} {}",
+                        resource.as_protocol_str(),
+                        observed,
+                        limit,
+                        progress.completed,
+                        progress.total,
+                        progress.unit
+                    ),
+                    None => write!(
+                        f,
+                        "{} of {} exceeds the limit of {}",
+                        resource.as_protocol_str(),
+                        observed,
+                        limit
+                    ),
+                },
                 None => write!(
                     f,
                     "{} limit ({}) exceeded",

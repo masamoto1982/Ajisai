@@ -1,9 +1,9 @@
 # MCP product readiness
 
-Status date: 2026-08-13 (updated after the first model baseline, the P1-1
-corpus round and the collection-word billing round; before that, the work-meter recalibration, trace
-provenance, response compaction, algebraic short display and host-failure
-work). This is an implementation tracker, not a language specification.
+Status date: 2026-08-13 (updated after the resource-progress diagnosis fix, the
+first model baseline, the P1-1 corpus round and the collection-word billing
+round; before that, the work-meter recalibration, trace provenance, response
+compaction, algebraic short display and host-failure work). This is an implementation tracker, not a language specification.
 Percentages measure completion of the concrete exit criteria below; they are
 not forecasts.
 
@@ -595,24 +595,40 @@ the harness:
   diagnosis. It also made the two repair rates identical by construction. They
   now separate: 1.000 observed against 0.750 repaired.
 
-**A diagnosis defect the baseline found, not yet fixed.** On
-`repair-collection-ceiling` the model repairs in the right *direction* — it
-shrinks the collection, not the arithmetic, which is the claim `collectionWork`
-was split out to make true — but it shrinks by one element (99,999 → 99,998) and
-by twenty (→ 99,979), and both retries fail again. The reason is in the
-diagnosis: a cumulative work meter aborts the moment the budget is crossed, so
-`observed` (20,004,122) always sits a hair over `limit` (20,000,000) however far
-over the request really was. A reader inferring proportionally concludes it needs
-to shrink by 0.02%; it needs to shrink by 94%, to about 6,291 elements. **For an
-incrementally charged ceiling `observed` carries no distance information at all**
-— unlike `bigintBits` or `algebraicTerms`, where it is a real size and a real
-multiple of the limit. Reporting how far the operation got before it was refused
-would say the useful thing, but that is a change to the diagnosis contract every
-host reads, so it is recorded here rather than made unilaterally.
+**A diagnosis defect the baseline found, fixed, and the fix measured.** On
+`repair-collection-ceiling` the model repaired in the right *direction* — it
+shrank the collection, not the arithmetic, which is the claim `collectionWork`
+was split out to make true — but it shrank by one element (99,999 → 99,998) and
+by twenty (→ 99,979), and both retries failed again.
 
-**What P2 still owes**: the before/after comparison the `exactDisplay` and
-response-compaction rounds are owed (needs a second capture across a change),
-corpus growth beyond 65 cases, and remote-service latency. The percentage moves
+The fault was in the diagnosis, not the model. A cumulative work meter aborts
+the moment the budget is crossed, so `observed` (20,004,122) always sits a hair
+over `limit` (20,000,000) however far over the request really was. Read
+proportionally — which is the only way to read it — it says "shrink by 0.02%",
+where the input had to shrink by 94%. Unlike `bigintBits` or `algebraicTerms`,
+where `observed` is a real size and a real multiple of the limit, **for an
+incrementally charged ceiling it carries no distance information at all.**
+
+`diagnosis.resourceLimit.progress` now reports where the operation stopped:
+`{ completed, total, unit }`. For a scan that is the answer rather than a hint
+at it — the budget bought exactly `completed` elements of this data, so an input
+of that size is the one that fits. It is emitted only where it exists: a copy or
+a sort is charged in full before it runs, so its `observed` already says how far
+over the request was and no progress figure is invented for it. A
+`checkHowFarItGot` next-check states the instruction in both languages rather
+than leaving it to be inferred.
+
+**Re-captured against the same corpus and the same model, the repair rate went
+0.750 → 1.000**, and in both languages the model retried with `[ 0 6032 ] RANGE`
+— exactly the size the refusal advertised, where before it had shaved off one
+element. Both trace documents are committed
+(`claude-opus-5-repairs-baseline.json` before, `…-repairs-progress-fix.json`
+after), which also makes this the first before/after comparison this tracker has
+been able to run.
+
+**What P2 still owes**: the before/after comparisons the `exactDisplay` and
+response-compaction rounds are owed (the mechanism now exists and has been used
+once, above), corpus growth beyond 65 cases, and remote-service latency. The percentage moves
 to 75% for evidence collected, not for the product performing well — a 0.39
 semantic success rate is a starting line.
 

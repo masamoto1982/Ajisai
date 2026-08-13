@@ -181,10 +181,12 @@
           "/aiDiagnostic/kind": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "collectionWork",
           "/diagnosis/resourceLimit/limit": 20000000,
-          "/diagnosis/resourceLimit/observed": 20005397
+          "/diagnosis/resourceLimit/observed": 20005397,
+          "/diagnosis/resourceLimit/progress/unit": "elements",
+          "/diagnosis/resourceLimit/progress/total": 6292
         }
       },
-      "note": "The element copies, order comparisons and equality probes a collection Word performs inside a single execution step -- the work the step budget cannot see, because such a Word is one step however many elements it touches. `UNIQUE` scans the distinct values found so far for each element, so 6,291 distinct values is 19,785,195 probes and passes while 6,292 crosses on the last one. What is charged is deliberately not the element count: the same Word over the same 16,000 elements measured 0.52 ms with one distinct value and 682 ms with sixteen thousand, so the price is operations x the measured cost of one element -- leaves per element, limbs per leaf, and 512 units for an algebraic one, which compares 500x slower than a machine word. `LENGTH` is on both sides to keep the under case inside `responseBytes`; it charges nothing, being O(1) again as of this change. Derived in docs/dev/collection-word-billing-2026-08-13.md."
+      "note": "The element copies, order comparisons and equality probes a collection Word performs inside a single execution step -- the work the step budget cannot see, because such a Word is one step however many elements it touches. `UNIQUE` scans the distinct values found so far for each element, so 6,291 distinct values is 19,785,195 probes and passes while 6,292 crosses on the last one. What is charged is deliberately not the element count: the same Word over the same 16,000 elements measured 0.52 ms with one distinct value and 682 ms with sixteen thousand, so the price is operations x the measured cost of one element -- leaves per element, limbs per leaf, and 512 units for an algebraic one, which compares 500x slower than a machine word. `LENGTH` is on both sides to keep the under case inside `responseBytes`; it charges nothing, being O(1) again as of this change. Derived in docs/dev/collection-word-billing-2026-08-13.md. The refusal also reports how far it got: a meter charged as it goes stops the instant the budget is crossed, so `observed` sits a hair over `limit` however far over the request was — 0.02% at 100,000 elements, where the input actually had to shrink by 94%. Measured against a real model, reading it proportionally is exactly what happened: asked to deduplicate 100,000 integers it retried with 99,999 and then 99,979, and both failed again. `diagnosis.resourceLimit.progress` carries the size that fits instead, and the `checkHowFarItGot` next-check says to use it."
     },
     "bigintBits": {
       "coverage": "boundary",

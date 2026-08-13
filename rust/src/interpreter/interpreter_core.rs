@@ -723,6 +723,7 @@ impl Interpreter {
                 resource: crate::error::ResourceLimit::NumericWork,
                 limit: self.runtime_limits.max_numeric_work,
                 observed: Some(self.numeric_work_used),
+                progress: None,
             });
         }
         Ok(())
