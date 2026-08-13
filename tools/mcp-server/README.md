@@ -300,6 +300,14 @@ correctly and writes source computing the wrong thing has a language problem.
 Generation is rated over the positive cases only, since a case whose correct
 answer is no call has nothing to generate.
 
+A turn may hold several tool calls, and all of them are recorded and scored. A
+model that looks a Word up and then computes has made one attempt containing two
+calls, not a wrong choice — 91 of 130 turns in the first baseline did exactly
+that, so keeping only the first call scored the lookup as the model's decision
+and reported 0.323 selection accuracy where reading the whole turn reports
+0.469. `reachedExpectedToolFirstRate` reports the stricter reading beside it,
+without making instinct a pass criterion.
+
 `eval/reference-traces.json` is generated from the corpus by
 `npm run eval:reference-traces` and drift-checked in `eval:validate`. A perfect
 fixture is the corpus answering itself with its own reference arguments, so
@@ -334,9 +342,22 @@ credentials the way the Anthropic SDK does (`ANTHROPIC_API_KEY`,
 exits non-zero having written nothing. `capture-traces.test.js` exercises the
 harness against a scripted client; it tests prompt assembly and tool-call
 extraction, not a model.
+`npm run eval:capture-repairs` captures the other half: for each repair case it
+asks, executes the model's call against the real server, hands the whole
+structured result back as a `tool_result`, and records the second attempt. Both
+attempts are recorded as *calls*, never as outcomes — the scorer replays them
+itself, because a capture that recorded its own verdict would be grading the
+model with the code that produced its answer. A turn that calls nothing, or a
+model that gives up after reading the diagnosis, is recorded rather than
+dropped: a harness that could only capture the runs that went well would report
+a repair rate computed over those.
+
 `score-repairs.js` replays a failed attempt and its model-produced revision,
 requires the expected structured diagnosis before the revision can count, and
 reports diagnosis-observation and diagnosis-driven repair rates, per language.
+It replays whichever tool the model chose, not only `compute`: `1 2 AD` through
+`check` returns the identical diagnosis, so replaying one tool scored a model
+that checked before running as never having seen a diagnosis at all.
 The cases cover unknown Words, stack shape, malformed source and the
 `collectionWork` ceiling — the last of these exists to make a claim testable:
 a ceiling named for collections should send a repair at the collection, and its

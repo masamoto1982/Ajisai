@@ -63,8 +63,8 @@
   {
    "id": "repair-collection-ceiling",
    "prompts": {
-    "en": "Deduplicate the integers from 0 to 99999 and count them. If Ajisai refuses, read the diagnosis and retry within the limit it names.",
-    "ja": "0 から 99999 までの整数を重複除去して数えてください。Ajisai が拒否したら、診断を読んで、示された上限の内側で再試行してください。"
+    "en": "Run the Ajisai program `[ 0 99999 ] RANGE UNIQUE LENGTH`. If Ajisai refuses it, read the diagnosis and retry within the limit it names.",
+    "ja": "Ajisai で `[ 0 99999 ] RANGE UNIQUE LENGTH` を実行してください。拒否されたら、診断を読んで、示された上限の内側で再試行してください。"
    },
    "firstAttempt": {
     "expect": {

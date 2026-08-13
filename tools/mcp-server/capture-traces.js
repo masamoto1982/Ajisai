@@ -6,14 +6,20 @@
 // the readiness tracker has said for three rounds that the harness is not the
 // bottleneck — real traces are. This is the missing half.
 //
-// It drives the actual model over the actual MCP tool definitions, one call per
-// corpus case, and writes a trace the scorers accept. What it does *not* do is
-// produce a number when it cannot measure one: with no resolvable credentials
-// it exits non-zero having written nothing, because a file that looks like a
-// trace and isn't is worse than no file.
+// It drives the actual model over the actual MCP tool definitions, one turn per
+// corpus case per language, and writes a trace the scorers accept. A turn may
+// hold several tool calls and all of them are recorded: a model that looks a
+// Word up before computing has made one attempt, not a wrong choice.
+//
+// What it does *not* do is produce a number when it cannot measure one: with no
+// resolvable credentials it exits non-zero having written nothing, because a
+// file that looks like a trace and isn't is worse than no file.
 //
 // Usage:
 //   node capture-traces.js [--model <id>] [--out <path>] [--limit <n>]
+//
+// `--limit` counts corpus cases, not prompts: each case is asked once per
+// language, so `--limit 1` makes two requests.
 //
 // Credentials resolve the way the Anthropic SDK resolves them (ANTHROPIC_API_KEY,
 // ANTHROPIC_AUTH_TOKEN, or an `ant auth login` profile) — this file reads none
@@ -106,6 +112,14 @@ export async function captureCase(client, { model, tools, testCase, language }) 
   const [first] = toolUses;
   return {
     caseId: testCase.id,
+    // Every call the turn made, not only the first. The first capture threw
+    // the rest away and the headline number measured the discard: 93 of 130
+    // turns made two calls, overwhelmingly a `word_contract` lookup followed by
+    // the `compute` that answers the request, and scoring the lookup as the
+    // model's choice reported 32% tool selection for a model that had reached
+    // the right tool in most of those turns. Looking a Word up before using it
+    // is the behaviour the registry tool exists to invite.
+    toolCalls: toolUses.map(({ name, input }) => ({ name, arguments: input ?? {} })),
     // Which asking this was. Both halves of a pair carry the same expectations,
     // so without this the two answers cannot be told apart and the comparison
     // the pairing exists for is unrecoverable after the run.

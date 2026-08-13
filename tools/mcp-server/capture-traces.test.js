@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { captureAll, captureCase, DEFAULT_MODEL, SYSTEM_PROMPT, toolDefinitions } from "./capture-traces.js";
-import { LANGUAGES, indexTraces, mayAssertPerfect, validateCorpus } from "./evaluation-contract.js";
+import { LANGUAGES, callsOf, indexTraces, mayAssertPerfect, validateCorpus } from "./evaluation-contract.js";
 
 const tools = await toolDefinitions();
 assert.deepEqual(
@@ -58,6 +58,11 @@ const positive = await captureCase(client, {
 assert.deepEqual(positive.selectedTool, "compute");
 assert.deepEqual(positive.arguments, { source: "1 3 /" });
 assert.deepEqual(positive.observed, { toolCalls: 1, stopReason: "tool_use" });
+assert.deepEqual(
+  positive.toolCalls,
+  [{ name: "compute", arguments: { source: "1 3 /" } }],
+  "the whole turn is recorded, not only the call that happened to be first",
+);
 assert.equal(positive.language, "en", "a trace records which asking produced it");
 
 // The negative half of the corpus. A model that answers an irrelevant prompt
@@ -74,6 +79,32 @@ const negative = await captureCase(client, {
 });
 assert.equal(negative.selectedTool, null);
 assert.deepEqual(negative.arguments, {});
+assert.deepEqual(negative.toolCalls, [], "restraint records an empty turn, not a missing one");
+
+// A turn holding a lookup and then the call that answers the request. Keeping
+// only the first scored the lookup as the model's choice, which is what made
+// the first real capture report 32% tool selection for a model that had
+// reached the right tool in most of those very turns.
+const exploring = scriptedClient([{
+  content: [
+    { type: "tool_use", id: "l1", name: "word_contract", input: { word: "MOD" } },
+    { type: "tool_use", id: "c1", name: "compute", input: { source: "10 4 MOD" } },
+  ],
+  stop_reason: "tool_use",
+}]);
+const twoCall = await captureCase(exploring, {
+  model: DEFAULT_MODEL,
+  tools,
+  testCase: { id: "integer-modulus", prompts: { en: "10 mod 4?", ja: "10 を 4 で割った余りは?" } },
+  language: "en",
+});
+assert.deepEqual(
+  twoCall.toolCalls.map(({ name }) => name),
+  ["word_contract", "compute"],
+  "both calls survive, in order",
+);
+assert.equal(twoCall.selectedTool, "word_contract", "`selectedTool` stays the first call");
+assert.equal(callsOf(twoCall).length, 2);
 
 const [request, japaneseRequest] = client.requests;
 assert.equal(request.system, SYSTEM_PROMPT);

@@ -1,7 +1,7 @@
 # MCP product readiness
 
-Status date: 2026-08-13 (updated after the P1-1 corpus round and the
-collection-word billing round; before that, the work-meter recalibration, trace
+Status date: 2026-08-13 (updated after the first model baseline, the P1-1
+corpus round and the collection-word billing round; before that, the work-meter recalibration, trace
 provenance, response compaction, algebraic short display and host-failure
 work). This is an implementation tracker, not a language specification.
 Percentages measure completion of the concrete exit criteria below; they are
@@ -25,9 +25,9 @@ host and shares the value protocol with the native CLI.
 |---|---:|---:|---:|
 | P0 — lossless semantic boundary | 35% | 100% | 35.0% |
 | P1 — local stdio beta | 35% | 100% | 35.0% |
-| P2 — agent evaluation | 20% | 57% | 11.4% |
+| P2 — agent evaluation | 20% | 75% | 15.0% |
 | P3 — remote service | 10% | 0% | 0.0% |
-| **Overall** | **100%** | — | **81.4%** |
+| **Overall** | **100%** | — | **85.0%** |
 
 ### P0 — lossless semantic boundary (100%)
 
@@ -484,9 +484,9 @@ mirror of `numericLiteralDigits`. At the widths `bigintBits` admits it measures
 in the tens of milliseconds rather than seconds, so it is a follow-up and not a
 hole of the size this round closed.
 
-### P2 — agent evaluation (57%)
+### P2 — agent evaluation (75%)
 
-**A trace now says what produced it, and the harness that produces one exists.**
+**A trace now says what produced it, and a real one has been captured.**
 Every trace document declares `provenance.source` — `referenceFixture` or
 `model` — and a `model` trace must additionally record the model id, prompt
 digest, tool-choice setting, capture time and the server/engine/registry
@@ -539,15 +539,82 @@ at the collection rather than at the arithmetic; `repair-collection-ceiling`
 makes that measurable, and its source contains no arithmetic at all, so a
 repaired attempt that succeeds can only have shrunk the collection.
 
-**No baseline has been collected, and the percentage above reflects that.** The
-capture harness resolves credentials the way the Anthropic SDK does and, finding
-none, exits non-zero having written nothing — a file that looks like a trace and
-is not one would be worse than no file. **This is the only thing P1-1 is still
-waiting on, and it is not a code change.** Downstream of one run: first-attempt
-generation rate, the language gap, diagnosis-observation and repair rates for a
-real model, and the before/after comparison the `exactDisplay` and
-response-compaction rounds are owed. The movement here is for corpus and
-metrics, not for evidence — no number in this section describes a model.
+**The first model baseline has been collected.** `claude-opus-5`, 130 selection
+prompts and 8 repair prompts, captured 2026-08-13 against server 0.3.0 / engine
+0.2.0-beta.1. The trace documents are committed under `eval/traces/`; every
+number below is reproducible by re-scoring them, and none of them is asserted —
+`--require-perfect` still refuses a model trace.
+
+| metric | overall | en | ja |
+|---|---:|---:|---:|
+| tool selection accuracy | 0.469 | 0.462 | 0.477 |
+| reached expected tool *first* | 0.338 | 0.385 | 0.292 |
+| first-attempt generation rate | 0.331 | 0.322 | 0.339 |
+| semantic success rate | 0.392 | 0.385 | 0.400 |
+| irrelevant tool rate | **0.000** | 0.000 | 0.000 |
+
+| repair metric | overall | en | ja |
+|---|---:|---:|---:|
+| diagnosis observed | 1.000 | 1.000 | 1.000 |
+| diagnosis-driven repair | 0.750 | 0.750 | 0.750 |
+
+**There is no language penalty.** The gap is −0.015 on selection and −0.017 on
+generation: Japanese is *marginally ahead*, which at 65 pairs is indistinguishable
+from zero. The question the pairing was built to ask has an answer, and it is the
+reassuring one — an English tool surface does not cost a Japanese caller
+anything measurable.
+
+**The dominant failure is under-use, not misuse.** Of 118 positive prompts, 21
+produced no tool call at all and another 46 called only `word_contract` — the
+model looked the Word up and then answered from its own head. Together that is
+57% of prompts that ended without running the program. Against
+`irrelevantToolRate: 0.000` — perfect restraint on the six irrelevant-intent
+cases — the shape is unambiguous: the model is not over-reaching for Ajisai, it
+is declining to reach at all, most often for questions it believes it can answer
+itself (`10 MOD 4`, sorting three integers, the length of a three-element
+vector). For an engine whose whole proposition is that a model's own arithmetic
+should not be trusted, **that is the product finding of this round**, and it is
+the evidence P1-2's quickstart work was waiting for.
+
+**Two harness defects were found by the first capture and fixed before the
+number above was taken.** Both had to be, because both made the metric measure
+the harness:
+
+- The capture recorded only the *first* `tool_use` block of a turn. 91 of 130
+  turns made two calls, overwhelmingly a lookup followed by the compute that
+  answers the request, so the discarded call was usually the real one. Scored
+  that way the same traces read 0.323 selection accuracy against the 0.469 above
+  — the difference is entirely the discard. A turn is one attempt; every call in
+  it is now recorded, `toolSelectionAccuracy` asks whether the expected tool was
+  reached, and `reachedExpectedToolFirstRate` reports the stricter reading beside
+  it without making instinct a pass criterion.
+- `score-repairs.js` replayed only `compute` and scored every other tool as
+  nothing having happened. `1 2 AD` through `check` returns the identical
+  `typoOrUnknownName` diagnosis naming the identical Word, so a model that
+  statically checked before running was recorded as never having seen a
+  diagnosis. It also made the two repair rates identical by construction. They
+  now separate: 1.000 observed against 0.750 repaired.
+
+**A diagnosis defect the baseline found, not yet fixed.** On
+`repair-collection-ceiling` the model repairs in the right *direction* — it
+shrinks the collection, not the arithmetic, which is the claim `collectionWork`
+was split out to make true — but it shrinks by one element (99,999 → 99,998) and
+by twenty (→ 99,979), and both retries fail again. The reason is in the
+diagnosis: a cumulative work meter aborts the moment the budget is crossed, so
+`observed` (20,004,122) always sits a hair over `limit` (20,000,000) however far
+over the request really was. A reader inferring proportionally concludes it needs
+to shrink by 0.02%; it needs to shrink by 94%, to about 6,291 elements. **For an
+incrementally charged ceiling `observed` carries no distance information at all**
+— unlike `bigintBits` or `algebraicTerms`, where it is a real size and a real
+multiple of the limit. Reporting how far the operation got before it was refused
+would say the useful thing, but that is a change to the diagnosis contract every
+host reads, so it is recorded here rather than made unilaterally.
+
+**What P2 still owes**: the before/after comparison the `exactDisplay` and
+response-compaction rounds are owed (needs a second capture across a change),
+corpus growth beyond 65 cases, and remote-service latency. The percentage moves
+to 75% for evidence collected, not for the product performing well — a 0.39
+semantic success rate is a starting line.
 
 #### Earlier P2 work
 
@@ -557,12 +624,12 @@ checking and contracts. It was intentionally only a seed; the expansion to
 100–200 prompts it called for is done (130, above). A trace scorer now measures
 tool selection, end-to-end semantics, missing traces and irrelevant activation;
 the committed perfect reference trace verifies the scorer only. Real model
-traces and baseline comparisons remain to be collected; first-attempt
-generation rate is now a metric of its own, still unmeasured against a model. A
+traces have since been captured (above); baseline *comparisons* across a change
+remain to be collected. A
 separate repair scorer now requires the expected structured diagnosis before a
 corrected attempt can count, with cases for unknown Words, stack shape,
 malformed source and the collection-work ceiling. Its perfect reference is a
-harness fixture; real-model repair rates remain unmeasured.
+harness fixture; real-model repair rates are reported above.
 Corpus and trace contracts now reject duplicate/unknown IDs, unknown tools,
 malformed expectations and incomplete reference fixtures before scoring.
 The selection corpus reached 22 prompts in that round, adding large-integer

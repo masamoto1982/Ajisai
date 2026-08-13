@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "source": "model",
+    "modelId": "claude-opus-5",
+    "promptTemplateDigest": "6ab77253ef57f34a",
+    "toolChoice": "auto",
+    "capturedAt": "2026-08-13T05:59:00.705Z",
+    "serverVersion": "0.3.0",
+    "engineVersion": "0.2.0-beta.1",
+    "registryDigest": "a67241e09f36537a53ec4353e40fa740af9a7dd30c9bf0d101390d78e151243b"
+  },
+  "traces": [
+    {
+      "caseId": "repair-unknown-word",
+      "language": "en",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 AD"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 ADD"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    },
+    {
+      "caseId": "repair-unknown-word",
+      "language": "ja",
+      "firstAttempt": {
+        "selectedTool": "check",
+        "arguments": {
+          "source": "1 2 AD"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 ADD"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    },
+    {
+      "caseId": "repair-stack-underflow",
+      "language": "en",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 ADD"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 ADD"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    },
+    {
+      "caseId": "repair-stack-underflow",
+      "language": "ja",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 ADD"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "1 2 ADD"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    },
+    {
+      "caseId": "repair-unclosed-vector",
+      "language": "en",
+      "firstAttempt": {
+        "selectedTool": "check",
+        "arguments": {
+          "source": "[ 1 2"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 1 2 ]"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    },
+    {
+      "caseId": "repair-unclosed-vector",
+      "language": "ja",
+      "firstAttempt": {
+        "selectedTool": "check",
+        "arguments": {
+          "source": "[ 1 2"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 1 2 ]"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    },
+    {
+      "caseId": "repair-collection-ceiling",
+      "language": "en",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 0 99998 ] RANGE UNIQUE LENGTH"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    },
+    {
+      "caseId": "repair-collection-ceiling",
+      "language": "ja",
+      "firstAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+        }
+      },
+      "repairedAttempt": {
+        "selectedTool": "compute",
+        "arguments": {
+          "source": "[ 0 99979 ] RANGE UNIQUE LENGTH"
+        }
+      },
+      "observed": {
+        "turns": 2,
+        "firstTurnToolCalls": 2,
+        "stopReason": "tool_use",
+        "sawDiagnosis": true
+      }
+    }
+  ]
+}
