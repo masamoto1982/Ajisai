@@ -24,8 +24,27 @@ function matches(result, expected) {
       JSON.stringify(atPointer(result.structuredContent, pointer)) === JSON.stringify(value));
 }
 
+/**
+ * Replay the attempt the model actually made, through the tool it actually
+ * chose.
+ *
+ * This used to replay only `compute` and score everything else as nothing
+ * happened. That is not a stricter grade, it is a wrong one: `1 2 AD` through
+ * `check` returns the identical `typoOrUnknownName` diagnosis naming the
+ * identical Word, so a model that statically checked before running — the more
+ * careful order, and one the tool descriptions invite — was recorded as never
+ * having seen a diagnosis at all. The first real capture scored 3/8 with two of
+ * the five failures caused by this, and it also made the two reported rates
+ * identical by construction, since an attempt that was never replayed can
+ * neither observe a diagnosis nor repair from one.
+ *
+ * Grading what the model did lets the two rates separate: reading the
+ * diagnosis and completing the repair become different achievements, which is
+ * what having two numbers is for. A repair that answers with a contract lookup
+ * still fails the second expectation, because it never produced the value.
+ */
 async function callAttempt(client, attempt) {
-  if (attempt?.selectedTool !== "compute") return null;
+  if (!attempt?.selectedTool) return null;
   try {
     return await client.callTool({ name: attempt.selectedTool, arguments: attempt.arguments ?? {} });
   } catch {

@@ -20,6 +20,21 @@ export function traceKey(caseId, language) {
 }
 
 /**
+ * Every tool call a turn made, oldest first.
+ *
+ * A turn is one attempt, and a model that looks a Word up before computing has
+ * made one attempt containing two calls. `toolCalls` is what a capture records;
+ * `selectedTool`/`arguments` remain the first of them, which is all the
+ * hand-written fixtures ever had. Reading through this helper is what lets the
+ * two shapes be scored by the same code.
+ */
+export function callsOf(trace) {
+  if (Array.isArray(trace?.toolCalls)) return trace.toolCalls;
+  if (!trace?.selectedTool) return [];
+  return [{ name: trace.selectedTool, arguments: trace.arguments ?? {} }];
+}
+
+/**
  * What produced a set of traces — the field that decides what its score means.
  *
  * `referenceFixture` is a hand-written conformance trace: scoring it proves the
@@ -180,8 +195,14 @@ export function indexTraces(document, caseIds, { repair = false } = {}) {
     const key = traceKey(trace.caseId, trace.language);
     if (traces.has(key)) throw new Error(`duplicate trace for ${key}`);
     if (repair) {
-      validateAttempt(trace.firstAttempt, `${key}.firstAttempt`, false);
-      validateAttempt(trace.repairedAttempt, `${key}.repairedAttempt`, false);
+      // `null` is allowed on both attempts, and has to be: a real capture can
+      // record a model that never called a tool, or that gave up after reading
+      // the diagnosis. Rejecting those would leave the harness able to record
+      // only the cases that went well, and a repair rate computed over those is
+      // not a repair rate. The scorer counts a null attempt as a failure, which
+      // is what it is.
+      validateAttempt(trace.firstAttempt, `${key}.firstAttempt`, true);
+      validateAttempt(trace.repairedAttempt, `${key}.repairedAttempt`, true);
     } else {
       validateAttempt(trace, key, true);
     }

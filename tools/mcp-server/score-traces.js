@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "./index.js";
 import {
   LANGUAGES,
+  callsOf,
   indexTraces,
   mayAssertPerfect,
   traceKey,
@@ -34,7 +35,15 @@ await Promise.all([server.connect(serverTransport), client.connect(clientTranspo
 
 /** One language's tally. Kept per language so the pair can be compared. */
 function emptyTally() {
-  return { asked: 0, missing: 0, selected: 0, generated: 0, semantic: 0, activations: 0 };
+  return {
+    asked: 0,
+    missing: 0,
+    selected: 0,
+    reachedFirst: 0,
+    generated: 0,
+    semantic: 0,
+    activations: 0,
+  };
 }
 
 const tallies = new Map(LANGUAGES.map((language) => [language, emptyTally()]));
@@ -50,23 +59,38 @@ for (const testCase of corpus.cases) {
       console.log(`MISS ${label}`);
       continue;
     }
-    const selectionOk = trace.selectedTool === testCase.expectedTool;
+    // A turn is one attempt, and it may hold several calls. Selection asks
+    // whether the expected tool was reached in that attempt; reaching it
+    // *first* is reported beside it, because "looked the Word up, then computed"
+    // and "computed straight away" are both successes and only the second is a
+    // statement about instinct.
+    const calls = callsOf(trace);
+    const selectionOk = testCase.expectedTool === null
+      ? calls.length === 0
+      : calls.some((call) => call.name === testCase.expectedTool);
     if (selectionOk) tally.selected += 1;
+    if (calls[0]?.name === testCase.expectedTool || (testCase.expectedTool === null && !calls[0])) {
+      tally.reachedFirst += 1;
+    }
     if (testCase.expectedTool === null) {
-      if (trace.selectedTool !== null) tally.activations += 1;
+      if (calls.length > 0) tally.activations += 1;
       if (selectionOk) tally.semantic += 1;
       console.log(`${selectionOk ? "PASS" : "FAIL"} ${label} restraint`);
       continue;
     }
-    if (trace.selectedTool === null) {
-      console.log(`FAIL ${label} no tool selected`);
+    const expectedCall = calls.find((call) => call.name === testCase.expectedTool);
+    if (!expectedCall) {
+      console.log(
+        `FAIL ${label} never reached ${testCase.expectedTool}` +
+          (calls.length ? ` (called ${calls.map((call) => call.name).join(", ")})` : " (no call)"),
+      );
       continue;
     }
     let result;
     try {
       result = await client.callTool({
-        name: trace.selectedTool,
-        arguments: trace.arguments ?? {},
+        name: expectedCall.name,
+        arguments: expectedCall.arguments ?? {},
       });
     } catch {
       result = null;
@@ -102,6 +126,10 @@ function rates(tally) {
     asked: tally.asked,
     missingTraces: tally.missing,
     toolSelectionAccuracy: tally.selected / tally.asked,
+    // Of the turns that reached the right tool, how many reached it with their
+    // very first call. Never a pass/fail criterion — a lookup before a compute
+    // is good practice, not a miss.
+    reachedExpectedToolFirstRate: tally.reachedFirst / tally.asked,
     // Over the positive cases only: a case whose correct answer is *no* call
     // has nothing to generate, and counting it as a generation success would
     // reward restraint twice while diluting the rate this metric is for.
@@ -119,6 +147,7 @@ const overall = {
   asked: combined.asked,
   missingTraces: combined.missing,
   toolSelectionAccuracy: combined.selected / combined.asked,
+  reachedExpectedToolFirstRate: combined.reachedFirst / combined.asked,
   firstAttemptGenerationRate: positives === 0
     ? 0
     : combined.generated / (positives * LANGUAGES.length),

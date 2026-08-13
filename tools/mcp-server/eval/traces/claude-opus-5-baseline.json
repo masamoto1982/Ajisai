@@ -1,0 +1,2862 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "source": "model",
+    "modelId": "claude-opus-5",
+    "promptTemplateDigest": "6ab77253ef57f34a",
+    "toolChoice": "auto",
+    "capturedAt": "2026-08-13T06:10:37.112Z",
+    "serverVersion": "0.3.0",
+    "engineVersion": "0.2.0-beta.1",
+    "registryDigest": "a67241e09f36537a53ec4353e40fa740af9a7dd30c9bf0d101390d78e151243b"
+  },
+  "traces": [
+    {
+      "caseId": "exact-fraction",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 3 /"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 3 /"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "exact-fraction",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 3 /"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 3 /"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "decimal-no-float",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "0.1 0.2 +"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "0.1 0.2 +"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "decimal-no-float",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "0.1 0.2 +"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "0.1 0.2 +"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "algebraic-sqrt",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "2 sqrt"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "2 sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "algebraic-sqrt",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "2 sqrt"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "vector-broadcast",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[ 1 2 ] [ 10 10 ] vec+"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec+"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "[ 1 2 ] [ 10 10 ] vec+"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "vector-broadcast",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-map"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-add"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-map"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "nil-reason",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 0 /"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "/"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "nil-reason",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 0 /"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "/"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "nil-recovery",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "nil-or"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "/"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "nil-recovery",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "nil-default"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "/"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "language-error",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "FROBNICATE"
+          }
+        },
+        {
+          "name": "check",
+          "arguments": {
+            "source": "FROBNICATE"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "FROBNICATE"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "language-error",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "FROBNICATE"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "FROBNICATE"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "FROBNICATE"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "static-check",
+      "toolCalls": [
+        {
+          "name": "check",
+          "arguments": {
+            "source": "{ [ 1 ] + } 'INC' DEF"
+          }
+        },
+        {
+          "name": "infer_contracts",
+          "arguments": {
+            "source": "{ [ 1 ] + } 'INC' DEF"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "{ [ 1 ] + } 'INC' DEF"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "static-check",
+      "toolCalls": [
+        {
+          "name": "check",
+          "arguments": {
+            "source": "{ [ 1 ] + } 'INC' DEF"
+          }
+        },
+        {
+          "name": "infer_contracts",
+          "arguments": {
+            "source": "{ [ 1 ] + } 'INC' DEF"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "{ [ 1 ] + } 'INC' DEF"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "contract-inference",
+      "toolCalls": [
+        {
+          "name": "infer_contracts",
+          "arguments": {
+            "source": "{ [ 1 ] + } 'INC' DEF"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "infer_contracts",
+      "arguments": {
+        "source": "{ [ 1 ] + } 'INC' DEF"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "contract-inference",
+      "toolCalls": [
+        {
+          "name": "infer_contracts",
+          "arguments": {
+            "source": "{ [ 1 ] + } 'INC' DEF"
+          }
+        },
+        {
+          "name": "check",
+          "arguments": {
+            "source": "{ [ 1 ] + } 'INC' DEF"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "infer_contracts",
+      "arguments": {
+        "source": "{ [ 1 ] + } 'INC' DEF"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "word-contract",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "MAP"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "MAP"
+      },
+      "observed": {
+        "toolCalls": 1,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "word-contract",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "MAP"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "MAP"
+      },
+      "observed": {
+        "toolCalls": 1,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "reduced-fraction",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "2/8"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "2/8"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "reduced-fraction",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "2 8 /"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "2 8 /"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "large-integer",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "9007199254740993 1 +"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "9007199254740993 1 +"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "large-integer",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "9007199254740993 1 +"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "9007199254740993 1 +"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "vector-pairwise",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[1 2] [3 4] vec-add"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-add"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "[1 2] [3 4] vec-add"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "vector-pairwise",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-add"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "v+"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-add"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sqrt-domain-nil",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "-1 sqrt"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "-1 sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sqrt-domain-nil",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "-1 sqrt"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "exact-comparison",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "&lt;"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 2 <"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "&lt;"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "exact-comparison",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "<"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 2 <"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "<"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "integer-modulus",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "integer-modulus",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "static-check-error",
+      "toolCalls": [
+        {
+          "name": "check",
+          "arguments": {
+            "source": "FROBNICATE"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "FROBNICATE"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "FROBNICATE"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "static-check-error",
+      "toolCalls": [
+        {
+          "name": "check",
+          "arguments": {
+            "source": "FROBNICATE"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "FROBNICATE"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "FROBNICATE"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "alias-word-contract",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "+"
+      },
+      "observed": {
+        "toolCalls": 1,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "alias-word-contract",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "+"
+      },
+      "observed": {
+        "toolCalls": 1,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sort-ascending",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "sort-ascending",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "unique-labels",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "unique-labels",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "tally-labels",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "tally-labels",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "group-by-key",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "group-by"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "group"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "group-by"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "group-by-key",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "group-by"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "dict"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "group-by"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "order-permutation",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "order-permutation",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sort"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "argsort"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sort"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "range-sequence",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "range"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "iota"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "range"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "range-sequence",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "iota"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "range"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "iota"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sum-vector",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-sum"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[1 2 3 4] vec-sum"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-sum"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sum-vector",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sum"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[1, 2, 3, 4] sum"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sum"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "zip-transpose",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "zip-transpose",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "transpose"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "transpose"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "take-prefix",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "take"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-take"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "take"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "take-prefix",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "take"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-take"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "take"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "concat-vectors",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-concat"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-append"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-concat"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "concat-vectors",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "concat"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vector-concat"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "concat"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "reverse-vector",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "reverse"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-reverse"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "reverse"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "reverse-vector",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "reverse"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[1, 2, 3] reverse"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "reverse"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "length-count",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "length-count",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "index-of-value",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "index-of-value",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "get-element",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "nth"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-at"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "nth"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "get-element",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-at"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "nth"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-at"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "put-element",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-set"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-put"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-set"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "put-element",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-set"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-put"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-set"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "fill-matrix",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "zeros"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "fill-matrix",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[ [ 0 0 ] [ 0 0 ] ]"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "[ [ 0 0 ] [ 0 0 ] ]"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "map-double",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-scale"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec*"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-scale"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "map-double",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-scale"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "map"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-scale"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "filter-even",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "filter"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "even?"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "filter"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "filter-even",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "filter"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "filter"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "fold-product",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 2 * 3 * 4 *"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "product"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 2 * 3 * 4 *"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "fold-product",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "product"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "*"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "product"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "any-predicate",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "contains?"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "member?"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "contains?"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "any-predicate",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "all-predicate",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "all-predicate",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "all?"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "even?"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "all?"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "chars-split",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "split"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "chars"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "split"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "chars-split",
+      "toolCalls": [
+        {
+          "name": "check",
+          "arguments": {
+            "source": "\"hi\""
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {}
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "\"hi\""
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "join-chars",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "join"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "concat"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "join"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "join-chars",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "concat"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "string"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "concat"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "tokenize-csv",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "tokenize-csv",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "split"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "string"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "split"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "num-parse",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "string->number"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "parse"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "string->number"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "num-parse",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "parse-int"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "string->number"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "parse-int"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "str-render",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "number->string"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "to-string"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "number->string"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "str-render",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "number->string"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "to-string"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "number->string"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sqrt-perfect-square",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "sqrt-perfect-square",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "9 sqrt"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sum-of-two-roots",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "2 sqrt 3 sqrt +"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "sum-of-two-roots",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "third-times-three",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1/3 3 *"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "*"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1/3 3 *"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "third-times-three",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "*"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1/3 3 *"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "*"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "decimal-equality",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "0.1 0.2 +"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "0.1 0.2 +"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "decimal-equality",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "0.1 0.2 +"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "+"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "0.1 0.2 +"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "boolean-and",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "TRUE"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "FALSE"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "TRUE"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "boolean-and",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "disjoint-domains",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "="
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "equal?"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "="
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "disjoint-domains",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "="
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "\"A\" [ 65 ] = ."
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "="
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "nil-is-detectable",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "nil?"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "/"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "nil-is-detectable",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "/"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "nil?"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "/"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "ceiling-collection-work",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "ceiling-collection-work",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "ceiling-numeric-work",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "*"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "ceiling-numeric-work",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "sqrt"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "*"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "sqrt"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "ceiling-materialization",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "range"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "iota"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "range"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "ceiling-materialization",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "range"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "iota"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "range"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "ceiling-execution-steps",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "dup"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "recur"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "dup"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "ceiling-execution-steps",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "countdown"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 2 +"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "countdown"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "shape-mismatch",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-add"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[1 2 3] [1 2] vec-add"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-add"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "shape-mismatch",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "vec-add"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "v+"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "vec-add"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "stack-shape-error",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 ADD"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "ADD"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 ADD"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "stack-shape-error",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "1 ADD"
+          }
+        },
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "ADD"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "1 ADD"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "malformed-source",
+      "toolCalls": [
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[ 1 2"
+          }
+        },
+        {
+          "name": "check",
+          "arguments": {
+            "source": "[ 1 2"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "compute",
+      "arguments": {
+        "source": "[ 1 2"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "malformed-source",
+      "toolCalls": [
+        {
+          "name": "check",
+          "arguments": {
+            "source": "[ 1 2"
+          }
+        },
+        {
+          "name": "compute",
+          "arguments": {
+            "source": "[ 1 2"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "check",
+      "arguments": {
+        "source": "[ 1 2"
+      },
+      "observed": {
+        "toolCalls": 2,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "unique-word-contract",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "UNIQUE"
+          }
+        }
+      ],
+      "language": "en",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "UNIQUE"
+      },
+      "observed": {
+        "toolCalls": 1,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "unique-word-contract",
+      "toolCalls": [
+        {
+          "name": "word_contract",
+          "arguments": {
+            "word": "UNIQUE"
+          }
+        }
+      ],
+      "language": "ja",
+      "selectedTool": "word_contract",
+      "arguments": {
+        "word": "UNIQUE"
+      },
+      "observed": {
+        "toolCalls": 1,
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "caseId": "irrelevant-weather",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-weather",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-writing",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-writing",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-translation",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-translation",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-history",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-history",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-recipe",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-recipe",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-opinion",
+      "toolCalls": [],
+      "language": "en",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    },
+    {
+      "caseId": "irrelevant-opinion",
+      "toolCalls": [],
+      "language": "ja",
+      "selectedTool": null,
+      "arguments": {},
+      "observed": {
+        "toolCalls": 0,
+        "stopReason": "end_turn"
+      }
+    }
+  ]
+}
