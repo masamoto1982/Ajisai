@@ -629,10 +629,12 @@ cost nothing in restraint** — `irrelevantToolRate` is still 0.000, so the mode
 did not start over-reaching, it stopped under-reaching. The language gap remains
 negligible (0.031 selection, 0.017 generation, now marginally favouring English).
 
-**The remaining failure has moved from selection to writing.** 31 of the 130
-prompts now reach `compute` and hand it source that does not produce the
-expected result, and the mistakes are four concrete syntax rules rather than
-misunderstandings of the domain:
+**The remaining failure moved from selection to writing, so the same fix was
+applied one level down and measured too.** 31 of 130 prompts reached `compute`
+and handed it source that did not produce the expected result. Every rule below
+was executed against the engine before being written down, which corrected two
+guesses made from reading the sources alone: `[1 2 3]` without inner spaces runs
+fine, and so does `[ 1, 2, 3 ]` with commas. Neither is a cause.
 
 | the model wrote | Ajisai wants | n |
 |---|---|---:|
@@ -641,20 +643,35 @@ misunderstandings of the domain:
 | `5 RANGE` | `[ 0 4 ] RANGE` — `RANGE` takes a bounds vector | 4 |
 | `[ 1 2 ] [ 3 4 ] ZIP` | `[ [ 1 2 ] [ 3 4 ] ] ZIP` — one vector of vectors | 1 |
 
-Each of those was run against the engine before being written down, which
-corrected two guesses made from reading the sources alone: `[1 2 3]` without
-inner spaces is **fine**, and so is `[ 1, 2, 3 ]` with commas. Neither is a
-cause. The quote character is, and it is the single largest one.
+Those went into the `source` parameter description, which is read with the tool.
+All four landed on their targets — the same prompts now produce
+`[ 'a' 'b' 'a' ] UNIQUE`, `[ 0 4 ] RANGE`, `[ [ 1 2 ] [ 3 4 ] ] ZIP` and
+`{ 2 MOD 0 EQ } FILTER`.
 
-The rest of the 31 are not syntax: a wrong Word for the job (`INDEX-OF` where
-`{ 2 = } ANY` was asked for), an invented one (`OVER`), and one case answered as
-a different question. Those are not fixable by stating a rule.
+**Three captures, one corpus, one model:**
 
-The four rules are all in the writing protocol, and the writing protocol is
-inside the 26 KB resource the caller does not fetch. That is the same shape as
-the defect this round fixed, one level down: the information exists and does not
-reach the surface that is read. It is the obvious next lever, and it is now
-measurable the same way.
+| metric | baseline | + entry surface | + syntax rules |
+|---|---:|---:|---:|
+| tool selection accuracy | 0.469 | 0.862 | 0.862 |
+| reached expected tool first | 0.338 | 0.762 | 0.746 |
+| first-attempt generation rate | 0.331 | 0.585 | **0.763** |
+| semantic success rate | 0.392 | 0.623 | **0.777** |
+| irrelevant tool rate | 0.000 | 0.000 | **0.083** |
+
+Semantic success roughly doubled across the two rounds, and each round moved the
+number it was aimed at: the first moved selection, the second moved generation.
+
+**The second round cost something, and the number says so.** `irrelevantToolRate`
+left 0.000 for the first time — one of the six irrelevant-intent cases, in
+Japanese only. Asked for a haiku about hydrangeas, the model composed one and
+then called `compute` to count the mora of each line
+(`[ 'あめあがり' … ] { CHARS LENGTH } MAP`). Whether that is over-reach or a
+counting engine used for a counting sub-task is a fair question, and the corpus
+answers it as a miss. **The case is not being changed.** A negative case that
+catches a change is doing its job, and rewriting it after it fires would make
+every later restraint number meaningless. The regression is recorded at its
+measured size: one prompt in 130, and the first time in three captures that
+advertising the engine more loudly cost anything at all.
 
 The `assets/quickstart.md` resource is deliberately **not** split. The
 reevaluation left the 8 KB target open to be judged on size alone; the baseline
