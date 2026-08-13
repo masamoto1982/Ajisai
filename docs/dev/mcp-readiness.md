@@ -609,12 +609,92 @@ descriptions mention must exist. The second is the failure the baseline
 measured, pointed at ourselves — an entry surface that sends a caller after a
 Word that is not there.
 
-**The effect of this is not measured.** The credential that took the baseline
-has been rotated, so the after-capture has not been run. What exists is a
-hypothesis with a mechanism to test it: re-run `npm run eval:capture` and
-`score-traces.js` against the same 130 prompts and compare. Until that happens
-the numbers in the table above stand as the only measurement, and this round's
-change is a described change, not a demonstrated improvement.
+**The effect is measured, and it is the largest single movement this tracker has
+recorded.** Same 65 cases, same 130 prompts, same model, same thin system
+prompt; only the tool descriptions and the preface changed
+(`claude-opus-5-after-entry-surface.json`).
+
+| metric | before | after |
+|---|---:|---:|
+| tool selection accuracy | 0.469 | **0.862** |
+| reached expected tool first | 0.338 | **0.762** |
+| first-attempt generation rate | 0.331 | **0.585** |
+| semantic success rate | 0.392 | **0.623** |
+| irrelevant tool rate | 0.000 | **0.000** |
+
+Read as counts, the two diagnosed causes are what moved: prompts that reached
+the expected tool went 49 → 100 of 118, prompts that called nothing went 21 → 4,
+and turns spent only guessing names in the registry went 46 → 13. **The gain
+cost nothing in restraint** — `irrelevantToolRate` is still 0.000, so the model
+did not start over-reaching, it stopped under-reaching. The language gap remains
+negligible (0.031 selection, 0.017 generation, now marginally favouring English).
+
+**The remaining failure moved from selection to writing, so the same fix was
+applied one level down and measured too.** 31 of 130 prompts reached `compute`
+and handed it source that did not produce the expected result. Every rule below
+was executed against the engine before being written down, which corrected two
+guesses made from reading the sources alone: `[1 2 3]` without inner spaces runs
+fine, and so does `[ 1, 2, 3 ]` with commas. Neither is a cause.
+
+| the model wrote | Ajisai wants | n |
+|---|---|---:|
+| `"hi" CHARS` | `'hi' CHARS` — a string is single-quoted | 8 |
+| `[ 2 MOD 0 EQ ] FILTER` | `{ 2 MOD 0 = } FILTER` — a block is braces | 4 |
+| `5 RANGE` | `[ 0 4 ] RANGE` — `RANGE` takes a bounds vector | 4 |
+| `[ 1 2 ] [ 3 4 ] ZIP` | `[ [ 1 2 ] [ 3 4 ] ] ZIP` — one vector of vectors | 1 |
+
+Those went into the `source` parameter description, which is read with the tool.
+All four landed on their targets — the same prompts now produce
+`[ 'a' 'b' 'a' ] UNIQUE`, `[ 0 4 ] RANGE`, `[ [ 1 2 ] [ 3 4 ] ] ZIP` and
+`{ 2 MOD 0 EQ } FILTER`.
+
+**Three captures, one corpus, one model:**
+
+| metric | baseline | + entry surface | + syntax rules |
+|---|---:|---:|---:|
+| tool selection accuracy | 0.469 | 0.862 | 0.862 |
+| reached expected tool first | 0.338 | 0.762 | 0.746 |
+| first-attempt generation rate | 0.331 | 0.585 | **0.763** |
+| semantic success rate | 0.392 | 0.623 | **0.777** |
+| irrelevant tool rate | 0.000 | 0.000 | **0.083** |
+
+Semantic success roughly doubled across the two rounds, and each round moved the
+number it was aimed at: the first moved selection, the second moved generation.
+
+**The second round cost something, and the number says so.** `irrelevantToolRate`
+left 0.000 for the first time — one of the six irrelevant-intent cases, in
+Japanese only. Asked for a haiku about hydrangeas, the model composed one and
+then called `compute` to count the mora of each line
+(`[ 'あめあがり' … ] { CHARS LENGTH } MAP`). Whether that is over-reach or a
+counting engine used for a counting sub-task is a fair question, and the corpus
+answers it as a miss. **The case is not being changed.** A negative case that
+catches a change is doing its job, and rewriting it after it fires would make
+every later restraint number meaningless.
+
+**What was changed instead is the resolution of the metric that caught it.** Six
+negative cases means one miss moves the rate by 8 points overall and 17 in one
+language — not enough to tell a regression from an unlucky prompt, which is the
+wrong basis for trading away a measured gain. The negative set is now 20, and
+the fourteen additions probe the boundary rather than the obvious: numeric asks
+the closed domain genuinely excludes (sine, natural log, pi's digits), numeric
+asks whose data the engine does not have (currency conversion, a weekday, a
+distance), asks that contain a number but are not calculations (explain postfix
+notation, estimate a reading time, name a variable), and programming asks in
+another language. The existing six stay.
+
+Growing the corpus breaks comparability, so the scorer now says which rates
+survive it. `positiveSelectionAccuracy` (new) and `firstAttemptGenerationRate`
+are computed over the positive cases, which did not change, so the series holds:
+
+| metric | baseline | + entry surface | + syntax rules |
+|---|---:|---:|---:|
+| positive selection accuracy | 0.415 | 0.847 | 0.856 |
+| first-attempt generation rate | 0.331 | 0.585 | 0.763 |
+
+`toolSelectionAccuracy` and `semanticSuccessRate` mix the two classes and only
+compare within one composition; `irrelevantToolRate` restarts, because its
+denominator is what changed. Every trace document records `composition` so a
+later reader can tell which corpus a number came from rather than inferring it.
 
 The `assets/quickstart.md` resource is deliberately **not** split. The
 reevaluation left the 8 KB target open to be judged on size alone; the baseline
@@ -642,6 +722,25 @@ the harness:
   statically checked before running was recorded as never having seen a
   diagnosis. It also made the two repair rates identical by construction. They
   now separate: 1.000 observed against 0.750 repaired.
+
+**A repair-harness defect this round found, and one it did not.** Recording
+only the first `tool_use` of a repair turn mis-scores a model that got *better*:
+after this round it began statically checking before running, and `check` on
+`1 ADD` reports nothing because a stack underflow is a runtime fact. The failing
+`compute` behind it was the attempt, and the harness threw it away — the same
+correction `score-traces.js` needed one round earlier, now applied to both ends
+of the repair loop (a turn observed the diagnosis if any of its calls did, and
+repaired if any of its calls produced the expected result).
+
+It did not explain the number it was found chasing. The repair rate is 0.750,
+down from 1.000, and after the fix it is still 0.750: on
+`repair-stack-underflow` the model now spends its whole first turn on `check`
+and `word_contract` and never produces a failure at all, so there is no
+diagnosis to repair from. That is a corpus limitation rather than a regression —
+it is the one case whose failure is invisible to static checking, so a model
+that checks first will always miss it — and it is recorded rather than scored
+around. The prediction was wrong and the fix was kept because it is correct
+independently.
 
 **A diagnosis defect the baseline found, fixed, and the fix measured.** On
 `repair-collection-ceiling` the model repaired in the right *direction* — it

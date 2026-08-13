@@ -30,7 +30,13 @@ for (const entry of registry.entries) {
   known.add(entry.name);
   for (const alias of entry.aliases ?? []) known.add(alias);
 }
-const descriptions = TOOLS.map(({ description }) => description).join("\n");
+// Input-schema property descriptions count too: `source` carries the syntax
+// rules, and a rule that names a Word which does not exist misleads exactly as
+// a tool description would.
+const descriptions = TOOLS.flatMap(({ description, inputSchema }) => [
+  description,
+  ...Object.values(inputSchema?.properties ?? {}).map((property) => property.description ?? ""),
+]).join("\n");
 
 // ── every family is represented ─────────────────────────────────────────
 //
@@ -76,7 +82,7 @@ assert.deepEqual(
 // ordinary prose or the `RPN`/`MCP` style acronyms, which are excluded by
 // being absent from the registry only if they were meant as Words — hence the
 // allow-list rather than a cleverer regex.
-const NOT_WORDS = new Set(["RPN", "MCP", "JSON", "UTF", "NIL_", "I", "O"]);
+const NOT_WORDS = new Set(["RPN", "MCP", "JSON", "UTF-", "UTF", "ASCII", "I", "O"]);
 const mentioned = [...descriptions.matchAll(/\b[A-Z][A-Z-]*\??/g)]
   .map(([token]) => token)
   .filter((token) => token.length > 1 && !NOT_WORDS.has(token));

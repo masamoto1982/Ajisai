@@ -48,10 +48,15 @@ const trace = await captureRepair(client, mcp, {
   testCase,
   language: "en",
 });
-assert.deepEqual(trace.firstAttempt, { selectedTool: "compute", arguments: { source: "1 2 AD" } });
+assert.deepEqual(trace.firstAttempt, {
+  selectedTool: "compute",
+  arguments: { source: "1 2 AD" },
+  toolCalls: [{ name: "compute", arguments: { source: "1 2 AD" } }],
+});
 assert.deepEqual(trace.repairedAttempt, {
   selectedTool: "compute",
   arguments: { source: "1 2 ADD" },
+  toolCalls: [{ name: "compute", arguments: { source: "1 2 ADD" } }],
 });
 assert.equal(trace.language, "en");
 assert.equal(trace.observed.sawDiagnosis, true, "the executed first attempt really did fail");
@@ -94,9 +99,45 @@ const explored = await captureRepair(exploring, mcp, {
 });
 assert.equal(explored.observed.firstTurnToolCalls, 2);
 assert.deepEqual(
-  explored.firstAttempt,
-  { selectedTool: "compute", arguments: { source: "1 2 AD" } },
-  "the first call is the recorded attempt",
+  explored.firstAttempt.toolCalls.map(({ arguments: args }) => args.source),
+  ["1 2 AD", "1 2 SUBTRACT"],
+  "both calls of the turn are recorded, in order",
+);
+assert.equal(
+  explored.firstAttempt.selectedTool,
+  "compute",
+  "`selectedTool` stays the first call",
+);
+
+// The turn a model that checks before running produces: `check` on `1 ADD`
+// reports nothing, because a stack underflow is a runtime fact, and the
+// failing `compute` behind it is the attempt. Recording only the first call
+// scored two cases 1.0 -> 0.0 on a strategy change that was an improvement.
+const careful = scriptedClient([
+  {
+    content: [
+      { type: "tool_use", id: "k1", name: "check", input: { source: "1 ADD" } },
+      { type: "tool_use", id: "k2", name: "compute", input: { source: "1 ADD" } },
+    ],
+    stop_reason: "tool_use",
+  },
+  call("k3", "1 2 ADD"),
+]);
+const checked = await captureRepair(careful, mcp, {
+  model: DEFAULT_MODEL,
+  tools,
+  testCase,
+  language: "en",
+});
+assert.deepEqual(
+  checked.firstAttempt.toolCalls.map(({ name }) => name),
+  ["check", "compute"],
+  "a check-then-run turn keeps the run that actually failed",
+);
+assert.equal(
+  checked.observed.sawDiagnosis,
+  true,
+  "the turn saw a diagnosis even though its first call did not produce one",
 );
 const [, exploringFollowUp] = exploring.requests;
 assert.deepEqual(
@@ -113,6 +154,7 @@ const silent = await captureRepair(scriptedClient([noCall]), mcp, {
   language: "ja",
 });
 assert.equal(silent.firstAttempt.selectedTool, null);
+assert.deepEqual(silent.firstAttempt.toolCalls, []);
 assert.equal(silent.repairedAttempt.selectedTool, null);
 assert.equal(silent.observed.turns, 1, "there is no second turn without a first call");
 assert.equal(silent.observed.sawDiagnosis, false);

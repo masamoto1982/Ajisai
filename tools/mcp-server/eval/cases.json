@@ -1014,6 +1014,160 @@
    "expectedTool": null,
    "arguments": null,
    "expect": null
+  },
+  {
+   "id": "irrelevant-sine",
+   "category": "negative",
+   "prompts": {
+    "en": "What is the sine of 30 degrees?",
+    "ja": "30 度のサインはいくつですか。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-logarithm",
+   "category": "negative",
+   "prompts": {
+    "en": "What is the natural logarithm of 2?",
+    "ja": "2 の自然対数はいくつですか。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-pi-digits",
+   "category": "negative",
+   "prompts": {
+    "en": "Give me pi to 20 decimal places.",
+    "ja": "円周率を小数点以下 20 桁まで教えてください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-currency",
+   "category": "negative",
+   "prompts": {
+    "en": "Convert 100 US dollars to Japanese yen.",
+    "ja": "100 米ドルを日本円に換算してください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-weekday",
+   "category": "negative",
+   "prompts": {
+    "en": "What day of the week was 14 May 1990?",
+    "ja": "1990 年 5 月 14 日は何曜日でしたか。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-distance",
+   "category": "negative",
+   "prompts": {
+    "en": "How far is Tokyo from Osaka?",
+    "ja": "東京から大阪までの距離はどれくらいですか。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-explain-rpn",
+   "category": "negative",
+   "prompts": {
+    "en": "Explain what postfix notation is and why a stack suits it.",
+    "ja": "後置記法とは何か、なぜスタックと相性が良いのかを説明してください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-estimate",
+   "category": "negative",
+   "prompts": {
+    "en": "Roughly how long does a 500-page novel take to read?",
+    "ja": "500 ページの小説を読むのに、だいたいどれくらいかかりますか。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-naming",
+   "category": "negative",
+   "prompts": {
+    "en": "Suggest a good variable name for a user's age.",
+    "ja": "ユーザーの年齢を保持する変数の良い名前を提案してください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-python",
+   "category": "negative",
+   "prompts": {
+    "en": "Write a Python function that reverses a string.",
+    "ja": "文字列を逆順にする Python の関数を書いてください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-regex",
+   "category": "negative",
+   "prompts": {
+    "en": "Write a regular expression that matches an email address.",
+    "ja": "メールアドレスにマッチする正規表現を書いてください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-debug",
+   "category": "negative",
+   "prompts": {
+    "en": "Why does `for (i=0;i<n;i++)` skip the last element in my JavaScript loop?",
+    "ja": "JavaScript の `for (i=0;i<n;i++)` で最後の要素が飛ばされるのはなぜですか。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-summary",
+   "category": "negative",
+   "prompts": {
+    "en": "Summarize the plot of Momotaro in two sentences.",
+    "ja": "桃太郎のあらすじを 2 文で要約してください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
+  },
+  {
+   "id": "irrelevant-book",
+   "category": "negative",
+   "prompts": {
+    "en": "Recommend a book about compiler construction.",
+    "ja": "コンパイラ構築についての本を 1 冊薦めてください。"
+   },
+   "expectedTool": null,
+   "arguments": null,
+   "expect": null
   }
  ]
 }

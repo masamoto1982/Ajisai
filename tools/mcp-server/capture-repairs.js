@@ -83,9 +83,17 @@ export async function captureRepair(client, mcp, { model, tools, testCase, langu
     messages,
   });
   const firstUse = firstToolUse(first);
-  const attempt = (use) => ({
-    selectedTool: use?.name ?? null,
-    arguments: use?.input ?? {},
+  // A turn is one attempt, and it may hold several calls — the same reading
+  // `score-traces.js` was corrected to in the first baseline round. Recording
+  // only the first `tool_use` mis-scored a model that got *better*: after the
+  // entry-surface round it began statically checking before running, and
+  // `check` on `1 ADD` reports nothing, because a stack underflow is a runtime
+  // fact. The failing `compute` right behind it was the attempt, and the
+  // harness threw it away.
+  const attempt = (uses) => ({
+    selectedTool: uses[0]?.name ?? null,
+    arguments: uses[0]?.input ?? {},
+    toolCalls: uses.map(({ name, input }) => ({ name, arguments: input ?? {} })),
   });
 
   // No first call means no failure to read a diagnosis from, so there is no
@@ -96,8 +104,8 @@ export async function captureRepair(client, mcp, { model, tools, testCase, langu
     return {
       caseId: testCase.id,
       language,
-      firstAttempt: attempt(null),
-      repairedAttempt: attempt(null),
+      firstAttempt: attempt([]),
+      repairedAttempt: attempt([]),
       observed: { turns: 1, stopReason: first.stop_reason ?? null, sawDiagnosis: false },
     };
   }
@@ -134,20 +142,21 @@ export async function captureRepair(client, mcp, { model, tools, testCase, langu
     tool_choice: { type: "auto" },
     messages,
   });
-  const secondUse = firstToolUse(second);
   return {
     caseId: testCase.id,
     language,
-    firstAttempt: attempt(firstUse),
-    repairedAttempt: attempt(secondUse),
+    firstAttempt: attempt(uses),
+    repairedAttempt: attempt(toolUses(second)),
     observed: {
       turns: 2,
       firstTurnToolCalls: uses.length,
       stopReason: second.stop_reason ?? null,
-      // Whether the executed first attempt actually failed. A case where it
-      // succeeded outright never tested a repair, and the scorer will score it
-      // as no diagnosis observed — this records why.
-      sawDiagnosis: result?.structuredContent?.status === "error",
+      // Whether *any* call in the first turn failed. A turn where none did
+      // never tested a repair, and the scorer will score it as no diagnosis
+      // observed — this records why.
+      sawDiagnosis: results.some(
+        ({ outcome }) => outcome?.structuredContent?.status === "error",
+      ),
     },
   };
 }

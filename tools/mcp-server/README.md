@@ -275,8 +275,8 @@ backend.
 runs `backend/parity-test.js`) runs every golden case and every declared limit
 boundary against both backends and asserts they agree.
 
-`eval/cases.json` is the agent-evaluation corpus: 65 cases, each asked in
-English and Japanese, so 130 prompts. `npm run eval` executes every case's
+`eval/cases.json` is the agent-evaluation corpus: 79 cases (59 positive, 20
+negative), each asked in English and Japanese, so 158 prompts. `npm run eval` executes every case's
 expected tool call against the real backend. It measures backend semantic
 correctness only; model tool selection and source generation require captured
 model traces and are not claimed by this score.
@@ -298,7 +298,12 @@ are separate numbers because they have different repairs: a model that reaches
 for the wrong tool with correct source has a tool problem, and one that reaches
 correctly and writes source computing the wrong thing has a language problem.
 Generation is rated over the positive cases only, since a case whose correct
-answer is no call has nothing to generate.
+answer is no call has nothing to generate. `positiveSelectionAccuracy` is there
+for the same reason from the other side: `toolSelectionAccuracy` mixes the two
+classes, so growing the negative set moves it without any behaviour changing.
+Each score carries a `composition` block naming how many cases of each class it
+was computed over — rates over one class survive a corpus that grows, rates over
+both only compare within one composition.
 
 A turn may hold several tool calls, and all of them are recorded and scored. A
 model that looks a Word up and then computes has made one attempt containing two
