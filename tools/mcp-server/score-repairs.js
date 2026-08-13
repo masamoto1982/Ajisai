@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "./index.js";
 import {
   LANGUAGES,
+  callsOf,
   indexTraces,
   mayAssertPerfect,
   traceKey,
@@ -25,31 +26,45 @@ function matches(result, expected) {
 }
 
 /**
- * Replay the attempt the model actually made, through the tool it actually
- * chose.
+ * Replay every call the attempt made, and answer with the first result that
+ * satisfies what the case expects.
  *
- * This used to replay only `compute` and score everything else as nothing
- * happened. That is not a stricter grade, it is a wrong one: `1 2 AD` through
- * `check` returns the identical `typoOrUnknownName` diagnosis naming the
- * identical Word, so a model that statically checked before running — the more
- * careful order, and one the tool descriptions invite — was recorded as never
- * having seen a diagnosis at all. The first real capture scored 3/8 with two of
- * the five failures caused by this, and it also made the two reported rates
- * identical by construction, since an attempt that was never replayed can
- * neither observe a diagnosis nor repair from one.
+ * A turn is one attempt and may hold several calls — the reading
+ * `score-traces.js` was corrected to in the first baseline round, arriving here
+ * for the same reason and, this time, on a model that had got *better*. After
+ * the entry-surface round it began statically checking before running; `check`
+ * on `1 ADD` reports nothing, because a stack underflow is a runtime fact, and
+ * grading only that call recorded the failing `compute` right behind it as
+ * never having happened. Two cases went 1.0 -> 0.0 on a strategy change that
+ * was an improvement.
  *
- * Grading what the model did lets the two rates separate: reading the
- * diagnosis and completing the repair become different achievements, which is
- * what having two numbers is for. A repair that answers with a contract lookup
- * still fails the second expectation, because it never produced the value.
+ * `some` rather than `first` is the same rule both ends: the attempt observed
+ * the diagnosis if any of its calls did, and repaired if any of its calls
+ * produced the expected result.
+ *
+ * The round before, this replayed only `compute` and scored every other tool as
+ * nothing having happened — the same defect one level down, since `1 2 AD`
+ * through `check` returns the identical `typoOrUnknownName` diagnosis naming
+ * the identical Word. Both corrections point the same way: grade what the model
+ * did, through the tool it chose, across the whole turn. That is also what lets
+ * the two rates separate rather than being identical by construction — a repair
+ * answered with a contract lookup still fails the second expectation, because
+ * it never produced the value.
  */
-async function callAttempt(client, attempt) {
-  if (!attempt?.selectedTool) return null;
-  try {
-    return await client.callTool({ name: attempt.selectedTool, arguments: attempt.arguments ?? {} });
-  } catch {
-    return null;
+async function callAttempt(client, attempt, expected) {
+  const calls = callsOf(attempt);
+  let fallback = null;
+  for (const call of calls) {
+    let outcome = null;
+    try {
+      outcome = await client.callTool({ name: call.name, arguments: call.arguments ?? {} });
+    } catch {
+      outcome = null;
+    }
+    if (matches(outcome, expected)) return outcome;
+    fallback ??= outcome;
   }
+  return fallback;
 }
 
 const tracePath = process.argv[2];
@@ -81,11 +96,13 @@ try {
         console.log(`MISS ${label}`);
         continue;
       }
-      const first = await callAttempt(client, trace.firstAttempt);
+      const first = await callAttempt(client, trace.firstAttempt, testCase.firstAttempt.expect);
       const diagnosisOk = matches(first, testCase.firstAttempt.expect);
       if (diagnosisOk) tally.observed += 1;
       // A lucky standalone answer is not diagnostic recovery.
-      const repaired = diagnosisOk ? await callAttempt(client, trace.repairedAttempt) : null;
+      const repaired = diagnosisOk
+        ? await callAttempt(client, trace.repairedAttempt, testCase.repairedAttempt.expect)
+        : null;
       const repairOk = diagnosisOk && matches(repaired, testCase.repairedAttempt.expect);
       if (repairOk) tally.repaired += 1;
       console.log(`${repairOk ? "PASS" : "FAIL"} ${label} diagnosis=${diagnosisOk}`);

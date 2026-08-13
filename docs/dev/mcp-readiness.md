@@ -609,12 +609,43 @@ descriptions mention must exist. The second is the failure the baseline
 measured, pointed at ourselves — an entry surface that sends a caller after a
 Word that is not there.
 
-**The effect of this is not measured.** The credential that took the baseline
-has been rotated, so the after-capture has not been run. What exists is a
-hypothesis with a mechanism to test it: re-run `npm run eval:capture` and
-`score-traces.js` against the same 130 prompts and compare. Until that happens
-the numbers in the table above stand as the only measurement, and this round's
-change is a described change, not a demonstrated improvement.
+**The effect is measured, and it is the largest single movement this tracker has
+recorded.** Same 65 cases, same 130 prompts, same model, same thin system
+prompt; only the tool descriptions and the preface changed
+(`claude-opus-5-after-entry-surface.json`).
+
+| metric | before | after |
+|---|---:|---:|
+| tool selection accuracy | 0.469 | **0.862** |
+| reached expected tool first | 0.338 | **0.762** |
+| first-attempt generation rate | 0.331 | **0.585** |
+| semantic success rate | 0.392 | **0.623** |
+| irrelevant tool rate | 0.000 | **0.000** |
+
+Read as counts, the two diagnosed causes are what moved: prompts that reached
+the expected tool went 49 → 100 of 118, prompts that called nothing went 21 → 4,
+and turns spent only guessing names in the registry went 46 → 13. **The gain
+cost nothing in restraint** — `irrelevantToolRate` is still 0.000, so the model
+did not start over-reaching, it stopped under-reaching. The language gap remains
+negligible (0.031 selection, 0.017 generation, now marginally favouring English).
+
+**The remaining failure has moved from selection to writing.** 31 of the 130
+prompts now reach `compute` and hand it source that does not produce the
+expected result, and the mistakes are four concrete syntax rules rather than
+misunderstandings of the domain:
+
+| the model wrote | Ajisai wants |
+|---|---|
+| `["a" "b" "a"] UNIQUE` | `[ 'a' 'b' 'a' ] UNIQUE` — single quotes |
+| `[1 2 3 4] …` | `[ 1 2 3 4 ] …` — brackets are tokens and need spaces |
+| `[ 2 MOD 0 EQ ] FILTER` | `{ 2 MOD 0 = } FILTER` — a block is braces |
+| `5 RANGE` | `[ 0 4 ] RANGE` — `RANGE` takes a bounds vector |
+
+Every one of those is in the writing protocol, and the writing protocol is
+inside the 26 KB resource the caller does not fetch. That is the same shape as
+the defect this round fixed, one level down: the information exists and does not
+reach the surface that is read. It is the obvious next lever, and it is now
+measurable the same way.
 
 The `assets/quickstart.md` resource is deliberately **not** split. The
 reevaluation left the 8 KB target open to be judged on size alone; the baseline
@@ -642,6 +673,25 @@ the harness:
   statically checked before running was recorded as never having seen a
   diagnosis. It also made the two repair rates identical by construction. They
   now separate: 1.000 observed against 0.750 repaired.
+
+**A repair-harness defect this round found, and one it did not.** Recording
+only the first `tool_use` of a repair turn mis-scores a model that got *better*:
+after this round it began statically checking before running, and `check` on
+`1 ADD` reports nothing because a stack underflow is a runtime fact. The failing
+`compute` behind it was the attempt, and the harness threw it away — the same
+correction `score-traces.js` needed one round earlier, now applied to both ends
+of the repair loop (a turn observed the diagnosis if any of its calls did, and
+repaired if any of its calls produced the expected result).
+
+It did not explain the number it was found chasing. The repair rate is 0.750,
+down from 1.000, and after the fix it is still 0.750: on
+`repair-stack-underflow` the model now spends its whole first turn on `check`
+and `word_contract` and never produces a failure at all, so there is no
+diagnosis to repair from. That is a corpus limitation rather than a regression —
+it is the one case whose failure is invisible to static checking, so a model
+that checks first will always miss it — and it is recorded rather than scored
+around. The prediction was wrong and the fix was kept because it is correct
+independently.
 
 **A diagnosis defect the baseline found, fixed, and the fix measured.** On
 `repair-collection-ceiling` the model repaired in the right *direction* — it
