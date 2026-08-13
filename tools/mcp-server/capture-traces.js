@@ -24,7 +24,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { engineVersion, registryDigest, serverVersion } from "./index.js";
-import { validateCorpus } from "./evaluation-contract.js";
+import { LANGUAGES, validateCorpus } from "./evaluation-contract.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -90,7 +90,7 @@ export async function toolDefinitions() {
  * call would score the one metric that measures restraint as a guaranteed
  * failure.
  */
-export async function captureCase(client, { model, tools, testCase }) {
+export async function captureCase(client, { model, tools, testCase, language }) {
   const response = await client.messages.create({
     model,
     // Thinking is on by default on current models and shares this budget with
@@ -100,12 +100,16 @@ export async function captureCase(client, { model, tools, testCase }) {
     system: SYSTEM_PROMPT,
     tools,
     tool_choice: { type: "auto" },
-    messages: [{ role: "user", content: testCase.prompt }],
+    messages: [{ role: "user", content: testCase.prompts[language] }],
   });
   const toolUses = (response.content ?? []).filter((block) => block.type === "tool_use");
   const [first] = toolUses;
   return {
     caseId: testCase.id,
+    // Which asking this was. Both halves of a pair carry the same expectations,
+    // so without this the two answers cannot be told apart and the comparison
+    // the pairing exists for is unrecoverable after the run.
+    language,
     // `null` is a real answer, not a missing one: it is what a correct response
     // to an irrelevant prompt looks like.
     selectedTool: first?.name ?? null,
@@ -151,12 +155,24 @@ function captureFailure(error) {
   return `capture failed: ${error?.message ?? error}\nNothing was written.`;
 }
 
-export async function captureAll({ client, model, tools, cases, onCase = () => {} }) {
+export async function captureAll({
+  client,
+  model,
+  tools,
+  cases,
+  languages = LANGUAGES,
+  onCase = () => {},
+}) {
   const traces = [];
+  // Case-major rather than language-major, so a run interrupted partway leaves
+  // both halves of every completed pair rather than a complete English half
+  // and no Japanese one — a shape that scores as a language gap of 100%.
   for (const testCase of cases) {
-    const trace = await captureCase(client, { model, tools, testCase });
-    traces.push(trace);
-    onCase(trace);
+    for (const language of languages) {
+      const trace = await captureCase(client, { model, tools, testCase, language });
+      traces.push(trace);
+      onCase(trace);
+    }
   }
   return {
     schemaVersion: 1,
@@ -196,7 +212,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
       model,
       tools: await toolDefinitions(),
       cases,
-      onCase: ({ caseId, selectedTool }) => console.error(`  ${caseId} -> ${selectedTool ?? "(no tool)"}`),
+      onCase: ({ caseId, language, selectedTool }) =>
+        console.error(`  ${caseId} [${language}] -> ${selectedTool ?? "(no tool)"}`),
     });
   } catch (error) {
     console.error(captureFailure(error));
