@@ -696,6 +696,75 @@ compare within one composition; `irrelevantToolRate` restarts, because its
 denominator is what changed. Every trace document records `composition` so a
 later reader can tell which corpus a number came from rather than inferring it.
 
+### The expanded negatives, measured
+
+`claude-opus-5-after-negatives.json` — 158 prompts, same server as the syntax
+round, so the only difference from the previous capture is the 14 added cases.
+The comparable series continues, and the two rounds' gains hold:
+
+| metric | baseline | + entry surface | + syntax rules | + negatives |
+|---|---:|---:|---:|---:|
+| positive selection accuracy | 0.415 | 0.847 | 0.856 | 0.864 |
+| first-attempt generation rate | 0.331 | 0.585 | 0.763 | 0.771 |
+
+`irrelevantToolRate` is **0.175** — 7 activations in 40 negative prompts, the
+first number this metric has had at usable resolution. It is not comparable to
+the 0.083 of the previous round, and the movement is not a regression: the 14
+new cases were chosen to be hard, and all 7 activations are theirs.
+
+**The original six are clean, including the one that fired last round.** Twelve
+prompts, no calls — the haiku/mora case did not repeat. One miss on six cases
+was, as suspected, inside the noise of a single prompt. That is the argument for
+the expansion restated as evidence.
+
+**The transcendentals group is clean too, and that is a description working.**
+Sine, natural log and pi's digits produced no call in either language. These are
+numeric asks phrased exactly like the positive cases; what separates them is that
+the closed domain excludes them, and the only place a caller learns that before
+its first call is the "Out of domain: transcendentals" sentence in the `compute`
+description. Three cases in two languages is not proof, but it is the sentence's
+first test and it passed.
+
+**All 7 activations are one behaviour, and it is not the failure the metric was
+built to catch.** Read them together:
+
+| case | what it called |
+|---|---|
+| `irrelevant-weekday` (en, ja) | Zeller's congruence, spelled out in Ajisai |
+| `irrelevant-explain-rpn` (en, ja) | `3 4 ADD 5 MUL` vs `3 4 5 MUL ADD`, as worked examples |
+| `irrelevant-currency` (ja) | 100 × a self-supplied 140–156 rate band |
+| `irrelevant-estimate` (ja) | 300,000 words ÷ a self-supplied 400/500/600 wpm |
+| `irrelevant-debug` (ja) | `[ 0 5 ] RANGE`, to show the off-by-one |
+
+In none of them does the model claim the engine holds data it does not. It
+supplies the missing constant itself and uses the engine for the arithmetic
+underneath — a rate band it names, a reading speed it names, a calendar formula
+it knows. `irrelevant-currency` is the clearest: the engine cannot know the yen
+rate, the model does not pretend it can, and what it computes is 100 dollars
+across a range it chose.
+
+So `irrelevantToolRate` as defined — *any* call on a case whose expected tool is
+null — is measuring two different things at one price:
+
+- **claiming absent data**, which produces a confidently wrong answer and is the
+  failure worth a metric;
+- **using a calculator for a sub-task with self-supplied inputs**, which is what
+  a careful assistant does and what 7 of 7 activations actually were.
+
+**The cases are still not being changed, and neither is the metric — yet.**
+Splitting the definition after seeing the traces is how a metric gets tuned into
+agreeing with the model. What the traces license is the observation; separating
+the two readings needs its own criterion, decided before the next capture rather
+than after it, and ideally checked against the final answer text rather than the
+call alone. The corpus records the calls, so that judgement remains available.
+
+**Japanese activates more (0.25 vs 0.10), and the sample is too small to mean
+anything.** Five of the seven are Japanese, but three of those are cases whose
+English half also fired. The two one-sided ones (`irrelevant-estimate`,
+`irrelevant-debug`) are a two-prompt difference. Against a language gap that is
+−0.034 on positive selection — Japanese marginally *ahead* — this is noted and
+not interpreted.
+
 The `assets/quickstart.md` resource is deliberately **not** split. The
 reevaluation left the 8 KB target open to be judged on size alone; the baseline
 supplies the argument. It is fetched on demand rather than injected, so its 26 KB
