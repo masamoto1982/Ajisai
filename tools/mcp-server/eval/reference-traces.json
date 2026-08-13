@@ -1020,6 +1020,174 @@
    "language": "ja",
    "selectedTool": null,
    "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-sine",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-sine",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-logarithm",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-logarithm",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-pi-digits",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-pi-digits",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-currency",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-currency",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-weekday",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-weekday",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-distance",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-distance",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-explain-rpn",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-explain-rpn",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-estimate",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-estimate",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-naming",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-naming",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-python",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-python",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-regex",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-regex",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-debug",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-debug",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-summary",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-summary",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-book",
+   "language": "en",
+   "selectedTool": null,
+   "arguments": {}
+  },
+  {
+   "caseId": "irrelevant-book",
+   "language": "ja",
+   "selectedTool": null,
+   "arguments": {}
   }
  ]
 }

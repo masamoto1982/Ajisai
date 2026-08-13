@@ -39,6 +39,7 @@ function emptyTally() {
     asked: 0,
     missing: 0,
     selected: 0,
+    positiveSelected: 0,
     reachedFirst: 0,
     generated: 0,
     semantic: 0,
@@ -69,6 +70,7 @@ for (const testCase of corpus.cases) {
       ? calls.length === 0
       : calls.some((call) => call.name === testCase.expectedTool);
     if (selectionOk) tally.selected += 1;
+    if (selectionOk && testCase.expectedTool !== null) tally.positiveSelected += 1;
     if (calls[0]?.name === testCase.expectedTool || (testCase.expectedTool === null && !calls[0])) {
       tally.reachedFirst += 1;
     }
@@ -126,6 +128,13 @@ function rates(tally) {
     asked: tally.asked,
     missingTraces: tally.missing,
     toolSelectionAccuracy: tally.selected / tally.asked,
+    // Over the positive cases only, and the reason it exists is comparability:
+    // `toolSelectionAccuracy` mixes the two classes, so adding negative cases
+    // moves it without any behaviour changing. The negative set grew from 6 to
+    // 20 to give `irrelevantToolRate` enough resolution to tell a regression
+    // from one unlucky prompt, and that would otherwise have silently broken
+    // the series it was measured against.
+    positiveSelectionAccuracy: positives === 0 ? 0 : tally.positiveSelected / positives,
     // Of the turns that reached the right tool, how many reached it with their
     // very first call. Never a pass/fail criterion — a lookup before a compute
     // is good practice, not a miss.
@@ -147,6 +156,9 @@ const overall = {
   asked: combined.asked,
   missingTraces: combined.missing,
   toolSelectionAccuracy: combined.selected / combined.asked,
+  positiveSelectionAccuracy: positives === 0
+    ? 0
+    : combined.positiveSelected / (positives * LANGUAGES.length),
   reachedExpectedToolFirstRate: combined.reachedFirst / combined.asked,
   firstAttemptGenerationRate: positives === 0
     ? 0
@@ -169,6 +181,11 @@ const metrics = {
     ? "scorer conformance only — not model performance"
     : `model performance for ${provenance.modelId}`,
   cases: corpus.cases.length,
+  // Which rates a later run may be compared against. `firstAttemptGeneration`,
+  // `positiveSelection` and `irrelevantTool` are each computed over one class,
+  // so they survive a corpus that grows; `toolSelectionAccuracy` and
+  // `semanticSuccessRate` mix the two and only compare within one composition.
+  composition: { positive: positives, negative: negatives },
   languages: LANGUAGES,
   ...overall,
   byLanguage,
@@ -180,6 +197,8 @@ const metrics = {
       byLanguage.en.toolSelectionAccuracy - byLanguage.ja.toolSelectionAccuracy,
     firstAttemptGenerationRate:
       byLanguage.en.firstAttemptGenerationRate - byLanguage.ja.firstAttemptGenerationRate,
+    positiveSelectionAccuracy:
+      byLanguage.en.positiveSelectionAccuracy - byLanguage.ja.positiveSelectionAccuracy,
     semanticSuccessRate: byLanguage.en.semanticSuccessRate - byLanguage.ja.semanticSuccessRate,
   },
 };

@@ -669,9 +669,32 @@ then called `compute` to count the mora of each line
 counting engine used for a counting sub-task is a fair question, and the corpus
 answers it as a miss. **The case is not being changed.** A negative case that
 catches a change is doing its job, and rewriting it after it fires would make
-every later restraint number meaningless. The regression is recorded at its
-measured size: one prompt in 130, and the first time in three captures that
-advertising the engine more loudly cost anything at all.
+every later restraint number meaningless.
+
+**What was changed instead is the resolution of the metric that caught it.** Six
+negative cases means one miss moves the rate by 8 points overall and 17 in one
+language — not enough to tell a regression from an unlucky prompt, which is the
+wrong basis for trading away a measured gain. The negative set is now 20, and
+the fourteen additions probe the boundary rather than the obvious: numeric asks
+the closed domain genuinely excludes (sine, natural log, pi's digits), numeric
+asks whose data the engine does not have (currency conversion, a weekday, a
+distance), asks that contain a number but are not calculations (explain postfix
+notation, estimate a reading time, name a variable), and programming asks in
+another language. The existing six stay.
+
+Growing the corpus breaks comparability, so the scorer now says which rates
+survive it. `positiveSelectionAccuracy` (new) and `firstAttemptGenerationRate`
+are computed over the positive cases, which did not change, so the series holds:
+
+| metric | baseline | + entry surface | + syntax rules |
+|---|---:|---:|---:|
+| positive selection accuracy | 0.415 | 0.847 | 0.856 |
+| first-attempt generation rate | 0.331 | 0.585 | 0.763 |
+
+`toolSelectionAccuracy` and `semanticSuccessRate` mix the two classes and only
+compare within one composition; `irrelevantToolRate` restarts, because its
+denominator is what changed. Every trace document records `composition` so a
+later reader can tell which corpus a number came from rather than inferring it.
 
 The `assets/quickstart.md` resource is deliberately **not** split. The
 reevaluation left the 8 KB target open to be judged on size alone; the baseline
