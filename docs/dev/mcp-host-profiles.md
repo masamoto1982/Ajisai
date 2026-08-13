@@ -38,6 +38,18 @@ each meter's slowest measured path — 14,465 units/ms for `numericWork`, 30,800
 for `collectionWork` — 10,000,000 and 20,000,000 both buy about 0.7 s. Their
 sum is what `wallTimeMs` backstops.
 
+**Only that pair is derived.** The other six ceilings differ between the two
+profiles by 1x, 3.8x, 10x, 195x and 1024x, and no rule explains the spread —
+`executionSteps` is identical across hosts while the arithmetic budget beside it
+is a hundred times larger, and `sourceBytes` at 64 MB is a round number rather
+than a measured one. Every ceiling in both columns does fire by name, which was
+checked on 2026-08-13 and is not the issue; what is missing is a statement of
+what the difference is a function of. Recorded as work with an entry condition
+and a scope in
+[`host-profile-derivation-handoff.md`](./host-profile-derivation-handoff.md):
+the values stay different on purpose, the derivation behind them is what gets
+unified.
+
 The MCP server declares four further ceilings that exist only at the adapter,
 because they bound the *call* rather than the computation: `wallTimeMs`
 (5,000), `responseBytes` (1,048,576), `concurrentExecutions` (4), and the
