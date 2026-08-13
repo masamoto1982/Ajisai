@@ -58,7 +58,7 @@
     "sync:assets": "node sync-assets.js",
     "check:assets": "node sync-assets.js --check",
     "prepack": "node sync-assets.js --check",
-    "selftest": "node selftest.js",
+    "selftest": "node tool-description.test.js && node selftest.js",
     "test:pack": "node pack-smoke.js",
     "eval:validate": "node validate-evaluation.js && node evaluation-contract.test.js && node capture-traces.test.js && node capture-repairs.test.js && node generate-reference-traces.mjs --check",
     "eval:reference-traces": "node generate-reference-traces.mjs",

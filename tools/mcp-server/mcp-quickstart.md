@@ -6,14 +6,39 @@
 
 # Ajisai over MCP — read this first
 
-You are connected to Ajisai: a small, bounded, deterministic calculator whose
+You are connected to Ajisai: a small, bounded, deterministic engine whose
 numbers are **exact rationals closed under square root** — no floats anywhere in
-its supported domain. Use it when the arithmetic has to be right and the failure
+its supported domain. Use it when the answer has to be right and the failure
 has to be explainable. It is not a general-purpose language runtime.
 
 This preface is the MCP entry point. Everything after it is the generated
 protocol for *writing* Ajisai, and is the reference to consult once you know
 which call to make.
+
+## 0. What it does, in one table
+
+Ajisai is more than arithmetic, and a caller who assumes otherwise stops
+reaching for it exactly where it would have helped. The 65 Words are:
+
+| you need | Words |
+|---|---|
+| arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `SUM` `RANDOM` |
+| comparison and logic | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` · `AND` `OR` `NOT` `TRUE` `FALSE` |
+| vectors | arithmetic broadcasts element-wise; no separate vector Words |
+| collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
+| blocks over a collection | `MAP` `FILTER` `FOLD` `ANY` `ALL` |
+| text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
+| absence | `NIL` `NIL?` `NIL-REASON` `VENT` (`^`) |
+| naming, control, output | `DEF` `BIND` `DEL` · `COND` `EXEC` · `PRINT` `KEEP` `REFLECT` |
+
+**Word names are exact and case-sensitive, and this is the whole list.** Do not
+invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that
+is not here does not exist under another spelling. When unsure, call
+`word_contract` — it answers a near miss with `suggestions` — or read
+`ajisai://vocabulary` for every contract at once.
+
+Out of domain, and not worth a call: transcendental functions, floating point,
+I/O, and anything that is really a program rather than a calculation.
 
 ## 1. Choose a tool
 
@@ -34,7 +59,11 @@ its contents as `source`.
    `hostError` (with `isError` set) — this server failed, and your program may
    be fine.
 2. On `ok`: `stackDisplay` is the final stack bottom→top, `output` holds `PRINT`
-   lines, and `stack` is the machine-readable form of the same values.
+   lines, and `stack` is the machine-readable form of the same values. That is
+   the general rule and it has exactly one exception: for an irrational square
+   root `stackDisplay` is a *truncated* rendering and the value lives in
+   `semantics.exactTerms` — see §4, which you must read before computing with
+   any `SQRT` result.
 3. On `error`: `diagnosis.why` and `.where` locate it; `diagnosis.candidates`
    names the Word you probably meant; `diagnosis.nextChecks[].code` is a stable
    identifier to act on — never match on its display text, which is localized.
