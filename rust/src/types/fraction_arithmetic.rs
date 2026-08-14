@@ -1,6 +1,6 @@
+use super::bigint_gcd::balanced_bigint_gcd;
 use super::fraction::{compute_gcd_i64, Fraction, FractionRepr, RoundingMode};
 use num_bigint::BigInt;
-use num_integer::Integer;
 use num_traits::{One, Zero};
 
 impl Fraction {
@@ -18,7 +18,7 @@ impl Fraction {
 
         let (sn, sd): (BigInt, BigInt) = self.to_bigint_pair();
         let nn: BigInt = n.numerator();
-        let g: BigInt = nn.gcd(&sd);
+        let g: BigInt = balanced_bigint_gcd(&nn, &sd);
         let n_reduced: BigInt = &nn / &g;
         let b_reduced: BigInt = &sd / &g;
         Self::create_already_reduced(sn * n_reduced, b_reduced)
@@ -39,7 +39,7 @@ impl Fraction {
 
         let (sn, sd): (BigInt, BigInt) = self.to_bigint_pair();
         let nn: BigInt = n.numerator();
-        let g: BigInt = sn.gcd(&nn);
+        let g: BigInt = balanced_bigint_gcd(&sn, &nn);
         let a_reduced: BigInt = &sn / &g;
         let n_reduced: BigInt = &nn / &g;
         Self::create_already_reduced(a_reduced, sd * n_reduced)
@@ -74,7 +74,7 @@ impl Fraction {
             if sum.is_zero() {
                 return Fraction::from_repr(FractionRepr::Small(0, 1));
             }
-            let g: BigInt = sum.gcd(&ad);
+            let g: BigInt = balanced_bigint_gcd(&sum, &ad);
             if g.is_one() {
                 return Self::create_already_reduced(sum, ad);
             }
@@ -113,7 +113,7 @@ impl Fraction {
             if diff.is_zero() {
                 return Fraction::from_repr(FractionRepr::Small(0, 1));
             }
-            let g: BigInt = diff.gcd(&ad);
+            let g: BigInt = balanced_bigint_gcd(&diff, &ad);
             if g.is_one() {
                 return Self::create_already_reduced(diff, ad);
             }
@@ -148,21 +148,21 @@ impl Fraction {
         }
 
         if ad.is_one() {
-            let g: BigInt = an.gcd(&bd);
+            let g: BigInt = balanced_bigint_gcd(&an, &bd);
             let a_reduced: BigInt = &an / &g;
             let d_reduced: BigInt = &bd / &g;
             return Self::create_already_reduced(a_reduced * bn, d_reduced);
         }
 
         if bd.is_one() {
-            let g: BigInt = bn.gcd(&ad);
+            let g: BigInt = balanced_bigint_gcd(&bn, &ad);
             let c_reduced: BigInt = &bn / &g;
             let b_reduced: BigInt = &ad / &g;
             return Self::create_already_reduced(an * c_reduced, b_reduced);
         }
 
-        let g1: BigInt = an.gcd(&bd);
-        let g2: BigInt = bn.gcd(&ad);
+        let g1: BigInt = balanced_bigint_gcd(&an, &bd);
+        let g2: BigInt = balanced_bigint_gcd(&bn, &ad);
 
         let a_reduced: BigInt = &an / &g1;
         let d_reduced: BigInt = &bd / &g1;
@@ -200,21 +200,21 @@ impl Fraction {
         }
 
         if ad.is_one() {
-            let g: BigInt = an.gcd(&bn);
+            let g: BigInt = balanced_bigint_gcd(&an, &bn);
             let a_reduced: BigInt = &an / &g;
             let c_reduced: BigInt = &bn / &g;
             return Self::create_already_reduced(a_reduced * bd, c_reduced);
         }
 
         if bd.is_one() {
-            let g: BigInt = an.gcd(&bn);
+            let g: BigInt = balanced_bigint_gcd(&an, &bn);
             let a_reduced: BigInt = &an / &g;
             let c_reduced: BigInt = &bn / &g;
             return Self::create_already_reduced(a_reduced, ad * c_reduced);
         }
 
-        let g1: BigInt = an.gcd(&bn);
-        let g2: BigInt = bd.gcd(&ad);
+        let g1: BigInt = balanced_bigint_gcd(&an, &bn);
+        let g2: BigInt = balanced_bigint_gcd(&bd, &ad);
 
         let a_reduced: BigInt = &an / &g1;
         let c_reduced: BigInt = &bn / &g1;

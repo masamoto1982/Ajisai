@@ -10,8 +10,8 @@
 //! (Same construction as the §4.2.7 comparison pre-pass this module's
 //! type grew out of.)
 
+use crate::types::bigint_gcd::balanced_bigint_gcd;
 use num_bigint::BigInt;
-use num_integer::Integer;
 use num_traits::{One, Zero};
 
 /// Pairwise-coprime positive integers, each ≥ 2 and none a perfect
@@ -39,7 +39,7 @@ impl Basis {
             let mut shared: Option<(usize, usize)> = None;
             'search: for i in 0..elems.len() {
                 for j in (i + 1)..elems.len() {
-                    if !elems[i].gcd(&elems[j]).is_one() {
+                    if !balanced_bigint_gcd(&elems[i], &elems[j]).is_one() {
                         shared = Some((i, j));
                         break 'search;
                     }
@@ -48,7 +48,7 @@ impl Basis {
             let Some((i, j)) = shared else { break };
             let a = elems.swap_remove(j);
             let b = elems.swap_remove(i);
-            let g = a.gcd(&b);
+            let g = balanced_bigint_gcd(&a, &b);
             for part in [&a / &g, &b / &g, g] {
                 if part > one && !elems.contains(&part) {
                     elems.push(part);

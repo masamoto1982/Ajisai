@@ -2,10 +2,10 @@
 //! and division. Split from `algebraic.rs` to respect the file-size
 //! budget (SPEC §14.1).
 
+use crate::types::bigint_gcd::balanced_bigint_gcd;
 use crate::types::exact::algebraic::{add_term as merge_term, Algebraic, AlgebraicResult};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
-use num_integer::Integer;
 use num_traits::{One, Zero};
 use std::collections::BTreeMap;
 
@@ -76,7 +76,7 @@ impl MqTerms {
         let mut out = MqTerms::zero();
         for (m1, c1) in &self.0 {
             for (m2, c2) in &other.0 {
-                let g = m1.gcd(m2);
+                let g = balanced_bigint_gcd(m1, m2);
                 let monomial = (m1 / &g) * (m2 / &g);
                 let coeff = c1.mul(c2).mul(&Fraction::new(g, BigInt::one()));
                 merge_term(&mut out.0, monomial, coeff);

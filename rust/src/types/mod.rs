@@ -1,4 +1,5 @@
 pub mod arena;
+mod bigint_gcd;
 pub(crate) mod code_data;
 pub mod display;
 pub mod exact;

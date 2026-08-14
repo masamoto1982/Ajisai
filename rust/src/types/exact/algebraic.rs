@@ -17,6 +17,7 @@
 //! an `Algebraic` that merely wraps a rational — callers receive the
 //! `Fraction` itself and route it back to Tier 0.
 
+use crate::types::bigint_gcd::balanced_bigint_gcd;
 use crate::types::exact::basis::Basis;
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -266,7 +267,7 @@ impl Algebraic {
         let mut terms: BTreeMap<BigInt, Fraction> = BTreeMap::new();
         for (m1, c1) in &a {
             for (m2, c2) in &b {
-                let g = m1.gcd(m2);
+                let g = balanced_bigint_gcd(m1, m2);
                 let monomial = (m1 / &g) * (m2 / &g);
                 let coeff = c1.mul(c2).mul(&Fraction::new(g, BigInt::one()));
                 add_term(&mut terms, monomial, coeff);

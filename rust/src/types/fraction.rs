@@ -1,5 +1,5 @@
+use super::bigint_gcd::balanced_bigint_gcd;
 use num_bigint::BigInt;
-use num_integer::Integer;
 use num_traits::{One, ToPrimitive, Zero};
 use std::str::FromStr;
 
@@ -144,7 +144,7 @@ impl std::hash::Hash for Fraction {
             return;
         }
         let (mut n, mut d) = self.to_bigint_pair();
-        let g = n.gcd(&d);
+        let g = balanced_bigint_gcd(&n, &d);
         if !g.is_zero() && !g.is_one() {
             n /= &g;
             d /= &g;
@@ -204,7 +204,7 @@ impl Fraction {
             return Self::create_from_i128(n as i128, d as i128);
         }
 
-        let common: BigInt = numerator.gcd(&denominator);
+        let common: BigInt = balanced_bigint_gcd(&numerator, &denominator);
         let mut num: BigInt = &numerator / &common;
         let mut den: BigInt = &denominator / &common;
         if den < BigInt::zero() {
