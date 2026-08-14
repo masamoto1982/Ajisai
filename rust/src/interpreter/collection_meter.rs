@@ -45,9 +45,24 @@
 
 use crate::error::{AjisaiError, ResourceProgress, Result, PROGRESS_UNIT_ELEMENTS};
 use crate::interpreter::arithmetic_meter::measure_operand;
-use crate::interpreter::runtime_limits::{ElementCost, OperandWork};
+use crate::interpreter::runtime_limits::{ElementCost, OperandWork, COLLECTION_COPY_UNITS};
 use crate::interpreter::Interpreter;
 use crate::types::Value;
+
+/// What one `HashMap` lookup costs beyond the leaf-width probe it hashes, in
+/// collection units — the de-quadraticization follow-up's constant
+/// (`docs/dev/collection-word-dequadraticization-2026-08-14.md`).
+///
+/// `probe_units` alone undercharged at scale: at 1,000,000 all-distinct
+/// elements (the playground's `materializedElements` ceiling), it charged
+/// 2,277 units/ms of real wall time, *below* the 2,814 units/ms floor
+/// `examples/work_meter_calibration` already accepts on an unbounded numeric
+/// path — table growth and cache pressure a flat per-leaf charge cannot see.
+/// This adds a second fixed charge to every element hashed (not only the
+/// ones retained), which restores the margin. Reuses `COLLECTION_COPY_UNITS`'s
+/// value for the reason `collection-word-billing-2026-08-13.md` §4 gives it:
+/// a `HashMap` insert is itself a copy of the key into the table.
+const COLLECTION_HASH_UNITS: u64 = COLLECTION_COPY_UNITS;
 
 /// Charge `units` of collection work and fail — diagnosably, before the loop
 /// that would spend it runs — if the cumulative total crosses
@@ -207,11 +222,9 @@ impl ScanMeter {
     /// `probe_units` prices hashing the element's own leaves; `COLLECTION_HASH_UNITS`
     /// prices the `HashMap` machinery around that hash — table growth and
     /// cache pressure that a flat per-leaf charge cannot see, and that
-    /// re-measuring at scale showed matters (`runtime_limits::COLLECTION_HASH_UNITS`).
+    /// re-measuring at scale showed matters.
     pub(crate) fn charge_scan_of(&self, interp: &mut Interpreter, completed: usize) -> Result<()> {
-        let units = self
-            .probe_units
-            .saturating_add(crate::interpreter::runtime_limits::COLLECTION_HASH_UNITS);
+        let units = self.probe_units.saturating_add(COLLECTION_HASH_UNITS);
         charge(interp, units).map_err(|error| self.with_progress(error, completed))
     }
 
