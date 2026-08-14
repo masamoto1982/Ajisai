@@ -82,6 +82,28 @@ fn measure(setup: &str, word: &str) -> f64 {
     millis
 }
 
+/// Like `measure`, but also reads back what the collection meter actually
+/// charged for `word`, so a units/ms rate can be computed against the
+/// post-dequadraticization pricing model instead of hand-derived from the
+/// wall clock and an assumed formula.
+fn measure_charged(setup: &str, word: &str) -> (f64, u64) {
+    let mut interp = Interpreter::new();
+    interp.set_runtime_limits(unbounded());
+    interp.set_max_execution_steps(usize::MAX);
+
+    if let Err(error) = block_on(interp.execute(setup)) {
+        panic!("setup `{setup}` must succeed, got: {error:?}");
+    }
+
+    let started = Instant::now();
+    let outcome = block_on(interp.execute(word));
+    let millis = started.elapsed().as_secs_f64() * 1000.0;
+    if let Err(error) = outcome {
+        panic!("`{word}` on `{setup}` must succeed, got: {error:?}");
+    }
+    (millis, interp.collection_work_used())
+}
+
 /// A vector of `n` distinct small integers.
 fn distinct(n: usize) -> String {
     format!("[ 0 {} ] RANGE", n - 1)
@@ -462,6 +484,48 @@ fn section_ceiling() {
     );
 }
 
+/// units/ms floor under the current (post-dequadraticization) pricing model,
+/// on paths `collectionWork` alone has to bound.
+///
+/// Mirrors `work_meter_calibration`'s selection of `dense tensor lanes` as
+/// `numericWork`'s floor: several representative unbounded paths — a scan
+/// word at low distinctness, a copy word, a comparison word — each read back
+/// through `collection_work_used()` rather than assumed from the billing
+/// design doc's pre-dequadraticization formula, since both the algorithm and
+/// the per-element charge changed underneath it.
+fn section_floor_rate() {
+    println!("── 6. collectionWork floor: units/ms under this build ───────────\n");
+    println!(
+        "Charged units read back from `collection_work_used()`, not derived\n\
+         from the pricing formula by hand — the scan family's algorithm and\n\
+         charge both changed in the de-quadraticization follow-up, so the old\n\
+         hand-derived 30,800 units/ms no longer applies as-is.\n"
+    );
+    println!(
+        "{:<32} {:>12} {:>9} {:>12}",
+        "case", "units", "run ms", "units/ms"
+    );
+    let cases: Vec<(&str, String, &str)> = vec![
+        ("UNIQUE 200k d=1", few_distinct(200_000, 1), "UNIQUE"),
+        ("TALLY 200k d=1", few_distinct(200_000, 1), "TALLY"),
+        ("UNIQUE 100k all-distinct", distinct(100_000), "UNIQUE"),
+        ("REVERSE 100k", distinct(100_000), "REVERSE"),
+        ("SORT 100k", distinct(100_000), "SORT"),
+    ];
+    let mut floor = f64::INFINITY;
+    for (label, setup, word) in &cases {
+        let (millis, units) = measure_charged(setup, word);
+        let rate = if millis > 0.0 {
+            units as f64 / millis
+        } else {
+            f64::INFINITY
+        };
+        floor = floor.min(rate);
+        println!("{label:<32} {units:>12} {millis:>9.1} {rate:>12.0}");
+    }
+    println!("\nfloor: {floor:.0} units/ms on this container, this build.");
+}
+
 fn main() {
     section_element_count();
     section_element_width();
@@ -469,4 +533,5 @@ fn main() {
     section_element_shape();
     section_blind_spots();
     section_ceiling();
+    section_floor_rate();
 }

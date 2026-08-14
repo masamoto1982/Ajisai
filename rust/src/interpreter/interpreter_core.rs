@@ -6,7 +6,14 @@ use std::sync::Arc;
 
 use super::epoch::EpochSnapshot;
 
-pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
+/// Derived in `runtime_limits.rs`, alongside `DEFAULT_MAX_NUMERIC_WORK` and
+/// `DEFAULT_MAX_COLLECTION_WORK` — see that constant's doc comment for the
+/// full derivation. Mirrors the existing `MAX_MATERIALIZED_ELEMENTS`
+/// re-export pattern below: the step budget's *default* is part of the same
+/// host-time-budget derivation as the other accumulating ceilings even though
+/// the field it initializes (`Interpreter::max_execution_steps`) is not part
+/// of `RuntimeLimits`.
+pub const DEFAULT_MAX_EXECUTION_STEPS: usize = super::runtime_limits::DEFAULT_MAX_EXECUTION_STEPS;
 
 /// Cap on the user-word call stack depth. Hit before Rust's native call stack
 /// runs out and panics the WASM module to an unrecoverable trap. The value is
@@ -16,9 +23,12 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
 /// recursion expands to several Rust frames (execute_word_core_inner →
 /// plan/structure runner → execution loop → resolve), so the empirical
 /// safe ceiling is roughly 256 levels in debug builds. The execution-step
-/// limit (DEFAULT_MAX_EXECUTION_STEPS = 100_000) is still the primary
-/// backstop for non-recursive runaway computation; this guard turns deep
-/// recursion specifically into a recoverable AjisaiError instead of a trap.
+/// limit (`DEFAULT_MAX_EXECUTION_STEPS`) is still the primary backstop for
+/// non-recursive runaway computation; this guard turns deep recursion
+/// specifically into a recoverable AjisaiError instead of a trap, independent
+/// of whatever `DEFAULT_MAX_EXECUTION_STEPS` happens to be — a stack overflow
+/// is a depth problem, not a count problem, so raising the step budget must
+/// not raise this ceiling with it.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
 /// Cap on how deeply vector literals may nest (`[ [ [ ... ] ] ]`). The literal

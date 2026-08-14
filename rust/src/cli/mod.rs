@@ -70,8 +70,10 @@ Options:
                                   reported as `cannot verify`, never as passed
   --step-limit <N>                With `run`: override the execution step
                                   budget. N is a positive integer; default:
-                                  100000. A host safety control, not a language
-                                  semantic
+                                  the host's derived step budget
+                                  (interpreter::DEFAULT_MAX_EXECUTION_STEPS,
+                                  docs/dev/mcp-host-profiles.md). A host
+                                  safety control, not a language semantic
 
 Exit codes:
   0  success

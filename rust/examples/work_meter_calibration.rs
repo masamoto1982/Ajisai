@@ -110,6 +110,56 @@ fn algebraic_product(factors: usize) -> String {
     source
 }
 
+/// Steps per millisecond for a dispatch-bound loop: no `Fraction` wider than
+/// a machine word, no algebraic term, nothing any other meter prices.
+/// `executionSteps` is the *only* ceiling such a path can ever reach — the
+/// same role `dense tensor lanes` plays for `numericWork` — so the *slowest*
+/// such path's rate is what `DEFAULT_MAX_EXECUTION_STEPS` should be sized
+/// against for a host whose ceiling is a time budget rather than a fixed
+/// round number. Two shapes, because dispatch cost is not uniform: a flat
+/// arithmetic loop is cheap, and a user-word call (dictionary lookup, frame
+/// push) is dearer — `DOWN_PROBE` in `cli/step_limit_tests.rs` is exactly
+/// this second shape, and it is the one that sets the floor.
+///
+/// Read via `Interpreter::resource_usage().execution_steps` rather than
+/// computed from the source text, so it counts what the interpreter actually
+/// charged (one step per word, including the leading literal push) instead of
+/// what the calibration author assumed it would.
+fn steps_per_ms(source: &str) -> (u64, f64, f64) {
+    let mut interp = Interpreter::new();
+    interp.set_runtime_limits(unbounded());
+    interp.set_max_execution_steps(usize::MAX);
+
+    let started = Instant::now();
+    let outcome = block_on(interp.execute(source));
+    let run_millis = started.elapsed().as_secs_f64() * 1000.0;
+    if let Err(error) = outcome {
+        panic!("steps_per_ms must complete, got: {error:?}");
+    }
+    let steps = interp.resource_usage().execution_steps;
+    let rate = if run_millis > 0.0 {
+        steps as f64 / run_millis
+    } else {
+        f64::INFINITY
+    };
+    (steps, run_millis, rate)
+}
+
+/// A flat loop of `reps` cheap machine-word additions.
+fn add_loop(reps: usize) -> String {
+    format!("1{}", " 7 +".repeat(reps))
+}
+
+/// A trampolined tail-recursive countdown, same construction as
+/// `cli::step_limit_tests::DOWN_PROBE`: every iteration is a user-word call
+/// (dictionary lookup, guard check, frame push) rather than a bare
+/// arithmetic op, so it prices dispatch overhead the flat loop cannot see.
+fn down_probe(n: usize) -> String {
+    format!(
+        "{{\n{{ [ 0 ] > | [ 1 ] - DOWN }}\n{{ IDLE | [ 'done' ] }} COND\n}} 'DOWN' DEF\n{n} DOWN"
+    )
+}
+
 fn main() {
     let wide = "9".repeat(4096);
 
@@ -202,4 +252,37 @@ fn main() {
             measurement.render_millis
         );
     }
+
+    println!("\n── executionSteps floor: dispatch-bound steps/ms ────────────────\n");
+    println!(
+        "`executionSteps` prices word count, not the internal work a word does —\n\
+         every other meter above already prices that. The only path\n\
+         `executionSteps` alone has to bound is a long loop of the cheapest\n\
+         possible word, the way `dense tensor lanes` is the only path\n\
+         `numericWork` alone has to bound. Repeated at growing rep counts to\n\
+         show the rate has settled rather than trusting one noisy sample.\n"
+    );
+    println!(
+        "{:<24} {:>10} {:>9} {:>12}",
+        "shape", "steps", "run ms", "steps/ms"
+    );
+    let mut floor = f64::INFINITY;
+    for (label, reps) in [
+        ("add loop", 50_000usize),
+        ("add loop", 200_000),
+        ("add loop", 1_000_000),
+    ] {
+        let (steps, run_millis, rate) = steps_per_ms(&add_loop(reps));
+        floor = floor.min(rate);
+        println!("{label:<24} {steps:>10} {run_millis:>9.1} {rate:>12.0}");
+    }
+    for n in [50_000usize, 200_000, 1_000_000] {
+        let (steps, run_millis, rate) = steps_per_ms(&down_probe(n));
+        floor = floor.min(rate);
+        println!(
+            "{:<24} {steps:>10} {run_millis:>9.1} {rate:>12.0}",
+            "DOWN trampoline"
+        );
+    }
+    println!("\nfloor: {floor:.0} steps/ms on this container, this build.");
 }
