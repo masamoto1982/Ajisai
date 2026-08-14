@@ -15,6 +15,8 @@ mod value_tensor;
 // (`snapshot_stack` / `restore_stack_snapshot`) and by its own native property
 // tests. Gating it on `any(test, feature = "wasm")` keeps a plain native build
 // free of dead code while still running the round-trip tests under `cargo test`.
+#[cfg(test)]
+mod value_hash_tests;
 #[cfg(any(test, feature = "wasm"))]
 pub(crate) mod value_persist;
 #[cfg(test)]
