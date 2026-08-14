@@ -21,6 +21,7 @@ pub mod higher_order;
 pub mod higher_order_fold;
 pub mod host;
 pub mod host_lookup;
+mod host_profile_defaults;
 pub mod io;
 pub mod logic;
 pub mod math_ops;
