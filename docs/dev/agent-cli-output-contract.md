@@ -33,7 +33,10 @@ leaves no program on disk for the duration of the call.
 With `--json`, commands that produce a JSON report write one document to
 stdout. Program `PRINT` effects are captured in the document rather than mixed
 into stdout. `--step-limit` is a positive integer and applies only to `run`;
-the default is 100,000. `--contract` applies only to `check`.
+the default is the host's derived step budget
+(`interpreter::DEFAULT_MAX_EXECUTION_STEPS`, currently 23,190,000 — see
+`docs/dev/mcp-host-profiles.md`, re-derived per-container and not a value to
+hard-code elsewhere). `--contract` applies only to `check`.
 
 ## `run` and `check`
 

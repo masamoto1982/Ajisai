@@ -16,7 +16,16 @@ mod resource_usage_tests {
         compute(
             source,
             ComputeOptions {
-                step_limit: None,
+                // The MCP profile's real `executionSteps` (100,000) is not
+                // `Interpreter::new()`'s default any more — the playground
+                // and native-CLI default was re-derived in the 2026-08-14
+                // host-profile-derivation follow-up and grew far past it
+                // (`runtime_limits::DEFAULT_MAX_EXECUTION_STEPS`). Every real
+                // MCP call site threads its own 100,000 explicitly
+                // (`tools/mcp-server/index.js` `LIMITS.executionSteps`), so
+                // this test does the same rather than relying on a default
+                // that no longer means "the MCP profile".
+                step_limit: Some(100_000),
                 runtime_limits: Some(LOCAL_AGENT_RUNTIME_LIMITS),
             },
         )

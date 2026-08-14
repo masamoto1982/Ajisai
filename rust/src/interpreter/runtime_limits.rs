@@ -23,35 +23,7 @@ use crate::error::{AjisaiError, ResourceLimit, Result};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 
-/// Default cap on elements a single generative built-in (`RANGE`, `FILL`,
-/// `RESHAPE`, …) may materialize in one call. Mirrors the historical
-/// `MAX_MATERIALIZED_ELEMENTS` constant; each generated `Value` costs a few
-/// hundred bytes, so one million elements bounds a call to a few hundred MiB
-/// rather than a multi-gigabyte OOM abort.
-pub const DEFAULT_MAX_MATERIALIZED_ELEMENTS: usize = 1_000_000;
-
-/// Default cap on the byte length of a single source program handed to
-/// `execute`, checked before tokenization allocates per-character buffers.
-///
-/// The default is deliberately generous (64 MiB): machine-generated programs
-/// are legitimately several megabytes (the perf-benchmark's largest chain is
-/// ~1.77 MB), so the *default* only rejects genuinely pathological input while
-/// keeping the char-buffer allocation bounded. Memory-constrained hosts — the
-/// WASM playground in particular — should inject a tighter `max_source_bytes`
-/// via `Interpreter::set_runtime_limits`; that is exactly why the limit is a
-/// per-interpreter injectable field rather than a global.
-pub const DEFAULT_MAX_SOURCE_BYTES: usize = 64 * 1024 * 1024;
-
-/// Default cap on the digit count of a single numeric literal in source. A
-/// 4096-digit integer is astronomically large for any legitimate program,
-/// while the ceiling stops a megabyte-long literal from driving an expensive
-/// BigInt parse (`Fraction::from_str`) before the value is ever built.
-pub const DEFAULT_MAX_NUMERIC_LITERAL_DIGITS: usize = 4_096;
-
-/// Default cap on accumulated internal numeric work units charged through the
-/// work meter (algebraic products, reciprocal recursion, precision doubling,
-/// enclosure refinement).
-pub const DEFAULT_MAX_NUMERIC_WORK: u64 = 1_000_000_000;
+pub use super::host_profile_defaults::*;
 
 /// Width of the machine word the bignum arithmetic underneath actually works
 /// in. Work is priced in limb×limb products because that is what a bignum
@@ -209,17 +181,6 @@ pub const COLLECTION_COPY_UNITS: u64 = 16;
 /// of two numbers into one.
 pub const ALGEBRAIC_ELEMENT_UNITS: u64 = 512;
 
-/// Default cap on accumulated collection work units.
-///
-/// Set to twice [`DEFAULT_MAX_NUMERIC_WORK`], which is what makes the two
-/// ceilings bound the same amount of *time* rather than the same number of
-/// units: the numeric meter's slowest unbounded path charges 14,465 units/ms
-/// and this one's charges 30,800, so a budget twice as large buys roughly the
-/// same wall clock. The agent profile scales both down together for the same
-/// reason (`LOCAL_AGENT_RUNTIME_LIMITS`), and `wallTimeMs` remains the backstop
-/// that bounds their sum.
-pub const DEFAULT_MAX_COLLECTION_WORK: u64 = 2 * DEFAULT_MAX_NUMERIC_WORK;
-
 /// The units a collection Word is charged for touching one element, given the
 /// measure of the operand it came from.
 ///
@@ -288,15 +249,6 @@ impl ElementCost {
             .saturating_add(self.copies(count))
     }
 }
-
-/// Default cap on the bit length of a BigInt arithmetic result. ~300k decimal
-/// digits — generous for exact rationals, but bounded so a doubling cascade
-/// cannot blow up to gigabytes. Consumed by the work meter in the follow-up.
-pub const DEFAULT_MAX_BIGINT_BITS: u64 = 1_000_000;
-
-/// Default cap on the number of algebraic terms a single continued-fraction /
-/// polynomial value may carry. Consumed by the work meter in the follow-up.
-pub const DEFAULT_MAX_ALGEBRAIC_TERMS: usize = 100_000;
 
 /// Operand width for the work meter on an exact (Tier 0 or Tier 1) value:
 /// the wider of what it stores in coefficients and in radicands.
