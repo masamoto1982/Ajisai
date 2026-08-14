@@ -45,21 +45,34 @@ fn run_cli(args: &[&str]) -> i32 {
     super::run(&args)
 }
 
-/// The CLI's default step budget really is `DEFAULT_MAX_EXECUTION_STEPS`, not
-/// some other number nobody re-checks. Structural rather than a full run:
-/// `DEFAULT_MAX_EXECUTION_STEPS` is now in the tens of millions
-/// (`runtime_limits::DEFAULT_MAX_EXECUTION_STEPS`), and actually exhausting a
-/// budget that size costs wall time proportional to dispatch speed by
-/// construction — there is no cheap operand that reaches a step *count* the
-/// way one wide BigInt reaches a work ceiling. The `#[ignore]`d test further
-/// down proves the real default end to end for whoever runs it deliberately.
+/// `ajisai run` with no `--step-limit` must actually apply the derived
+/// default, through the CLI, not merely have a constant that says so.
+///
+/// This replaced an assertion that compared `Interpreter::new()
+/// .max_execution_steps()` to `DEFAULT_MAX_EXECUTION_STEPS` — which the
+/// constructor initializes that field *from* (`interpreter_core.rs`), so it
+/// could never fail, and which never invoked the CLI at all despite saying it
+/// checked `ajisai run`.
+///
+/// `DOWN_PROBE` costs 200,002 steps: comfortably past the 100,000 this
+/// default used to be, and a rounding error against what it is now. So a
+/// clean exit here is a real end-to-end statement — the CLI reached the
+/// interpreter default, and that default is at least the old budget — while
+/// staying a fast test. What it deliberately does *not* claim is that the
+/// budget is enforced at its exact declared value; only
+/// `down_probe_exceeds_the_real_default_budget_without_step_limit` below can
+/// say that, and it costs real wall time by construction, so it is
+/// `#[ignore]`d.
 #[test]
-fn cli_run_without_step_limit_uses_the_documented_default() {
+fn down_probe_runs_under_the_default_budget_without_step_limit() {
+    let path = write_program("default", DOWN_PROBE);
+    let code = run_cli(&["run", path.to_str().unwrap()]);
+    let _ = std::fs::remove_file(&path);
     assert_eq!(
-        Interpreter::new().max_execution_steps(),
-        DEFAULT_MAX_EXECUTION_STEPS,
-        "`ajisai run` with no `--step-limit` falls through to \
-         `Interpreter::new()`'s default, which must be the documented one"
+        code, 0,
+        "200000 DOWN costs 200,002 steps and must complete under the derived \
+         default budget of {DEFAULT_MAX_EXECUTION_STEPS}, with no --step-limit \
+         given"
     );
 }
 

@@ -44,10 +44,16 @@ pub const DEFAULT_MAX_MATERIALIZED_ELEMENTS: usize = 1_000_000;
 /// against Ajisai gets close to it — while being an amount someone could
 /// state a reason for instead of a bare "large enough". Still a judgment
 /// call, not a measurement of what a human pastes into a textarea; nobody has
-/// done that study either. Memory-constrained hosts — the MCP server in
-/// particular, which is tighter still — should inject an even lower
-/// `max_source_bytes` via `Interpreter::set_runtime_limits`; that is exactly
-/// why the limit is a per-interpreter injectable field rather than a global.
+/// done that study either.
+///
+/// Memory-constrained hosts — **the WASM playground in particular**, which is
+/// the host carrying this value and the one with the least headroom — should
+/// inject a tighter `max_source_bytes` via `Interpreter::set_runtime_limits`;
+/// that is exactly why the limit is a per-interpreter injectable field rather
+/// than a global. (The MCP server already does, at 64 KiB.) That advice
+/// predates the 2026-08-14 derivation and survives it: a byte ceiling is
+/// about the allocation the tokenizer is about to make, which a time budget
+/// has nothing to say about.
 pub const DEFAULT_MAX_SOURCE_BYTES: usize = 16 * 1024 * 1024;
 
 /// Default cap on the digit count of a single numeric literal in source. A
