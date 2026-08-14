@@ -826,7 +826,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+    "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
    }
   },
   {
@@ -834,7 +834,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+    "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
    }
   },
   {

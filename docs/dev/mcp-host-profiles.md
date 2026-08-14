@@ -129,3 +129,9 @@ for the collection prices, and `rust/examples/work_meter_calibration.rs` /
 `rust/examples/collection_word_calibration.rs` for the measurements themselves.
 Both are runnable: re-measure rather than trust the constants when a
 representation changes.
+
+`UNIQUE` / `TALLY` / `GROUP` themselves stopped being a linear scan on
+2026-08-14: [`collection-word-dequadraticization-2026-08-14.md`](./collection-word-dequadraticization-2026-08-14.md)
+replaced it with a `Value: Hash`-backed `HashMap` lookup and re-derived the
+per-element charge accordingly. The ceiling values in the table above did not
+move; the golden boundary source that reaches `collectionWork` did.

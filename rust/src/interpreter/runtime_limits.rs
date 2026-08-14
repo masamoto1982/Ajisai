@@ -195,6 +195,30 @@ pub fn broadcast_numeric_work(left: OperandWork, right: OperandWork, pair_units:
 /// Empirical, and re-measured by `examples/collection_word_calibration`.
 pub const COLLECTION_COPY_UNITS: u64 = 16;
 
+/// What one `HashMap` lookup costs beyond the leaf-width probe it hashes, in
+/// collection units — the de-quadraticization follow-up's constant.
+///
+/// `UNIQUE`/`TALLY`/`GROUP` used to scan every distinct value found so far,
+/// so the per-element charge was `probe_units × candidates` and the honest
+/// price grew with the data. A `HashMap` lookup replaced that scan with an
+/// O(1)-amortized one, so [`ScanMeter::charge_scan_of`](crate::interpreter::collection_meter::ScanMeter::charge_scan_of)
+/// charges [`ElementCost::probe`] once per element rather than scaled by
+/// distinct count — but a hash table's *amortized* O(1) is not *free*, and
+/// re-measuring at scale caught the gap: at 1,000,000 all-distinct elements
+/// (the playground's `materializedElements` ceiling), `probe_units +
+/// COLLECTION_COPY_UNITS` alone charged 2,277 units/ms of real wall time —
+/// *below* the 2,814 units/ms floor `examples/work_meter_calibration`
+/// already accepts on an unbounded numeric path on the same container,
+/// which means the price was in the dangerous direction: cheaper than the
+/// work it actually costs. Table growth and cache pressure are why — a
+/// flat per-element charge cannot see either — so this adds a second fixed
+/// charge to every element hashed (not only the ones retained), calibrated
+/// to keep the 1,000,000-element floor above that same numeric-path floor
+/// with margin. Reuses `COLLECTION_COPY_UNITS`'s value on the same
+/// reasoning `docs/dev/collection-word-billing-2026-08-13.md` §4 used for
+/// it: a `HashMap` insert is itself a copy of the key into the table.
+pub const COLLECTION_HASH_UNITS: u64 = COLLECTION_COPY_UNITS;
+
 /// What comparing one *algebraic* element costs, in collection units.
 ///
 /// `Algebraic::eq` is `Algebraic::cmp`: deciding it rebases both sides over a

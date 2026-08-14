@@ -63,8 +63,8 @@
   {
    "id": "repair-collection-ceiling",
    "prompts": {
-    "en": "Run the Ajisai program `[ 0 99999 ] RANGE UNIQUE LENGTH`. If Ajisai refuses it, read the diagnosis and retry within the limit it names.",
-    "ja": "Ajisai で `[ 0 99999 ] RANGE UNIQUE LENGTH` を実行してください。拒否されたら、診断を読んで、示された上限の内側で再試行してください。"
+    "en": "Run the Ajisai program `[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH`. If Ajisai refuses it, read the diagnosis and retry within the limit it names.",
+    "ja": "Ajisai で `[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH` を実行してください。拒否されたら、診断を読んで、示された上限の内側で再試行してください。"
    },
    "firstAttempt": {
     "expect": {

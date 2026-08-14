@@ -107,13 +107,13 @@
    "firstAttempt": {
     "selectedTool": "compute",
     "arguments": {
-     "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+     "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
     }
    },
    "repairedAttempt": {
     "selectedTool": "compute",
     "arguments": {
-     "source": "[ 0 4999 ] RANGE UNIQUE LENGTH"
+     "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
     }
    }
   },
@@ -123,13 +123,13 @@
    "firstAttempt": {
     "selectedTool": "compute",
     "arguments": {
-     "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+     "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
     }
    },
    "repairedAttempt": {
     "selectedTool": "compute",
     "arguments": {
-     "source": "[ 0 4999 ] RANGE UNIQUE LENGTH"
+     "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
     }
    }
   }

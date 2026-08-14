@@ -166,27 +166,27 @@
       "declared": 20000000,
       "under": {
         "kind": "source",
-        "source": "[ 0 6290 ] RANGE UNIQUE LENGTH",
+        "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH",
         "expect": {
           "/status": "ok",
-          "/stackDisplay/0": "6291/1"
+          "/stackDisplay/0": "99999/1"
         }
       },
       "over": {
         "kind": "source",
-        "source": "[ 0 6291 ] RANGE UNIQUE LENGTH",
+        "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH",
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",
           "/aiDiagnostic/kind": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "collectionWork",
           "/diagnosis/resourceLimit/limit": 20000000,
-          "/diagnosis/resourceLimit/observed": 20005397,
+          "/diagnosis/resourceLimit/observed": 20000007,
           "/diagnosis/resourceLimit/progress/unit": "elements",
-          "/diagnosis/resourceLimit/progress/total": 6292
+          "/diagnosis/resourceLimit/progress/total": 99999
         }
       },
-      "note": "The element copies, order comparisons and equality probes a collection Word performs inside a single execution step -- the work the step budget cannot see, because such a Word is one step however many elements it touches. `UNIQUE` scans the distinct values found so far for each element, so 6,291 distinct values is 19,785,195 probes and passes while 6,292 crosses on the last one. What is charged is deliberately not the element count: the same Word over the same 16,000 elements measured 0.52 ms with one distinct value and 682 ms with sixteen thousand, so the price is operations x the measured cost of one element -- leaves per element, limbs per leaf, and 512 units for an algebraic one, which compares 500x slower than a machine word. `LENGTH` is on both sides to keep the under case inside `responseBytes`; it charges nothing, being O(1) again as of this change. Derived in docs/dev/collection-word-billing-2026-08-13.md. The refusal also reports how far it got: a meter charged as it goes stops the instant the budget is crossed, so `observed` sits a hair over `limit` however far over the request was — 0.02% at 100,000 elements, where the input actually had to shrink by 94%. Measured against a real model, reading it proportionally is exactly what happened: asked to deduplicate 100,000 integers it retried with 99,999 and then 99,979, and both failed again. `diagnosis.resourceLimit.progress` carries the size that fits instead, and the `checkHowFarItGot` next-check says to use it."
+      "note": "The element copies, order comparisons and equality probes a collection Word performs inside a single execution step -- the work the step budget cannot see, because such a Word is one step however many elements it touches. This pair used to be `[ 0 6290 ] RANGE UNIQUE LENGTH` / `[ 0 6291 ] RANGE UNIQUE LENGTH`: `UNIQUE` scanned the distinct values found so far for each element (n x distinct), so a boundary was reachable in one pass over plain rational scalars. The de-quadraticization follow-up (`Value: Hash`) turned that scan into an O(n)-average `HashMap` lookup, so one pass over 100,000 all-distinct machine words -- the most `materializedElements` permits -- now costs about 5.1M of the 20M budget, nowhere near this ceiling. Repeating `UNIQUE` on the same all-distinct 99,999-element vector reaches it in cheap, uniform passes instead: each repeat re-scans the same elements (still all distinct, so every pass is the same shape) and the sixth crosses on its 38,240th element. This was deliberately chosen over a single expensive-per-element pass (an algebraic or wide-BigInt vector, which can also reach the ceiling in one pass): those pay real per-element cost in `Algebraic::hash`'s interval refinement or BigInt limb-walking that is dramatically more expensive unoptimized than optimized, and an unoptimized `ajisai` binary is exactly what exercises this golden file (`npm run test:mcp` builds without `--release`) -- a single-pass algebraic witness here once took 16s against a 5,000ms `wallTimeMs`. What is charged per element is still operations x the measured cost of one element -- leaves per element, limbs per leaf, 512 units for an algebraic one -- plus a fixed `COLLECTION_HASH_UNITS` for the table lookup itself, re-measured at scale because a flat per-leaf charge alone undercounted a `HashMap`'s own growth and cache cost. `LENGTH` is on both sides to keep the response small. Derived in docs/dev/collection-word-billing-2026-08-13.md and re-derived in docs/dev/collection-word-dequadraticization-2026-08-14.md. The refusal also reports how far it got: a meter charged as it goes stops the instant the budget is crossed, so `observed` sits a hair over `limit` however far over the request was. `diagnosis.resourceLimit.progress` carries the size that fits instead, and the `checkHowFarItGot` next-check says to use it."
     },
     "bigintBits": {
       "coverage": "boundary",

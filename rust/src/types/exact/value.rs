@@ -48,6 +48,29 @@ pub enum ExactReal {
     Computable(Computable),
 }
 
+/// Hashes the same way the derived `PartialEq` compares: by variant, then by
+/// the payload's own `Hash` (each tier's own impl is what stays consistent
+/// with that tier's equality — `Fraction`'s reduced pair, `Algebraic`'s
+/// representation-independent bucket key, `Computable`'s pointer identity).
+impl std::hash::Hash for ExactReal {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Rational(f) => {
+                state.write_u8(0);
+                f.hash(state);
+            }
+            Self::Algebraic(a) => {
+                state.write_u8(1);
+                a.hash(state);
+            }
+            Self::Computable(c) => {
+                state.write_u8(2);
+                c.hash(state);
+            }
+        }
+    }
+}
+
 /// Outcome of an exact-real comparison.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExactCmp {

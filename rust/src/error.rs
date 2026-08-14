@@ -2,7 +2,7 @@ use std::fmt;
 
 pub type Result<T> = std::result::Result<T, AjisaiError>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NilReason {
     DivisionByZero,
     /// No longer produced. It existed so NIL could stand in for an empty

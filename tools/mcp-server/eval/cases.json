@@ -822,12 +822,12 @@
    "id": "ceiling-collection-work",
    "category": "resourceLimit",
    "prompts": {
-    "en": "Deduplicate the 100000 integers from 0 to 99999 and tell me how many are left.",
-    "ja": "0 から 99999 までの 10 万個の整数を重複除去して、残りが何個か教えてください。"
+    "en": "Deduplicate the 99999 integers from 0 to 99998 six times over and tell me how many are left.",
+    "ja": "0 から 99998 までの 99999 個の整数を 6 回重複除去して、残りが何個か教えてください。"
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 0 99999 ] RANGE UNIQUE LENGTH"
+    "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
    },
    "expect": {
     "/status": "error",
