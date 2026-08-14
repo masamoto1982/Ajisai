@@ -48,6 +48,16 @@ impl PartialEq for Computable {
     }
 }
 
+/// Hashes the same pointer identity `==` compares, so the two agree the
+/// only way they can: no vocabulary word constructs this tier yet, so this
+/// exists to keep `ExactReal: Hash` total, not because a program can reach
+/// it.
+impl std::hash::Hash for Computable {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (Arc::as_ptr(&self.gen) as *const ()).hash(state);
+    }
+}
+
 impl Computable {
     /// Build from a nested-enclosure generator. The reference way to
     /// define a Tier 2 value.

@@ -15,7 +15,8 @@
 //!
 //!  * the same 16,000-element `UNIQUE` costs 0.52 ms or 682 ms depending only
 //!    on how many *distinct* values the data holds — a factor of 1,300 the
-//!    element count cannot see;
+//!    element count cannot see, when `UNIQUE` finds its bucket by scanning
+//!    every distinct value seen so far;
 //!  * an element that is itself a 64-element vector costs 41x more to probe
 //!    when the elements agree on their first 63 positions than when they differ
 //!    at the first, so "one element" is not a unit of work;
@@ -25,17 +26,43 @@
 //! So the charge is *operations × the price of one operation*, with the price
 //! measured from the operand ([`ElementCost`]) and the count supplied by the
 //! Word. Copies and comparison sorts know their count before they start and are
-//! charged at the entry, exactly as arithmetic is. Equality scans do not — the
-//! count depends on the data — and are charged per element, before that
-//! element's scan, against the number of distinct values found so far. That
-//! number is an upper bound on the probes the element will perform, so a
-//! refusal still happens before the work rather than after it.
+//! charged at the entry, exactly as arithmetic is.
+//!
+//! `UNIQUE`, `TALLY` and `GROUP` used to be the exception: a linear scan
+//! against every distinct value found so far, which is where the first
+//! bullet's 1,300x came from, and which meant the honest price of the scan
+//! itself was `n × distinct` — quadratic on the data the scan cannot see in
+//! advance. `Value: Hash` (canonical for every domain the scan visits,
+//! including a bounded interval refinement for algebraic elements — see
+//! `types::exact::algebraic::Algebraic::hash`) turned that scan into a
+//! `HashMap` lookup, so the per-element price this module charges is now
+//! fixed — [`ElementCost::probe`], the cost of hashing the element once —
+//! not scaled by how many distinct values already exist. See [`ScanMeter`]
+//! for what stays a per-element pre-charge rather than a single entry
+//! charge: the *count* of elements is known up front, but committing to
+//! *which* elements survive is not, so a refusal still lands before the
+//! scan runs past the budget rather than after.
 
 use crate::error::{AjisaiError, ResourceProgress, Result, PROGRESS_UNIT_ELEMENTS};
 use crate::interpreter::arithmetic_meter::measure_operand;
-use crate::interpreter::runtime_limits::{ElementCost, OperandWork};
+use crate::interpreter::runtime_limits::{ElementCost, OperandWork, COLLECTION_COPY_UNITS};
 use crate::interpreter::Interpreter;
 use crate::types::Value;
+
+/// What one `HashMap` lookup costs beyond the leaf-width probe it hashes, in
+/// collection units — the de-quadraticization follow-up's constant
+/// (`docs/dev/collection-word-dequadraticization-2026-08-14.md`).
+///
+/// `probe_units` alone undercharged at scale: at 1,000,000 all-distinct
+/// elements (the playground's `materializedElements` ceiling), it charged
+/// 2,277 units/ms of real wall time, *below* the 2,814 units/ms floor
+/// `examples/work_meter_calibration` already accepts on an unbounded numeric
+/// path — table growth and cache pressure a flat per-leaf charge cannot see.
+/// This adds a second fixed charge to every element hashed (not only the
+/// ones retained), which restores the margin. Reuses `COLLECTION_COPY_UNITS`'s
+/// value for the reason `collection-word-billing-2026-08-13.md` §4 gives it:
+/// a `HashMap` insert is itself a copy of the key into the table.
+const COLLECTION_HASH_UNITS: u64 = COLLECTION_COPY_UNITS;
 
 /// Charge `units` of collection work and fail — diagnosably, before the loop
 /// that would spend it runs — if the cumulative total crosses
@@ -140,23 +167,30 @@ pub(crate) fn charge_comparison_sort(interp: &mut Interpreter, items: &[Value]) 
     charge(interp, units)
 }
 
-/// The running charge for an equality scan — `UNIQUE`, `TALLY`, `GROUP`,
-/// `INDEX-OF`.
+/// The running charge for a hash-keyed scan — `UNIQUE`, `TALLY`, `GROUP`.
 ///
-/// The one place in either meter that does not charge everything at the entry,
-/// and the reason is a property of the operation rather than an exception made
-/// for it. Arithmetic can pre-charge because the cost of `a * b` is a function
-/// of the operands' *shape*, which is known before it runs. A scan's cost is a
-/// function of the operands' *content*: how many distinct values the data
-/// holds, which is what the scan is for. Charging the worst case (`n²/2`
-/// probes) up front would refuse the programs these Words exist to serve — a
-/// per-class tally, a vocabulary, a grouping key — which are cheap precisely
-/// because their distinct count is small; measured, `d=1` at 16,000 elements is
-/// 1,300x cheaper than `d=n`.
+/// The one place in either meter that does not charge everything at the
+/// entry, and the reason is a property of the operation rather than an
+/// exception made for it. Arithmetic can pre-charge because the cost of
+/// `a * b` is a function of the operands' *shape*, known before it runs. A
+/// hash-keyed scan's per-element cost is also a function of shape — hashing
+/// one element visits its leaves once, the same width [`ElementCost::probe`]
+/// already prices for a comparison — but the *count* of elements it will
+/// need to hash is exactly the vector length, so this charges that fixed
+/// per-element price before each element rather than the whole scan at the
+/// entry. That still refuses before the work runs, one element early rather
+/// than the whole vector early: a `HashMap` lookup and insert is O(1)
+/// amortized on top of the hash itself, so nothing here scales with how many
+/// distinct values have been found — unlike the linear-scan design this
+/// replaced, where a probe was charged against every distinct value seen so
+/// far and a vocabulary of size `d` cost `n × d` (`docs/dev/collection-word-billing-2026-08-13.md`
+/// priced that; the de-quadraticization follow-up re-priced it here).
 ///
-/// What "refuse rather than measure" actually requires is that no more than the
-/// budget is ever spent, and [`Self::charge_scan_of`] satisfies it by charging
-/// an upper bound on each element's probes *before* that element is scanned.
+/// An algebraic element's hash is not free either: [`crate::types::exact::algebraic::Algebraic::hash`]
+/// runs a bounded interval refinement to find its representation-independent
+/// bucket, comparable in cost to the one comparison [`ALGEBRAIC_ELEMENT_UNITS`](crate::interpreter::runtime_limits::ALGEBRAIC_ELEMENT_UNITS)
+/// already prices — [`ElementCost::probe`] already folds that constant into
+/// an algebraic leaf's width, so no separate charge is needed here.
 pub(crate) struct ScanMeter {
     probe_units: u64,
     copy_units: u64,
@@ -174,14 +208,9 @@ impl ScanMeter {
         }
     }
 
-    /// Charge, before scanning element number `completed`, for probing
-    /// `candidates` of them.
-    ///
-    /// `candidates` is the number of distinct values found so far, which is the
-    /// most probes this element can perform. An element that matches early is
-    /// over-charged — by 2x on average over a uniform match, and not at all
-    /// when every element is distinct or every element is equal, the two ends
-    /// the ceiling exists to separate.
+    /// Charge, before scanning element number `completed`, for hashing it —
+    /// the fixed per-element price of finding its bucket, however many
+    /// distinct buckets already exist.
     ///
     /// `completed` is how many elements are already behind it, and it is what
     /// makes a refusal here actionable. Because this meter charges as it goes,
@@ -189,14 +218,14 @@ impl ScanMeter {
     /// over the request really was, so it cannot say how much smaller the input
     /// needs to be. `completed` can: the budget bought exactly this many
     /// elements of this data. See `error::ResourceProgress`.
-    pub(crate) fn charge_scan_of(
-        &self,
-        interp: &mut Interpreter,
-        completed: usize,
-        candidates: usize,
-    ) -> Result<()> {
-        charge(interp, self.probe_units.saturating_mul(candidates as u64))
-            .map_err(|error| self.with_progress(error, completed))
+    ///
+    /// `probe_units` prices hashing the element's own leaves; `COLLECTION_HASH_UNITS`
+    /// prices the `HashMap` machinery around that hash — table growth and
+    /// cache pressure that a flat per-leaf charge cannot see, and that
+    /// re-measuring at scale showed matters.
+    pub(crate) fn charge_scan_of(&self, interp: &mut Interpreter, completed: usize) -> Result<()> {
+        let units = self.probe_units.saturating_add(COLLECTION_HASH_UNITS);
+        charge(interp, units).map_err(|error| self.with_progress(error, completed))
     }
 
     /// Charge for retaining one element in the result.

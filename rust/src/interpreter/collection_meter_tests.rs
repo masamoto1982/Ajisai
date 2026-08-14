@@ -71,17 +71,21 @@ mod collection_meter_tests {
     // ── the axis that element count cannot see ─────────────────────────────
 
     #[tokio::test]
-    async fn a_scan_is_priced_by_the_distinct_count_not_the_element_count() {
-        // 4,000 elements either way. One distinct value is a linear scan; 4,000
-        // distinct values is a quadratic one. A price read off the length would
-        // report these two as equal, and the measured times differ by a factor
-        // of a thousand.
+    async fn a_scan_is_priced_by_the_element_count_not_the_distinct_count() {
+        // 4,000 elements either way — one distinct value on one side, 4,000 on
+        // the other. Before the de-quadraticization follow-up this was the
+        // opposite assertion: `UNIQUE` scanned every distinct value found so
+        // far, so the same element count charged 100x more when nothing
+        // repeated (`docs/dev/collection-word-billing-2026-08-13.md`). `Value:
+        // Hash` turned that scan into one hash-and-lookup per element, so the
+        // charge now tracks element count; distinctness only adds the small,
+        // linear cost of copying every new value into the result.
         let uniform = charged_by("[ 0 3999 ] RANGE { 1 MOD } MAP UNIQUE").await;
         let distinct = charged_by("[ 0 3999 ] RANGE UNIQUE").await;
         assert!(
-            distinct > uniform * 100,
-            "the same Word over the same element count must charge for the data: \
-             {distinct} distinct against {uniform} uniform"
+            distinct < uniform * 3,
+            "distinctness must no longer dominate the price the way the O(n×d) \
+             linear scan made it: {distinct} distinct against {uniform} uniform"
         );
     }
 
@@ -118,11 +122,19 @@ mod collection_meter_tests {
     #[tokio::test]
     async fn an_algebraic_element_costs_more_than_a_machine_word() {
         // Deciding `√2 == √3` rebases two radical bases; deciding `2 == 3`
-        // compares two machine words. Measured at 3.0 µs against 5.8 ns.
-        let rational = charged_by("[ 2 121 ] RANGE UNIQUE").await;
-        let algebraic = charged_by("[ 2 121 ] RANGE { SQRT } MAP UNIQUE").await;
+        // compares two machine words. `ALGEBRAIC_ELEMENT_UNITS` prices one
+        // such decision at 512 against 1, and the de-quadraticization
+        // follow-up reuses it for the cost of finding an algebraic element's
+        // hash bucket (`Algebraic::hash` runs the same kind of interval
+        // refinement `cmp` does) — so algebraic still costs far more per
+        // element, just not the >100x the old quadratic scan measured, since
+        // the per-element copy cost (shared by both sides, dominated by the
+        // width-independent `COLLECTION_COPY_UNITS`) no longer gets diluted
+        // by an O(n) amplification that hit both sides equally.
+        let rational = charged_by_word("[ 2 121 ] RANGE", "UNIQUE").await;
+        let algebraic = charged_by_word("[ 2 121 ] RANGE { SQRT } MAP", "UNIQUE").await;
         assert!(
-            algebraic > rational * 100,
+            algebraic > rational * 30,
             "an algebraic element must be priced as one: {algebraic} against \
              {rational}"
         );
@@ -207,15 +219,18 @@ mod collection_meter_tests {
         // The scan family is the one place either meter charges inside its
         // loop, so it is the one place a refusal can happen with the operand
         // already taken. It has to go back.
-        // The budget has to admit the `RANGE` — building 5,000 elements costs
-        // 85,000 units — and refuse the scan, which is 12.5M probes.
+        // The budget has to admit the `RANGE` — building 5,800 elements costs
+        // 98,600 units — and refuse the scan on its own: 5,800 all-distinct
+        // elements is 104,400 units, over budget in a fresh `execute` call
+        // (the counter resets between calls, so the two charges are not
+        // cumulative here — see `charged_by_word`).
         let mut interp = Interpreter::new();
         interp.set_runtime_limits(RuntimeLimits {
             max_collection_work: 100_000,
             ..RuntimeLimits::default()
         });
         interp
-            .execute("[ 0 4999 ] RANGE")
+            .execute("[ 0 5799 ] RANGE")
             .await
             .expect("building the vector is inside the budget for this test");
         let before = interp.get_stack().len();
@@ -246,7 +261,7 @@ mod collection_meter_tests {
         // proportionally retried 100,000 elements as 99,999 and failed again.
         // `completed` is the answer rather than a hint at it: the budget bought
         // exactly that many elements, so re-running with that many must succeed.
-        let budget = 1_000_000;
+        let budget = 250_000;
         let mut interp = Interpreter::new();
         interp.set_runtime_limits(RuntimeLimits {
             max_collection_work: budget,
@@ -255,7 +270,7 @@ mod collection_meter_tests {
         let err = interp
             .execute("[ 0 9999 ] RANGE UNIQUE")
             .await
-            .expect_err("ten thousand distinct values is far past this budget");
+            .expect_err("ten thousand distinct values is past this budget");
         let AjisaiError::ResourceLimitExceeded {
             observed, progress, ..
         } = err
@@ -276,8 +291,8 @@ mod collection_meter_tests {
         let overshoot = observed.expect("a work ceiling reports what it spent") - budget;
         assert!(
             overshoot * 100 < budget,
-            "observed overshoots by under 1% even at 10x the affordable input, \
-             which is exactly why it cannot be read proportionally: {overshoot}"
+            "observed overshoots by under 1% of the budget, which is exactly \
+             why it cannot be read proportionally: {overshoot}"
         );
 
         // And the advertised size really does fit.

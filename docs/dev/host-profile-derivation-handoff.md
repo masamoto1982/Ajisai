@@ -1,9 +1,11 @@
 # ホストプロファイル導出統一 引き継ぎ書
 
 作成日: 2026-08-13
-対象セッション: 走査系の非二次化が入った**後**の、独立した 1 セッション
+更新: 2026-08-14 — §1 の着手条件が満たされた（下記参照）。
+対象セッション: 独立した 1 セッション
 関連: [`mcp-host-profiles.md`](./mcp-host-profiles.md) /
-[`collection-word-billing-2026-08-13.md`](./collection-word-billing-2026-08-13.md)
+[`collection-word-billing-2026-08-13.md`](./collection-word-billing-2026-08-13.md) /
+[`collection-word-dequadraticization-2026-08-14.md`](./collection-word-dequadraticization-2026-08-14.md)
 
 ## 0. この文書の位置づけ
 
@@ -14,15 +16,22 @@
 **この文書は単独で読めるように書いてある。** 前セッションの文脈を引き継がずに
 着手してよい。逆に、本書に書いていない判断を前セッションの記憶から補わないこと。
 
-## 1. 着手条件（重要）
+## 1. 着手条件（重要・2026-08-14 時点で満たされた）
 
-**走査系の非二次化が main に入り、コレクションメーターが再較正されるまで着手しない。**
+**旧条件: 走査系の非二次化が main に入り、コレクションメーターが再較正されるまで
+着手しない。**
 
-理由は §5 に書く。要約すると、本作業が固定しようとしている導出の錨が、
-非二次化によって動く定数だからである。先に着手すると、間もなく動く数値の上に
-規則を建てることになる。
+2026-08-14、`collection-word-dequadraticization-2026-08-14.md` により満たされた:
+`UNIQUE` / `TALLY` / `GROUP` は `Value: Hash` を使う `HashMap` ルックアップになり
+（線形走査ではなくなった）、課金モデルも作り直され、`profile_liveness_tests` /
+golden / eval の証人プログラムも新しい値付けに合わせて更新・再検証済みである。
 
-非二次化そのものは本書の対象外であり、そちらの引き継ぎ書はまだ無い。
+§5 は旧着手条件の**根拠だった**内容として歴史的に残す。着手前に必ず
+`collection-word-dequadraticization-2026-08-14.md` §6（測っていないこと）を読むこと。
+WASM バンドルは本作業内で再ビルド済みで、`backend/parity-test.js` は
+`collectionWork` を含む全境界ケースで native/WASM 一致を確認している
+（2026-08-14 時点）。以後 Rust 側を変更した場合は
+`scripts/rebuild-wasm.sh` / `scripts/rebuild-mcp-wasm.sh` を再実行すること。
 
 ## 2. 決まったこと
 

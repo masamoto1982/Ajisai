@@ -213,6 +213,101 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
     true
 }
 
+/// Flatten a nested `Vector` into `(shape, leaves)` the same way
+/// `nested_flatten_matches` walks it against a dense tensor's lanes:
+/// `Scalar` contributes its `Fraction`, `Tensor` contributes its own dense
+/// lanes, `Vector` recurses, and anything else (`ExactScalar`, `Nil`,
+/// `Boolean`, `Text`, `CodeBlock`) fails the flatten — mirroring exactly
+/// which leaves `nested_flatten_matches` is willing to match against a
+/// tensor lane. Used only to make [`ValueData`]'s `Hash` agree with the
+/// `Vector`/`Tensor` cross-equality in `PartialEq`: a value that *can*
+/// equal a dense tensor must hash the way that tensor does.
+fn dense_flatten(v: &[Value]) -> Option<(Vec<usize>, Vec<Fraction>)> {
+    let shape = nested_vector_shape(v)?;
+    let mut leaves = Vec::new();
+    if collect_dense_leaves(v, &mut leaves) {
+        Some((shape, leaves))
+    } else {
+        None
+    }
+}
+
+fn collect_dense_leaves(v: &[Value], out: &mut Vec<Fraction>) -> bool {
+    for child in v {
+        match &child.data {
+            ValueData::Scalar(f) => out.push(f.clone()),
+            ValueData::Vector(inner) => {
+                if !collect_dense_leaves(inner, out) {
+                    return false;
+                }
+            }
+            ValueData::Tensor { data, .. } => out.extend(data.iter()),
+            _ => return false,
+        }
+    }
+    true
+}
+
+/// Discriminant tags for [`ValueData`]'s `Hash`. `DENSE` is shared by
+/// `Vector` and `Tensor` deliberately: it is what makes a rectangular
+/// numeric `Vector` hash the same as the `Tensor` holding the same data,
+/// matching the cross-representation equality `tensor_eq_vector` grants
+/// them. `STRUCT_VECTOR` is everything else — a `Vector` that is not a
+/// dense-tensor lookalike, hashed structurally instead.
+const HASH_TAG_BOOLEAN: u8 = 0;
+const HASH_TAG_SCALAR: u8 = 1;
+const HASH_TAG_EXACT_SCALAR: u8 = 2;
+const HASH_TAG_DENSE: u8 = 3;
+const HASH_TAG_STRUCT_VECTOR: u8 = 4;
+const HASH_TAG_NIL: u8 = 5;
+const HASH_TAG_CODE_BLOCK: u8 = 6;
+const HASH_TAG_TEXT: u8 = 7;
+
+impl std::hash::Hash for ValueData {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            ValueData::Boolean(b) => {
+                state.write_u8(HASH_TAG_BOOLEAN);
+                b.hash(state);
+            }
+            ValueData::Scalar(f) => {
+                state.write_u8(HASH_TAG_SCALAR);
+                f.hash(state);
+            }
+            ValueData::ExactScalar(e) => {
+                state.write_u8(HASH_TAG_EXACT_SCALAR);
+                e.hash(state);
+            }
+            ValueData::Vector(v) => match dense_flatten(v) {
+                Some((shape, leaves)) => {
+                    state.write_u8(HASH_TAG_DENSE);
+                    shape.hash(state);
+                    leaves.hash(state);
+                }
+                None => {
+                    state.write_u8(HASH_TAG_STRUCT_VECTOR);
+                    v.hash(state);
+                }
+            },
+            ValueData::Tensor { data, shape } => {
+                state.write_u8(HASH_TAG_DENSE);
+                shape.hash(state);
+                let leaves: Vec<Fraction> = data.iter().collect();
+                leaves.hash(state);
+            }
+            ValueData::Nil => state.write_u8(HASH_TAG_NIL),
+            ValueData::CodeBlock(tokens) => {
+                state.write_u8(HASH_TAG_CODE_BLOCK);
+                tokens.hash(state);
+            }
+            ValueData::Text(s) => {
+                state.write_u8(HASH_TAG_TEXT);
+                s.hash(state);
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Value {
     pub data: ValueData,
@@ -244,7 +339,23 @@ impl PartialEq for Value {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// No value here is ever NaN-like (every numeric tier is exact), so `eq` is
+/// a true equivalence relation and this marker is safe.
+impl Eq for Value {}
+
+/// Hashes exactly what `PartialEq` compares — `data`, then the NIL reason —
+/// and nothing `PartialEq` does not (`hint` stays out of both). Required
+/// for `UNIQUE` / `TALLY` / `GROUP` to key a `HashMap<Value, _>` rather than
+/// re-scan the accumulated result for every element (CS5 collection-word
+/// de-quadraticization).
+impl std::hash::Hash for Value {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state);
+        self.nil_reason().hash(state);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Token {
     Number(Arc<str>),
     String(Arc<str>),

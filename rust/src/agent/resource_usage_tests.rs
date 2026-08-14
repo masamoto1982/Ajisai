@@ -100,11 +100,16 @@ mod resource_usage_tests {
 
     #[tokio::test]
     async fn collection_work_is_reported_and_tracks_the_data_not_the_length() {
-        // The property the whole collection meter exists for: the same Word over
-        // the same number of elements costs what the *data* costs. 16,000
-        // elements with one distinct value is a linear scan; 16,000 distinct
-        // values is a quadratic one, and a price read off the element count
-        // alone could not tell them apart.
+        // The property the whole collection meter exists for: the same Word
+        // over the same number of elements charges for the *data*, not the
+        // count read off the vector's length. Before the de-quadraticization
+        // follow-up this meant 16,000 distinct values (a linear scan against
+        // every distinct value found so far) cost 50x what 16,000 repeats of
+        // one value cost, and was refused outright. `Value: Hash` replaced
+        // that scan with an O(n)-average `HashMap` lookup, so distinctness no
+        // longer dominates the price the way it did — both succeed now, and
+        // the gap between them is only the cost of copying every new value
+        // into the result rather than an O(n×distinct) amplification.
         let uniform = agent_json("[ 0 15999 ] RANGE { 1 MOD } MAP UNIQUE LENGTH").await;
         assert_eq!(uniform["status"], "ok");
         let uniform_work = uniform["resourceUsage"]["collectionWork"]
@@ -116,16 +121,21 @@ mod resource_usage_tests {
         );
 
         let distinct = agent_json("[ 0 15999 ] RANGE UNIQUE LENGTH").await;
-        assert_eq!(
-            distinct["diagnosis"]["resourceLimit"]["resource"], "collectionWork",
-            "16,000 distinct values is 128M probes and must be refused by name"
+        assert_eq!(distinct["status"], "ok");
+        let distinct_work = distinct["resourceUsage"]["collectionWork"]
+            .as_u64()
+            .expect("collectionWork is a number");
+        assert!(
+            distinct_work > uniform_work,
+            "16,000 distinct values still costs more than 16,000 repeats — \
+             every one of them is new and gets copied into the result — but \
+             {distinct_work} against {uniform_work} must at least move with \
+             the data"
         );
         assert!(
-            distinct["resourceUsage"]["collectionWork"]
-                .as_u64()
-                .expect("collectionWork is a number")
-                > uniform_work * 50,
-            "the same Word over the same element count must charge for the data"
+            distinct_work < uniform_work * 3,
+            "distinctness must no longer dominate the price the way the \
+             O(n×distinct) linear scan did: {distinct_work} against {uniform_work}"
         );
     }
 

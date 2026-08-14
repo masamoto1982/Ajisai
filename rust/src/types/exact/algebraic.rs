@@ -368,6 +368,56 @@ impl PartialEq for Algebraic {
 
 impl Eq for Algebraic {}
 
+/// Bits of fractional precision the hash key is taken at. Chosen generously
+/// past what any realistic near-collision needs — collisions only cost a
+/// fallback `==` inside the bucket, never wrong dedup — so it is a
+/// performance knob, not a correctness one.
+const HASH_KEY_BITS: u64 = 64;
+
+/// `floor(f * 2^target_bits)`, exactly (`BigInt` division, not `f64`).
+fn floor_scaled(f: &Fraction, target_bits: u64) -> BigInt {
+    let (num, den) = f.to_bigint_pair();
+    (num << target_bits).div_floor(&den)
+}
+
+impl std::hash::Hash for Algebraic {
+    /// A representation-independent hash key: `floor(self * 2^HASH_KEY_BITS)`.
+    ///
+    /// Two normal forms for the same real number can disagree structurally
+    /// — `√12` built directly keeps the coarse basis `{12}`; built as
+    /// `2·√3` it carries `{3}` — so hashing `basis`/`terms` would hash equal
+    /// values unequally and break the `Hash`/`Eq` contract `HashMap` needs.
+    /// No factorization step fixes this cheaply (basis-building is
+    /// deliberately not full prime factorization; see `basis.rs`).
+    ///
+    /// Instead this reuses the decidability `sign` already relies on:
+    /// `bounds(bits)` is a shrinking enclosure of the true value, and an
+    /// irrational value (the only kind this type holds; rationals demote
+    /// eagerly) is never exactly on a `2^-HASH_KEY_BITS` grid line. So
+    /// doubling `bits` until the enclosure's floor is decided always
+    /// terminates, and it converges to the same integer for any two
+    /// representations of the same number — the key is a property of the
+    /// *number*, not of the basis or term structure used to reach it.
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let mut bits = HASH_KEY_BITS + 8;
+        loop {
+            let (lo, hi) = self.bounds(bits);
+            let lo_key = floor_scaled(&lo, HASH_KEY_BITS);
+            let hi_key = floor_scaled(&hi, HASH_KEY_BITS);
+            if lo_key == hi_key {
+                lo_key.hash(state);
+                return;
+            }
+            debug_assert!(
+                bits < (1 << 24),
+                "algebraic hash key failed to converge — an irrational value \
+                 should never sit exactly on a precision grid line"
+            );
+            bits *= 2;
+        }
+    }
+}
+
 fn rational_sign(f: &Fraction) -> Ordering {
     if f.is_zero() {
         Ordering::Equal

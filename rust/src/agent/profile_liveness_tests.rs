@@ -150,16 +150,33 @@ mod profile_liveness_tests {
         // The same liveness property, on the axis the collection meter added.
         // `max_collection_work` has to be reachable by a vector the
         // `materializedElements` ceiling admits — otherwise the collection
-        // ceiling is declared past what the host will ever let a program build,
-        // and the quadratic scan it exists to stop stays unnamed. The ordering
-        // here runs the other way from the size ceilings above: the *work*
-        // ceiling has to bind first, because a vector this size is legal and it
-        // is what is done to it that is not.
-        let (resource, _, _) = refused_by("[ 0 99999 ] RANGE UNIQUE").await;
+        // ceiling is declared past what the host will ever let a program build.
+        // The ordering here runs the other way from the size ceilings above:
+        // the *work* ceiling has to bind first, because a vector this size is
+        // legal and it is what is done to it that is not.
+        //
+        // `[ 0 99999 ] RANGE UNIQUE` was this witness before the
+        // de-quadraticization follow-up (`Value: Hash` turned the scan family's
+        // O(n×distinct) linear scan into an O(n)-average `HashMap` lookup):
+        // 100,000 all-distinct machine words now costs about 3.4M of the 20M
+        // budget in one pass, nowhere near the ceiling. An algebraic element
+        // costs enough per element to reach the ceiling in one pass, but
+        // `Algebraic::hash`'s interval refinement is genuinely expensive in an
+        // unoptimized build (this test runs under `cargo test`, not
+        // `--release`) — a single-pass algebraic witness here once ran in
+        // 40 seconds. Repeating `UNIQUE` on the same all-distinct vector
+        // instead accumulates the same budget in cheap machine-word passes:
+        // each repeat re-scans the same 99,999 elements (still all distinct,
+        // so `UNIQUE` is a no-op on the values and re-charges the same
+        // amount), and the *sixth* pass crosses 20,000,000 partway through —
+        // still inside `materializedElements` (built once) and
+        // `executionSteps` (six steps).
+        let (resource, _, _) =
+            refused_by("[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE").await;
         assert_eq!(
             resource, "collectionWork",
-            "a quadratic scan over a vector `materializedElements` permits must \
-             be refused by name; got `{resource}`"
+            "six passes over a `materializedElements`-legal vector must cross \
+             the collection-work ceiling and be refused by name; got `{resource}`"
         );
     }
 

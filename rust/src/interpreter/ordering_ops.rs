@@ -14,6 +14,7 @@ use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::{Interpretation, Value};
+use std::collections::HashMap;
 
 /// Take the Word's single operand, honouring `KEEP`.
 pub(super) fn take_operand(interp: &mut Interpreter) -> Result<Value> {
@@ -107,24 +108,42 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
 /// class labels are usually text, and a grouping key is whatever the data
 /// says it is.
 ///
-/// The scan is `n × distinct`, and `distinct` is the thing the scan is finding
-/// out, so the charge is taken per element rather than at the entry — against
-/// the number of distinct values in hand, which bounds the probes that element
-/// can make. See `collection_meter::ScanMeter`.
+/// A `HashMap<Value, usize>` keyed on the output index makes this one pass
+/// over `items` rather than a scan of the accumulated result for every
+/// element (`n × distinct` in the worst case, when nothing repeats). `Value`
+/// hashes the same representation-independent way it compares — a rational,
+/// text, boolean, or rectangular numeric vector/tensor hashes cheaply; an
+/// algebraic element pays a bounded interval-refinement pass to find its
+/// canonical bucket (`Algebraic::hash`) — so first-occurrence order still
+/// costs one hash-and-lookup per element rather than a probe against every
+/// distinct value seen so far. See `collection_meter::ScanMeter`.
 fn distinct_with_counts(interp: &mut Interpreter, items: &[Value]) -> Result<Vec<(Value, usize)>> {
+    use std::collections::hash_map::Entry;
+
     let meter = ScanMeter::new(items);
-    let mut out: Vec<(Value, usize)> = Vec::new();
+    // Indices into `items`, not clones: the element itself is only cloned
+    // once, when it turns out to be one of the survivors, instead of once to
+    // probe the map and again to hold the result.
+    let mut order: Vec<usize> = Vec::new();
+    let mut counts: Vec<usize> = Vec::new();
+    let mut index: HashMap<&Value, usize> = HashMap::with_capacity(items.len());
     for (completed, item) in items.iter().enumerate() {
-        meter.charge_scan_of(interp, completed, out.len())?;
-        match out.iter_mut().find(|(seen, _)| seen == item) {
-            Some((_, count)) => *count += 1,
-            None => {
+        meter.charge_scan_of(interp, completed)?;
+        match index.entry(item) {
+            Entry::Occupied(e) => counts[*e.get()] += 1,
+            Entry::Vacant(e) => {
                 meter.charge_retained(interp, completed)?;
-                out.push((item.clone(), 1));
+                e.insert(order.len());
+                order.push(completed);
+                counts.push(1);
             }
         }
     }
-    Ok(out)
+    Ok(order
+        .into_iter()
+        .zip(counts)
+        .map(|(idx, count)| (items[idx].clone(), count))
+        .collect())
 }
 
 /// `UNIQUE ( [ vec ] -> [ distinct ] )`: the distinct elements in
@@ -242,27 +261,31 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    // Two prices, because `GROUP` does two things: it scans the keys for a
-    // match (`n × distinct`, charged per key against the groups in hand) and it
-    // copies every value into a bucket (`n`, charged as each one lands).
+    // Two prices, because `GROUP` does two things: it hashes each key to find
+    // its bucket (`n`, one hash-and-lookup per key — see `distinct_with_counts`)
+    // and it copies every value into a bucket (`n`, charged as each one lands).
     let key_meter = ScanMeter::new(&keys);
     let value_meter = ScanMeter::new(&values);
     let mut groups: Vec<(Value, Vec<Value>)> = Vec::new();
+    let mut group_index: HashMap<&Value, usize> = HashMap::with_capacity(keys.len());
     for (completed, (value, key)) in values.iter().zip(keys.iter()).enumerate() {
         let charged = key_meter
-            .charge_scan_of(interp, completed, groups.len())
+            .charge_scan_of(interp, completed)
             .and_then(|()| value_meter.charge_retained(interp, completed));
         if let Err(e) = charged {
             put_back(interp, &values_value, &keys_value);
             return Err(e);
         }
-        match groups.iter_mut().find(|(seen, _)| seen == key) {
-            Some((_, bucket)) => bucket.push(value.clone()),
-            None => {
-                if let Err(e) = key_meter.charge_retained(interp, completed) {
+        match group_index.entry(key) {
+            std::collections::hash_map::Entry::Occupied(e) => {
+                groups[*e.get()].1.push(value.clone())
+            }
+            std::collections::hash_map::Entry::Vacant(e) => {
+                if let Err(err) = key_meter.charge_retained(interp, completed) {
                     put_back(interp, &values_value, &keys_value);
-                    return Err(e);
+                    return Err(err);
                 }
+                e.insert(groups.len());
                 groups.push((key.clone(), vec![value.clone()]));
             }
         }

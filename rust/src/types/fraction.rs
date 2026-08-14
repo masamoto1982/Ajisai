@@ -112,6 +112,57 @@ impl PartialEq for Fraction {
 
 impl Eq for Fraction {}
 
+/// Hashes the same reduced `(numerator, denominator)` pair `==` compares by
+/// cross-multiplication, so equal fractions hash equal however each arrived
+/// — `Small` vs `Big` representation, or a `create_unreduced` construction
+/// that never called the gcd normalizer `new` does.
+///
+/// A `Small` fraction reduces through `compute_gcd_i64` rather than routing
+/// through `BigInt`, which is the collection meter's hash-per-element scan
+/// (`UNIQUE`/`TALLY`/`GROUP`) calling this once per element: every `Small`
+/// reduction that went through `BigInt::from` first paid a heap allocation
+/// to hash a value that fits in a register. A `Big` fraction that reduces
+/// down to something `i64` can hold takes the same fast path afterward —
+/// which of the two paths runs is a function of the reduced *value*, not of
+/// which `repr` it arrived in, so the two stay consistent with each other.
+impl std::hash::Hash for Fraction {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        if self.is_nil() {
+            state.write_u8(0);
+            return;
+        }
+        state.write_u8(1);
+        if let FractionRepr::Small(n, d) = &self.repr {
+            let g = compute_gcd_i64(*n, *d).max(1);
+            let (mut rn, mut rd) = (n / g, d / g);
+            if rd < 0 {
+                rn = -rn;
+                rd = -rd;
+            }
+            rn.hash(state);
+            rd.hash(state);
+            return;
+        }
+        let (mut n, mut d) = self.to_bigint_pair();
+        let g = n.gcd(&d);
+        if !g.is_zero() && !g.is_one() {
+            n /= &g;
+            d /= &g;
+        }
+        if d.sign() == num_bigint::Sign::Minus {
+            n = -n;
+            d = -d;
+        }
+        if let (Some(rn), Some(rd)) = (n.to_i64(), d.to_i64()) {
+            rn.hash(state);
+            rd.hash(state);
+            return;
+        }
+        n.hash(state);
+        d.hash(state);
+    }
+}
+
 impl Fraction {
     #[inline]
     pub fn nil() -> Self {
