@@ -2,10 +2,15 @@
 
 作成日: 2026-08-13
 更新: 2026-08-14 — §1 の着手条件が満たされた（下記参照）。
+更新: 2026-08-14 — §4 の作業項目 1〜3 に着手・完了。実施記録は
+[`host-profile-derivation-2026-08-14.md`](./host-profile-derivation-2026-08-14.md)。
+§6 の未測定事項はほぼそのまま残っているので、次に着手する前にその文書の
+§9 を読むこと。
 対象セッション: 独立した 1 セッション
 関連: [`mcp-host-profiles.md`](./mcp-host-profiles.md) /
 [`collection-word-billing-2026-08-13.md`](./collection-word-billing-2026-08-13.md) /
-[`collection-word-dequadraticization-2026-08-14.md`](./collection-word-dequadraticization-2026-08-14.md)
+[`collection-word-dequadraticization-2026-08-14.md`](./collection-word-dequadraticization-2026-08-14.md) /
+[`host-profile-derivation-2026-08-14.md`](./host-profile-derivation-2026-08-14.md)
 
 ## 0. この文書の位置づけ
 
