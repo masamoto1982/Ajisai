@@ -71,9 +71,37 @@ impl Measurement {
 }
 
 fn measure(name: String, source: &str) -> Measurement {
+    measure_after_setup(name, "", source)
+}
+
+/// Build the operand with `setup`, then time `source` alone.
+///
+/// The distinction is not cosmetic, and getting it wrong is how this harness
+/// under-reported a rate the host profile was later derived from. A rate is
+/// `charged units / elapsed ms`, so any time inside the measured interval that
+/// charges *this* meter nothing drags the rate down. `[ 0 99999 ] RANGE`
+/// materializes 100,000 elements — real milliseconds, and real
+/// `collectionWork` — while charging `numericWork` almost nothing. Timing it
+/// together with the twenty additions that follow made the dense-lane path
+/// look ~20% cheaper per millisecond than it is (6,153 vs 7,374 units/ms
+/// measured back to back on one container), and a floor rate that reads low
+/// derives a budget that is too small.
+///
+/// `execute` keeps the stack across calls and resets the counters
+/// (`execution_loop.rs`), so the second call sees the first call's operand and
+/// counts only its own work. This is the same split
+/// `collection_word_calibration::measure` has always used; the two harnesses
+/// disagreeing was itself the defect.
+fn measure_after_setup(name: String, setup: &str, source: &str) -> Measurement {
     let mut interp = Interpreter::new();
     interp.set_runtime_limits(unbounded());
     interp.set_max_execution_steps(usize::MAX);
+
+    if !setup.is_empty() {
+        if let Err(error) = block_on(interp.execute(setup)) {
+            panic!("setup `{setup}` for `{name}` must succeed, got: {error:?}");
+        }
+    }
 
     let started = Instant::now();
     let outcome = block_on(interp.execute(source));
@@ -185,10 +213,15 @@ fn main() {
             &format!("{{ {wide} + }} 'W' DEF 1{}", " W".repeat(200)),
         ),
         // Dense `i64` lanes: one charged unit per lane, and a lane here is a
-        // machine-word add inside a tensor kernel.
-        measure(
-            "dense tensor lanes (100k x i64 add)".into(),
-            &format!("[ 0 99999 ] RANGE{}", " 1 +".repeat(20)),
+        // machine-word add inside a tensor kernel. This is the *floor* path —
+        // the slowest charged rate, and therefore the one a host time budget
+        // divides by — so it is the row that most needs the operand build kept
+        // out of the timed interval, and enough repetitions that what remains
+        // is the add and not the measurement's own edges.
+        measure_after_setup(
+            "dense tensor lanes (100k x i64 add x200)".into(),
+            "[ 0 99999 ] RANGE",
+            &" 1 +".repeat(200),
         ),
         // A scalar operation on machine-word values. Its cost is dominated by
         // interpreter dispatch, which `executionSteps` prices, not this meter.
