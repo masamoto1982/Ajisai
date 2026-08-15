@@ -3,7 +3,12 @@
 Status date: 2026-08-13. Updated 2026-08-14: the playground / native-default
 profile's ceilings are now derived, not chosen — see
 [`host-profile-derivation-handoff.md`](./host-profile-derivation-handoff.md)
-for the work and the reasoning behind each number below.
+for the work and the reasoning behind each number below, and
+[`host-profile-derivation-2026-08-14.md`](./host-profile-derivation-2026-08-14.md)
+§10 for a correction to that work: the first derivation calibrated on native
+release and applied the result to the WASM playground, which is not the same
+engine and — for one meter — not even a good proxy for it. The numbers below
+are the corrected, WASM-calibrated ones.
 
 Ajisai's resource ceilings are **host safety controls, not language semantics**
 (`SPECIFICATION.html` §2.5). A conforming host chooses its own, and all
@@ -26,41 +31,60 @@ to trust a document that could drift:
 | ceiling | MCP / `ajisai agent` | playground and `ajisai run` | what it bounds | derived? |
 |---|---:|---:|---|---|
 | `sourceBytes` | 65,536 | 16,777,216 | byte length of one program | judgment call (§ below) |
-| `executionSteps` | 100,000 | 23,190,000 | Words executed | **yes**, from the host time budget |
+| `executionSteps` | 100,000 | 12,180,000 | Words executed | **yes**, from the host time budget |
 | `materializedElements` | 100,000 | 1,000,000 | elements one generative Word may build | no — size, not time (§ below) |
 | `numericLiteralDigits` | 4,096 | 4,096 | digits in one numeric literal | no |
-| `numericWork` | 10,000,000 | 139,800,000 | accumulated arithmetic work, in limb-multiply units, in every operand shape | **yes**, from the host time budget |
-| `collectionWork` | 20,000,000 | 905,280,000 | accumulated element operations inside collection Words — copies, order comparisons, equality probes | **yes**, from the host time budget |
+| `numericWork` | 10,000,000 | 311,190,000 | accumulated arithmetic work, in limb-multiply units, in every operand shape | **yes**, from the host time budget |
+| `collectionWork` | 20,000,000 | 1,414,860,000 | accumulated element operations inside collection Words — copies, order comparisons, equality probes | **yes**, from the host time budget |
 | `bigintBits` | 262,144 | 1,000,000 | coefficient width of one exact arithmetic result | no — size, not time (§ below) |
 | `algebraicTerms` | 512 | 10,000 | term count of one exact algebraic value | no — size, not time (§ below) |
 
-Both profiles' pair of work ceilings bound the same amount of *time*, not the
-same number of units — the two paths do not count the same thing, so setting
+Both profiles' triple of derived ceilings bound the same amount of *time*, not
+the same number of units — the paths do not count the same thing, so setting
 them equal would have made one of them mean something different from the
-other. Each host has its own single time budget, and each work ceiling is that
-budget times the meter's own measured floor rate (its slowest unbounded path,
-in units/ms, on the container it was measured on):
+other. Each host has its own single time budget, and each derived ceiling is
+that budget times the meter's own measured floor rate (its slowest unbounded
+path, in units/ms or steps/ms, **on the engine that host actually runs**):
 
-| host | time budget | `numericWork` floor rate | `collectionWork` floor rate |
-|---|---:|---:|---:|
-| MCP / `ajisai agent` | 5,000 ms (`wallTimeMs`, adapter-enforced) | 14,465 units/ms | 30,800 units/ms |
-| playground / `ajisai run` | 30,000 ms (`DEFAULT_HOST_TIME_BUDGET_MS`) | 4,660 units/ms | 30,176 units/ms |
+| host | time budget | `numericWork` floor rate | `collectionWork` floor rate | `executionSteps` floor rate |
+|---|---:|---:|---:|---:|
+| MCP / `ajisai agent` | 5,000 ms (`wallTimeMs`, adapter-enforced) | 14,465 units/ms | 30,800 units/ms | (not derived; see below) |
+| playground / `ajisai run` | 30,000 ms (`DEFAULT_HOST_TIME_BUDGET_MS`) | 10,373 units/ms | 47,162 units/ms | 406 steps/ms |
 
-The two hosts' floor rates were measured on different containers at different
-times (MCP's in `docs/dev/collection-word-billing-2026-08-13.md` §6, before
-the scan family was de-quadraticized; the playground's in this session, after)
-and are not comparable to each other — only within a host, between its own
-`numericWork` and `collectionWork` rows, does the ratio mean anything.
-Notably, the playground's two floor rates are *not* a clean multiple of one
-another (30,176 / 4,660 ≈ 6.5) the way the MCP profile's used to look
-(30,800 / 14,465 ≈ 2.1, once hard-coded as `collectionWork = 2 × numericWork`).
-That 2× relationship was itself a derived-but-coincidental ratio of two
-measured rates, not a rule, and the 2026-08-14 de-quadraticization of
-`UNIQUE`/`TALLY`/`GROUP` moved it, exactly as
+**The playground row is measured on WASM** (`scripts/wasm-profile-calibration.mjs`,
+against the same compiled module the browser ships — Node and Chrome are both
+V8), not native release. That correction matters: measured back to back on
+one container, native ran `numericWork`'s floor path 2.1x *faster* than WASM,
+`collectionWork`'s 4.0x faster, and `executionSteps`'s dispatch loop 0.66x —
+*slower* — than WASM. A ratio that swings from "twice as fast" to "a third
+slower" depending on the meter means a single native calibration cannot make
+three ceilings bound equal time on the engine they actually run on, which is
+the entire point of deriving them from a shared time budget. The first
+attempt at this derivation (see the git history of this document, or
+`docs/dev/host-profile-derivation-2026-08-14.md` §§1-9) calibrated on native
+and got playground numbers 2-4x smaller than the ones above for `numericWork`/
+`collectionWork` and roughly half for `executionSteps`; §10 of that document
+is the correction. `rust/examples/work_meter_calibration.rs` and
+`rust/examples/collection_word_calibration.rs` remain the right tools for
+native's own floor — `ajisai run` and native `ajisai agent` really do run on
+that engine — just not for this table's playground column.
+
+The two hosts' floor rates were measured on different containers, different
+engines, and (for MCP) before the scan family was de-quadraticized and the
+`Fraction::hash` gcd fix landed — they are not comparable to each other; only
+within a host, between its own rows, does a ratio mean anything. The
+playground's own `numericWork`/`collectionWork` floor rates are *not* a clean
+multiple of one another (47,162 / 10,373 ≈ 4.5) the way the MCP profile's used
+to look (30,800 / 14,465 ≈ 2.1, once hard-coded as
+`collectionWork = 2 × numericWork`). That 2× relationship was itself a
+derived-but-coincidental ratio of two measured rates, not a rule, and moved
+twice on 2026-08-14 — once when the scan family was de-quadraticized, exactly
+as
 [`collection-word-dequadraticization-2026-08-14.md`](./collection-word-dequadraticization-2026-08-14.md)
-§5 predicted it might. Each work ceiling is now derived independently from its
-own host's time budget and its own floor rate; the two only need to agree on
-the *time* they bound, and they do that by construction.
+§5 predicted it might, and again when the `Fraction::hash` fix changed which
+collection path was the floor. Each derived ceiling now comes independently
+from its own host's time budget and its own measured floor rate; the ceilings
+only need to agree on the *time* they bound, and they do that by construction.
 
 `DEFAULT_HOST_TIME_BUDGET_MS` (30 s) is a **judgment call, not a
 measurement** — nobody has usage data on how long an Ajisai learner tolerates
@@ -68,7 +92,7 @@ a running computation before assuming it is stuck. It is several multiples of
 the classic ~10 s "the UI looks frozen" threshold (Nielsen/Miller), extended
 because the playground shows a running state and an abort control rather than
 giving no feedback at all — see the constant's doc comment in
-`rust/src/interpreter/runtime_limits.rs` (`DEFAULT_HOST_TIME_BUDGET_MS`) for
+`rust/src/interpreter/host_profile_defaults.rs` (`DEFAULT_HOST_TIME_BUDGET_MS`) for
 the full reasoning, and treat it as replaceable the moment real usage data
 exists.
 
@@ -79,9 +103,9 @@ hosts should agree). It is derived the same way as the two work ceilings — the
 host time budget times a measured floor rate — except the unit being priced is
 raw word-dispatch count rather than operand size, and the floor path is
 therefore a long loop of the *cheapest* word rather than the widest operand
-(measured at 773 steps/ms for a trampolined user-word call, the dispatch-bound
-analogue of `numericWork`'s "dense tensor lanes"; see
-`rust/examples/work_meter_calibration.rs`). The MCP profile's own
+(measured at 406 steps/ms **on WASM** for a trampolined user-word call, the
+dispatch-bound analogue of `numericWork`'s "dense tensor lanes"; see
+`scripts/wasm-profile-calibration.mjs`). The MCP profile's own
 `executionSteps` is untouched: every real MCP call site threads its own
 `100_000` explicitly (`tools/mcp-server/index.js` `LIMITS.executionSteps`),
 independent of whatever the interpreter's own default is, so raising the
@@ -97,16 +121,20 @@ at their prior values (mostly) or a differently-reasoned one:**
   their prior values, re-checked only for the weaker property of staying
   reachable inside the new `numericWork`/`collectionWork` budgets (they do:
   see the doc comments on `DEFAULT_MAX_MATERIALIZED_ELEMENTS` and
-  `DEFAULT_MAX_BIGINT_BITS` in `runtime_limits.rs`).
+  `DEFAULT_MAX_BIGINT_BITS` in `host_profile_defaults.rs`).
 - `algebraicTerms` moved (100,000 → 10,000) for the same reason it moved on
   the MCP side once before: the old value stopped being *live* once
-  `numericWork` shrank to match this container's measured rate — the doubling
-  that first exceeds 100,000 terms costs 520,124,416 units, nearly 4× the new
-  139,800,000 budget, so `numericWork` would always answer first and the term
-  ceiling would never fire (`profile_liveness_tests` exists to catch exactly
-  this). 10,000 is chosen the same way the MCP profile's 512 was: live with
-  comfortable margin (the crossing cascade costs ~36% of the work budget), not
-  derived from a stated size-legibility criterion either.
+  `numericWork` shrank below what it needs — the doubling that first exceeds
+  100,000 terms costs 520,124,416 units (a fixed cost from the pricing
+  formula, independent of which host measured the floor rate), which is over
+  even the current, WASM-calibrated 311,190,000 budget, so `numericWork`
+  would always answer first and the term ceiling would never fire
+  (`profile_liveness_tests` exists to catch exactly this). 10,000 is chosen
+  the same way the MCP profile's 512 was: live with comfortable margin (the
+  crossing cascade costs ~16% of the current work budget), not derived from a
+  stated size-legibility criterion either, and left at 10,000 rather than
+  raised back toward 100,000 now that the budget has grown — the value was
+  never meant to track the budget's size, only to stay live under it.
 - `sourceBytes` (playground: 64 MiB → 16 MiB) is a **judgment call with a
   stated anchor**, replacing a round number that had no stated reason at all:
   16 MiB is about 9× the largest known legitimate machine-generated Ajisai
