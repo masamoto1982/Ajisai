@@ -23,21 +23,22 @@
 // measures a desktop-class V8, which is what the playground profile is
 // derived for. A mobile browser is slower; see the profile's own doc comment.
 //
-// KNOWN FINDING, 2026-08-14 — read the collectionWork floor with this in mind.
-// `UNIQUE 4k x 4096-digit` comes back roughly 300x below every other
-// collection path (248 units/ms against 73,491 for `REVERSE 100k` here; 780
-// against 45,025 on native release). That is not a property of WASM: it is
-// `Fraction::hash` on the `Big` representation, which clones through
-// `to_bigint_pair()` and runs a full `BigInt::gcd` once per element per scan.
-// Measured in isolation, hashing costs 2.1 us at 64 digits, 21.8 us at 512 and
-// 602 us at 4096 — superlinear in width — while the scan charges
-// `work_limbs(bits)`, which is linear (4, 27 and 213 units). So the charge and
-// the cost diverge with width, reaching ~470x at 4096 digits.
-//
-// Until that is resolved, the collectionWork floor printed below is the floor
-// of a meter with a known hole in it, and a budget derived from it is not
-// meaningful. The de-quadraticization follow-up fixed exactly this shape of
-// defect for the `Small` representation and left `Big` on the slow path.
+// RESOLVED FINDING, 2026-08-14 — kept for whoever re-measures next.
+// `UNIQUE 4k x 4096-digit` used to come back roughly 300-470x below every
+// other collection path on this run (248 units/ms against 73,491 for
+// `REVERSE 100k`; 780 against 45,025 on native release) — not a property of
+// WASM, but `Fraction::hash` on the `Big` representation cloning through
+// `to_bigint_pair()` and running a full, unbalanced `BigInt::gcd` once per
+// element per scan (612 us at `gcd(4096-digit, 1)`, the common case for any
+// wide integer-valued Fraction, against 1.2 us once balanced). Fixed by
+// `balanced_bigint_gcd` (`rust/src/types/bigint_gcd.rs`): the same case now
+// measures 47,162-73,457 units/ms across runs, in range with the other
+// collection paths and still the floor by a normal margin, not a hole.
+// De-quadraticization (same day) had already fixed this shape of defect for
+// the `Small` representation; this closed it for `Big`. If a future
+// collectionWork floor comes back looking like a hole again — one path
+// wildly below the rest rather than merely lower — read this as the pattern
+// to check for, not as evidence WASM itself is the cause.
 //
 // Method, matching the native harnesses after their 2026-08-14 fix:
 //   - operand construction is executed first and subtracted, in both time and
@@ -145,7 +146,15 @@ const COLLECTION = [
 ];
 
 const STEPS = [
-    ['add loop x200k', '', `1${' 7 +'.repeat(200_000)}`],
+    // 15,000 reps, not 200,000: each `" 7 +"` is 4 source bytes, and this
+    // case's source is written out flat (unlike the trampoline below, which
+    // stays short at any rep count because the loop body lives once in a
+    // `DEF`) — 200,000 reps is 800,001 bytes, over the MCP profile's
+    // 65,536-byte `sourceBytes`. 15,000 reps is 60,001 bytes, comfortably
+    // under, and still gives `rate()` a wall-clock interval well clear of
+    // jitter (rates are ms-normalized, so step *count* only needs to be
+    // enough to time cleanly, not any particular round number).
+    ['add loop x15k', '', `1${' 7 +'.repeat(15_000)}`],
     // Every iteration pays a dictionary lookup and a frame push, not just an
     // arithmetic op. This was the native floor and is the shape
     // `cli::step_limit_tests::DOWN_PROBE` uses.
@@ -179,8 +188,9 @@ for (const [name, floor] of [['numericWork', numeric], ['collectionWork', collec
     console.log(`${name.padEnd(16)} 30000 ms x ${floor.toFixed(0).padStart(8)} = ${Math.round(30_000 * floor).toLocaleString()}`);
 }
 console.log(
-    '\nA budget here is only as good as the floor above it. Check that the\n' +
-    'floor path is one the meter prices correctly before deriving anything\n' +
-    'from it — see the KNOWN FINDING at the top of this file, which is why\n' +
-    'the collectionWork row currently is not.'
+    '\nA budget here is only as good as the floor above it. Before deriving\n' +
+    'anything from a floor, check that the winning path is priced correctly —\n' +
+    'a floor that is one specific shape wildly below every other path is a\n' +
+    'pricing hole, not a bound. See the RESOLVED FINDING at the top of this\n' +
+    'file for what that looked like the one time it happened here.'
 );

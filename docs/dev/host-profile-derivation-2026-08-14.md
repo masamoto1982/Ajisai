@@ -231,7 +231,7 @@ MCP よりずっと大きいので、その予算を実際に使い切るには�
 - `npm run eval:mcp`: 79/79 通過。
 - `npx vitest run`（フロントエンド）: 359/359 通過。
 
-## 9. 測っていないこと・残った作業
+## 9. 測っていないこと・残った作業（§10 以前の時点）
 
 引き継ぎ書 §6 の内容はほぼそのまま残る:
 
@@ -248,3 +248,153 @@ MCP よりずっと大きいので、その予算を実際に使い切るには�
   実際にデプロイされる環境で `work_meter_calibration` /
   `collection_word_calibration` を再実行し、`DEFAULT_MAX_NUMERIC_WORK`
   等を再導出することが望ましい（同じ式、違う定数を入れるだけ）。
+
+**§10 が §9 の最後の項目を訂正する。** 「同じ式、違う定数を入れるだけ」は
+不正確だった——入れ替えるべきはコンテナではなくホスト（エンジン）そのもの
+だった。
+
+## 10. 訂正 — 較正ホストの誤りと課金の欠陥（第三者レビューによる発見）
+
+本書merge後、独立したレビューセッションが §1〜9 の実施内容を精査し、
+2 件の欠陥を発見した。両方とも本セッションの続きとして修正し、この節に
+まとめる。関連 PR: #1515（較正ハーネスの区間バグ・恒真テスト・上書きした
+記述の3件）、#1516（`Fraction::hash` の gcd 修正）。
+
+### 10.1 較正したホストと、上限を適用するホストが違っていた
+
+§2〜§7 の底値レート（`NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS` 等）はすべて
+**native release**（`cargo run --release`）で測っていた。しかし
+`RuntimeLimits::default()` を実際に消費するのは主に **WASM の playground**
+である。同一コンテナで両方を測り直すと、native→WASM の比はメーターごとに
+バラバラだった:
+
+| メーター | native | WASM | 比 |
+|---|---:|---:|---:|
+| `numericWork` の floor 経路 | 7,374 u/ms | 15,345 u/ms | 2.08x 速い |
+| `collectionWork` の floor 経路 | 44,015 u/ms | 175,036 u/ms | 3.98x 速い |
+| `executionSteps` の floor 経路 | 879 steps/ms | 584 steps/ms | 0.66x 遅い |
+
+「2倍速い」から「3割遅い」までメーターごとに向きも大きさも違うので、
+native の 1 回の較正では 3 つの上限を WASM 上で同じ時間に揃えることは
+できない。実際、§2〜§7 の値が playground（WASM）でどれだけの時間を買うか
+測ると 9.1秒／5.2秒／39.7秒——狙った 30秒に対し最大 7.6 倍のばらつき
+だった。「時間を揃える」という本書の目的が、一番大事な場所で成立して
+いなかった。
+
+さらに §2 の較正ハーネス自体にも欠陥があった:
+`work_meter_calibration::measure` はオペランド構築（`[ 0 99999 ] RANGE`
+による 10 万要素の materialize）を計時区間に含めたまま課金単位だけで
+割っていたため、floor 経路（dense tensor lanes）のレートが実際より
+低く出ていた（6,153 対、構築時間を除いた場合の 7,374 units/ms）。
+`collection_word_calibration` は元から setup と計測対象を分離していたので、
+**2 つの較正ハーネスが互いに矛盾しており、本書はその間違っている方から
+数値を採っていた**。
+
+対処: `measure_after_setup`（`rust/examples/work_meter_calibration.rs`）
+を新設して区間を修正し、WASM 用の較正ハーネス
+`scripts/wasm-profile-calibration.mjs` を新設した。native/WASM で二重に
+較正するのではなく、**playground が実際に動くエンジン（WASM）だけを
+`DEFAULT_MAX_*` の根拠にする**——native の `examples/work_meter_calibration`
+等は `ajisai run` / native `ajisai agent` 自身の floor を知るための道具
+として残すが、共有デフォルトの根拠としては使わない。
+
+### 10.2 `Fraction::hash` の gcd が要素幅に対して超線形だった
+
+WASM 較正の初回実行で `collectionWork` の floor が
+`UNIQUE 4k × 4096桁` になり、他経路より**約 300〜470 倍**低いことが
+判明した（WASM: 248 対 73,491 u/ms、native: 780 対 45,025 u/ms）。
+
+原因は `num-bigint` の `BigInt::gcd`（`Integer::gcd`）がオペランドの
+**幅の差**に対して二次的に遅いことだった:
+
+| `gcd(4096桁, X)` | 時間 |
+|---|---:|
+| X = 1 | 612 µs |
+| X = 7 | 356 µs |
+| X = 4096桁 | 1.2 µs |
+
+`Fraction::hash`・`Fraction::new`（正規化）はどちらも `gcd(numerator,
+denominator)` を呼ぶ。整数値の Fraction は分母が 1 なので、**最も一般的な
+ケースが最悪ケース**になっていた。これは走査系の課金の欠陥ではなく、
+`Fraction` の基礎演算そのものの実装コストの欠陥である——非二次化
+（`collection-word-dequadraticization-2026-08-14.md`）が `Small` 表現には
+同種の修正を施していたが、`Big` 表現は取り残されていた。
+
+修正: `gcd(a, b) == gcd(b, a mod b)` で 1 回除算してから既存の binary GCD
+に渡す `balanced_bigint_gcd`（`rust/src/types/bigint_gcd.rs`）を新設し、
+`Fraction`・`fraction_arithmetic`・Tier 1 代数的正規形（`exact::basis` /
+`exact::algebraic` / `exact::algebraic_field`）の raw `gcd()` 呼び出し
+**18 箇所すべて**を置き換えた。実測 494 倍高速化（612µs→1.2µs）、
+`UNIQUE 4k×4096桁` は 780→106,051 u/ms（136 倍、native）。正しさは
+`Integer::gcd` を oracle にした property test で検証し、`value_hash_tests`
+の Hash/Eq 契約（`bc14dc6`、#1513 由来）を含む既存テストは全て無変更で
+通過した。
+
+### 10.3 再導出した値
+
+10.1・10.2 の修正後、WASM で底値レートを測り直した（複数回実行の最小値、
+「コンテナのノイズに対して安全な向き」という既存の方針を踏襲）:
+
+| メーター | WASM 底値レート | 経路 |
+|---|---:|---|
+| `numericWork` | 10,373 units/ms | dense tensor lanes (100k) |
+| `collectionWork` | 47,162 units/ms | UNIQUE 4k × 4096桁（もう「穴」ではなく、通常の意味での floor） |
+| `executionSteps` | 406 steps/ms | DOWN トランポリン |
+
+`DEFAULT_HOST_TIME_BUDGET_MS`（30秒）は変更していない——今回の訂正は
+どのホストを測るかの誤りであって、時間予算の判断そのものは再検討して
+いない。
+
+| 上限 | §2〜§7 の値（native 較正、誤り） | 訂正後（WASM 較正） |
+|---|---:|---:|
+| `numericWork` | 139,800,000 | **311,190,000** |
+| `collectionWork` | 905,280,000 | **1,414,860,000** |
+| `executionSteps` | 23,190,000 | **12,180,000** |
+
+`algebraicTerms`（10,000）・`bigintBits`（1,000,000）は値そのものは
+変えていない——生存に必要な閾値は課金式から決まる固定値であり、
+どのホストで底値レートを測ったかに依存しないため。ただし新しい
+`numericWork` 予算のもとで余裕（マージン）を再確認した:
+`bigintBits` の到達コストは新予算の約 39%（旧: 87%）、`algebraicTerms`
+は約 16%（旧: 36%）——どちらも以前よりむしろ安全になった。
+`algebraicTerms` を予算の余裕に合わせて 100,000 側へ戻すことはしていない
+（`host_profile_defaults.rs` の同定数の doc comment に理由を書いた:
+「予算が動くたびに値を追いかけるのは原則の無いchurnである」）。
+
+`rust/src/agent/profile_liveness_tests.rs` の playground 側証人も
+更新した: `cumulative_cascade_reps` 261→580、`collection_reps_to_cross`
+27→42（`algebraic_terms_over/under`・`bigint_bits_over/under` は閾値が
+固定費なので不変）。
+
+### 10.4 検証（10.1〜10.3 適用後）
+
+- `cargo test --lib` / `--tests`・clippy(`-D warnings`)・fmt・
+  file-size budget: 全て通過。
+- `cargo test --lib bigint_gcd`: property test（`Integer::gcd` を oracle
+  に random pair 比較）・固定ケーステスト、両方通過。引数を入れ替える
+  変異で両方落ちることを確認済み（牙があることの検証）。
+- `npm run test:mcp` / `test:mcp-backends`（native/WASM parity）/
+  `eval:mcp` / `npx vitest run`: 全て通過。
+- WASM バンドル再ビルド済み。gcd 修正のみでは再ビルド後のバイナリに
+  差分が出ない（既に反映済みの状態からの再ビルドだったため）ことを
+  `git status` で確認、`host_profile_defaults.rs` の値変更後は差分あり
+  （このコミットに含む）。
+
+### 10.5 残った作業（更新）
+
+§9 の 4 項目のうち、以下は本節で状況が変わった:
+
+- **底値レートの計測ホストが container-specific なのは変わらないが、
+  今後は native ではなく WASM を測ること。** 別のデプロイ環境・別の
+  ブラウザエンジンでは `scripts/wasm-profile-calibration.mjs` を
+  再実行すること。
+- **`ajisai run`（CLI）を独立したホストとして検討していない、という
+  論点は今回さらに具体的な根拠を得た。** native と WASM の底値レート比が
+  メーターごとに 0.66x〜4.0x とバラバラだったという実測は、
+  `ajisai run` が playground と同じデフォルトを共有し続けることの
+  コストを定量化している——native CLI は今、自分自身のエンジンではなく
+  WASM のために較正された上限の下で動いている。分離するかどうかの判断
+  は本節でも下していない。
+
+他の 3 項目（playground 利用者の待てる時間、materializedElements/
+bigintBits の基準、いずれも未測定）は §9 のまま変わらない。
