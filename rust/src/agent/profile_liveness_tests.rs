@@ -102,10 +102,18 @@ mod profile_liveness_tests {
     }
 
     /// The playground / `ajisai run` default profile, re-derived
-    /// 2026-08-14 (`docs/dev/host-profile-derivation-handoff.md` §4). Witness
-    /// sizes measured against `RuntimeLimits::default()` on this session's
-    /// container; see `docs/dev/mcp-host-profiles.md` for how each ceiling
-    /// was derived.
+    /// 2026-08-14 (`docs/dev/host-profile-derivation-handoff.md` §4) and
+    /// re-derived again the same day once the first attempt's native
+    /// calibration was found not to be a valid proxy for the WASM engine
+    /// this profile actually governs (`docs/dev/
+    /// host-profile-derivation-2026-08-14.md` §10). `algebraic_terms_*` and
+    /// `bigint_bits_*` are unchanged by that: the term/bit thresholds a
+    /// cascade or widening chain crosses are fixed by the pricing formula,
+    /// not by which host measured the work budget's floor rate — only the
+    /// *margin* moved. `cumulative_cascade_reps` and
+    /// `collection_reps_to_cross` did move, since the work budgets
+    /// themselves did. See `docs/dev/mcp-host-profiles.md` for how each
+    /// ceiling was derived.
     fn playground_profile() -> Profile {
         Profile {
             name: "playground",
@@ -116,9 +124,9 @@ mod profile_liveness_tests {
             bigint_bits_over: 74,      // > 1,000,000 bits
             bigint_bits_under: 73,     // < 1,000,000 bits
             cumulative_cascade_factors: 8,
-            cumulative_cascade_reps: 261,
+            cumulative_cascade_reps: 580,
             collection_vector_max: 999_997,
-            collection_reps_to_cross: 27,
+            collection_reps_to_cross: 42,
         }
     }
 

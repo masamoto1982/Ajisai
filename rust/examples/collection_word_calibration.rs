@@ -493,6 +493,12 @@ fn section_ceiling() {
 /// through `collection_work_used()` rather than assumed from the billing
 /// design doc's pre-dequadraticization formula, since both the algorithm and
 /// the per-element charge changed underneath it.
+///
+/// **Native, not what `DEFAULT_MAX_COLLECTION_WORK` is sized against** — see
+/// `work_meter_calibration`'s equivalent note on its steps/ms section. The
+/// playground default is calibrated on WASM, by
+/// `scripts/wasm-profile-calibration.mjs`
+/// (`docs/dev/host-profile-derivation-2026-08-14.md` §10).
 fn section_floor_rate() {
     println!("── 6. collectionWork floor: units/ms under this build ───────────\n");
     println!(

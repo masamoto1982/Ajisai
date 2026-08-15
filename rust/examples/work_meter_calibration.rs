@@ -141,13 +141,21 @@ fn algebraic_product(factors: usize) -> String {
 /// Steps per millisecond for a dispatch-bound loop: no `Fraction` wider than
 /// a machine word, no algebraic term, nothing any other meter prices.
 /// `executionSteps` is the *only* ceiling such a path can ever reach — the
-/// same role `dense tensor lanes` plays for `numericWork` — so the *slowest*
-/// such path's rate is what `DEFAULT_MAX_EXECUTION_STEPS` should be sized
-/// against for a host whose ceiling is a time budget rather than a fixed
-/// round number. Two shapes, because dispatch cost is not uniform: a flat
-/// arithmetic loop is cheap, and a user-word call (dictionary lookup, frame
-/// push) is dearer — `DOWN_PROBE` in `cli/step_limit_tests.rs` is exactly
-/// this second shape, and it is the one that sets the floor.
+/// same role `dense tensor lanes` plays for `numericWork`. Two shapes,
+/// because dispatch cost is not uniform: a flat arithmetic loop is cheap,
+/// and a user-word call (dictionary lookup, frame push) is dearer —
+/// `DOWN_PROBE` in `cli/step_limit_tests.rs` is exactly this second shape,
+/// and it is the one that sets the floor.
+///
+/// **Native, not what `DEFAULT_MAX_EXECUTION_STEPS` is sized against.** The
+/// 2026-08-14 host-profile derivation calibrated that constant here first,
+/// then found native was not a valid proxy for the WASM engine the
+/// playground actually runs on and moved to
+/// `scripts/wasm-profile-calibration.mjs` instead
+/// (`docs/dev/host-profile-derivation-2026-08-14.md` §10). This remains the
+/// right tool for the native floor — `ajisai run` and native `ajisai agent`
+/// really do run on this engine — just not for the shared playground
+/// default.
 ///
 /// Read via `Interpreter::resource_usage().execution_steps` rather than
 /// computed from the source text, so it counts what the interpreter actually

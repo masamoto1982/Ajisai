@@ -90,33 +90,53 @@ pub const DEFAULT_MAX_NUMERIC_LITERAL_DIGITS: usize = 4_096;
 /// available; until then, treat it as what it is.
 pub const DEFAULT_HOST_TIME_BUDGET_MS: u64 = 30_000;
 
-/// `numericWork`'s units/ms floor on this container, this build, this
-/// session (release, rustc 1.94.1, 2026-08-14) — the slowest measured rate
-/// among the paths only `numericWork` bounds, the same role `dense tensor
-/// lanes` plays in `docs/dev/collection-word-billing-2026-08-13.md` §6.
-/// Read from `examples/work_meter_calibration`'s `dense tensor lanes (100k x
-/// i64 add)` row, minimum of several runs (4,660–6,197 units/ms observed;
-/// this container is shared/virtualized and visibly noisier than the
-/// reference container that document used, so the minimum — the safe
+/// `numericWork`'s units/ms floor **on WASM**, this container, this build,
+/// this session (Node's V8 against `tools/mcp-server/wasm/generated`, which
+/// is the same compiled module the browser playground ships — see
+/// `scripts/wasm-profile-calibration.mjs`) — the slowest measured rate among
+/// the paths only `numericWork` bounds, the same role `dense tensor lanes`
+/// plays in `docs/dev/collection-word-billing-2026-08-13.md` §6.
+///
+/// **Not measured on native.** The first attempt at this derivation
+/// (2026-08-14) calibrated all three floor rates on `cargo run --release`
+/// and applied them to the WASM playground, which is where every one of
+/// these ceilings actually runs. Measured back to back on one container, the
+/// native→WASM ratio was 2.1x for this meter, 4.0x for `collectionWork` and
+/// 0.66x for `executionSteps` — a ratio that swings from "twice as fast" to
+/// "a third slower" depending on the meter, so a native calibration cannot
+/// make three ceilings bound equal time on the host they are actually
+/// applied to
+/// (`docs/dev/host-profile-derivation-2026-08-14.md` §10 has the numbers).
+/// `rust/examples/work_meter_calibration.rs` remains useful for its own
+/// purpose — the native floor `ajisai run`/native `ajisai agent` actually
+/// runs under, and the ratio work between `numericWork` and `collectionWork`
+/// pricing does not depend on host — but it is not this constant's source.
+///
+/// `dense tensor lanes (100k) x80` was the floor across every run (10,373–
+/// 15,591 units/ms observed; this container is shared/virtualized and
+/// visibly noisier under WASM than under native, so the minimum — the safe
 /// direction, since a lower rate means a *smaller* derived budget — is kept
-/// rather than an average). **Container-specific: re-measure when deploying
-/// on different hardware, per the same document's own instruction to
-/// re-measure rather than trust a stale constant.**
-const NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 4_660;
+/// rather than an average). **Container- and engine-specific: re-measure
+/// with `scripts/wasm-profile-calibration.mjs` when deploying on different
+/// hardware or a different browser engine.**
+const NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 10_373;
 
-/// `collectionWork`'s units/ms floor on this container, this build, this
-/// session — measured the same way as [`NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS`]
-/// but read from `examples/collection_word_calibration`'s new §6 section
-/// (added in this session), which reads `collection_work_used()` back
-/// directly rather than hand-deriving units from the pricing formula: the
-/// scan family's algorithm and per-element charge both changed in the
-/// 2026-08-14 de-quadraticization follow-up, so the pre-dequadraticization
-/// 30,800 units/ms no longer describes this build. `REVERSE 100k` was the
-/// floor across every run (30,176–50,915 units/ms observed; minimum kept for
-/// the same reason as the numeric floor) — the scan family, once hashed
-/// instead of scanned, is no longer the cheapest-per-unit path the way it was
-/// before. **Container-specific: re-measure on deployment hardware.**
-const COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 30_176;
+/// `collectionWork`'s units/ms floor on WASM — measured the same way as
+/// [`NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS`], by the same script.
+///
+/// The floor path here, `UNIQUE` over a vector of 4096-digit values, is
+/// itself the reason this whole derivation was redone: it used to charge
+/// ~470x less per millisecond than any other collection path (248 units/ms
+/// against 73,491 for `REVERSE 100k`), a pricing hole in `Fraction::hash`'s
+/// `BigInt::gcd` on wide operands with a narrow denominator (see the fix's
+/// own commit), not a real bound — deriving a budget from it would have
+/// meant shipping a ceiling one specific shape of value could blow through
+/// 470x over. After the fix this path charges 47,162–73,457 units/ms across
+/// runs, now genuinely the floor (below `REVERSE 100k`'s ~89,000–91,000) but
+/// by a normal margin, not a hole. Minimum kept for the same reason as the
+/// numeric floor. **Container- and engine-specific: re-measure with
+/// `scripts/wasm-profile-calibration.mjs` on deployment hardware.**
+const COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 47_162;
 
 /// Default cap on accumulated internal numeric work units charged through the
 /// work meter (algebraic products, reciprocal recursion, precision doubling,
@@ -128,34 +148,40 @@ const COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 30_176;
 /// so exhausts this budget in *less* than [`DEFAULT_HOST_TIME_BUDGET_MS`],
 /// never more — the same safety direction
 /// `LOCAL_AGENT_RUNTIME_LIMITS.max_numeric_work` uses for the MCP profile.
-/// Notably **smaller** than the pre-derivation value of 1,000,000,000: that
-/// number was never derived (`docs/dev/host-profile-derivation-handoff.md`
-/// §3.2 called it "a post-hoc interpretation, not a derived value"), and this
-/// container's floor rate is well under the faster reference container the
-/// old number implicitly assumed. A faster deployment target would derive a
-/// larger number from the same formula; re-measure there rather than raise
-/// this by hand.
+///
+/// This number moved twice on 2026-08-14, for two different reasons, and
+/// both are worth keeping straight. First, from the pre-derivation
+/// 1,000,000,000 (never itself derived — `docs/dev/
+/// host-profile-derivation-handoff.md` §3.2 called it "a post-hoc
+/// interpretation, not a derived value") down to 139,800,000, calibrated on
+/// **native** release. Then, once review found native was not a valid proxy
+/// for the WASM engine every ceiling here actually governs, up to the value
+/// computed here — WASM's `numericWork` floor measured faster than native's
+/// on this container. Neither number was wrong to compute; the second
+/// calibration was wrong to apply to the playground. Re-measure with
+/// `scripts/wasm-profile-calibration.mjs` on a different deployment target
+/// or browser engine rather than adjusting this by hand.
 pub const DEFAULT_MAX_NUMERIC_WORK: u64 =
     DEFAULT_HOST_TIME_BUDGET_MS * NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS;
 
-/// `executionSteps`' steps/ms floor on this container, this build, this
-/// session — the same idea as [`NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS`] above,
-/// but for word dispatch rather than operand size. `executionSteps` prices
-/// raw word count and cannot see what a word does internally (the other two
-/// meters already price that), so the only path it alone has to bound is a
-/// long loop of the *cheapest* word — the dispatch-bound analogue of `dense
-/// tensor lanes`.
+/// `executionSteps`' steps/ms floor on WASM — the same idea as
+/// [`NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS`] above, but for word dispatch
+/// rather than operand size. `executionSteps` prices raw word count and
+/// cannot see what a word does internally (the other two meters already
+/// price that), so the only path it alone has to bound is a long loop of the
+/// *cheapest* word — the dispatch-bound analogue of `dense tensor lanes`.
 ///
-/// Measured from `examples/work_meter_calibration`'s steps/ms section, which
-/// tries two shapes and keeps the slower: a flat loop of machine-word
-/// additions (~1,470–1,838 steps/ms) and a trampolined user-word tail call —
-/// the same construction as `cli::step_limit_tests::DOWN_PROBE` — which is
-/// dearer because every iteration pays a dictionary lookup and a frame push,
-/// not just an arithmetic op (773–890 steps/ms observed). The trampoline sets
+/// Measured by `scripts/wasm-profile-calibration.mjs`, which tries two
+/// shapes and keeps the slower: a flat loop of machine-word additions (785
+/// steps/ms observed) and a trampolined user-word tail call — the same
+/// construction as `cli::step_limit_tests::DOWN_PROBE` — which is dearer
+/// because every iteration pays a dictionary lookup and a frame push, not
+/// just an arithmetic op (406–419 steps/ms observed). The trampoline sets
 /// the floor, same as the numeric and collection meters: minimum of several
-/// runs kept for the same conservative reason. **Container-specific:
-/// re-measure on deployment hardware.**
-const EXECUTION_STEPS_FLOOR_RATE_STEPS_PER_MS: u64 = 773;
+/// runs kept for the same conservative reason. **Container- and
+/// engine-specific: re-measure with the same script on deployment
+/// hardware.**
+const EXECUTION_STEPS_FLOOR_RATE_STEPS_PER_MS: u64 = 406;
 
 /// Default cap on words executed in one `execute` call — `executionSteps`.
 /// [`super::interpreter_core::DEFAULT_MAX_EXECUTION_STEPS`] re-exports this
@@ -174,6 +200,11 @@ const EXECUTION_STEPS_FLOOR_RATE_STEPS_PER_MS: u64 = 773;
 /// threaded through `--step-limit` / `stepLimit`), so raising this default
 /// only widens the playground and native-CLI budget; MCP's is untouched.
 ///
+/// Like the two work budgets, this was first calibrated on native and moved
+/// again once that was found not to be a valid proxy for WASM (see
+/// [`DEFAULT_MAX_NUMERIC_WORK`]'s doc comment) — down, this time: WASM's
+/// dispatch floor measured slower than native's on this container.
+///
 /// A budget this large is not something a fast test should try to exhaust by
 /// actually running it — unlike the two work meters, which a single wide
 /// operand can reach in microseconds, reaching a step *count* costs real wall
@@ -190,22 +221,17 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize =
 /// Derived the same way as [`DEFAULT_MAX_NUMERIC_WORK`]:
 /// [`DEFAULT_HOST_TIME_BUDGET_MS`] ×
 /// [`COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS`]. **No longer twice the numeric
-/// budget.** It used to be defined as `2 * DEFAULT_MAX_NUMERIC_WORK`, which
-/// was itself a derived relationship — the two floor rates measured 14,465
-/// and 30,800 units/ms on the reference container in
-/// `docs/dev/collection-word-billing-2026-08-13.md` §6, a ratio of ~2.1 that
-/// the `2×` constant captured. The 2026-08-14 de-quadraticization follow-up
-/// predicted this ratio would move once the scan family stopped being a
-/// linear scan (`docs/dev/collection-word-dequadraticization-2026-08-14.md`
-/// §5: "the 2 in `2 * DEFAULT_MAX_NUMERIC_WORK` may no longer hold"), and on
-/// this container it did: the two floor rates now measure 4,660 and 30,176,
-/// a ratio of ~6.5. Hard-coding a multiplier onto a number that already
-/// depends on which path happens to be slowest today, and which changes
-/// character with the algorithm, was recording a coincidence as a rule. Each
-/// budget is now derived independently from its own measured floor, and they
-/// only need to agree on the *time* they bound, which they do by
-/// construction (both use the same [`DEFAULT_HOST_TIME_BUDGET_MS`]) rather
-/// than by one being defined in terms of the other.
+/// budget**, and not a fixed ratio to it at all. It used to be defined as
+/// `2 * DEFAULT_MAX_NUMERIC_WORK`, a relationship that was itself derived
+/// once — the two floor rates measured 14,465 and 30,800 units/ms on the
+/// reference container in `docs/dev/collection-word-billing-2026-08-13.md`
+/// §6, a ratio of ~2.1 that the `2×` constant captured — but a ratio between
+/// two independently-measured rates is not a rule, and it moved: the
+/// 2026-08-14 de-quadraticization follow-up predicted it might once the scan
+/// family stopped being a linear scan, and the same day's `Fraction::hash`
+/// fix moved it again. Each budget is derived independently from its own
+/// measured floor; they only need to agree on the *time* they bound, which
+/// they do by construction (both use the same [`DEFAULT_HOST_TIME_BUDGET_MS`]).
 pub const DEFAULT_MAX_COLLECTION_WORK: u64 =
     DEFAULT_HOST_TIME_BUDGET_MS * COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS;
 
@@ -220,16 +246,19 @@ pub const DEFAULT_MAX_COLLECTION_WORK: u64 =
 /// a claim rather than a control (`profile_liveness_tests`, and the account of
 /// exactly this failure mode in `docs/dev/mcp-host-profiles.md`'s "what each
 /// MCP-declared limit is pinned by" section). Re-checked against the
-/// 2026-08-14 re-derivation of `DEFAULT_MAX_NUMERIC_WORK`: the widening chain
-/// that first crosses 1,000,000 bits (74 repeated multiplications by a
-/// 4096-digit constant) charges 122,321,640 units, ~87% of the new
-/// 139,800,000 budget — close, the same margin `bigintBits` already runs at
-/// under the MCP profile (86%), because an N-limb integer costs about N²/4
-/// limb-operations by construction and the two ceilings are the closest pair
-/// for exactly that reason. Left unchanged because it still fires by name
-/// with the numeric-work ceiling as backstop, not because a size-based
-/// criterion for it has been written down (`host-profile-derivation-handoff.md`
-/// §6 lists this honestly as unmeasured).
+/// WASM-calibrated `DEFAULT_MAX_NUMERIC_WORK`: the widening chain that first
+/// crosses 1,000,000 bits (74 repeated multiplications by a 4096-digit
+/// constant) charges 122,321,640 units — a fixed cost, deterministic from the
+/// pricing formula and independent of which host measured the floor rate —
+/// which is ~39% of the current 311,190,000 budget (was ~87% under the
+/// native-calibrated 139,800,000 this replaced; still comparable to the
+/// margin `bigintBits` runs at under the MCP profile, 86%, because an N-limb
+/// integer costs about N²/4 limb-operations by construction and the two
+/// ceilings are the closest pair for exactly that reason). Left unchanged
+/// because it still fires by name with the numeric-work ceiling as backstop,
+/// not because a size-based criterion for it has been written down
+/// (`host-profile-derivation-handoff.md` §6 lists this honestly as
+/// unmeasured).
 pub const DEFAULT_MAX_BIGINT_BITS: u64 = 1_000_000;
 
 /// Default cap on the number of algebraic terms a single continued-fraction /
@@ -240,16 +269,23 @@ pub const DEFAULT_MAX_BIGINT_BITS: u64 = 1_000_000;
 /// the numeric-work budget shrank to match this container's measured floor
 /// rate (`docs/dev/host-profile-derivation-handoff.md` §4): the doubling
 /// cascade that first exceeds 100,000 terms (131,072 terms, at factor 17)
-/// charges 520,124,416 units — nearly 4x the new 139,800,000 budget, so
-/// `numericWork` would always answer first and the term ceiling would never
-/// fire in its life, exactly the failure `profile_liveness_tests` exists to
-/// catch (see the module-level docs on that file, and the identical MCP-side
-/// history: `max_algebraic_terms` was 4,096 there for the same reason before
-/// being lowered to 512). 10,000 is chosen the same way 512 was for the MCP
+/// charges 520,124,416 units — over the 311,190,000 budget this constant is
+/// checked against now, and further still over the 139,800,000 the
+/// native-calibrated first attempt would have shipped — so `numericWork`
+/// would always answer first and the term ceiling would never fire in its
+/// life, exactly the failure `profile_liveness_tests` exists to catch (see
+/// the module-level docs on that file, and the identical MCP-side history:
+/// `max_algebraic_terms` was 4,096 there for the same reason before being
+/// lowered to 512). 10,000 is chosen the same way 512 was for the MCP
 /// profile: the cascade that first crosses it (16,384 terms, at factor 14)
-/// charges 50,356,224 units, ~36% of the work budget — comfortably reachable
-/// with room to spare, not cut close the way `bigintBits` is. Like
-/// `DEFAULT_MAX_BIGINT_BITS`, this is not itself derived from a stated
-/// size-legibility criterion; it is chosen to be *live*, which is a weaker
-/// and more urgent property than being *right*.
+/// charges 50,356,224 units — a fixed, host-independent cost — ~16% of the
+/// current work budget (was ~36% under the smaller native-calibrated one;
+/// either way comfortably reachable with room to spare, not cut close the
+/// way `bigintBits` is). Left at 10,000 rather than raised back toward
+/// 100,000 now that the budget has more room: the value was never meant to
+/// track the budget's exact size, only to stay live under it, and chasing a
+/// bigger number each time the budget moves is churn without a principle
+/// behind it. Like `DEFAULT_MAX_BIGINT_BITS`, this is not itself derived
+/// from a stated size-legibility criterion; it is chosen to be *live*, which
+/// is a weaker and more urgent property than being *right*.
 pub const DEFAULT_MAX_ALGEBRAIC_TERMS: usize = 10_000;
