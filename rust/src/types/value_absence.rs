@@ -27,8 +27,6 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::UnknownWord => AbsenceOrigin::UnknownWord,
         NilReason::ExecutionFailure => AbsenceOrigin::ExecutionFailure,
         NilReason::Undecidable => AbsenceOrigin::ComparisonBudget,
-        NilReason::NoData => AbsenceOrigin::HostEnvironment,
-        NilReason::PortDisconnected => AbsenceOrigin::HostEnvironment,
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
         NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,
         NilReason::DomainMiss => AbsenceOrigin::DomainMiss,

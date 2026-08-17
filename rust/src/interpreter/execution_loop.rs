@@ -115,8 +115,6 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         | NilReason::InvalidLens
         | NilReason::ExecutionFailure
         | NilReason::Undecidable
-        | NilReason::NoData
-        | NilReason::PortDisconnected
         | NilReason::SpaceExhausted
         // No `ErrorCategory` names a domain miss or an unavailable diagnostic,
         // and inventing one would add a category with no `AjisaiError` behind
