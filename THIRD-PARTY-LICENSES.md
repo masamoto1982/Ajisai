@@ -10,10 +10,7 @@ listed separately at the end.
 
 Almost all redistributed dependencies are under permissive licenses (MIT,
 Apache-2.0, BSD, ISC, Zlib, Unicode) and impose no source-disclosure
-obligation on Ajisai. The one exception is the desktop-only `serialport`
-crate (**MPL-2.0**, a *file-level* weak copyleft) — see the note in the
-desktop section below; it does not affect Ajisai's own source. There are no
-strong-copyleft (GPL/LGPL) dependencies.
+obligation on Ajisai. There are no strong-copyleft (GPL/LGPL) dependencies.
 
 ---
 
@@ -75,17 +72,9 @@ published with each crate on <https://crates.io> / its source repository.
 | `tauri-plugin-fs` | MIT OR Apache-2.0 |
 | `tauri-plugin-dialog` | MIT OR Apache-2.0 |
 | `tauri-plugin-store` | MIT OR Apache-2.0 |
-| `serialport` | MPL-2.0 ⚠ see note |
 | `@tauri-apps/api`, `@tauri-apps/plugin-*` (JS) | MIT OR Apache-2.0 |
 
-> **Note on `serialport`:** the `serialport` crate is licensed under
-> **MPL-2.0**, a *file-level* copyleft. MPL-2.0 only requires that
-> modifications to the crate's *own* source files be shared; it imposes **no**
-> obligation on Ajisai's own source, and unmodified redistribution inside the
-> desktop binary is permitted provided the MPL text and source availability are
-> preserved. Source: <https://github.com/serialport/serialport-rs>. If you
-> prefer to avoid MPL entirely, the serial feature can be gated out of the
-> desktop build.
+
 
 ---
 

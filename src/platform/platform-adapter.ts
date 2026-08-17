@@ -84,50 +84,12 @@ export interface ExecutionConfig {
     readonly stepLimit?: number;
 }
 
-export interface SerialPortInfo {
-    readonly portId: string;
-    readonly label?: string;
-}
 
-/** Received bytes drained from one port, plus its host-reported connection state. */
-export interface SerialInboxData {
-    readonly portId: string;
-    readonly bytes: number[];
-    readonly disconnected: boolean;
-}
-
-/**
- * Host serial-port capability. The interpreter core never calls this directly;
- * it emits `SERIAL:` commands that the output dispatcher forwards here. The
- * interface is shaped for the stricter web case (capability detection,
- * user-gesture-driven access) so a native Tauri backend satisfies it trivially.
- *
- * Phase 1 covers the outbound methods. `drainInbox` is the Phase-2 receive
- * seam: it returns the bytes received since the previous call, to be injected
- * into the next execution snapshot.
- */
-export interface SerialAdapter {
-    /** Capability detection: false when the host has no serial API. */
-    readonly available: boolean;
-    /** Prompt the user to grant a port (web requires a user gesture). */
-    requestAccess(): Promise<SerialPortInfo | null>;
-    listPorts(): Promise<SerialPortInfo[]>;
-    open(portId: string): Promise<void>;
-    configure(portId: string, options: { readonly baudRate: number }): Promise<void>;
-    write(portId: string, bytes: Uint8Array): Promise<void>;
-    flush(portId: string): Promise<void>;
-    /** Received bytes for one port since the last drain. */
-    drainInbox(portId: string): Uint8Array;
-    /** Drain every open port's received bytes, for injection into a run's snapshot. */
-    drainAllInboxes(): SerialInboxData[];
-    close(portId: string): Promise<void>;
-}
 
 export interface PlatformAdapter {
     readonly persistence: Persistence;
     readonly fileIO: FileIO;
     readonly runtime: Runtime;
-    readonly serial: SerialAdapter;
     /**
      * Where a platform surfaces host execution settings (§5.3 water levels).
      * Both current adapters return the empty config (all defaults); a Tauri

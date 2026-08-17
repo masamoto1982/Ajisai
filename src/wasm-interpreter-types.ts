@@ -74,11 +74,7 @@ export interface AjisaiInterpreter {
     // Cost-model counters (SPECIFICATION.html §4.8): observational only,
     // session-cumulative, reset with the interpreter.
     collect_runtime_metrics(): RuntimeMetricsSnapshot;
-    // Serial RX inbox injection (SPECIFICATION.html §9.4). Filled before execution
-    // from the platform serial adapter; drained by SERIAL@READ.
-    update_serial_inbox(portId: string, bytes: Uint8Array): void;
-    mark_serial_disconnected(portId: string): void;
-    clear_serial_inboxes(): void;
+
 }
 
 /**
