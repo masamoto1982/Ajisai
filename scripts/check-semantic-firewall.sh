@@ -89,7 +89,7 @@ check_user_visible_absent 'memoization vocabulary' '[Mm]emoiz'
 # describe Ajisai as it currently is. History and superseded designs live in
 # docs/dev/, which defines nothing. This catches the framing half of the
 # clause; check-reading-surfaces.mjs catches the vocabulary half.
-READING_SURFACES=(README.md public/docs/index.html SPECIFICATION.html spec/language-semantics.md spec/gui-semantics.md)
+READING_SURFACES=(README.md public/docs/index.html public/docs/ja/index.html SPECIFICATION.html spec/language-semantics.md spec/gui-semantics.md)
 
 check_absent \
   'history framing on a reading surface (LANG.AUTHORITY.PRESENT)' \
