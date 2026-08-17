@@ -442,6 +442,9 @@
             </div>
         </div>
         <div class="header-actions">
+            <!-- 多言語化: 日本語版 (public/docs/ja/) への導線。現在の #section は
+                 JS で引き継ぐ（syncFromHash 等と同じ script ブロック内）。 -->
+            <a href="ja/index.html" class="btn" id="lang-switch" hreflang="ja">日本語</a>
             <!-- Reference 側ではアプリ本体への動線として Playground ボタンを置く。 -->
             <a href="../index.html" class="btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -2355,6 +2358,19 @@ COND</code></td>
 
     <script>
         document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+        // 言語切替リンクは現在表示中の頁 (#hash) を引き継ぐ。頁切り替え
+        // (hashchange) のたびに追従させる必要があるので、読み込み時だけでなく
+        // hashchange でも更新する。
+        (function () {
+            var langSwitch = document.getElementById('lang-switch');
+            if (!langSwitch) return;
+            function syncLangSwitch() {
+                langSwitch.href = 'ja/index.html' + window.location.hash;
+            }
+            window.addEventListener('hashchange', syncLangSwitch);
+            syncLangSwitch();
+        })();
 
         // 各サンプルの「Playground で開く」リンクに、そのサンプルの表（先頭行・
         // サンプルコード列）の本文を埋め込んだ URL を設定する。アプリ本体は

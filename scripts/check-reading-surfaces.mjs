@@ -68,7 +68,7 @@ const EXAMPLE_NAMES = new Set([
 // not a Word. `?` is symbol-shaped, so it is listed in both places.
 const HOST_COMMANDS = new Set(['RESET', 'CLEAR', 'LOOKUP', '?']);
 
-const SURFACES = ['README.md', 'public/docs/index.html', 'SPECIFICATION.html'];
+const SURFACES = ['README.md', 'public/docs/index.html', 'public/docs/ja/index.html', 'SPECIFICATION.html'];
 
 // Word-shaped: upper-case initial, then the characters an Ajisai name may use.
 // Anything else inside <code> is a literal, a fragment, or punctuation.
@@ -78,7 +78,13 @@ const WORD_SHAPED = /^[A-Z][A-Z0-9@?!'-]*$/;
 // This half of the check did not exist, and the whole retired set — `,,`, `<=`,
 // `>=`, `<>` and `&` — sat in the in-app Reference presenting itself as usable
 // sugar while the gate reported success, because a symbol is not word-shaped.
-const SYMBOL_SHAPED = /^[^A-Za-z0-9\s]+$/;
+// Every Ajisai symbol is ASCII punctuation, so the class is restricted to
+// ASCII punctuation rather than "anything that is not a Latin letter or
+// digit": a translated surface (public/docs/ja/) sets prose like <code>分子/分母</code>
+// beside real tokens, and CJK characters are prose, not a symbol claim, the
+// same way the Latin word "numerator" beside them is prose rather than a
+// Word claim.
+const SYMBOL_SHAPED = /^[!-/:-@[-`{-~]+$/;
 
 // Characters a document names in order to say the language does *not* allocate
 // them, plus prose placeholders inside shape sketches. Each is a deliberate
