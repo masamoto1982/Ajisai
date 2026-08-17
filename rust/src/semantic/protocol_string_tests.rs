@@ -82,11 +82,10 @@ fn every_nil_reason_has_a_distinct_lower_camel_protocol_string() {
         NilReason::UnknownWord,
         NilReason::ExecutionFailure,
         NilReason::Undecidable,
-        NilReason::NoData,
-        NilReason::PortDisconnected,
         NilReason::SpaceExhausted,
         NilReason::DomainMiss,
         NilReason::NotAvailable,
+        NilReason::Literal,
     ];
     let mut seen: Vec<&str> = Vec::new();
     for reason in &all {
