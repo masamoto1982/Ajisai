@@ -40,6 +40,14 @@ is not here does not exist under another spelling. When unsure, call
 Out of domain, and not worth a call: transcendental functions, floating point,
 I/O, and anything that is really a program rather than a calculation.
 
+Ajisai also carries no external or real-world reference data — no exchange
+rates, no calendars, no reading speeds, no other language's syntax semantics.
+Do not invent a plausible-looking number for one of those and run it through
+`compute` to dress a guess up as an exact answer; if the question needs a
+real-world fact rather than a value already given or derivable from first
+principles inside this domain, answer directly without a call, or say you
+don't know.
+
 ## 1. Choose a tool
 
 | you want | call | pass |

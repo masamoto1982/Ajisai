@@ -166,13 +166,27 @@ export const TOOLS = [
     // `dict`: none exist) because nothing readable before the first call said
     // what the Words are called. Naming the families and the Words in them is
     // the cheapest thing that answers both.
+    // A third failure mode showed up only in Japanese. Live evaluation
+    // against claude-opus-5 (eval/traces/claude-opus-5-full-corpus.json)
+    // found three negative cases — irrelevant-currency, irrelevant-estimate,
+    // irrelevant-debug, none of them Ajisai's domain — that passed restraint
+    // in English but failed in Japanese: the model invented a plausible
+    // real-world number (an exchange rate, characters-per-page, a step count
+    // for someone else's for-loop) and ran it through this tool, so the
+    // guess came back dressed as an exact result. The description at the
+    // time was identical in both languages, and irrelevantToolRate was 0.10
+    // en vs. 0.25 ja on that same text, so the gap was the model's response
+    // to one weak sentence differing by language, not missing Japanese
+    // wording. The closing sentence below names the failure directly instead
+    // of leaving "out of domain" to be inferred.
     description:
       "Execute a bounded Ajisai program and return its stack. Ajisai is postfix (RPN) and its numbers are exact rationals closed under square root — no floats, so results are reproducible and comparisons decide. " +
       "Its 65 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR ROUND ABS NEG MIN MAX SQRT SUM), comparison (EQ NEQ LT LTE GT GTE), boolean logic (AND OR NOT), " +
       "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE TALLY GROUP ZIP RANGE FILL TAKE CONCAT REVERSE LENGTH GET PUT INDEX-OF), " +
       "higher-order blocks (MAP FILTER FOLD ANY ALL), text (CHARS JOIN TOKENIZE TRIM NUM STR), and absence (NIL NIL? VENT), plus DEF to name your own. " +
       "Word names are exact and case-sensitive; the full list is the ajisai://vocabulary resource and word_contract answers a near-miss with suggestions, so look a name up rather than guessing it. " +
-      "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: transcendentals, floats, I/O, and general-purpose programming.",
+      "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: transcendentals, floats, I/O, and general-purpose programming. " +
+      "Ajisai also has no external or real-world reference data of its own — no exchange rates, no calendars, no reading speeds, no other language's syntax semantics. Do not invent a plausible-looking number for one of those and run it through this tool to dress a guess up as an exact answer; if the question needs a real-world fact rather than a value already given or derivable from first principles inside this domain, answer directly without a call, or say you don't know.",
     inputSchema: sourceSchema,
     outputSchema: envelopeSchema,
     annotations: READ_ONLY_ANNOTATIONS,
