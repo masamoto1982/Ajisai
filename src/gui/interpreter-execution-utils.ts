@@ -2,18 +2,10 @@
 import {
     applyInterpreterSnapshot,
     createInterpreterSnapshot,
-    type InterpreterSnapshot,
-    type SerialInboxEntry
+    type InterpreterSnapshot
 } from '../workers/interpreter-snapshot';
 import { getPlatform } from '../platform';
 import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
-
-// Drain any host-received serial bytes so this run's SERIAL@READ sees the data
-// that arrived since the previous run. Returns undefined when nothing is open.
-const collectSerialInbox = (): SerialInboxEntry[] | undefined => {
-    const entries = getPlatform().serial.drainAllInboxes();
-    return entries.length > 0 ? entries : undefined;
-};
 
 // A word is addressed by its bare name. The dictionary has two tiers and User
 // is one of them (LANG.DICTIONARY.RESOLUTION), so there is nothing for a
@@ -40,7 +32,6 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
         // format before this run executes (SPEC §2.3).
         stackSnapshot: interpreter.snapshot_stack(),
         userWords: collectUserWords(interpreter),
-        serialInbox: collectSerialInbox(),
         // Host-configured step budget (SPEC §5.3 water level); undefined
         // keeps the interpreter default of 100,000.
         stepLimit: getPlatform().executionConfig.stepLimit

@@ -265,20 +265,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn update_input_buffer(&mut self, _text: String) {}
 
-    /// Inject the host-received bytes for a serial port (Section 9.4). Replaces
-    /// any buffer previously set for this port id and clears the port's
-    /// disconnected flag. `SERIAL@READ` drains this buffer.
-    #[wasm_bindgen]
-    pub fn update_serial_inbox(&mut self, _port_id: String, _bytes: Vec<u8>) {}
 
-    /// Mark a serial port as disconnected by the host. Once its inbox is empty,
-    /// `SERIAL@READ` projects `NilReason::PortDisconnected`.
-    #[wasm_bindgen]
-    pub fn mark_serial_disconnected(&mut self, _port_id: String) {}
-
-    /// Clear all injected serial receive buffers and disconnected flags.
-    #[wasm_bindgen]
-    pub fn clear_serial_inboxes(&mut self) {}
 
     #[wasm_bindgen]
     pub fn extract_io_output_buffer(&self) -> String {

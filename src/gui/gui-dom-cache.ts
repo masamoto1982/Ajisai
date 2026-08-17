@@ -33,7 +33,6 @@ export interface GUIElements {
     readonly mobileDictionarySearch: HTMLInputElement;
     readonly mobileDictionarySearchClearBtn: HTMLButtonElement;
     readonly copyOutputBtn: HTMLButtonElement;
-    readonly serialConnectBtn: HTMLButtonElement | null;
 }
 
 type ElementConstructor<T extends HTMLElement> = {
@@ -108,8 +107,7 @@ export const cacheElements = (): GUIElements => ({
     mobilePanelSelect: requireElementById('mobile-panel-select', HTMLSelectElement),
     mobileDictionarySearch: requireElementById('mobile-dictionary-search', HTMLInputElement),
     mobileDictionarySearchClearBtn: requireElementById('mobile-dictionary-search-clear-btn', HTMLButtonElement),
-    copyOutputBtn: requireElementById('copy-output-btn', HTMLButtonElement),
-    serialConnectBtn: optionalElementById('serial-connect-btn', HTMLButtonElement)
+    copyOutputBtn: requireElementById('copy-output-btn', HTMLButtonElement)
 });
 
 export const extractDisplayElements = (elements: GUIElements): DisplayElements => ({

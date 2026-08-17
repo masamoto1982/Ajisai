@@ -62,8 +62,6 @@ const createFakeInterpreter = (): FakeInterpreter => {
             return { status: 'OK' } as ExecuteResult;
         },
         set_max_execution_steps: () => { /* budget is not modelled here */ },
-        update_serial_inbox: () => { /* no serial in this model */ },
-        mark_serial_disconnected: () => { /* no serial in this model */ },
     };
 
     return fake as FakeInterpreter;

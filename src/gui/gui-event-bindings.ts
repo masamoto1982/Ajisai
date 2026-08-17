@@ -184,26 +184,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
     elements.importJsonBtn?.addEventListener('click', () => persistence.importJsonAsVector());
 
-    {
-        const serialBtn = elements.serialConnectBtn;
-        const serial = getPlatform().serial;
-        if (serialBtn && serial.available) {
-            serialBtn.hidden = false;
-            serialBtn.addEventListener('click', async () => {
-                // requestAccess() must run inside this user gesture (Web Serial).
-                try {
-                    const info = await serial.requestAccess();
-                    if (info) {
-                        display.renderInfo(`Serial port connected as '${info.portId}'.`, true);
-                    } else {
-                        display.renderInfo('No serial port was selected.', true);
-                    }
-                } catch (error) {
-                    display.renderError(error as Error);
-                }
-            });
-        }
-    }
+
 
     elements.codeInput.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' && e.shiftKey) {
