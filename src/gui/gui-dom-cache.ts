@@ -54,13 +54,7 @@ function requireElementById<T extends HTMLElement>(id: string, expectedConstruct
     return element as T;
 }
 
-function optionalElementById<T extends HTMLElement>(id: string, expectedConstructor: ElementConstructor<T>): T | null {
-    const element = document.getElementById(id);
-    if (!element) {
-        return null;
-    }
-    return element instanceof expectedConstructor ? (element as T) : null;
-}
+
 
 function requireElementBySelector<T extends HTMLElement>(selector: string, expectedConstructor: ElementConstructor<T>): T {
     const element = document.querySelector(selector);

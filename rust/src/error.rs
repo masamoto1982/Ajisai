@@ -37,7 +37,6 @@ pub enum NilReason {
     // NIL node carrying a reason, so no `NilReason` value represents U. There
     // is no reverse decode of `NilReason` from a protocol string, so the
     // retired name needs no boundary handling.
-
     /// A well-formed generative operation (`RANGE`, `FILL`) whose materialized
     /// result would exceed the space water level (`max_materialized_elements`).
     /// The Bubble Rule projects this to NIL with `absence.origin = spaceBudget`
@@ -256,7 +255,6 @@ impl NilReason {
         NilReason::UnknownWord,
         NilReason::ExecutionFailure,
         NilReason::Undecidable,
-
         NilReason::SpaceExhausted,
         NilReason::DomainMiss,
         NilReason::NotAvailable,

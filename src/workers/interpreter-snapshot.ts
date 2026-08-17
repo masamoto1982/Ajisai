@@ -60,5 +60,4 @@ export const applyInterpreterSnapshot = (
         && snapshot.stepLimit > 0) {
         interpreter.set_max_execution_steps(snapshot.stepLimit);
     }
-    }
 };

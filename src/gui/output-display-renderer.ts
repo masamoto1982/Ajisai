@@ -2,7 +2,6 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import type { Value, ExecuteResult, RuntimeMetricsSnapshot } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
-import { getPlatform } from '../platform';
 import { valueToLatex } from './value-latex';
 import {
     createRenderBudget,

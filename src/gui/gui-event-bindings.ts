@@ -1,5 +1,4 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import { getPlatform } from '../platform';
 import type { Display } from './output-display-renderer';
 import type { Editor } from './code-input-editor';
 import type { MobileHandler, ViewMode } from './mobile-view-switcher';
