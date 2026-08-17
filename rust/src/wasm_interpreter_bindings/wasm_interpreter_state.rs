@@ -265,8 +265,6 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn update_input_buffer(&mut self, _text: String) {}
 
-
-
     #[wasm_bindgen]
     pub fn extract_io_output_buffer(&self) -> String {
         String::new()
