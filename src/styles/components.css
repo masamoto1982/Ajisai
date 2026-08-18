@@ -247,14 +247,14 @@
 }
 
 
-#clear-btn {
+#editor-clear-btn {
     top: 0.5rem;
     right: 0.5rem;
     z-index: 2;
     color: var(--input-text);
 }
 
-#format-btn {
+#editor-format-btn {
     bottom: 0.5rem;
     right: 0.5rem;
     z-index: 2;
@@ -274,8 +274,8 @@
     display: none;
 }
 
-#code-input:placeholder-shown ~ #clear-btn,
-#code-input:placeholder-shown ~ #format-btn {
+#code-input:placeholder-shown ~ #editor-clear-btn,
+#code-input:placeholder-shown ~ #editor-format-btn {
     display: none;
 }
 

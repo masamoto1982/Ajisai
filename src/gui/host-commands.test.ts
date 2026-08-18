@@ -1,6 +1,7 @@
-// `RESET`, `CLEAR` and a lookup are answered by the host, not the language. The
-// two rules that keep them from eating a program are what these tests pin: the
-// request must be the whole input, and a User Word of that name wins.
+// `RESET`, `STACK-CLEAR`, `EDITOR-CLEAR` and a lookup are answered by the
+// host, not the language. The two rules that keep them from eating a program
+// are what these tests pin: the request must be the whole input, and a User
+// Word of that name wins.
 
 import { describe, expect, test } from 'vitest';
 import { resolveHostCommand } from './host-commands';
@@ -9,27 +10,30 @@ const noUserWords = () => false;
 const userWords = (...names: string[]) => (name: string) => names.includes(name);
 
 describe('resolveHostCommand', () => {
-    test('recognizes the two bare host commands typed alone', () => {
+    test('recognizes the three bare host commands typed alone', () => {
         expect(resolveHostCommand('RESET', noUserWords)).toEqual({ kind: 'RESET' });
-        expect(resolveHostCommand('CLEAR', noUserWords)).toEqual({ kind: 'CLEAR' });
+        expect(resolveHostCommand('STACK-CLEAR', noUserWords)).toEqual({ kind: 'STACK-CLEAR' });
+        expect(resolveHostCommand('EDITOR-CLEAR', noUserWords)).toEqual({ kind: 'EDITOR-CLEAR' });
     });
 
     test('matches case-insensitively, as Word lookup does', () => {
-        expect(resolveHostCommand('clear', noUserWords)).toEqual({ kind: 'CLEAR' });
+        expect(resolveHostCommand('stack-clear', noUserWords)).toEqual({ kind: 'STACK-CLEAR' });
+        expect(resolveHostCommand('editor-clear', noUserWords)).toEqual({ kind: 'EDITOR-CLEAR' });
         expect(resolveHostCommand('  Reset  ', noUserWords)).toEqual({ kind: 'RESET' });
     });
 
     test('a name inside a program is not a host command', () => {
-        expect(resolveHostCommand('1 CLEAR', noUserWords)).toBeNull();
-        expect(resolveHostCommand('CLEAR CLEAR', noUserWords)).toBeNull();
-        expect(resolveHostCommand("{ CLEAR } 'X' DEF", noUserWords)).toBeNull();
+        expect(resolveHostCommand('1 STACK-CLEAR', noUserWords)).toBeNull();
+        expect(resolveHostCommand('STACK-CLEAR STACK-CLEAR', noUserWords)).toBeNull();
+        expect(resolveHostCommand("{ EDITOR-CLEAR } 'X' DEF", noUserWords)).toBeNull();
     });
 
     test('a User Word of the same name wins', () => {
-        expect(resolveHostCommand('CLEAR', userWords('CLEAR'))).toBeNull();
+        expect(resolveHostCommand('STACK-CLEAR', userWords('STACK-CLEAR'))).toBeNull();
+        expect(resolveHostCommand('EDITOR-CLEAR', userWords('EDITOR-CLEAR'))).toBeNull();
         expect(resolveHostCommand('RESET', userWords('RESET'))).toBeNull();
         // …and only that name: an unrelated definition changes nothing.
-        expect(resolveHostCommand('CLEAR', userWords('DBL'))).toEqual({ kind: 'CLEAR' });
+        expect(resolveHostCommand('STACK-CLEAR', userWords('DBL'))).toEqual({ kind: 'STACK-CLEAR' });
     });
 
     // ── Looking a Word up ─────────────────────────────────────────────────
@@ -65,11 +69,11 @@ describe('resolveHostCommand', () => {
     });
 
     test('the name looked up is never treated as a definition to shadow', () => {
-        // Only the *mark* can be shadowed. Asking about `CLEAR` asks about
-        // `CLEAR`, whether or not the session defines it.
-        expect(resolveHostCommand("'CLEAR' ?", userWords('CLEAR'))).toEqual({
+        // Only the *mark* can be shadowed. Asking about `STACK-CLEAR` asks
+        // about `STACK-CLEAR`, whether or not the session defines it.
+        expect(resolveHostCommand("'STACK-CLEAR' ?", userWords('STACK-CLEAR'))).toEqual({
             kind: 'LOOKUP',
-            name: 'CLEAR'
+            name: 'STACK-CLEAR'
         });
         expect(resolveHostCommand("'ADD' ?", userWords('?'))).toBeNull();
         expect(resolveHostCommand("'ADD' LOOKUP", userWords('LOOKUP'))).toBeNull();

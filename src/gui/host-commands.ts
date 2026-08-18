@@ -8,12 +8,14 @@
 /// interpreter.
 ///
 /// These are not Words, and the distinction is worth keeping sharp. `RESET`
-/// discards the session and `CLEAR` discards the stack, and neither belongs in
-/// the vocabulary: a program must not be able to throw away the values it was
-/// handed, or the dictionary it was defined in. They are the typed spelling of
-/// controls that also exist as buttons and shortcuts — `Ctrl+Alt+Enter`, and
-/// the Stack area's `×` / `Shift+Alt+C` — for people who would rather not leave
-/// the keyboard.
+/// discards the session, `STACK-CLEAR` discards the stack, and `EDITOR-CLEAR`
+/// discards the typed text in the Input surface — none belong in the
+/// vocabulary: a program must not be able to throw away the values it was
+/// handed, the text it was typed as, or the dictionary it was defined in. They
+/// are the typed spelling of controls that also exist as buttons and
+/// shortcuts — `Ctrl+Alt+Enter` for Reset, the Stack area's `×` / `Ctrl+Alt+S`
+/// for Stack clear, and the Input area's `×` / `Ctrl+Alt+E` for Editor clear —
+/// for people who would rather not leave the keyboard.
 ///
 /// A lookup belongs here for a different reason. It used to be `LOOKUP`, a
 /// Word, and asking what `ADD` does went through the interpreter and came back
@@ -22,11 +24,12 @@
 /// person at the keyboard does, so the host reads the request itself.
 export type HostCommand =
     | { readonly kind: 'RESET' }
-    | { readonly kind: 'CLEAR' }
+    | { readonly kind: 'STACK-CLEAR' }
+    | { readonly kind: 'EDITOR-CLEAR' }
     | { readonly kind: 'LOOKUP'; readonly name: string };
 
 /// The bare names, each its own whole input.
-const BARE_COMMANDS = ['RESET', 'CLEAR'] as const;
+const BARE_COMMANDS = ['RESET', 'STACK-CLEAR', 'EDITOR-CLEAR'] as const;
 
 /// The two spellings of a lookup, `'ADD' ?` and `'ADD' LOOKUP`, in either the
 /// quoted form the reference teaches or a bare name.
@@ -44,13 +47,14 @@ const LOOKUP_PATTERN = /^(?:'([^']*)'|(\S+))\s+(\?|LOOKUP)$/i;
 /// Which host command `code` is, if any.
 ///
 /// Two rules keep a host command from eating a program. The request has to be
-/// the *whole* input, so `1 CLEAR` is a program and fails as an unknown word if
-/// `CLEAR` is not defined. And a User Word of the command's name wins: nothing
-/// reserves these names — `DEF` accepts them all — so without the check,
-/// defining `CLEAR` would produce a word that could never be called on its own,
-/// because the host would answer first and silently. For a lookup the name that
-/// must not be shadowed is the mark, `?` or `LOOKUP`, not the word being looked
-/// up: `'CLEAR' ?` asks about `CLEAR` whether or not `CLEAR` is defined. The
+/// the *whole* input, so `1 STACK-CLEAR` is a program and fails as an unknown
+/// word if `STACK-CLEAR` is not defined. And a User Word of the command's name
+/// wins: nothing reserves these names — `DEF` accepts them all — so without
+/// the check, defining `STACK-CLEAR` would produce a word that could never be
+/// called on its own, because the host would answer first and silently. For a
+/// lookup the name that must not be shadowed is the mark, `?` or `LOOKUP`, not
+/// the word being looked up: `'STACK-CLEAR' ?` asks about `STACK-CLEAR`
+/// whether or not `STACK-CLEAR` is defined. The
 /// language is what the user is here for; the convenience yields to it.
 ///
 /// Matching is case-insensitive, as Word lookup is.

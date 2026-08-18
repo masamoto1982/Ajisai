@@ -34,14 +34,17 @@ export const analyzeStackModifiers = (content: string): StackModifierState => {
 const DESKTOP_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
-    'Run → Shift+Enter',
-    'Step → Ctrl+Enter',
-    'Format → Shift+Alt+F',
-    'Clear stack → Shift+Alt+C',
-    'Suggestions → Ctrl+Space',
-    'Recall → Ctrl+Up / Ctrl+Down',
-    'Reset → Ctrl+Alt+Enter',
-    'Abort → Escape'
+    'Run this code             → Shift+Enter',
+    'Run one step at a time    → Ctrl+Enter',
+    'Format this code          → Shift+Alt+F',
+    'Look up a word            → \'NAME\' ?',
+    '',
+    'Clear the stack, keep your words     → Ctrl+Alt+S',
+    'Clear this editor, keep everything   → Ctrl+Alt+E',
+    'Reset: erase the stack, your words, everything → Ctrl+Alt+Enter',
+    '',
+    'Bring back your last program → Ctrl+Up / Ctrl+Down',
+    'Stop a running step          → Escape'
 ].join('\n');
 
 const MOBILE_EDITOR_PLACEHOLDER = [

@@ -66,7 +66,7 @@ const EXAMPLE_NAMES = new Set([
 // `LOOKUP` and `?` are here because reference prose is not a value: a program
 // can do nothing with the answer, so asking for it is the reader's action and
 // not a Word. `?` is symbol-shaped, so it is listed in both places.
-const HOST_COMMANDS = new Set(['RESET', 'CLEAR', 'LOOKUP', '?']);
+const HOST_COMMANDS = new Set(['RESET', 'STACK-CLEAR', 'EDITOR-CLEAR', 'LOOKUP', '?']);
 
 const SURFACES = ['README.md', 'public/docs/index.html', 'public/docs/ja/index.html', 'SPECIFICATION.html'];
 
