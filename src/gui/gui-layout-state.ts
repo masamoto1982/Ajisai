@@ -31,22 +31,22 @@ export const analyzeStackModifiers = (content: string): StackModifierState => {
 // keyboard shortcuts; mobile lists the equivalent touch gestures. A non-empty
 // placeholder also drives the :placeholder-shown CSS that hides the inline
 // clear/format buttons while the field is empty.
-// Casing is deliberate, not incidental: UPPERCASE names a word you can type
-// into the editor and run (a host command, same as `ADD` or `DEF` are Words),
-// lowercase describes an action that only exists as a shortcut or button.
-// Keeping that line sharp here is what stops RESET/STACK-CLEAR/EDITOR-CLEAR
-// from reading as three names for the same kind of danger.
+// Every operation here lives only as a shortcut (or, for the two clears, also
+// a button) — none can be typed into the editor and run. That is deliberate:
+// the vocabulary holds nothing that throws away the values a program was
+// handed, the text it was typed as, or the dictionary it was defined in, and
+// the Input surface holds nothing but the program being written.
 const DESKTOP_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
-    'run this code            → Shift+Enter',
-    'run one step at a time   → Ctrl+Enter',
-    'format this code         → Shift+Alt+F',
+    'run this code                  → Shift+Enter',
+    'run one step at a time         → Ctrl+Enter',
+    'format this code               → Shift+Alt+F',
+    'look up the word at the cursor → Ctrl+Alt+L',
     '',
-    'RESET (erase the stack, your words, everything) → Ctrl+Alt+Enter',
-    'STACK-CLEAR (erase the stack, keep your words)  → Ctrl+Alt+S',
-    'EDITOR-CLEAR (erase this text, keep everything) → Ctrl+Alt+E',
-    'LOOKUP (\'NAME\' ? shows what a word does)',
+    'clear the stack, keep your words   → Ctrl+Alt+S',
+    'clear this editor, keep everything → Ctrl+Alt+E',
+    'reset: erase the stack, your words, everything → Ctrl+Alt+Enter',
     '',
     'bring back your last program → Ctrl+Up / Ctrl+Down',
     'stop a running step          → Escape'
