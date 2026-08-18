@@ -170,6 +170,24 @@
             line-height: 1.5;
         }
 
+        /* 言語切替: ブランド行の Reference タグの右隣に置く、控えめな輪郭のみの
+           リンク。Playground ボタンと違い遷移先はこのページの言語版なので、
+           .btn ほどの主張は持たせない。 */
+        .lang-switch {
+            display: inline-block;
+            font-size: 0.75rem;
+            color: var(--color-text-light);
+            border: var(--border-main);
+            border-radius: 6px;
+            padding: 0.125rem 0.5rem;
+            line-height: 1.5;
+
+            &:hover {
+                color: var(--color-text);
+                border-color: var(--color-text-light);
+            }
+        }
+
         .header-actions {
             display: flex;
             justify-content: flex-end;
@@ -447,12 +465,24 @@
                     <h1>Ajisai</h1>
                 </a>
                 <span class="ref-tagline">リファレンス</span>
+                <!-- 多言語化: 英語版 (public/docs/) への導線。Reference タグの
+                     右隣が意味的に相応しい位置。現在の #section は JS で引き継ぐ。 -->
+                <a href="../index.html" class="lang-switch" id="lang-switch" hreflang="en">English</a>
             </div>
         </div>
         <div class="header-actions">
-            <!-- 多言語化: 英語版 (public/docs/) への導線。現在の #section は
-                 JS で引き継ぐ。 -->
-            <a href="../index.html" class="btn" id="lang-switch" hreflang="en">English</a>
+            <!-- MCP サーバーの導入手順（README の Install and connect 節、英語）
+                 への動線。設定情報の正典はそちら一箇所なので、内容を複製せず
+                 リンクする。 -->
+            <a href="https://github.com/masamoto1982/Ajisai/blob/main/tools/mcp-server/README.md#install-and-connect" class="btn" target="_blank" rel="noopener noreferrer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 22v-5"/>
+                    <path d="M9 8V2"/>
+                    <path d="M15 8V2"/>
+                    <path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>
+                </svg>
+                MCP
+            </a>
             <!-- Reference 側ではアプリ本体への動線として Playground ボタンを置く。 -->
             <a href="../../index.html" class="btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
