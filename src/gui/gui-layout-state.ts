@@ -31,20 +31,25 @@ export const analyzeStackModifiers = (content: string): StackModifierState => {
 // keyboard shortcuts; mobile lists the equivalent touch gestures. A non-empty
 // placeholder also drives the :placeholder-shown CSS that hides the inline
 // clear/format buttons while the field is empty.
+// Casing is deliberate, not incidental: UPPERCASE names a word you can type
+// into the editor and run (a host command, same as `ADD` or `DEF` are Words),
+// lowercase describes an action that only exists as a shortcut or button.
+// Keeping that line sharp here is what stops RESET/STACK-CLEAR/EDITOR-CLEAR
+// from reading as three names for the same kind of danger.
 const DESKTOP_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
-    'Run this code             → Shift+Enter',
-    'Run one step at a time    → Ctrl+Enter',
-    'Format this code          → Shift+Alt+F',
-    'Look up a word            → \'NAME\' ?',
+    'run this code            → Shift+Enter',
+    'run one step at a time   → Ctrl+Enter',
+    'format this code         → Shift+Alt+F',
     '',
-    'Clear the stack, keep your words     → Ctrl+Alt+S',
-    'Clear this editor, keep everything   → Ctrl+Alt+E',
-    'Reset: erase the stack, your words, everything → Ctrl+Alt+Enter',
+    'RESET (erase the stack, your words, everything) → Ctrl+Alt+Enter',
+    'STACK-CLEAR (erase the stack, keep your words)  → Ctrl+Alt+S',
+    'EDITOR-CLEAR (erase this text, keep everything) → Ctrl+Alt+E',
+    'LOOKUP (\'NAME\' ? shows what a word does)',
     '',
-    'Bring back your last program → Ctrl+Up / Ctrl+Down',
-    'Stop a running step          → Escape'
+    'bring back your last program → Ctrl+Up / Ctrl+Down',
+    'stop a running step          → Escape'
 ].join('\n');
 
 const MOBILE_EDITOR_PLACEHOLDER = [
