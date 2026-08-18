@@ -25,7 +25,7 @@ export interface ExecutionCallbacks {
     readonly showInfo: (text: string, append: boolean) => void;
     readonly highlightSourceRange: (start: number, end: number) => void;
     /// Discard every value on the stack, leaving the dictionary alone. Shared
-    /// with the Stack area's `×` and `Shift+Alt+C`, so all three routes are one
+    /// with the Stack area's `×` and `Ctrl+Alt+S`, so all three routes are one
     /// behavior.
     readonly clearStack: () => void;
     readonly showDocumentation: (text: string) => void;
@@ -203,11 +203,17 @@ export const createExecutionController = (
             await executeReset();
             return;
         }
-        if (hostCommand?.kind === 'CLEAR') {
+        if (hostCommand?.kind === 'STACK-CLEAR') {
             // `clearStack` redraws, reports and saves — the same call the `×`
             // and the shortcut make — so all this route adds is consuming the
             // command from the editor, exactly as a successful run does.
             clearStack();
+            clearEditor(false);
+            return;
+        }
+        if (hostCommand?.kind === 'EDITOR-CLEAR') {
+            // Clearing the editor consumes the typed command itself — the
+            // same effect the `×` and `Ctrl+Alt+E` produce directly.
             clearEditor(false);
             return;
         }

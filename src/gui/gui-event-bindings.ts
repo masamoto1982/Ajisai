@@ -128,12 +128,12 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.dictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
     elements.mobileDictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
 
-    elements.clearBtn.addEventListener('click', () => editor.clear());
+    elements.editorClearBtn.addEventListener('click', () => editor.clear());
     // Same control, same corner, same gesture as clearing the editor — the
     // Stack area's `×` throws away the values and keeps the dictionary, which
     // is what separates it from Reset.
     elements.stackClearBtn.addEventListener('click', () => clearStack());
-    elements.formatBtn.addEventListener('click', () => editor.format());
+    elements.editorFormatBtn.addEventListener('click', () => editor.format());
 
     // Reformat the editor before running it, so the source that defines words
     // (and therefore the stored definition) is tidied at execution time.
@@ -286,13 +286,19 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
             e.preventDefault();
             e.stopImmediatePropagation();
         }
-        // Shift+Alt+C clears the stack, following Shift+Alt+F for Format. It is
-        // bound on the window rather than the editor because the Stack area can
-        // hold focus, and `e.code` so the binding does not move with the layout.
-        // No confirmation: unlike Reset this loses only values, and the same
-        // values are one re-run away.
-        if (e.code === 'KeyC' && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        // Ctrl+Alt+S clears the stack and Ctrl+Alt+E clears the editor. Both are
+        // bound on the window rather than their buttons because the Stack area
+        // can hold focus, and `e.code` so the binding does not move with the
+        // layout. Neither confirms: unlike Reset, Stack clear loses only values
+        // (one re-run away) and Editor clear loses only unsaved typing
+        // (recoverable via Recall).
+        if (e.code === 'KeyS' && e.ctrlKey && e.altKey && !e.shiftKey && !e.metaKey) {
             clearStack();
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+        if (e.code === 'KeyE' && e.ctrlKey && e.altKey && !e.shiftKey && !e.metaKey) {
+            editor.clear();
             e.preventDefault();
             e.stopImmediatePropagation();
         }

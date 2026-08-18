@@ -125,8 +125,8 @@ export const createGUI = (): GUI => {
     // Clearing the stack keeps the dictionary — that is the whole point of
     // having it apart from Reset — so it is the interpreter's `clear_stack` and
     // nothing else, followed by a redraw and a save. One definition for all
-    // three routes to it: the Stack area's `×`, `Shift+Alt+C`, and the `CLEAR`
-    // host command typed in the editor.
+    // three routes to it: the Stack area's `×`, `Ctrl+Alt+S`, and the
+    // `STACK-CLEAR` host command typed in the editor.
     const clearStack = (): void => {
         const interpreter = INTERPRETER_CLIENT.getOptional();
         if (!interpreter) return;
