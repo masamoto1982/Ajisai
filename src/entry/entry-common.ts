@@ -49,10 +49,11 @@ export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
         return;
     }
     element.hidden = false;
-    element.textContent = `profile: ${profile.profile}`;
-    element.title = Object.entries(profile.limits)
-        .map(([name, value]) => `${name}: ${value.toLocaleString()}`)
-        .join('\n');
+    element.textContent = `resource limits: ${profile.profile}`;
+    element.title = [
+        'Resource limits enforced by this host:',
+        ...Object.entries(profile.limits).map(([name, value]) => `${name}: ${value.toLocaleString()}`),
+    ].join('\n');
 }
 
 export async function initializeApplication(): Promise<void> {
