@@ -570,7 +570,7 @@
 
                 <section id="vectors" class="ref-page">
                     <h2>値とベクトル</h2>
-                    <p>ベクトルは、値を角括弧<code>[ ]</code>で囲み、空白で区切って表します。ベクトルリテラルはそれ自身に評価され、ベクトルは自由に入れ子にできます。</p>
+                    <p>ベクトルは、要素となる値を角括弧<code>[ ]</code>で囲み、空白で区切って記述します。ベクトルリテラルは評価されるとそのままベクトル値になり、自由に入れ子(ネスト)にできます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -581,7 +581,7 @@
                                 <tr>
                                     <td><code>[ 1 2 3 ]</code></td>
                                     <td><code>[ 1/1 2/1 3/1 ]</code></td>
-                                    <td class="notes">スタックに積まれたベクトル。整数は分母1の厳密な分数として表示される。</td>
+                                    <td class="notes">スタックに積まれたベクトル。整数は分母が1の厳密な分数として表示される。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -600,7 +600,7 @@
                                 <tr>
                                     <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
                                     <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
-                                    <td class="notes">入れ子はそのまま保たれ、入れ子はグループ化されたデータや不揃いなデータを表現する手段になる。</td>
+                                    <td class="notes">入れ子はそのまま保持され、グループ化されたデータや不揃い(ジャグ配列的)なデータを表現する手段になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -628,7 +628,9 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>それ自身のテキスト</strong>であり、呼び出しにもエラーにもなりません。したがって<code>[ FOO BAR ]</code>は<code>[ 'FOO' 'BAR' ]</code>です。これは各要素を引用符で囲まなくても文字列のベクトルを書ける方法であり、また値に名前を付け始めた読者を驚かせる唯一のことでもあります——<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はテキストになる</a>を参照。</p>
+                    <h3>リテラル中の裸の名前</h3>
+                    <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>それ自身のテキスト</strong>であり、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は<code>[ 'FOO' 'BAR' ]</code>と完全に等価です。これは各要素を引用符で囲まなくても文字列のベクトルを書ける方法であり、また値に名前を付け始めた読者を驚かせる唯一のことでもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください——<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はテキストになる</a>を参照。</p>
+                    <h3><code>[ ]</code>と<code>NIL</code>の違い</h3>
                     <p class="ref-note"><code>[ ]</code>は空ベクトルです——値を1つも持たないコレクションであり、書いたり入れ子にしたり測ったりできる普通の値です(<code>[ ] LENGTH</code>は<code>0</code>)。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、泡になるのではなく<code>[ ]</code>を返します——<code>[ 1 2 3 ] { 5 GT } FILTER</code>は<code>[ ]</code>です。</p>
                 </section>
 
