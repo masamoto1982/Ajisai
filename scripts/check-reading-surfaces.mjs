@@ -57,16 +57,14 @@ const EXAMPLE_NAMES = new Set([
   'SEED', 'N',
 ]);
 
-// Names the *host* allocates rather than the language: typed into the editor,
-// they are acted on by the GUI and never reach the interpreter. The
-// presentation profile has to be able to name them — a control nobody can
-// discover is not documented — and they are correctly absent from the
-// vocabulary registry, which is the whole point being made about them.
-//
-// `LOOKUP` and `?` are here because reference prose is not a value: a program
-// can do nothing with the answer, so asking for it is the reader's action and
-// not a Word. `?` is symbol-shaped, so it is listed in both places.
-const HOST_COMMANDS = new Set(['RESET', 'STACK-CLEAR', 'EDITOR-CLEAR', 'LOOKUP', '?']);
+// Names the *host* allocates rather than the language: shortcut-only GUI
+// operations (Reset, Stack clear, Editor clear, Lookup) with no typed
+// spelling at all — not even as text a program could type and have the host
+// intercept. The presentation profile still has to be able to name them in
+// prose, and they are correctly absent from the vocabulary registry, which is
+// the whole point being made about them: a word of the same name is an
+// ordinary word, not a reserved one.
+const HOST_COMMANDS = new Set(['RESET', 'STACK-CLEAR', 'EDITOR-CLEAR', 'LOOKUP']);
 
 const SURFACES = ['README.md', 'public/docs/index.html', 'public/docs/ja/index.html', 'SPECIFICATION.html'];
 

@@ -29,6 +29,12 @@ export interface Editor {
      */
     readonly revealRange: (start: number, end: number) => void;
     readonly registerContentChangeCallback: (callback: (content: string) => void) => void;
+    /**
+     * The word-shaped token touching the cursor (or the current selection's
+     * start), the same extraction autocomplete uses. Empty when the cursor
+     * sits on whitespace or punctuation with nothing to look up.
+     */
+    readonly getWordAtCursor: () => string;
 }
 
 const insertAt = (
@@ -490,6 +496,8 @@ export const createEditor = (
         syncLastKnownSelection();
     };
 
+    const getWordAtCursor = (): string => extractToken(element.value, element.selectionStart).token;
+
     return {
         extractValue,
         updateValue,
@@ -501,6 +509,7 @@ export const createEditor = (
         focus,
         dismissSuggestions,
         revealRange,
-        registerContentChangeCallback
+        registerContentChangeCallback,
+        getWordAtCursor
     };
 };

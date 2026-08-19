@@ -15,19 +15,13 @@ import { createStepExecutor, StepExecutor } from './step-executor';
 import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 import type { ViewMode } from './mobile-view-switcher';
 import type { ExecutionSurfaceChanges } from './gui-layout-state';
-import { resolveHostCommand } from './host-commands';
 
 export interface ExecutionCallbacks {
     readonly extractEditorValue: () => string;
     readonly clearEditor: (switchView?: boolean) => void;
-    readonly updateEditorValue: (value: string) => void;
     readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly highlightSourceRange: (start: number, end: number) => void;
-    /// Discard every value on the stack, leaving the dictionary alone. Shared
-    /// with the Stack area's `×` and `Ctrl+Alt+S`, so all three routes are one
-    /// behavior.
-    readonly clearStack: () => void;
     readonly showDocumentation: (text: string) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
@@ -44,6 +38,10 @@ export interface ExecutionController {
     readonly executeStep: () => Promise<void>;
     readonly checkIsStepModeActive: () => boolean;
     readonly abortExecution: () => void;
+    /// Look `name` up in the dictionary and show the answer. Bound to
+    /// `Ctrl+Alt+L`, which supplies the word under the cursor — see
+    /// `lookupWord` below for why the answer always goes to Output.
+    readonly lookupWord: (name: string) => void;
 }
 
 export const createExecutionController = (
@@ -53,11 +51,9 @@ export const createExecutionController = (
     const {
         extractEditorValue,
         clearEditor,
-        updateEditorValue,
         insertEditorText,
         showInfo,
         highlightSourceRange,
-        clearStack,
         showDocumentation,
         showError,
         showExecutionResult,
@@ -68,32 +64,26 @@ export const createExecutionController = (
         updateAfterExecution
     } = callbacks;
 
-    const checkIsUserWord = (name: string): boolean =>
-        interpreter.collect_user_words_info().some(([, word]) => word === name);
-
-    /// Answer a lookup from the dictionary, without running anything.
+    /// Answer a lookup from the dictionary for `name`, without running
+    /// anything. Always answers to the Output area, whether `name` is a Core
+    /// word (its reference text) or a User word (its reconstructed `DEF`
+    /// source, shown as read-only reference rather than loaded for editing).
     ///
-    /// The two destinations are opposite, which is why the query says which one
-    /// it means. Reference text is read, so it goes to the output area — it used
-    /// to be written into the editor, where several screens of prose replaced
-    /// whatever the user had typed, and `'ADD' ?` in the middle of writing a
-    /// program lost the program. A User Word's reconstructed `DEF` *is* meant
-    /// for the editor: the point of looking one up is to edit it and define it
-    /// again, and what it replaces is the lookup line that just ran.
-    const showLookup = (name: string): void => {
+    /// This used to load a User word's `DEF` into the Input area instead, back
+    /// when a lookup was typed on its own throwaway line and running it was
+    /// the trigger — replacing that one line cost nothing. The trigger is now
+    /// `Ctrl+Alt+L` at the cursor, which can be anywhere inside a program
+    /// still being written, so overwriting the Input area here would risk
+    /// unsaved work; Output is the only destination that is always safe.
+    const lookupWord = (name: string): void => {
+        if (!name) return;
         const found = interpreter.resolve_host_lookup(name);
         if (!found) {
             showError(`Unknown word: ${name}`);
             return;
         }
-        if (found.kind === 'documentation') {
-            showDocumentation(found.text);
-            updateView('output');
-            return;
-        }
-        updateEditorValue(found.text);
-        showInfo(`Showing definition: ${name}`, false);
-        updateView('input');
+        showDocumentation(found.text);
+        updateView('output');
     };
 
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
@@ -198,30 +188,6 @@ export const createExecutionController = (
 
         stepExecutor.reset();
 
-        const hostCommand = resolveHostCommand(code, checkIsUserWord);
-        if (hostCommand?.kind === 'RESET') {
-            await executeReset();
-            return;
-        }
-        if (hostCommand?.kind === 'STACK-CLEAR') {
-            // `clearStack` redraws, reports and saves — the same call the `×`
-            // and the shortcut make — so all this route adds is consuming the
-            // command from the editor, exactly as a successful run does.
-            clearStack();
-            clearEditor(false);
-            return;
-        }
-        if (hostCommand?.kind === 'EDITOR-CLEAR') {
-            // Clearing the editor consumes the typed command itself — the
-            // same effect the `×` and `Ctrl+Alt+E` produce directly.
-            clearEditor(false);
-            return;
-        }
-        if (hostCommand?.kind === 'LOOKUP') {
-            showLookup(hostCommand.name);
-            return;
-        }
-
         let executionChanges: ExecutionSurfaceChanges | null = null;
 
         try {
@@ -298,6 +264,7 @@ export const createExecutionController = (
         executeReset,
         executeStep,
         checkIsStepModeActive,
-        abortExecution
+        abortExecution,
+        lookupWord
     };
 };

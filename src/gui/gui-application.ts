@@ -232,11 +232,9 @@ export const createGUI = (): GUI => {
         executionController = createExecutionController(INTERPRETER_CLIENT.getRequired(), {
             extractEditorValue: () => editor.extractValue(),
             clearEditor: (switchView) => { editor.clear(switchView); },
-            updateEditorValue: (value) => editor.updateValue(value),
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
             highlightSourceRange: (start, end) => editor.revealRange(start, end),
-            clearStack: () => clearStack(),
             showDocumentation: (text) => display.renderDocumentation(text),
             showError: (error, precedingOutput) => display.renderError(error, precedingOutput),
             showExecutionResult: (result) => display.renderExecutionResult(result),

@@ -302,6 +302,15 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
             e.preventDefault();
             e.stopImmediatePropagation();
         }
+        // Ctrl+Alt+L looks up the word at the cursor — no typed spelling, no
+        // button, since the target comes from the cursor rather than an
+        // argument someone could type or click. Silently does nothing when
+        // the cursor is not on a word.
+        if (e.code === 'KeyL' && e.ctrlKey && e.altKey && !e.shiftKey && !e.metaKey) {
+            executionController.lookupWord(editor.getWordAtCursor());
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
     }, true);
 }
 
