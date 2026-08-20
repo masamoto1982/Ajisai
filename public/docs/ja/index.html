@@ -2370,6 +2370,7 @@ COND</code></td>
                 <section id="output" class="ref-page">
                     <h2>出力</h2>
                     <p><code>PRINT</code>は、スタック最上位の値を出力領域に書き出します。他のどのワードとも同様、既定ではオペランドを消費します。<code>KEEP</code>を付ければ、値はスタックにも残ります。Playgroundは常に最終的なスタックを表示するので、<code>PRINT</code>は結果を見るためではなく、出力チャンネルのためのものです。</p>
+                    <h3>引用符は表示上の便宜</h3>
                     <p>文字列は、数値ベクトルと見分けられるように、スタック上ではシングルクォートで囲まれて表示されます(<code>'TEST'</code>)。この引用符はStack表示に属するものであり、値には属しません——<code>PRINT</code>は生のテキストを書き出すので、<code>'TEST'</code>は<code>TEST</code>として出力されます。テキストの一部である引用符文字はそのまま保たれます(内容が<code>T'ES'T</code>である文字列は<code>T'ES'T</code>として出力されます)。数と真偽値は、スタック上に現れるのとまったく同じ姿で出力されます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
