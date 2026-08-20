@@ -1271,6 +1271,7 @@
                 <section id="vector-ops" class="ref-page">
                     <h2>ベクトル操作</h2>
                     <p>ベクトルのインデックスは0始まりです。負のインデックスは末尾から数えます。<code>GET</code>や<code>LENGTH</code>のような読み取り系のワードは、他のすべてのワードと同様、読み取ったベクトルを消費します。元のベクトルを後でも使いたい場合は<code>KEEP</code>を前置してください。</p>
+                    <h3>GETで読み取る</h3>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1309,6 +1310,7 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3>答えの形はインデックスの形に従う</h3>
                     <p><code>GET</code>は、与えた数だけのインデックスを受け取ります。1つのインデックスなら要素そのものを返し、複数なら、インデックスが指定した順序での選択結果のベクトルを返します。したがって、いくつかの位置を選び出すこと、並べ替えること、逆順にすることは、いずれも1回の呼び出しで済み、何も指さないインデックスは残りを台無しにするのではなく、その位置に<code>NIL</code>を残すだけです。</p>
                     <p class="ref-note">インデックスの並びが書かれたものではなく計算されたものであるときは、この規則を2度読んでください。これは<em>答えの形がデータに従う</em>ことを意味するからです——2つのインデックスによる収集(gather)はベクトルを、1つによる収集は裸の要素を返します。たまたま1つの位置に絞られる選択——分割の左側や、メンバーが1人しかいないクラスなど——はスカラーを返すことになり、ベクトルの場合を想定して書いた<code>LENGTH</code>や<code>FOLD</code>はそれに対して失敗します。件数によらず常にベクトルが欲しい場合は、一度に1つずつインデックスを収集し、<code>MAP</code>に結果を集めさせてください。これはインデックス列と同じ長さのベクトルを、その長さがいくつであっても返します。</p>
                     <div class="sample">
@@ -1349,6 +1351,7 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3>その他の基本操作</h3>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
