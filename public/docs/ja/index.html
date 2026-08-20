@@ -1024,7 +1024,9 @@
 
                 <section id="logic" class="ref-page">
                     <h2>論理</h2>
-                    <p><code>AND</code>、<code>OR</code>、<code>NOT</code>は、2つの真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算です。3つとも綴りのまま書き、記号は持ちません。不在のオペランドはそのまま通過します——<code>NIL</code>が入れば<code>NIL</code>が出るので、もう一方のオペランドで答えが決まってしまう場合でも、泡は結果の中に見える形で残ります。</p>
+                    <p>Ajisaiには<code>AND</code>、<code>OR</code>、<code>NOT</code>という3つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。3つとも綴りのまま書き、記号は持ちません。</p>
+                    <h3>NILはそのまま伝わる</h3>
+                    <p>いずれかのオペランドが不在(<code>NIL</code>)であれば、その不在はそのまま結果に伝わります。<code>NIL</code>が入れば<code>NIL</code>が出るので、もう一方のオペランドだけで答えが決まりそうな場合でも、泡は結果の中に見える形で残ります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1054,7 +1056,7 @@
                                 <tr>
                                     <td><code>TRUE FALSE OR</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">論理OR。</td>
+                                    <td class="notes">確定した2つの値の論理OR。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1073,7 +1075,7 @@
                                 <tr>
                                     <td><code>TRUE NOT</code></td>
                                     <td><code>FALSE</code></td>
-                                    <td class="notes">論理NOT。</td>
+                                    <td class="notes">確定した値の論理NOT。</td>
                                 </tr>
                             </tbody>
                         </table>
