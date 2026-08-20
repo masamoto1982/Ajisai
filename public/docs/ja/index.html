@@ -28,7 +28,9 @@
         Ajisai のどの表層形とも衝突しない。code/pre はスキャン対象外なので
         Ajisai チャネルが数式描画に巻き込まれることはない。
       - 用語対訳: word=ワード, stack=スタック, vector=ベクトル, bubble=泡
-        （バブル）, block=ブロック, frame=フレーム, bind=束縛, dictionary=辞書。
+        （バブル）, block=ブロック, frame=フレーム, bind=束縛, dictionary=辞書,
+        vessel=器, flow=流れ, ripple=波紋, channel error/breach=決壊
+        （水路の破れ）。
     -->
     <style>
         :root {
@@ -499,6 +501,24 @@
                 <section id="intro" class="ref-page">
                     <h2>はじめに</h2>
                     <p>Ajisaiは、AIファーストでベクトル指向のデータフロー言語です。プログラムは<strong>ワード</strong>の並びとして構成されます。値は単一のスタック上で管理され、各ワードがスタックからオペランドを取り出し(消費し)、処理結果をスタックに積みます。</p>
+                    <h3>水のメタファー</h3>
+                    <p>Ajisaiという名前は紫陽花(あじさい)に由来し、「水を湛える器」と解釈されることがあります。Ajisaiはこの水の比喩を設計の軸に据えています。Stack(実体はVector)は水を湛える<strong>器</strong>であり、そこに注がれる<strong>水</strong>は値——もっとも純粋な形は<code>SQRT</code>で拡張された厳密な分数——です。プログラムを実行することは器に水を注ぐ行為であり、注いだ水が入力から出力へと動いていく過程が<strong>流れ</strong>、出力(<code>PRINT</code>)としてその水面に現れる痕跡が<strong>波紋</strong>です。</p>
+                    <p>器の中には、水以外にもう一つだけ混じるものがあります。整った操作が値を作れなかったときに残る<strong>泡</strong>——<code>NIL</code>です。泡は不在であって虚偽ではなく、理由を持ったまま下流へ流れていきます。これに対し、操作や入力の形そのものが誤っているときは、水路が持ちこたえられずに<strong>決壊</strong>し、評価はその場で止まります。決壊は流れの中を運ばれる値ではなく、プログラムを終わらせる唯一の結果です。</p>
+                    <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>水の比喩</th><th>言語での意味</th><th>観察できるもの</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>器(Vessel)</td><td>Stack。実体はVector</td><td><code>[ ]</code>、入れ子、インデックス</td></tr>
+                                <tr><td>水(Water)</td><td>器に注がれる値。もっとも純粋な形は厳密な分数(<code>SQRT</code>拡張を含む)</td><td>数値・真偽値・文字列・コードブロック</td></tr>
+                                <tr><td>流れ(Flow)</td><td>水が入力から出力へ、ワードによって形を変えながら動く過程</td><td>演算を通るデータフロー</td></tr>
+                                <tr><td>波紋(Ripple)</td><td>流れが水面に残す痕跡</td><td><code>PRINT</code>の出力</td></tr>
+                                <tr><td>泡(Bubble)</td><td>整った操作が値を作れなかった状態</td><td><code>NIL</code>。機械可読な理由を伴う</td></tr>
+                                <tr><td>決壊(Breach)</td><td>器や水路そのものが破れる。操作や入力の形が誤っている</td><td>伝播して評価を止めるエラー</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <h3>数値の厳密性</h3>
                     <p>すべての数値は厳密に扱われます。厳密な有理数と、それらに対する代数的な平方根(<code>SQRT</code>)の閉包(多重二次正規形)で保持され、算術演算や比較演算は丸め誤差なしで実行されます。なお、連分数形式は値そのものから導出される正準表示であり、内部の格納形式ではありません。</p>
                     <h3>本リファレンスの特徴</h3>
