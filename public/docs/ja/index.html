@@ -1890,7 +1890,9 @@ COND</code></td>
                 <section id="strings" class="ref-page">
                     <h2>文字列</h2>
                     <p>文字列は<code>'</code>で引用され、スタック上では引用符付きで表示されます。この引用符は表示上の便宜であって値の一部ではありません——<code>PRINT</code>は生のテキストを書き出します(<code>'TEST'</code>は<code>TEST</code>として出力されます——<a href="#output">出力</a>を参照)。一方、コレクションの中に入れ子になった文字列は引用符を保ったままです(<code>[ 'AB' 'CD' ]</code>は<code>[ 'AB' 'CD' ]</code>のまま)。文字列は、キャスト系のワードで数や文字と相互に変換できます。</p>
+                    <h3>独立した値の定義域</h3>
                     <p>文字列は6つの値の定義域の1つであり、コードポイントのベクトルではありません——<code>'A' [ 65 ] EQ</code>は<code>FALSE</code>であり、文字列に対する算術は、そのコードに対する算術ではなくエラーになります。空文字列<code>''</code>は普通の文字列であり、<code>NIL</code>ではありません。</p>
+                    <h3>ベクトルへ渡る: <code>CHARS</code>と<code>JOIN</code></h3>
                     <p>文字列はベクトルではないため、コレクション系のワードは文字列を受け付けません。<code>LENGTH</code>、<code>GET</code>、<code>REVERSE</code>、<code>CONCAT</code>はいずれも文字列に対してはエラーを送出します。まず<code>CHARS</code>でベクトルの定義域へ渡ってください(<code>'abc' CHARS LENGTH</code>は<code>3</code>)。連結は<code>JOIN</code>で行い、これは文字列のベクトルを1つの文字列に変えるためのワードです——<code>[ 'ab' 'cd' ] JOIN</code>は<code>'abcd'</code>です。書いたものではなく計算した値を連結したい場合は、まず<code>COLLECT</code>で集めてください——<code>'a' 'b' 2 COLLECT JOIN</code>。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
