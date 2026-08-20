@@ -258,17 +258,21 @@
 
         /* Each .ref-page is one page. Visibility is declarative: the URL fragment
            selects the visible page through :target, so no JS show/hide is needed
-           (and there is no first-paint flash of every page at once). When nothing
-           is targeted — a bare URL — :has() falls back to showing the first page. */
+           (and there is no first-paint flash of every page at once). The fragment
+           may also name a heading *inside* a page — the ids of the pages that
+           were merged away are kept as <h3 id> so their links stay alive — so a
+           page whose descendant is targeted opens too. When nothing at all is
+           targeted — a bare URL — :has() falls back to showing the first page. */
         .ref-page {
             display: none;
         }
 
-        .ref-page:target {
+        .ref-page:target,
+        .ref-page:has(:target) {
             display: block;
         }
 
-        .ref-main:not(:has(.ref-page:target)) #intro {
+        .ref-main:not(:has(:target)) #intro {
             display: block;
         }
 
@@ -549,7 +553,7 @@
                 </section>
 
                 <section id="tokens" class="ref-page">
-                    <h2>トークンと綴り</h2>
+                    <h2>基本(トークン, <code>#</code>)</h2>
                     <p>Ajisaiのプログラムは、空白などで区切られた一連の<strong>トークン</strong>の並びです。</p>
                     <h3>トークンの区切り規則</h3>
                     <p>トークンが終わる(区切られる)条件は、次の3通りだけです。</p>
@@ -588,8 +592,9 @@
                     <p class="ref-note">文字列リテラルは、トークン境界に位置する引用符(<code>'</code>)で閉じます。文字列の内部にアポストロフィがあっても、直後に空白や区切り文字が続かなければ文字列は終了しません。これにより、エスケープ文字なしで<code>'It's fine'</code>のような文字列を1つのリテラルとして書けます。引用符の直後に名前用文字が続く場合はテキストの内側にとどまるため、<code>'abc'CHARS</code>は2つのトークンではなく閉じられていない文字列として扱われます。</p>
                 </section>
 
-                <section id="vectors" class="ref-page">
-                    <h2>値とベクトル</h2>
+                <section id="values" class="ref-page">
+                    <h2>値と型(<code>[ ]</code>, <code>' '</code>, <code>NIL</code>)</h2>
+                    <h3 id="vectors">ベクトル(<code>[ ]</code>)</h3>
                     <p>ベクトルは、要素となる値を角括弧<code>[ ]</code>で囲み、空白で区切って記述します。ベクトルリテラルは評価されるとそのままベクトル値になり、自由に入れ子(ネスト)にできます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -652,10 +657,8 @@
                     <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>それ自身のテキスト</strong>であり、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は<code>[ 'FOO' 'BAR' ]</code>と完全に等価です。これは各要素を引用符で囲まなくても文字列のベクトルを書ける方法であり、また値に名前を付け始めた読者を驚かせる唯一のことでもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください——<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はテキストになる</a>を参照。</p>
                     <h3><code>[ ]</code>と<code>NIL</code>の違い</h3>
                     <p class="ref-note"><code>[ ]</code>は空ベクトルです——値を1つも持たないコレクションであり、書いたり入れ子にしたり測ったりできる普通の値です(<code>[ ] LENGTH</code>は<code>0</code>)。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、泡になるのではなく<code>[ ]</code>を返します——<code>[ 1 2 3 ] { 5 GT } FILTER</code>は<code>[ ]</code>です。</p>
-                </section>
 
-                <section id="numbers" class="ref-page">
-                    <h2>厳密な数</h2>
+                    <h3 id="numbers">厳密な数</h3>
                     <p>Ajisaiにおけるすべての数値は<strong>厳密数</strong>として扱われます。</p>
                     <h3>数値の表現と定義域</h3>
                     <p>整数、分数、小数、指数表記など各リテラルは、同一の厳密な値を表す異なる表記形式にすぎません(例: <code>0.5</code>は2進浮動小数点による近似値ではなく、厳密な<code>1/2</code>そのものです)。</p>
@@ -777,32 +780,11 @@
                     </div>
                     <h3>無理数の描画形式と構文規則</h3>
                     <p class="ref-note">無理数を出力する際、値そのものは<code>( 1 ( 2 ( 2 ( 2 ... ) ) ) )</code>のような入れ子の連分数として、表示用の予算で打ち切って描画されます。この入れ子形式は表示専用の出力であり、ソースコードの構文ではありません。プログラム中で<code>(</code> <code>)</code>を直接書くことは、構文エラー(予約記号)として拒否されます。</p>
-                </section>
 
-                <section id="stack" class="ref-page">
-                    <h2>スタックと修飾子</h2>
-                    <p>Ajisaiのワードは、スタックからオペランド(引数)を取り出し、結果をスタックへ積み戻します。取り出した値をその場で消費するのが既定の挙動です——ワードは自分が読み込んだ値をスタックから取り除きます。この既定の挙動を変える、明示的な方法がただ1つだけあります。それがワードの前に置く<strong>修飾子</strong>です。</p>
-                    <h3>唯一の修飾子<code>KEEP</code></h3>
-                    <div class="ref-table-wrap word-table">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>修飾子</th><th>効果</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><code>KEEP</code></td><td class="notes">次のワードのオペランドを保持したまま、その結果も併せて積む。</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p><code>KEEP</code>は<em>直後の1つのワードだけ</em>に前置され、記号は持たず、そのまま綴って書きます。Ajisaiの修飾子はこれひとつだけです——既定でない挙動のための明示的な操作はこれひとつだけで、値の複製や入れ替え、破棄のためだけに用意された専用のワード群のようなものはありません。ワードがどう振る舞うかについてのそれ以外のすべては、ワードそのものに内在しています。したがって呼び出しを読むということは、名前と、たかだか1つの前置修飾子を読むことにすぎません。</p>
-                    <p class="ref-note">補足: Forthのような古典的なスタック指向言語には、値の複製・入れ替え・破棄を担う専用のワード群(いわゆる「スタックシャッフラー」)が用意されていることがありますが、Ajisaiにはそうした仕組み自体がなく、<code>KEEP</code>ひとつがその役割を兼ねます。</p>
-                    <h3>呼び出し単位で効く</h3>
-                    <p><code>KEEP</code>を前置する対象は自分で定義したワードでもよく、その場合も意味は変わりません。<code>KEEP</code>が保持するのは<strong>その呼び出し</strong>のオペランドであり、本体がたまたま内部で使う値ではありません。<code>{ 2 MUL } 'DOUBLE' DEF</code>があるとき、<code>5 KEEP DOUBLE</code>は<code>5/1 10/1</code>になります——本体自身が持つ<code>2</code>は本体内部の話であり、あなたのスタックには決して届きません。</p>
-                    <h3>あらゆる値のコピー装置になる</h3>
-                    <p>覚えておく価値のある帰結が1つあります。渡された値をそのまま返すワード——<code>{ 1 COLLECT [ 0 ] GET } 'ID' DEF</code>、これは値を包んでまた取り出すだけです——を用意しておくと、<code>KEEP</code>は<em>あらゆる種類</em>の値のコピー装置になります。<code>'hi' KEEP ID</code>は2つの文字列を残しますし、算術演算では複製できない真偽値やコードブロックについても同じことが成り立ちます。</p>
-                    <h3>結果を積まないワードも例外ではない</h3>
-                    <p><code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではありません。これらに<code>KEEP</code>を付けたときに残るのは、そのオペランドそのまま、変わらぬ姿です——<code>5 KEEP 'X' BIND</code>は値に名前を付け<em>つつ</em>、<code>5/1 'X'</code>を元の場所に残します。</p>
-                    <h3>唯一の例外: 高階ワード</h3>
-                    <p class="ref-note">高階ワードだけが例外であり、出会う前に知っておく価値があります。<code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>ANY</code>、<code>ALL</code>は、自分が走査する<em>コレクション</em>だけを保持し、それ以外は保持しません。したがって<code>[ 1 2 ] KEEP { 2 MUL } MAP</code>は<code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code>です——ブロックは残らず、<code>FOLD</code>の場合は開始時の累積値も残りません。ブロックは呼び出しが読み取ったデータというより、その呼び出しが<em>何であるか</em>を表すものであり、累積値は答えに畳み込まれています。それ以外のすべてのワードは、読み取ったものをすべて保持します。<code>[ 10 3 ] KEEP [ 0 ] GET</code>も例外ではなく、<code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>の3つすべてが残ります。</p>
+                    <h3 id="strings">文字列(<code>' '</code>)</h3>
+                    <p>文字列は<code>'</code>で引用され、スタック上では引用符付きで表示されます。この引用符は表示上の便宜であって値の一部ではありません——<code>PRINT</code>は生のテキストを書き出します(<code>'TEST'</code>は<code>TEST</code>として出力されます——<a href="#output">出力</a>を参照)。一方、コレクションの中に入れ子になった文字列は引用符を保ったままです(<code>[ 'AB' 'CD' ]</code>は<code>[ 'AB' 'CD' ]</code>のまま)。文字列は、キャスト系のワードで数や文字と相互に変換できます——操作は<a href="#strings-ops">文字列操作</a>にまとめてあります。</p>
+                    <h3>独立した値の定義域</h3>
+                    <p>文字列は6つの値の定義域の1つであり、コードポイントのベクトルではありません——<code>'A' [ 65 ] EQ</code>は<code>FALSE</code>であり、文字列に対する算術は、そのコードに対する算術ではなくエラーになります。空文字列<code>''</code>は普通の文字列であり、<code>NIL</code>ではありません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -811,9 +793,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>3 4 +</code></td>
-                                    <td><code>7/1</code></td>
-                                    <td class="notes">既定モード：両方のオペランドが消費され、和が積まれる。</td>
+                                    <td><code>'hello'</code></td>
+                                    <td><code>'hello'</code></td>
+                                    <td class="notes">文字列リテラルはそれ自身に評価される。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -822,311 +804,8 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>3 4 KEEP ADD</code></td>
-                                    <td><code>3/1 4/1 7/1</code></td>
-                                    <td class="notes"><code>KEEP</code>はオペランドを保持し、結果はその上に積まれる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                </section>
 
-                <section id="arithmetic" class="ref-page">
-                    <h2>算術</h2>
-                    <p>算術ワードは、ベクトル同士の要素ごとの演算(要素単位の演算)として機能します。各ワードには正式な英語名が定義されており、演算記号はその糖衣構文(シンタックスシュガー)です。</p>
-                    <h3>算術ワード一覧</h3>
-                    <div class="ref-table-wrap word-table">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>正式名</th><th>糖衣構文</th><th>意味</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><code>ADD</code></td><td><code>+</code></td><td class="notes">加算</td></tr>
-                                <tr><td><code>SUB</code></td><td><code>-</code></td><td class="notes">減算</td></tr>
-                                <tr><td><code>MUL</code></td><td><code>*</code></td><td class="notes">乗算</td></tr>
-                                <tr><td><code>DIV</code></td><td><code>/</code></td><td class="notes">厳密な除算</td></tr>
-                                <tr><td><code>MOD</code></td><td><code>%</code></td><td class="notes">剰余</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <h3>ブロードキャスト規則</h3>
-                    <p>ブロードキャストは、単に要素数1のベクトルを拡張するだけの規則ではなく、多次元ベクトルの<strong>軸</strong>全体に適用される一貫した規則です。</p>
-                    <ul class="ref-list">
-                        <li><strong>軸の対応付け</strong>: 2つのベクトルは最も内側の軸から順に対応付けられます。</li>
-                        <li><strong>長さ1の軸の拡張</strong>: 短いベクトルの届かない軸は長さ1とみなされ、長さ1の軸は相手側の長さに合わせて繰り返し使われます(例: <code>[ 1 2 3 ] [ 10 ] *</code>は<code>[ 10/1 20/1 30/1 ]</code>、<code>[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] *</code>は<code>[ [ 10/1 40/1 ] [ 30/1 80/1 ] ]</code>)。</li>
-                        <li><strong>形状の不一致</strong>: 軸の長さが一致せず、どちらも1でない場合はエラーになります(例: <code>[ 1 2 3 ] [ 10 20 ] *</code>は長さ3と2を対応付けられないためエラー)。</li>
-                        <li><strong>スカラーの適用</strong>: スカラー値は軸を必要とせず、ベクトルがどう入れ子になっていても——不揃いなものも含め——すべての要素と組み合わさります。</li>
-                        <li><strong>矩形条件</strong>: 2つの<em>ベクトル</em>同士がブロードキャストできるのは、両方とも矩形(各軸の長さが揃っている)のときだけです。</li>
-                    </ul>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] +</code></td>
-                                    <td><code>[ 5/1 7/1 9/1 ]</code></td>
-                                    <td class="notes">要素ごとの加算。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] [ 10 ] *</code></td>
-                                    <td><code>[ 10/1 20/1 30/1 ]</code></td>
-                                    <td class="notes">単一要素のベクトルは、もう一方のオペランド全体へブロードキャストされる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>7 3 MOD</code></td>
-                                    <td><code>1/1</code></td>
-                                    <td class="notes">7を3で割った余り。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>その他の数値演算ワード</h3>
-                    <p>基本四則演算に加えて、次の数値演算ワードが用意されています。</p>
-                    <ul class="ref-list">
-                        <li><strong>符号操作</strong>: <code>ABS</code>(絶対値)、<code>NEG</code>(符号反転)</li>
-                        <li><strong>極値</strong>: <code>MIN</code>(最小値)、<code>MAX</code>(最大値)</li>
-                        <li><strong>平方根</strong>: <code>SQRT</code></li>
-                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)</li>
-                        <li><strong>量子化</strong>: <code>QUANTIZE</code>——<code>1/d</code>の最も近い倍数に丸めます。ループ処理や反復計算での使用に適したワードです。<a href="#iterative">反復計算と数値</a>を参照。</li>
-                    </ul>
-                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュしません——該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">NILと泡(バブル)の規則</a>を参照。</p>
-                    <h3>決定論的擬似乱数 <code>RANDOM</code></h3>
-                    <p class="ref-note"><code>RANDOM</code>もここにあり、他のすべてのワードと同じく1つの純粋関数です。<code>7 3 RANDOM</code>はシード<code>7</code>だけによって決まる、[0, 1)の範囲の厳密な有理数を3つ引きますが、これは毎回、どのセッションでも同じ3つを引きます。隠れた状態もホストのエントロピーもないため、厳密性や純粋性と矛盾するところは何もありません——<code>ORDER</code>と組み合わせれば決定論的なシャッフルになります(<code>SEED N RANDOM ORDER</code>)し、読みやすい分解能で値を引きたいときは<code>QUANTIZE</code>と組み合わせます。</p>
-                    <h3>ベクトルへの自動リフティング</h3>
-                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり(リフトし)、<code>+</code>と同じ規則でブロードキャストします。正規化(レクティファイア)は<code>[ -1 2 -3 ] 0 MAX</code> → <code>[ 0/1 2/1 0/1 ]</code>であり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>です。<code>MAP</code>もブロックも不要です——手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが泡になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
-                </section>
-
-                <section id="comparison" class="ref-page">
-                    <h2>比較と真偽値</h2>
-                    <p>6つの順序関係はすべてワードとして用意されています。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値です——真偽値は数ではありません。6つそれぞれに対応する記号があり、1文字のものが3つ、2文字のものが3つです。トークンが終わるのは空白または区切り文字の位置だけで、途中で終わることは決してないため、2文字の記号を使ってもトークナイザに余計なコストはかかりません。</p>
-                    <h3>比較ワード一覧</h3>
-                    <div class="ref-table-wrap word-table">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>正式名</th><th>糖衣構文</th><th>意味</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">等しい</td></tr>
-                                <tr><td><code>NEQ</code></td><td><code>!=</code></td><td class="notes">等しくない</td></tr>
-                                <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">より小さい</td></tr>
-                                <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">以下</td></tr>
-                                <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">より大きい</td></tr>
-                                <tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td class="notes">以上</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>5 3 GT</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">決定できた比較は真偽値を返す。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 1 LTE</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes"><code>LTE</code>、<code>GTE</code>、<code>NEQ</code>は2文字の名前として使う。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>TRUE 1 EQ</code></td>
-                                    <td><code>FALSE</code></td>
-                                    <td class="notes">真偽値は数の1ではない。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>2 SQRT 2 SQRT SUB 0 EQ</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">\(\sqrt{2} - \sqrt{2}\)はちょうど0。平方根およびその和・差・積・商は厳密に比較されるため、6つの関係は予算に頼らずに決定できる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>厳密な比較</h3>
-                    <p class="ref-note">この6つの関係は、ワードが組み立てられるすべての値——有理数も平方根も同様に——にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
-                </section>
-
-                <section id="logic" class="ref-page">
-                    <h2>論理</h2>
-                    <p>Ajisaiには<code>AND</code>、<code>OR</code>、<code>NOT</code>という3つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。3つとも綴りのまま書き、記号は持ちません。</p>
-                    <h3>NILはそのまま伝わる</h3>
-                    <p>いずれかのオペランドが不在(<code>NIL</code>)であれば、その不在はそのまま結果に伝わります。<code>NIL</code>が入れば<code>NIL</code>が出るので、もう一方のオペランドだけで答えが決まりそうな場合でも、泡は結果の中に見える形で残ります。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>TRUE FALSE AND</code></td>
-                                    <td><code>FALSE</code></td>
-                                    <td class="notes">確定した2つの値の論理AND。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>TRUE FALSE OR</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">確定した2つの値の論理OR。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>TRUE NOT</code></td>
-                                    <td><code>FALSE</code></td>
-                                    <td class="notes">確定した値の論理NOT。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 0 DIV TRUE AND</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">左のオペランドが泡になったので、その不在が結果まで伝わる。必要な箇所で<code>^</code>を使って回復させる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="nil" class="ref-page">
-                    <h2>NILと泡(バブル)の規則</h2>
+                    <h3 id="nil">泡(<code>NIL</code>)</h3>
                     <p>失敗のモデルは一言で言えます——<strong>値を作れなかった → 泡(バブル)／そもそも使い方が違う → エラー</strong>。正しい形の操作が結果を作れない場合は、構造化された理由を伴う「泡」である<code>NIL</code>に写像されます。一方、誤った使い方(型違い、オペランド不足)は通常のエラーを送出します。</p>
                     <h3>泡は流れる</h3>
                     <p>算術と比較はどちらもNILをそのまま通します(パススルー)。<code>NIL</code>のオペランドが入っても、パイプラインをクラッシュさせることなく結果が<code>NIL</code>になるだけです。<code>EQ</code>や<code>NEQ</code>も例外ではありません——<code>NIL 1 EQ</code>は<code>FALSE</code>ではなく<code>NIL</code>です。</p>
@@ -1288,8 +967,351 @@
                     </div>
                 </section>
 
+                <section id="stack" class="ref-page">
+                    <h2>スタックと修飾子(<code>KEEP</code>)</h2>
+                    <p>Ajisaiのワードは、スタックからオペランド(引数)を取り出し、結果をスタックへ積み戻します。取り出した値をその場で消費するのが既定の挙動です——ワードは自分が読み込んだ値をスタックから取り除きます。この既定の挙動を変える、明示的な方法がただ1つだけあります。それがワードの前に置く<strong>修飾子</strong>です。</p>
+                    <h3>唯一の修飾子<code>KEEP</code></h3>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>修飾子</th><th>効果</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>KEEP</code></td><td class="notes">次のワードのオペランドを保持したまま、その結果も併せて積む。</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p><code>KEEP</code>は<em>直後の1つのワードだけ</em>に前置され、記号は持たず、そのまま綴って書きます。Ajisaiの修飾子はこれひとつだけです——既定でない挙動のための明示的な操作はこれひとつだけで、値の複製や入れ替え、破棄のためだけに用意された専用のワード群のようなものはありません。ワードがどう振る舞うかについてのそれ以外のすべては、ワードそのものに内在しています。したがって呼び出しを読むということは、名前と、たかだか1つの前置修飾子を読むことにすぎません。</p>
+                    <p class="ref-note">補足: Forthのような古典的なスタック指向言語には、値の複製・入れ替え・破棄を担う専用のワード群(いわゆる「スタックシャッフラー」)が用意されていることがありますが、Ajisaiにはそうした仕組み自体がなく、<code>KEEP</code>ひとつがその役割を兼ねます。</p>
+                    <h3>呼び出し単位で効く</h3>
+                    <p><code>KEEP</code>を前置する対象は自分で定義したワードでもよく、その場合も意味は変わりません。<code>KEEP</code>が保持するのは<strong>その呼び出し</strong>のオペランドであり、本体がたまたま内部で使う値ではありません。<code>{ 2 MUL } 'DOUBLE' DEF</code>があるとき、<code>5 KEEP DOUBLE</code>は<code>5/1 10/1</code>になります——本体自身が持つ<code>2</code>は本体内部の話であり、あなたのスタックには決して届きません。</p>
+                    <h3>あらゆる値のコピー装置になる</h3>
+                    <p>覚えておく価値のある帰結が1つあります。渡された値をそのまま返すワード——<code>{ 1 COLLECT [ 0 ] GET } 'ID' DEF</code>、これは値を包んでまた取り出すだけです——を用意しておくと、<code>KEEP</code>は<em>あらゆる種類</em>の値のコピー装置になります。<code>'hi' KEEP ID</code>は2つの文字列を残しますし、算術演算では複製できない真偽値やコードブロックについても同じことが成り立ちます。</p>
+                    <h3>結果を積まないワードも例外ではない</h3>
+                    <p><code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではありません。これらに<code>KEEP</code>を付けたときに残るのは、そのオペランドそのまま、変わらぬ姿です——<code>5 KEEP 'X' BIND</code>は値に名前を付け<em>つつ</em>、<code>5/1 'X'</code>を元の場所に残します。</p>
+                    <h3>唯一の例外: 高階ワード</h3>
+                    <p class="ref-note">高階ワードだけが例外であり、出会う前に知っておく価値があります。<code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>ANY</code>、<code>ALL</code>は、自分が走査する<em>コレクション</em>だけを保持し、それ以外は保持しません。したがって<code>[ 1 2 ] KEEP { 2 MUL } MAP</code>は<code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code>です——ブロックは残らず、<code>FOLD</code>の場合は開始時の累積値も残りません。ブロックは呼び出しが読み取ったデータというより、その呼び出しが<em>何であるか</em>を表すものであり、累積値は答えに畳み込まれています。それ以外のすべてのワードは、読み取ったものをすべて保持します。<code>[ 10 3 ] KEEP [ 0 ] GET</code>も例外ではなく、<code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>の3つすべてが残ります。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 4 +</code></td>
+                                    <td><code>7/1</code></td>
+                                    <td class="notes">既定モード：両方のオペランドが消費され、和が積まれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 4 KEEP ADD</code></td>
+                                    <td><code>3/1 4/1 7/1</code></td>
+                                    <td class="notes"><code>KEEP</code>はオペランドを保持し、結果はその上に積まれる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="operators" class="ref-page">
+                    <h2>演算子(<code>+ - * / %</code>, <code>=</code>, <code>AND</code>)</h2>
+                    <h3 id="arithmetic">算術</h3>
+                    <p>算術ワードは、ベクトル同士の要素ごとの演算(要素単位の演算)として機能します。各ワードには正式な英語名が定義されており、演算記号はその糖衣構文(シンタックスシュガー)です。</p>
+                    <h3>算術ワード一覧</h3>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>正式名</th><th>糖衣構文</th><th>意味</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>ADD</code></td><td><code>+</code></td><td class="notes">加算</td></tr>
+                                <tr><td><code>SUB</code></td><td><code>-</code></td><td class="notes">減算</td></tr>
+                                <tr><td><code>MUL</code></td><td><code>*</code></td><td class="notes">乗算</td></tr>
+                                <tr><td><code>DIV</code></td><td><code>/</code></td><td class="notes">厳密な除算</td></tr>
+                                <tr><td><code>MOD</code></td><td><code>%</code></td><td class="notes">剰余</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h3>ブロードキャスト規則</h3>
+                    <p>ブロードキャストは、単に要素数1のベクトルを拡張するだけの規則ではなく、多次元ベクトルの<strong>軸</strong>全体に適用される一貫した規則です。</p>
+                    <ul class="ref-list">
+                        <li><strong>軸の対応付け</strong>: 2つのベクトルは最も内側の軸から順に対応付けられます。</li>
+                        <li><strong>長さ1の軸の拡張</strong>: 短いベクトルの届かない軸は長さ1とみなされ、長さ1の軸は相手側の長さに合わせて繰り返し使われます(例: <code>[ 1 2 3 ] [ 10 ] *</code>は<code>[ 10/1 20/1 30/1 ]</code>、<code>[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] *</code>は<code>[ [ 10/1 40/1 ] [ 30/1 80/1 ] ]</code>)。</li>
+                        <li><strong>形状の不一致</strong>: 軸の長さが一致せず、どちらも1でない場合はエラーになります(例: <code>[ 1 2 3 ] [ 10 20 ] *</code>は長さ3と2を対応付けられないためエラー)。</li>
+                        <li><strong>スカラーの適用</strong>: スカラー値は軸を必要とせず、ベクトルがどう入れ子になっていても——不揃いなものも含め——すべての要素と組み合わさります。</li>
+                        <li><strong>矩形条件</strong>: 2つの<em>ベクトル</em>同士がブロードキャストできるのは、両方とも矩形(各軸の長さが揃っている)のときだけです。</li>
+                    </ul>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] +</code></td>
+                                    <td><code>[ 5/1 7/1 9/1 ]</code></td>
+                                    <td class="notes">要素ごとの加算。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 10 ] *</code></td>
+                                    <td><code>[ 10/1 20/1 30/1 ]</code></td>
+                                    <td class="notes">単一要素のベクトルは、もう一方のオペランド全体へブロードキャストされる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>7 3 MOD</code></td>
+                                    <td><code>1/1</code></td>
+                                    <td class="notes">7を3で割った余り。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>その他の数値演算ワード</h3>
+                    <p>基本四則演算に加えて、次の数値演算ワードが用意されています。</p>
+                    <ul class="ref-list">
+                        <li><strong>符号操作</strong>: <code>ABS</code>(絶対値)、<code>NEG</code>(符号反転)</li>
+                        <li><strong>極値</strong>: <code>MIN</code>(最小値)、<code>MAX</code>(最大値)</li>
+                        <li><strong>平方根</strong>: <code>SQRT</code></li>
+                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)</li>
+                        <li><strong>量子化</strong>: <code>QUANTIZE</code>——<code>1/d</code>の最も近い倍数に丸めます。ループ処理や反復計算での使用に適したワードです。<a href="#iterative">反復のコスト</a>を参照。</li>
+                    </ul>
+                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュしません——該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">泡(バブル)の規則</a>を参照。</p>
+                    <h3>決定論的擬似乱数 <code>RANDOM</code></h3>
+                    <p class="ref-note"><code>RANDOM</code>もここにあり、他のすべてのワードと同じく1つの純粋関数です。<code>7 3 RANDOM</code>はシード<code>7</code>だけによって決まる、[0, 1)の範囲の厳密な有理数を3つ引きますが、これは毎回、どのセッションでも同じ3つを引きます。隠れた状態もホストのエントロピーもないため、厳密性や純粋性と矛盾するところは何もありません——<code>ORDER</code>と組み合わせれば決定論的なシャッフルになります(<code>SEED N RANDOM ORDER</code>)し、読みやすい分解能で値を引きたいときは<code>QUANTIZE</code>と組み合わせます。</p>
+                    <h3>ベクトルへの自動リフティング</h3>
+                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり(リフトし)、<code>+</code>と同じ規則でブロードキャストします。正規化(レクティファイア)は<code>[ -1 2 -3 ] 0 MAX</code> → <code>[ 0/1 2/1 0/1 ]</code>であり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>です。<code>MAP</code>もブロックも不要です——手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが泡になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
+
+                    <h3 id="comparison">比較と真偽値</h3>
+                    <p>6つの順序関係はすべてワードとして用意されています。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値です——真偽値は数ではありません。6つそれぞれに対応する記号があり、1文字のものが3つ、2文字のものが3つです。トークンが終わるのは空白または区切り文字の位置だけで、途中で終わることは決してないため、2文字の記号を使ってもトークナイザに余計なコストはかかりません。</p>
+                    <h3>比較ワード一覧</h3>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>正式名</th><th>糖衣構文</th><th>意味</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">等しい</td></tr>
+                                <tr><td><code>NEQ</code></td><td><code>!=</code></td><td class="notes">等しくない</td></tr>
+                                <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">より小さい</td></tr>
+                                <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">以下</td></tr>
+                                <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">より大きい</td></tr>
+                                <tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td class="notes">以上</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5 3 GT</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">決定できた比較は真偽値を返す。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 1 LTE</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes"><code>LTE</code>、<code>GTE</code>、<code>NEQ</code>は2文字の名前として使う。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE 1 EQ</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">真偽値は数の1ではない。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>2 SQRT 2 SQRT SUB 0 EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">\(\sqrt{2} - \sqrt{2}\)はちょうど0。平方根およびその和・差・積・商は厳密に比較されるため、6つの関係は予算に頼らずに決定できる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>厳密な比較</h3>
+                    <p class="ref-note">この6つの関係は、ワードが組み立てられるすべての値——有理数も平方根も同様に——にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
+
+                    <h3 id="logic">論理</h3>
+                    <p>Ajisaiには<code>AND</code>、<code>OR</code>、<code>NOT</code>という3つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。3つとも綴りのまま書き、記号は持ちません。</p>
+                    <h3>NILはそのまま伝わる</h3>
+                    <p>いずれかのオペランドが不在(<code>NIL</code>)であれば、その不在はそのまま結果に伝わります。<code>NIL</code>が入れば<code>NIL</code>が出るので、もう一方のオペランドだけで答えが決まりそうな場合でも、泡は結果の中に見える形で残ります。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE FALSE AND</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">確定した2つの値の論理AND。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE FALSE OR</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">確定した2つの値の論理OR。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE NOT</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">確定した値の論理NOT。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 DIV TRUE AND</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">左のオペランドが泡になったので、その不在が結果まで伝わる。必要な箇所で<code>^</code>を使って回復させる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                </section>
+
                 <section id="vector-ops" class="ref-page">
-                    <h2>ベクトル操作</h2>
+                    <h2>ベクトル操作(<code>GET</code>, <code>LENGTH</code>)</h2>
                     <p>ベクトルのインデックスは0始まりです。負のインデックスは末尾から数えます。<code>GET</code>や<code>LENGTH</code>のような読み取り系のワードは、他のすべてのワードと同様、読み取ったベクトルを消費します。元のベクトルを後でも使いたい場合は<code>KEEP</code>を前置してください。</p>
                     <h3>GETで読み取る</h3>
                     <div class="sample">
@@ -1572,10 +1594,230 @@
                     <p class="ref-note"><code>UNIQUE</code>と<code>TALLY</code>は数だけでなくあらゆる値に対して働きます——ラベルは通常テキストです——一方、<code>ORDER</code>と<code>SORT</code>はフラットな数のベクトルを必要とします。厳密な順序関係が定義されているのはそこだからです。<code>GROUP</code>は値とキーを位置によって対応付けるので、2つのオペランドは同じ長さでなければなりません。</p>
                 </section>
 
-                <section id="higher-order" class="ref-page">
-                    <h2>高階ワード</h2>
+                <section id="strings-ops" class="ref-page">
+                    <h2>文字列操作(<code>CHARS</code>, <code>JOIN</code>)</h2>
+                    <h3>ベクトルへ渡る: <code>CHARS</code>と<code>JOIN</code></h3>
+                    <p>文字列はベクトルではないため、コレクション系のワードは文字列を受け付けません。<code>LENGTH</code>、<code>GET</code>、<code>REVERSE</code>、<code>CONCAT</code>はいずれも文字列に対してはエラーを送出します。まず<code>CHARS</code>でベクトルの定義域へ渡ってください(<code>'abc' CHARS LENGTH</code>は<code>3</code>)。連結は<code>JOIN</code>で行い、これは文字列のベクトルを1つの文字列に変えるためのワードです——<code>[ 'ab' 'cd' ] JOIN</code>は<code>'abcd'</code>です。書いたものではなく計算した値を連結したい場合は、まず<code>COLLECT</code>で集めてください——<code>'a' 'b' 2 COLLECT JOIN</code>。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'hello' CHARS</code></td>
+                                    <td><code>[ 'h' 'e' 'l' 'l' 'o' ]</code></td>
+                                    <td class="notes"><code>CHARS</code>は文字列の定義域からベクトルの定義域へ渡る。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 'hel' 'lo' ] JOIN</code></td>
+                                    <td><code>'hello'</code></td>
+                                    <td class="notes">文字列のベクトルを連結する。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'  hi  ' TRIM</code></td>
+                                    <td><code>'hi'</code></td>
+                                    <td class="notes">両端の空白を取り除く。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'a,b,c' ',' TOKENIZE</code></td>
+                                    <td><code>[ 'a' 'b' 'c' ]</code></td>
+                                    <td class="notes">区切り文字で分割する。<code>JOIN</code>で断片を元通りに繋げる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note"><code>CHARS</code>は文字列をその文字へ分割し、<code>TOKENIZE</code>は区切り文字によって分割します。どちらも文字列のベクトルを生成し、<code>JOIN</code>はそれをテキストへ組み立て直します——<code>'hello' CHARS REVERSE JOIN</code>は<code>'olleh'</code>です。</p>
+
+                    <h3>数との相互変換: <code>STR</code>と<code>NUM</code></h3>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>42 STR</code></td>
+                                    <td><code>'42'</code></td>
+                                    <td class="notes">数から文字列へ。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'1/3' NUM</code></td>
+                                    <td><code>1/3</code></td>
+                                    <td class="notes">文字列から厳密な数へ。パースできないテキストは<code>NIL</code>になる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="control" class="ref-page">
+                    <h2>制御構文(<code>COND</code>, <code>MAP</code>)</h2>
+                    <h3 id="blocks-frames">ブロックと評価文脈(<code>{ }</code>)</h3>
+                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません——それを決めるのは、それを受け取るワードです。</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>評価するワード</th><th>ブロックが見るもの</th><th>ブロックが残すもの</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>ワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
+                                <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
+                                <tr><td><code>COND</code>のガード、および発火した本体</td><td class="notes">値1つ——ディスパッチ対象の値のみ</td><td class="notes">ちょうど1つ——最上位の値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
+                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">値1つ——現在の要素のみ</td><td class="notes">ちょうど1つ——写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
+                                <tr><td><code>FOLD</code></td><td class="notes">値2つ——累積値、続いて要素</td><td class="notes">ちょうど1つ——次の累積値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p>したがって<code>{ + } 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 { + } EXEC</code>も同様です——どちらもスタック全体を見ます。しかし<code>100 [ 1 2 ] { + } MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
+                    <p class="ref-note">「最上位より下にあるものは捨てられる」は2度読む価値があります。これは静かに起こるからです。2つの値を残す述語は通ります——<code>[ 1 2 3 ] { 1 GT TRUE } FILTER</code>はすべてを残します。最上位の<code>TRUE</code>が答えであり、その下の比較結果は捨てられるからです。エラーになるのは<em>何も</em>残さなかったときだけです。高階ワードのブロックが説明のつかない答えを返したら、それが残しているものの個数を数えてください。</p>
+                    <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] { 'x' 1 ADD } MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。あなたが定義したワードのところで、この掘り下げは止まります——その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
+                    <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます——これが、あるワードが<code>MAP</code>や<code>EXEC</code>に渡す<code>{ }</code>の内側から自分自身を呼び出せる理由であり、その呼び出しが普通の再帰呼び出しになる理由です。</p>
+
+                    <h3 id="cond">条件分岐(<code>COND</code>)</h3>
+                    <p><code>COND</code>は、ガードと本体の組(節)を順に評価し、最初にtrueになったガードの本体を実行します。節形式では、<code>|</code>がガードと本体を区切り、各節はちょうど1行を占めます。<code>TRUE</code>は常にtrueなelseガードを作ります。</p>
+                    <p>else節は<code>IDLE</code>とも綴ることができ、こちらの綴りが好ましいものです。<code>IDLE</code>は65個のWordのうちの1つではなく、Dictionaryパネルにも見つかりません。位置によって読み取られるキーワードであり、ガードとしてのみ意味を持ち、<em>それより前のどの節も発火しなかったときにこの節が発火する</em>ことを意味します。<code>TRUE</code>も、ガードが読み取る値を積むことで同じ結果に達しますが、動作はしても語ることは少ないです。<code>IDLE</code>はどの節がフォールバックであるかを明示します。</p>
+                    <p class="ref-note"><code>IDLE</code>は<em>それが書かれた場所で</em>発火します。節は上から下へ試され、<code>IDLE</code>もその順序の中で自分の番を待ちます。したがって<code>IDLE</code>より下に書かれたものには決して到達しません。最後に置いてください——そもそも「フォールバック」とはそういう意味です。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 0 ]
+{ [ 0 ] &lt; | 'negative' }
+{ [ 0 ] = | 'zero' }
+{ TRUE | 'positive' }
+COND</code></td>
+                                    <td><code>'zero'</code></td>
+                                    <td class="notes">節形式：<code>|</code>の左がガード、右が本体。慣例として1行に1節。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ -5 ] { [ 0 ] &lt; } { 'negative' } { TRUE } { 'positive' } COND</code></td>
+                                    <td><code>'negative'</code></td>
+                                    <td class="notes">対形式：ガードと本体のブロックを交互に並べる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>書き方の規則</h3>
+                    <p class="ref-note">各ガードは<code>TRUE</code>か<code>FALSE</code>を返すので、節は発火するかしないかのどちらかです。どの節も一致せずelse節もない場合、<code>COND</code>はエラーを送出します。</p>
+                    <p class="ref-note">1行に1節が正式な形式であり、Formatボタンもこの形を生成しますが、これは規則というよりレイアウト上の好みです。1行に折りたたんだ<code>COND</code>も実行でき、意味は変わりません。それでも縦に並べて書いてください——人がガードを上から下へ目で追って読めるのは、節が縦に積まれているときだけです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5
+{ 3 &lt; | 'small' }
+{ IDLE | 'big' }
+COND</code></td>
+                                    <td><code>'big'</code></td>
+                                    <td class="notes"><code>IDLE</code>がフォールバック節を明示する。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>節が見るもの</h3>
+                    <p><code>COND</code>の節は、目に見えるスタックの上では実行されません。すべてのガード、そして発火した節の本体は、<strong>ちょうど1つの値——<code>COND</code>がディスパッチしている値——だけを保持する隔離されたフレーム</strong>の中で実行され、そこから戻ってくるのもちょうど1つの値、本体が終わったときに最上位にあるものだけです。これは、スタック全体を見るワードの本体や<code>EXEC</code>とは異なります。このページ冒頭の<a href="#blocks-frames">ブロックと評価文脈</a>にある表が、5つの規則をまとめたものです。</p>
+                    <p>出会う前に書き留めておく価値のある帰結が2つあります。節の本体は、<code>COND</code>より前にスタックにあった値には到達できません——<code>1 2 3 4</code>に続けて本体が<code>+</code>である節を書くとスタックアンダーフローになります。<code>+</code>が見つけるのはディスパッチ対象の値だけだからです。そして複数の値で終わる本体は、最上位のものだけを保持します——<code>{ TRUE | 7 8 9 }</code>は<code>9</code>を答え、<code>7</code>と<code>8</code>はフレームとともに消えます。</p>
+                    <p class="ref-note">この隔離こそが、<code>COND</code>による再帰を実用的にしています。自己呼び出しに至るまでに作業用の値を組み立てる節の本体は、それらを片付ける必要がありません——それらはフレームを生き延びられないので、前の回がどれだけ足場を組んでいようと、再帰の各回は1つの値から始まります。</p>
+
+                    <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>ANY</code>・<code>ALL</code>)</h3>
                     <p>コードブロック<code>{ }</code>は第一級の値です。高階ワードは、ブロック——あるいは定義済みワードの引用された名前——を、ベクトルの各要素に適用します。</p>
-                    <h3><code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>ANY</code>・<code>ALL</code></h3>
                     <p class="ref-note">ブロックが残したものが、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] { 1 COLLECT } MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] { REVERSE } MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません——点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1693,27 +1935,6 @@
                     </div>
                     <p class="ref-note"><code>EXEC</code>はスタックから取ったコードブロックを実行する。</p>
 
-                    <h3 id="blocks-frames">ブロックが見るもの</h3>
-                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません——それを決めるのは、それを受け取るワードです。</p>
-                    <div class="ref-table-wrap word-table">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>評価するワード</th><th>ブロックが見るもの</th><th>ブロックが残すもの</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>ワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
-                                <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
-                                <tr><td><code>COND</code>のガード、および発火した本体</td><td class="notes">値1つ——ディスパッチ対象の値のみ</td><td class="notes">ちょうど1つ——最上位の値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
-                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">値1つ——現在の要素のみ</td><td class="notes">ちょうど1つ——写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
-                                <tr><td><code>FOLD</code></td><td class="notes">値2つ——累積値、続いて要素</td><td class="notes">ちょうど1つ——次の累積値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p>したがって<code>{ + } 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 { + } EXEC</code>も同様です——どちらもスタック全体を見ます。しかし<code>100 [ 1 2 ] { + } MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
-                    <p class="ref-note">「最上位より下にあるものは捨てられる」は2度読む価値があります。これは静かに起こるからです。2つの値を残す述語は通ります——<code>[ 1 2 3 ] { 1 GT TRUE } FILTER</code>はすべてを残します。最上位の<code>TRUE</code>が答えであり、その下の比較結果は捨てられるからです。エラーになるのは<em>何も</em>残さなかったときだけです。高階ワードのブロックが説明のつかない答えを返したら、それが残しているものの個数を数えてください。</p>
-                    <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] { 'x' 1 ADD } MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。あなたが定義したワードのところで、この掘り下げは止まります——その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
-                    <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます——これが、あるワードが<code>MAP</code>や<code>EXEC</code>に渡す<code>{ }</code>の内側から自分自身を呼び出せる理由であり、その呼び出しが普通の再帰呼び出しになる理由です。</p>
-
                     <h3 id="two-arguments">2つの引数を取るワードを書く</h3>
                     <p>Ajisaiには<code>DUP</code>、<code>SWAP</code>、<code>DROP</code>、<code>ROT</code>がありません。これは欠落ではなく意図的な設計です——<strong>複数の値はスタック上ではなくベクトルの中を運ばれます</strong>。2つの引数を必要とするワードは、要素数2のベクトルを1つ取ります。呼び出す側は、それを直接書く——<code>[ 3 4 ]</code>——か、計算済みの値から<code>COLLECT</code>で組み立てます。</p>
                     <div class="sample">
@@ -1827,450 +2048,8 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p class="ref-note">真ん中の行は、ベクトル<code>[ 'AJISAI-CODE-1' [ 'number' '5' ] [ 'symbol' 'LT' ] ]</code>を、部品ごとに組み立てているものとして読んでください——<code>2 COLLECT</code>が各2要素レコードをまとめ、最後の<code>3 COLLECT</code>がタグと2つのレコードをまとめます。これがAjisaiにおける部分適用のすべてです——そのための独立したワードはなく、必要もありません。ブロックとは、内容を計算できる値だからです。</p>
-                </section>
 
-                <section id="cond" class="ref-page">
-                    <h2>条件分岐</h2>
-                    <p><code>COND</code>は、ガードと本体の組(節)を順に評価し、最初にtrueになったガードの本体を実行します。節形式では、<code>|</code>がガードと本体を区切り、各節はちょうど1行を占めます。<code>TRUE</code>は常にtrueなelseガードを作ります。</p>
-                    <p>else節は<code>IDLE</code>とも綴ることができ、こちらの綴りが好ましいものです。<code>IDLE</code>は65個のWordのうちの1つではなく、Dictionaryパネルにも見つかりません。位置によって読み取られるキーワードであり、ガードとしてのみ意味を持ち、<em>それより前のどの節も発火しなかったときにこの節が発火する</em>ことを意味します。<code>TRUE</code>も、ガードが読み取る値を積むことで同じ結果に達しますが、動作はしても語ることは少ないです。<code>IDLE</code>はどの節がフォールバックであるかを明示します。</p>
-                    <p class="ref-note"><code>IDLE</code>は<em>それが書かれた場所で</em>発火します。節は上から下へ試され、<code>IDLE</code>もその順序の中で自分の番を待ちます。したがって<code>IDLE</code>より下に書かれたものには決して到達しません。最後に置いてください——そもそも「フォールバック」とはそういう意味です。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 0 ]
-{ [ 0 ] &lt; | 'negative' }
-{ [ 0 ] = | 'zero' }
-{ TRUE | 'positive' }
-COND</code></td>
-                                    <td><code>'zero'</code></td>
-                                    <td class="notes">節形式：<code>|</code>の左がガード、右が本体。慣例として1行に1節。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ -5 ] { [ 0 ] &lt; } { 'negative' } { TRUE } { 'positive' } COND</code></td>
-                                    <td><code>'negative'</code></td>
-                                    <td class="notes">対形式：ガードと本体のブロックを交互に並べる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>書き方の規則</h3>
-                    <p class="ref-note">各ガードは<code>TRUE</code>か<code>FALSE</code>を返すので、節は発火するかしないかのどちらかです。どの節も一致せずelse節もない場合、<code>COND</code>はエラーを送出します。</p>
-                    <p class="ref-note">1行に1節が正式な形式であり、Formatボタンもこの形を生成しますが、これは規則というよりレイアウト上の好みです。1行に折りたたんだ<code>COND</code>も実行でき、意味は変わりません。それでも縦に並べて書いてください——人がガードを上から下へ目で追って読めるのは、節が縦に積まれているときだけです。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>5
-{ 3 &lt; | 'small' }
-{ IDLE | 'big' }
-COND</code></td>
-                                    <td><code>'big'</code></td>
-                                    <td class="notes"><code>IDLE</code>がフォールバック節を明示する。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>節が見るもの</h3>
-                    <p><code>COND</code>の節は、目に見えるスタックの上では実行されません。すべてのガード、そして発火した節の本体は、<strong>ちょうど1つの値——<code>COND</code>がディスパッチしている値——だけを保持する隔離されたフレーム</strong>の中で実行され、そこから戻ってくるのもちょうど1つの値、本体が終わったときに最上位にあるものだけです。これは、スタック全体を見るワードの本体や<code>EXEC</code>とは異なります。5つの規則をまとめて見るには<a href="#blocks-frames">ブロックが見るもの</a>を参照してください。</p>
-                    <p>出会う前に書き留めておく価値のある帰結が2つあります。節の本体は、<code>COND</code>より前にスタックにあった値には到達できません——<code>1 2 3 4</code>に続けて本体が<code>+</code>である節を書くとスタックアンダーフローになります。<code>+</code>が見つけるのはディスパッチ対象の値だけだからです。そして複数の値で終わる本体は、最上位のものだけを保持します——<code>{ TRUE | 7 8 9 }</code>は<code>9</code>を答え、<code>7</code>と<code>8</code>はフレームとともに消えます。</p>
-                    <p class="ref-note">この隔離こそが、<code>COND</code>による再帰を実用的にしています。自己呼び出しに至るまでに作業用の値を組み立てる節の本体は、それらを片付ける必要がありません——それらはフレームを生き延びられないので、前の回がどれだけ足場を組んでいようと、再帰の各回は1つの値から始まります。</p>
-                </section>
-
-                <section id="strings" class="ref-page">
-                    <h2>文字列</h2>
-                    <p>文字列は<code>'</code>で引用され、スタック上では引用符付きで表示されます。この引用符は表示上の便宜であって値の一部ではありません——<code>PRINT</code>は生のテキストを書き出します(<code>'TEST'</code>は<code>TEST</code>として出力されます——<a href="#output">出力</a>を参照)。一方、コレクションの中に入れ子になった文字列は引用符を保ったままです(<code>[ 'AB' 'CD' ]</code>は<code>[ 'AB' 'CD' ]</code>のまま)。文字列は、キャスト系のワードで数や文字と相互に変換できます。</p>
-                    <h3>独立した値の定義域</h3>
-                    <p>文字列は6つの値の定義域の1つであり、コードポイントのベクトルではありません——<code>'A' [ 65 ] EQ</code>は<code>FALSE</code>であり、文字列に対する算術は、そのコードに対する算術ではなくエラーになります。空文字列<code>''</code>は普通の文字列であり、<code>NIL</code>ではありません。</p>
-                    <h3>ベクトルへ渡る: <code>CHARS</code>と<code>JOIN</code></h3>
-                    <p>文字列はベクトルではないため、コレクション系のワードは文字列を受け付けません。<code>LENGTH</code>、<code>GET</code>、<code>REVERSE</code>、<code>CONCAT</code>はいずれも文字列に対してはエラーを送出します。まず<code>CHARS</code>でベクトルの定義域へ渡ってください(<code>'abc' CHARS LENGTH</code>は<code>3</code>)。連結は<code>JOIN</code>で行い、これは文字列のベクトルを1つの文字列に変えるためのワードです——<code>[ 'ab' 'cd' ] JOIN</code>は<code>'abcd'</code>です。書いたものではなく計算した値を連結したい場合は、まず<code>COLLECT</code>で集めてください——<code>'a' 'b' 2 COLLECT JOIN</code>。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'hello'</code></td>
-                                    <td><code>'hello'</code></td>
-                                    <td class="notes">文字列リテラルはそれ自身に評価される。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>42 STR</code></td>
-                                    <td><code>'42'</code></td>
-                                    <td class="notes">数から文字列へ。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'1/3' NUM</code></td>
-                                    <td><code>1/3</code></td>
-                                    <td class="notes">文字列から厳密な数へ。パースできないテキストは<code>NIL</code>になる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'hello' CHARS</code></td>
-                                    <td><code>[ 'h' 'e' 'l' 'l' 'o' ]</code></td>
-                                    <td class="notes"><code>CHARS</code>は文字列の定義域からベクトルの定義域へ渡る。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 'hel' 'lo' ] JOIN</code></td>
-                                    <td><code>'hello'</code></td>
-                                    <td class="notes">文字列のベクトルを連結する。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'  hi  ' TRIM</code></td>
-                                    <td><code>'hi'</code></td>
-                                    <td class="notes">両端の空白を取り除く。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'a,b,c' ',' TOKENIZE</code></td>
-                                    <td><code>[ 'a' 'b' 'c' ]</code></td>
-                                    <td class="notes">区切り文字で分割する。<code>JOIN</code>で断片を元通りに繋げる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <p class="ref-note"><code>CHARS</code>は文字列をその文字へ分割し、<code>TOKENIZE</code>は区切り文字によって分割します。どちらも文字列のベクトルを生成し、<code>JOIN</code>はそれをテキストへ組み立て直します——<code>'hello' CHARS REVERSE JOIN</code>は<code>'olleh'</code>です。</p>
-                </section>
-
-                <section id="define" class="ref-page">
-                    <h2>ワードの定義</h2>
-                    <h3><code>DEF</code>で新しいワードを作る</h3>
-                    <p>新しいワードは、コードブロックと名前から定義されます：<code>{ body } 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>{ [ 10 ] + } 'ADD10' DEF
-5 ADD10</code></td>
-                                    <td><code>[ 15/1 ]</code></td>
-                                    <td class="notes"><code>ADD10</code>を定義し、それを呼び出す。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>{ [ 2 ] * } 'DBL' DEF
-[ 1 2 3 ] 'DBL' MAP</code></td>
-                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
-                                    <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>DEFが検査すること、しないこと</h3>
-                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです——<code>{ TOTALL 1 } 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
-                    <p>これは検査漏れではなく設計上の選択です。名前は呼び出し時に解決されます。これにより、あるワードが自分より後に定義される別のワードを呼び出すことができます——したがって2つのワードが互いを呼び合うこともでき、定義を依存関係に合わせて並べ替える必要は決してありません。</p>
-                    <p class="ref-note">その代償として、本体の中の誤字は、何かがそれを呼び出すまで静かに潜んでいます。これを事前に検出できるのがヘッドレスCLIです——<code>ajisai check</code>は何も実行せずにファイル中のすべての名前を解決し、未知のものを報告します。<code>ajisai check --contract</code>はさらに宣言されたワード契約も検証します。Playgroundにはこれに相当するものがありません——アプリの中では、ワードを呼び出すこと自体が検査になります。</p>
-                    <h3>ワードの管理</h3>
-                    <p><code>DEL</code>は、引用された名前でユーザー定義ワードを削除します。依存関係は追跡されており、他のワードが依存しているワードはまったく削除できません。したがって宙ぶらりんの参照は起こり得ません——先に依存している側を削除してください。</p>
-                    <p class="ref-note">ワード名は大文字・小文字を区別しません(<code>add10</code>と<code>ADD10</code>は同じワードです)。慣例として<code>APPLY-GAIN</code>のような動詞-目的語の形に従います。名前がどのように定義と対応付けられるかは、<a href="#dictionaries">辞書とワードの同一性</a>で扱います。</p>
-                </section>
-
-
-
-                <section id="bindings" class="ref-page">
-                    <h2>値に名前を付ける</h2>
-                    <h3><code>BIND</code>で名前を与える</h3>
-                    <p>スタックは一度に1つの値しか手渡してくれませんが、書く価値のあるたいていの式は、1つの値を2回以上使います。残差は二乗誤差と勾配の両方に使われ、閾値は比較と報告の両方に使われ、座標の組は和と差の両方に使われます。<code>KEEP</code>はコピーしますが、それで十分に思えて実は違います——上のコピーから何かを導出すると、その結果は下のコピーの<em>上に</em>乗ってしまうので、2回目の使用が1回目の下に埋もれてしまいます。</p>
-                    <p>代わりに<code>BIND</code>は値に名前を与えます。値と名前を取って両方を消費し、それ以降その名前が<em>すなわち</em>その値になります。好きなだけ、好きな順序で使えます。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 4 9 ] [ 'A' 'B' ] BIND A B ADD  A B SUB  2 COLLECT</code></td>
-                                    <td><code>[ 13/1 -5/1 ]</code></td>
-                                    <td class="notes">1つのベクトルから2つの名前。それぞれを2回読む。スタックだけで書こうとすると行列と畳み込みが必要になる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <p>名前が1つなら値全体を受け取ります。複数なら、同じ長さのベクトルを位置ごとに分解します。長さは正確に一致しなければならず、一致しなければ<code>BIND</code>はエラーを送出します——黙って通してしまうと、ベクトルの方が長いときは末尾が捨てられ、短いときはどれかの名前に何も対応しないという、書いた本人の意図とは違う結果になってしまうからです。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>5 'T' BIND T T MUL</code></td>
-                                    <td><code>25/1</code></td>
-                                    <td class="notes">名前1つの場合。<code>GET</code>のインデックスと同様、<code>[ 'T' ]</code>と書いても同じ意味になる。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3 id="name-inside-brackets"><code>[ ]</code>の中の名前は値ではなくテキスト</h3>
-                    <p>ここが唯一、束縛があなたを驚かせる場所であり、自分のプログラムの中でではなく、ここで出会っておく価値があります。ベクトルリテラルの中では、裸の名前は<strong>それ自身のテキスト</strong>です——これは<code>[ ]</code>一般についての規則であり、束縛された名前も例外ではありません。したがって<code>3 'K' BIND</code>の後、<code>[ K ]</code>は<code>[ 3/1 ]</code>ではなく、要素数1のベクトル<code>[ 'K' ]</code>です。</p>
-                    <p>これが人を戸惑わせるのは、このリファレンスのイディオムが<code>[ 0 ] GET</code>や<code>[ 3 ] TAKE</code>のように書かれているため、自然な次の一手が<code>XS [ K ] TAKE</code>になってしまうからです——そしてこれは<code>expected integer, got string</code>で失敗します。意図を表す2つの書き方があります。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>3 'K' BIND [ 1 2 3 4 5 ] K TAKE</code></td>
-                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
-                                    <td class="notes">名前を裸のまま書く。個数やインデックスは単なる数でよいので、何も包む必要はない。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>3 'K' BIND K 1 COLLECT</code></td>
-                                    <td><code>[ 3/1 ]</code></td>
-                                    <td class="notes">本当に要素数1のベクトルが欲しいときは、組み立てる。<code>COLLECT</code>は値を読むが、<code>[ ]</code>はテキストを読む。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>名前が届く範囲</h3>
-                    <p>束縛は、それを作った<strong>フレーム</strong>——ワードの本体、あるいは直接入力した場合は実行そのもの——に属し、それとまったく同じだけ生きます。2つの規則が導かれ、この2つで話のすべてです。</p>
-                    <p><strong>名前は、そのフレームの中に書かれたブロックにも届きます。</strong><code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>EXEC</code>、<code>COND</code>の節が実行するブロックは、名前にとって新しいフレームではないので、周囲にある名前をそのまま読めます。これらのワードが強制する隔離(<a href="#blocks-frames">ブロックが見るもの</a>を参照)は<em>スタック</em>についてのものであり、名前はスタックの上にはありません。これにより、述語はプログラムが実行時にしか知り得なかった値に対してテストできます。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>3 'LIMIT' BIND [ 1 5 2 9 ] { LIMIT LT } FILTER</code></td>
-                                    <td><code>[ 1/1 2/1 ]</code></td>
-                                    <td class="notes">ブロックは<code>LIMIT</code>が束縛されている場所に書かれているので、<code>LIMIT</code>と書ける。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <p><strong>名前は、あなたが呼び出すワードの中までは届きません。</strong>ワードの意味は、そのオペランドと辞書だけで決まり、それ以外の何ものでもありません。これが、ワード単体で読めることを可能にしています——したがって本体が読むのは自分自身の束縛だけであり、呼び出し元の束縛を読むことは決してありません。中でその値が必要なら、オペランドとして渡してください。それこそがオペランドの役目です。これを誤ると、未知のワードとして報告されるのではなく、はっきりとそう告げられます。</p>
-                    <p>束縛を行うワードは、呼び出し元に対して何の名前も残しません。また実行の束縛は、その実行が終われば消えます。これは意図的です——フレームより長く生き延びる名前があれば、それは辞書の隣にある、編集可能な第2の名前空間になってしまいます。ここには名前空間は1つしかありません。保持しておきたいデータには、ワードを定義してください——<code>{ [ 1 2 3 ] } 'XS' DEF</code>——これはまさに辞書が本来するべき仕事です。</p>
-                    <h3>名前はワードか束縛のどちらか、両方にはなれない</h3>
-                    <p>CoreワードまたはUserワードがすでに持っている名前を束縛することはできず、現在束縛されている名前でワードを定義することもできません。どちらの方向も拒否されるので、ある名前がどちらを経由して解決されたのかを考える必要は決してありません。<code>W</code>、<code>DX</code>、<code>LIMIT</code>のような短い使い捨ての名前は、ここではまさにふさわしいものです。ワード名と違って命名規則の警告の対象にもなりません——それらはローカルであり、そのスコープは目の前の画面の中に収まっています。</p>
-                </section>
-
-                <section id="patterns" class="ref-page">
-                    <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は65個のワードで、意図的に小さく保たれています——ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、argmin(最小値の位置)や緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 4 ] 1 { MUL } FOLD</code></td>
-                                    <td><code>24/1</code></td>
-                                    <td class="notes">積。和には専用のワード<code>SUM</code>があり、同じ<code>FOLD</code>の形で<code>MIN</code>や<code>MAX</code>を使えば極値になる。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] MUL SUM</code></td>
-                                    <td><code>32/1</code></td>
-                                    <td class="notes">内積：要素ごとに掛けてから合計する。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A { V MUL SUM } MAP</code></td>
-                                    <td><code>[ 17/1 39/1 ]</code></td>
-                                    <td class="notes">行列とベクトルの積：行ごとに1つの内積。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 4 1 7 1 ] ORDER [ 0 ] GET</code></td>
-                                    <td><code>1/1</code></td>
-                                    <td class="notes">argmin：昇順の最初の位置。代わりに<code>[ -1 ] GET</code>を使えばargmaxになる。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS KEEP SUM XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL SUM XS LENGTH DIV</code></td>
-                                    <td><code>2/1</code></td>
-                                    <td class="notes">分散：中心化し、二乗し、平均する。標準偏差はさらに<code>SQRT</code>を1回。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3>キーによる順序付け——同点も含めて</h3>
-                    <p>値をソートしてから元の位置を調べ直すのは、順序付けを得る自明な方法ですが、まさに重要な場面で間違った答えを出します——距離が等しい2つがあると、<code>SORT</code>してから<code>INDEX-OF</code>すると同じ位置を2回見つけてしまい、「最も近い3つ」が2つの近傍を返したり4つを返したりし得ます。<code>ORDER</code>は<code>SORT</code>が捨ててしまう問い——<em>どの位置か</em>、順に——に答え、しかも安定に答えます。したがって等しいキーは、書かれていた順序を保ちます。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 18 13 1 1 13 2 ] ORDER 3 TAKE</code></td>
-                                    <td><code>[ 2/1 3/1 5/1 ]</code></td>
-                                    <td class="notes">6つの距離のうち最も近い3つ。うち2つは1で同点。<code>3 TAKE</code>を外せば順序全体、<code>[ 2/1 3/1 5/1 1/1 4/1 0/1 ]</code>が得られる。ペイロードを一緒に運ぶには、置換を束縛してそれで収集する：<code>XS ORDER 'P' BIND YS P GET</code>。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="iterative" class="ref-page">
-                    <h2>反復計算と数値</h2>
+                    <h3 id="iterative">反復のコスト(<code>QUANTIZE</code>)</h3>
                     <p>厳密算術は、ループのコストを変えます。このリファレンスの他のすべての節はプログラムが<em>何を意味するか</em>についてですが、この節はそれを繰り返すことが<em>何のコストを伴うか</em>についてです。厳密性が見返りに何かを要求してくる、唯一の場所だからです。</p>
                     <h3>コストはどこから来るのか</h3>
                     <p>厳密な有理数は分子と分母の組として格納されており、分数と分数の積は分母同士の積になります。1回掛けるだけなら何も起きません。しかしループの中で掛け続ける——これはまさに勾配降下法、ニュートン法、k-means、べき乗法、その他あらゆる反復的手法がやっていることです——と、分母はステップを追うごとに大きくなります。何も失われず、何も近似されません。数はまったく正しいままです。ただ、その桁が記録しているのは<strong>その値がどう計算されたか</strong>であり、その履歴は回を追うごとに長くなります。</p>
@@ -2342,8 +2121,155 @@ COND</code></td>
                     <p class="ref-note">超越関数——指数関数、対数関数、任意のべき乗——は語彙にありません。それらに対する有理数の答えは存在せず、Ajisaiは正当化できない数を返さないからです。それらの上に組み立てられる手法(ロジスティック回帰、softmax、交差エントロピー、ガウス尤度)は、この言語が計算する範囲の外にあります。<code>SQRT</code>だけが、この言語が代数的数として厳密に構成する唯一の無理数です。</p>
                 </section>
 
-                <section id="dictionaries" class="ref-page">
-                    <h2>辞書とワードの同一性</h2>
+                <section id="words" class="ref-page">
+                    <h2>ワードと名前(<code>DEF</code>, <code>BIND</code>)</h2>
+                    <h3 id="define"><code>DEF</code>で新しいワードを作る</h3>
+                    <p>新しいワードは、コードブロックと名前から定義されます：<code>{ body } 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ [ 10 ] + } 'ADD10' DEF
+5 ADD10</code></td>
+                                    <td><code>[ 15/1 ]</code></td>
+                                    <td class="notes"><code>ADD10</code>を定義し、それを呼び出す。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ [ 2 ] * } 'DBL' DEF
+[ 1 2 3 ] 'DBL' MAP</code></td>
+                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
+                                    <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>DEFが検査すること、しないこと</h3>
+                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです——<code>{ TOTALL 1 } 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
+                    <p>これは検査漏れではなく設計上の選択です。名前は呼び出し時に解決されます。これにより、あるワードが自分より後に定義される別のワードを呼び出すことができます——したがって2つのワードが互いを呼び合うこともでき、定義を依存関係に合わせて並べ替える必要は決してありません。</p>
+                    <p class="ref-note">その代償として、本体の中の誤字は、何かがそれを呼び出すまで静かに潜んでいます。これを事前に検出できるのがヘッドレスCLIです——<code>ajisai check</code>は何も実行せずにファイル中のすべての名前を解決し、未知のものを報告します。<code>ajisai check --contract</code>はさらに宣言されたワード契約も検証します。Playgroundにはこれに相当するものがありません——アプリの中では、ワードを呼び出すこと自体が検査になります。</p>
+                    <h3>ワードの管理</h3>
+                    <p><code>DEL</code>は、引用された名前でユーザー定義ワードを削除します。依存関係は追跡されており、他のワードが依存しているワードはまったく削除できません。したがって宙ぶらりんの参照は起こり得ません——先に依存している側を削除してください。</p>
+                    <p class="ref-note">ワード名は大文字・小文字を区別しません(<code>add10</code>と<code>ADD10</code>は同じワードです)。慣例として<code>APPLY-GAIN</code>のような動詞-目的語の形に従います。名前がどのように定義と対応付けられるかは、<a href="#dictionaries">辞書とワードの同一性</a>で扱います。</p>
+
+                    <h3 id="bindings"><code>BIND</code>で名前を与える</h3>
+                    <p>スタックは一度に1つの値しか手渡してくれませんが、書く価値のあるたいていの式は、1つの値を2回以上使います。残差は二乗誤差と勾配の両方に使われ、閾値は比較と報告の両方に使われ、座標の組は和と差の両方に使われます。<code>KEEP</code>はコピーしますが、それで十分に思えて実は違います——上のコピーから何かを導出すると、その結果は下のコピーの<em>上に</em>乗ってしまうので、2回目の使用が1回目の下に埋もれてしまいます。</p>
+                    <p>代わりに<code>BIND</code>は値に名前を与えます。値と名前を取って両方を消費し、それ以降その名前が<em>すなわち</em>その値になります。好きなだけ、好きな順序で使えます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 4 9 ] [ 'A' 'B' ] BIND A B ADD  A B SUB  2 COLLECT</code></td>
+                                    <td><code>[ 13/1 -5/1 ]</code></td>
+                                    <td class="notes">1つのベクトルから2つの名前。それぞれを2回読む。スタックだけで書こうとすると行列と畳み込みが必要になる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p>名前が1つなら値全体を受け取ります。複数なら、同じ長さのベクトルを位置ごとに分解します。長さは正確に一致しなければならず、一致しなければ<code>BIND</code>はエラーを送出します——黙って通してしまうと、ベクトルの方が長いときは末尾が捨てられ、短いときはどれかの名前に何も対応しないという、書いた本人の意図とは違う結果になってしまうからです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5 'T' BIND T T MUL</code></td>
+                                    <td><code>25/1</code></td>
+                                    <td class="notes">名前1つの場合。<code>GET</code>のインデックスと同様、<code>[ 'T' ]</code>と書いても同じ意味になる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3 id="name-inside-brackets"><code>[ ]</code>の中の名前は値ではなくテキスト</h3>
+                    <p>ここが唯一、束縛があなたを驚かせる場所であり、自分のプログラムの中でではなく、ここで出会っておく価値があります。ベクトルリテラルの中では、裸の名前は<strong>それ自身のテキスト</strong>です——これは<code>[ ]</code>一般についての規則であり、束縛された名前も例外ではありません。したがって<code>3 'K' BIND</code>の後、<code>[ K ]</code>は<code>[ 3/1 ]</code>ではなく、要素数1のベクトル<code>[ 'K' ]</code>です。</p>
+                    <p>これが人を戸惑わせるのは、このリファレンスのイディオムが<code>[ 0 ] GET</code>や<code>[ 3 ] TAKE</code>のように書かれているため、自然な次の一手が<code>XS [ K ] TAKE</code>になってしまうからです——そしてこれは<code>expected integer, got string</code>で失敗します。意図を表す2つの書き方があります。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 'K' BIND [ 1 2 3 4 5 ] K TAKE</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes">名前を裸のまま書く。個数やインデックスは単なる数でよいので、何も包む必要はない。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>3 'K' BIND K 1 COLLECT</code></td>
+                                    <td><code>[ 3/1 ]</code></td>
+                                    <td class="notes">本当に要素数1のベクトルが欲しいときは、組み立てる。<code>COLLECT</code>は値を読むが、<code>[ ]</code>はテキストを読む。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>名前が届く範囲</h3>
+                    <p>束縛は、それを作った<strong>フレーム</strong>——ワードの本体、あるいは直接入力した場合は実行そのもの——に属し、それとまったく同じだけ生きます。2つの規則が導かれ、この2つで話のすべてです。</p>
+                    <p><strong>名前は、そのフレームの中に書かれたブロックにも届きます。</strong><code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>EXEC</code>、<code>COND</code>の節が実行するブロックは、名前にとって新しいフレームではないので、周囲にある名前をそのまま読めます。これらのワードが強制する隔離(<a href="#blocks-frames">ブロックと評価文脈</a>を参照)は<em>スタック</em>についてのものであり、名前はスタックの上にはありません。これにより、述語はプログラムが実行時にしか知り得なかった値に対してテストできます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 'LIMIT' BIND [ 1 5 2 9 ] { LIMIT LT } FILTER</code></td>
+                                    <td><code>[ 1/1 2/1 ]</code></td>
+                                    <td class="notes">ブロックは<code>LIMIT</code>が束縛されている場所に書かれているので、<code>LIMIT</code>と書ける。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p><strong>名前は、あなたが呼び出すワードの中までは届きません。</strong>ワードの意味は、そのオペランドと辞書だけで決まり、それ以外の何ものでもありません。これが、ワード単体で読めることを可能にしています——したがって本体が読むのは自分自身の束縛だけであり、呼び出し元の束縛を読むことは決してありません。中でその値が必要なら、オペランドとして渡してください。それこそがオペランドの役目です。これを誤ると、未知のワードとして報告されるのではなく、はっきりとそう告げられます。</p>
+                    <p>束縛を行うワードは、呼び出し元に対して何の名前も残しません。また実行の束縛は、その実行が終われば消えます。これは意図的です——フレームより長く生き延びる名前があれば、それは辞書の隣にある、編集可能な第2の名前空間になってしまいます。ここには名前空間は1つしかありません。保持しておきたいデータには、ワードを定義してください——<code>{ [ 1 2 3 ] } 'XS' DEF</code>——これはまさに辞書が本来するべき仕事です。</p>
+                    <h3>名前はワードか束縛のどちらか、両方にはなれない</h3>
+                    <p>CoreワードまたはUserワードがすでに持っている名前を束縛することはできず、現在束縛されている名前でワードを定義することもできません。どちらの方向も拒否されるので、ある名前がどちらを経由して解決されたのかを考える必要は決してありません。<code>W</code>、<code>DX</code>、<code>LIMIT</code>のような短い使い捨ての名前は、ここではまさにふさわしいものです。ワード名と違って命名規則の警告の対象にもなりません——それらはローカルであり、そのスコープは目の前の画面の中に収まっています。</p>
+
+                    <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
                     <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は65個の正準なワードを保持し、封印されています——Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、あなたが<code>DEF</code>で定義するすべてを保持します。</p>
                     <p>この65個のワードは、<strong>36語のSemantic Kernel</strong>と<strong>29語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするもの、あるいは何かを行う唯一の明示的な方法であるもの——コードブロックの実行、NILからの回復、辞書の変更、出力、コードとデータの間の橋渡し——です。Standardのワードは、頻出する発想に1つの固定された名前と契約を与えます——<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>など。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。65個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
@@ -2386,9 +2312,8 @@ COND</code></td>
                     <p>すべてのワードは<strong>コンテンツ同一性</strong>を持ちます——正規化された定義と、それが呼び出すワードたちの同一性にわたるダイジェストです。同じ同一性を持つ2つの定義は、名前が何であれ同じワードであり、定義を変更すると、それに依存するすべてのものの同一性が変わります。これが、<code>DEF</code>と<code>DEL</code>が、他の何かがまだ参照しているワードを乱すことを拒否する理由です——依存しているのはワードに対してであって、綴りに対してではありません。</p>
                 </section>
 
-
                 <section id="output" class="ref-page">
-                    <h2>出力</h2>
+                    <h2>出力(<code>PRINT</code>)</h2>
                     <p><code>PRINT</code>は、スタック最上位の値を出力領域に書き出します。他のどのワードとも同様、既定ではオペランドを消費します。<code>KEEP</code>を付ければ、値はスタックにも残ります。Playgroundは常に最終的なスタックを表示するので、<code>PRINT</code>は結果を見るためではなく、出力チャンネルのためのものです。</p>
                     <h3>引用符は表示上の便宜</h3>
                     <p>文字列は、数値ベクトルと見分けられるように、スタック上ではシングルクォートで囲まれて表示されます(<code>'TEST'</code>)。この引用符はStack表示に属するものであり、値には属しません——<code>PRINT</code>は生のテキストを書き出すので、<code>'TEST'</code>は<code>TEST</code>として出力されます。テキストの一部である引用符文字はそのまま保たれます(内容が<code>T'ES'T</code>である文字列は<code>T'ES'T</code>として出力されます)。数と真偽値は、スタック上に現れるのとまったく同じ姿で出力されます。</p>
@@ -2451,8 +2376,71 @@ COND</code></td>
                     </div>
                 </section>
 
-                <section id="identity-model" class="ref-page">
-                    <h2>同一性モデル</h2>
+                <section id="patterns" class="ref-page">
+                    <h2>よくあるパターン</h2>
+                    <p>Ajisaiの語彙は65個のワードで、意図的に小さく保たれています——ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、argmin(最小値の位置)や緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 ] 1 { MUL } FOLD</code></td>
+                                    <td><code>24/1</code></td>
+                                    <td class="notes">積。和には専用のワード<code>SUM</code>があり、同じ<code>FOLD</code>の形で<code>MIN</code>や<code>MAX</code>を使えば極値になる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] MUL SUM</code></td>
+                                    <td><code>32/1</code></td>
+                                    <td class="notes">内積：要素ごとに掛けてから合計する。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A { V MUL SUM } MAP</code></td>
+                                    <td><code>[ 17/1 39/1 ]</code></td>
+                                    <td class="notes">行列とベクトルの積：行ごとに1つの内積。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 4 1 7 1 ] ORDER [ 0 ] GET</code></td>
+                                    <td><code>1/1</code></td>
+                                    <td class="notes">argmin：昇順の最初の位置。代わりに<code>[ -1 ] GET</code>を使えばargmaxになる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS KEEP SUM XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL SUM XS LENGTH DIV</code></td>
+                                    <td><code>2/1</code></td>
+                                    <td class="notes">分散：中心化し、二乗し、平均する。標準偏差はさらに<code>SQRT</code>を1回。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3>キーによる順序付け——同点も含めて</h3>
+                    <p>値をソートしてから元の位置を調べ直すのは、順序付けを得る自明な方法ですが、まさに重要な場面で間違った答えを出します——距離が等しい2つがあると、<code>SORT</code>してから<code>INDEX-OF</code>すると同じ位置を2回見つけてしまい、「最も近い3つ」が2つの近傍を返したり4つを返したりし得ます。<code>ORDER</code>は<code>SORT</code>が捨ててしまう問い——<em>どの位置か</em>、順に——に答え、しかも安定に答えます。したがって等しいキーは、書かれていた順序を保ちます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 18 13 1 1 13 2 ] ORDER 3 TAKE</code></td>
+                                    <td><code>[ 2/1 3/1 5/1 ]</code></td>
+                                    <td class="notes">6つの距離のうち最も近い3つ。うち2つは1で同点。<code>3 TAKE</code>を外せば順序全体、<code>[ 2/1 3/1 5/1 1/1 4/1 0/1 ]</code>が得られる。ペイロードを一緒に運ぶには、置換を束縛してそれで収集する：<code>XS ORDER 'P' BIND YS P GET</code>。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+
+                    <h3 id="identity-model">付録: 同一性モデル</h3>
                     <p>Ajisaiでは<code>EQ</code>、<code>LT</code>、<code>GTE</code>のような普通の比較ワードを書けますが、言語は舞台裏でいくつもの「同じか?」という問いを別々に保っています。</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
@@ -2469,32 +2457,22 @@ COND</code></td>
                     </div>
                     <p>比較ワードは最上位の層でのみ働きます——あらゆるAjisaiの値にわたって厳密かつ全域的であり、数学的な問いに答えます。それより下の層は値のモデルには関与しないので、表現や表示が比較の結果に影響することは決してありません。</p>
                 </section>
-
             </article>
 
             <nav class="ref-nav" aria-label="Index">
                 <h2>目次</h2>
                 <ul>
                     <li><a href="#intro">はじめに</a></li>
-                    <li><a href="#tokens">トークンと綴り</a></li>
-                    <li><a href="#vectors">値とベクトル</a></li>
-                    <li><a href="#numbers">厳密な数</a></li>
-                    <li><a href="#identity-model">同一性モデル</a></li>
+                    <li><a href="#tokens">基本</a></li>
+                    <li><a href="#values">値と型</a></li>
                     <li><a href="#stack">スタックと修飾子</a></li>
-                    <li><a href="#arithmetic">算術</a></li>
-                    <li><a href="#comparison">比較と真偽値</a></li>
-                    <li><a href="#logic">論理</a></li>
-                    <li><a href="#nil">NILと泡(バブル)の規則</a></li>
+                    <li><a href="#operators">演算子</a></li>
                     <li><a href="#vector-ops">ベクトル操作</a></li>
-                    <li><a href="#higher-order">高階ワード</a></li>
-                    <li><a href="#cond">条件分岐</a></li>
-                    <li><a href="#strings">文字列</a></li>
-                    <li><a href="#define">ワードの定義</a></li>
-                    <li><a href="#bindings">値に名前を付ける</a></li>
-                    <li><a href="#patterns">よくあるパターン</a></li>
-                    <li><a href="#iterative">反復計算と数値</a></li>
-                    <li><a href="#dictionaries">辞書とワードの同一性</a></li>
+                    <li><a href="#strings-ops">文字列操作</a></li>
+                    <li><a href="#control">制御構文</a></li>
+                    <li><a href="#words">ワードと名前</a></li>
                     <li><a href="#output">出力</a></li>
+                    <li><a href="#patterns">よくあるパターン</a></li>
                 </ul>
             </nav>
         </main>
@@ -2549,12 +2527,22 @@ COND</code></td>
                 return (link.getAttribute('href') || '').replace(/^#/, '');
             }
 
-            function currentPageIndex() {
+            // ハッシュが指す頁。頁 id そのものだけでなく、頁内の見出し id
+            // (統合で消えた旧頁の id は <h3 id> として温存してある)を指す
+            // ハッシュも、それを含む頁として解決する。
+            function pageFromHash() {
                 var id = window.location.hash.replace(/^#/, '');
+                if (!id) return null;
                 for (var i = 0; i < pages.length; i++) {
-                    if (pages[i].id === id) return i;
+                    if (pages[i].id === id) return pages[i];
                 }
-                return 0;
+                var target = document.getElementById(id);
+                return target ? target.closest('.ref-page') : null;
+            }
+
+            function currentPageIndex() {
+                var page = pageFromHash();
+                return page ? pages.indexOf(page) : 0;
             }
 
             // 前後の頁へ移動する(端では何もしない)。hash を書き換えると
@@ -2569,12 +2557,7 @@ COND</code></td>
             // mirrors the current page into aria-current (accessibility; CSS cannot
             // set it), falling back to the first page when nothing is targeted.
             function markCurrentPage() {
-                var id = window.location.hash.replace(/^#/, '');
-                var target = null;
-                pages.forEach(function (page) {
-                    if (page.id === id) target = page;
-                });
-                if (!target) target = pages[0];
+                var target = pageFromHash() || pages[0];
 
                 navLinks.forEach(function (link) {
                     if (pageIdFromLink(link) === target.id) {
