@@ -46,3 +46,4 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `mcp-readiness.md` | MCP 製品化の実装トラッカー（達成した exit criteria のみを記録する） | `[方針記録]` |
 | `mcp-claude-code-handoff.md` | MCP 開発の次担当への引き継ぎ（現行方針・禁止事項） | `[方針記録]` |
 | `host-profile-derivation-handoff.md` | ホスト間で上限の値ではなく導出を統一する作業の引き継ぎ。走査系の非二次化の後に着手 | `[方針記録]` |
+| `reference-ja-restructure-handoff.md` | Reference 日本語版の再編（水のメタファー導入・制御構造の集約）の引き継ぎ。着手前に §8 の確認事項を利用者へ | `[方針記録]` |
