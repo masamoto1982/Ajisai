@@ -1108,7 +1108,8 @@
                 <section id="nil" class="ref-page">
                     <h2>NILと泡(バブル)の規則</h2>
                     <p>失敗のモデルは一言で言えます——<strong>値を作れなかった → 泡(バブル)／そもそも使い方が違う → エラー</strong>。正しい形の操作が結果を作れない場合は、構造化された理由を伴う「泡」である<code>NIL</code>に写像されます。一方、誤った使い方(型違い、オペランド不足)は通常のエラーを送出します。</p>
-                    <p>泡は流れます——算術と比較はNILをそのまま通す(パススルー)ので、<code>NIL</code>のオペランドは、パイプラインをクラッシュさせることなく結果を<code>NIL</code>にします。2つのワードは、泡を乱すことなく調べます——<code>NIL?</code>はスタック最上位の値が泡かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも値をその場に残したまま、答えをその上に積みます。最後に、<code>VENT</code>(<code>^</code>)が代わりの値(フォールバック)を与えます。</p>
+                    <h3>泡は流れる</h3>
+                    <p>算術と比較はどちらもNILをそのまま通します(パススルー)。<code>NIL</code>のオペランドが入っても、パイプラインをクラッシュさせることなく結果が<code>NIL</code>になるだけです。<code>EQ</code>や<code>NEQ</code>も例外ではありません——<code>NIL 1 EQ</code>は<code>FALSE</code>ではなく<code>NIL</code>です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1185,6 +1186,8 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3>泡を調べる: <code>NIL?</code>と<code>NIL-REASON</code></h3>
+                    <p>この2つのワードは、泡を乱すことなく調べます——<code>NIL?</code>はスタック最上位の値が泡かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも値をその場に残したまま、答えをその上に積みます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1223,6 +1226,8 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3>代わりの値を与える: <code>VENT</code></h3>
+                    <p><code>VENT</code>(<code>^</code>)は、最上位の値が泡のときだけ代わりの値(フォールバック)を与えます。フォールバックは<code>^</code>の直後に書かれたソースそのものであり、あらかじめスタックに積んでおいた値ではありません。最上位が泡でなければ、そのフォールバックは<em>評価すらされずに読み飛ばされます</em>——重い処理や副作用のある式をフォールバックに書いても、実際に泡が出たときにしか実行されません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
