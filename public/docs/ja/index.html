@@ -925,7 +925,8 @@
 
                 <section id="comparison" class="ref-page">
                     <h2>比較と真偽値</h2>
-                    <p>6つの順序関係すべてがワードとして存在します。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値です——真偽値は数ではありません。6つそれぞれに記号があります。1文字のものが3つ、2文字のものが3つです。トークンは空白または区切り文字でのみ終わり、途中で終わることは決してないため、2文字の名前はトークナイザにとって何のコストにもなりません。</p>
+                    <p>6つの順序関係はすべてワードとして用意されています。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値です——真偽値は数ではありません。6つそれぞれに対応する記号があり、1文字のものが3つ、2文字のものが3つです。トークンが終わるのは空白または区切り文字の位置だけで、途中で終わることは決してないため、2文字の記号を使ってもトークナイザに余計なコストはかかりません。</p>
+                    <h3>比較ワード一覧</h3>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -970,7 +971,7 @@
                                 <tr>
                                     <td><code>1 1 LTE</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes"><code>LTE</code>、<code>GTE</code>、<code>NEQ</code>は名前で使う。</td>
+                                    <td class="notes"><code>LTE</code>、<code>GTE</code>、<code>NEQ</code>は2文字の名前として使う。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1017,6 +1018,7 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3>厳密な比較</h3>
                     <p class="ref-note">この6つの関係は、ワードが組み立てられるすべての値——有理数も平方根も同様に——にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
                 </section>
 
