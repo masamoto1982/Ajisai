@@ -14,7 +14,7 @@ Its central promise is **value integrity first**: numbers stay exact, structure 
 
 **Numeric scope.** Numbers are *exact by default*: exact rationals and the multiquadratic field they generate under `SQRT` — square roots of non-negative rationals, closed under field arithmetic, in a normal form \(\sum_d c_d\sqrt d\). Arithmetic never rounds, coefficients are arbitrary-precision, and **comparison is total**: every comparison of two scalars decides in finite time. That field is the whole numeric domain, so π, e, and logarithms are not Ajisai values.
 
-The name *Ajisai* comes from hydrangea, often interpreted as a “water vessel.” Ajisai uses water as its main metaphor: values flow through channels, operations shape those channels, and exceptional situations remain visible instead of disappearing into hidden runtime state.
+The name *Ajisai* comes from hydrangea, often interpreted as a “water vessel.” Ajisai uses water as its main metaphor: the Stack is the vessel, values are the water poured into it — exact rationals in their purest form — and evaluation is the flow between pouring and the ripple it leaves at the surface, the printed output. Exceptional situations remain visible instead of disappearing into hidden runtime state: a bubble when no water could be produced, a breach when the vessel itself gives way.
 
 ## Documentation
 
@@ -34,11 +34,14 @@ The HTML source of the specification lives at [`SPECIFICATION.html`](SPECIFICATI
 
 | Water metaphor | Language meaning | Observable idea |
 | --- | --- | --- |
-| Flow | ordinary values moving through the stack | Scalars, booleans, strings, vectors, code blocks |
+| Vessel | the Stack — a Vector holding what has been poured in | `[ ]`, nesting, indexing |
+| Water | a value poured into the vessel; exact rationals (extended by `SQRT`) are its purest form | Scalars, booleans, strings, code blocks |
+| Flow | water moving between pouring and the ripple it leaves, shaped by the Words it passes through | Dataflow through operations |
+| Ripple | the trace a flow leaves at the surface | `PRINT` output |
 | Bubble | a well-formed operation could not produce a value | `NIL`, carrying a machine-readable reason |
-| Channel error | the operation or input shape is malformed | raised error that propagates and halts evaluation |
+| Breach | the vessel or channel gives way — the operation or input shape is malformed | raised error that propagates and halts evaluation |
 
-Ajisai keeps these three cases separate. A bubble is absence, not falsehood; an error is not a value in the stream. Truth is two-valued — `TRUE` and `FALSE` — and every comparison decides.
+Ajisai keeps outcomes separate from the water that carries them. A bubble is absence, not falsehood; a breach is not a value in the stream. Truth is two-valued — `TRUE` and `FALSE` — and every comparison decides.
 
 Spec links: [Value Domains](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values), [Diagnostic absence](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values-nil), [Partiality and Failure](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure)
 
@@ -58,13 +61,13 @@ Spec links: [Exact scalars](https://masamoto1982.github.io/Ajisai/SPECIFICATION.
 
 ### 2) Bubble: partial failure stays visible
 
-Ajisai distinguishes three outcomes. A **value** is ordinary success. A **bubble** is `NIL`: a well-formed operation that could not produce a value — division by zero, a failed `NUM` parse, an out-of-range `GET`. A **channel error** is malformed use, which propagates and halts evaluation.
+Ajisai distinguishes three outcomes. A **value** is ordinary success. A **bubble** is `NIL`: a well-formed operation that could not produce a value — division by zero, a failed `NUM` parse, an out-of-range `GET`. A **breach** (channel error) is malformed use, which propagates and halts evaluation.
 
-A bubble carries a machine-readable **reason** and flows downstream, so absence stays diagnosable. `NIL` is not `FALSE`, and an error is not a value.
+A bubble carries a machine-readable **reason** and flows downstream, so absence stays diagnosable. `NIL` is not `FALSE`, and a breach is not a value.
 
 - `NIL` means "the value is absent", and `^` (`VENT`) turns it into a fallback at the end of a pipeline.
 - `AND` / `OR` / `NOT` pass a `NIL` operand through, so a bubble stays visible even when the other operand would settle the answer.
-- A channel error is the one outcome that ends the program: it propagates to the top and halts evaluation, so misuse surfaces where it happened rather than turning into a value.
+- A breach is the one outcome that ends the program: it propagates to the top and halts evaluation, so misuse surfaces where it happened rather than turning into a value.
 
 Spec links: [Diagnostic absence](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values-nil), [Value, absence, misuse](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-trichotomy), [NIL passthrough](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-passthrough), [Recovery](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-recovery)
 
@@ -104,11 +107,11 @@ Safety in Ajisai is a property of ordinary value flow. Every operation lands in
 one of two places:
 
 - a well-formed operation that cannot produce a value becomes a **bubble** (`NIL`),
-- a malformed use raises a **channel error**.
+- a malformed use raises a **breach** (channel error).
 
 The two are kept apart on purpose. A bubble carries its reason downstream, and a
-single `^` (`VENT`) turns it into a fallback at the end of a pipeline. A channel
-error propagates to the top and halts evaluation, so misuse is reported rather
+single `^` (`VENT`) turns it into a fallback at the end of a pipeline. A breach
+propagates to the top and halts evaluation, so misuse is reported rather
 than absorbed into the result.
 
 Two limits bound how much a program may do, and they mean different things:
