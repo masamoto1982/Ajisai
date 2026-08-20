@@ -2324,10 +2324,13 @@ COND</code></td>
 
                 <section id="dictionaries" class="ref-page">
                     <h2>辞書とワードの同一性</h2>
+                    <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
                     <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は65個の正準なワードを保持し、封印されています——Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、あなたが<code>DEF</code>で定義するすべてを保持します。</p>
                     <p>この65個のワードは、<strong>36語のSemantic Kernel</strong>と<strong>29語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするもの、あるいは何かを行う唯一の明示的な方法であるもの——コードブロックの実行、NILからの回復、辞書の変更、出力、コードとデータの間の橋渡し——です。Standardのワードは、頻出する発想に1つの固定された名前と契約を与えます——<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>など。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。65個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
-                    <p><strong>ワードを調べる。</strong>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます——Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します(エディタに戻して編集する形ではありません)。これはプログラムが行うことではなく、エディタが行うことです——何も積まれず、何も消費されず、答えは値ではなく文章です。したがってプログラムがここで呼び出せるワードはありません。Reset(<code>Ctrl+Alt+Enter</code>)、Stack clear(<code>Ctrl+Alt+S</code>)、Editor clear(<code>Ctrl+Alt+E</code>)がショートカットのみで存在するほかの操作です——それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません——<code>RESET</code>や<code>LOOKUP</code>という名前のワードは、ほかの名前と同じ普通のワードです。</p>
+                    <h3>ワードを調べる</h3>
+                    <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます——Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します(エディタに戻して編集する形ではありません)。これはプログラムが行うことではなく、エディタが行うことです——何も積まれず、何も消費されず、答えは値ではなく文章です。したがってプログラムがここで呼び出せるワードはありません。Reset(<code>Ctrl+Alt+Enter</code>)、Stack clear(<code>Ctrl+Alt+S</code>)、Editor clear(<code>Ctrl+Alt+E</code>)がショートカットのみで存在するほかの操作です——それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません——<code>RESET</code>や<code>LOOKUP</code>という名前のワードは、ほかの名前と同じ普通のワードです。</p>
 
+                    <h3>名前解決と再定義</h3>
                     <p>名前はCoreかUserのどちらかで解決され、UserがCoreを覆い隠すことは決してありません。したがってワードの名前が、そのワードの住所のすべてです——修飾された形もなく、選ぶべき辞書もなく、裸の名前が曖昧になる余地もありません。名前は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
