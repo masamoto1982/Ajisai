@@ -819,8 +819,8 @@
 
                 <section id="arithmetic" class="ref-page">
                     <h2>算術</h2>
-                    <p>算術ワードはベクトル同士の要素ごとの演算として働き、要素数1のベクトルはより長いベクトルに対してブロードキャストされます。各ワードには正式な英語名があり、記号はその糖衣構文です。</p>
-                    <p class="ref-note">ブロードキャストは要素数1のベクトルだけの規則ではなく、軸についての規則です。2つのベクトルは最も内側の軸から順に対応付けられ、短い方が届かない軸は長さ1とみなされ、長さ1の軸は相手側の長さに合わせて繰り返し使われます——したがって<code>[ 1 2 3 ] [ 10 ] *</code>は<code>[ 10/1 20/1 30/1 ]</code>、<code>[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] *</code>は<code>[ [ 10/1 40/1 ] [ 30/1 80/1 ] ]</code>です。それ以外はエラーになります——<code>[ 1 2 3 ] [ 10 20 ] *</code>は3と2を対応付けられません。スカラーは軸を必要とせず、ベクトルがどう入れ子になっていても——不揃いなものも含め——すべての要素と組み合わさります。2つの<em>ベクトル</em>同士がブロードキャストできるのは、両方とも矩形(各軸の長さが揃っている)のときだけです。</p>
+                    <p>算術ワードは、ベクトル同士の要素ごとの演算(要素単位の演算)として機能します。各ワードには正式な英語名が定義されており、演算記号はその糖衣構文(シンタックスシュガー)です。</p>
+                    <h3>算術ワード一覧</h3>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -835,6 +835,15 @@
                             </tbody>
                         </table>
                     </div>
+                    <h3>ブロードキャスト規則</h3>
+                    <p>ブロードキャストは、単に要素数1のベクトルを拡張するだけの規則ではなく、多次元ベクトルの<strong>軸</strong>全体に適用される一貫した規則です。</p>
+                    <ul class="ref-list">
+                        <li><strong>軸の対応付け</strong>: 2つのベクトルは最も内側の軸から順に対応付けられます。</li>
+                        <li><strong>長さ1の軸の拡張</strong>: 短いベクトルの届かない軸は長さ1とみなされ、長さ1の軸は相手側の長さに合わせて繰り返し使われます(例: <code>[ 1 2 3 ] [ 10 ] *</code>は<code>[ 10/1 20/1 30/1 ]</code>、<code>[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] *</code>は<code>[ [ 10/1 40/1 ] [ 30/1 80/1 ] ]</code>)。</li>
+                        <li><strong>形状の不一致</strong>: 軸の長さが一致せず、どちらも1でない場合はエラーになります(例: <code>[ 1 2 3 ] [ 10 20 ] *</code>は長さ3と2を対応付けられないためエラー)。</li>
+                        <li><strong>スカラーの適用</strong>: スカラー値は軸を必要とせず、ベクトルがどう入れ子になっていても——不揃いなものも含め——すべての要素と組み合わさります。</li>
+                        <li><strong>矩形条件</strong>: 2つの<em>ベクトル</em>同士がブロードキャストできるのは、両方とも矩形(各軸の長さが揃っている)のときだけです。</li>
+                    </ul>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -864,7 +873,7 @@
                                 <tr>
                                     <td><code>[ 1 2 3 ] [ 10 ] *</code></td>
                                     <td><code>[ 10/1 20/1 30/1 ]</code></td>
-                                    <td class="notes">単一要素のベクトルは、もう一方のオペランドに対してブロードキャストされる。</td>
+                                    <td class="notes">単一要素のベクトルは、もう一方のオペランド全体へブロードキャストされる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -892,9 +901,20 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">残りの数値ワードもここにあります——符号のための<code>ABS</code>と<code>NEG</code>、2つの数についての<code>MIN</code>と<code>MAX</code>、<code>SQRT</code>、丸めの対<code>FLOOR</code>と<code>ROUND</code>、そして<code>1/d</code>の最も近い倍数に丸める<code>QUANTIZE</code>——これはループの中で手を伸ばすべきワードです。<a href="#iterative">反復計算と数値</a>を参照。ゼロ除算はクラッシュしません——<a href="#nil">NILと泡(バブル)の規則</a>を参照。</p>
-                    <p class="ref-note"><code>RANDOM</code>もここにあり、他のすべてのワードと同じく1つの関数です。<code>7 3 RANDOM</code>はシード<code>7</code>だけによって決まる、[0, 1)の範囲の厳密な有理数を3つ引きますが、これは毎回、どのセッションでも同じ3つを引きます。隠れた状態もホストのエントロピーもないため、厳密性や純粋性と矛盾するところは何もありません——<code>ORDER</code>と組み合わせればシャッフルになります(<code>SEED N RANDOM ORDER</code>)し、読みやすい分解能で値を引きたいときは<code>QUANTIZE</code>と組み合わせます。</p>
-                    <p class="ref-note">これらはいずれも持ち上がります(リフトします)。<code>MIN</code>、<code>MAX</code>、<code>SQRT</code>は<code>+</code>と同じ規則でブロードキャストするので、正規化(レクティファイア)は<code>[ -1 2 -3 ] 0 MAX</code>——<code>[ 0/1 2/1 0/1 ]</code>——であり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>です。<code>MAP</code>もブロックも不要です——手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが泡になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
+                    <h3>その他の数値演算ワード</h3>
+                    <p>基本四則演算に加えて、次の数値演算ワードが用意されています。</p>
+                    <ul class="ref-list">
+                        <li><strong>符号操作</strong>: <code>ABS</code>(絶対値)、<code>NEG</code>(符号反転)</li>
+                        <li><strong>極値</strong>: <code>MIN</code>(最小値)、<code>MAX</code>(最大値)</li>
+                        <li><strong>平方根</strong>: <code>SQRT</code></li>
+                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)</li>
+                        <li><strong>量子化</strong>: <code>QUANTIZE</code>——<code>1/d</code>の最も近い倍数に丸めます。ループ処理や反復計算での使用に適したワードです。<a href="#iterative">反復計算と数値</a>を参照。</li>
+                    </ul>
+                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュしません——該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">NILと泡(バブル)の規則</a>を参照。</p>
+                    <h3>決定論的擬似乱数 <code>RANDOM</code></h3>
+                    <p class="ref-note"><code>RANDOM</code>もここにあり、他のすべてのワードと同じく1つの純粋関数です。<code>7 3 RANDOM</code>はシード<code>7</code>だけによって決まる、[0, 1)の範囲の厳密な有理数を3つ引きますが、これは毎回、どのセッションでも同じ3つを引きます。隠れた状態もホストのエントロピーもないため、厳密性や純粋性と矛盾するところは何もありません——<code>ORDER</code>と組み合わせれば決定論的なシャッフルになります(<code>SEED N RANDOM ORDER</code>)し、読みやすい分解能で値を引きたいときは<code>QUANTIZE</code>と組み合わせます。</p>
+                    <h3>ベクトルへの自動リフティング</h3>
+                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり(リフトし)、<code>+</code>と同じ規則でブロードキャストします。正規化(レクティファイア)は<code>[ -1 2 -3 ] 0 MAX</code> → <code>[ 0/1 2/1 0/1 ]</code>であり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>です。<code>MAP</code>もブロックも不要です——手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが泡になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
                 </section>
 
                 <section id="comparison" class="ref-page">
