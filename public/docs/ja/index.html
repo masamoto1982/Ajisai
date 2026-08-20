@@ -1555,6 +1555,7 @@
                 <section id="higher-order" class="ref-page">
                     <h2>高階ワード</h2>
                     <p>コードブロック<code>{ }</code>は第一級の値です。高階ワードは、ブロック——あるいは定義済みワードの引用された名前——を、ベクトルの各要素に適用します。</p>
+                    <h3><code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>ANY</code>・<code>ALL</code></h3>
                     <p class="ref-note">ブロックが残したものが、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] { 1 COLLECT } MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] { REVERSE } MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません——点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
