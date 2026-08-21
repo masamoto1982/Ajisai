@@ -764,80 +764,269 @@ carries no gap.
 
 ---
 
-## Phase 4 — 三分法の統一（**設計フェーズ。実装前に人間の承認が要る**）
+## Phase 4 — 三分法の統一（実装する）
 
-### 4.1 目的と、この Phase が他と違う点
+### 4.1 目的
 
 実行時の三分法（値 / NIL+理由 / ERROR）と、静的検査の三値
 （verified / cannot verify / violated）は、**同じ三分法を時刻を変えて適用したもの**である。
-これを明示的に一つにする。
+`check --contract` の結果を、その対応が読み取れる形で出力する。
 
-**⚠️ この Phase は、他と違って「設計文書を書いて停止する」ところまでが作業範囲。**
-実装に進んではならない。理由：これは十概念のうち #2 と #8 の関係を
-変える提案であり、言語の同一性（`docs/dev/ajisai-minimal-core-identity.md`）に触れる。
-実装可否は人間が決める。
+**これは装飾ではない。** 対応が本物であることの構造的な証拠が3つある：
 
-### 4.2 触ってよいファイル
+1. **gap は伝播する。** Phase 3 で依存語の gaps を合流させるのは、
+   `LANG.FAILURE.PASSTHROUGH`（NIL は理由を変えずに下流へ流れる）と同じ挙動である。
+   意図して似せたのではなく、不完全性が伝播するという性質から独立に出てきた。
+2. **「値」の場合は既に別ツールとして存在する。** `ajisai contract` /
+   MCP の `infer_contracts` が返すのは推論された契約——つまり検査の成功結果そのもの。
+   三分法は既に2つのツールに分裂して実装されている。
+3. **gap ID は NIL reason と同じ性格の識別子である。** どちらも
+   「整形式な部分操作が値を作れなかった理由」の安定 ID であり、
+   人間向け文言とは独立に安定する。
+
+### 4.2 スコープ：何をやり、何をやらないか（重要）
+
+この Phase がやるのは **(a) だけ**である。
+
+- **(a) 出力の語彙と構造を三分法に合わせる（やる）**
+  `check --contract` が per-declaration の結果を `value` / `nil` / `error` として報告し、
+  ファイル全体の判定をその畳み込みとして出す。意味論の変更なし、追加のみ。
+  正典には「この三値は三分法の検査時刻への適用である」という*記述*を1段落足す。
+
+- **(b) 検査器が実際に Ajisai の `Value` を返す（やらない）**
+  gap ID を NIL reason のレジストリに合流させ、`NIL-REASON` で読めるようにする案。
+  **技術的理由で見送る**：(b) の利益は「検査結果を Ajisai プログラムが加工できる」ことだが、
+  それが意味を持つのは検査器自体が Ajisai で書かれたとき（セルフホスティング）であって、
+  それは本ロードマップに無い。検査器が Rust のままなら (b) は
+  「JSON に NIL 形のノードが入る」以上のものにならず、それは (a) が既に与える。
+  さらに (b) は reason レジストリを実行時と検査時の2平面にまたがらせるため、
+  `spec/words.json` の reason 語彙に触る。利益が来ていない段階で払うコストではない。
+
+  → (b) は `docs/dev/` に「なぜ今やらないか」として記録する（Step 4.5）。
+  セルフホスティングが議題に上がったとき、この判断は再検討に値する。
+
+**この線引きは技術的判断として確定している。** (b) に手を出さないこと。
+
+### 4.3 触ってよいファイル（ホワイトリスト）
 
 ```
-新規: docs/dev/trichotomy-unification-design.md
+編集: spec/language-semantics.md              （LANG.CONTRACT.CHECK に1段落）
+編集: SPECIFICATION.html                      （生成物。生成コマンドの結果のみコミット）
+編集: rust/src/agent/contract_decl.rs         （出力の追加）
+編集: rust/src/agent/contract_gap.rs          （畳み込み規則）
+編集: docs/dev/agent-cli-output-contract.md
+新規: docs/dev/trichotomy-unification.md      （(b) を見送る理由の記録）
+編集: docs/dev/INDEX.md
 ```
 
-**それだけ。** Rust も spec も触らない。
+**Phase 3 の完了が前提。** gap ID が無いと `nil` の reason が書けない。
 
-### 4.3 事前に読むファイル
+### 4.4 事前に読むファイル
 
 | ファイル | 読む理由 |
 | --- | --- |
 | `spec/language-semantics.md` の `LANG.FAILURE.TRICHOTOMY` と `LANG.CONTRACT.CHECK` | 統一する2つの三分法の正典定義 |
-| `docs/dev/ajisai-minimal-core-identity.md` | 「何が変われば Ajisai でなくなるか」の判定基準 |
-| `docs/dev/concept-reduction-2026-07.md` | 十概念への削減の経緯。この提案は #2 と #8 を1つにする方向 |
-| `docs/dev/ajisai-self-hosting-design.md` | 「新しい権威層を作らない」制約 |
-| Phase 3 で作った `contract_gap.rs` | cannot verify の内訳。NIL の reason と同じ性格である点が論拠 |
+| `spec/language-semantics.md` の `LANG.FAILURE.PASSTHROUGH` | gap の伝播がこれと同型であることの確認 |
+| `docs/dev/ajisai-authoring-style.md` | 正典 HTML の執筆規約。§4.5 で従う |
+| `rust/src/agent/contract_report.rs` の冒頭コメント | 「値」の場合が既にここにあることの確認 |
+| `rust/src/error.rs` の `ErrorCategory` | **足さない**ことを確認するために読む（落とし穴 B） |
 
-### 4.4 書くべき内容（この構成で書く）
+### 4.5 ⚠️ 落とし穴
 
-1. **観察**：2つの三分法の対応表。verified↔値、cannot verify↔NIL(reason)、violated↔ERROR。
-   Phase 3 の gap ID が NIL reason と同じ性格の識別子であることを、
-   両者が同じものである最初の具体的証拠として挙げる。
-2. **提案**：`check --contract` の結果を Ajisai の値そのものにする。
-   - verified → 値
-   - cannot verify → `reason` が gap ID の NIL
-   - violated → ERROR カテゴリ
-3. **十概念への影響**：#2 と #8 が1つの概念の2つの適用時刻になる。概念数が減る。
-   ただし「概念が減る」ことを自明な善としないこと——`LANG.CONTRACT.CHECK` は
-   「実行しない」ことを本質としており、実行時の三分法と**同一視できない差**が
-   あるかどうかを正面から検討すること。
-4. **反論の検討（必須）**：少なくとも以下に答えること。
-   - 静的検査の結果を「値」にすると、`ajisai check` は Ajisai プログラムを実行することになるのか？
-     ならないなら、どういう意味で「値」なのか（プロトコル上の表現か、実際の `Value` か）
-   - `cannot verify` は NIL の定義（「整形式だが値を作れなかった」）に本当に当てはまるか
-   - 新しい権威層を作らないという制約に抵触しないか
-5. **段階案**：意味論を変えずに得られる部分（プロトコル上の表現の統一）と、
-   正典変更が要る部分を分ける。前者だけでも実利があるなら、それを先行案として示す。
-6. **推奨と、判断を人間に返す明示の問い**：最後に「この判断を人間に返す」と書き、
-   決めてほしい選択肢を2〜3個に絞って提示する。
+#### 落とし穴 A：既存の `violated` と `findings` を消さない
 
-### 4.5 受け入れ条件
+追加のみが許される（`LANG.OBSERVATION.PROTOCOL`）。`violated` boolean と
+`findings` 配列は**そのまま残す**。新しい `outcome` / `declarations` を足す。
 
-- [ ] `docs/dev/trichotomy-unification-design.md` が上記6節構成で存在する
-- [ ] 4.4 の「反論の検討」3項目すべてに、賛否どちらかの結論が書かれている
-      （「検討の余地がある」で終わらせない）
-- [ ] Rust / spec / package.json に**変更が無い**
-- [ ] `docs/dev/INDEX.md` に `[方針記録]` として追加されている
-- [ ] 最後に人間への問いが明示されている
+一時的に同じ事実が2つの形で出ることになる。これはこのリポジトリが嫌う
+「並行する定義」だが、**プロトコルの追加専用規律のほうが優先する**。
+`agent-cli-output-contract.md` に「`findings` / `violated` は `declarations` の射影であり、
+次の schemaVersion で削除される」と明記して、負債を可視化すること。
+`SCHEMA_VERSION` はこの Phase では**上げない**。
 
-### 4.6 コミット
+#### 落とし穴 B：`ErrorCategory` に新しい variant を足さない
+
+`rust/src/error.rs` の `ErrorCategory` は**実行時**エラーのレジストリである。
+契約違反は実行時エラーではない。JSON には文字列 `"contractViolation"` を書くが、
+**enum に variant を追加してはならない**。これがスコープ (a) と (b) の境界そのもの：
+(a) は三分法の*語彙と構造*を使い、*レジストリは統合しない*。
+
+#### 落とし穴 C：exit code と `violated` の判定を変えない
+
+`check --contract` の終了コードは現行のまま：違反があれば 1、無ければ 0。
+`Note`（cannot verify）は**決して失敗させない**。
+`outcome` フィールドの追加が exit code に影響してはならない。
+既存の CLI テストが緑のままであることで確認する。
+
+#### 落とし穴 D：畳み込み規則は恣意的に決めない
+
+ファイル全体の `outcome` は per-declaration の畳み込みだが、その順序は
+`LANG.FAILURE` から**導出される**のであって、選ぶものではない：
+
+- ERROR は伝播して評価を止める → 1つでも `error` があれば全体は `error`
+- NIL は下流へ流れる → `error` が無く、1つでも `nil` があれば全体は `nil`
+- どちらも無ければ `value`
+
+コードのコメントに**この導出を書く**こと。「そう決めた」ではなく
+「三分法からこうなる」と読めなければ、この Phase の意味が半分失われる。
+
+#### 落とし穴 E：正典を「実行する」と読ませない
+
+`LANG.CONTRACT.CHECK` は「without running the program」を明言している。
+追加する段落は、三分法が**結果の分類**であって**機構の主張ではない**ことを
+明示すること。ゼロ除算・パース失敗・範囲外添字はどれも機構が全く違うのに
+同じ NIL という結末を共有している——検査の不決定をその一覧に加えても、
+機構は何一つ変わらない。この論法を段落に含めること。
+
+#### 落とし穴 F：`SPECIFICATION.html` を手で編集しない
+
+生成物である。`spec/language-semantics.md` を編集し、
+`npm run specification:generate` を実行し、その結果をコミットする。
+`npm run specification:check` が緑になることで確認する。
+
+### 4.6 手順
+
+#### Step 4.1 — 正典に1段落足す
+
+`spec/language-semantics.md` の `LANG.CONTRACT.CHECK` 節、第2段落の**後ろ**に、
+以下の内容の段落を1つ追加する（既存の HTML 執筆規約に合わせること）。
+
+内容（英語。文言はこの意味を保てば調整してよい）：
+
+> These three results are the trichotomy of LANG.FAILURE.TRICHOTOMY applied at
+> check time rather than at run time: verified corresponds to a value — the
+> inferred contract itself — cannot verify to a reasoned absence, and violated
+> to an error. The correspondence classifies outcomes, not mechanisms, and does
+> not make the check evaluate the program: division by zero, a failed parse and
+> an out-of-range index already share one outcome category while sharing no
+> mechanism, and an inference that could not decide joins that list on the same
+> terms.
+
+**完了条件**：`npm run specification:generate && npm run specification:check` が緑。
+
+#### Step 4.2 — 畳み込み規則の実装
+
+`rust/src/agent/contract_gap.rs` に：
+
+```rust
+/// 宣言1つの検査結果。LANG.CONTRACT.CHECK の三値を、
+/// LANG.FAILURE.TRICHOTOMY の語彙で表したもの。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CheckOutcome {
+    /// verified — 推論が契約を出し、宣言と一致した。値は契約そのもの。
+    Value,
+    /// cannot verify — 整形式な検査が判定を出せなかった。理由は gap ID。
+    Nil(GapCode),
+    /// violated — 宣言が、証明された契約と矛盾する。
+    Error,
+}
+
+impl CheckOutcome {
+    pub(crate) fn as_str(self) -> &'static str { /* "value" / "nil" / "error" */ }
+}
+
+/// ファイル全体の判定。順序は選択ではなく LANG.FAILURE からの導出：
+/// ERROR は伝播して評価を止めるので、1つでもあれば全体を決める。NIL は
+/// 下流へ流れるので、ERROR が無いときにだけ全体を決める。どちらも無ければ値。
+pub(crate) fn fold_outcomes(outcomes: &[CheckOutcome]) -> CheckOutcome;
+```
+
+`fold_outcomes` は空スライスに対して `Value` を返す（宣言が無いファイルは
+検査すべきものが無く、それは不決定でも違反でもない）。
+
+#### Step 4.3 — 出力の追加
+
+`contract_decl.rs` の `ContractDeclCheck`：
+
+1. per-declaration の結果を保持する `Vec<(String /*word*/, CheckOutcome)>` を持つ。
+   `check_one` が finding を1つも出さなければ `Value`、`Note` を出せば
+   その `code` から `Nil(gap)`、`Error` を出せば `Error`。
+   1つの宣言が `Note` と `Error` の両方を出した場合は `Error`（畳み込み規則と同じ）。
+2. `to_json` に追加（既存キーは残す。落とし穴 A）：
+
+```json
+{
+  "violated": false,
+  "findings": [ ... ],
+  "gapSummary": { ... },
+  "outcome": "nil",
+  "declarations": [
+    { "word": "INC",       "outcome": "value" },
+    { "word": "NORMALIZE", "outcome": "nil", "reason": "gap.recursiveDependency" },
+    { "word": "BAD",       "outcome": "error", "category": "contractViolation" }
+  ]
+}
+```
+
+- `declarations` の順序は `#:contract` の**ソース出現順**に固定する
+- `reason` は `outcome == "nil"` のときだけ現れる
+- `category` は `outcome == "error"` のときだけ現れ、値は常に `"contractViolation"`
+
+#### Step 4.4 — テスト
+
+| # | 名前 | 内容 |
+| --- | --- | --- |
+| 1 | `verified_declaration_is_a_value` | 成立する宣言1つ → `outcome: "value"`、`declarations` も `value` |
+| 2 | `unverifiable_declaration_is_a_nil_with_a_reason` | 再帰語 → `nil` + `reason` が gap ID |
+| 3 | `violated_declaration_is_an_error` | 証明された違反 → `error` + `category: "contractViolation"` |
+| 4 | `error_dominates_nil_in_the_fold` | `error` と `nil` が混在するファイルの全体判定が `error` |
+| 5 | `nil_dominates_value_in_the_fold` | `nil` と `value` の混在 → `nil` |
+| 6 | `empty_declarations_fold_to_value` | 宣言ゼロのファイル → `value` |
+| 7 | `outcome_does_not_change_the_exit_code` | `nil` のみのファイルで exit 0、`error` を含むファイルで exit 1（落とし穴 C） |
+| 8 | `legacy_fields_still_present` | `violated` と `findings` が従来どおり出る（落とし穴 A） |
+
+テスト7が最重要。**cannot verify が検査を失敗させないという既存の保証を、
+この変更で壊さないこと。**
+
+#### Step 4.5 — (b) を見送る理由の記録
+
+`docs/dev/trichotomy-unification.md` を作り、以下を書く：
+
+1. 対応が本物である3つの構造的証拠（§4.1）
+2. (a) で何を実装したか
+3. **(b) をなぜ今やらないか**（§4.2 の理由をそのまま。
+   「人間が決めるべきだから」ではなく「セルフホスティングが来ていないから」と書くこと）
+4. (b) を再検討すべき条件：検査器の一部でも Ajisai で書かれるとき
+5. 概念数についての正直な記述：これは十概念を9にする変更**ではない**。
+   #8 が三分法の第2定義を持つのをやめる、という**定義面の削減**である。
+   「概念が減る」と書かないこと
+
+`docs/dev/INDEX.md` に `[方針記録]` として追加。
+
+### 4.7 受け入れ条件
+
+- [ ] `npm run specification:check` が緑（`spec/` と生成 HTML が同期）
+- [ ] `cargo test --lib` / `cargo test --tests` / `clippy -D warnings` が緑
+- [ ] `ErrorCategory` に variant が増えていない（落とし穴 B）
+- [ ] `SCHEMA_VERSION` が 1 のまま
+- [ ] `violated` と `findings` が残っている
+- [ ] exit code の挙動が変わっていない（テスト7）
+- [ ] 畳み込み規則のコメントに `LANG.FAILURE` からの導出が書かれている（落とし穴 D）
+- [ ] `docs/dev/trichotomy-unification.md` に (b) を見送る技術的理由がある
+- [ ] `spec/words.json` に変更が無い
+
+### 4.8 コミット
 
 ```
-Design note: the static check's three results are the runtime trichotomy
+State the static check's three results as the runtime trichotomy
 
 verified / cannot verify / violated stand in exact correspondence with
-value / NIL-with-reason / ERROR. The gap identifiers introduced alongside the
-contract checker behave like NIL reasons, which is the first concrete evidence
-that the two are one concept applied at two times rather than two concepts.
+value / NIL-with-reason / ERROR, and the correspondence is structural rather
+than decorative. Gap identifiers propagate through dependency inference exactly
+as NIL reasons propagate downstream; the "value" case already exists as its own
+tool, since `ajisai contract` returns the inferred contract that `check` asserts
+against; and a gap identifier is the same kind of thing as a NIL reason — a
+stable identifier for why a well-formed partial operation produced nothing.
 
-Design only: no semantic change is proposed here without a human decision.
+The check still does not run the program. The trichotomy classifies outcomes,
+not mechanisms: division by zero, a failed parse and an out-of-range index
+already share one outcome category while sharing no mechanism.
+
+This lands the reporting vocabulary and the fold rule only. Merging the gap
+registry into the NIL reason registry is deliberately not done: its payoff
+depends on the checker itself being written in Ajisai, which is not on the
+roadmap, and until then it would widen the reason vocabulary across two planes
+for no gain. See docs/dev/trichotomy-unification.md.
 ```
 
 ---
@@ -1024,7 +1213,7 @@ polynomials are deliberately left for a separate change.
 Phase 1 (observationDigest)  ── 独立。最初にやる
 Phase 2 (semantics table)    ── 独立。Phase 1 と並行可
 Phase 3 (gap ID)             ── 独立
-Phase 4 (三分法の設計)        ── Phase 3 の gap ID を論拠に使うので Phase 3 の後
+Phase 4 (三分法の統一)        ── Phase 3 の gap ID を reason に使うので Phase 3 の後
 Phase 5 (cost contract)      ── Phase 3 の gap ID を使うので Phase 3 の後
 ```
 
@@ -1037,12 +1226,17 @@ Phase 5 (cost contract)      ── Phase 3 の gap ID を使うので Phase 3 �
 | 1 | 250〜400（本体）+ 200〜300（テスト） | 0 | 落とし穴 A を外すと前提が壊れる |
 | 2 | 0 | 200〜300 | 実行時間（CLI 1,642 回）と出力順の安定性 |
 | 3 | 80〜150 | 0 | 既存の三値の意味を変えてしまうこと |
-| 4 | 0 | 0 | 設計を実装に進めてしまうこと |
+| 4 | 80〜150 + 150（テスト） | 0 | 既存の exit code / `findings` を壊すこと、スコープ (b) に手を出すこと |
 | 5 | 500〜700（2ファイル）+ 300（テスト） | 0 | 偽陽性（`exact` の扱い） |
 
 ## 付録 C — 各 Phase の PR 説明に必ず含めること
 
 - 何を追加したか（1段落）
-- **何を追加していないか**（特に Phase 5：多項式を実装していないこと）
+- **何を追加していないか**、およびその技術的理由
+  （Phase 4：reason レジストリを統合していないこと／Phase 5：多項式を実装していないこと）
 - 保証の向きと、その残余（特に Phase 1：代数的数の `2^-512` 残余）
 - 実行した検証コマンドとその結果
+
+「未実装」を書くときは、**なぜ今やらないかを技術的理由で書く**こと。
+「判断が必要だから」「人間が決めるべきだから」は理由ではない——
+それは判断を先送りにした記録であって、判断の記録ではない。
