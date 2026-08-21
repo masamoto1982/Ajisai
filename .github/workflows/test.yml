@@ -117,6 +117,11 @@ jobs:
           cargo build --bin ajisai --manifest-path rust/Cargo.toml
           npm run check:skill
 
+      - name: Exhaustive semantics table is in sync
+        # 65語 × 入力ドメイン組の全数表。契約（spec/words.json）と実装の乖離を
+        # 総当たりで検出し、同時に AI 向けの完全な意味論資産になる。
+        run: npm run semantics:table:check
+
       - name: Generate primitive test map
         run: npm run primitive:test-map
 
