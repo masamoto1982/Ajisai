@@ -48,6 +48,11 @@ mod observation_digest_tests {
         Value::from_exact_real(a.mul(&b))
     }
 
+    fn exact_add(left: &Value, right: &Value) -> Value {
+        let (a, b) = (as_exact(left), as_exact(right));
+        Value::from_exact_real(a.add(&b))
+    }
+
     async fn agent_json(source: &str) -> serde_json::Value {
         compute(source, ComputeOptions::default()).await.to_json()
     }
@@ -247,5 +252,50 @@ mod observation_digest_tests {
         let b = digest_field(source).await;
         assert!(a.is_string(), "expected a digest string, got {a}");
         assert_eq!(a, b);
+    }
+
+    /// Regression: keying the algebraic digest at a much larger precision
+    /// than `HASH_KEY_BITS` made a 256-term value (reachable in practice —
+    /// `max_algebraic_terms` allows up to 512) cost tens of milliseconds per
+    /// value in a release build and hundreds in a debug one; multiplied
+    /// across a stack of them, enough to time out an unrelated CI job. This
+    /// pins the *budget*, not the mechanism, so a future precision change
+    /// remains free as long as it stays cheap.
+    #[test]
+    fn many_term_algebraic_digest_stays_fast() {
+        let pairs = [
+            (2, 3),
+            (5, 7),
+            (11, 13),
+            (17, 19),
+            (23, 29),
+            (31, 37),
+            (41, 43),
+            (47, 53),
+        ];
+        let mut factors = pairs
+            .into_iter()
+            .map(|(p, q)| exact_add(&sqrt_of(p), &sqrt_of(q)));
+        let mut value = factors.next().expect("at least one factor");
+        for factor in factors {
+            value = exact_mul(&value, &factor);
+        }
+        let terms = match &value.data {
+            crate::types::ValueData::ExactScalar(ExactReal::Algebraic(alg)) => {
+                alg.normal_form_terms().len()
+            }
+            other => panic!("expected an algebraic scalar: {other:?}"),
+        };
+        assert!(terms > 100, "expected a many-term value, got {terms} terms");
+
+        let start = std::time::Instant::now();
+        let digest = digest_of(&value);
+        let elapsed = start.elapsed();
+        assert!(digest.is_some());
+        assert!(
+            elapsed < std::time::Duration::from_secs(2),
+            "digesting a {terms}-term algebraic value took {elapsed:?} (debug build); \
+             expected well under 2s"
+        );
     }
 }

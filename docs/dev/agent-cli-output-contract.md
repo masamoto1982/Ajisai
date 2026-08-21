@@ -178,11 +178,16 @@ it; a NIL's reason is included the same way `PartialEq for Value` includes it.
 **Guarantee, stated in one direction only:** equal observations always digest
 equally. The converse does not hold without qualification for algebraic
 (Tier 1 exact-irrational) scalars: the digest keys such a value by
-`floor(value * 2^512)`, so two distinct algebraic numbers closer together than
-`2^-512` fold to the same digest. This is a deliberate, bounded residual, not
-an oversight — do not read `observationDigest` as proving two stacks differ
-when it merely fails to prove they agree at that resolution. Every other
-domain (rational, boolean, string, code block, NIL, vector, tensor) digests
+`floor(value * 2^64)` — the same precision `impl Hash for Algebraic`
+(`types/exact/algebraic.rs`) already uses for `HashMap`-based correctness
+throughout the interpreter (`UNIQUE` / `GROUP` / `TALLY`), deliberately reused
+rather than widened, because the cost of this key is `O(terms)` big-integer
+square roots and a legitimately reachable algebraic value can carry hundreds
+of terms — so two distinct algebraic numbers closer together than `2^-64`
+fold to the same digest. This is a deliberate, bounded residual, not an
+oversight — do not read `observationDigest` as proving two stacks differ when
+it merely fails to prove they agree at that resolution. Every other domain
+(rational, boolean, string, code block, NIL, vector, tensor) digests
 injectively.
 
 `observationDigest` is `null` exactly when the observation contains a Tier 2

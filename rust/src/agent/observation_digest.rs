@@ -16,11 +16,14 @@
 //!    own founding example fail. `impl Hash for Algebraic`
 //!    (`types/exact/algebraic.rs`) already solves this by hashing
 //!    `floor(value * 2^bits)`, doubling `bits` until the bounding interval's
-//!    floor is decided; this module reruns that loop at `DIGEST_ALGEBRAIC_BITS`
-//!    instead of the smaller key the `Hash` impl uses internally. That gives
-//!    "equal ⇒ same digest" but not the converse: two distinct algebraic
-//!    numbers closer together than `2^-DIGEST_ALGEBRAIC_BITS` fold to the same
-//!    key. Documented as a residual, not silently assumed away.
+//!    floor is decided; this module reruns that exact loop at that impl's own
+//!    `HASH_KEY_BITS` precision (`DIGEST_ALGEBRAIC_BITS`), not a larger one —
+//!    see `encode_algebraic`'s doc comment for why a larger precision is not
+//!    just unnecessary but actively wrong for a value that can carry
+//!    hundreds of terms. This gives "equal ⇒ same digest" but not the
+//!    converse: two distinct algebraic numbers closer together than
+//!    `2^-DIGEST_ALGEBRAIC_BITS` fold to the same key. Documented as a
+//!    residual, not silently assumed away.
 //!  * **`Vector` and `Tensor` can be the same value.** A rectangular numeric
 //!    `Vector` equals the `Tensor` holding the same lanes
 //!    (`tensor_eq_vector`), so encoding by `ValueData` variant would answer
@@ -56,11 +59,13 @@ use crate::types::{Value, ValueData};
 /// digest is not a compatible value across a tag change.
 pub(crate) const DIGEST_SCHEMA_TAG: &[u8] = b"AJISAI-OBS-1";
 
-/// Bits of fractional precision an algebraic scalar's digest key is taken at.
-/// Gives "equal ⇒ same digest" (soundness); does not separate two distinct
-/// algebraic numbers closer together than `2^-DIGEST_ALGEBRAIC_BITS` — see the
-/// module comment.
-pub(crate) const DIGEST_ALGEBRAIC_BITS: u32 = 512;
+/// Bits of fractional precision an algebraic scalar's digest key is taken at
+/// — deliberately `types::exact::algebraic::HASH_KEY_BITS`, the same
+/// precision `impl Hash for Algebraic` already uses, not a larger one; see
+/// `encode_algebraic`. Gives "equal ⇒ same digest" (soundness); does not
+/// separate two distinct algebraic numbers closer together than
+/// `2^-DIGEST_ALGEBRAIC_BITS` — see the module comment.
+pub(crate) const DIGEST_ALGEBRAIC_BITS: u32 = 64;
 
 /// Everything one observation digest is taken over.
 pub(crate) struct ObservationDigestInput<'a> {
@@ -226,10 +231,25 @@ fn encode_rational(bytes: &mut Vec<u8>, f: &Fraction) {
 
 /// An algebraic scalar, keyed by `floor(value * 2^DIGEST_ALGEBRAIC_BITS)` —
 /// the same representation-independent enclosure key `impl Hash for
-/// Algebraic` uses, rerun at this module's own precision instead of that
-/// impl's `HASH_KEY_BITS`. `Algebraic` never holds a rational (rationals
-/// demote eagerly), so the value is never exactly on a `2^-bits` grid line
-/// and the loop below always terminates.
+/// Algebraic` uses (`HASH_KEY_BITS`), at that same precision rather than a
+/// larger one of this module's own. `Algebraic` never holds a rational
+/// (rationals demote eagerly), so the value is never exactly on a `2^-bits`
+/// grid line and the loop below always terminates.
+///
+/// Reusing `HASH_KEY_BITS` rather than choosing a larger precision is load
+/// bearing, not just tidy: this loop's cost is `O(terms)` big-integer square
+/// roots at `~2*bits` bits each, and a legitimately reachable value can carry
+/// up to `max_algebraic_terms` (512) terms. Keying at 512 bits instead of 64
+/// made one such 256-term stack value's digest cost tens of milliseconds in
+/// a release build and several hundred in a debug one — multiplied across a
+/// stack of them, enough to make an unrelated resource-limit regression test
+/// time out in CI. `HASH_KEY_BITS` is not a lesser precision chosen for
+/// speed at correctness's expense: it is the precision `UNIQUE` / `GROUP` /
+/// `TALLY` already trust for exactly this soundness property everywhere in
+/// the interpreter, so reusing it does not introduce a new residual — it
+/// reuses the one already load-bearing elsewhere. The residual this leaves
+/// (two distinct algebraic numbers within `2^-64` of each other digest
+/// alike) is documented, not hidden.
 fn encode_algebraic(bytes: &mut Vec<u8>, alg: &Algebraic) {
     let target_bits = u64::from(DIGEST_ALGEBRAIC_BITS);
     let mut bits = target_bits + 8;
