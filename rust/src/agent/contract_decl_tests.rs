@@ -1,5 +1,7 @@
-//! Step 3.5 of `docs/dev/competitive-advantage-work-order-2026-08.md`: gap
-//! identifiers for `check --contract`'s "cannot verify" result.
+//! Step 3.5 and Step 4.4 of
+//! `docs/dev/competitive-advantage-work-order-2026-08.md`: gap identifiers
+//! for `check --contract`'s "cannot verify" result (Phase 3), and stating
+//! that result in the runtime trichotomy's own vocabulary (Phase 4).
 
 #[cfg(test)]
 mod contract_decl_tests {
@@ -8,6 +10,10 @@ mod contract_decl_tests {
 
     fn contract_decls(source: &str) -> Json {
         check(source, true).to_json()["contractDecls"].clone()
+    }
+
+    fn exit_code(source: &str) -> i32 {
+        check(source, true).exit_code()
     }
 
     #[test]
@@ -106,5 +112,98 @@ mod contract_decl_tests {
             recursive_pos < unresolved_pos,
             "byGap keys are not in ascending order: {by_gap}"
         );
+    }
+
+    #[test]
+    fn verified_declaration_is_a_value() {
+        let source = "{ 1 SUB } 'GOOD' DEF\n#:contract GOOD ( 1 -- 1 ) pure nil-free";
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "value");
+        assert_eq!(decls["declarations"][0]["word"], "GOOD");
+        assert_eq!(decls["declarations"][0]["outcome"], "value");
+        assert!(decls["declarations"][0].get("reason").is_none());
+        assert!(decls["declarations"][0].get("category").is_none());
+    }
+
+    #[test]
+    fn unverifiable_declaration_is_a_nil_with_a_reason() {
+        let source = "{ 1 SUB REC } 'REC' DEF\n#:contract REC ( 1 -- 1 ) pure nil-free";
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "nil");
+        assert_eq!(decls["declarations"][0]["word"], "REC");
+        assert_eq!(decls["declarations"][0]["outcome"], "nil");
+        assert_eq!(
+            decls["declarations"][0]["reason"],
+            "gap.recursiveDependency"
+        );
+    }
+
+    #[test]
+    fn violated_declaration_is_an_error() {
+        let source = "{ 1 PRINT } 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "error");
+        assert_eq!(decls["declarations"][0]["word"], "F");
+        assert_eq!(decls["declarations"][0]["outcome"], "error");
+        assert_eq!(decls["declarations"][0]["category"], "contractViolation");
+    }
+
+    #[test]
+    fn error_dominates_nil_in_the_fold() {
+        // REC is unverifiable (nil); F is a proven violation (error).
+        let source = "{ 1 SUB REC } 'REC' DEF
+{ 1 PRINT } 'F' DEF
+#:contract REC ( 1 -- 1 ) pure nil-free
+#:contract F ( 1 -- 0 ) pure";
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "error");
+    }
+
+    #[test]
+    fn nil_dominates_value_in_the_fold() {
+        // REC is unverifiable (nil); GOOD verifies cleanly (value).
+        let source = "{ 1 SUB REC } 'REC' DEF
+{ 1 SUB } 'GOOD' DEF
+#:contract REC ( 1 -- 1 ) pure nil-free
+#:contract GOOD ( 1 -- 1 ) pure nil-free";
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "nil");
+    }
+
+    #[test]
+    fn empty_declarations_fold_to_value() {
+        let source = "{ 1 SUB } 'GOOD' DEF";
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "value");
+        assert_eq!(decls["declarations"].as_array().unwrap().len(), 0);
+    }
+
+    /// The most important test in this phase: `nil` (cannot verify) must
+    /// never fail the check, and the new `outcome` field must not change
+    /// that — only a proven `error` does.
+    #[test]
+    fn outcome_does_not_change_the_exit_code() {
+        let nil_only = "{ 1 SUB REC } 'REC' DEF\n#:contract REC ( 1 -- 1 ) pure nil-free";
+        assert_eq!(exit_code(nil_only), 0, "cannot-verify must not fail check");
+
+        let with_error = "{ 1 PRINT } 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        assert_eq!(
+            exit_code(with_error),
+            1,
+            "a proven violation must fail check"
+        );
+    }
+
+    #[test]
+    fn legacy_fields_still_present() {
+        let source = "{ 1 PRINT } 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let decls = contract_decls(source);
+        assert_eq!(decls["violated"], true);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert!(!findings.is_empty());
+        for finding in findings {
+            assert!(finding.get("severity").is_some());
+            assert!(finding.get("message").is_some());
+        }
     }
 }

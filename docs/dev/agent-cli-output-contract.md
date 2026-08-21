@@ -126,6 +126,59 @@ change what counts as a violation.
   present (empty when nothing is unverifiable), so a caller can read it
   without a presence check.
 
+### `contractDecls`: `outcome` and `declarations`
+
+`verified` / `cannot verify` / `violated` are `LANG.FAILURE.TRICHOTOMY`
+(value / reasoned absence / error) applied at check time instead of run time
+(`spec/language-semantics.md`, `LANG.CONTRACT.CHECK`) — not by analogy, but
+because a gap identifier already has the same character as a NIL reason, and
+`ajisai contract` already returns the "value" case (the inferred contract
+itself) as its own tool. `contractDecls.outcome` and `.declarations` state
+that correspondence directly, in the runtime's own vocabulary:
+
+```json
+{
+  "violated": false,
+  "findings": [ ... ],
+  "gapSummary": { ... },
+  "outcome": "nil",
+  "declarations": [
+    { "word": "INC",       "outcome": "value" },
+    { "word": "NORMALIZE", "outcome": "nil", "reason": "gap.recursiveDependency" },
+    { "word": "BAD",       "outcome": "error", "category": "contractViolation" }
+  ]
+}
+```
+
+- `declarations` has one entry per successfully-parsed `#:contract`
+  declaration, in source order, each carrying exactly the fields its outcome
+  has: `reason` (a gap id) only for `"outcome": "nil"`; `category` (always
+  the literal string `"contractViolation"` — not an `ErrorCategory`, which is
+  the *runtime* error registry, and a contract violation is not a runtime
+  error) only for `"outcome": "error"`.
+- The file-level `outcome` is a fold of `declarations[].outcome`, derived from
+  `LANG.FAILURE` rather than chosen: `error` propagates and halts, so one
+  `error` anywhere decides the whole file; `nil` flows downstream only once
+  nothing halted first, so it decides the file only when no `error` is
+  present; a file with no declarations (or none outstanding) is `value`.
+- **This does not make `check` evaluate the program.** The correspondence
+  classifies outcomes, not mechanisms — division by zero, a failed parse and
+  an out-of-range index already share one *outcome* (NIL) while sharing no
+  *mechanism*, and an inference that could not decide joins that list on the
+  same terms.
+- `findings` and `violated` are **not removed or changed** — `LANG.OBSERVATION.PROTOCOL`
+  permits only additive changes within a schema version, and `SCHEMA_VERSION`
+  does not move for this change. They remain exactly what they were: `findings`
+  / `violated` is a legacy projection of the identical result `outcome` /
+  `declarations` now also states directly, and is planned for removal in a
+  future breaking schema version. The exit code is unaffected either way: it
+  is `1` when `violated` is `true` and `0` otherwise, exactly as before —
+  `outcome: "nil"` (cannot verify) never fails the check.
+- Merging gap identifiers into the NIL reason registry so a gap could be read
+  back through `NIL-REASON` is deliberately **not** done here. See
+  `docs/dev/trichotomy-unification.md` for why, and the condition under which
+  it is worth revisiting.
+
 ### What the run cost, and what the runtime did
 
 Two objects, because they answer different questions.

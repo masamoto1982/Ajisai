@@ -47,4 +47,5 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `mcp-claude-code-handoff.md` | MCP 開発の次担当への引き継ぎ（現行方針・禁止事項） | `[方針記録]` |
 | `host-profile-derivation-handoff.md` | ホスト間で上限の値ではなく導出を統一する作業の引き継ぎ。走査系の非二次化の後に着手 | `[方針記録]` |
 | `competitive-advantage-work-order-2026-08.md` | 競争優位の研磨（観測ダイジェスト・全数意味論表・gap ID・三分法統一・コスト契約）の改修指示書。Phase 単位で実装する。設計判断は本書で確定済み | `[設計根拠]` |
+| `trichotomy-unification.md` | 実行時三分法と静的検査三値の対応を統一した理由と、reason レジストリ統合（案(b)）を今やらない技術的理由・再検討条件 | `[方針記録]` |
 | `reference-ja-restructure-handoff.md` | Reference 日本語版の再編（水のメタファー導入・制御構造の集約）の引き継ぎ。着手前に §8 の確認事項を利用者へ | `[方針記録]` |

@@ -25,7 +25,8 @@
 //! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
 //! as a `note`, never a false `error`.
 
-use super::contract_gap::{gap_summary_json, DeclOutcome};
+use super::contract_gap::GapCode;
+use super::contract_gap::{declaration_json, fold_outcomes, gap_summary_json, CheckOutcome};
 use super::contract_linearity::{check_linearity, linearity_from_word, Linearity};
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractFlow, ContractPurity, NilBehavior,
@@ -72,34 +73,36 @@ impl Severity {
 pub(crate) struct DeclFinding {
     pub severity: Severity,
     pub message: String,
-    /// The gap id behind a `Note` (cannot-verify) finding, or `None`. Always
-    /// `None` for an `Error` finding (Phase 3 pitfall B: a proven violation
-    /// has no gap — a gap is a reason inference could not decide, and this
-    /// finding is not one of those).
+    /// The gap id behind a `Note` finding, or `None`. Always `None` for an
+    /// `Error` finding — a proven violation has no gap (pitfall B).
     pub code: Option<&'static str>,
 }
 
 /// Result of the declaration check over a whole file.
 pub(crate) struct ContractDeclCheck {
     pub findings: Vec<DeclFinding>,
-    /// True if any finding is an `error` (a declaration the inference
-    /// contradicts). Drives the `check` exit code.
+    /// True if any finding is an `error`. Drives the `check` exit code;
+    /// `outcome`/`declarations` below are read-only projections and do not
+    /// affect it (Phase 4 pitfall C).
     pub violated: bool,
-    /// One classification per successfully-parsed `#:contract` declaration
-    /// (Step 3.4) — *not* derived by counting `findings` by severity, because
-    /// one declaration can contribute more than one finding (e.g. both a
-    /// purity and a nil-free mismatch), which would double-count it. A
-    /// malformed directive that never became a `ContractDecl` is not one of
-    /// these: its `Error` finding still counts toward `violated` and
-    /// `findings` above, but it was never a checkable declaration in the
-    /// first place, so it is not part of this per-declaration tally.
-    pub decl_outcomes: Vec<DeclOutcome>,
+    /// One `(word, outcome)` per successfully-parsed `#:contract`
+    /// declaration, in source order — not derived by counting `findings` by
+    /// severity, since one declaration can contribute more than one finding
+    /// (e.g. purity and nil-free both mismatched), which would double-count
+    /// it. A malformed directive that never became a `ContractDecl` still
+    /// counts toward `violated`/`findings` but is not one of these.
+    pub decl_outcomes: Vec<(String, CheckOutcome)>,
 }
 
 impl ContractDeclCheck {
     /// Additive JSON for the `--json` envelope (`contractDecls`), rendered here
     /// so `report` stays decoupled from the declaration types.
     pub(crate) fn to_json(&self) -> serde_json::Value {
+        let outcomes: Vec<CheckOutcome> = self
+            .decl_outcomes
+            .iter()
+            .map(|(_, outcome)| *outcome)
+            .collect();
         serde_json::json!({
             "violated": self.violated,
             "findings": self.findings.iter().map(|f| serde_json::json!({
@@ -107,10 +110,16 @@ impl ContractDeclCheck {
                 "message": f.message,
                 "code": f.code,
             })).collect::<Vec<_>>(),
-            "gapSummary": gap_summary_json(
-                &self.decl_outcomes,
-                self.findings.iter().filter_map(|f| f.code),
-            ),
+            "gapSummary": gap_summary_json(&outcomes, self.findings.iter().filter_map(|f| f.code)),
+            // Phase 4: LANG.FAILURE.TRICHOTOMY applied at check time.
+            // `findings`/`violated` stay as the legacy projection of the
+            // same result (docs/dev/agent-cli-output-contract.md).
+            "outcome": fold_outcomes(&outcomes).as_str(),
+            "declarations": self
+                .decl_outcomes
+                .iter()
+                .map(|(word, outcome)| declaration_json(word, *outcome))
+                .collect::<Vec<_>>(),
         })
     }
 }
@@ -360,15 +369,22 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         let before = findings.len();
         check_one(&mut interp, decl, &mut findings);
         let new_findings = &findings[before..];
-        decl_outcomes.push(
-            if new_findings.iter().any(|f| f.severity == Severity::Error) {
-                DeclOutcome::Violated
-            } else if new_findings.iter().any(|f| f.severity == Severity::Note) {
-                DeclOutcome::CannotVerify
-            } else {
-                DeclOutcome::Verified
-            },
-        );
+        let outcome = if new_findings.iter().any(|f| f.severity == Severity::Error) {
+            CheckOutcome::Error
+        } else if new_findings.iter().any(|f| f.severity == Severity::Note) {
+            // Every conservative Note carries a code in practice (pitfall
+            // D); `ConservativeSeed` only guards the defensive "gaps was
+            // empty" case that should never actually occur.
+            let gap = new_findings
+                .iter()
+                .find_map(|f| f.code)
+                .and_then(GapCode::from_str)
+                .unwrap_or(GapCode::ConservativeSeed);
+            CheckOutcome::Nil(gap)
+        } else {
+            CheckOutcome::Value
+        };
+        decl_outcomes.push((decl.name.clone(), outcome));
     }
 
     ContractDeclCheck {
