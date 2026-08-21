@@ -36,6 +36,47 @@ pub(crate) fn content_digest(bytes: &[u8]) -> String {
     format!("#{}", blake3::hash(bytes).to_hex())
 }
 
+/// Canonical byte encoding for one token: the tag-byte assignment
+/// `body_content_key` uses (`N`/`n` for a number, parsed or raw; `S` for a
+/// string; `Y` for a canonicalized symbol; `[`/`]`/`{`/`}`/`^`/`|`/`\n` for
+/// structural tokens). Extracted so `agent::observation_digest`'s `CodeBlock`
+/// encoding (Phase 1, competitive-advantage-work-order-2026-08.md) can reuse
+/// the exact same byte assignment instead of a second copy silently drifting
+/// from this one. Pulling the `match` out of its loop changes no output: the
+/// caller still writes precisely the bytes it wrote inline.
+pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
+    match tok {
+        Token::Number(n) => match Fraction::from_str(n) {
+            Ok(frac) => {
+                let (num, den) = frac.to_bigint_pair();
+                bytes.push(b'N');
+                bytes.extend_from_slice(num.to_str_radix(16).as_bytes());
+                bytes.push(b'/');
+                bytes.extend_from_slice(den.to_str_radix(16).as_bytes());
+            }
+            Err(_) => {
+                bytes.push(b'n');
+                bytes.extend_from_slice(n.as_bytes());
+            }
+        },
+        Token::String(s) => {
+            bytes.push(b'S');
+            bytes.extend_from_slice(s.as_bytes());
+        }
+        Token::Symbol(s) => {
+            bytes.push(b'Y');
+            bytes.extend_from_slice(canonicalize_core_word_name(s).as_bytes());
+        }
+        Token::VectorStart => bytes.push(b'['),
+        Token::VectorEnd => bytes.push(b']'),
+        Token::BlockStart => bytes.push(b'{'),
+        Token::BlockEnd => bytes.push(b'}'),
+        Token::NilCoalesce => bytes.push(b'^'),
+        Token::CondClauseSep => bytes.push(b'|'),
+        Token::LineBreak => bytes.push(b'\n'),
+    }
+}
+
 /// Canonical content key for a word body, independent of references' identities
 /// (references are keyed by their canonical spelling). Two textually identical
 /// bodies — e.g. the same definition exported and re-imported into another
@@ -47,36 +88,7 @@ pub(crate) fn body_content_key(lines: &[crate::types::ExecutionLine]) -> String 
         bytes.push(0x1d);
         for tok in line.body_tokens.iter() {
             bytes.push(0x1f);
-            match tok {
-                Token::Number(n) => match Fraction::from_str(n) {
-                    Ok(frac) => {
-                        let (num, den) = frac.to_bigint_pair();
-                        bytes.push(b'N');
-                        bytes.extend_from_slice(num.to_str_radix(16).as_bytes());
-                        bytes.push(b'/');
-                        bytes.extend_from_slice(den.to_str_radix(16).as_bytes());
-                    }
-                    Err(_) => {
-                        bytes.push(b'n');
-                        bytes.extend_from_slice(n.as_bytes());
-                    }
-                },
-                Token::String(s) => {
-                    bytes.push(b'S');
-                    bytes.extend_from_slice(s.as_bytes());
-                }
-                Token::Symbol(s) => {
-                    bytes.push(b'Y');
-                    bytes.extend_from_slice(canonicalize_core_word_name(s).as_bytes());
-                }
-                Token::VectorStart => bytes.push(b'['),
-                Token::VectorEnd => bytes.push(b']'),
-                Token::BlockStart => bytes.push(b'{'),
-                Token::BlockEnd => bytes.push(b'}'),
-                Token::NilCoalesce => bytes.push(b'^'),
-                Token::CondClauseSep => bytes.push(b'|'),
-                Token::LineBreak => bytes.push(b'\n'),
-            }
+            encode_token(&mut bytes, tok);
         }
     }
     content_digest(&bytes)

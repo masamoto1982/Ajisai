@@ -7,12 +7,19 @@
 //! runtime-metrics envelope (`docs/dev/agent-cli-output-contract.md`).
 
 pub mod api;
+pub(crate) mod contract_cost;
 pub(crate) mod contract_decl;
+#[cfg(test)]
+mod contract_decl_tests;
+pub(crate) mod contract_gap;
 mod contract_linearity;
 pub(crate) mod contract_report;
 mod error_stack;
 #[cfg(test)]
 mod error_stack_tests;
+mod observation_digest;
+#[cfg(test)]
+mod observation_digest_tests;
 #[cfg(test)]
 mod profile_liveness_tests;
 pub(crate) mod report;
@@ -23,7 +30,8 @@ pub(crate) mod run_render;
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::interpreter::{HostEffect, Interpreter};
-use crate::types::Token;
+use crate::types::{Token, Value};
+use observation_digest::{observation_digest, ObservationDigestInput};
 use report::Report;
 
 /// Options shared across agent operations. `json` only matters to the native
@@ -59,6 +67,17 @@ pub(crate) fn error_report(
     // The residue a failed run was holding is not worth the diagnosis that
     // explains it — see `agent::error_stack`.
     let residue = error_stack::elided_error_stack(interp);
+    // The digest is taken over the real stack, not the wire-budgeted residue:
+    // `stack`/`stackDisplay` may elide values for `responseBytes`, but the
+    // observation itself is what the interpreter actually holds.
+    let error_category = category.map(ErrorCategory::as_protocol_str);
+    let digest = observation_digest(ObservationDigestInput {
+        status: "error",
+        stack: &stack_values(interp),
+        output: &output,
+        user_words: &user_word_identities(interp),
+        error_category,
+    });
     Report {
         status: "error",
         stack: residue.stack,
@@ -72,7 +91,35 @@ pub(crate) fn error_report(
         resource_usage: interp.resource_usage(),
         contract_decls: None,
         stack_elided: residue.elided,
+        observation_digest: digest,
     }
+}
+
+/// The stack, bottom to top, as owned `Value`s — the raw material
+/// `observation_digest` encodes from. Cloning is cheap: `Value`'s heavy
+/// payloads (`Vector`, `Tensor`, `Text`, `CodeBlock`) are all reference
+/// counted.
+pub(crate) fn stack_values(interp: &Interpreter) -> Vec<Value> {
+    interp
+        .get_stack()
+        .iter_slots()
+        .map(|(value, _role)| value.clone())
+        .collect()
+}
+
+/// `(normalized word name, content identity)` for every user word, sorted by
+/// name — the shape `ObservationDigestInput::user_words` requires.
+pub(crate) fn user_word_identities(interp: &Interpreter) -> Vec<(String, String)> {
+    let mut pairs: Vec<(String, String)> = interp
+        .user_words
+        .keys()
+        .map(|name| {
+            let identity = interp.word_identity(name).cloned().unwrap_or_default();
+            (name.clone(), identity)
+        })
+        .collect();
+    pairs.sort();
+    pairs
 }
 
 pub(crate) fn print_payloads(interp: &Interpreter) -> Vec<String> {

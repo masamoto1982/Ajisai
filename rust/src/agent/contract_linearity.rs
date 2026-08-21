@@ -139,6 +139,7 @@ pub(crate) fn check_linearity(
                     decl.name,
                     linearity.as_str()
                 ),
+            code: None,
         });
         return;
     }
@@ -158,5 +159,11 @@ pub(crate) fn check_linearity(
     findings.push(DeclFinding {
         severity: Severity::Note,
         message: note,
+        // Not a contract-inference gap: this Note is a flow-insensitive
+        // structural check (KEEP applied to a handle-discharging word) that
+        // found no proof of violation. It is independent of
+        // `WordContract::confidence`/`gaps` entirely, unlike `check_one`'s
+        // arity/purity/nil-free findings in `contract_decl.rs`.
+        code: None,
     });
 }

@@ -50,6 +50,13 @@ pub(crate) struct Report {
     /// (`agent::error_stack`). `None` whenever nothing was dropped, which is
     /// every success and every ordinary error.
     pub stack_elided: Option<Json>,
+    /// Canonical `#`-prefixed 64-hex-char BLAKE3 digest of the whole
+    /// observation (`status` / stack / output / user-dictionary identities /
+    /// error category) — `agent::observation_digest`, Phase 1 of
+    /// `docs/dev/competitive-advantage-work-order-2026-08.md`. `None` means
+    /// the observation could not be encoded: a Tier 2 `ExactReal::Computable`
+    /// scalar was present somewhere in the stack.
+    pub observation_digest: Option<String>,
 }
 
 impl Report {
@@ -72,6 +79,7 @@ impl Report {
             "resourceUsage": resource_usage_json(&self.resource_usage),
             "contractDecls": self.contract_decls,
             "stackElided": self.stack_elided,
+            "observationDigest": self.observation_digest,
         })
     }
 }

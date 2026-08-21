@@ -135,7 +135,13 @@ names or spawn diagnostics into it; that belongs on stderr, and
   (committed p95 budget 1 second) and response-size gate
   (`medianResponseBytesBudget`). Response bytes are deterministic for a fixed
   corpus and engine, so that budget is exact — lower it when a response
-  genuinely shrinks, never raise it to make a regression pass.
+  genuinely shrinks, never raise it to paper over an accidental regression.
+  The one exception is a deliberate, committed envelope change: `2600` moved
+  to `2760` when `observationDigest` (competitive-advantage-work-order-2026-08.md
+  Phase 1) became a field every `compute`/`check` response carries — the new
+  value is the exact re-measured median with the field present, not a
+  rounded-up guess, so the budget stays exact for the new deterministic
+  reality rather than exact for a baseline the wire format no longer has.
 - `number-baseline.js` and `eval/number-baseline.json`: deliberately narrow
   comparison with JavaScript `Number`, including exact controls. Do not present
   it as a general language or CAS benchmark.

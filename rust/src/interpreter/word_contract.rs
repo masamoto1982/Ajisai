@@ -1,15 +1,16 @@
 //! Inferred contracts for user-defined words.
 //!
-//! Phase 1 deliberately does not add surface syntax. A user word's contract is
-//! inferred from its body and resolved dependency contracts without executing
-//! Ajisai code. Built-in contracts are projected from the existing
-//! §7.14 registry; user-word contracts are widened monotonically as dependencies
-//! are joined. When recursion or a dynamic structure prevents a complete proof,
+//! Phase 1 deliberately does not add surface syntax. A user word's contract
+//! is inferred from its body and resolved dependency contracts without
+//! executing Ajisai code. Built-in contracts are projected from the existing
+//! §7.14 registry; user-word contracts widen monotonically as dependencies
+//! join. When recursion or a dynamic structure prevents a complete proof,
 //! the result is conservative rather than Ajisai's logical `UNKNOWN` value.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::agent::contract_gap::GapCode;
 use crate::coreword_registry::{
     get_coreword_metadata, Determinism, MassContract, NilPolicy, Purity,
 };
@@ -18,6 +19,7 @@ use crate::types::{Capabilities, Token, WordDefinition};
 use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
 };
+use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
 
@@ -40,7 +42,13 @@ pub struct WordContract {
     pub space: SpaceClass,
     /// True when the bound is provably attained, licensing a declaration error.
     pub space_exact: bool,
+    /// Sound upper bound on the word's charged time cost (`ResourceUsage`'s
+    /// three axes; Phase 5, `word_cost`). `pub(crate)` because `CostBound` is.
+    pub(crate) cost: CostBound,
     pub confidence: ContractConfidence,
+    /// Why inference could not fully verify this word when `confidence` is
+    /// `Conservative` (empty when `Complete`, Phase 3); `pub(crate)` because `GapCode` is.
+    pub(crate) gaps: Vec<GapCode>,
     pub cache_key: WordContractCacheKey,
 }
 
@@ -92,6 +100,16 @@ pub struct WordContractCacheKey {
     pub inference_schema_version: u32,
 }
 
+/// A cache key for a builtin/leaf contract: no dependencies, current schema.
+fn leaf_cache_key(word_identity: String) -> WordContractCacheKey {
+    WordContractCacheKey {
+        word_identity,
+        dependency_identities: Vec::new(),
+        core_schema_version: WORD_CONTRACT_CORE_SCHEMA_VERSION,
+        inference_schema_version: WORD_CONTRACT_SCHEMA_VERSION,
+    }
+}
+
 impl WordContract {
     fn conservative(key: WordContractCacheKey) -> Self {
         Self {
@@ -104,18 +122,15 @@ impl WordContract {
             nil_behavior: NilBehavior::MayCreate,
             space: SpaceClass::Unbounded,
             space_exact: false,
+            cost: CostBound::CONSERVATIVE,
             confidence: ContractConfidence::Conservative,
+            gaps: vec![GapCode::ConservativeSeed],
             cache_key: key,
         }
     }
 
     fn identity(name: &str) -> Self {
-        let key = WordContractCacheKey {
-            word_identity: format!("builtin:{name}"),
-            dependency_identities: Vec::new(),
-            core_schema_version: WORD_CONTRACT_CORE_SCHEMA_VERSION,
-            inference_schema_version: WORD_CONTRACT_SCHEMA_VERSION,
-        };
+        let key = leaf_cache_key(format!("builtin:{name}"));
         Self {
             flow: ContractFlow::Fixed {
                 consumes: 0,
@@ -129,7 +144,9 @@ impl WordContract {
             nil_behavior: NilBehavior::NeverCreates,
             space: SpaceClass::Const,
             space_exact: true,
+            cost: CostBound::IDENTITY,
             confidence: ContractConfidence::Complete,
+            gaps: Vec::new(),
             cache_key: key,
         }
     }
@@ -140,11 +157,10 @@ impl From<Purity> for ContractPurity {
         match value {
             Purity::Pure => ContractPurity::Pure,
             // `conditional` means the Word is as pure as the block it is
-            // given — it contributes nothing of its own. The inference walk
-            // already visits the symbols inside that block and widens with
-            // them, so charging the Word itself would double-count: a `MAP`
-            // over a pure block is pure, and over an effectful one the block's
-            // own effects are what make the caller effectful.
+            // given. The inference walk already visits the block's symbols
+            // and widens with them, so charging the Word itself would
+            // double-count — a `MAP` over a pure block is pure, and over an
+            // effectful one the block's own effects make the caller effectful.
             Purity::Conditional => ContractPurity::Pure,
             Purity::Observational => ContractPurity::Observable,
             Purity::Effectful => ContractPurity::Effectful,
@@ -156,9 +172,8 @@ impl From<Determinism> for ContractDeterminism {
     fn from(value: Determinism) -> Self {
         match value {
             Determinism::Deterministic => ContractDeterminism::Deterministic,
-            // Both non-deterministic classes collapse here: the inference
-            // lattice asks only whether a result is reproducible from its
-            // operands, and neither runtime state nor the host is.
+            // Both non-deterministic classes collapse here: the lattice asks
+            // only whether a result is reproducible from its operands.
             Determinism::StateRelative | Determinism::HostRelative => {
                 ContractDeterminism::NonDeterministic
             }
@@ -226,6 +241,7 @@ struct AccumulatedContract {
     order_sensitivity: OrderSensitivity,
     nil_behavior: NilBehavior,
     confidence: ContractConfidence,
+    gaps: Vec<GapCode>,
 }
 
 impl AccumulatedContract {
@@ -239,6 +255,7 @@ impl AccumulatedContract {
             order_sensitivity: contract.order_sensitivity,
             nil_behavior: contract.nil_behavior,
             confidence: contract.confidence,
+            gaps: contract.gaps.clone(),
         }
     }
 
@@ -254,31 +271,29 @@ impl AccumulatedContract {
         self.order_sensitivity = widen_order(self.order_sensitivity, other.order_sensitivity);
         self.nil_behavior = widen_nil(self.nil_behavior, other.nil_behavior);
         self.confidence = widen_confidence(self.confidence, other.confidence);
+        // Incompleteness propagates like a NIL reason; canonicalized once at
+        // the end of accumulation, not per widen.
+        self.gaps.extend(other.gaps.iter().copied());
     }
 }
 
 fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
-    let key = WordContractCacheKey {
-        word_identity: format!("static:{}:{}", name, def.registration_order),
-        dependency_identities: Vec::new(),
-        core_schema_version: WORD_CONTRACT_CORE_SCHEMA_VERSION,
-        inference_schema_version: WORD_CONTRACT_SCHEMA_VERSION,
-    };
+    let key = leaf_cache_key(format!("static:{}:{}", name, def.registration_order));
     let Some(meta) = get_coreword_metadata(name) else {
         return WordContract::conservative(key);
     };
     let nil_behavior = match meta.nil_policy {
         NilPolicy::Passthrough | NilPolicy::PreserveReason => NilBehavior::Propagates,
-        // `passthroughThenProject` does both: a NIL operand flows through, and
-        // a well-formed operand may still project onto one. `MayCreate` is the
-        // wider of the two and the one a caller has to plan for.
+        // `passthroughThenProject` does both: a NIL operand flows through,
+        // and a well-formed operand may still project onto one — `MayCreate`
+        // is the wider of the two, the one a caller has to plan for.
         NilPolicy::PassthroughThenProject | NilPolicy::CreatesNil => NilBehavior::MayCreate,
         NilPolicy::RejectNil => NilBehavior::RejectsNil,
-        // `inspectNil` reads the NIL-ness of its subject rather than
-        // propagating it, which is what `ConsumesNil` names in this lattice.
+        // `inspectNil` reads NIL-ness rather than propagating it — `ConsumesNil`.
         NilPolicy::ConsumeNil | NilPolicy::InspectNil => NilBehavior::ConsumesNil,
     };
     let (space, space_exact) = super::word_space::builtin_space_for(name);
+    let cost = super::word_cost::builtin_cost_for(name);
     WordContract {
         flow: meta.mass.into(),
         purity: meta.purity.into(),
@@ -289,7 +304,9 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         nil_behavior,
         space,
         space_exact,
+        cost,
         confidence: ContractConfidence::Complete,
+        gaps: Vec::new(),
         cache_key: key,
     }
 }
@@ -336,10 +353,7 @@ impl Interpreter {
         }
 
         let key = self.contract_cache_key(resolved_name, def);
-        if let Some(cached) = self
-            .word_contract_cache_ref()
-            .and_then(|cache| cache.get(&key))
-        {
+        if let Some(cached) = self.word_contract_cache_ref().and_then(|c| c.get(&key)) {
             return Some(cached.clone());
         }
 
@@ -354,6 +368,7 @@ impl Interpreter {
         let seed = WordContract::identity(resolved_name);
         let mut acc = AccumulatedContract::from_contract(&seed);
         let mut sim = SpaceSim::new();
+        let mut cost_sim = CostSim::new();
         let mut complete = true;
 
         'lines: for line in def.lines.iter() {
@@ -362,6 +377,7 @@ impl Interpreter {
                     Token::Number(_) | Token::String(_) => {
                         flow.push_literal();
                         sim.feed_literal();
+                        cost_sim.feed_literal();
                     }
                     Token::Symbol(symbol) => {
                         let canonical =
@@ -370,15 +386,22 @@ impl Interpreter {
                             complete = false;
                             flow.dynamic = true;
                             sim.feed_unresolved();
+                            cost_sim.feed_unresolved();
+                            acc.gaps.push(GapCode::UnresolvedWord);
                             continue;
                         };
                         let dep_contract = if dep_def.is_builtin {
                             Arc::new(static_word_contract(&dep_name, &dep_def))
                         } else if visiting.contains(&dep_name) {
                             complete = false;
-                            Arc::new(WordContract::conservative(
+                            acc.gaps.push(GapCode::RecursiveDependency);
+                            // Cleared, not merged: incompleteness here is
+                            // attributed above, not the placeholder's own seed.
+                            let mut placeholder = WordContract::conservative(
                                 self.contract_cache_key(&dep_name, &dep_def),
-                            ))
+                            );
+                            placeholder.gaps.clear();
+                            Arc::new(placeholder)
                         } else {
                             match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
                                 Some(contract) => contract,
@@ -386,6 +409,8 @@ impl Interpreter {
                                     complete = false;
                                     flow.dynamic = true;
                                     sim.abandon_line();
+                                    cost_sim.abandon_line();
+                                    acc.gaps.push(GapCode::DependencyUnknown);
                                     continue 'lines;
                                 }
                             }
@@ -396,6 +421,11 @@ impl Interpreter {
                         } else {
                             DepSpace::of_user_word(&dep_contract)
                         });
+                        cost_sim.feed_word(&if dep_def.is_builtin {
+                            DepCost::of_builtin(&dep_name)
+                        } else {
+                            DepCost::of_user_word(&dep_contract)
+                        });
                         acc.widen_with(&dep_contract);
                     }
                     Token::VectorStart
@@ -404,7 +434,10 @@ impl Interpreter {
                     | Token::BlockEnd
                     | Token::NilCoalesce
                     | Token::CondClauseSep
-                    | Token::LineBreak => sim.feed_structural(token),
+                    | Token::LineBreak => {
+                        sim.feed_structural(token);
+                        cost_sim.feed_structural(token);
+                    }
                 }
             }
         }
@@ -415,9 +448,13 @@ impl Interpreter {
             class: space,
             exact: space_exact,
         } = sim.finish();
+        let cost = cost_sim.finish();
         if !complete {
             acc.confidence = ContractConfidence::Conservative;
         }
+        // The gap set is a set, not a log: canonical order, not visit order.
+        acc.gaps.sort();
+        acc.gaps.dedup();
         let contract = Arc::new(WordContract {
             flow: acc.flow,
             purity: acc.purity,
@@ -428,7 +465,9 @@ impl Interpreter {
             nil_behavior: acc.nil_behavior,
             space,
             space_exact,
+            cost,
             confidence: acc.confidence,
+            gaps: acc.gaps,
             cache_key: key,
         });
         self.word_contract_cache_mut()
@@ -436,11 +475,7 @@ impl Interpreter {
         Some(contract)
     }
 
-    fn contract_cache_key(
-        &self,
-        resolved_name: &str,
-        def: &WordDefinition,
-    ) -> WordContractCacheKey {
+    fn contract_cache_key(&self, name: &str, def: &WordDefinition) -> WordContractCacheKey {
         let mut dependency_identities: Vec<String> = def
             .dependencies
             .iter()
@@ -453,11 +488,9 @@ impl Interpreter {
         dependency_identities.sort();
         WordContractCacheKey {
             word_identity: self
-                .word_identity(resolved_name)
+                .word_identity(name)
                 .cloned()
-                .unwrap_or_else(|| {
-                    format!("unidentified:{resolved_name}:{}", def.registration_order)
-                }),
+                .unwrap_or_else(|| format!("unidentified:{name}:{}", def.registration_order)),
             dependency_identities,
             core_schema_version: WORD_CONTRACT_CORE_SCHEMA_VERSION,
             inference_schema_version: WORD_CONTRACT_SCHEMA_VERSION,

@@ -3,28 +3,32 @@
 //! "connect an opt-in declaration to a pre-execution check" step of
 //! `docs/dev/external-evaluation-response-strategy.md`.
 //!
-//! Like the `#@` test directives, a `#:contract` directive is **tooling only**:
-//! it adds no language semantics (canonical source: `SPECIFICATION.html`) and is
-//! an ordinary comment to the interpreter. It states what a user word's contract
-//! is expected to be; `check --contract` infers the word's actual contract
-//! *without executing any word body* and reports a declaration the inference
-//! contradicts.
+//! Like the `#@` test directives, a `#:contract` directive is **tooling
+//! only**: it adds no language semantics (canonical source:
+//! `SPECIFICATION.html`) and is an ordinary comment to the interpreter. It
+//! states what a user word's contract is expected to be; `check --contract`
+//! infers the word's actual contract *without executing any word body* and
+//! reports a declaration the inference contradicts.
 //!
 //! ```text
 //! #:contract INC ( 1 -- 1 ) pure nil-free
 //! #:contract NORMALIZE ( 1 -- 1 ) may-nil
+//! #:contract SUM-ALL cost steps=unbounded numeric=linear
 //! ```
 //!
 //! Grammar: `#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [purity] [nil]
-//! [linearity]`, where `purity` is one of `pure` / `observable` /
-//! `effectful`, `nil` is `nil-free` / `may-nil`, `linearity` is
-//! `linear` / `affine` / `droppable` (the resource-ownership axis; see
-//! `docs/dev/structural-memory-safety-roadmap.md` Phase 1).
-//! Each part is
-//! optional; the fields left out are not checked. Because inference is
-//! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
-//! as a `note`, never a false `error`.
+//! [linearity] [cost]`, where `purity` is `pure`/`observable`/`effectful`,
+//! `nil` is `nil-free`/`may-nil`, `linearity` is `linear`/`affine`/
+//! `droppable` (`docs/dev/structural-memory-safety-roadmap.md` Phase 1), and
+//! `cost` is one or more `steps=`/`numeric=`/`collection=` terms each
+//! `const`/`linear`/`superlinear`/`unbounded`
+//! (`docs/dev/cost-contract-design.md`). Each part is optional; fields left
+//! out are not checked. Inference is deliberately conservative (SPEC
+//! §7.14), so an unprovable declaration is a `note`, never a false `error`.
 
+use super::contract_cost::{check_cost_decl, parse_cost_terms, CostDecl};
+use super::contract_gap::GapCode;
+use super::contract_gap::{declaration_json, fold_outcomes, gap_summary_json, CheckOutcome};
 use super::contract_linearity::{check_linearity, linearity_from_word, Linearity};
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractFlow, ContractPurity, NilBehavior,
@@ -43,12 +47,13 @@ pub(crate) struct ContractDecl {
     pub nil_free: Option<bool>,
     /// Declared resource linearity, or `None` when the directive omits it.
     pub linearity: Option<Linearity>,
-    /// Declared static-footprint class, or `None` when the directive omits it.
+    /// Declared cost-class bounds, one per axis; each `None` axis is not
+    /// checked (Phase 5).
+    pub cost: CostDecl,
     /// The original directive text, for diagnostics.
     pub raw: String,
 }
 
-/// One declaration-check finding, mirroring `plan_check::Finding`.
 /// Outcome of checking one declaration axis. The specification fixes exactly
 /// three results for `check --contract`: verified (no finding), violated
 /// (`Error`), or cannot verify (`Note`) when inference is too conservative to
@@ -71,26 +76,49 @@ impl Severity {
 pub(crate) struct DeclFinding {
     pub severity: Severity,
     pub message: String,
+    /// The gap id behind a `Note` finding; always `None` for an `Error`
+    /// finding — a proven violation has no gap (pitfall B).
+    pub code: Option<&'static str>,
 }
 
 /// Result of the declaration check over a whole file.
 pub(crate) struct ContractDeclCheck {
     pub findings: Vec<DeclFinding>,
-    /// True if any finding is an `error` (a declaration the inference
-    /// contradicts). Drives the `check` exit code.
+    /// True if any finding is an `error`. Drives the `check` exit code;
+    /// `outcome`/`declarations` below are read-only projections (pitfall C).
     pub violated: bool,
+    /// One `(word, outcome)` per successfully-parsed declaration, in source
+    /// order — not derived by counting `findings` by severity, since one
+    /// declaration can contribute more than one finding. A malformed
+    /// directive counts toward `violated`/`findings` but not this list.
+    pub decl_outcomes: Vec<(String, CheckOutcome)>,
 }
 
 impl ContractDeclCheck {
     /// Additive JSON for the `--json` envelope (`contractDecls`), rendered here
     /// so `report` stays decoupled from the declaration types.
     pub(crate) fn to_json(&self) -> serde_json::Value {
+        let outcomes: Vec<CheckOutcome> = self
+            .decl_outcomes
+            .iter()
+            .map(|(_, outcome)| *outcome)
+            .collect();
         serde_json::json!({
             "violated": self.violated,
             "findings": self.findings.iter().map(|f| serde_json::json!({
                 "severity": f.severity.as_str(),
                 "message": f.message,
+                "code": f.code,
             })).collect::<Vec<_>>(),
+            "gapSummary": gap_summary_json(&outcomes, self.findings.iter().filter_map(|f| f.code)),
+            // Phase 4: LANG.FAILURE.TRICHOTOMY at check time; `findings`/
+            // `violated` stay as the legacy projection of the same result.
+            "outcome": fold_outcomes(&outcomes).as_str(),
+            "declarations": self
+                .decl_outcomes
+                .iter()
+                .map(|(word, outcome)| declaration_json(word, *outcome))
+                .collect::<Vec<_>>(),
         })
     }
 }
@@ -122,9 +150,8 @@ fn purity_label(purity: ContractPurity) -> &'static str {
     }
 }
 
-/// Parse the `#:contract` directives out of `source`. Malformed directives are
-/// returned as error messages so a typo never passes silently (mirroring the
-/// `#@` test-directive contract).
+/// Parse the `#:contract` directives out of `source`. Malformed directives
+/// are returned as error messages so a typo never passes silently.
 pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec<String>) {
     let mut decls = Vec::new();
     let mut errors = Vec::new();
@@ -146,13 +173,14 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
             purity: None,
             nil_free: None,
             linearity: None,
+            cost: CostDecl::default(),
             raw: raw.clone(),
         };
         let mut malformed: Option<String> = None;
 
         let rest: Vec<&str> = words.collect();
         let mut i = 0;
-        while i < rest.len() {
+        'terms: while i < rest.len() {
             match rest[i] {
                 "(" => {
                     // ( CONSUMES -- PRODUCES )
@@ -179,6 +207,13 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
                     decl.nil_free = Some(false);
                     i += 1;
                 }
+                "cost" => match parse_cost_terms(&rest, i + 1, name, &mut decl.cost) {
+                    Ok(next_i) => i = next_i,
+                    Err(e) => {
+                        malformed = Some(e);
+                        break 'terms;
+                    }
+                },
                 other => {
                     if let Some(p) = purity_from_word(other) {
                         decl.purity = Some(p);
@@ -232,8 +267,7 @@ fn parse_count(words: &[&str], side: &str) -> Result<u16, String> {
 
 /// Extract every top-level `{ body } 'NAME' DEF` from `tokens`, returning
 /// `(NAME, body-tokens)` pairs in source order. Nested blocks are respected;
-/// blocks that are not the operand of a top-level `DEF` are ignored. This reads
-/// the token stream only — it executes nothing.
+/// this reads the token stream only — it executes nothing.
 fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
     let mut defs = Vec::new();
     // Record depth-0 `{ ... }` spans as (open_index, close_index).
@@ -287,9 +321,9 @@ fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
 
 /// Build an interpreter from `source` by registering its top-level word
 /// definitions and imports **without executing any word body or top-level
-/// code**, returning it alongside the user words it defined, in source order.
-/// Shared by the `#:contract` checker and the `contract` reporter so both see
-/// the identical execution-free environment the inference runs against.
+/// code**, returning it with the user words it defined, in source order.
+/// Shared by the `#:contract` checker and the `contract` reporter so both
+/// see the identical execution-free environment.
 pub(crate) fn build_definitions_interpreter(source: &str) -> (Interpreter, Vec<String>) {
     let mut interp = Interpreter::new();
     let mut names = Vec::new();
@@ -311,9 +345,8 @@ pub(crate) fn build_definitions_interpreter(source: &str) -> (Interpreter, Vec<S
     (interp, names)
 }
 
-/// Build a check interpreter from `source` by registering its top-level word
-/// definitions (and imports) without executing any word body or top-level code,
-/// then check every `#:contract` declaration against the inferred contract.
+/// Build a check interpreter from `source` (no execution), then check every
+/// `#:contract` declaration against the inferred contract.
 pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
     let (decls, parse_errors) = parse_contract_directives(source);
     let mut findings: Vec<DeclFinding> = parse_errors
@@ -321,6 +354,7 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         .map(|message| DeclFinding {
             severity: Severity::Error,
             message,
+            code: None,
         })
         .collect();
 
@@ -328,18 +362,38 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         return ContractDeclCheck {
             violated: !findings.is_empty(),
             findings,
+            decl_outcomes: Vec::new(),
         };
     }
 
     let (mut interp, _names) = build_definitions_interpreter(source);
 
+    let mut decl_outcomes = Vec::with_capacity(decls.len());
     for decl in &decls {
+        let before = findings.len();
         check_one(&mut interp, decl, &mut findings);
+        let new_findings = &findings[before..];
+        let outcome = if new_findings.iter().any(|f| f.severity == Severity::Error) {
+            CheckOutcome::Error
+        } else if new_findings.iter().any(|f| f.severity == Severity::Note) {
+            // Every conservative Note carries a code in practice (pitfall D);
+            // `ConservativeSeed` guards only the defensive empty-gaps case.
+            let gap = new_findings
+                .iter()
+                .find_map(|f| f.code)
+                .and_then(GapCode::from_str)
+                .unwrap_or(GapCode::ConservativeSeed);
+            CheckOutcome::Nil(gap)
+        } else {
+            CheckOutcome::Value
+        };
+        decl_outcomes.push((decl.name.clone(), outcome));
     }
 
     ContractDeclCheck {
         violated: findings.iter().any(|f| f.severity == Severity::Error),
         findings,
+        decl_outcomes,
     }
 }
 
@@ -348,6 +402,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
         findings.push(DeclFinding {
             severity: Severity::Error,
             message: format!("`#:contract {}`: no such word is defined.", decl.name),
+            code: None,
         });
         return;
     };
@@ -355,6 +410,14 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
     // Conservative inference cannot disprove a declaration, so a mismatch under
     // low confidence is a note (unverifiable), never a false error.
     let conservative = contract.confidence == ContractConfidence::Conservative;
+    // The gap id behind a conservative mismatch. Every path to `Conservative`
+    // also pushes a gap, but if one ever didn't, `None` is the safe direction
+    // — never panic over an incomplete diagnostic (Phase 3 pitfall D).
+    let code: Option<&'static str> = if conservative {
+        contract.gaps.first().map(|g| g.as_str())
+    } else {
+        None
+    };
 
     if let Some((dc, dp)) = decl.arity {
         match &contract.flow {
@@ -363,6 +426,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                     findings.push(DeclFinding {
                         severity: Severity::Error,
                         message: arity_msg(&decl.name, dc, dp, *consumes, *produces),
+                        code: None,
                     });
                 }
             }
@@ -377,6 +441,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                         decl.name, dc, dp,
                         if conservative { " (unverified)" } else { "" }
                     ),
+                code: if conservative { code } else { None },
             }),
         }
     }
@@ -396,15 +461,15 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                     purity_label(contract.purity),
                     if conservative { " (unverified)" } else { "" }
                 ),
+                code: if conservative { code } else { None },
             });
         }
     }
 
     if decl.nil_free == Some(true) {
         // `nil-free` means the word never *manufactures* absence. Only
-        // `MayCreate` (a CreatesNil word like DIV in the flow) does that;
-        // `Propagates` merely carries an input NIL through (ADD1 is nil-free yet
-        // propagates), and Rejects/Consumes/NeverCreates never mint a NIL.
+        // `MayCreate` (e.g. DIV) does that; `Propagates` merely carries an
+        // input NIL through (ADD1 is nil-free yet propagates).
         let may_create = matches!(contract.nil_behavior, NilBehavior::MayCreate);
         if may_create {
             findings.push(DeclFinding {
@@ -418,9 +483,12 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                         decl.name,
                         if conservative { " (unverified)" } else { "" }
                     ),
+                code: if conservative { code } else { None },
             });
         }
     }
+
+    check_cost_decl(&decl.name, decl.cost, contract.cost, code, findings);
 
     if let Some(linearity) = decl.linearity {
         check_linearity(interp, decl, linearity, findings);
