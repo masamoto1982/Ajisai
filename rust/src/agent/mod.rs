@@ -7,6 +7,7 @@
 //! runtime-metrics envelope (`docs/dev/agent-cli-output-contract.md`).
 
 pub mod api;
+pub(crate) mod contract_cost;
 pub(crate) mod contract_decl;
 #[cfg(test)]
 mod contract_decl_tests;

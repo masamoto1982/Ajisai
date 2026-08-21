@@ -179,6 +179,30 @@ that correspondence directly, in the runtime's own vocabulary:
   `docs/dev/trichotomy-unification.md` for why, and the condition under which
   it is worth revisiting.
 
+### `contractDecls`: the `cost` declaration axis
+
+A `#:contract` directive may also declare `cost`, one or more
+`steps=CLASS`/`numeric=CLASS`/`collection=CLASS` terms (`CLASS` one of
+`const`/`linear`/`superlinear`/`unbounded`), checked against the same three
+counters `resourceUsage` reports (`executionSteps`/`numericWork`/
+`collectionWork` respectively — see below). Design rationale, the class
+lattice, and why this axis deliberately does not refine per call site are in
+`docs/dev/cost-contract-design.md`.
+
+```text
+#:contract SUM-ALL cost steps=unbounded numeric=linear
+```
+
+- Each axis is checked only when declared; an omitted axis is not checked, the
+  same rule the other declaration parts already follow.
+- Unlike arity/purity/nil-free, a cost mismatch's `severity` is driven by
+  *that axis's own* exactness witness, not the word's overall
+  `ContractConfidence`: `error` only when the tighter class is proven
+  attained, `note` otherwise. A `note` here can carry `code: null` even though
+  it is a `note` — a cost bound can be a sound-but-unproven upper bound by the
+  classification's own design (e.g. `MAP`'s step count), not because
+  inference gave up on the word, so it is not always one of the four gap ids.
+
 ### What the run cost, and what the runtime did
 
 Two objects, because they answer different questions.

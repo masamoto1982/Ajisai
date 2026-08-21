@@ -194,6 +194,77 @@ mod contract_decl_tests {
         );
     }
 
+    // Phase 5 (Step 5.6): the `cost` declaration axis.
+
+    #[test]
+    fn const_word_verifies_const_cost() {
+        let source =
+            "{ 1 2 ADD } 'S' DEF\n#:contract S cost steps=const numeric=linear collection=const";
+        let decls = contract_decls(source);
+        assert_eq!(decls["outcome"], "value");
+        assert_eq!(decls["findings"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn exact_mismatch_is_a_cost_error() {
+        // ADD's numeric axis is provably linear (the meter's own reason to
+        // exist), so declaring a tighter `const` bound is a proven violation.
+        let source = "{ 1 2 ADD } 'S' DEF\n#:contract S cost numeric=const";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0]["severity"], "error");
+        assert_eq!(findings[0]["code"], Json::Null);
+        assert_eq!(decls["outcome"], "error");
+    }
+
+    #[test]
+    fn inexact_mismatch_is_a_cost_note() {
+        // MAP's steps axis is a sound but unproven `unbounded` upper bound
+        // (the body could be trivial), so a tighter declaration is only ever
+        // unverifiable, never a false error.
+        let source = "{ [ 1 ] MAP } 'M' DEF\n#:contract M cost steps=const";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0]["severity"], "note");
+        assert_eq!(decls["outcome"], "nil");
+    }
+
+    #[test]
+    fn omitted_cost_axis_is_not_checked() {
+        // Only `steps` is declared; MAP's numeric and collection axes are
+        // also mismatched against a tighter class but must not be checked.
+        let source = "{ [ 1 ] MAP } 'M' DEF\n#:contract M cost steps=const";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert_eq!(findings.len(), 1, "only the declared axis is checked");
+        assert!(findings[0]["message"].as_str().unwrap().contains("steps"));
+    }
+
+    #[test]
+    fn unknown_cost_class_is_a_parse_error() {
+        let source = "{ 1 2 ADD } 'S' DEF\n#:contract S cost numeric=quadratic";
+        let decls = contract_decls(source);
+        assert_eq!(decls["violated"], true);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert!(findings.iter().any(|f| f["message"]
+            .as_str()
+            .unwrap()
+            .contains("unknown cost class")));
+    }
+
+    #[test]
+    fn unknown_cost_axis_is_a_parse_error() {
+        let source = "{ 1 2 ADD } 'S' DEF\n#:contract S cost bogus=const";
+        let decls = contract_decls(source);
+        assert_eq!(decls["violated"], true);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert!(findings
+            .iter()
+            .any(|f| f["message"].as_str().unwrap().contains("unknown cost axis")));
+    }
+
     #[test]
     fn legacy_fields_still_present() {
         let source = "{ 1 PRINT } 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
