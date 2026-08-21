@@ -33,6 +33,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `spec-impl-drift-tactic.md` | 仕様と実装が食い違ったときの裁定戦術 | `[設計根拠]` |
 | `language-coherence-review-2026-08.md` | 外部「整合化改修案」の検証と、正典収束計画への差し替え | `[方針記録]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察 | `[観察ノート]` |
+| `receipt-accountability-plan-2026-08.md` | 受領証（Receipt）を軸とした改修案。外部評価の採否・決定可能断片・単位・配布の実施順序 | `[方針記録]` |
 
 ## エージェント/CLI・GUI
 
