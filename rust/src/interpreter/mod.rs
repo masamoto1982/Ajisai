@@ -43,7 +43,11 @@ pub mod word_contract;
 mod word_contract_lattice;
 #[cfg(test)]
 mod word_contract_tests;
-mod word_identity;
+// `pub(crate)`, not private: `agent::observation_digest` (Phase 1,
+// competitive-advantage-work-order-2026-08.md) calls
+// `word_identity::content_digest` and `word_identity::encode_token` directly,
+// so the crate-wide agent boundary needs to name this module.
+pub(crate) mod word_identity;
 #[cfg(test)]
 mod word_identity_tests;
 pub mod word_space;

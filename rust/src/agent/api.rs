@@ -223,9 +223,22 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
     let contract_failed = contract_decls
         .as_ref()
         .is_some_and(|result| result.violated);
+    let status = if contract_failed { "error" } else { "ok" };
+    // `check` never executes, so the observation is the degenerate one: no
+    // stack, no output, no dictionary — but it still folds to a stable digest
+    // that a caller can compare across two identical `check` calls.
+    let digest = super::observation_digest::observation_digest(
+        super::observation_digest::ObservationDigestInput {
+            status,
+            stack: &[],
+            output: &[],
+            user_words: &[],
+            error_category: None,
+        },
+    );
     AgentResponse {
         report: Report {
-            status: if contract_failed { "error" } else { "ok" },
+            status,
             stack: serde_json::Value::Array(Vec::new()),
             stack_display: Vec::new(),
             output: Vec::new(),
@@ -237,6 +250,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
             resource_usage: crate::interpreter::ResourceUsage::default(),
             contract_decls: contract_decls.as_ref().map(|result| result.to_json()),
             stack_elided: None,
+            observation_digest: digest,
         },
     }
 }

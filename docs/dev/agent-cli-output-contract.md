@@ -56,7 +56,8 @@ Both commands emit schema version 1:
   "runtimeMetrics": {},
   "resourceUsage": {},
   "contractDecls": null,
-  "stackElided": null
+  "stackElided": null,
+  "observationDigest": null
 }
 ```
 
@@ -107,6 +108,45 @@ in `resourceUsage`. That it sat in the optimizer object is how it went unnoticed
 that nothing ever wrote it: the value was `0` for every program ever run, beside
 the `Interpreter::execution_step_count` that every limit check increments. Two
 counters for one fact, and the reported one was the one that was always zero.
+
+### `observationDigest`
+
+A single `#`-prefixed 64-lowercase-hex BLAKE3 digest of the whole observation,
+or `null`. Two runs agree on this field exactly when they agree on everything
+an agent can observe: `status`, the stack (bottom to top, by value — not by
+representation), `PRINT` output in order, the user dictionary (each word's
+normalized name and its content identity, sorted by name), and the error
+category. It lets a caller compare two implementations, two runs, or a run
+against a recorded expectation, without transferring or diffing the values
+themselves.
+
+It does **not** include `stackDisplay`, `message`, `diagnosis`,
+`aiDiagnostic`, `errorFlowTrace`, `runtimeMetrics`, `resourceUsage`, or
+`contractDecls` — none of those are the observation; several of them
+(`stackDisplay` in particular, SPEC §4.2.3's continued fraction truncated at a
+display budget) are not even faithful to the value they render. A value's
+`hint` (display role) is excluded the same way `PartialEq for Value` excludes
+it; a NIL's reason is included the same way `PartialEq for Value` includes it.
+
+**Guarantee, stated in one direction only:** equal observations always digest
+equally. The converse does not hold without qualification for algebraic
+(Tier 1 exact-irrational) scalars: the digest keys such a value by
+`floor(value * 2^512)`, so two distinct algebraic numbers closer together than
+`2^-512` fold to the same digest. This is a deliberate, bounded residual, not
+an oversight — do not read `observationDigest` as proving two stacks differ
+when it merely fails to prove they agree at that resolution. Every other
+domain (rational, boolean, string, code block, NIL, vector, tensor) digests
+injectively.
+
+`observationDigest` is `null` exactly when the observation contains a Tier 2
+`ExactReal::Computable` scalar (lazily refined, no canonical finite
+representation) anywhere in the stack. No current Word constructs one.
+
+The byte grammar is tagged (`AJISAI-OBS-1`, `rust/src/agent/observation_digest.rs`).
+Changing the grammar is not a backward-compatible change even though it adds
+no JSON field and does not move `SCHEMA_VERSION`: a value that used to digest
+one way will digest another, so any caller comparing against a previously
+recorded digest breaks. Bump the schema tag when that happens.
 
 ### An error report that cannot afford its stack
 
