@@ -79,6 +79,53 @@ adapter's `worker_threads` backend) renders the identical envelope; the
 native CLI (`rust/src/cli`) is a thin file/terminal adapter over the same
 module.
 
+### `contractDecls`: gap identifiers
+
+`LANG.CONTRACT.CHECK` fixes exactly three results for `check --contract`:
+verified, cannot verify, violated. A `code` on a finding is the stable *reason*
+behind a cannot-verify result — the breakdown of that one result, not a fourth
+result of its own. `violated` (top-level bool) and each finding's `severity`
+are computed exactly as before; gap identifiers add information, they do not
+change what counts as a violation.
+
+```json
+{
+  "violated": false,
+  "findings": [
+    {
+      "severity": "note",
+      "message": "`#:contract NORMALIZE`: declared `pure` but inferred `effectful` (unverified).",
+      "code": "gap.recursiveDependency"
+    }
+  ],
+  "gapSummary": {
+    "declarationsChecked": 3,
+    "verified": 1,
+    "cannotVerify": 1,
+    "violated": 1,
+    "byGap": { "gap.recursiveDependency": 1 }
+  }
+}
+```
+
+- `code` is present (a string) only on a `"severity": "note"` finding, and is
+  `null` for every `"severity": "error"` finding: a proven violation is not
+  something inference merely failed to decide, so it carries no gap.
+- The four gap ids, and no others: `gap.unresolvedWord` (a symbol the body
+  calls does not resolve to any word), `gap.recursiveDependency` (inference
+  re-entered a word that is already being inferred — direct or mutual
+  recursion), `gap.dependencyUnknown` (a dependency's own inference could not
+  complete), `gap.conservativeSeed` (inference fell back to the maximally
+  cautious contract without going through one of the other three reasons).
+- `gapSummary.declarationsChecked` counts successfully-parsed `#:contract`
+  declarations; `verified + cannotVerify + violated` always equals it. A
+  malformed directive (one that never became a checkable declaration) still
+  contributes an `error` finding and still sets `violated: true`, but is not
+  one of the three counted here.
+- `gapSummary.byGap` keys are sorted ascending and the object is always
+  present (empty when nothing is unverifiable), so a caller can read it
+  without a presence check.
+
 ### What the run cost, and what the runtime did
 
 Two objects, because they answer different questions.

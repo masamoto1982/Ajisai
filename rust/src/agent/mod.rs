@@ -8,6 +8,9 @@
 
 pub mod api;
 pub(crate) mod contract_decl;
+#[cfg(test)]
+mod contract_decl_tests;
+pub(crate) mod contract_gap;
 mod contract_linearity;
 pub(crate) mod contract_report;
 mod error_stack;

@@ -25,6 +25,7 @@
 //! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
 //! as a `note`, never a false `error`.
 
+use super::contract_gap::{gap_summary_json, DeclOutcome};
 use super::contract_linearity::{check_linearity, linearity_from_word, Linearity};
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractFlow, ContractPurity, NilBehavior,
@@ -71,6 +72,11 @@ impl Severity {
 pub(crate) struct DeclFinding {
     pub severity: Severity,
     pub message: String,
+    /// The gap id behind a `Note` (cannot-verify) finding, or `None`. Always
+    /// `None` for an `Error` finding (Phase 3 pitfall B: a proven violation
+    /// has no gap — a gap is a reason inference could not decide, and this
+    /// finding is not one of those).
+    pub code: Option<&'static str>,
 }
 
 /// Result of the declaration check over a whole file.
@@ -79,6 +85,15 @@ pub(crate) struct ContractDeclCheck {
     /// True if any finding is an `error` (a declaration the inference
     /// contradicts). Drives the `check` exit code.
     pub violated: bool,
+    /// One classification per successfully-parsed `#:contract` declaration
+    /// (Step 3.4) — *not* derived by counting `findings` by severity, because
+    /// one declaration can contribute more than one finding (e.g. both a
+    /// purity and a nil-free mismatch), which would double-count it. A
+    /// malformed directive that never became a `ContractDecl` is not one of
+    /// these: its `Error` finding still counts toward `violated` and
+    /// `findings` above, but it was never a checkable declaration in the
+    /// first place, so it is not part of this per-declaration tally.
+    pub decl_outcomes: Vec<DeclOutcome>,
 }
 
 impl ContractDeclCheck {
@@ -90,7 +105,12 @@ impl ContractDeclCheck {
             "findings": self.findings.iter().map(|f| serde_json::json!({
                 "severity": f.severity.as_str(),
                 "message": f.message,
+                "code": f.code,
             })).collect::<Vec<_>>(),
+            "gapSummary": gap_summary_json(
+                &self.decl_outcomes,
+                self.findings.iter().filter_map(|f| f.code),
+            ),
         })
     }
 }
@@ -321,6 +341,7 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         .map(|message| DeclFinding {
             severity: Severity::Error,
             message,
+            code: None,
         })
         .collect();
 
@@ -328,18 +349,32 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
         return ContractDeclCheck {
             violated: !findings.is_empty(),
             findings,
+            decl_outcomes: Vec::new(),
         };
     }
 
     let (mut interp, _names) = build_definitions_interpreter(source);
 
+    let mut decl_outcomes = Vec::with_capacity(decls.len());
     for decl in &decls {
+        let before = findings.len();
         check_one(&mut interp, decl, &mut findings);
+        let new_findings = &findings[before..];
+        decl_outcomes.push(
+            if new_findings.iter().any(|f| f.severity == Severity::Error) {
+                DeclOutcome::Violated
+            } else if new_findings.iter().any(|f| f.severity == Severity::Note) {
+                DeclOutcome::CannotVerify
+            } else {
+                DeclOutcome::Verified
+            },
+        );
     }
 
     ContractDeclCheck {
         violated: findings.iter().any(|f| f.severity == Severity::Error),
         findings,
+        decl_outcomes,
     }
 }
 
@@ -348,6 +383,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
         findings.push(DeclFinding {
             severity: Severity::Error,
             message: format!("`#:contract {}`: no such word is defined.", decl.name),
+            code: None,
         });
         return;
     };
@@ -355,6 +391,16 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
     // Conservative inference cannot disprove a declaration, so a mismatch under
     // low confidence is a note (unverifiable), never a false error.
     let conservative = contract.confidence == ContractConfidence::Conservative;
+    // The gap id behind a conservative mismatch, or `None` if this contract
+    // is not conservative. A conservative contract with an empty `gaps` list
+    // should not arise (every path to `Conservative` also pushes a gap), but
+    // if it ever did, reporting no code is the safe direction — never panic
+    // over a diagnostic being incomplete (Phase 3 pitfall D).
+    let code: Option<&'static str> = if conservative {
+        contract.gaps.first().map(|g| g.as_str())
+    } else {
+        None
+    };
 
     if let Some((dc, dp)) = decl.arity {
         match &contract.flow {
@@ -363,6 +409,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                     findings.push(DeclFinding {
                         severity: Severity::Error,
                         message: arity_msg(&decl.name, dc, dp, *consumes, *produces),
+                        code: None,
                     });
                 }
             }
@@ -377,6 +424,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                         decl.name, dc, dp,
                         if conservative { " (unverified)" } else { "" }
                     ),
+                code: if conservative { code } else { None },
             }),
         }
     }
@@ -396,6 +444,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                     purity_label(contract.purity),
                     if conservative { " (unverified)" } else { "" }
                 ),
+                code: if conservative { code } else { None },
             });
         }
     }
@@ -418,6 +467,7 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
                         decl.name,
                         if conservative { " (unverified)" } else { "" }
                     ),
+                code: if conservative { code } else { None },
             });
         }
     }

@@ -10,6 +10,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::agent::contract_gap::GapCode;
 use crate::coreword_registry::{
     get_coreword_metadata, Determinism, MassContract, NilPolicy, Purity,
 };
@@ -41,6 +42,11 @@ pub struct WordContract {
     /// True when the bound is provably attained, licensing a declaration error.
     pub space_exact: bool,
     pub confidence: ContractConfidence,
+    /// Why inference could not fully verify this word, when `confidence` is
+    /// `Conservative`; always empty when `Complete` (Phase 3). Not part of
+    /// the cache key. `pub(crate)` (narrower than the other fields) because
+    /// `GapCode` itself is.
+    pub(crate) gaps: Vec<GapCode>,
     pub cache_key: WordContractCacheKey,
 }
 
@@ -105,6 +111,7 @@ impl WordContract {
             space: SpaceClass::Unbounded,
             space_exact: false,
             confidence: ContractConfidence::Conservative,
+            gaps: vec![GapCode::ConservativeSeed],
             cache_key: key,
         }
     }
@@ -130,6 +137,7 @@ impl WordContract {
             space: SpaceClass::Const,
             space_exact: true,
             confidence: ContractConfidence::Complete,
+            gaps: Vec::new(),
             cache_key: key,
         }
     }
@@ -226,6 +234,7 @@ struct AccumulatedContract {
     order_sensitivity: OrderSensitivity,
     nil_behavior: NilBehavior,
     confidence: ContractConfidence,
+    gaps: Vec<GapCode>,
 }
 
 impl AccumulatedContract {
@@ -239,6 +248,7 @@ impl AccumulatedContract {
             order_sensitivity: contract.order_sensitivity,
             nil_behavior: contract.nil_behavior,
             confidence: contract.confidence,
+            gaps: contract.gaps.clone(),
         }
     }
 
@@ -254,6 +264,9 @@ impl AccumulatedContract {
         self.order_sensitivity = widen_order(self.order_sensitivity, other.order_sensitivity);
         self.nil_behavior = widen_nil(self.nil_behavior, other.nil_behavior);
         self.confidence = widen_confidence(self.confidence, other.confidence);
+        // Incompleteness propagates like a NIL reason does downstream.
+        // Canonicalized once at the end of accumulation, not per widen.
+        self.gaps.extend(other.gaps.iter().copied());
     }
 }
 
@@ -290,6 +303,7 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         space,
         space_exact,
         confidence: ContractConfidence::Complete,
+        gaps: Vec::new(),
         cache_key: key,
     }
 }
@@ -370,15 +384,22 @@ impl Interpreter {
                             complete = false;
                             flow.dynamic = true;
                             sim.feed_unresolved();
+                            acc.gaps.push(GapCode::UnresolvedWord);
                             continue;
                         };
                         let dep_contract = if dep_def.is_builtin {
                             Arc::new(static_word_contract(&dep_name, &dep_def))
                         } else if visiting.contains(&dep_name) {
                             complete = false;
-                            Arc::new(WordContract::conservative(
+                            acc.gaps.push(GapCode::RecursiveDependency);
+                            // Cleared, not merged below: the reason this
+                            // word is incomplete is attributed above, not
+                            // the placeholder's own `ConservativeSeed`.
+                            let mut placeholder = WordContract::conservative(
                                 self.contract_cache_key(&dep_name, &dep_def),
-                            ))
+                            );
+                            placeholder.gaps.clear();
+                            Arc::new(placeholder)
                         } else {
                             match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
                                 Some(contract) => contract,
@@ -386,6 +407,7 @@ impl Interpreter {
                                     complete = false;
                                     flow.dynamic = true;
                                     sim.abandon_line();
+                                    acc.gaps.push(GapCode::DependencyUnknown);
                                     continue 'lines;
                                 }
                             }
@@ -418,6 +440,9 @@ impl Interpreter {
         if !complete {
             acc.confidence = ContractConfidence::Conservative;
         }
+        // The gap set is a set, not a log: canonical order, not visit order.
+        acc.gaps.sort();
+        acc.gaps.dedup();
         let contract = Arc::new(WordContract {
             flow: acc.flow,
             purity: acc.purity,
@@ -429,6 +454,7 @@ impl Interpreter {
             space,
             space_exact,
             confidence: acc.confidence,
+            gaps: acc.gaps,
             cache_key: key,
         });
         self.word_contract_cache_mut()
