@@ -352,7 +352,6 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 <p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>.</p>
 
 <p>The check is deliberately <strong>conservative and partial</strong>. It reports exactly three outcomes per declaration: <em>verified</em>, <em>violated</em>, or <em>cannot verify</em>. Anything outside the syntactic fragment the inference analyzes — a higher-order body whose block is not statically known, or dynamic control — is reported as <em>cannot verify</em> and is never silently passed. A tool that reports <em>verified</em> for an unanalyzable body is nonconforming.</p>
-
 <p>These three results are the trichotomy of LANG.FAILURE.TRICHOTOMY applied at check time rather than at run time: verified corresponds to a value — the inferred contract itself — cannot verify to a reasoned absence, and violated to an error. The correspondence classifies outcomes, not mechanisms, and does not make the check evaluate the program: division by zero, a failed parse and an out-of-range index already share one outcome category while sharing no mechanism, and an inference that could not decide joins that list on the same terms.</p>
 
 <h2 id="lang-observation">10. Observation and Host Protocol</h2>
