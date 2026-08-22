@@ -40,6 +40,7 @@ pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;
 mod word_candidates;
 pub mod word_contract;
+mod word_contract_flow;
 mod word_contract_lattice;
 #[cfg(test)]
 mod word_contract_tests;

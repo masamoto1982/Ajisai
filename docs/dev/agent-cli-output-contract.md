@@ -111,12 +111,15 @@ change what counts as a violation.
 - `code` is present (a string) only on a `"severity": "note"` finding, and is
   `null` for every `"severity": "error"` finding: a proven violation is not
   something inference merely failed to decide, so it carries no gap.
-- The four gap ids, and no others: `gap.unresolvedWord` (a symbol the body
+- The five gap ids, and no others: `gap.unresolvedWord` (a symbol the body
   calls does not resolve to any word), `gap.recursiveDependency` (inference
   re-entered a word that is already being inferred — direct or mutual
   recursion), `gap.dependencyUnknown` (a dependency's own inference could not
   complete), `gap.conservativeSeed` (inference fell back to the maximally
-  cautious contract without going through one of the other three reasons).
+  cautious contract without going through one of the other three reasons),
+  `gap.unmodelledControlFlow` (the body reaches a control directive whose
+  paths differ in stack height — `^`, `|` — or an unbalanced `[`/`{`
+  delimiter, so no fixed arity describes it).
 - `gapSummary.declarationsChecked` counts successfully-parsed `#:contract`
   declarations; `verified + cannotVerify + violated` always equals it. A
   malformed directive (one that never became a checkable declaration) still

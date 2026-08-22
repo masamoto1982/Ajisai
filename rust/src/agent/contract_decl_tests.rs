@@ -30,6 +30,64 @@ mod contract_decl_tests {
         assert_eq!(decls["gapSummary"]["byGap"]["gap.recursiveDependency"], 3);
     }
 
+    // -----------------------------------------------------------------
+    // A correct declaration must never be reported as a violation
+    // (`LANG.CONTRACT.CHECK`; `word_contract_flow.rs`). Each body below has
+    // the declared arity at run time, and each was rejected as a proven
+    // violation before the flow simulation became literal-depth aware.
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn a_correct_declaration_over_literals_is_verified_not_violated() {
+        for (body, decl) in [
+            ("[ 1 2 ]", "( 0 -- 1 )"),
+            ("[ 10 20 ] ADD", "( 1 -- 1 )"),
+            ("{ 2 MUL } MAP", "( 1 -- 1 )"),
+            ("[ [ 1 ] [ 2 ] ]", "( 0 -- 1 )"),
+            ("{ [ 1 2 ] }", "( 0 -- 1 )"),
+            ("[ { 1 } ]", "( 0 -- 1 )"),
+        ] {
+            let source = format!("{{ {body} }} 'W' DEF\n#:contract W {decl}");
+            let decls = contract_decls(&source);
+            assert_eq!(
+                decls["findings"].as_array().expect("findings array").len(),
+                0,
+                "expected no finding for `{body}` declared {decl}, got {decls}"
+            );
+            assert_eq!(decls["outcome"], "value", "body: {body}");
+            assert_eq!(exit_code(&source), 0, "body: {body}");
+        }
+    }
+
+    #[test]
+    fn a_wrong_declaration_over_literals_is_still_violated() {
+        // The counterpart of the test above: the fix must not buy its way out
+        // of false errors by giving up on real ones.
+        let source = "{ [ 1 2 ] } 'W' DEF\n#:contract W ( 0 -- 2 )";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0]["severity"], "error");
+        assert_eq!(decls["outcome"], "error");
+        assert_eq!(exit_code(source), 1);
+    }
+
+    #[test]
+    fn vent_reports_the_unmodelled_control_flow_gap() {
+        let source = "{ 1 0 DIV ^ 9 } 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert!(!findings.is_empty(), "expected at least one finding");
+        for finding in findings {
+            assert_eq!(finding["severity"], "note");
+            assert_eq!(finding["code"], "gap.unmodelledControlFlow");
+        }
+        assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
+        assert_eq!(decls["outcome"], "nil");
+        // A note never fails the check.
+        assert_eq!(exit_code(source), 0);
+    }
+
     #[test]
     fn unresolved_word_reports_unresolved_gap() {
         // INNER is defined by a nested (non-top-level) DEF, so the
