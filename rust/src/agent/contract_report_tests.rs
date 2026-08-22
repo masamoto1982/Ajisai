@@ -1,8 +1,9 @@
 //! Tests for Phase 1 of `docs/dev/cost-discoverability-work-order-2026-08.md`:
 //! surfacing the inferred `cost` bound (`interpreter::word_cost`) through
-//! `ajisai contract`'s JSON and `suggested` directive. Mirrors the exact-only
-//! discipline `contract_report.rs` already applies to `space` — here per axis
-//! rather than word-wide (§1.4 pitfall B/C/D).
+//! `ajisai contract`'s JSON and `suggested` directive, under an exact-only
+//! discipline applied per axis rather than word-wide (§1.4 pitfall B/C/D),
+//! and the standing guarantee that `suggested` is paste-ready: it may carry
+//! no term the declaration checker cannot parse.
 
 #[cfg(test)]
 mod contract_report_tests {
@@ -67,10 +68,22 @@ mod contract_report_tests {
     fn suggested_round_trips_through_the_checker() {
         // The one test that matters most (§1.5 Step 1.4): every `suggested`
         // line this Phase produces, pasted back into its own source, must
-        // pass `check --contract` cleanly — no violation, nothing left
-        // unverifiable.
-        let source = "{ ADD } 'A' DEF\n{ JOIN } 'J' DEF\n{ [ 1 ] MAP } 'M' DEF";
+        // pass `check --contract` cleanly.
+        //
+        // The assertions below are deliberately anchored on `findings`,
+        // `violated` and the *number* of parsed declarations rather than on
+        // `outcome`/`gapSummary`. A directive the parser rejects never
+        // reaches `decl_outcomes` at all (`ContractDeclCheck::decl_outcomes`:
+        // "a malformed directive counts toward `violated`/`findings` but not
+        // this list"), so `outcome` folds to `"value"` and both `gapSummary`
+        // counters stay 0 while `check` is in fact exiting 1 on a hard
+        // error. Asserting only those three would certify a `suggested` line
+        // the checker cannot even parse — which is exactly the round trip
+        // this test exists to rule out.
+        let source =
+            "{ ADD } 'A' DEF\n{ JOIN } 'J' DEF\n{ [ 1 ] MAP } 'M' DEF\n{ [ 0 10 ] RANGE } 'K' DEF";
         let reports = report_contracts(source);
+        assert_eq!(reports.len(), 4, "expected one report per defined word");
         let mut annotated = source.to_string();
         for r in &reports {
             annotated.push('\n');
@@ -79,9 +92,40 @@ mod contract_report_tests {
         let response = crate::agent::api::check(&annotated, true);
         let json = response.to_json();
         let decls = &json["contractDecls"];
+        // Every suggested line parsed *and* verified.
+        assert_eq!(
+            decls["findings"].as_array().expect("findings array").len(),
+            0,
+            "suggested lines produced findings: {decls}"
+        );
+        assert_eq!(decls["violated"], false, "decls was: {decls}");
+        assert_eq!(
+            decls["declarations"]
+                .as_array()
+                .expect("declarations array")
+                .len(),
+            reports.len(),
+            "a suggested line failed to parse, so it never reached the check: {decls}"
+        );
         assert_eq!(decls["outcome"], "value", "decls was: {decls}");
         assert_eq!(decls["gapSummary"]["violated"], 0);
         assert_eq!(decls["gapSummary"]["cannotVerify"], 0);
+        // The user-facing signal: pasting the suggestions back in still exits 0.
+        assert_eq!(response.exit_code(), 0, "decls was: {decls}");
+    }
+
+    #[test]
+    fn suggested_carries_no_term_the_checker_cannot_parse() {
+        // Regression for the space term: `space:linear` was emitted here
+        // while `contract_decl.rs` has no `space:` production, so the whole
+        // directive was rejected as malformed and `check --contract` exited
+        // 1 on its own suggestion. `{ ADD }` is space-exact (`space:linear`
+        // in the report), which is precisely the case that used to emit it.
+        let line = suggested("{ ADD } 'A' DEF", "A");
+        assert!(
+            !line.contains("space"),
+            "suggested must carry only checkable terms: {line}"
+        );
     }
 
     #[test]
@@ -90,10 +134,14 @@ mod contract_report_tests {
         // `input_driven_arithmetic_is_exactly_linear_in_numeric_work`), so the
         // full `cost` term is always present — locking the required
         // steps → numeric → collection order in one literal string.
-        let line = suggested("{ ADD } 'A' DEF", "A");
+        let source = "{ ADD } 'A' DEF";
+        let line = suggested(source, "A");
         assert!(
             line.contains("cost steps=const numeric=linear collection=const"),
             "line was: {line}"
         );
+        // And the same source reported twice renders identically, so a diff
+        // of two `ajisai contract` runs stays empty.
+        assert_eq!(line, suggested(source, "A"));
     }
 }

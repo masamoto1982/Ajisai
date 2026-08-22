@@ -437,12 +437,18 @@ order sensitivity, space class, a `cost` object keyed by its three axes
 `"unbounded"`), effects, confidence, and a paste-ready `suggested` declaration.
 Inference registers definitions without executing their bodies.
 
-`suggested` only codifies a cost axis when inference *proves* that axis's
-bound is attained (its `exact` witness), the same discipline already applied
-to the space class; an axis whose bound is merely a plausible upper bound is
-reported but left out of `suggested`. When no axis is exact, the `cost`
-keyword itself is omitted rather than emitted with zero terms, since the
-declaration grammar rejects a bare `cost`.
+`suggested` carries only terms the declaration checker can parse — arity,
+purity, NIL behavior and `cost`. The space class is reported but never
+suggested: there is no `space:` production in the declaration grammar, so a
+suggested line carrying one is rejected as malformed and fails
+`check --contract` outright.
+
+Within `cost`, `suggested` codifies an axis only when inference *proves* that
+axis's bound is attained (its `exact` witness); an axis whose bound is merely
+a plausible upper bound is reported but left out, since an unproven bound
+could only ever check as a note. When no axis is exact, the `cost` keyword
+itself is omitted rather than emitted with zero terms, since the declaration
+grammar rejects a bare `cost`.
 
 The MCP adapter normalizes this legacy bare array into its common result
 envelope under `contracts`; the native CLI shape remains unchanged in schema

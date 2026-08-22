@@ -38,8 +38,9 @@ pub(crate) struct WordReport {
     pub cost_collection: &'static str,
     pub effects: Vec<String>,
     pub confidence: &'static str,
-    /// A `#:contract` directive line that codifies the checkable subset of this
-    /// inferred contract (arity + purity + nil-freedom).
+    /// A `#:contract` directive line that codifies the checkable subset of
+    /// this inferred contract (arity + purity + nil-freedom + `cost`). Never
+    /// the space class, which the declaration grammar cannot parse.
     pub suggested: String,
 }
 
@@ -107,21 +108,24 @@ fn suggested_directive(
     if let Some(nil) = nil {
         parts.push(nil.to_string());
     }
-    // Only codify the space class when the inference *proves* the bound is
-    // attained; an unproven upper bound would only ever check as a note, so
-    // suggesting it would invite a declaration weaker than the checker verifies.
-    if contract.space_exact {
-        parts.push(space_label(contract.space).to_string());
-    }
-    // The same exact-only discipline applies to `cost`, but per axis rather
+    // No space term: the space class is *reported* (see `WordReport::space`)
+    // but is not part of the checkable subset. `contract_decl.rs` has no
+    // `space:` production — the declarable properties are arity, purity and
+    // NIL behavior (`spec/language-semantics.md`, LANG.CONTRACT.CHECK) plus
+    // `cost` — so emitting `space:linear` here made the whole directive a
+    // malformed one, and a malformed directive is a hard `error` that fails
+    // `check --contract` outright. `suggested` exists only to be pasted back
+    // and pass, so it must carry nothing the checker cannot parse.
+    //
+    // The exact-only discipline instead applies to `cost`, per axis rather
     // than word-wide: `steps`/`numeric`/`collection` each carry their own
-    // witness (`docs/dev/cost-contract-design.md` §3), so each is checked on
-    // its own rather than gated by the word's overall `confidence`. An axis
-    // stays out of `suggested` entirely when its bound is not provably
-    // attained. When *no* axis is exact, the `cost` keyword itself must be
-    // left out — `contract_cost::parse_cost_terms` rejects a bare `cost` with
-    // zero `axis=class` terms, which would make this very line fail
-    // `check --contract`.
+    // witness (`docs/dev/cost-contract-design.md` §3), so each is gated on
+    // its own rather than by the word's overall `confidence`. An axis stays
+    // out entirely when its bound is not provably attained, since an unproven
+    // bound would only ever check as a note — suggesting it would invite a
+    // declaration weaker than the checker verifies. When *no* axis is exact,
+    // the `cost` keyword itself must be left out too: `parse_cost_terms`
+    // rejects a bare `cost` with zero `axis=class` terms.
     let mut cost_terms = Vec::new();
     if contract.cost.steps.1 {
         cost_terms.push(format!("steps={}", cost_label(contract.cost.steps.0)));
