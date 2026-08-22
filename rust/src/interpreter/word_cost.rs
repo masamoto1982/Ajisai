@@ -7,17 +7,22 @@
 //! bounds its charged *cost* — `ResourceUsage`'s three counters
 //! (`executionSteps` / `numericWork` / `collectionWork`) — the same way, on
 //! the same class lattice, joined during the same single-pass token walk
-//! `word_contract.rs` already performs. Unlike `word_space.rs`, this module
-//! does not refine a bound from an operand's literal-vs-input provenance
-//! (`docs/dev/cost-contract-design.md` §6): every dependency's class is
-//! taken as declared, which can only make a bound *looser*, never produce a
-//! false `Error` — the same invariant `word_space.rs`'s module comment
-//! states, inherited here by construction rather than by re-deriving it.
+//! `word_contract.rs` already performs.
+//!
+//! A dependency's class is refined against the operand provenance that walk
+//! already computes, so a compile-time-literal operand collapses a class the
+//! same way it does for space (`[ 0 10 ] RANGE`). The provenance is *read
+//! from* `SpaceSim` (`word_space::OperandProfile`) rather than tracked a
+//! second time here: one slot stack, two bounds. This is what upholds the
+//! "never a false error" invariant `word_space.rs`'s module comment states —
+//! see `refine_axis` for why taking a class un-refined broke it in both
+//! directions.
 
 use crate::kernel::generated::WordId;
 use crate::types::Token;
 
 use super::word_contract::WordContract;
+use super::word_space::{OperandProfile, SpaceClass};
 
 /// Growth class of a charged quantity as a function of a word's input.
 /// Identical lattice to `word_space::SpaceClass`; kept as its own type
@@ -143,18 +148,27 @@ pub(crate) fn builtin_cost(id: WordId) -> CostBound {
     };
 
     // `collection` (collectionWork): the element-processing words scale with
-    // their operand's size, measured directly (`SORT`/`CONCAT`/`GET`/
-    // `RANGE`/`TAKE`/`UNIQUE`/`TALLY`/`REVERSE`/`PUT`/`INDEX-OF` all charge
+    // their operand's *size*, measured directly (`SORT`/`CONCAT`/`GET`/
+    // `TAKE`/`UNIQUE`/`TALLY`/`REVERSE`/`PUT`/`INDEX-OF` all charge
     // collectionWork proportional to element count on a representative
-    // input). The remaining collection-shaped words (`FILL`, `ZIP`, `GROUP`,
+    // input). The remaining collection-shaped words (`ZIP`, `GROUP`,
     // `JOIN`, `CHARS`, `TOKENIZE`, `TRIM`, `STR`, `NUM`, `BIND`, `DEF`,
     // `PRINT`) are given the same plausible `Linear` bound without the
     // `exact` claim, since they were not all individually confirmed to
     // *attain* it. `JOIN` can repeat a separator between every pair, which
     // is `Superlinear` rather than `Linear` in the worst case.
     let collection = match id {
-        Concat | Reverse | Take | Collect | Range | Fill | Sort | Order | Unique | Tally | Zip
-        | Put | Group | IndexOf | Get => (Linear, true),
+        Concat | Reverse | Take | Collect | Sort | Order | Unique | Tally | Zip | Put | Group
+        | IndexOf | Get => (Linear, true),
+        // The value-driven materializers, classified as `word_space` already
+        // classifies them for space: a *numeric operand's value* sets the
+        // materialized length, so the charge is unbounded as a function of
+        // input **size** — measured, `[ 0 10 ] RANGE` charges 187 and
+        // `[ 0 20000 ] RANGE` charges 340,017 against the same 2-element
+        // operand; `[ 300 300 0 ] FILL` charges 1,530,000. A compile-time
+        // literal operand pins the amount, which `CostSim::feed_word` (not
+        // this table) refines back down to `Const`.
+        Range | Fill => (Unbounded, true),
         Join => (Superlinear, false),
         // `Reflect` converts a CodeBlock token sequence to/from a Vector, a
         // size-dependent conversion plausibly linear in body length —
@@ -191,24 +205,90 @@ pub(crate) fn builtin_cost_for(name: &str) -> CostBound {
 }
 
 /// The per-word contribution facts `CostSim` needs about a resolved
-/// dependency — deliberately just the joined bound (`docs/dev/
-/// cost-contract-design.md` §6: no operand-literal refinement in this
-/// phase, unlike `word_space::DepSpace`).
+/// dependency.
 pub(crate) struct DepCost {
     pub cost: CostBound,
+    /// True when the dependency is a built-in, whose classes are functions of
+    /// its operands, so a compile-time-literal operand refines the
+    /// contribution down. A user word's cost may be *internal* (a loop over
+    /// its own construction), so its class is never refined downward — the
+    /// same split `word_space::DepSpace::operand_driven` draws.
+    pub operand_driven: bool,
 }
 
 impl DepCost {
-    pub(crate) fn of_builtin(name: &str) -> Self {
-        DepCost {
-            cost: builtin_cost_for(name),
-        }
-    }
-
-    pub(crate) fn of_user_word(contract: &WordContract) -> Self {
+    /// The dependency's own inferred bound. Reads `contract.cost` for both
+    /// kinds: `word_contract::static_word_contract` already stored exactly
+    /// `builtin_cost_for(name)` there, so re-deriving it per token would be a
+    /// redundant registry lookup.
+    pub(crate) fn of(contract: &WordContract, operand_driven: bool) -> Self {
         DepCost {
             cost: contract.cost,
+            operand_driven,
         }
+    }
+}
+
+/// The operand-size lattice (`word_space::SpaceClass`) read as a cost class.
+/// The two lattices are identical in shape by construction (`docs/dev/
+/// cost-contract-design.md` §2); this states the correspondence in one place
+/// rather than merging the types the design deliberately keeps apart.
+fn size_as_cost_class(size: SpaceClass) -> CostClass {
+    match size {
+        SpaceClass::Const => CostClass::Const,
+        SpaceClass::Linear => CostClass::Linear,
+        SpaceClass::Superlinear => CostClass::Superlinear,
+        SpaceClass::Unbounded => CostClass::Unbounded,
+    }
+}
+
+/// `class` charged against an operand of size bound `size` — the mirror of
+/// `word_space::apply_to_size`.
+fn apply_to_size(class: CostClass, size: CostClass) -> CostClass {
+    match class {
+        CostClass::Const => CostClass::Const,
+        CostClass::Linear => size,
+        CostClass::Superlinear => match size {
+            CostClass::Const => CostClass::Const,
+            CostClass::Linear | CostClass::Superlinear => CostClass::Superlinear,
+            CostClass::Unbounded => CostClass::Unbounded,
+        },
+        CostClass::Unbounded => CostClass::Unbounded,
+    }
+}
+
+/// One axis of a dependency's bound, refined against what actually feeds it.
+///
+/// This is the step Phase 5 originally omitted, and omitting it was unsound in
+/// *both* directions: a bound left un-refined stays a looser class while
+/// keeping its `exact` witness, and "looser class + exact" is precisely what
+/// licenses a declaration `Error` — so `{ 1 2 ADD }` (a 0-input word whose
+/// charge is a fixed constant) reported a hard error against the true
+/// declaration `cost numeric=const`. Refining here restores the invariant
+/// `word_space` already held: a witness survives only when the operands are
+/// genuinely traced and the class was not refined away beneath it.
+fn refine_axis(
+    axis: (CostClass, bool),
+    operand_driven: bool,
+    all_lit: bool,
+    all_traced: bool,
+    size: CostClass,
+) -> (CostClass, bool) {
+    let (class, tight) = axis;
+    if !operand_driven {
+        return (class, tight && all_traced);
+    }
+    match class {
+        CostClass::Const => (CostClass::Const, true),
+        // Every operand is a compile-time constant, so the charge this call
+        // makes is a compile-time constant too, whatever the class would be
+        // for an input-derived operand.
+        _ if all_lit => (CostClass::Const, true),
+        CostClass::Linear | CostClass::Superlinear => {
+            let applied = apply_to_size(class, size);
+            (applied, tight && all_traced && applied == class)
+        }
+        CostClass::Unbounded => (CostClass::Unbounded, tight && all_traced),
     }
 }
 
@@ -254,11 +334,27 @@ impl CostSim {
         self.bound.join(CostBound::CONSERVATIVE);
     }
 
-    pub(crate) fn feed_word(&mut self, dep: &DepCost) {
-        if self.block_depth > 0 {
-            return;
-        }
-        self.bound.join(dep.cost);
+    /// A resolved dependency call, refined against the operand provenance the
+    /// space model already computed for the same call (`operands`) rather than
+    /// re-deriving it from a second copy of the slot stack.
+    pub(crate) fn feed_word(&mut self, dep: &DepCost, operands: OperandProfile) {
+        let (all_lit, all_traced, size) = match operands {
+            // Attributed at the higher-order word that runs the block, not here.
+            OperandProfile::Skipped => return,
+            // Counted, but no refinement and no witness is justified.
+            OperandProfile::Unknown => (false, false, CostClass::Unbounded),
+            OperandProfile::Known {
+                all_lit,
+                all_traced,
+                max_size,
+            } => (all_lit, all_traced, size_as_cost_class(max_size)),
+        };
+        let refine = |axis| refine_axis(axis, dep.operand_driven, all_lit, all_traced, size);
+        self.bound.join(CostBound {
+            steps: refine(dep.cost.steps),
+            numeric: refine(dep.cost.numeric),
+            collection: refine(dep.cost.collection),
+        });
     }
 
     /// The caller stopped feeding this line mid-way (a dependency could not

@@ -202,6 +202,14 @@ lattice, and why this axis deliberately does not refine per call site are in
   it is a `note` — a cost bound can be a sound-but-unproven upper bound by the
   classification's own design (e.g. `MAP`'s step count), not because
   inference gave up on the word, so it is not always one of the four gap ids.
+- The inferred class depends on **what actually feeds the word**, not on the
+  word's name alone. A built-in's class is a function of its operands, so a
+  compile-time-literal operand collapses it: `{ RANGE }` is `unbounded` on the
+  collection axis (its charge is set by the operand's *value*, not its size),
+  while `{ [ 0 10 ] RANGE }` is `const`. Likewise `{ ADD }` is `linear` on the
+  numeric axis but `{ 1 2 ADD }` is `const`. Two words calling the same
+  built-in can therefore verify different declarations — declaring the class
+  the *call site* actually has is what makes the axis worth declaring.
 
 ### What the run cost, and what the runtime did
 
