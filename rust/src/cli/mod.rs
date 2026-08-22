@@ -331,6 +331,10 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
             if !r.effects.is_empty() {
                 println!("    effects: {}", r.effects.join(", "));
             }
+            println!(
+                "    cost: steps={} numeric={} collection={}",
+                r.cost_steps, r.cost_numeric, r.cost_collection
+            );
             println!("    {}", r.suggested);
         }
     }

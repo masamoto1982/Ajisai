@@ -432,9 +432,17 @@ language `status: error` is a host transport failure.
 
 `contract --json` emits a JSON array, not the `run` envelope. Each entry reports
 a user Word's inferred `name`, `arity`, `purity`, `determinism`, NIL behavior,
-order sensitivity, space class, effects, confidence, and a paste-ready
-`suggested` declaration. Inference registers definitions without executing
-their bodies.
+order sensitivity, space class, a `cost` object keyed by its three axes
+(`steps`/`numeric`/`collection`, each `"const"`/`"linear"`/`"superlinear"`/
+`"unbounded"`), effects, confidence, and a paste-ready `suggested` declaration.
+Inference registers definitions without executing their bodies.
+
+`suggested` only codifies a cost axis when inference *proves* that axis's
+bound is attained (its `exact` witness), the same discipline already applied
+to the space class; an axis whose bound is merely a plausible upper bound is
+reported but left out of `suggested`. When no axis is exact, the `cost`
+keyword itself is omitted rather than emitted with zero terms, since the
+declaration grammar rejects a bare `cost`.
 
 The MCP adapter normalizes this legacy bare array into its common result
 envelope under `contracts`; the native CLI shape remains unchanged in schema
