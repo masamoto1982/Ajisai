@@ -15,6 +15,7 @@ use crate::interpreter::word_contract::{
     ContractConfidence, ContractDeterminism, ContractFlow, ContractPurity, NilBehavior,
     OrderSensitivity,
 };
+use crate::interpreter::word_cost::CostClass;
 use crate::interpreter::word_space::SpaceClass;
 
 /// One user word's inferred contract, rendered into stable labels.
@@ -28,6 +29,13 @@ pub(crate) struct WordReport {
     pub order: &'static str,
     /// The inferred space-growth class (`space:const` … `space:unbounded`).
     pub space: &'static str,
+    /// The inferred charged-cost class on each of the three axes
+    /// (`"const"` … `"unbounded"`, no `cost:`/`space:`-style prefix — these
+    /// sit under a named axis in both JSON and terminal output, and the bare
+    /// word matches the declaration vocabulary (`cost steps=const`)).
+    pub cost_steps: &'static str,
+    pub cost_numeric: &'static str,
+    pub cost_collection: &'static str,
     pub effects: Vec<String>,
     pub confidence: &'static str,
     /// A `#:contract` directive line that codifies the checkable subset of this
@@ -59,6 +67,15 @@ fn space_label(class: SpaceClass) -> &'static str {
         SpaceClass::Linear => "space:linear",
         SpaceClass::Superlinear => "space:superlinear",
         SpaceClass::Unbounded => "space:unbounded",
+    }
+}
+
+fn cost_label(class: CostClass) -> &'static str {
+    match class {
+        CostClass::Const => "const",
+        CostClass::Linear => "linear",
+        CostClass::Superlinear => "superlinear",
+        CostClass::Unbounded => "unbounded",
     }
 }
 
@@ -96,6 +113,32 @@ fn suggested_directive(
     if contract.space_exact {
         parts.push(space_label(contract.space).to_string());
     }
+    // The same exact-only discipline applies to `cost`, but per axis rather
+    // than word-wide: `steps`/`numeric`/`collection` each carry their own
+    // witness (`docs/dev/cost-contract-design.md` §3), so each is checked on
+    // its own rather than gated by the word's overall `confidence`. An axis
+    // stays out of `suggested` entirely when its bound is not provably
+    // attained. When *no* axis is exact, the `cost` keyword itself must be
+    // left out — `contract_cost::parse_cost_terms` rejects a bare `cost` with
+    // zero `axis=class` terms, which would make this very line fail
+    // `check --contract`.
+    let mut cost_terms = Vec::new();
+    if contract.cost.steps.1 {
+        cost_terms.push(format!("steps={}", cost_label(contract.cost.steps.0)));
+    }
+    if contract.cost.numeric.1 {
+        cost_terms.push(format!("numeric={}", cost_label(contract.cost.numeric.0)));
+    }
+    if contract.cost.collection.1 {
+        cost_terms.push(format!(
+            "collection={}",
+            cost_label(contract.cost.collection.0)
+        ));
+    }
+    if !cost_terms.is_empty() {
+        parts.push("cost".to_string());
+        parts.extend(cost_terms);
+    }
     parts.join(" ")
 }
 
@@ -122,6 +165,9 @@ pub(crate) fn report_contracts(source: &str) -> Vec<WordReport> {
                 OrderSensitivity::OrderSensitive => "order-sensitive",
             },
             space: space_label(contract.space),
+            cost_steps: cost_label(contract.cost.steps.0),
+            cost_numeric: cost_label(contract.cost.numeric.0),
+            cost_collection: cost_label(contract.cost.collection.0),
             effects: contract.effects.clone(),
             confidence: match contract.confidence {
                 ContractConfidence::Complete => "complete",
@@ -147,6 +193,11 @@ pub(crate) fn reports_json(reports: &[WordReport]) -> serde_json::Value {
                     "nil": r.nil,
                     "order": r.order,
                     "space": r.space,
+                    "cost": {
+                        "steps": r.cost_steps,
+                        "numeric": r.cost_numeric,
+                        "collection": r.cost_collection,
+                    },
                     "effects": r.effects,
                     "confidence": r.confidence,
                     "suggested": r.suggested,

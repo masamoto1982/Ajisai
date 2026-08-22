@@ -14,6 +14,8 @@ mod contract_decl_tests;
 pub(crate) mod contract_gap;
 mod contract_linearity;
 pub(crate) mod contract_report;
+#[cfg(test)]
+mod contract_report_tests;
 mod error_stack;
 #[cfg(test)]
 mod error_stack_tests;
