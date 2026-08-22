@@ -18,7 +18,22 @@
 //!  * `WordContract::conservative()` is reached as a fallback seed rather
 //!    than through one of the three sites above (`ConservativeSeed`).
 //!
-//! These four and no others: a fifth incompleteness source is a design
+//! A fifth was added when the stack-flow simulation stopped guessing at the
+//! constructs it cannot model (`word_contract_flow.rs`):
+//!
+//!  * the body reaches a control directive whose paths differ in stack height
+//!    (`^`, `|`), or an unbalanced `[`/`{` delimiter, so no fixed arity
+//!    describes it (`UnmodelledControlFlow`).
+//!
+//! It earns an id of its own rather than being folded into `ConservativeSeed`
+//! for the reason that seed is named after: `ConservativeSeed` says inference
+//! fell back to `WordContract::conservative()`, which this site does not do —
+//! it produces a perfectly ordinary contract whose *flow* alone is
+//! unmodelled. Reusing that id would make `byGap` count two different
+//! situations as one, which is exactly the telemetry the gap ids exist to
+//! keep apart.
+//!
+//! These five and no others: a sixth incompleteness source is a design
 //! decision (which bucket does it belong in, or does it need one of its
 //! own), not something to invent here silently.
 //!
@@ -34,6 +49,7 @@ pub(crate) enum GapCode {
     RecursiveDependency,
     DependencyUnknown,
     ConservativeSeed,
+    UnmodelledControlFlow,
 }
 
 impl GapCode {
@@ -42,6 +58,7 @@ impl GapCode {
         GapCode::RecursiveDependency,
         GapCode::DependencyUnknown,
         GapCode::ConservativeSeed,
+        GapCode::UnmodelledControlFlow,
     ];
 
     pub(crate) fn as_str(self) -> &'static str {
@@ -50,6 +67,7 @@ impl GapCode {
             GapCode::RecursiveDependency => "gap.recursiveDependency",
             GapCode::DependencyUnknown => "gap.dependencyUnknown",
             GapCode::ConservativeSeed => "gap.conservativeSeed",
+            GapCode::UnmodelledControlFlow => "gap.unmodelledControlFlow",
         }
     }
 

@@ -117,3 +117,102 @@ async fn del_refuses_while_a_dependent_would_be_left_dangling() {
     let after = interp.infer_word_contract("USE").unwrap();
     assert_eq!(after.nil_behavior, NilBehavior::MayCreate);
 }
+
+// ---------------------------------------------------------------------------
+// Literal-depth regression tests (`word_contract_flow.rs`).
+//
+// `[ ... ]` and `{ ... }` each push exactly one value and consume nothing;
+// their interiors are content, not code. Inferring otherwise reported a
+// *correct* `#:contract` declaration as a proven violation.
+// ---------------------------------------------------------------------------
+
+fn fixed(consumes: u16, produces: u16) -> ContractFlow {
+    ContractFlow::Fixed { consumes, produces }
+}
+
+#[tokio::test]
+async fn a_vector_literal_pushes_one_value_not_its_elements() {
+    let contract = contract_for("{ [ 1 2 ] } 'PAIR' DEF", "PAIR").await;
+    assert_eq!(contract.flow, fixed(0, 1));
+    assert_eq!(contract.confidence, ContractConfidence::Complete);
+}
+
+#[tokio::test]
+async fn a_vector_literal_operand_is_consumed_like_any_other_value() {
+    let contract = contract_for("{ [ 10 20 ] ADD } 'ADD-PAIR' DEF", "ADD-PAIR").await;
+    assert_eq!(contract.flow, fixed(1, 1));
+    assert_eq!(contract.confidence, ContractConfidence::Complete);
+}
+
+#[tokio::test]
+async fn a_code_block_literal_is_not_inlined_into_the_arity() {
+    // The block's `2 MUL` is evaluated only when MAP runs it, so it must not
+    // consume an operand at the point the block is written. Inlining it made
+    // this word's arity ( 2 -- 1 ).
+    let contract = contract_for("{ { 2 MUL } MAP } 'DOUBLE-ALL' DEF", "DOUBLE-ALL").await;
+    assert_eq!(contract.flow, fixed(1, 1));
+    assert_eq!(contract.confidence, ContractConfidence::Complete);
+}
+
+#[tokio::test]
+async fn nested_literals_still_push_exactly_one_value() {
+    for source in [
+        "{ [ [ 1 ] [ 2 ] ] } 'W' DEF",
+        "{ [ { 1 } ] } 'W' DEF",
+        "{ { [ 1 2 ] } } 'W' DEF",
+        "{ { { 1 } } } 'W' DEF",
+    ] {
+        let contract = contract_for(source, "W").await;
+        assert_eq!(contract.flow, fixed(0, 1), "source: {source}");
+    }
+}
+
+#[tokio::test]
+async fn a_symbol_inside_a_vector_literal_is_content_not_a_call() {
+    // At run time `[ 'a' PRINT 'b' ]` is the three-element vector
+    // [ 'a' 'PRINT' 'b' ], so PRINT's arity must not be applied here.
+    let contract = contract_for("{ [ 'a' PRINT 'b' ] } 'LABELS' DEF", "LABELS").await;
+    assert_eq!(contract.flow, fixed(0, 1));
+}
+
+#[tokio::test]
+async fn vent_leaves_the_flow_unmodelled_rather_than_wrong() {
+    // `^` selects between paths of differing height, so no fixed arity
+    // describes it. Reported as a gap, which can only ever produce a note.
+    let contract = contract_for("{ 1 0 DIV ^ 9 } 'FALLBACK' DEF", "FALLBACK").await;
+    assert_eq!(contract.flow, ContractFlow::Dynamic);
+    assert_eq!(contract.confidence, ContractConfidence::Conservative);
+    assert!(contract
+        .gaps
+        .contains(&crate::agent::contract_gap::GapCode::UnmodelledControlFlow));
+}
+
+#[tokio::test]
+async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
+    // `KEEP`'s registry arity is ( 0 -- 0 ); it makes the *next* Word read its
+    // operands without consuming them. Each expectation below is the stack the
+    // body actually leaves at run time.
+    for (body, consumes, produces) in [
+        // `2 3 KEEP ADD` leaves `2 3 5`.
+        ("KEEP ADD", 2, 3),
+        ("2 3 KEEP ADD", 0, 3),
+        // A second KEEP is idempotent, and the flag survives an intervening
+        // literal, so `2 3 KEEP 4 ADD` leaves `2 3 4 7`.
+        ("2 3 KEEP KEEP ADD", 0, 3),
+        ("2 3 KEEP 4 ADD", 0, 4),
+        ("[ 1 2 ] KEEP SUM", 0, 2),
+        // The modifier reaches exactly one Word: `2 3 KEEP ADD ADD` leaves `2 8`.
+        ("2 3 KEEP ADD ADD", 0, 2),
+        // Pending at the end of a body is a no-op, as it is at run time.
+        ("1 KEEP", 0, 1),
+    ] {
+        let source = format!("{{ {body} }} 'W' DEF");
+        let contract = contract_for(&source, "W").await;
+        assert_eq!(contract.flow, fixed(consumes, produces), "body: {body}");
+        assert_eq!(
+            contract.confidence,
+            ContractConfidence::Complete,
+            "body: {body}"
+        );
+    }
+}

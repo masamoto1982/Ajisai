@@ -16,6 +16,7 @@ use crate::coreword_registry::{
 };
 use crate::types::{Capabilities, Token, WordDefinition};
 
+use super::word_contract_flow::FlowSim;
 use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
 };
@@ -193,44 +194,6 @@ impl From<MassContract> for ContractFlow {
     }
 }
 
-#[derive(Default)]
-struct FlowAccumulator {
-    dynamic: bool,
-    required: u16,
-    height: u16,
-}
-
-impl FlowAccumulator {
-    fn push_literal(&mut self) {
-        self.height = self.height.saturating_add(1);
-    }
-
-    fn apply(&mut self, flow: &ContractFlow) {
-        let ContractFlow::Fixed { consumes, produces } = flow else {
-            self.dynamic = true;
-            return;
-        };
-        if self.height < *consumes {
-            self.required = self.required.saturating_add(consumes - self.height);
-            self.height = 0;
-        } else {
-            self.height -= consumes;
-        }
-        self.height = self.height.saturating_add(*produces);
-    }
-
-    fn finish(self) -> ContractFlow {
-        if self.dynamic {
-            ContractFlow::Dynamic
-        } else {
-            ContractFlow::Fixed {
-                consumes: self.required,
-                produces: self.height,
-            }
-        }
-    }
-}
-
 #[derive(Clone)]
 struct AccumulatedContract {
     flow: ContractFlow,
@@ -364,7 +327,7 @@ impl Interpreter {
             return Some(contract);
         }
 
-        let mut flow = FlowAccumulator::default();
+        let mut flow = FlowSim::new();
         let seed = WordContract::identity(resolved_name);
         let mut acc = AccumulatedContract::from_contract(&seed);
         let mut sim = SpaceSim::new();
@@ -375,7 +338,7 @@ impl Interpreter {
             for token in line.body_tokens.iter() {
                 match token {
                     Token::Number(_) | Token::String(_) => {
-                        flow.push_literal();
+                        flow.feed_literal();
                         sim.feed_literal();
                         cost_sim.feed_literal();
                     }
@@ -384,7 +347,7 @@ impl Interpreter {
                             crate::core_word_aliases::canonicalize_core_word_name(symbol);
                         let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
                             complete = false;
-                            flow.dynamic = true;
+                            flow.go_dynamic();
                             sim.feed_unresolved();
                             cost_sim.feed_unresolved();
                             acc.gaps.push(GapCode::UnresolvedWord);
@@ -407,7 +370,7 @@ impl Interpreter {
                                 Some(contract) => contract,
                                 None => {
                                     complete = false;
-                                    flow.dynamic = true;
+                                    flow.abandon_line();
                                     sim.abandon_line();
                                     cost_sim.abandon_line();
                                     acc.gaps.push(GapCode::DependencyUnknown);
@@ -415,7 +378,7 @@ impl Interpreter {
                                 }
                             }
                         };
-                        flow.apply(&dep_contract.flow);
+                        flow.feed_word(&dep_name, &dep_contract.flow);
                         let builtin = dep_def.is_builtin;
                         // One slot model, two bounds: the space walk computes
                         // the operand provenance and the cost walk refines
@@ -435,6 +398,7 @@ impl Interpreter {
                     | Token::NilCoalesce
                     | Token::CondClauseSep
                     | Token::LineBreak => {
+                        flow.feed_structural(token);
                         sim.feed_structural(token);
                         cost_sim.feed_structural(token);
                     }
@@ -443,7 +407,15 @@ impl Interpreter {
         }
 
         visiting.remove(resolved_name);
-        acc.flow = flow.finish();
+        let (inferred_flow, flow_unmodelled) = flow.finish();
+        acc.flow = inferred_flow;
+        if flow_unmodelled {
+            // A `Dynamic` the simulation *gave up* on, unlike one derived
+            // from a dependency's own mass contract: it may only ever produce
+            // a "cannot verify" note, never a proven violation.
+            complete = false;
+            acc.gaps.push(GapCode::UnmodelledControlFlow);
+        }
         let SpaceBound {
             class: space,
             exact: space_exact,
