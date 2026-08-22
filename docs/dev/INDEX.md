@@ -50,4 +50,5 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `trichotomy-unification.md` | 実行時三分法と静的検査三値の対応を統一した理由と、reason レジストリ統合（案(b)）を今やらない技術的理由・再検討条件 | `[方針記録]` |
 | `cost-contract-design.md` | `#:contract` のコスト軸（steps/numeric/collection）の設計根拠。クラス格子・join規則・多項式を今やらない理由・機械非依存性の正確な意味 | `[設計根拠]` |
 | `cost-discoverability-work-order-2026-08.md` | 推論されたコストを `ajisai contract` に出す改修指示書。付録 A に SHA-256→BLAKE3 置換を採用しない根拠と再検討条件 | `[設計根拠]` |
+| `competitive-advantage-round2-2026-08.md` | 競争優位の研磨・第二巡の提案（層0: アリティ推論の不健全性の確認、層1: ブロック契約値化・再帰の不動点・Assume-Guarantee、層2: 制約付きデコード面・観測スペクトル・意味論差分、層3: 検証済み修復・反例最小化、層4: 計算証明書）。実装指示書ではない | `[観察ノート]` |
 | `reference-ja-restructure-handoff.md` | Reference 日本語版の再編（水のメタファー導入・制御構造の集約）の引き継ぎ。着手前に §8 の確認事項を利用者へ | `[方針記録]` |
