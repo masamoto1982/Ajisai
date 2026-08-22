@@ -416,16 +416,16 @@ impl Interpreter {
                             }
                         };
                         flow.apply(&dep_contract.flow);
-                        sim.feed_word(&if dep_def.is_builtin {
+                        let builtin = dep_def.is_builtin;
+                        // One slot model, two bounds: the space walk computes
+                        // the operand provenance and the cost walk refines
+                        // against the very same reading.
+                        let operands = sim.feed_word(&if builtin {
                             DepSpace::of_builtin(&dep_name, &dep_contract)
                         } else {
                             DepSpace::of_user_word(&dep_contract)
                         });
-                        cost_sim.feed_word(&if dep_def.is_builtin {
-                            DepCost::of_builtin(&dep_name)
-                        } else {
-                            DepCost::of_user_word(&dep_contract)
-                        });
+                        cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
                         acc.widen_with(&dep_contract);
                     }
                     Token::VectorStart

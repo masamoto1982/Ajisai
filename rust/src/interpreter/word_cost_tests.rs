@@ -16,13 +16,50 @@ async fn cost_of(src: &str, name: &str) -> CostBound {
 }
 
 #[tokio::test]
-async fn const_arithmetic_word_is_const_steps_and_exact_linear_numeric() {
-    // `ADD` never loops internally (const, exact steps) and is the meter's
-    // own reason to exist on the numeric axis (linear, exact numeric); it
-    // touches no collection (const, exact collection).
-    let cost = cost_of("{ 1 2 ADD } 'S' DEF", "S").await;
+async fn input_driven_arithmetic_is_exactly_linear_in_numeric_work() {
+    // A bare `ADD` takes its operands from the word's inputs, so the meter's
+    // limb-width charge really does grow with input: linear, and provably
+    // attained. It never loops internally (const steps) and touches no
+    // collection — measured, `[ 0 400 ] RANGE 2 MUL` charges 401 numericWork
+    // and zero collectionWork beyond the RANGE itself.
+    let cost = cost_of("{ ADD } 'A' DEF", "A").await;
     assert_eq!(cost.steps, (CostClass::Const, true));
     assert_eq!(cost.numeric, (CostClass::Linear, true));
+    assert_eq!(cost.collection, (CostClass::Const, true));
+}
+
+#[tokio::test]
+async fn literal_operands_refine_a_linear_charge_to_const() {
+    // Regression: `{ 1 2 ADD }` consumes nothing and charges a *fixed*
+    // constant (measured: numericWork 1). Taking ADD's `linear` class
+    // un-refined while keeping its exactness witness made the true
+    // declaration `cost numeric=const` a hard `error` — a false error, the
+    // one thing this model must never produce. The literal operands pin it.
+    let cost = cost_of("{ 1 2 ADD } 'S' DEF", "S").await;
+    assert_eq!(cost.numeric, (CostClass::Const, true));
+    assert_eq!(cost.steps, (CostClass::Const, true));
+}
+
+#[tokio::test]
+async fn value_driven_materializer_is_unbounded_over_input_size() {
+    // Regression: RANGE's collectionWork is set by its operand's *value*, not
+    // its size — measured, `[ 0 10 ] RANGE` charges 187 and `[ 0 20000 ]
+    // RANGE` charges 340,017 against the very same 2-element operand. Calling
+    // that `linear` let a false declaration verify. `word_space` classifies
+    // this pair the same way for the same reason.
+    let cost = cost_of("{ RANGE } 'MK' DEF", "MK").await;
+    assert_eq!(cost.collection, (CostClass::Unbounded, true));
+
+    let fill = cost_of("{ FILL } 'F' DEF", "F").await;
+    assert_eq!(fill.collection, (CostClass::Unbounded, true));
+}
+
+#[tokio::test]
+async fn a_literal_operand_pins_even_a_value_driven_materializer() {
+    // The two fixes have to land together: making RANGE `Unbounded` without
+    // the refinement would turn the *true* declaration `cost collection=const`
+    // on a literal-driven range into a false error instead.
+    let cost = cost_of("{ [ 0 10 ] RANGE } 'K' DEF", "K").await;
     assert_eq!(cost.collection, (CostClass::Const, true));
 }
 

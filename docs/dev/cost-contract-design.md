@@ -54,6 +54,11 @@ inferred one is a mismatch:
 - `exact == false` → the inferred class is a sound bound with no proof of
   attainment → `Note`.
 
+A witness survives to the join only when the operands that produced it are
+genuinely traced *and* the class was not refined away beneath it (§6). A
+witness is never carried on a class the operands do not actually justify —
+that is what keeps the first bullet from firing on a true declaration.
+
 This is the same two-outcome shape `word_space.rs` already established for
 the space axis; `cost` inherits it rather than inventing a fourth kind of
 disagreement. One real difference from arity/purity/nil-free: those three
@@ -110,27 +115,43 @@ machines charged the identical unit count can still finish at different
 wall-clock times, exactly as `ALGEBRAIC_PAIR_UNITS`'s own calibration record
 already documents for the meter it feeds.
 
-## 6. Implementation note: no operand-literal refinement in this phase
+## 6. Operand-literal refinement: why it is *not* optional
 
-`word_space.rs`'s `SpaceSim` additionally tracks per-slot provenance (is an
-operand a compile-time literal, and if so how large) so that, for instance,
-`[ 0 10 ] RANGE` collapses from `Unbounded` to `Const` — a real operand a
-materializer's class is a function of. `CostSim` (`word_cost.rs`) does not
-carry this refinement: every dependency's class is taken as declared/inferred
-regardless of what its operands look like. This is a deliberate, bounded
-simplification, not an oversight:
+`word_space.rs`'s `SpaceSim` tracks per-slot provenance (is an operand a
+compile-time literal, and if so how large) so that `[ 0 10 ] RANGE` collapses
+from `Unbounded` to `Const` — a real operand a materializer's class is a
+function of. `CostSim` initially shipped **without** that refinement, on the
+argument that omitting it was a safe simplification because "dropping a
+refinement only ever makes a bound *looser*, which can only turn a
+would-be-`Error` into a `Note` — never the reverse."
 
-- It keeps the coarse class lattice this phase commits to (§4) from quietly
-  growing a second axis of precision work in the same change.
-- It cannot produce a false `Error`: dropping a refinement only ever makes a
-  bound *looser* (more `Unbounded`/inexact), which can only turn a
-  would-be-`Error` into a `Note` or a would-be-`Note` into a stricter `Note`
-  — never the reverse. The "never a false error" invariant holds trivially.
-- It is exactly the kind of judgment call §4 argues should not be made
-  silently: literal-operand refinement for the cost axes (e.g. "does a
-  compile-time-length vector make `MAP`'s `steps` provably `Const`?") is a
-  legitimate future increment, revisited once the coarse axis has real
-  callers to learn from.
+**That argument was wrong, and the omission was unsound in both directions.**
+It is recorded here rather than deleted, because the failure mode is the
+non-obvious part:
+
+- Dropping the refinement loosens the *class* but leaves the `exact` witness
+  attached to it. "Looser class + still exact" is precisely the combination
+  that licenses a declaration `Error`. So `{ 1 2 ADD }` — a word that consumes
+  nothing and charges a fixed constant (measured: `numericWork` 1) — reported
+  a hard `error` against the *true* declaration `cost numeric=const`. A false
+  error, the one outcome this model must never produce.
+- In the other direction, the same missing refinement is what made it look
+  acceptable to classify the value-driven materializers as `Linear`. They are
+  not: `[ 0 10 ] RANGE` charges 187 and `[ 0 20000 ] RANGE` charges 340,017
+  against the *same* 2-element operand, and `[ 300 300 0 ] FILL` charges
+  1,530,000. Declaring `cost collection=linear` on `{ RANGE }` was reported as
+  **verified**.
+
+The two are one bug with one fix, and they had to be fixed together: correcting
+`RANGE`/`FILL` to `Unbounded` *without* the refinement would have turned the
+true declaration `cost collection=const` on a literal-driven range into a new
+false error.
+
+`CostSim` therefore refines exactly as `SpaceSim` does. It does **not** keep a
+second slot stack: `SpaceSim::feed_word` returns an `OperandProfile` for each
+dependency call and `CostSim` refines against that same reading. One slot
+model, two bounds — the two walks cannot drift apart, and the provenance is
+paid for once.
 
 ## 7. Summary of what ships
 
@@ -142,9 +163,13 @@ simplification, not an oversight:
   or `ajisai run --json`'s `resourceUsage` on a representative program) and
   from a plausible, never-looser upper bound with `exact = false` elsewhere —
   never a guess that could later prove too tight.
+  The value-driven materializers (`RANGE`/`FILL`) are `Unbounded` on the
+  collection axis for the same reason `word_space.rs` gives them `Unbounded`
+  for space: their charge is set by an operand's *value*, not its size.
 - `CostSim`: the single-pass token-stream accumulator, fed from the same
   `word_contract.rs` inference walk `SpaceSim` already rides along with — no
-  second pass over a word's body.
+  second pass over a word's body — refining each dependency's classes against
+  the `OperandProfile` that walk already computed (§6).
 - `WordContract::cost: CostBound`, propagated the same way `space` is.
 - `#:contract ... cost steps=<class> numeric=<class> collection=<class>`
   parsing (any subset of the three axes; an unknown axis or class name is a

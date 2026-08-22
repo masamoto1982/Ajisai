@@ -207,15 +207,38 @@ mod contract_decl_tests {
 
     #[test]
     fn exact_mismatch_is_a_cost_error() {
-        // ADD's numeric axis is provably linear (the meter's own reason to
-        // exist), so declaring a tighter `const` bound is a proven violation.
-        let source = "{ 1 2 ADD } 'S' DEF\n#:contract S cost numeric=const";
+        // A bare RANGE materializes a length set by its operand's *value*, so
+        // against a genuine word input it provably exceeds any size-bounded
+        // class: declaring `collection=linear` is a proven violation.
+        let source = "{ RANGE } 'MK' DEF\n#:contract MK cost collection=linear";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0]["severity"], "error");
         assert_eq!(findings[0]["code"], Json::Null);
         assert_eq!(decls["outcome"], "error");
+    }
+
+    /// The invariant the cost axis must never break, pinned at the surface a
+    /// user actually sees. Both of these declarations are *true*; before the
+    /// operand-provenance refinement the first reported a hard `error`
+    /// (exit 1) and the second reported `value` for a false declaration.
+    #[test]
+    fn a_true_cost_declaration_is_never_reported_as_violated() {
+        // Consumes nothing, charges a fixed constant.
+        let literal_add = "{ 1 2 ADD } 'S' DEF\n#:contract S cost numeric=const";
+        let decls = contract_decls(literal_add);
+        assert_eq!(decls["outcome"], "value");
+        assert_eq!(decls["findings"].as_array().unwrap().len(), 0);
+        assert_eq!(exit_code(literal_add), 0);
+
+        // A literal-driven range materializes a compile-time-fixed length.
+        let literal_range = "{ [ 0 10 ] RANGE } 'K' DEF\n#:contract K cost collection=const";
+        assert_eq!(contract_decls(literal_range)["outcome"], "value");
+
+        // And a genuinely size-driven word still verifies at `linear`.
+        let sorted = "{ SORT } 'T' DEF\n#:contract T cost collection=linear";
+        assert_eq!(contract_decls(sorted)["outcome"], "value");
     }
 
     #[test]

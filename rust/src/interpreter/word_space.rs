@@ -11,7 +11,7 @@
 //! *value* of `X`). Everything the simulation cannot prove degrades to a sound
 //! upper bound with `exact = false`, so the declaration checker can only raise
 //! an `error` on a provable violation — the module-wide "never a false error"
-//! invariant.
+//! invariant. `feed_word` hands that provenance to `word_cost::CostSim` too.
 
 use crate::kernel::generated::WordId;
 use crate::types::Token;
@@ -129,13 +129,12 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
 }
 
 /// A space-specific stack arity for a built-in whose `mass` contract is
-/// `Dynamic` but whose *stack* arity is nonetheless fixed and known to the
-/// space model. This lets the simulation inspect the operand provenance of the
-/// value-driven materializers — the words where a compile-time-literal operand
-/// collapses the class from `Unbounded` to `Const` (`[ 0 10 ] RANGE`) — even
-/// though their `mass` is conservatively `Dynamic`. Only these words carry an
-/// override; every other Dynamic-mass word is soundly handled by the
-/// degrade-on-dynamic path.
+/// `Dynamic` but whose *stack* arity is nonetheless fixed and known here. This
+/// lets the simulation inspect the operand provenance of the value-driven
+/// materializers — where a compile-time-literal operand collapses the class
+/// from `Unbounded` to `Const` (`[ 0 10 ] RANGE`) — even though their `mass`
+/// is conservatively `Dynamic`. Every other Dynamic-mass word is soundly
+/// handled by the degrade-on-dynamic path.
 fn space_arity_override(id: WordId) -> Option<(u16, u16)> {
     match id {
         WordId::Range | WordId::Fill => Some((1, 1)),
@@ -169,26 +168,18 @@ struct Slot {
     size: SpaceClass,
 }
 
-const LIT_SLOT: Slot = Slot {
-    lit: true,
-    input: false,
-    size: SpaceClass::Const,
-};
-const INPUT_SLOT: Slot = Slot {
-    lit: false,
-    input: true,
-    size: SpaceClass::Linear,
-};
-const UNKNOWN_SLOT: Slot = Slot {
-    lit: false,
-    input: false,
-    size: SpaceClass::Unbounded,
-};
-const INERT_SLOT: Slot = Slot {
-    lit: false,
-    input: false,
-    size: SpaceClass::Const,
-};
+const fn slot(lit: bool, input: bool, size: SpaceClass) -> Slot {
+    Slot { lit, input, size }
+}
+
+/// A compile-time constant operand.
+const LIT_SLOT: Slot = slot(true, false, SpaceClass::Const);
+/// A word input, moved untouched.
+const INPUT_SLOT: Slot = slot(false, true, SpaceClass::Linear);
+/// Provenance lost: assume the worst about its size.
+const UNKNOWN_SLOT: Slot = slot(false, false, SpaceClass::Unbounded);
+/// Present but structurally inert (a quotation value).
+const INERT_SLOT: Slot = slot(false, false, SpaceClass::Const);
 
 /// The per-word contribution facts the simulation needs about a resolved
 /// dependency, projected from its (builtin or inferred) contract.
@@ -251,11 +242,31 @@ fn apply_to_size(class: SpaceClass, size: SpaceClass) -> SpaceClass {
     }
 }
 
+/// What this slot model learned about the operands of one dependency call.
+/// Returned by `feed_word` so a second bound model over the same walk
+/// (`word_cost::CostSim`) can refine its own classes against the identical
+/// provenance instead of duplicating the slot stack and risking divergence.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum OperandProfile {
+    /// Inside a block: deliberately not attributed here at all (any execution
+    /// of the block is charged at the higher-order word's own call site).
+    Skipped,
+    /// Attributed, but no provenance is justified — a data-dependent arity, or
+    /// a call among vector-literal elements the model does not track.
+    Unknown,
+    /// A fixed-arity call whose operand slots were all inspected.
+    Known {
+        all_lit: bool,
+        all_traced: bool,
+        max_size: SpaceClass,
+    },
+}
+
 /// Execution-free space simulation over a word body's token stream, fed by the
 /// contract-inference walk. Tracks slot provenance (literal / input / other) so
-/// dependency contributions can be *applied* to what actually feeds them, and
-/// degrades soundly: any construct it cannot model clears the tracked slots and
-/// poisons underflow (an unknown slot, never a false `input`/`lit` tag).
+/// contributions can be *applied* to what actually feeds them, and degrades
+/// soundly: any construct it cannot model clears the slots and poisons
+/// underflow (an unknown slot, never a false `input`/`lit` tag).
 pub(crate) struct SpaceSim {
     slots: Vec<Slot>,
     /// Underflow no longer provably reaches a word input (heights unknown).
@@ -367,14 +378,15 @@ impl SpaceSim {
         self.vector_dirty = false;
     }
 
-    /// A resolved dependency call.
-    pub(crate) fn feed_word(&mut self, dep: &DepSpace) {
+    /// A resolved dependency call. Returns what was learned about its operand
+    /// slots, for a second bound model riding the same walk.
+    pub(crate) fn feed_word(&mut self, dep: &DepSpace) -> OperandProfile {
         if self.block_depth > 0 {
-            return;
+            return OperandProfile::Skipped;
         }
         if self.vector_depth > 0 {
             self.vector_dirty = true;
-            return;
+            return OperandProfile::Unknown;
         }
         let arity = dep.arity_override.or(match dep.flow {
             ContractFlow::Fixed { consumes, produces } => Some((consumes, produces)),
@@ -387,7 +399,7 @@ impl SpaceSim {
                 exact: false,
             });
             self.degrade();
-            return;
+            return OperandProfile::Unknown;
         };
 
         let mut operands = Vec::with_capacity(consumes as usize);
@@ -465,6 +477,16 @@ impl SpaceSim {
                 input: false,
                 size: out_size,
             });
+        }
+
+        OperandProfile::Known {
+            all_lit,
+            all_traced,
+            max_size: operands
+                .iter()
+                .map(|o| o.size)
+                .max()
+                .unwrap_or(SpaceClass::Const),
         }
     }
 
