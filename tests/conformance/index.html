@@ -1967,14 +1967,36 @@ COND } 'EVENP' DEF
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- SQRT is the only Word that leaves the rationals (LANG.VALUES.EXACT), and
-     it leaves them exactly: the irrational round-trips through MUL with no
+<!-- SQRT generates the field from a rational radicand (LANG.VALUES.EXACT), and
+     it generates it exactly: the irrational round-trips through MUL with no
      rounding. -->
 
 <section class="ajisai-case" id="core-sqrt-irrational-is-exact" data-category="core">
   <h3>An irrational SQRT is exact: √2 · √2 is 2</h3>
   <pre class="ajisai-source">2 SQRT 2 SQRT MUL</pre>
   <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- LANG.VALUES.DENOTATION: a value is what it denotes, not how it was made.
+     √8 and √2+√2 are built by different operations and are one value. -->
+
+<section class="ajisai-case" id="core-denotation-same-real-is-one-value" data-category="core">
+  <h3>Values built through different histories are one value when they denote the same real</h3>
+  <pre class="ajisai-source">8 SQRT 2 SQRT 2 SQRT ADD EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- The field is closed under its arithmetic but SQRT is not an operation it is
+     closed under: the radicand is rational, so a non-rational one is malformed
+     use rather than a value or a projection (LANG.VALUES.EXACT). -->
+
+<section class="ajisai-case" id="core-sqrt-radicand-is-rational" data-category="core">
+  <h3>SQRT of a non-rational radicand is malformed use</h3>
+  <pre class="ajisai-source">2 SQRT SQRT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected number, got other format</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

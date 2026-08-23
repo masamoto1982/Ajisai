@@ -225,7 +225,8 @@
       "interpretationRole": "truthValue",
       "clauses": [
         "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT"
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.DENOTATION"
       ],
       "documentation": {
         "summary": "Test equality of two values.",
@@ -268,7 +269,8 @@
       "interpretationRole": "truthValue",
       "clauses": [
         "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT"
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.DENOTATION"
       ],
       "documentation": {
         "summary": "Test inequality of two values.",

@@ -83,7 +83,7 @@ Test equality of two values.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
 - **Syntax:** `1 1 =`
 - **Aliases:** `=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
@@ -98,7 +98,7 @@ Test inequality of two values.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
 - **Syntax:** `1 2 NEQ`
 - **Aliases:** `!=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`

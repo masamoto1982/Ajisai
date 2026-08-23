@@ -163,19 +163,19 @@ Values form a disjoint tagged sum of exactly six domains: Scalar, Boolean, Strin
 In particular FALSE is not scalar zero, TRUE is not scalar one, and an absent value is not an ERROR.
 </p>
 
+<h3 id="lang-values-denotation">LANG.VALUES.DENOTATION — Identity is denotation</h3>
+
+<p>A value is what it denotes, never how it was made. Two values are one value exactly when they denote the same thing, whatever operations produced each of them: \(\sqrt{8}\) and \(\sqrt{2}+\sqrt{2}\) are one value, and two NILs carrying one reason are one value. Construction history is not part of a value and cannot be read back out of one.</p>
+
+<p>An internal representation is therefore unobservable, and a display is derived from the value rather than from the source that produced it. The content identity of LANG.DICTIONARY.MUTATION is this law applied to definitions rather than to values.</p>
+
 <h3 id="lang-values-exact">LANG.VALUES.EXACT — Exact scalars</h3>
 
-<p>
-Every scalar denotes an exact element of the field \(\mathbb{Q}(\sqrt{d_1},\dots,\sqrt{d_k})\) generated over the rationals by square roots of non-negative rationals — a multiquadratic normal form \(\sum_d c_d\sqrt{d}\) with rational \(c_d\). Integer, fraction, decimal, and scientific-notation literals are source forms for exact rationals; <code>SQRT</code> is the only Word that leaves the rationals.
-</p>
+<p>A scalar is an exact real, and the domain is fixed by a condition rather than by a list: it is a field — closed under addition, subtraction, multiplication and division — whose equality and order an implementation decides in finite time through a normal form it exhibits. Comparison is accordingly <strong>total</strong>: every comparison of two scalars yields TRUE or FALSE in finite time, not as a separate guarantee but as the half of the condition that fixes the domain.</p>
 
-<p>
-Arithmetic performs no intermediate rounding, and coefficients are arbitrary-precision, so a coefficient grows to whatever size the value requires. Comparison over this domain is <strong>total and decidable</strong>: every comparison of two scalars yields TRUE or FALSE in finite time. Values built through different histories compare equal when they denote the same real — \(\sqrt{8}\) and \(\sqrt{2}+\sqrt{2}\) are one value.
-</p>
+<p>The field \(\mathbb{Q}(\sqrt{d_1},\dots,\sqrt{d_k})\) generated over the rationals by square roots of non-negative rationals, in multiquadratic normal form \(\sum_d c_d\sqrt{d}\) with rational \(c_d\), is the witness that meets the condition and is therefore the present domain. Integer, fraction, decimal, and scientific-notation literals are source forms for exact rationals, and <code>SQRT</code> generates the rest from a rational radicand: it is what builds the field rather than an operation the field is closed under. Arithmetic performs no intermediate rounding, and coefficients are arbitrary-precision, so a coefficient grows to whatever size the value requires.</p>
 
-<p>
-The internal representation is unobservable. Canonical continued-fraction display is derived from a value; it is not evidence of the runtime storage form.
-</p>
+<p>A real that no exhibited normal form reaches — \(\pi\), \(e\), a logarithm — is not an Ajisai value. Widening the domain means exhibiting a normal form that meets the condition; it does not mean amending the condition.</p>
 
 <h3 id="lang-values-truth">LANG.VALUES.TRUTH — Two-valued truth</h3>
 
@@ -193,9 +193,7 @@ Absence and misuse live outside this domain: an operation that cannot produce a 
 NIL is a value representing absence from a well-formed partial operation. It carries a <strong>reason</strong>: a stable, machine-readable identifier for why production failed. The reason is observable through <code>NIL-REASON</code> and through the protocol.
 </p>
 
-<p>
-The reason is the entire observable content of a NIL: two NILs with the same reason are the same value. An implementation may emit richer diagnostics on the host channel, and no program behavior may depend on them.
-</p>
+<p>The reason is the entire observable content of a NIL. An implementation may emit richer diagnostics on the host channel, and no program behavior may depend on them.</p>
 
 <h3 id="lang-values-vector">LANG.VALUES.VECTOR — Vectors</h3>
 
@@ -321,7 +319,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p><code>DEF</code> binds a name to a code block; <code>DEL</code> removes a User Word and fails with ERROR if any other definition still depends on it. A definition may call itself. A dictionary mutation commits atomically or raises ERROR with no partial visible mutation.</p>
 
-<p>Every Word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the Words it calls. Two definitions with the same identity are the same Word, and a change to a dependency changes the identity of everything that depends on it.</p>
+<p>Every Word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the Words it calls, so a change to a dependency changes the identity of everything that depends on it. Which definitions are one Word follows from LANG.VALUES.DENOTATION.</p>
 
 <h3 id="lang-effects-output">LANG.EFFECTS.OUTPUT — Output</h3>
 

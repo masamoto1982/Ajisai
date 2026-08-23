@@ -7,7 +7,7 @@
     "primitives": 24,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 17,
-    "distinct_conformance_cases": 71
+    "distinct_conformance_cases": 70
   },
   "primitives": [
     {
@@ -280,9 +280,9 @@
       "algebraic_family": "exact-scalar",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 9,
+      "derived_word_count": 8,
       "law_test_count": 3,
-      "conformance_case_count": 3,
+      "conformance_case_count": 2,
       "derived_words": [
         "core.chars",
         "core.join",
@@ -290,7 +290,6 @@
         "core.print",
         "core.str",
         "core.structural.string",
-        "core.substitute",
         "core.tokenize",
         "core.trim"
       ],
@@ -300,7 +299,6 @@
         "rust/tests/string_laws.rs"
       ],
       "conformance_cases": [
-        "standard-substitute",
         "standard-tokenize",
         "standard-trim"
       ]
@@ -629,7 +627,7 @@
       "conformance_case_count": 1,
       "derived_words": [
         "core.import.name-resolution",
-        "core.lookup"
+        "host.lookup"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -670,7 +668,7 @@
       "law_test_count": 1,
       "conformance_case_count": 0,
       "derived_words": [
-        "core.lookup",
+        "host.lookup",
         "hosted.missing-capability.diagnostics"
       ],
       "law_tests": [
