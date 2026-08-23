@@ -146,7 +146,7 @@ The **Expected value** column shows the final stack exactly as the language rend
 | `2 SQRT 2 LT` | `TRUE` | `SQRT` yields the exact algebraic √2 and compares it without rounding. |
 | `8 SQRT 2 SQRT 2 SQRT + =` | `TRUE` | Values built through different histories are one value when they denote the same real. |
 
-More examples are available in [`examples/`](examples/) and in the [Reference](https://masamoto1982.github.io/Ajisai/docs/index.html), where every sample opens in the Playground.
+More examples are available in the [Reference](https://masamoto1982.github.io/Ajisai/docs/index.html), where every sample opens in the Playground.
 
 Spec links: [Source and Desugaring](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-source), [Value Domains](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values), [Dictionary and Effects](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-dictionary)
 
@@ -209,7 +209,6 @@ Quality process documents live in [`docs/quality/`](docs/quality/), including th
 | [`rust/src/`](rust/src/) | Rust interpreter core and value model |
 | [`src/`](src/) | TypeScript GUI/runtime shell |
 | [`src-tauri/`](src-tauri/) | Desktop wrapper |
-| [`examples/`](examples/) | Ajisai sample programs |
 | [`public/docs/`](public/docs/) | Hand-authored HTML Reference ([rendered here](https://masamoto1982.github.io/Ajisai/docs/index.html)) |
 | [`docs/dev/`](docs/dev/) | Non-canonical design notes and implementation guidance |
 | [`docs/quality/`](docs/quality/) | Quality, traceability, and verification policy |
