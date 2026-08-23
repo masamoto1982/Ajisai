@@ -436,3 +436,39 @@ README はこのディレクトリを「More examples」としてリンクして
   （grep）と、65語に存在しない語を説明していること（レジストリ照合）は確認したが、
   ビルド済み CLI がないため実行はしていない。
 - **本書はどの改修も実施していない。** 正典・実装ともに無変更である。
+
+## 7. 追記（実施済み・改修Ⅵ・Ⅲ）
+
+改修ⅥとⅢ(a)(b)を実施した。実施の過程で、本書 §1.1 と §3 改修Ⅲの記述に**訂正が要る事実誤認**が見つかったので、原文は書き換えずここに記録する。
+
+### 7.1 §1.1「0件」は不正確だった — `capability`/`hostedEffect` は MCP 経由で外部に転送されていた
+
+§1.1 の表は `capability`・`hostedEffect`・`interpretationRole` の実装参照を「0件」としていたが、この grep は `rust/src` と `src` のみを対象とし、**`scripts/` と `tools/mcp-server/` を調べていなかった**。実際には:
+
+- `scripts/generate-word-reference.mjs` が `entry.capability` / `entry.hostedEffect` を読み、`docs/word-reference.md` に `Capability / hosted effect: `none` / `none`` の行として出力していた。
+- `tools/mcp-server/index.js` の `word_contract` ツールと `ajisai://words/{name}` リソースは `spec/words.json` のエントリを**そのまま**返す。したがってこの3フィールドは、MCP 経由で接続する外部の AI エージェントから観測可能だった。
+
+`interpretationRole` については訂正なし——上記のいずれからも読まれておらず、`docs/dev/reduction-consistency-audit-2026-07.md` の **D14**（2026年7月・本書執筆前に既に記録されていた判定）が同じ結論に達している。
+
+`capability`/`hostedEffect` は「参照されていない」のではなく、**`effects` フィールド（正典 `LANG.CONTRACT.REGISTRY` が挙げる契約構成要素の一つ）と Rust 側の独立した `WordProfile` 列挙型の両方に完全に重複していた**。`PRINT` の `effects: ["consoleWrite"]` と `hostedEffect: "consoleWrite"` は同じ事実の二重表現であり、`WordProfile::Hosted` の判定は `words.json` を経由せず `name == "PRINT"` から独立に導かれている。除去は「未到達だから」ではなく「正典が既に持つ `effects` と重複するから」を理由に行った。`generate-word-reference.mjs` は `effects` から `**Effects:**` 行を出すよう書き換えた。
+
+### 7.2 §1.1 に未記載だった `errorWhen` の一般化検証は失敗した
+
+改修Ⅲ(b) の当初案は「`errorWhen` の値ごとに Rust ソース中の文字列一致を取る」という汎用ゲートだった。実装して現行 `words.json`（削除前）に対して実行したところ、`stackTargetMode` 等の3件だけでなく、**27件中27件が「未到達」と誤検出された**。原因は、`errorWhen` の値（`nonCodeBlock` 等）の大半が Rust 側では camelCase 識別子ではなく散文のエラーメッセージ（例: `"expected number, got other format"`）としてしか存在しないため。`stackTargetMode`/`nonNumericOrInterval`/`negativeInterval` が死んでいると判定できたのは文字列一致ではなく、**TOP/STAK 修飾子軸と区間演算という概念自体が言語から削除されている**というドメイン知識によるものだった。
+
+このチェックは一般化できないと判断し、**破棄した**。改修Ⅲ(b) で実装した自動ゲート（`scripts/check-unreachable-contract.mjs`、`npm run check:unreachable-contract`）は、**トップレベルの分類フィールド名の到達可能性のみ**を検査する。`errorWhen` 値ごとの到達可能性チェックは自動化されていない——3件の既知の死んだ値は本改修で手作業により削除したが、将来同種の値が紛れ込んでも、このゲートは検出しない。
+
+### 7.3 `category` と `partiality` は精査した結果、除去対象から外した
+
+- **`category`**（16値）は `family`（12値）の**下位区分**であり、5本の生成スクリプト（`generate-core-word-docs.mjs` 等、ドキュメント・skill.md・conformance manifest・word manifest の生成）から実際に読まれ、`family` にはない粒度の情報を運んでいた。重複ではなく、生きた別軸。**除去しない。**
+- **`partiality`** は `scripts/generate-word-registry.mjs` により **`rust/src/kernel/generated/word_registry.rs` へコンパイルされ**、`rust/src/builtins/builtin_word_details.rs:149` の `match spec.partiality { ... }` で実際の分岐ロジックに使われていた。`nilPolicy` と `projection.when` から論理的に導出可能だとしても、それは「未到達」とは別の問題であり、除去は契約検証ロジックの書き換えを伴う別規模の作業になる。**除去しない。**
+
+§3 改修Ⅲ(a) の課題節が「精査していない」としていたこの2点は、精査した結果、除去しないと判断した。
+
+### 7.4 実施内容と検証
+
+- **改修Ⅵ**: `LANG.SOURCE.FRAME` の四行表を二則の散文へ書き換えた。当初案の前提「n は `words.json` の `stack.inputs` から導出できる」は誤りだった——`stack.inputs` は呼び出し全体のオペランド数（`MAP` は2＝コレクション＋ブロック）であり、フレームが見る値の数（`MAP` は1＝要素のみ）とは異なる。契約レジストリにフレーム引数専用のフィールドは存在しないため、各語のフレーム引数は散文で直接述べた。
+- **改修Ⅲ(a)**: `interpretationRole`・`capability`・`hostedEffect` を65エントリ全件、`errorWhen` の `stackTargetMode`（6語）・`nonNumericOrInterval`・`negativeInterval`（SQRT）を削除。`spec/words.schema.json`・`tools/mcp-server/result.schema.json` の対応する宣言も削除し、`tools/mcp-server/assets/` を再同期した。
+- **改修Ⅲ(b)**: `scripts/check-unreachable-contract.mjs` を新設し、Quality Gate に組み込んだ（`npm run check:unreachable-contract`）。範囲は §7.2 の通りフィールド名到達可能性のみ。
+
+検証: `cargo test --all-targets` 1108件全通過、生成 Rust ファイル（`word_registry.rs`・`generated_core_word_docs.rs`）に差分なし（＝削除は Rust 側の型・分岐に一切影響しない）。npm ゲート31ステップ（MCP ブロック9ステップを含む）全通過。`cargo fmt` / `clippy` 緑。

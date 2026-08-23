@@ -145,10 +145,7 @@
         "partiality",
         "purity",
         "determinism",
-        "capability",
         "effects",
-        "hostedEffect",
-        "interpretationRole",
         "clauses",
         "documentation",
         "executorKey"
@@ -266,10 +263,6 @@
             "hostRelative"
           ]
         },
-        "capability": {
-          "type": "string",
-          "minLength": 1
-        },
         "effects": {
           "type": "array",
           "items": {
@@ -277,20 +270,6 @@
             "minLength": 1
           },
           "uniqueItems": true
-        },
-        "hostedEffect": {
-          "type": "string",
-          "minLength": 1
-        },
-        "interpretationRole": {
-          "enum": [
-            "scalar",
-            "text",
-            "truthValue",
-            "vector",
-            "nil",
-            "unassigned"
-          ]
         },
         "clauses": {
           "type": "array",

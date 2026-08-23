@@ -67,7 +67,7 @@ for (const entry of words.entries) {
   lines.push(`- **Stack:** ${stackArity(entry.stack.inputs)} input(s) → ${stackArity(entry.stack.outputs)} output(s); \`${entry.consumption}\` consumption`);
   lines.push(`- **NIL policy:** \`${entry.nilPolicy}\`; projection: ${projection(entry)}`);
   lines.push(`- **Purity / determinism:** \`${entry.purity}\` / \`${entry.determinism}\``);
-  lines.push(`- **Capability / hosted effect:** \`${entry.capability}\` / \`${entry.hostedEffect}\``);
+  lines.push(`- **Effects:** ${entry.effects.length ? entry.effects.map((effect) => `\`${effect}\``).join(', ') : 'none'}`);
   lines.push(`- **Clauses:** ${entry.clauses.map((clause) => `\`${clause}\``).join(', ')}`);
   lines.push(`- **Syntax:** \`${entry.documentation.syntax.replace(/`/g, '\\`')}\``);
   if (entry.aliases.length) lines.push(`- **Aliases:** ${entry.aliases.map((alias) => `\`${alias}\``).join(', ')}`);
