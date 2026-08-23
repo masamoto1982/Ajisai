@@ -52,6 +52,7 @@
     "core-word-docs:check": "node scripts/generate-core-word-docs.mjs --check",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
     "check:minimal-core": "node scripts/check-minimal-core.mjs",
+    "check:unreachable-contract": "node scripts/check-unreachable-contract.mjs",
     "check:version-sync": "node scripts/check-version-sync.mjs",
     "check:runtime-metadata": "node scripts/check-runtime-metadata-source.mjs",
     "check:agent-cli-contract": "node scripts/check-agent-cli-contract.mjs",

@@ -131,6 +131,9 @@ jobs:
       - name: Check Minimal Core closure
         run: npm run check:minimal-core
 
+      - name: Contract fields are reachable, not declared and unread
+        run: npm run check:unreachable-contract
+
       - name: Package, crate and Tauri versions agree
         run: npm run check:version-sync
 

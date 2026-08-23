@@ -537,15 +537,6 @@
     "partiality": {
      "type": "string"
     },
-    "capability": {
-     "type": "string"
-    },
-    "hostedEffect": {
-     "type": "string"
-    },
-    "interpretationRole": {
-     "type": "string"
-    },
     "consumption": {
      "type": "string"
     },
