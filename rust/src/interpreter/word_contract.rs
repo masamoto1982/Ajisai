@@ -20,6 +20,7 @@ use super::word_contract_flow::FlowSim;
 use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
 };
+use super::word_contract_widen::{is_reflect, opaque_reflection_contract, VectorScope};
 use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
@@ -332,12 +333,23 @@ impl Interpreter {
         let mut acc = AccumulatedContract::from_contract(&seed);
         let mut sim = SpaceSim::new();
         let mut cost_sim = CostSim::new();
+        let mut scope = VectorScope::new();
         let mut complete = true;
 
         'lines: for line in def.lines.iter() {
             for token in line.body_tokens.iter() {
                 match token {
                     Token::Number(_) | Token::String(_) => {
+                        flow.feed_literal();
+                        sim.feed_literal();
+                        cost_sim.feed_literal();
+                    }
+                    // A vector-literal interior is data (`[ 'a' PRINT 'b' ]`
+                    // is `[ 'a' 'PRINT' 'b' ]`, PRINT never resolves or
+                    // runs): treated exactly like a Number/String literal,
+                    // not attempted as a call, so it makes no contribution to
+                    // `acc` at all — see `word_contract_widen.rs`.
+                    Token::Symbol(_) if scope.in_vector_literal() => {
                         flow.feed_literal();
                         sim.feed_literal();
                         cost_sim.feed_literal();
@@ -389,7 +401,19 @@ impl Interpreter {
                             DepSpace::of_user_word(&dep_contract)
                         });
                         cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
-                        acc.widen_with(&dep_contract);
+                        // `flow`/`sim`/`cost_sim` above read `dep_contract`'s
+                        // real, sound projection unconditionally — REFLECT's
+                        // arity/space/cost are unaffected by which direction
+                        // it ran. Only the acc-relevant axes below need the
+                        // conservative substitute (see `contract_gap.rs`'s
+                        // `OpaqueReflection` doc comment for why).
+                        if is_reflect(&dep_name) {
+                            complete = false;
+                            acc.gaps.push(GapCode::OpaqueReflection);
+                            acc.widen_with(&opaque_reflection_contract(&dep_contract));
+                        } else {
+                            acc.widen_with(&dep_contract);
+                        }
                     }
                     Token::VectorStart
                     | Token::VectorEnd
@@ -401,6 +425,7 @@ impl Interpreter {
                         flow.feed_structural(token);
                         sim.feed_structural(token);
                         cost_sim.feed_structural(token);
+                        scope.feed_structural(token);
                     }
                 }
             }

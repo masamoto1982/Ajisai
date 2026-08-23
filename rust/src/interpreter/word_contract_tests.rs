@@ -216,3 +216,100 @@ async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Vector-depth regression tests (`word_contract_widen.rs`).
+//
+// A Symbol inside `[ ... ]` desugars to its own name as a String
+// (LANG.VALUES.VECTOR) and is never resolved or called, so it must not
+// widen purity/effects/determinism into the accumulator. Every expectation
+// below is the `output` the body actually produces at run time.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn a_symbol_inside_a_vector_literal_never_widens_purity() {
+    // `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]` — PRINT never runs.
+    let contract = contract_for("{ [ 'a' PRINT 'b' ] } 'LABELS' DEF", "LABELS").await;
+    assert_eq!(contract.purity, ContractPurity::Pure);
+    assert_eq!(contract.confidence, ContractConfidence::Complete);
+}
+
+#[tokio::test]
+async fn a_block_written_inside_a_vector_literal_is_erased_not_quoted() {
+    // `collect_vector_with_depth` (`vector_literal.rs`) has no BlockStart/
+    // BlockEnd arm: `{ }` found while collecting a vector is skipped, and its
+    // interior splices into the *enclosing* vector as plain elements —
+    // `[ { PRINT } { 1 } ]` evaluates to `[ 'PRINT' 1/1 ]`, not a vector
+    // holding a CodeBlock. So PRINT here must not widen either, however
+    // deeply the `[`/`{` alternate, as long as a `[` is innermost.
+    for body in [
+        "[ { PRINT } ]",
+        "[ { PRINT } { 1 } ]",
+        "[ { [ { PRINT } 0 GET EXEC ] } 0 GET EXEC ]",
+    ] {
+        let source = format!("{{ {body} }} 'W' DEF");
+        let contract = contract_for(&source, "W").await;
+        assert_eq!(contract.purity, ContractPurity::Pure, "body: {body}");
+        assert_eq!(
+            contract.confidence,
+            ContractConfidence::Complete,
+            "body: {body}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_block_value_actually_stored_via_collect_still_widens() {
+    // Unlike `[ ... ]` syntax, `COLLECT` gathers already-evaluated stack
+    // *values* — a `{ PRINT }` written outside any vector, at vector depth 0,
+    // produces a genuine CodeBlock value that survives being collected, and
+    // running it through GET+EXEC really does print (measured: `'hi'
+    // { PRINT } 1 COLLECT [ 0 ] GET EXEC` prints "hi"). This must still
+    // widen — the vector-depth gate must not over-reach past the one case it
+    // exists for.
+    let contract = contract_for("{ { PRINT } 1 COLLECT [ 0 ] GET EXEC } 'W' DEF", "W").await;
+    assert_eq!(contract.purity, ContractPurity::Effectful);
+}
+
+#[tokio::test]
+async fn a_map_over_a_literal_block_still_widens_regardless_of_purity() {
+    // Sanity check that the vector-depth gate leaves the ordinary,
+    // no-vector-involved case exactly as before.
+    let pure = contract_for("{ { 2 MUL } MAP } 'DOUBLE-ALL' DEF", "DOUBLE-ALL").await;
+    assert_eq!(pure.purity, ContractPurity::Pure);
+    let effectful = contract_for("{ { PRINT } MAP } 'PRINTALL' DEF", "PRINTALL").await;
+    assert_eq!(effectful.purity, ContractPurity::Effectful);
+}
+
+// ---------------------------------------------------------------------------
+// `REFLECT` regression tests (`word_contract_widen.rs`, `OpaqueReflection`).
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn reflect_exec_of_code_data_is_never_verified_pure() {
+    // Measured: this body prints "hi" at run time (`ajisai run`), yet before
+    // the `OpaqueReflection` fix this inferred `pure`/`complete` — a false
+    // *verified*, not a false error.
+    let source = "{ [ 'AJISAI-CODE-1' [ 'string' 'hi' ] [ 'symbol' 'PRINT' ] ] \
+                   REFLECT EXEC } 'SNEAK' DEF";
+    let contract = contract_for(source, "SNEAK").await;
+    assert_eq!(contract.purity, ContractPurity::Effectful);
+    assert_eq!(contract.confidence, ContractConfidence::Conservative);
+    assert!(contract
+        .gaps
+        .contains(&crate::agent::contract_gap::GapCode::OpaqueReflection));
+}
+
+#[tokio::test]
+async fn reflect_of_a_literal_block_never_reaching_exec_is_still_conservative() {
+    // The safe direction (CodeBlock -> data, pure introspection) is
+    // deliberately over-approximated too: REFLECT's own contribution is
+    // always the conservative one, regardless of which direction it runs, so
+    // this reports `effectful`/conservative even though it never prints —
+    // never a false error (a `pure` declaration here becomes a note, not an
+    // error), only a stricter "cannot verify" than a provenance-aware model
+    // would give.
+    let contract = contract_for("{ { 1 2 ADD } REFLECT LENGTH } 'W' DEF", "W").await;
+    assert_eq!(contract.purity, ContractPurity::Effectful);
+    assert_eq!(contract.confidence, ContractConfidence::Conservative);
+}

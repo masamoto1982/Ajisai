@@ -44,6 +44,7 @@ mod word_contract_flow;
 mod word_contract_lattice;
 #[cfg(test)]
 mod word_contract_tests;
+mod word_contract_widen;
 pub(crate) mod word_cost;
 #[cfg(test)]
 mod word_cost_tests;

@@ -358,4 +358,54 @@ mod contract_decl_tests {
             assert!(finding.get("message").is_some());
         }
     }
+
+    // -----------------------------------------------------------------
+    // A `pure` declaration that never prints must never be reported as a
+    // violation (`word_contract_widen.rs`'s vector-depth gate). Each body
+    // below has the declared purity at run time, and each was rejected as a
+    // proven violation before the fix.
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn a_pure_declaration_over_vector_literal_symbols_is_verified() {
+        for body in [
+            "[ 'a' PRINT 'b' ]",
+            "[ { PRINT } ]",
+            "[ { [ { PRINT } 0 GET EXEC ] } 0 GET EXEC ]",
+        ] {
+            let source = format!("{{ {body} }} 'W' DEF\n#:contract W pure");
+            let decls = contract_decls(&source);
+            assert_eq!(
+                decls["findings"].as_array().expect("findings array").len(),
+                0,
+                "expected no finding for `{body}`, got {decls}"
+            );
+            assert_eq!(decls["outcome"], "value", "body: {body}");
+            assert_eq!(exit_code(&source), 0, "body: {body}");
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // `REFLECT` closes a false-*verified* hole, not a false-error one
+    // (`gap.opaqueReflection`): a body that genuinely prints through
+    // `REFLECT EXEC` must never come back `outcome: "value"` for a `pure`
+    // declaration.
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn reflect_exec_reports_the_opaque_reflection_gap_not_a_false_verify() {
+        let source = "{ [ 'AJISAI-CODE-1' [ 'string' 'hi' ] [ 'symbol' 'PRINT' ] ] \
+                       REFLECT EXEC } 'SNEAK' DEF\n#:contract SNEAK pure nil-free";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert!(!findings.is_empty(), "expected at least one finding");
+        for finding in findings {
+            assert_eq!(finding["severity"], "note");
+            assert_eq!(finding["code"], "gap.opaqueReflection");
+        }
+        assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
+        assert_eq!(decls["outcome"], "nil");
+        // A note never fails the check.
+        assert_eq!(exit_code(source), 0);
+    }
 }
