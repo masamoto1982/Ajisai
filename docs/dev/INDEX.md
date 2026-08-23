@@ -33,6 +33,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `spec-impl-drift-tactic.md` | 仕様と実装が食い違ったときの裁定戦術 | `[設計根拠]` |
 | `language-coherence-review-2026-08.md` | 外部「整合化改修案」の検証と、正典収束計画への差し替え | `[方針記録]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察 | `[観察ノート]` |
+| `ajisai-single-axis-proposal-2026-08.md` | 中心概念を「絞り込み（narrowing）」一本に定める提案。到達不能契約の実測と、七つの改修案（未承認・未実施） | `[観察ノート]` |
 
 ## エージェント/CLI・GUI
 
