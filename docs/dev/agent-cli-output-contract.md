@@ -111,15 +111,19 @@ change what counts as a violation.
 - `code` is present (a string) only on a `"severity": "note"` finding, and is
   `null` for every `"severity": "error"` finding: a proven violation is not
   something inference merely failed to decide, so it carries no gap.
-- The five gap ids, and no others: `gap.unresolvedWord` (a symbol the body
+- The six gap ids, and no others: `gap.unresolvedWord` (a symbol the body
   calls does not resolve to any word), `gap.recursiveDependency` (inference
   re-entered a word that is already being inferred — direct or mutual
   recursion), `gap.dependencyUnknown` (a dependency's own inference could not
   complete), `gap.conservativeSeed` (inference fell back to the maximally
-  cautious contract without going through one of the other three reasons),
+  cautious contract without going through one of the other reasons),
   `gap.unmodelledControlFlow` (the body reaches a control directive whose
   paths differ in stack height — `^`, `|` — or an unbalanced `[`/`{`
-  delimiter, so no fixed arity describes it).
+  delimiter, so no fixed arity describes it), `gap.opaqueReflection` (the
+  body calls `REFLECT`, which can turn code-data whose Word names were never
+  `Symbol` tokens into a `CodeBlock`; inference cannot know what a value it
+  produces will do once something runs it, so it never trusts `REFLECT`'s
+  own optimistic registry contract for that).
 - `gapSummary.declarationsChecked` counts successfully-parsed `#:contract`
   declarations; `verified + cannotVerify + violated` always equals it. A
   malformed directive (one that never became a checkable declaration) still
@@ -204,7 +208,7 @@ lattice, and why this axis deliberately does not refine per call site are in
   attained, `note` otherwise. A `note` here can carry `code: null` even though
   it is a `note` — a cost bound can be a sound-but-unproven upper bound by the
   classification's own design (e.g. `MAP`'s step count), not because
-  inference gave up on the word, so it is not always one of the four gap ids.
+  inference gave up on the word, so it is not always one of the six gap ids.
 - The inferred class depends on **what actually feeds the word**, not on the
   word's name alone. A built-in's class is a function of its operands, so a
   compile-time-literal operand collapses it: `{ RANGE }` is `unbounded` on the

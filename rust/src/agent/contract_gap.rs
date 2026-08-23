@@ -33,7 +33,25 @@
 //! situations as one, which is exactly the telemetry the gap ids exist to
 //! keep apart.
 //!
-//! These five and no others: a sixth incompleteness source is a design
+//! A sixth closes a soundness hole rather than a false-error source: a call
+//! to `REFLECT` (`OpaqueReflection`). Every other way a body can reach a
+//! `CodeBlock` value is visible to this walk regardless of provenance — a
+//! literal `{ }` is scanned unconditionally by `Token::Symbol`, irrespective
+//! of vector/block depth, and a value produced by calling another resolved
+//! word already carries that word's own (over-)approximated effects — but
+//! `REFLECT` can turn a `Vector` whose elements are `String` tokens into a
+//! `CodeBlock` whose Word names were never `Symbol` tokens this walk could
+//! resolve. Trusting `REFLECT`'s own registry contract (genuinely
+//! `pure`/`nil-free`/deterministic, for the `CodeBlock`→data direction) for
+//! *what the reflected value does once something runs it* let a body that
+//! prints through `REFLECT EXEC` infer as `pure`/`complete` — not a false
+//! `error` but a false *verified*, which is worse: `check --contract`'s
+//! entire purpose is to let a caller trust a `pure` declaration without
+//! running the code. `REFLECT`'s `flow`/`space`/`cost` stay their real,
+//! sound projection (those axes are unaffected by which direction it ran);
+//! only the widened acc-relevant axes fall back to the conservative ceiling.
+//!
+//! These six and no others: a seventh incompleteness source is a design
 //! decision (which bucket does it belong in, or does it need one of its
 //! own), not something to invent here silently.
 //!
@@ -50,6 +68,7 @@ pub(crate) enum GapCode {
     DependencyUnknown,
     ConservativeSeed,
     UnmodelledControlFlow,
+    OpaqueReflection,
 }
 
 impl GapCode {
@@ -59,6 +78,7 @@ impl GapCode {
         GapCode::DependencyUnknown,
         GapCode::ConservativeSeed,
         GapCode::UnmodelledControlFlow,
+        GapCode::OpaqueReflection,
     ];
 
     pub(crate) fn as_str(self) -> &'static str {
@@ -68,6 +88,7 @@ impl GapCode {
             GapCode::DependencyUnknown => "gap.dependencyUnknown",
             GapCode::ConservativeSeed => "gap.conservativeSeed",
             GapCode::UnmodelledControlFlow => "gap.unmodelledControlFlow",
+            GapCode::OpaqueReflection => "gap.opaqueReflection",
         }
     }
 
