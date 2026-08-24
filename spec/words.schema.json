@@ -58,6 +58,49 @@
         }
       ]
     },
+    "costAxis": {
+      "description": "One axis of a Word's charged-cost bound. `class` is a sound upper bound on how the charge grows with the Word's input; `exact` records that some contribution provably attains that class, which is what licenses a `#:contract` mismatch to be an error rather than a note.",
+      "type": "object",
+      "required": [
+        "class",
+        "exact"
+      ],
+      "properties": {
+        "class": {
+          "enum": [
+            "const",
+            "linear",
+            "superlinear",
+            "unbounded"
+          ]
+        },
+        "exact": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cost": {
+      "description": "The Word's charged cost on the three metered resources the runtime counts (`executionSteps` / `numericWork` / `collectionWork`). Declared per axis so a caller can bound a phrase before running it: the axes join pointwise under concatenation, so a phrase's bound is the join of its Words' bounds.",
+      "type": "object",
+      "required": [
+        "steps",
+        "numeric",
+        "collection"
+      ],
+      "properties": {
+        "steps": {
+          "$ref": "#/$defs/costAxis"
+        },
+        "numeric": {
+          "$ref": "#/$defs/costAxis"
+        },
+        "collection": {
+          "$ref": "#/$defs/costAxis"
+        }
+      },
+      "additionalProperties": false
+    },
     "projection": {
       "type": "object",
       "required": [
@@ -145,6 +188,7 @@
         "partiality",
         "purity",
         "determinism",
+        "cost",
         "effects",
         "clauses",
         "documentation",
@@ -262,6 +306,9 @@
             "stateRelative",
             "hostRelative"
           ]
+        },
+        "cost": {
+          "$ref": "#/$defs/cost"
         },
         "effects": {
           "type": "array",

@@ -332,6 +332,53 @@ impl AcceptedDomain {
     }
 }
 
+/// Growth class of a Word's charge on one metered resource, as a function of its input.
+///
+/// Generated from the `class` enum in spec/words.schema.json: every value the
+/// specification admits is a variant, so the implementation vocabulary cannot be
+/// narrower than the canonical one.
+///
+/// The variants are declared in the schema's own order, and that order **is** the
+/// lattice order the cost join widens along (`const` < `linear` < `superlinear` <
+/// `unbounded`), which is what the derived `Ord` means here. Reordering the
+/// schema enum would silently reorder the lattice, so `word_cost_tests.rs`
+/// asserts the chain directly.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum CostClass {
+    /// `const`
+    Const,
+    /// `linear`
+    Linear,
+    /// `superlinear`
+    Superlinear,
+    /// `unbounded`
+    Unbounded,
+}
+
+impl CostClass {
+    /// The canonical spec string for this variant.
+    pub const fn as_spec_str(self) -> &'static str {
+        match self {
+            CostClass::Const => "const",
+            CostClass::Linear => "linear",
+            CostClass::Superlinear => "superlinear",
+            CostClass::Unbounded => "unbounded",
+        }
+    }
+
+    /// The variant a canonical spec string names, or `None` when the string is
+    /// not one the specification admits.
+    pub fn from_spec_str(value: &str) -> Option<CostClass> {
+        match value {
+            "const" => Some(CostClass::Const),
+            "linear" => Some(CostClass::Linear),
+            "superlinear" => Some(CostClass::Superlinear),
+            "unbounded" => Some(CostClass::Unbounded),
+            _ => None,
+        }
+    }
+}
+
 /// Stack arity as declared in spec/words.json: an exact count, or one of the
 /// data-dependent markers the specification names.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -352,6 +399,34 @@ impl Arity {
             Arity::Variable | Arity::Control => None,
         }
     }
+}
+
+/// A Word's declared charge on one metered resource.
+///
+/// `class` is a **sound upper bound**: the charge never grows faster than this
+/// in the Word's input. `exact` records that some contribution provably
+/// *attains* the class — the witness that lets a `#:contract` mismatch be
+/// reported as an error rather than a note, since without it a looser class
+/// might simply be an over-approximation the caller has every right to beat.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct CostAxis {
+    pub class: CostClass,
+    pub exact: bool,
+}
+
+/// A Word's declared charge on all three metered resources, projected from
+/// spec/words.json.
+///
+/// The three axes are the runtime's own counters (`executionSteps` /
+/// `numericWork` / `collectionWork`), so a declared bound and a measured
+/// `resourceUsage` are answers about the same quantity. They join pointwise
+/// under concatenation, which is what lets a phrase's bound be computed from
+/// its Words' bounds without running it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct WordCost {
+    pub steps: CostAxis,
+    pub numeric: CostAxis,
+    pub collection: CostAxis,
 }
 
 /// A Word's spec-declared contract, projected from spec/words.json with each
@@ -383,6 +458,10 @@ pub struct GeneratedWord {
     pub accepted_domain: Option<AcceptedDomain>,
     pub purity: Purity,
     pub determinism: Determinism,
+    /// What the Word charges on each metered resource. Read by
+    /// `interpreter::word_cost`, which joins these bounds along a phrase to
+    /// bound it without executing it.
+    pub cost: WordCost,
     /// Which half of the public Core the Word belongs to. Both halves are
     /// ordinary sealed-Core Words reached by their plain names; the tier is a
     /// design classification the reading surfaces report, never a namespace.
@@ -412,6 +491,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -430,6 +523,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -448,6 +555,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -466,6 +587,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
@@ -484,6 +619,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -502,6 +651,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -520,6 +683,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
@@ -538,6 +715,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -556,6 +747,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
@@ -574,6 +779,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -592,6 +811,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
@@ -610,6 +843,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -628,6 +875,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
@@ -646,6 +907,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -664,6 +939,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -682,6 +971,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
@@ -700,6 +1003,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -718,6 +1035,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
@@ -736,6 +1067,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
@@ -754,6 +1099,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Numeric),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
@@ -772,6 +1131,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Numeric),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -790,6 +1163,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Numeric),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
@@ -808,6 +1195,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Numeric),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
@@ -826,6 +1227,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Numeric),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -844,6 +1259,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -862,6 +1291,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -880,6 +1323,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -898,6 +1355,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
@@ -916,6 +1387,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -934,6 +1419,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
@@ -952,6 +1451,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -970,6 +1483,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -988,6 +1515,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1006,6 +1547,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::FlatNumericVector),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1024,6 +1579,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::FlatNumericVector),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1042,6 +1611,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Vector),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1060,6 +1643,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Vector),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1078,6 +1675,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Vector),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1096,6 +1707,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Numeric),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
@@ -1114,6 +1739,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Vector),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1132,6 +1771,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: Some(AcceptedDomain::Vector),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1150,6 +1803,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
@@ -1168,6 +1835,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            numeric: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1186,6 +1867,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            numeric: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1204,6 +1899,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            numeric: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1222,6 +1931,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            numeric: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1240,6 +1963,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            numeric: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
@@ -1258,6 +1995,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1276,6 +2027,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Superlinear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1294,6 +2059,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
@@ -1312,6 +2091,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
@@ -1330,6 +2123,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1348,6 +2155,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1366,6 +2187,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            numeric: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1384,6 +2219,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            numeric: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Unbounded,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1402,6 +2251,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1420,6 +2283,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1438,6 +2315,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1456,6 +2347,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Conditional,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1474,6 +2379,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1492,6 +2411,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
@@ -1510,6 +2443,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Effectful,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["dictionaryWrite"],
@@ -1528,6 +2475,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Effectful,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["dictionaryDelete"],
@@ -1546,6 +2507,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Effectful,
         determinism: Determinism::HostRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["consoleWrite"],
@@ -1564,6 +2539,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],

@@ -18,44 +18,21 @@
 //! see `refine_axis` for why taking a class un-refined broke it in both
 //! directions.
 
-use crate::kernel::generated::WordId;
+use crate::kernel::generated::{generated_word_by_id, CostAxis, WordId};
 use crate::types::Token;
 
 use super::word_contract::WordContract;
 use super::word_space::{OperandProfile, SpaceClass};
 
 /// Growth class of a charged quantity as a function of a word's input.
-/// Identical lattice to `word_space::SpaceClass`; kept as its own type
-/// because the two model different resources and Phase 5 does not
-/// generalize the two into one (`docs/dev/cost-contract-design.md` §2).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum CostClass {
-    Const,
-    Linear,
-    Superlinear,
-    Unbounded,
-}
-
-impl CostClass {
-    pub(crate) fn from_str(s: &str) -> Option<CostClass> {
-        match s {
-            "const" => Some(CostClass::Const),
-            "linear" => Some(CostClass::Linear),
-            "superlinear" => Some(CostClass::Superlinear),
-            "unbounded" => Some(CostClass::Unbounded),
-            _ => None,
-        }
-    }
-
-    pub(crate) fn as_str(self) -> &'static str {
-        match self {
-            CostClass::Const => "const",
-            CostClass::Linear => "linear",
-            CostClass::Superlinear => "superlinear",
-            CostClass::Unbounded => "unbounded",
-        }
-    }
-}
+///
+/// Generated from spec/words.schema.json's own `class` enum, so the runtime
+/// vocabulary cannot be narrower than the canonical one, and its declaration
+/// order **is** the lattice order the join widens along. Identical in shape to
+/// `word_space::SpaceClass`, which stays a separate type because the two model
+/// different resources and Phase 5 does not generalize them into one
+/// (`docs/dev/cost-contract-design.md` §2).
+pub(crate) use crate::kernel::generated::CostClass;
 
 /// A joined bound on all three declarable axes (`docs/dev/
 /// cost-contract-design.md` §1). Each axis is `(class, exact)`: `class` is a
@@ -98,99 +75,58 @@ impl CostBound {
     }
 }
 
-/// Per-builtin classification, all three axes together. Grouped and
-/// commented by *why*, mirroring `word_space::builtin_space`'s style.
+/// The classification spec/words.json declares for a built-in, read back as
+/// the inference lattice's own representation.
 ///
-/// Evidence, not guesswork, where evidence exists: `runtime_limits.rs`'s own
-/// module comment states `Add`/`Sub`/`Mul`/`Div` are "priced limb×limb,
-/// including addition and subtraction"; `SUM`'s metered fold
-/// (`arithmetic::add_values_metered`) charges the identical schema per
-/// element; direct measurement (`ajisai run --json`, `resourceUsage`) pins
-/// the collection-processing words' `collectionWork` scaling and confirms
-/// comparisons/`SQRT`/`MOD`/`FLOOR`/`ROUND`/`ABS`/`NEG`/`MIN`/`MAX` charge no
-/// `numericWork` at all for a representative input. Elsewhere — any word not
-/// individually measured or documented — the class is a plausible upper
-/// bound (never a guess looser than what the word's own shape implies) with
-/// `exact = false`: sound by construction (`docs/dev/cost-contract-design.md`
-/// §6), never a source of a false declaration `Error`.
+/// The classes themselves are canonical data now, not a table written here:
+/// they live on `GeneratedWord::cost`, projected from spec/words.json by
+/// `scripts/generate-word-registry.mjs`, so the class a caller reads from
+/// `word_contract` over MCP and the class this inference walk joins are the
+/// same fact rather than two copies that can drift.
+///
+/// How those declared classes were arrived at — evidence, not guesswork, where
+/// evidence exists:
+///
+/// * `steps` (executionSteps): a builtin dispatch is one step, full stop,
+///   *unless* the builtin itself evaluates a caller-supplied block a
+///   data-dependent number of times. Verified directly: `[ 1 2 3 ] { 2 MUL }
+///   MAP` charges 4 steps (1 for MAP, 3 for the block's own MUL, once per
+///   element) against `1 2 ADD`'s 1. Every other builtin is a primitive with
+///   no such internal call, so it is `const` with the exactness witness.
+/// * `numeric` (numericWork): only the exact-arithmetic path charges this
+///   meter at all (`arithmetic::charge_binary_schema`, called from nowhere
+///   outside `arithmetic.rs`). `runtime_limits.rs`'s own module comment states
+///   `ADD`/`SUB`/`MUL`/`DIV` are "priced limb×limb, including addition and
+///   subtraction"; `SUM` folds with that same charged schema per element
+///   (`add_values_metered`); `QUANTIZE` was measured non-zero on a minimal
+///   case. Every other word measured zero on a representative input — a
+///   plausible `const` bound, but not `exact`, since one representative
+///   measurement is evidence rather than a proof across every bit width.
+/// * `collection` (collectionWork): the element-processing words scale with
+///   their operand's *size*, measured directly (`SORT`/`CONCAT`/`GET`/`TAKE`/
+///   `UNIQUE`/`TALLY`/`REVERSE`/`PUT`/`INDEX-OF` all charge proportional to
+///   element count on a representative input). The remaining collection-shaped
+///   words carry the same `linear` bound without the `exact` claim, not having
+///   been individually confirmed to attain it; `JOIN` repeats a separator
+///   between every pair, so it is `superlinear` in the worst case. `RANGE` and
+///   `FILL` are the value-driven materializers: a *numeric operand's value*
+///   sets the materialized length, so the charge is unbounded as a function of
+///   input **size** — measured, `[ 0 10 ] RANGE` charges 187 and
+///   `[ 0 20000 ] RANGE` charges 340,017 against the same 2-element operand;
+///   `[ 300 300 0 ] FILL` charges 1,530,000. A compile-time literal operand
+///   pins the amount, which `CostSim::feed_word` refines back down to `const`.
+///
+/// Anywhere evidence is absent the class is a plausible upper bound — never
+/// looser than the word's own shape implies — carrying `exact = false`: sound
+/// by construction (`docs/dev/cost-contract-design.md` §6), never a source of
+/// a false declaration `Error`.
 pub(crate) fn builtin_cost(id: WordId) -> CostBound {
-    use CostClass::*;
-    use WordId::*;
-
-    // `steps` (executionSteps): a builtin dispatch is one step, full stop,
-    // *unless* the builtin itself evaluates a caller-supplied block a
-    // data-dependent number of times. Verified directly:
-    // `[ 1 2 3 ] { 2 MUL } MAP` charges 4 steps (1 for MAP, 3 for the block's
-    // own MUL, once per element) against `1 2 ADD`'s 1. Every other builtin
-    // is a primitive with no such internal call, so it is `(Const, true)`
-    // regardless of which axis is being read below.
-    let steps = match id {
-        Map | Filter | Fold | Any | All | Exec | Cond => (Unbounded, false),
-        _ => (Const, true),
-    };
-
-    // `numeric` (numericWork): only the exact-arithmetic path charges this
-    // meter at all (`arithmetic::charge_binary_schema`, called from nowhere
-    // outside `arithmetic.rs`). `Add`/`Sub`/`Mul`/`Div` scale with operand
-    // bit width (documented, and the meter's whole reason to exist);
-    // `Sum` folds with that same charged schema per element
-    // (`add_values_metered`); `Quantize` was measured non-zero on a minimal
-    // case. Every other word measured zero on a representative input; that
-    // is a plausible bound (none of them perform unbounded internal
-    // arithmetic), so it earns `Const`, but not `exact` — a single
-    // representative measurement is evidence, not a proof across every
-    // bit width.
-    let numeric = match id {
-        Add | Sub | Mul | Div | Sum => (Linear, true),
-        Quantize => (Linear, false),
-        Map | Filter | Fold | Any | All | Exec | Cond => (Unbounded, false),
-        _ => (Const, false),
-    };
-
-    // `collection` (collectionWork): the element-processing words scale with
-    // their operand's *size*, measured directly (`SORT`/`CONCAT`/`GET`/
-    // `TAKE`/`UNIQUE`/`TALLY`/`REVERSE`/`PUT`/`INDEX-OF` all charge
-    // collectionWork proportional to element count on a representative
-    // input). The remaining collection-shaped words (`ZIP`, `GROUP`,
-    // `JOIN`, `CHARS`, `TOKENIZE`, `TRIM`, `STR`, `NUM`, `BIND`, `DEF`,
-    // `PRINT`) are given the same plausible `Linear` bound without the
-    // `exact` claim, since they were not all individually confirmed to
-    // *attain* it. `JOIN` can repeat a separator between every pair, which
-    // is `Superlinear` rather than `Linear` in the worst case.
-    let collection = match id {
-        Concat | Reverse | Take | Collect | Sort | Order | Unique | Tally | Zip | Put | Group
-        | IndexOf | Get => (Linear, true),
-        // The value-driven materializers, classified as `word_space` already
-        // classifies them for space: a *numeric operand's value* sets the
-        // materialized length, so the charge is unbounded as a function of
-        // input **size** — measured, `[ 0 10 ] RANGE` charges 187 and
-        // `[ 0 20000 ] RANGE` charges 340,017 against the same 2-element
-        // operand; `[ 300 300 0 ] FILL` charges 1,530,000. A compile-time
-        // literal operand pins the amount, which `CostSim::feed_word` (not
-        // this table) refines back down to `Const`.
-        Range | Fill => (Unbounded, true),
-        Join => (Superlinear, false),
-        // `Reflect` converts a CodeBlock token sequence to/from a Vector, a
-        // size-dependent conversion plausibly linear in body length —
-        // measured for none of these, so `exact` stays false throughout.
-        Chars | Tokenize | Trim | Str | Num | Bind | Def | Print | Reflect => (Linear, false),
-        Map | Filter | Fold | Any | All | Exec | Cond => (Unbounded, false),
-        // Constants, comparisons, logic, and exact arithmetic touch no
-        // collection by construction — confirmed for the arithmetic and
-        // comparison words directly (measured `collectionWork: 0`) —
-        // earning the stronger exact claim; everything else not
-        // individually reasoned through here falls to the plain,
-        // non-exact `Const` default below.
-        True | False | Nil | NilCheck | NilReason | Eq | Lt | Le | Gt | Gte | Neq | And | Or
-        | Not | Add | Sub | Mul | Div | Mod | Floor | Round | Quantize | Abs | Neg | Min | Max
-        | Sqrt | Length => (Const, true),
-        _ => (Const, false),
-    };
-
+    let declared = generated_word_by_id(id).cost;
+    let axis = |a: CostAxis| (a.class, a.exact);
     CostBound {
-        steps,
-        numeric,
-        collection,
+        steps: axis(declared.steps),
+        numeric: axis(declared.numeric),
+        collection: axis(declared.collection),
     }
 }
 

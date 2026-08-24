@@ -23,6 +23,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH"
       ],
@@ -57,6 +71,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH"
       ],
@@ -93,6 +121,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH"
       ],
@@ -129,6 +171,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH"
       ],
@@ -166,6 +222,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH"
       ],
@@ -205,6 +275,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT",
@@ -246,6 +330,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT",
@@ -288,6 +386,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT",
@@ -329,6 +441,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT",
@@ -371,6 +497,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT",
@@ -412,6 +552,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT",
@@ -454,6 +608,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "linear",
+          "exact": true
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -495,6 +663,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "linear",
+          "exact": true
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -537,6 +719,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "linear",
+          "exact": true
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -578,6 +774,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "linear",
+          "exact": true
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -620,6 +830,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -660,6 +884,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -699,6 +937,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -739,6 +991,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "linear",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -778,6 +1044,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -818,6 +1098,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -858,6 +1152,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -899,6 +1207,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -937,6 +1259,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -977,6 +1313,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.VALUES.VECTOR",
@@ -1016,6 +1366,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1054,6 +1418,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1093,6 +1471,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1132,6 +1524,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1170,6 +1576,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1210,6 +1630,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1248,6 +1682,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1286,6 +1734,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1326,6 +1788,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1367,6 +1843,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1407,6 +1897,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1447,6 +1951,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1488,6 +2006,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1529,6 +2061,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "linear",
+          "exact": true
+        },
+        "collection": {
+          "class": "const",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
@@ -1571,6 +2117,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1612,6 +2172,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1652,6 +2226,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.VECTOR",
         "LANG.COLLECTIONS.LIFT",
@@ -1693,6 +2281,20 @@
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.COLLECTIONS.HIGHER"
       ],
@@ -1732,6 +2334,20 @@
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.COLLECTIONS.HIGHER"
       ],
@@ -1771,6 +2387,20 @@
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.COLLECTIONS.HIGHER"
       ],
@@ -1809,6 +2439,20 @@
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.COLLECTIONS.HIGHER"
       ],
@@ -1848,6 +2492,20 @@
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.COLLECTIONS.HIGHER"
       ],
@@ -1885,6 +2543,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.DISJOINT",
         "LANG.FAILURE.TRICHOTOMY"
@@ -1923,6 +2595,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "superlinear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.DISJOINT",
         "LANG.FAILURE.TRICHOTOMY"
@@ -1960,6 +2646,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.DISJOINT",
         "LANG.FAILURE.TRICHOTOMY"
@@ -1999,6 +2699,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.DISJOINT",
         "LANG.FAILURE.TRICHOTOMY"
@@ -2037,6 +2751,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.DISJOINT",
         "LANG.FAILURE.TRICHOTOMY"
@@ -2072,6 +2800,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.DISJOINT",
         "LANG.FAILURE.TRICHOTOMY"
@@ -2110,6 +2852,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.MACHINE.TRANSFORMERS",
         "LANG.SOURCE.CODE"
@@ -2148,6 +2904,20 @@
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.MACHINE.TRANSFORMERS",
         "LANG.SOURCE.CODE"
@@ -2183,6 +2953,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.NIL",
         "LANG.FAILURE.RECOVERY"
@@ -2218,6 +3002,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.NIL",
         "LANG.FAILURE.RECOVERY"
@@ -2253,6 +3051,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
       "clauses": [
         "LANG.VALUES.NIL",
         "LANG.FAILURE.RECOVERY"
@@ -2292,6 +3104,20 @@
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.VALUES.NIL",
         "LANG.FAILURE.RECOVERY"
@@ -2327,6 +3153,20 @@
       "errorWhen": [],
       "purity": "pure",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.MODIFIERS.CONSUMPTION"
       ],
@@ -2365,6 +3205,20 @@
       ],
       "purity": "pure",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.SOURCE.FRAME",
         "LANG.DICTIONARY.RESOLUTION"
@@ -2404,6 +3258,20 @@
       ],
       "purity": "effectful",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.DICTIONARY.RESOLUTION",
         "LANG.DICTIONARY.MUTATION"
@@ -2445,6 +3313,20 @@
       ],
       "purity": "effectful",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.DICTIONARY.RESOLUTION",
         "LANG.DICTIONARY.MUTATION"
@@ -2482,6 +3364,20 @@
       "errorWhen": [],
       "purity": "effectful",
       "determinism": "hostRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.EFFECTS.OUTPUT",
         "LANG.MACHINE.ORDER"
@@ -2522,6 +3418,20 @@
       ],
       "purity": "pure",
       "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.SOURCE.REFLECTION"
       ],

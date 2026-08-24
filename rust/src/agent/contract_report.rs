@@ -71,15 +71,6 @@ fn space_label(class: SpaceClass) -> &'static str {
     }
 }
 
-fn cost_label(class: CostClass) -> &'static str {
-    match class {
-        CostClass::Const => "const",
-        CostClass::Linear => "linear",
-        CostClass::Superlinear => "superlinear",
-        CostClass::Unbounded => "unbounded",
-    }
-}
-
 fn arity_label(flow: &ContractFlow) -> String {
     match flow {
         ContractFlow::Fixed { consumes, produces } => format!("( {consumes} -- {produces} )"),
@@ -128,15 +119,21 @@ fn suggested_directive(
     // rejects a bare `cost` with zero `axis=class` terms.
     let mut cost_terms = Vec::new();
     if contract.cost.steps.1 {
-        cost_terms.push(format!("steps={}", cost_label(contract.cost.steps.0)));
+        cost_terms.push(format!(
+            "steps={}",
+            CostClass::as_spec_str(contract.cost.steps.0)
+        ));
     }
     if contract.cost.numeric.1 {
-        cost_terms.push(format!("numeric={}", cost_label(contract.cost.numeric.0)));
+        cost_terms.push(format!(
+            "numeric={}",
+            CostClass::as_spec_str(contract.cost.numeric.0)
+        ));
     }
     if contract.cost.collection.1 {
         cost_terms.push(format!(
             "collection={}",
-            cost_label(contract.cost.collection.0)
+            CostClass::as_spec_str(contract.cost.collection.0)
         ));
     }
     if !cost_terms.is_empty() {
@@ -169,9 +166,9 @@ pub(crate) fn report_contracts(source: &str) -> Vec<WordReport> {
                 OrderSensitivity::OrderSensitive => "order-sensitive",
             },
             space: space_label(contract.space),
-            cost_steps: cost_label(contract.cost.steps.0),
-            cost_numeric: cost_label(contract.cost.numeric.0),
-            cost_collection: cost_label(contract.cost.collection.0),
+            cost_steps: CostClass::as_spec_str(contract.cost.steps.0),
+            cost_numeric: CostClass::as_spec_str(contract.cost.numeric.0),
+            cost_collection: CostClass::as_spec_str(contract.cost.collection.0),
             effects: contract.effects.clone(),
             confidence: match contract.confidence {
                 ContractConfidence::Complete => "complete",

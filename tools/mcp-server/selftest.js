@@ -129,17 +129,83 @@ check(
     contract.structuredContent?.mcp?.serverVersion === serverVersion() &&
     contract.structuredContent?.suggestions?.length === 0,
 );
+// A Word's cost is what lets a caller budget a phrase before running it, so it
+// has to be on the entry the caller already reads — not derivable only by
+// executing something.
+check(
+  "word_contract publishes what the Word charges, per axis",
+  contract.structuredContent?.matches?.[0]?.cost?.steps?.class === "unbounded" &&
+    contract.structuredContent?.matches?.[0]?.cost?.numeric?.class === "unbounded" &&
+    contract.structuredContent?.matches?.[0]?.cost?.collection?.class === "unbounded",
+);
+const addContract = await client.callTool({ name: "word_contract", arguments: { word: "+" } });
+// `MAP` is unbounded on every axis, so it cannot show that the axes are read
+// independently; `ADD` is the case where they differ, and its `numeric` bound
+// is the one `runtime_limits.rs` prices limb×limb and therefore attains.
+check(
+  "a Word's cost axes are published independently, with their exactness",
+  (() => {
+    const cost = addContract.structuredContent?.matches?.[0]?.cost;
+    return cost?.steps?.class === "const" && cost.steps.exact === true &&
+      cost.numeric?.class === "linear" && cost.numeric.exact === true &&
+      cost.collection?.class === "const" && cost.collection.exact === true;
+  })(),
+);
 
 const resources = await client.listResources();
 check(
-  "publishes guide, vocabulary, result schema and host profile as resources",
+  "publishes guide, vocabulary, contracts, result schema and host profile as resources",
   JSON.stringify(resources.resources.map(({ uri }) => uri).sort()) ===
     JSON.stringify([
+      "ajisai://contracts",
       "ajisai://guide/quickstart",
       "ajisai://limits",
       "ajisai://schema/result",
       "ajisai://vocabulary",
     ]),
+);
+// Bounding a phrase means joining the bounds of every Word in it, which 65
+// separate `word_contract` probes cannot practically deliver. The bulk read is
+// what makes the published cost usable, so it is checked as such: every entry
+// carries a complete, well-formed cost.
+const contractsResource = JSON.parse(
+  (await client.readResource({ uri: "ajisai://contracts" })).contents[0]?.text ?? "{}",
+);
+const COST_CLASSES = ["const", "linear", "superlinear", "unbounded"];
+check(
+  "the contracts resource serves every Word's cost in one read",
+  Array.isArray(contractsResource.entries) &&
+    contractsResource.entries.length > 0 &&
+    contractsResource.entries.every((entry) =>
+      ["steps", "numeric", "collection"].every((axis) =>
+        COST_CLASSES.includes(entry.cost?.[axis]?.class) &&
+        typeof entry.cost?.[axis]?.exact === "boolean"
+      )
+    ),
+);
+check(
+  "the contracts resource and word_contract answer with the same entry",
+  JSON.stringify(contractsResource.entries.find((entry) => entry.name === "MAP")) ===
+    JSON.stringify(contract.structuredContent?.matches?.[0]),
+);
+// The property that makes a published bound worth reading: a caller that joins
+// the atoms' classes gets the same answer the engine infers for the phrase.
+// `[ 1 ] +` is `ADD` against a literal, so `numeric` stays `linear` while every
+// other axis stays at the lattice bottom.
+const composed = await client.callTool({
+  name: "infer_contracts",
+  arguments: { source: "{ [ 1 ] + } 'BUDGETED' DEF" },
+});
+check(
+  "an inferred phrase bound agrees with the join of its Words' published bounds",
+  (() => {
+    const add = contractsResource.entries.find((entry) => entry.name === "ADD")?.cost;
+    const inferred = composed.structuredContent?.contracts?.find(
+      (entry) => entry.name === "BUDGETED",
+    )?.cost;
+    return add && inferred &&
+      ["steps", "numeric", "collection"].every((axis) => inferred[axis] === add[axis].class);
+  })(),
 );
 const limitsResource = JSON.parse(
   (await client.readResource({ uri: "ajisai://limits" })).contents[0]?.text ?? "{}",
