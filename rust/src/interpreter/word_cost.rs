@@ -115,6 +115,11 @@ impl CostBound {
 ///   `[ 0 20000 ] RANGE` charges 340,017 against the same 2-element operand;
 ///   `[ 300 300 0 ] FILL` charges 1,530,000. A compile-time literal operand
 ///   pins the amount, which `CostSim::feed_word` refines back down to `const`.
+///   `PROBE` walks a block's tokens in the same single pass `REFLECT` does —
+///   resolving each call's dependency contracts, never evaluating the block
+///   itself — so it shares `REFLECT`'s `linear` bound rather than `EXEC`'s
+///   `unbounded` one: unlike `EXEC`, nothing about `PROBE`'s own cost depends
+///   on what the block would do if it ran.
 ///
 /// Anywhere evidence is absent the class is a plausible upper bound — never
 /// looser than the word's own shape implies — carrying `exact = false`: sound

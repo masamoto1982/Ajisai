@@ -2955,6 +2955,20 @@
       ],
       "purity": "pure",
       "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
       "clauses": [
         "LANG.MACHINE.TRANSFORMERS",
         "LANG.SOURCE.CODE",
