@@ -2252,6 +2252,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         accepted_domain: None,
         purity: Purity::Pure,
         determinism: Determinism::StateRelative,
+        cost: WordCost {
+            steps: CostAxis {
+                class: CostClass::Const,
+                exact: true,
+            },
+            numeric: CostAxis {
+                class: CostClass::Const,
+                exact: false,
+            },
+            collection: CostAxis {
+                class: CostClass::Linear,
+                exact: false,
+            },
+        },
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
