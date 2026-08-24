@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **65 Words**, of which **36** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **66 Words**, of which **37** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -781,6 +781,20 @@ Evaluate a code block.
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
 - **Syntax:** `{ 1 2 ADD } EXEC`
 - **ERROR conditions:** `nonCodeBlock`, `nestedExecutionError`
+
+## `PROBE`
+
+Infer a CodeBlock's contract against the current dictionary, without evaluating it. The result is a Vector of key/value pairs — purity, determinism, NIL behavior, effects, confidence, and any gap reasons inference could not resolve — the same inference `ajisai check --contract` runs from outside the language, reached from inside it. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `control`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `stateRelative`
+- **Effects:** none
+- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`, `LANG.CONTRACT.CHECK`
+- **Syntax:** `{ 1 2 ADD } PROBE`
+- **ERROR conditions:** `nonCodeBlock`
 
 ## `NIL`
 

@@ -2937,6 +2937,44 @@
       "vocabularyTier": "kernel"
     },
     {
+      "name": "PROBE",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonCodeBlock"
+      ],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.SOURCE.CODE",
+        "LANG.CONTRACT.CHECK"
+      ],
+      "documentation": {
+        "summary": "Infer a CodeBlock's contract against the current dictionary, without evaluating it.",
+        "hover": "PROBE — infer a contract without running it",
+        "lookup": "Infer a CodeBlock's contract against the current dictionary, without evaluating it. The result is a Vector of key/value pairs — purity, determinism, NIL behavior, effects, confidence, and any gap reasons inference could not resolve — the same inference `ajisai check --contract` runs from outside the language, reached from inside it. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.",
+        "syntax": "{ 1 2 ADD } PROBE",
+        "role": "Control primitive: narrow a description into what can be known about it without running it.",
+        "stackEffect": "[ { code } ] -> [ knowledge ]"
+      },
+      "executorKey": "Probe",
+      "effects": [],
+      "partiality": "partial",
+      "category": "control",
+      "vocabularyTier": "kernel"
+    },
+    {
       "name": "NIL",
       "aliases": [],
       "family": "absence",

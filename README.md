@@ -8,7 +8,7 @@ Ajisai is an AI-first, vector-oriented dataflow language for **auditable, exact 
 
 Its central promise is **value integrity first**: numbers stay exact, structure stays visible, partial failure stays diagnosable, and every built-in Word carries a machine-readable contract that a user word's declaration can be checked against ahead of execution (`ajisai check --contract`). That check is deliberately conservative — it verifies declarations within the syntactic fragment its inference can analyze, and reports anything it cannot prove as "cannot verify".
 
-**Ten concepts.** Ajisai is built from ten concepts and nothing else: exact rationals closed under `SQRT`; three outcomes (a value, a reasoned absence, an error); a stack and vectors; code blocks evaluated only on request; one modifier axis; a sealed-Core / User dictionary with content-addressed identity; a machine-readable contract per Word; a pre-execution check of user declarations against those contracts; one host protocol; and an executable conformance corpus. The vocabulary is **65 canonical Words** in one flat dictionary, of which a **36-Word Semantic Kernel** carries the language's semantic identity.
+**Ten concepts.** Ajisai is built from ten concepts and nothing else: exact rationals closed under `SQRT`; three outcomes (a value, a reasoned absence, an error); a stack and vectors; code blocks evaluated only on request; one modifier axis; a sealed-Core / User dictionary with content-addressed identity; a machine-readable contract per Word; a pre-execution check of user declarations against those contracts; one host protocol; and an executable conformance corpus. The vocabulary is **66 canonical Words** in one flat dictionary, of which a **37-Word Semantic Kernel** carries the language's semantic identity.
 
 **Release stage.** This is Ajisai **`0.2.0-beta.1`**. The beta begins at commit [`350834ee22ca`](https://github.com/masamoto1982/Ajisai/commit/350834ee22ca1f1583eaa50e35d69f8ac29cac3e) — the first commit meeting every condition in [`docs/dev/beta-freeze-2026-08.md`](docs/dev/beta-freeze-2026-08.md): 57 canonical Words with a complete contract, formalization, law test, and conformance case each; one host protocol; one persisted state format; and every quality gate green. The alpha stage before it ends at commit [`ebb66a5f9d14`](https://github.com/masamoto1982/Ajisai/commit/ebb66a5f9d14a6c8d6610488724e476e652abc35). A program, a saved session, or an exported dictionary written for the beta is read by the beta: there is one current format for each, and no converter from an older one.
 
@@ -91,9 +91,9 @@ Spec links: [The consumption axis](https://masamoto1982.github.io/Ajisai/SPECIFI
 
 ### 5) Words and contracts: searchable channels for humans and AI
 
-The dictionary has two tiers: **Core** holds the 65 canonical Words and is sealed, and **User** holds definitions made by `DEF`. Every Core Word is reachable by its plain name, so a program starts with the full vocabulary already in scope.
+The dictionary has two tiers: **Core** holds the 66 canonical Words and is sealed, and **User** holds definitions made by `DEF`. Every Core Word is reachable by its plain name, so a program starts with the full vocabulary already in scope.
 
-Inside Core, the 65 split into a **36-Word Semantic Kernel** — the Words that build or observe a value domain, or are the one explicit operation for control, effects, dictionary change, naming a value locally, NIL recovery, or the code/data boundary — and **29 Standard Words** that fix one canonical contract for a frequent concept, a standard algorithm, or an observable execution guarantee such as short-circuiting or restoration after an ERROR. The split is a design classification, not a packaging one: there is no namespace, module, import, or prelude, and a Standard Word carries the same machine-readable contract, specification clause, reference entry, law test, and conformance case as a Kernel Word. Each Standard Word records how it relates to the Kernel: 17 are `derivable`, with an executable Kernel-only witness in `rust/tests/standard_derivation_laws.rs`, and 12 are `operational`, keeping a native implementation whose observable guarantees — or asymptotic cost — a user definition would not reproduce.
+Inside Core, the 66 split into a **37-Word Semantic Kernel** — the Words that build or observe a value domain, or are the one explicit operation for control, effects, dictionary change, naming a value locally, NIL recovery, the code/data boundary, or pre-execution contract inference — and **29 Standard Words** that fix one canonical contract for a frequent concept, a standard algorithm, or an observable execution guarantee such as short-circuiting or restoration after an ERROR. The split is a design classification, not a packaging one: there is no namespace, module, import, or prelude, and a Standard Word carries the same machine-readable contract, specification clause, reference entry, law test, and conformance case as a Kernel Word. Each Standard Word records how it relates to the Kernel: 17 are `derivable`, with an executable Kernel-only witness in `rust/tests/standard_derivation_laws.rs`, and 12 are `operational`, keeping a native implementation whose observable guarantees — or asymptotic cost — a user definition would not reproduce.
 
 Each Core Word's contract is a machine-readable record in [`spec/words.json`](spec/words.json): arity, consumption, NIL policy, projection reason, error conditions, purity, effects, and documentation. That record is the single place the Word is defined; prose is a projection of it.
 
@@ -146,7 +146,7 @@ The **Expected value** column shows the final stack exactly as the language rend
 | `2 SQRT 2 LT` | `TRUE` | `SQRT` yields the exact algebraic √2 and compares it without rounding. |
 | `8 SQRT 2 SQRT 2 SQRT + =` | `TRUE` | Values built through different histories are one value when they denote the same real. |
 
-More examples are available in [`examples/`](examples/) and in the [Reference](https://masamoto1982.github.io/Ajisai/docs/index.html), where every sample opens in the Playground.
+More examples are available in the [Reference](https://masamoto1982.github.io/Ajisai/docs/index.html), where every sample opens in the Playground.
 
 Spec links: [Source and Desugaring](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-source), [Value Domains](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values), [Dictionary and Effects](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-dictionary)
 
@@ -209,7 +209,6 @@ Quality process documents live in [`docs/quality/`](docs/quality/), including th
 | [`rust/src/`](rust/src/) | Rust interpreter core and value model |
 | [`src/`](src/) | TypeScript GUI/runtime shell |
 | [`src-tauri/`](src-tauri/) | Desktop wrapper |
-| [`examples/`](examples/) | Ajisai sample programs |
 | [`public/docs/`](public/docs/) | Hand-authored HTML Reference ([rendered here](https://masamoto1982.github.io/Ajisai/docs/index.html)) |
 | [`docs/dev/`](docs/dev/) | Non-canonical design notes and implementation guidance |
 | [`docs/quality/`](docs/quality/) | Quality, traceability, and verification policy |

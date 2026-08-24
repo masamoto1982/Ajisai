@@ -1,11 +1,12 @@
-//! Inferred contracts for user-defined words.
+//! Inferred contracts for user-defined words. `word_contract_probe.rs`
+//! reuses `infer_word_contract_inner` for `PROBE`'s anonymous-CodeBlock case.
 //!
-//! Phase 1 deliberately does not add surface syntax. A user word's contract
-//! is inferred from its body and resolved dependency contracts without
-//! executing Ajisai code. Built-in contracts are projected from the existing
-//! §7.14 registry; user-word contracts widen monotonically as dependencies
-//! join. When recursion or a dynamic structure prevents a complete proof,
-//! the result is conservative rather than Ajisai's logical `UNKNOWN` value.
+//! A word's contract is inferred from its body and resolved dependency
+//! contracts without executing Ajisai code. Built-in contracts are projected
+//! from the existing coreword registry; user-word contracts widen
+//! monotonically as dependencies join. When recursion or a dynamic structure
+//! prevents a complete proof, the result is conservative rather than
+//! Ajisai's logical `UNKNOWN` value.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -306,7 +307,7 @@ impl Interpreter {
             .expect("word contract cache state must keep its concrete type")
     }
 
-    fn infer_word_contract_inner(
+    pub(crate) fn infer_word_contract_inner(
         &mut self,
         resolved_name: &str,
         def: &Arc<WordDefinition>,
