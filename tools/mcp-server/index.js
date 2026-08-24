@@ -213,9 +213,13 @@ export const TOOLS = [
     // whole list is one resource read away, so a caller that does not know the
     // name has something better to do than guess again.
     description:
-      "Return the generated canonical registry entry for a Word or alias — its arity, purity, NIL policy and contract. " +
+      "Return the generated canonical registry entry for a Word or alias — its arity, purity, NIL policy, contract, " +
+      "and `cost`: what the Word charges on each metered resource (`steps`/`numeric`/`collection`), as a growth class " +
+      "in its input. Cost classes join pointwise under concatenation, so a phrase's bound is the widest bound among " +
+      "its Words — read them here to budget a program before running it rather than discovering the ceiling by hitting it. " +
       "An unmatched name answers with the closest known Words in `suggestions`. " +
-      "To see every Word at once instead of probing one name at a time, read the ajisai://vocabulary resource.",
+      "To read every Word's full contract at once instead of probing one name at a time, read the ajisai://contracts " +
+      "resource; ajisai://vocabulary lists the inventory and its semantic classification.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -500,6 +504,11 @@ function wordContract(word) {
 const RESOURCES = [
   { uri: "ajisai://guide/quickstart", name: "Ajisai agent quickstart", mimeType: "text/markdown" },
   { uri: "ajisai://vocabulary", name: "Ajisai generated Word vocabulary", mimeType: "application/json" },
+  // The whole contract registry in one read. `word_contract` answers one name
+  // at a time, which is the wrong shape for the question cost exists to answer:
+  // bounding a phrase means joining the bounds of every Word in it, and a
+  // caller cannot do that from 65 separate probes.
+  { uri: "ajisai://contracts", name: "Ajisai canonical Word contracts", mimeType: "application/json" },
   { uri: "ajisai://schema/result", name: "Ajisai MCP result contract", mimeType: "application/json" },
   { uri: "ajisai://limits", name: "Ajisai MCP host profile limits", mimeType: "application/json" },
 ];
@@ -555,6 +564,7 @@ export function createServer() {
     const uri = params.uri;
     if (uri === "ajisai://guide/quickstart") return { contents: [{ uri, mimeType: "text/markdown", text: readFileSync(skillPath, "utf8") }] };
     if (uri === "ajisai://vocabulary") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(manifest(), null, 2) }] };
+    if (uri === "ajisai://contracts") return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(contracts(), null, 2) }] };
     if (uri === "ajisai://schema/result") return { contents: [{ uri, mimeType: "application/json", text: readFileSync(resultSchemaPath, "utf8") }] };
     if (uri === "ajisai://limits") {
       return {

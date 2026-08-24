@@ -187,3 +187,45 @@ mod join_proptests {
         }
     }
 }
+
+#[test]
+fn declared_class_order_is_the_lattice_order() {
+    // `CostClass` is generated from spec/words.schema.json's `class` enum and
+    // derives `Ord` from that declaration order, which is what `CostBound::join`
+    // widens along. Reordering the schema enum would silently reorder the
+    // lattice — a change no type error would catch — so the chain is asserted
+    // here rather than left implicit in the generated file.
+    assert!(CostClass::Const < CostClass::Linear);
+    assert!(CostClass::Linear < CostClass::Superlinear);
+    assert!(CostClass::Superlinear < CostClass::Unbounded);
+}
+
+#[test]
+fn every_word_publishes_a_cost_the_inference_reads_back() {
+    // The published registry is the only place the classes are written down,
+    // so an entry the inference cannot read back is a Word whose declared and
+    // inferred cost could disagree.
+    use crate::interpreter::word_cost::builtin_cost;
+    use crate::kernel::generated::GENERATED_WORDS;
+    for word in GENERATED_WORDS {
+        let inferred = builtin_cost(word.id);
+        assert_eq!(
+            inferred.steps,
+            (word.cost.steps.class, word.cost.steps.exact),
+            "{} steps",
+            word.name
+        );
+        assert_eq!(
+            inferred.numeric,
+            (word.cost.numeric.class, word.cost.numeric.exact),
+            "{} numeric",
+            word.name
+        );
+        assert_eq!(
+            inferred.collection,
+            (word.cost.collection.class, word.cost.collection.exact),
+            "{} collection",
+            word.name
+        );
+    }
+}

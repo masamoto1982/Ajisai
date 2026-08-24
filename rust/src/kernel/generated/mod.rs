@@ -16,8 +16,8 @@
 mod word_registry;
 
 pub use word_registry::{
-    AcceptedDomain, Arity, Consumption, Determinism, Family, GeneratedWord, NilPolicy, Partiality,
-    Purity, VocabularyTier, WordId, GENERATED_WORDS,
+    AcceptedDomain, Arity, Consumption, CostAxis, CostClass, Determinism, Family, GeneratedWord,
+    NilPolicy, Partiality, Purity, VocabularyTier, WordCost, WordId, GENERATED_WORDS,
 };
 
 /// The declared contract for a Word, by canonical name.
@@ -27,6 +27,18 @@ pub use word_registry::{
 /// canonicalize first.
 pub fn generated_word(name: &str) -> Option<&'static GeneratedWord> {
     GENERATED_WORDS.iter().find(|word| word.name == name)
+}
+
+/// The declared contract for a Word, by its canonical identity.
+///
+/// `WordId` is generated from the registry itself, so — unlike the name lookup
+/// above — every id has an entry by construction and the result is not an
+/// `Option`. The scan is over the same 65-entry table dispatch already walks.
+pub fn generated_word_by_id(id: WordId) -> &'static GeneratedWord {
+    GENERATED_WORDS
+        .iter()
+        .find(|word| word.id == id)
+        .expect("WordId is generated from GENERATED_WORDS, so every id has an entry")
 }
 
 /// The contract vocabularies serialize as the canonical spec strings, so the
@@ -51,7 +63,8 @@ serialize_as_spec_str!(
     Partiality,
     Purity,
     Determinism,
-    VocabularyTier
+    VocabularyTier,
+    CostClass
 );
 
 #[cfg(test)]

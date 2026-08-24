@@ -109,7 +109,8 @@
    "type": "array",
    "items": {
     "type": "object"
-   }
+   },
+   "description": "Inferred contracts for the user-defined Words in the submitted source (`infer_contracts` only). Reports each cost axis as its class alone; unlike a registry entry's `cost`, exactness is observable through `suggested`, which names only the axes the declaration checker can verify."
   },
   "diagnosis": {
    "oneOf": [
@@ -504,6 +505,7 @@
     "projection",
     "purity",
     "determinism",
+    "cost",
     "category",
     "documentation"
    ],
@@ -533,6 +535,27 @@
     },
     "determinism": {
      "type": "string"
+    },
+    "cost": {
+     "type": "object",
+     "description": "What the Word charges on each of the three metered resources the runtime counts (`executionSteps` / `numericWork` / `collectionWork`). The classes join pointwise under concatenation, so a phrase's bound on an axis is the widest class any of its Words declares there — which is what lets a caller budget a program without running it.",
+     "required": [
+      "steps",
+      "numeric",
+      "collection"
+     ],
+     "properties": {
+      "steps": {
+       "$ref": "#/$defs/costAxis"
+      },
+      "numeric": {
+       "$ref": "#/$defs/costAxis"
+      },
+      "collection": {
+       "$ref": "#/$defs/costAxis"
+      }
+     },
+     "additionalProperties": false
     },
     "partiality": {
      "type": "string"
@@ -737,6 +760,28 @@
      }
     }
    }
+  },
+  "costAxis": {
+   "type": "object",
+   "description": "A sound upper bound on one metered resource. `class` bounds how the charge grows with the Word's input; `exact` records that some contribution provably attains it, rather than the bound being a safe over-approximation.",
+   "required": [
+    "class",
+    "exact"
+   ],
+   "properties": {
+    "class": {
+     "enum": [
+      "const",
+      "linear",
+      "superlinear",
+      "unbounded"
+     ]
+    },
+    "exact": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": false
   }
  }
 }

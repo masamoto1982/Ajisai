@@ -31,7 +31,7 @@ pub(crate) fn parse_cost_terms(
         let Some((axis, class_word)) = rest[i].split_once('=') else {
             break;
         };
-        let Some(class) = CostClass::from_str(class_word) else {
+        let Some(class) = CostClass::from_spec_str(class_word) else {
             return Err(format!(
                 "`#:contract {name}`: unknown cost class `{class_word}` (expected `const`/`linear`/`superlinear`/`unbounded`)"
             ));
@@ -114,8 +114,8 @@ fn check_cost_axis(
             },
             message: format!(
                 "`#:contract {name}`: declared cost {axis}={} but inferred {}{}.",
-                declared.as_str(),
-                inferred_class.as_str(),
+                declared.as_spec_str(),
+                inferred_class.as_spec_str(),
                 if exact { "" } else { " (unverified)" }
             ),
             code: if exact { None } else { code },

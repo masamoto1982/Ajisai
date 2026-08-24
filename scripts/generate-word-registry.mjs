@@ -51,29 +51,63 @@ const pascal = (value) =>
     .map((part) => part[0].toUpperCase() + part.slice(1).toLowerCase())
     .join('');
 
+// `ordered` derives `PartialOrd`/`Ord` for an enum whose spec declaration order
+// *is* a lattice order, so the runtime can compare variants directly instead of
+// mapping them through a hand-written rank. `parsed` additionally emits
+// `from_spec_str`, for the vocabularies a caller writes by hand (a `#:contract`
+// declaration) and the runtime therefore has to read back.
 const CONTRACT_ENUMS = [
-  ['Family', 'family', 'Semantic family the Word selects its shared laws from.'],
-  ['Consumption', 'consumption', 'How the Word treats its operands under the default mode (SPEC §13.2).'],
-  ['NilPolicy', 'nilPolicy', 'How the Word behaves when an operand is NIL (SPEC §7.12).'],
-  ['Partiality', 'partiality', 'Whether well-formed application is total, partial, or NIL-projecting.'],
-  ['Purity', 'purity', 'Observational purity class (SPEC §7.14).'],
-  ['Determinism', 'determinism', 'What the Word\'s result may depend on beyond its operands.'],
-  ['VocabularyTier', 'vocabularyTier', 'Where the Word sits in the public Core: the Semantic Kernel or the Standard vocabulary.'],
-  ['AcceptedDomain', 'acceptedDomain', 'The shape of operand the Word accepts, where the specification narrows it.'],
+  { rustName: 'Family', field: 'family', doc: 'Semantic family the Word selects its shared laws from.' },
+  { rustName: 'Consumption', field: 'consumption', doc: 'How the Word treats its operands under the default mode (SPEC §13.2).' },
+  { rustName: 'NilPolicy', field: 'nilPolicy', doc: 'How the Word behaves when an operand is NIL (SPEC §7.12).' },
+  { rustName: 'Partiality', field: 'partiality', doc: 'Whether well-formed application is total, partial, or NIL-projecting.' },
+  { rustName: 'Purity', field: 'purity', doc: 'Observational purity class (SPEC §7.14).' },
+  { rustName: 'Determinism', field: 'determinism', doc: 'What the Word\'s result may depend on beyond its operands.' },
+  { rustName: 'VocabularyTier', field: 'vocabularyTier', doc: 'Where the Word sits in the public Core: the Semantic Kernel or the Standard vocabulary.' },
+  { rustName: 'AcceptedDomain', field: 'acceptedDomain', doc: 'The shape of operand the Word accepts, where the specification narrows it.' },
+  {
+    rustName: 'CostClass',
+    field: 'class',
+    doc: 'Growth class of a Word\'s charge on one metered resource, as a function of its input.',
+    ordered: true,
+    parsed: true,
+    note:
+      'The variants are declared in the schema\'s own order, and that order **is** the\n'
+      + '/// lattice order the cost join widens along (`const` < `linear` < `superlinear` <\n'
+      + '/// `unbounded`), which is what the derived `Ord` means here. Reordering the\n'
+      + '/// schema enum would silently reorder the lattice, so `word_cost_tests.rs`\n'
+      + '/// asserts the chain directly.',
+  },
 ];
 
-const enumBlocks = CONTRACT_ENUMS.map(([rustName, field, doc]) => {
+const enumBlocks = CONTRACT_ENUMS.map(({ rustName, field, doc, ordered, parsed, note }) => {
   const values = schemaEnum(field);
   const variants = values.map((value) => `    /// \`${value}\`\n    ${pascal(value)},`).join('\n');
   const arms = values
     .map((value) => `            ${rustName}::${pascal(value)} => ${JSON.stringify(value)},`)
     .join('\n');
+  const parseArms = values
+    .map((value) => `            ${JSON.stringify(value)} => Some(${rustName}::${pascal(value)}),`)
+    .join('\n');
+  const derives = `Clone, Copy, Debug, PartialEq, Eq, Hash${ordered ? ', PartialOrd, Ord' : ''}`;
+  const fromSpecStr = parsed
+    ? `
+
+    /// The variant a canonical spec string names, or \`None\` when the string is
+    /// not one the specification admits.
+    pub fn from_spec_str(value: &str) -> Option<${rustName}> {
+        match value {
+${parseArms}
+            _ => None,
+        }
+    }`
+    : '';
   return `/// ${doc}
 ///
 /// Generated from the \`${field}\` enum in spec/words.schema.json: every value the
 /// specification admits is a variant, so the implementation vocabulary cannot be
-/// narrower than the canonical one.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// narrower than the canonical one.${note ? `\n///\n/// ${note}` : ''}
+#[derive(${derives})]
 pub enum ${rustName} {
 ${variants}
 }
@@ -84,7 +118,7 @@ impl ${rustName} {
         match self {
 ${arms}
         }
-    }
+    }${fromSpecStr}
 }`;
 }).join('\n\n');
 
@@ -109,6 +143,24 @@ const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
 if (duplicates.length > 0) {
   throw new Error(`words.json has duplicate executorKey values: ${[...new Set(duplicates)].join(', ')}`);
 }
+
+// The three cost axes are projected in a fixed order rather than by iterating
+// the entry's own key order, so a reordered `cost` object in spec/words.json
+// cannot silently permute which resource a bound is attached to.
+const COST_AXES = ['steps', 'numeric', 'collection'];
+// Emitted in the shape rustfmt produces, since the generated file is checked in
+// and CI runs `cargo fmt --check` over it: a one-line struct literal here would
+// regenerate clean and then fail formatting.
+const cost = (value) => {
+  const axes = COST_AXES.map((axis) => {
+    const declared = value[axis];
+    return `            ${axis}: CostAxis {
+                class: ${enumRef('CostClass', declared.class)},
+                exact: ${declared.exact},
+            },`;
+  });
+  return `WordCost {\n${axes.join('\n')}\n        }`;
+};
 
 // A projection condition of "never" is the absence of one, so it is projected
 // as `None` rather than as a string every reader would have to compare against.
@@ -138,6 +190,7 @@ const rows = entries
         accepted_domain: ${word.acceptedDomain ? `Some(AcceptedDomain::${pascal(word.acceptedDomain)})` : 'None'},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
+        cost: ${cost(word.cost)},
         vocabulary_tier: ${enumRef('VocabularyTier', word.vocabularyTier)},
         standard_kind: ${word.standardKind ? `Some(${rustStr(word.standardKind)})` : 'None'},
         effects: ${rustStrSlice(word.effects)},
@@ -183,6 +236,34 @@ impl Arity {
     }
 }
 
+/// A Word's declared charge on one metered resource.
+///
+/// \`class\` is a **sound upper bound**: the charge never grows faster than this
+/// in the Word's input. \`exact\` records that some contribution provably
+/// *attains* the class — the witness that lets a \`#:contract\` mismatch be
+/// reported as an error rather than a note, since without it a looser class
+/// might simply be an over-approximation the caller has every right to beat.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct CostAxis {
+    pub class: CostClass,
+    pub exact: bool,
+}
+
+/// A Word's declared charge on all three metered resources, projected from
+/// spec/words.json.
+///
+/// The three axes are the runtime's own counters (\`executionSteps\` /
+/// \`numericWork\` / \`collectionWork\`), so a declared bound and a measured
+/// \`resourceUsage\` are answers about the same quantity. They join pointwise
+/// under concatenation, which is what lets a phrase's bound be computed from
+/// its Words' bounds without running it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct WordCost {
+    pub steps: CostAxis,
+    pub numeric: CostAxis,
+    pub collection: CostAxis,
+}
+
 /// A Word's spec-declared contract, projected from spec/words.json with each
 /// field typed by the vocabulary spec/words.schema.json declares for it.
 #[derive(Debug)]
@@ -212,6 +293,10 @@ pub struct GeneratedWord {
     pub accepted_domain: Option<AcceptedDomain>,
     pub purity: Purity,
     pub determinism: Determinism,
+    /// What the Word charges on each metered resource. Read by
+    /// \`interpreter::word_cost\`, which joins these bounds along a phrase to
+    /// bound it without executing it.
+    pub cost: WordCost,
     /// Which half of the public Core the Word belongs to. Both halves are
     /// ordinary sealed-Core Words reached by their plain names; the tier is a
     /// design classification the reading surfaces report, never a namespace.

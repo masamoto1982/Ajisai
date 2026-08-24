@@ -162,7 +162,45 @@ Every result carries the profile it ran under in `mcp.limits`, alongside
 `mcp.serverVersion`, `mcp.engineVersion` and `mcp.backend.kind`. Exceeding a
 ceiling is a diagnosed outcome, never a hang. The full profile is also readable
 without a tool call at `ajisai://limits`, the result contract at
-`ajisai://schema/result`, and the whole vocabulary at `ajisai://vocabulary`.
+`ajisai://schema/result`, every Word's full contract at `ajisai://contracts`,
+and the inventory with its semantic classification at `ajisai://vocabulary`.
+
+## 7. Budget before you run
+
+Every Word publishes what it charges, so you can bound a program without
+executing it. `word_contract` (and `ajisai://contracts`, for all of them at
+once) carries a `cost` object with one entry per metered resource:
+
+```json
+"cost": {
+  "steps":      { "class": "const",  "exact": true },
+  "numeric":    { "class": "linear", "exact": true },
+  "collection": { "class": "const",  "exact": true }
+}
+```
+
+`class` is a sound upper bound on how the charge grows with the Word's input —
+`const` < `linear` < `superlinear` < `unbounded`. The classes **join
+pointwise**: a phrase's bound on each axis is the widest class any of its Words
+declares on that axis, so you can compute a phrase's bound by reading its Words
+rather than by running it. `exact: true` means some contribution provably
+attains the class; `exact: false` marks a sound over-approximation the real run
+may beat.
+
+The three axes are the same counters a result reports back in
+`runtimeMetrics`, so a bound and a measurement are answers about one quantity.
+Two practical rules:
+
+- An `unbounded` axis means the charge is not a function of input *size* —
+  `MAP`/`FILTER`/`FOLD` run a block you supply, and `RANGE`/`FILL` are sized by
+  an operand's *value*. Pin those with literal operands, or expect to meet a
+  ceiling.
+- `infer_contracts` bounds Words you define yourself, without executing their
+  bodies — so a definition can be budgeted before it is ever called. It reports
+  the class per axis directly (`"cost": { "steps": "const", … }`) rather than as
+  a `{class, exact}` pair: an inferred bound states what the inference derived,
+  and its exactness is observable instead as whether `suggested` carries that
+  axis — `suggested` names only the axes the declaration checker can verify.
 
 ---
 
