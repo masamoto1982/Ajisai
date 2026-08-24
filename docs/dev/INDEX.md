@@ -35,6 +35,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察 | `[観察ノート]` |
 | `ajisai-single-axis-proposal-2026-08.md` | 中心概念を「絞り込み（narrowing）」一本に定める提案。到達不能契約の実測と、七つの改修案。うちⅡ・Ⅲ・Ⅴ・Ⅵ・Ⅶは実施済み（PR #1563/#1564/#1567）、Ⅰは指示書のみ | `[観察ノート]` |
 | `type-unification-work-order-2026-08.md` | 改修Ⅰ（CodeBlock/Vector 統合）の指示書。読み取り専用の前提再検証（Phase 0）→ 使い捨てブランチでの測定スパイク（Phase 1）→ 実装（Phase 2、未着手）の三段階。破壊的変更であり互換性方針の扱いを人間の判断待ちとしている | `[設計根拠]` |
+| `type-unification-phase0-report-2026-08.md` | 改修Ⅰの Phase 0 実測報告。`Value::Symbol` 追加で壊れる 48/49 箇所、非交差性に依存する conformance 22 件、書き換えが要る正典 6 節の確定一覧。指示書の停止条件が発火しており Phase 1 は未着手 | `[観察ノート]` |
 
 ## エージェント/CLI・GUI
 
