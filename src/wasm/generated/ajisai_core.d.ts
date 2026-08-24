@@ -6,10 +6,6 @@ export class AjisaiInterpreter {
     [Symbol.dispose](): void;
     clear_io_output_buffer(): void;
     /**
-     * Clear all injected serial receive buffers and disconnected flags.
-     */
-    clear_serial_inboxes(): void;
-    /**
      * Discard every value on the stack, leaving the dictionary, the output
      * and every other piece of session state untouched.
      *
@@ -65,11 +61,6 @@ export class AjisaiInterpreter {
     host_profile(): string;
     is_safe_preview_word(name: string): boolean;
     lookup_word_definition(name: string): any;
-    /**
-     * Mark a serial port as disconnected by the host. Once its inbox is empty,
-     * `SERIAL@READ` projects `NilReason::PortDisconnected`.
-     */
-    mark_serial_disconnected(_port_id: string): void;
     constructor();
     push_json_string(json_string: string): any;
     remove_word(name: string): void;
@@ -119,12 +110,6 @@ export class AjisaiInterpreter {
      */
     snapshot_stack(): string;
     update_input_buffer(_text: string): void;
-    /**
-     * Inject the host-received bytes for a serial port (Section 9.4). Replaces
-     * any buffer previously set for this port id and clears the port's
-     * disconnected flag. `SERIAL@READ` drains this buffer.
-     */
-    update_serial_inbox(_port_id: string, _bytes: Uint8Array): void;
 }
 
 /**
@@ -182,7 +167,6 @@ export interface InitOutput {
     readonly ajisaiinterpreter_host_profile: (a: number) => [number, number];
     readonly ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: number) => number;
     readonly ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
-    readonly ajisaiinterpreter_mark_serial_disconnected: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_new: () => number;
     readonly ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
@@ -192,11 +176,9 @@ export interface InitOutput {
     readonly ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;
     readonly ajisaiinterpreter_snapshot_stack: (a: number) => [number, number, number, number];
-    readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly init_panic_hook: () => void;
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
+    readonly init_panic_hook: () => void;
     readonly ajisaiinterpreter_reset_session: (a: number) => any;
-    readonly ajisaiinterpreter_clear_serial_inboxes: (a: number) => void;
     readonly wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h0896cde0637cafae: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

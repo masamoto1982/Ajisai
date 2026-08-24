@@ -30,8 +30,9 @@ export default defineConfig({
   // docs/dev/browser-parallelism-phase5-rollout.md). Tauri runs in a native
   // WebView that does not need them.
   server: {
+    host: '0.0.0.0',
     port: 3000,
-    open: !isTauri,
+    open: false,
     strictPort: true,
     headers: isTauri
       ? {}
