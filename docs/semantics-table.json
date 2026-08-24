@@ -12627,6 +12627,48 @@
       "outcome": "value"
     },
     {
+      "word": "PROBE",
+      "inputs": [
+        "scalar"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "PROBE",
+      "inputs": [
+        "boolean"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "PROBE",
+      "inputs": [
+        "string"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "PROBE",
+      "inputs": [
+        "vector"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "PROBE",
+      "inputs": [
+        "nil"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "PROBE",
+      "inputs": [
+        "codeblock"
+      ],
+      "outcome": "value"
+    },
+    {
       "word": "NIL",
       "inputs": [],
       "outcome": "nil:literal"

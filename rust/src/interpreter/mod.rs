@@ -27,6 +27,7 @@ pub mod logic;
 pub mod math_ops;
 pub(crate) mod naming_convention_checker;
 mod ordering_ops;
+mod probe;
 mod reflection;
 mod resolve_cache;
 pub mod runtime_limits;
@@ -42,6 +43,7 @@ mod word_candidates;
 pub mod word_contract;
 mod word_contract_flow;
 mod word_contract_lattice;
+mod word_contract_probe;
 #[cfg(test)]
 mod word_contract_tests;
 mod word_contract_widen;

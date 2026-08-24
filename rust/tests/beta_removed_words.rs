@@ -66,7 +66,7 @@ async fn removed_beta_words_are_unknown_through_reflect_decode() {
 async fn removed_beta_words_are_unknown_in_a_compiled_user_word() {
     for word in REMOVED_WORDS {
         let mut interpreter = Interpreter::new();
-        let source = format!("{{ 1 {word} }} 'PROBE' DEF PROBE");
+        let source = format!("{{ 1 {word} }} 'CALL-REMOVED' DEF CALL-REMOVED");
         let error = match interpreter.execute(&source).await {
             Ok(()) => panic!("removed Word {word} executed from a compiled body"),
             Err(error) => error,

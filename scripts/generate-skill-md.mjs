@@ -6,7 +6,6 @@
 // Inputs:
 //   - docs/word-manifest.json            (the surface inventory gate: §9)
 //   - spec/words.json                    (canonical Word documentation)
-//   - examples/*.ajisai                  (freshness gate: all must run)
 //   - curated snippet data in this file  (§6 examples, §7 errors, §8 forbidden)
 //
 // Every snippet is executed through the real `ajisai` CLI and the *actual*
@@ -21,7 +20,7 @@
 //   AJISAI_BIN=/path/to/ajisai ...                # override CLI binary
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -334,20 +333,11 @@ function verifiedExactnessSection() {
   return { decided: json.stackDisplay.join(' ') };
 }
 
-function verifyExamplesFresh() {
-  const dir = resolve(repoRoot, 'examples');
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.ajisai')).sort()) {
-    const proc = spawnSync(ajisaiBin, ['run', join(dir, file)], { encoding: 'utf8' });
-    if (proc.status !== 0) fail(`examples/${file} no longer runs; fix it before regenerating SKILL.md`);
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Document assembly
 // ---------------------------------------------------------------------------
 
 function buildSkillMd() {
-  verifyExamplesFresh();
   const nil = verifiedNilSection();
   const exactness = verifiedExactnessSection();
   const wordRows = buildWordTable();

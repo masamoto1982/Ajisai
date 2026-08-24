@@ -6,8 +6,8 @@
   "summary": {
     "primitives": 24,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 17,
-    "distinct_conformance_cases": 70
+    "distinct_law_test_files": 18,
+    "distinct_conformance_cases": 74
   },
   "primitives": [
     {
@@ -587,9 +587,9 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 10,
-      "law_test_count": 3,
-      "conformance_case_count": 7,
+      "derived_word_count": 11,
+      "law_test_count": 4,
+      "conformance_case_count": 11,
       "derived_words": [
         "core.bind",
         "core.cond",
@@ -600,9 +600,11 @@
         "core.fold",
         "core.import.name-resolution",
         "core.map",
+        "core.probe",
         "exploratory.child-runtime"
       ],
       "law_tests": [
+        "rust/src/interpreter/probe.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/naming_resolution_laws.rs",
         "rust/tests/standard_operational_laws.rs"
@@ -613,6 +615,10 @@
         "core-fold",
         "core-fold-word-name",
         "core-map",
+        "core-probe-never-runs-the-block",
+        "core-probe-pure-block",
+        "core-probe-rejects-non-codeblock",
+        "core-probe-unresolved-word-is-a-gap",
         "core-user-definition-resolved",
         "standard-filter"
       ]
@@ -664,17 +670,24 @@
       "algebraic_family": "observation",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 2,
-      "law_test_count": 1,
-      "conformance_case_count": 0,
+      "derived_word_count": 3,
+      "law_test_count": 2,
+      "conformance_case_count": 4,
       "derived_words": [
+        "core.probe",
         "host.lookup",
         "hosted.missing-capability.diagnostics"
       ],
       "law_tests": [
+        "rust/src/interpreter/probe.rs",
         "rust/tests/naming_resolution_laws.rs"
       ],
-      "conformance_cases": []
+      "conformance_cases": [
+        "core-probe-never-runs-the-block",
+        "core-probe-pure-block",
+        "core-probe-rejects-non-codeblock",
+        "core-probe-unresolved-word-is-a-gap"
+      ]
     },
     {
       "id": "algebra.reflection.involution",

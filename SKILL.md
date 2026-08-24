@@ -163,8 +163,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-65 canonical Words in one flat Core dictionary, of which
-36 form the Semantic Kernel and 29 are Standard Words. Both are
+66 canonical Words in one flat Core dictionary, of which
+37 form the Semantic Kernel and 29 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -226,6 +226,7 @@ no module system and nothing to import.
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
 | `EXEC` | control | Evaluate a code block. — e.g. `{ 1 2 ADD } EXEC` |
+| `PROBE` | control | Infer a CodeBlock's contract against the current dictionary, without evaluating it. — e.g. `{ 1 2 ADD } PROBE` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
