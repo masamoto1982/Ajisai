@@ -15,12 +15,6 @@ export class AjisaiInterpreter {
         wasm.ajisaiinterpreter_clear_io_output_buffer(this.__wbg_ptr);
     }
     /**
-     * Clear all injected serial receive buffers and disconnected flags.
-     */
-    clear_serial_inboxes() {
-        wasm.ajisaiinterpreter_clear_serial_inboxes(this.__wbg_ptr);
-    }
-    /**
      * Discard every value on the stack, leaving the dictionary, the output
      * and every other piece of session state untouched.
      *
@@ -194,16 +188,6 @@ export class AjisaiInterpreter {
         const ret = wasm.ajisaiinterpreter_lookup_word_definition(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
-    /**
-     * Mark a serial port as disconnected by the host. Once its inbox is empty,
-     * `SERIAL@READ` projects `NilReason::PortDisconnected`.
-     * @param {string} _port_id
-     */
-    mark_serial_disconnected(_port_id) {
-        const ptr0 = passStringToWasm0(_port_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.ajisaiinterpreter_mark_serial_disconnected(this.__wbg_ptr, ptr0, len0);
-    }
     constructor() {
         const ret = wasm.ajisaiinterpreter_new();
         this.__wbg_ptr = ret;
@@ -337,20 +321,6 @@ export class AjisaiInterpreter {
         const ptr0 = passStringToWasm0(_text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.ajisaiinterpreter_update_input_buffer(this.__wbg_ptr, ptr0, len0);
-    }
-    /**
-     * Inject the host-received bytes for a serial port (Section 9.4). Replaces
-     * any buffer previously set for this port id and clears the port's
-     * disconnected flag. `SERIAL@READ` drains this buffer.
-     * @param {string} _port_id
-     * @param {Uint8Array} _bytes
-     */
-    update_serial_inbox(_port_id, _bytes) {
-        const ptr0 = passStringToWasm0(_port_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passArray8ToWasm0(_bytes, wasm.__wbindgen_malloc);
-        const len1 = WASM_VECTOR_LEN;
-        wasm.ajisaiinterpreter_update_serial_inbox(this.__wbg_ptr, ptr0, len0, ptr1, len1);
     }
 }
 if (Symbol.dispose) AjisaiInterpreter.prototype[Symbol.dispose] = AjisaiInterpreter.prototype.free;
@@ -847,13 +817,6 @@ function makeMutClosure(arg0, arg1, f) {
     };
     CLOSURE_DTORS.register(real, state, state);
     return real;
-}
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {

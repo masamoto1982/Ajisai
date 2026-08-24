@@ -6,10 +6,6 @@ export class AjisaiInterpreter {
     [Symbol.dispose](): void;
     clear_io_output_buffer(): void;
     /**
-     * Clear all injected serial receive buffers and disconnected flags.
-     */
-    clear_serial_inboxes(): void;
-    /**
      * Discard every value on the stack, leaving the dictionary, the output
      * and every other piece of session state untouched.
      *
@@ -65,11 +61,6 @@ export class AjisaiInterpreter {
     host_profile(): string;
     is_safe_preview_word(name: string): boolean;
     lookup_word_definition(name: string): any;
-    /**
-     * Mark a serial port as disconnected by the host. Once its inbox is empty,
-     * `SERIAL@READ` projects `NilReason::PortDisconnected`.
-     */
-    mark_serial_disconnected(_port_id: string): void;
     constructor();
     push_json_string(json_string: string): any;
     remove_word(name: string): void;
@@ -119,12 +110,6 @@ export class AjisaiInterpreter {
      */
     snapshot_stack(): string;
     update_input_buffer(_text: string): void;
-    /**
-     * Inject the host-received bytes for a serial port (Section 9.4). Replaces
-     * any buffer previously set for this port id and clears the port's
-     * disconnected flag. `SERIAL@READ` drains this buffer.
-     */
-    update_serial_inbox(_port_id: string, _bytes: Uint8Array): void;
 }
 
 /**
