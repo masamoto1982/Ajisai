@@ -235,13 +235,13 @@ async fn a_symbol_inside_a_vector_literal_never_widens_purity() {
 }
 
 #[tokio::test]
-async fn a_block_written_inside_a_vector_literal_is_erased_not_quoted() {
-    // `collect_vector_with_depth` (`vector_literal.rs`) has no BlockStart/
-    // BlockEnd arm: `{ }` found while collecting a vector is skipped, and its
-    // interior splices into the *enclosing* vector as plain elements —
-    // `[ { PRINT } { 1 } ]` evaluates to `[ 'PRINT' 1/1 ]`, not a vector
-    // holding a CodeBlock. So PRINT here must not widen either, however
-    // deeply the `[`/`{` alternate, as long as a `[` is innermost.
+async fn a_block_written_inside_a_vector_literal_is_quoted_but_never_run() {
+    // `collect_vector_with_depth` (`vector_literal.rs`) captures a `{ }`
+    // found while collecting a vector as a genuine CodeBlock element —
+    // `[ { PRINT } { 1 } ]` evaluates to `[ { PRINT } { 1 } ]`, a vector
+    // holding two CodeBlocks. Neither runs merely by the vector literal
+    // being built, so PRINT here must not widen either, however deeply the
+    // `[`/`{` alternate, as long as a `[` is innermost.
     for body in [
         "[ { PRINT } ]",
         "[ { PRINT } { 1 } ]",

@@ -128,7 +128,46 @@ impl Interpreter {
                      '|' is control directive sugar for COND-CLAUSE and is meaningful only inside a COND expression.",
                 ));
                 }
-                _ => {
+                Token::BlockStart => {
+                    // A `{ ... }` written inside a Vector literal is data where
+                    // it is written (LANG.SOURCE.FRAME): capture its tokens as
+                    // an unevaluated CodeBlock element, the same way the
+                    // top-level execution loop captures a bare block
+                    // (`execution_loop.rs`'s `Token::BlockStart` arm), rather
+                    // than reading through the delimiters and flattening the
+                    // block's contents into this Vector. Depth-tracked scan,
+                    // not a recursive call, so it carries no additional stack
+                    // risk beyond the vector-nesting guard above.
+                    let mut block_depth: i32 = 1;
+                    let mut j = i + 1;
+                    let mut block_tokens: Vec<Token> = Vec::new();
+                    while j < tokens.len() && block_depth > 0 {
+                        match &tokens[j] {
+                            Token::BlockStart => {
+                                block_depth += 1;
+                                block_tokens.push(tokens[j].clone());
+                            }
+                            Token::BlockEnd => {
+                                block_depth -= 1;
+                                if block_depth > 0 {
+                                    block_tokens.push(tokens[j].clone());
+                                }
+                            }
+                            token => block_tokens.push(token.clone()),
+                        }
+                        j += 1;
+                    }
+                    if block_depth != 0 {
+                        return Err(AjisaiError::from("Unclosed code block"));
+                    }
+                    values.push(Value::from_code_block(block_tokens));
+                    has_other = true;
+                    i = j;
+                }
+                Token::BlockEnd => {
+                    return Err(AjisaiError::from("Unexpected code block end"));
+                }
+                Token::LineBreak | Token::NilCoalesce => {
                     i += 1;
                 }
             }
