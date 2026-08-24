@@ -5,7 +5,7 @@ const KERNEL = new Set(`TRUE FALSE AND NOT EQ LT GT
 ADD MUL DIV FLOOR NEG SQRT
 GET LENGTH CONCAT COLLECT RANGE FOLD
 CHARS JOIN NUM STR
-COND EXEC NIL NIL? NIL-REASON VENT KEEP BIND DEF DEL PRINT REFLECT RANDOM`.split(/\s+/));
+COND EXEC PROBE NIL NIL? NIL-REASON VENT KEEP BIND DEF DEL PRINT REFLECT RANDOM`.split(/\s+/));
 const STANDARD = new Set(`OR NEQ LTE GTE SUB MOD ROUND QUANTIZE ABS MIN MAX
 TAKE REVERSE FILL SORT ORDER UNIQUE TALLY ZIP SUM PUT GROUP INDEX-OF MAP FILTER ANY ALL
 TRIM TOKENIZE`.split(/\s+/));
@@ -45,7 +45,7 @@ for (const name of setDifference(KERNEL, kernelWords)) errors.push(`${name}: mis
 for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: unexpected Semantic Kernel classification`);
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
-if (kernelWords.size !== 36) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 36`);
+if (kernelWords.size !== 37) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 37`);
 if (standardWords.size !== 29) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 29`);
 
 const isPhaseOne = contracts.migration?.betaFreezePhase === 1;
@@ -55,7 +55,7 @@ if (isPhaseOne) {
   for (const name of setDifference(REMOVED, pendingRemoval)) errors.push(`${name}: missing from phase 1 removal set`);
   for (const name of setDifference(pendingRemoval, REMOVED)) errors.push(`${name}: unclassified Word is not in the removal set`);
 } else {
-  if (words.length !== 65) errors.push(`canonical inventory has ${words.length} Words; expected 65`);
+  if (words.length !== 66) errors.push(`canonical inventory has ${words.length} Words; expected 66`);
   for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 }
 
@@ -127,10 +127,16 @@ if (errors.length) {
   errors.forEach((error) => console.error(`[minimal-core] ${error}`));
   process.exit(1);
 }
-console.log('[minimal-core] 36/36 Semantic Kernel Words have executable witnesses.');
-console.log('[minimal-core] 29/29 Standard Words have complete contracts and law witnesses.');
+console.log(
+  `[minimal-core] ${kernelWords.size}/${kernelWords.size} Semantic Kernel Words have executable witnesses.`,
+);
+console.log(
+  `[minimal-core] ${standardWords.size}/${standardWords.size} Standard Words have complete contracts and law witnesses.`,
+);
 console.log(
   `[minimal-core] ${DERIVABLE.size}/${DERIVABLE.size} derivable Standards carry a Kernel-only witness; ` +
     `${OPERATIONAL.size}/${OPERATIONAL.size} operational Standards state a native retention reason.`,
 );
-if (isPhaseOne) console.log('[minimal-core] phase 1: 13 alpha Words remain explicitly pending removal.');
+if (isPhaseOne) {
+  console.log(`[minimal-core] phase 1: ${REMOVED.size} alpha Words remain explicitly pending removal.`);
+}

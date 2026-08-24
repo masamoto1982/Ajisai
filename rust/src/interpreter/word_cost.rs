@@ -173,7 +173,14 @@ pub(crate) fn builtin_cost(id: WordId) -> CostBound {
         // `Reflect` converts a CodeBlock token sequence to/from a Vector, a
         // size-dependent conversion plausibly linear in body length —
         // measured for none of these, so `exact` stays false throughout.
-        Chars | Tokenize | Trim | Str | Num | Bind | Def | Print | Reflect => (Linear, false),
+        // `Probe` walks a block's tokens the same single pass `Reflect` does
+        // — resolving each call's dependency contracts, never evaluating the
+        // block itself — so it shares `Reflect`'s bound rather than `Exec`'s:
+        // unlike `Exec`, nothing about `Probe`'s own cost depends on what the
+        // block would do if run.
+        Chars | Tokenize | Trim | Str | Num | Bind | Def | Print | Reflect | Probe => {
+            (Linear, false)
+        }
         Map | Filter | Fold | Any | All | Exec | Cond => (Unbounded, false),
         // Constants, comparisons, logic, and exact arithmetic touch no
         // collection by construction — confirmed for the arithmetic and

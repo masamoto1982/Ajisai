@@ -262,7 +262,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 65 canonical Words and 12 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 65, a 36-Word Semantic Kernel carries the semantic identity of the language and 29 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
+The vocabulary is 66 canonical Words and 12 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 66, a 37-Word Semantic Kernel carries the semantic identity of the language and 29 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -498,7 +498,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 65 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. The host's lookup, hover, the Reference, and execution must identify the same canonical entry.</p>
+<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 66 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. The host's lookup, hover, the Reference, and execution must identify the same canonical entry.</p>
 
 <h3 id="lang-dictionary-mutation">LANG.DICTIONARY.MUTATION — User Words</h3>
 
@@ -532,7 +532,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-contract-check">LANG.CONTRACT.CHECK — Pre-execution check</h3>
 
-<p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>.</p>
+<p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>. <code>PROBE</code> reaches the same inference from inside the language, over a CodeBlock rather than a named declaration: it never evaluates its operand, so calling it carries none of the operand's own effects.</p>
 
 <p>The check is deliberately <strong>conservative and partial</strong>. It reports exactly three outcomes per declaration: <em>verified</em>, <em>violated</em>, or <em>cannot verify</em>. Anything outside the syntactic fragment the inference analyzes — a higher-order body whose block is not statically known, or dynamic control — is reported as <em>cannot verify</em> and is never silently passed. A tool that reports <em>verified</em> for an unanalyzable body is nonconforming.</p>
 <p>These three results are the trichotomy of LANG.FAILURE.TRICHOTOMY applied at check time rather than at run time: verified corresponds to a value — the inferred contract itself — cannot verify to a reasoned absence, and violated to an error. The correspondence classifies outcomes, not mechanisms, and does not make the check evaluate the program: division by zero, a failed parse and an out-of-range index already share one outcome category while sharing no mechanism, and an inference that could not decide joins that list on the same terms.</p>

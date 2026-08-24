@@ -472,3 +472,33 @@ README はこのディレクトリを「More examples」としてリンクして
 - **改修Ⅲ(b)**: `scripts/check-unreachable-contract.mjs` を新設し、Quality Gate に組み込んだ（`npm run check:unreachable-contract`）。範囲は §7.2 の通りフィールド名到達可能性のみ。
 
 検証: `cargo test --all-targets` 1108件全通過、生成 Rust ファイル（`word_registry.rs`・`generated_core_word_docs.rs`）に差分なし（＝削除は Rust 側の型・分岐に一切影響しない）。npm ゲート31ステップ（MCP ブロック9ステップを含む）全通過。`cargo fmt` / `clippy` 緑。
+
+## 8. 追記（実施済み・改修Ⅱ）
+
+改修Ⅱ（契約推論を Core Word として露出）を実施した。`PROBE` として実装し、65→66語、Semantic Kernel 36→37語。
+
+### 8.1 実装の要点
+
+`rust/src/agent/word_contract.rs`（改称なし、既存の推論エンジン）の中核関数 `infer_word_contract_inner` は、当初の想定より再利用しやすかった。これは辞書に登録された「名前付き Word」を前提に見えたが、実際の再帰的な走査は `WordDefinition`（`lines: Arc<[ExecutionLine]>` 他）に対して行われており、名前は再帰検出とキャッシュキーの構成にしか使われていない。そこで CodeBlock の生トークン列を、DEF が使うのと同じ `parse_definition_body` で行分割し、**辞書に一切挿入しない**使い捨ての `WordDefinition` を合成して同じ関数に渡す、という最小差分の設計で足りた。
+
+**キャッシュキー衝突という実装上の罠。** 合成 `WordDefinition` の `registration_order` を固定値にすると、内容の異なる複数の CodeBlock が同じ依存語集合を呼ぶ場合に、契約推論の内部キャッシュが誤って他方の推論結果を返す危険があった。`next_registration_order()` を呼ぶたびに新規発行することで回避した。詳細は `word_contract_probe.rs` のコメントに残した。
+
+**ファイルサイズ予算超過。** `infer_contract_for_block` を `word_contract.rs` に足すと540行になり、`check:file-size` の500行予算（§14.1）を超えた。既存の `word_contract_flow.rs`/`word_contract_lattice.rs`/`word_contract_widen.rs` という分割規約に倣い、`word_contract_probe.rs` へ切り出した。`infer_word_contract_inner` を `pub(crate)` に昇格させたのはこの分割のためだけである。
+
+### 8.2 設計判断
+
+**出力形状。** `[ 'key' value ]` ペアの Vector、6フィールド（`purity`/`determinism`/`nil`/`effects`/`confidence`/`gaps`）。当初案が想定した「`words.json` のレコードと同じ形」ではなく、`#:contract` 宣言が検証できる部分集合（purity, nil）に「cannot verify をデータとして読めるようにする」ための2軸（`confidence`, `gaps`）を足した最小集合にした。arity とコストは意図的に外した——arity は `stack.inputs`/`outputs` のような単純な数値では表現できず（改修Ⅵで判明した通り、フレーム引数と呼び出しオペランド数は別物）、コストは `ajisai contract` が既に持つコストクラス表現（`cost.steps`/`numeric`/`collection`）を Ajisai 値としてどう表すか別途の設計判断が要るため、次の版に持ち越した。
+
+**family 分類。** 提案時は「reflection family」を想定していたが、`semantic-families.json` の `reflection` family は `dictionaryAccess: "none"` を宣言しており、これは REFLECT が「辞書状態と無関係」であることを正確に表す一方、PROBE は依存語を辞書解決する（結果が辞書状態に依存する）ため、この family へ入れると偽の主張になる。この2フィールドはどの検査スクリプトからも参照されておらず実害はないが、今回の作業全体が「宣言されているが正しくない事実」を潰す取り組みだったため、`control`（COND/EXEC と同じ family。`dictionaryAccess` 等の追加フィールドを持たない）に分類した。
+
+**Kernel/Standard。** Kernel とした。README の Kernel 判定基準「値域を構築・観測する語、または制御・作用・辞書変更・局所命名・NIL回復・コード/データ境界のための唯一の明示操作」に "pre-execution contract inference" を追加した——PROBE は「実行前契約検査のための唯一の明示操作」であり、VENT が「NIL回復のための唯一の明示操作」であるのと同じ構造。
+
+**`docs/formalization-coverage.json` への統合。** 新語を追加すると `check:minimal-core` が「Core の全語は `Formalized` ステータスかつ `Primitive`/`Derived` の `semantic_role` を持つ」ことを要求する——`Exploratory` は `kind: coreword`（実際の辞書語）には使えず、`kind: semantic-area`（SPAWN/AWAIT のような「まだ辞書語になっていない検討中の領域」）専用だった。これは意図的なゲートで、「代数的裏付けなしに正典語彙を増やせない」という制約そのものである。PROBE は `state-transformer.composition`（EXEC と共通の基盤——構造を評価せずに観測する点が異なる）と `observation.structured-diagnostic`（gap を構造化診断として観測する）から `Derived` とした。
+
+### 8.3 検証
+
+`{ 1 2 ADD } PROBE` → `pure`/`deterministic`/`complete`/`gaps: []`。`{ 42 PRINT } PROBE` → `effectful`/`effects: ['consoleWrite']` **かつ出力ストリームは空**（ブロックは一度も実行されていない——設計上の核心である「never evaluates its operand」を実行結果で確認)。`{ UNDEFINED-WORD } PROBE` → `confidence: conservative`/`gaps: ['gap.unresolvedWord']`。非 CodeBlock オペランドと NIL オペランドは ERROR、KEEP は正しくオペランドを保持。
+
+Rust 単体テスト7件を `probe.rs` に追加。conformance corpus に4件追加（275→279）。`cargo test --all-targets` 1115/1115。npm ゲート30ステップ（MCP ブロック9ステップ含む）全通過。`cargo fmt`/`clippy` 緑。
+
+**副産物として見つかった問題を2件、その場で修正した。** (1) `rust/tests/beta_removed_words.rs` が無関係なテストのプレースホルダー名として `'PROBE' DEF` を使っており、新語追加で衝突・失敗した——`'CALL-REMOVED' DEF` へ改名。(2) `scripts/check-minimal-core.mjs` の成功時ログが `kernelWords.size` 等の実測値ではなく `36/36`・`29/29`・`13` という**ハードコードされた文字列**を無条件に出力しており、検証ロジック自体は正しく37を数えていたのに、成功メッセージだけが古い数を表示し続ける状態だった。実測値から動的に組み立てるよう修正した——本書がこのセッション全体を通じて繰り返し見つけてきた「宣言されているが実態と結びついていない値」の、CIスクリプト内での再発である。

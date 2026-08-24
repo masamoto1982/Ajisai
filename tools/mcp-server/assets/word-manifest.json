@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 65,
-    "semanticKernelWords": 36,
+    "canonicalWords": 66,
+    "semanticKernelWords": 37,
     "standardWords": 29,
-    "corewords": 65,
+    "corewords": 66,
     "aliases": 12,
     "inputHelpers": 1,
     "surface_forms": 10,
-    "manifestEntries": 88
+    "manifestEntries": 89
   },
   "entries": [
     {
@@ -1017,6 +1017,24 @@
       "core_tier": "flow",
       "derived_from": [
         "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.probe",
+      "kind": "coreword",
+      "surface": "PROBE",
+      "category": "control",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "PROBE",
+      "coverage_entry_id": "core.probe",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow",
+      "derived_from": [
+        "algebra.state-transformer.composition",
+        "algebra.observation.structured-diagnostic"
       ],
       "classification": "Core"
     },

@@ -1554,6 +1554,48 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- LANG.CONTRACT.CHECK: PROBE reaches the same pre-execution inference
+     `ajisai check --contract` runs from outside the language. A pure block
+     infers as pure, deterministic, and complete with no gaps. -->
+
+<section class="ajisai-case" id="core-probe-pure-block" data-category="core">
+  <h3>PROBE infers a pure block as pure, with no gaps</h3>
+  <pre class="ajisai-source">{ 1 2 ADD } PROBE</pre>
+  <pre class="ajisai-expect-result">[ [ 'purity' 'pure' ] [ 'determinism' 'deterministic' ] [ 'nil' 'propagates' ] [ 'effects' [ ] ] [ 'confidence' 'complete' ] [ 'gaps' [ ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- Unlike EXEC, PROBE never evaluates its operand, so an effectful block's
+     effect is reported as data (LANG.CONTRACT.CHECK) without ever firing:
+     the block would PRINT if run, but PROBE does not run it. -->
+
+<section class="ajisai-case" id="core-probe-never-runs-the-block" data-category="core">
+  <h3>PROBE reports an effect without ever performing it</h3>
+  <pre class="ajisai-source">{ 42 PRINT } PROBE</pre>
+  <pre class="ajisai-expect-result">[ [ 'purity' 'effectful' ] [ 'determinism' 'nonDeterministic' ] [ 'nil' 'propagates' ] [ 'effects' [ 'consoleWrite' ] ] [ 'confidence' 'complete' ] [ 'gaps' [ ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- An unresolved dependency is the checker's own "cannot verify" outcome
+     carried as data (LANG.CONTRACT.CHECK, trichotomy-unification.md): a gap
+     id, not an ERROR — PROBE itself is total over any well-formed
+     CodeBlock. -->
+
+<section class="ajisai-case" id="core-probe-unresolved-word-is-a-gap" data-category="core">
+  <h3>PROBE reports an unresolved dependency as a gap, not an error</h3>
+  <pre class="ajisai-source">{ UNDEFINED-WORD } PROBE</pre>
+  <pre class="ajisai-expect-result">[ [ 'purity' 'pure' ] [ 'determinism' 'deterministic' ] [ 'nil' 'neverCreates' ] [ 'effects' [ ] ] [ 'confidence' 'conservative' ] [ 'gaps' [ 'gap.unresolvedWord' ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-probe-rejects-non-codeblock" data-category="core">
+  <h3>PROBE rejects a Scalar: only a CodeBlock can be probed</h3>
+  <pre class="ajisai-source">5 PROBE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">PROBE requires a CodeBlock</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- Observable staging contract of PRECOMPUTE (Section 7.7). -->
 
 <!-- Native recursion-depth guard (Sections 8.4, 11.1): a runtime safety

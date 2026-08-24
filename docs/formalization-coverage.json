@@ -1572,6 +1572,37 @@
       "core_tier": "flow"
     },
     {
+      "id": "core.probe",
+      "kind": "coreword",
+      "surface": "PROBE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/trichotomy-unification.md"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/probe.rs"
+      ],
+      "conformance_cases": [
+        "core-probe-pure-block",
+        "core-probe-never-runs-the-block",
+        "core-probe-unresolved-word-is-a-gap",
+        "core-probe-rejects-non-codeblock"
+      ],
+      "status": "Formalized",
+      "notes": "PROBE runs the same word-contract inference ajisai check --contract and ajisai contract already expose from outside the language (word_contract.rs, infer_word_contract), over an anonymous CodeBlock instead of a named dictionary Word. It examines a state-transformer composition's structure without composing/running it, and reports what inference could not resolve as structured diagnostic data (the gap ids trichotomy-unification.md derives as the check-time counterpart of a NIL reason) rather than as an opaque failure.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.composition",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
+    },
+    {
       "id": "core.map",
       "kind": "coreword",
       "surface": "MAP",
@@ -1754,7 +1785,6 @@
       "capability": "time.read",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-
     },
     {
       "id": "hosted.missing-capability.diagnostics",

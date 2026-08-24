@@ -89,7 +89,10 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Map | Filter | Fold | Any | All => (Unbounded, false),
         Exec | Cond => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
-        Get | Length | Reflect => (Const, false),
+        // `Probe` joins `Reflect` here for the same reason: it walks the
+        // block's tokens once without evaluating them, so its output scales
+        // with the block's own size rather than with anything unbounded.
+        Get | Length | Reflect | Probe => (Const, false),
         NilCheck | NilReason => (Const, false),
         True | False | Nil => (Const, false),
         // Structure builders bounded by their operands' total size.
