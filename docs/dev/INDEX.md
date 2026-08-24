@@ -33,7 +33,8 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `spec-impl-drift-tactic.md` | 仕様と実装が食い違ったときの裁定戦術 | `[設計根拠]` |
 | `language-coherence-review-2026-08.md` | 外部「整合化改修案」の検証と、正典収束計画への差し替え | `[方針記録]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察 | `[観察ノート]` |
-| `ajisai-single-axis-proposal-2026-08.md` | 中心概念を「絞り込み（narrowing）」一本に定める提案。到達不能契約の実測と、七つの改修案（未承認・未実施） | `[観察ノート]` |
+| `ajisai-single-axis-proposal-2026-08.md` | 中心概念を「絞り込み（narrowing）」一本に定める提案。到達不能契約の実測と、七つの改修案。うちⅡ・Ⅲ・Ⅴ・Ⅵ・Ⅶは実施済み（PR #1563/#1564/#1567）、Ⅰは指示書のみ | `[観察ノート]` |
+| `type-unification-work-order-2026-08.md` | 改修Ⅰ（CodeBlock/Vector 統合）の指示書。読み取り専用の前提再検証（Phase 0）→ 使い捨てブランチでの測定スパイク（Phase 1）→ 実装（Phase 2、未着手）の三段階。破壊的変更であり互換性方針の扱いを人間の判断待ちとしている | `[設計根拠]` |
 
 ## エージェント/CLI・GUI
 
