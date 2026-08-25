@@ -1,7 +1,15 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
 
 const isTauri = !!process.env.TAURI_ENV_TARGET_TRIPLE;
 const target = process.env.AJISAI_BUILD_TARGET === 'tauri' ? 'tauri' : 'web';
+
+// The release version the four synced manifests declare. `package.json` is the
+// source of truth `check:version-sync` holds the others to, so reading it here
+// keeps the badge's tooltip from becoming a fifth place to forget to update.
+function releaseVersion(): string {
+  return JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version;
+}
 
 function buildTimestampLabel(): string {
   const now = new Date();
@@ -18,7 +26,8 @@ export default defineConfig({
   base: target === 'tauri' ? '/' : './',
   define: {
     __AJISAI_TARGET__: JSON.stringify(target),
-    __AJISAI_BUILD_TIMESTAMP__: JSON.stringify(buildTimestampLabel())
+    __AJISAI_BUILD_TIMESTAMP__: JSON.stringify(buildTimestampLabel()),
+    __AJISAI_RELEASE_VERSION__: JSON.stringify(releaseVersion())
   },
   // Cross-origin isolation for SharedArrayBuffer-backed wasm threading
   // (implicit-parallelism roadmap Phase 5). These response headers make

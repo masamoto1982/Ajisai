@@ -12,6 +12,7 @@ export default defineConfig({
     // only defines build-time constants; it adds no DOM or coverage tooling.
     define: {
         __AJISAI_BUILD_TIMESTAMP__: JSON.stringify('test'),
+        __AJISAI_RELEASE_VERSION__: JSON.stringify('test'),
     },
     test: {
         // Co-locate tests with source: src/**/*.test.ts.
