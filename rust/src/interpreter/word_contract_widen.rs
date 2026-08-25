@@ -20,25 +20,28 @@
 //! while already inside `[ ]` as re-entering "code." It is tempting to
 //! reach for a stack (an inner `{ }` genuinely does mean code, once outside
 //! any vector — see the `{ { 2 MUL } MAP }` case below), but a `{`/`}` found
-//! *while a Vector literal is already being collected* is not a nested code
-//! literal at all: `Interpreter::collect_vector_with_depth`
-//! (`vector_literal.rs`) has no `Token::BlockStart`/`Token::BlockEnd` arm —
-//! they fall through its catch-all `_ => { i += 1; }` and are silently
-//! skipped, so their interior tokens splice directly into the *enclosing*
-//! vector as if the braces were never written. Measured:
-//! `[ { PRINT } { 1 } ]` evaluates to `[ 'PRINT' 1/1 ]`, not a vector
-//! containing a `CodeBlock` — there is no vector-literal syntax that stores
-//! an executable quotation (`COLLECT` does, by gathering already-evaluated
-//! stack *values*, which is a wholly different, non-literal path this
-//! module does not need to special-case: the `{ }` there is written outside
-//! any `[ ]`, at vector depth 0, and widens normally). A bracket-kind stack
-//! would have `[ { PRINT } ] } 0 GET EXEC`-shaped bodies widen as if `{ }`
-//! survived vector nesting, which is simply not what the source denotes —
-//! and, worse, undercounts vector depth on the way back out, so a *later*,
+//! *while a Vector literal is already being collected* still does not need
+//! one: `Interpreter::collect_vector_with_depth` (`vector_literal.rs`)
+//! captures it as a genuine `CodeBlock` element (its own
+//! `Token::BlockStart`/`Token::BlockEnd` arm mirrors the top-level capture in
+//! `execution_loop.rs`), but that element is inert data until something
+//! later extracts and `EXEC`s it — building the vector does not run it.
+//! Measured: `[ { PRINT } { 1 } ]` evaluates to `[ { PRINT } { 1 } ]`, a
+//! vector holding two `CodeBlock`s, neither of which has run (`COLLECT`
+//! reaches a *running* quotation the same way, by gathering already-evaluated
+//! stack *values* and later `GET`+`EXEC`ing one — a wholly different,
+//! non-literal path this module does not need to special-case: the `{ }`
+//! there is written outside any `[ ]`, at vector depth 0, and widens
+//! normally). So a Symbol lexically inside an unclosed `[` never executes at
+//! that point in the source, whatever punctuation surrounds it: either it is
+//! bare and denotes its own name, or it sits inertly inside a captured
+//! `CodeBlock` element — and the widen gate only ever needs the one fact
+//! `collect_vector` itself keys of, "are we inside an unclosed `[`", to
+//! suppress it. A bracket-kind stack would answer a different, unneeded
+//! question (whether the *immediately enclosing* delimiter is `{` or `[`)
+//! and would undercount vector depth on the way back out, so a *later*,
 //! genuinely top-level Symbol after the vector closes could inherit a stale
-//! bracket kind. The flat counter has neither failure mode: it only ever
-//! answers "are we inside an unclosed `[`", the one fact `collect_vector`
-//! itself keys of, whatever punctuation appears inside.
+//! bracket kind. The flat counter has neither failure mode.
 //!
 //! # `REFLECT`: the sole crossing back from data to code
 //!
