@@ -111,7 +111,7 @@ change what counts as a violation.
 - `code` is present (a string) only on a `"severity": "note"` finding, and is
   `null` for every `"severity": "error"` finding: a proven violation is not
   something inference merely failed to decide, so it carries no gap.
-- The six gap ids, and no others: `gap.unresolvedWord` (a symbol the body
+- The five gap ids, and no others: `gap.unresolvedWord` (a symbol the body
   calls does not resolve to any word), `gap.recursiveDependency` (inference
   re-entered a word that is already being inferred — direct or mutual
   recursion), `gap.dependencyUnknown` (a dependency's own inference could not
@@ -119,11 +119,10 @@ change what counts as a violation.
   cautious contract without going through one of the other reasons),
   `gap.unmodelledControlFlow` (the body reaches a control directive whose
   paths differ in stack height — `^`, `|` — or an unbalanced `[`/`{`
-  delimiter, so no fixed arity describes it), `gap.opaqueReflection` (the
-  body calls `REFLECT`, which can turn code-data whose Word names were never
-  `Symbol` tokens into a `CodeBlock`; inference cannot know what a value it
-  produces will do once something runs it, so it never trusts `REFLECT`'s
-  own optimistic registry contract for that).
+  delimiter, so no fixed arity describes it). `gap.opaqueReflection` was
+  retired along with `REFLECT` (CodeBlock/Vector unification, docs/dev/
+  type-unification-work-order-2026-08.md): every Vector is executable now,
+  so there is no separate crossing whose contents inference cannot trust.
 - `gapSummary.declarationsChecked` counts successfully-parsed `#:contract`
   declarations; `verified + cannotVerify + violated` always equals it. A
   malformed directive (one that never became a checkable declaration) still
