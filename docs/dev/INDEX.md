@@ -38,6 +38,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `type-unification-phase0-report-2026-08.md` | 改修Ⅰの Phase 0 実測報告。`Value::Symbol` 追加で壊れる 48/49 箇所、非交差性に依存する conformance 22 件、書き換えが要る正典 6 節の確定一覧。指示書の停止条件が発火しており Phase 1 は未着手 | `[観察ノート]` |
 | `type-unification-phase1-report-2026-08.md` | 改修Ⅰの Phase 1 スパイク報告。使い捨てブランチ（main 非マージ）で (A) 案を実装し conformance 279 件中 23 件の非通過を実測（Phase 0 の見積もり 22 件とほぼ一致）。`COND` の節ブロック発見が統合と構造的に相容れないという新しい壁を発見 | `[観察ノート]` |
 | `type-unification-phase2-report-2026-08.md` | 改修Ⅰの Phase 2 実装報告。`COND` を固定2オペランド規約（`value { { guard \| body } ... } COND`）へ再設計し、`DEF` の契約推論忠実性問題を新たに発見・対処。REFLECT を削除し§5.1の表示非単射性を解消。正典・生成ドキュメント・適合性コーパスを更新、全ゲート緑 | `[観察ノート]` |
+| `spec-impl-readme-reference-consistency-audit-2026-08.md` | 正典・実装・README・Reference 日本語版の四面整合性監査。全 gate 緑・`cargo test --lib` 986 件緑の下で残る乖離 10 件を実機実行で確定。最重要は `spec/host-protocol-v2.schema.json` が統合前の 6 定義域（`codeBlock`）を宣言し `SPECIFICATION.html` の `Symbol` と矛盾する点 | `[観察ノート]` |
 
 ## エージェント/CLI・GUI
 
