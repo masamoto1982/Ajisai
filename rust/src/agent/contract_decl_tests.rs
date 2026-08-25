@@ -384,28 +384,4 @@ mod contract_decl_tests {
             assert_eq!(exit_code(&source), 0, "body: {body}");
         }
     }
-
-    // -----------------------------------------------------------------
-    // `REFLECT` closes a false-*verified* hole, not a false-error one
-    // (`gap.opaqueReflection`): a body that genuinely prints through
-    // `REFLECT EXEC` must never come back `outcome: "value"` for a `pure`
-    // declaration.
-    // -----------------------------------------------------------------
-
-    #[test]
-    fn reflect_exec_reports_the_opaque_reflection_gap_not_a_false_verify() {
-        let source = "{ [ 'AJISAI-CODE-1' [ 'string' 'hi' ] [ 'symbol' 'PRINT' ] ] \
-                       REFLECT EXEC } 'SNEAK' DEF\n#:contract SNEAK pure nil-free";
-        let decls = contract_decls(source);
-        let findings = decls["findings"].as_array().expect("findings array");
-        assert!(!findings.is_empty(), "expected at least one finding");
-        for finding in findings {
-            assert_eq!(finding["severity"], "note");
-            assert_eq!(finding["code"], "gap.opaqueReflection");
-        }
-        assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
-        assert_eq!(decls["outcome"], "nil");
-        // A note never fails the check.
-        assert_eq!(exit_code(source), 0);
-    }
 }

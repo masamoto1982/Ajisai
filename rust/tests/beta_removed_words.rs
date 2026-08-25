@@ -40,21 +40,25 @@ async fn removed_beta_words_are_unknown_at_runtime() {
     }
 }
 
-/// A removed name reached through `REFLECT`'s code-data decoder is still an
-/// Unknown Word: decoding builds a CodeBlock, it does not resolve names, so the
-/// deleted entry cannot reappear behind the reflection boundary.
+/// A removed name reached as a bare Symbol inside a `[ ]`-built Vector is
+/// still an Unknown Word: building the literal does not resolve names (LANG.
+/// VALUES.VECTOR), so the deleted entry cannot reappear by being constructed
+/// as data rather than written directly as source (`REFLECT`, which used to
+/// be the dedicated crossing for this, is gone along with the CodeBlock/
+/// Vector split it crossed — docs/dev/type-unification-work-order-2026-08.md;
+/// any Vector is executable now, so there is no separate boundary to test).
 #[tokio::test]
-async fn removed_beta_words_are_unknown_through_reflect_decode() {
+async fn removed_beta_words_are_unknown_through_a_constructed_vector() {
     for word in REMOVED_WORDS {
         let mut interpreter = Interpreter::new();
-        let source = format!("[ 'AJISAI-CODE-1' [ 'symbol' '{word}' ] ] REFLECT EXEC");
+        let source = format!("[ {word} ] EXEC");
         let error = match interpreter.execute(&source).await {
-            Ok(()) => panic!("removed Word {word} executed after REFLECT decode"),
+            Ok(()) => panic!("removed Word {word} executed from a constructed Vector"),
             Err(error) => error,
         };
         assert!(
             matches!(error, AjisaiError::UnknownWord(ref name) if name == word),
-            "{word} resolved through the REFLECT decoder: {error}"
+            "{word} resolved through a constructed Vector: {error}"
         );
     }
 }

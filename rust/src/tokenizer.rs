@@ -177,7 +177,22 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
             Token::VectorEnd if delimiters.pop() == Some(Token::VectorStart) => {}
             Token::BlockEnd if delimiters.pop() == Some(Token::BlockStart) => {}
             Token::VectorEnd | Token::BlockEnd => return Err("mismatched code delimiter".into()),
-            Token::CondClauseSep if delimiters.last() != Some(&Token::BlockStart) => {
+            // A stored Word body's `|` reaches this validator already
+            // re-expanded as `[ ]` rather than `{ }` — a nested clause
+            // block, once built as a Vector, no longer remembers which
+            // bracket spelling wrote it (CodeBlock/Vector unification,
+            // docs/dev/type-unification-work-order-2026-08.md), and
+            // `value_as_code.rs`'s bridge back to tokens always re-expands a
+            // nested Vector as `[ ]`. So both spellings are accepted as a
+            // valid enclosing delimiter for `|` here; whether it actually
+            // sits inside a legitimate COND clause is decided later, when
+            // `split_clause_blocks` tries to split the block that held it.
+            Token::CondClauseSep
+                if !matches!(
+                    delimiters.last(),
+                    Some(&Token::BlockStart) | Some(&Token::VectorStart)
+                ) =>
+            {
                 return Err("'|' separator is only valid directly inside a code block".into())
             }
             _ => {}

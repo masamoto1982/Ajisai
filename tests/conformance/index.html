@@ -75,15 +75,17 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- LANG.VALUES.VECTOR: inside a Vector literal a name is data — its own text —
-     and no dictionary lookup occurs, so a literal denotes the same value under
-     every dictionary state. Only TRUE / FALSE / NIL denote values. The last case
-     records the consequence: a misspelling here is an element, not an error. -->
+<!-- LANG.VALUES.VECTOR: inside a Vector literal a name denotes a Symbol — data
+     until something executes it — and no dictionary lookup occurs while the
+     literal is built, so a literal denotes the same value under every
+     dictionary state. Only TRUE / FALSE / NIL denote values. The last case
+     records the consequence: a misspelling here is a Symbol element, not an
+     error — nothing about building the literal ever resolves a name. -->
 
 <section class="ajisai-case" id="core-vector-name-is-data" data-category="core">
-  <h3>A name inside a Vector literal is its own text</h3>
+  <h3>A name inside a Vector literal denotes a Symbol</h3>
   <pre class="ajisai-source">[ FOO 1 ]</pre>
-  <pre class="ajisai-expect-result">[ 'FOO' 1/1 ]</pre>
+  <pre class="ajisai-expect-result">[ FOO 1/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -91,7 +93,7 @@
   <h3>A Vector literal denotes the same value when the name is a defined Word</h3>
   <pre class="ajisai-source">{ [ 99 ] } 'FOO' DEF
 [ FOO 1 ]</pre>
-  <pre class="ajisai-expect-result">[ 'FOO' 1/1 ]</pre>
+  <pre class="ajisai-expect-result">[ FOO 1/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -103,9 +105,9 @@
 </section>
 
 <section class="ajisai-case" id="core-vector-misspelling-is-an-element" data-category="core">
-  <h3>A misspelled name inside a Vector literal is a String element, not an error</h3>
+  <h3>A misspelled name inside a Vector literal is a Symbol element, not an error</h3>
   <pre class="ajisai-source">[ 1 LENGHT 2 ]</pre>
-  <pre class="ajisai-expect-result">[ 1/1 'LENGHT' 2/1 ]</pre>
+  <pre class="ajisai-expect-result">[ 1/1 LENGHT 2/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1384,7 +1386,7 @@
 
 <section class="ajisai-case" id="core-cond-truthy-number-guard" data-category="core">
   <h3>A guard reducing to the bare number 1 fires as truthy</h3>
-  <pre class="ajisai-source">7 { 1 } { [ 42 ] } COND</pre>
+  <pre class="ajisai-source">7 { { 1 } { [ 42 ] } } COND</pre>
   <pre class="ajisai-expect-result">[ 42/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1392,8 +1394,10 @@
 <section class="ajisai-case" id="core-cond-idle-fires-in-written-order" data-category="core">
   <h3>IDLE fires where it is written, not after every other clause</h3>
   <pre class="ajisai-source">TRUE
+{
 { IDLE | 1 }
 { TRUE | 0 }
+}
 COND</pre>
   <pre class="ajisai-expect-result">1/1</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1402,9 +1406,11 @@ COND</pre>
 <section class="ajisai-case" id="core-cond-clause-above-idle-wins" data-category="core">
   <h3>A clause written above IDLE still wins; one written below it cannot</h3>
   <pre class="ajisai-source">5
+{
 { 99 GT | 'a' }
 { IDLE | 'b' }
 { 0 GT | 'c' }
+}
 COND</pre>
   <pre class="ajisai-expect-result">'b'</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1412,16 +1418,17 @@ COND</pre>
 
 <section class="ajisai-case" id="core-cond-one-line-is-the-same-program" data-category="core">
   <h3>Clause layout is presentation: a COND written flat denotes the same program</h3>
-  <pre class="ajisai-source">5 { 3 GT | 'big' } { IDLE | 'small' } COND</pre>
+  <pre class="ajisai-source">5 { { 3 GT | 'big' } { IDLE | 'small' } } COND</pre>
   <pre class="ajisai-expect-result">'big'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-word-body-multi-line-cond" data-category="core">
   <h3>A word body may hold a multi-line COND inside a nested block</h3>
-  <pre class="ajisai-source">{ { { 0 GT | 1 }
+  <pre class="ajisai-source">{ { {
+{ 0 GT | 1 }
 { IDLE | 0 }
-COND } MAP } 'STEPFN' DEF
+} COND } MAP } 'STEPFN' DEF
 [ -1 2 ] STEPFN</pre>
   <pre class="ajisai-expect-result">[ 0/1 1/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1534,15 +1541,16 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- A Vector is data and is never executable (LANG.SOURCE.CODE), so EXEC
-     raises its registered nonCodeBlock ERROR rather than reinterpreting the
-     value as source. -->
+<!-- CodeBlock/Vector unification (LANG.VALUES.DISJOINT, LANG.SOURCE.CODE):
+     `{ }` and `[ ]` are two spellings of the same Vector domain, so a Vector
+     built with either spelling is equally executable — EXEC does not
+     distinguish how its operand was written, only whether its elements form
+     a valid program. -->
 
-<section class="ajisai-case" id="core-exec-rejects-vector" data-category="core">
-  <h3>EXEC rejects a Vector: data is never code</h3>
+<section class="ajisai-case" id="core-exec-runs-a-bracket-spelled-vector" data-category="core">
+  <h3>EXEC runs a [ ]-spelled Vector exactly as it would a { }-spelled block</h3>
   <pre class="ajisai-source">[ 1 2 ADD ] EXEC</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected code block</pre>
+  <pre class="ajisai-expect-result">3/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1622,9 +1630,10 @@ W</pre>
 <section class="ajisai-case" id="core-self-recursion-through-map-block" data-category="core">
   <h3>A self-call inside a MAP block recurses (nested-block self-recursion)</h3>
   <pre class="ajisai-source">{
+{
 { 2 LT | 1 * }
 { IDLE | [ 1 2 ] - { FIB } MAP 0 { + } FOLD }
-COND } 'FIB' DEF
+} COND } 'FIB' DEF
 [ 0 10 ] RANGE { FIB } MAP</pre>
   <pre class="ajisai-expect-result">[ 0/1 1/1 1/1 2/1 3/1 5/1 8/1 13/1 21/1 34/1 55/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1633,9 +1642,10 @@ COND } 'FIB' DEF
 <section class="ajisai-case" id="core-self-recursion-through-exec-block" data-category="core">
   <h3>A self-call inside an EXEC block recurses (nested-block self-recursion)</h3>
   <pre class="ajisai-source">{
+{
 { 0 LTE | 0 * }
 { IDLE | 1 - { CNT } EXEC 1 + }
-COND } 'CNT' DEF
+} COND } 'CNT' DEF
 7 CNT</pre>
   <pre class="ajisai-expect-result">7/1</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1644,9 +1654,10 @@ COND } 'CNT' DEF
 <section class="ajisai-case" id="core-self-recursion-through-filter-block" data-category="core">
   <h3>A self-call inside a FILTER block recurses (nested-block self-recursion)</h3>
   <pre class="ajisai-source">{
+{
 { 0 EQ | 0 EQ }
 { IDLE | 1 - { EVENP } EXEC NOT }
-COND } 'EVENP' DEF
+} COND } 'EVENP' DEF
 { { EVENP } EXEC } 'EVENQ' DEF
 [ 0 1 2 3 4 5 ] { EVENQ } FILTER</pre>
   <pre class="ajisai-expect-result">[ 0/1 2/1 4/1 ]</pre>
@@ -1800,21 +1811,21 @@ COND } 'EVENP' DEF
 <section class="ajisai-case" id="core-lift-comparison-vector-scalar" data-category="core">
   <h3>A scalar combines with every element of a vector</h3>
   <pre class="ajisai-source">[ 3 4 ] 4 LT</pre>
-  <pre class="ajisai-expect-result">{ TRUE FALSE }</pre>
+  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-lift-comparison-scalar-vector" data-category="core">
   <h3>Lifting is symmetric: the scalar may be either operand</h3>
   <pre class="ajisai-source">3 [ 4 5 ] LT</pre>
-  <pre class="ajisai-expect-result">{ TRUE TRUE }</pre>
+  <pre class="ajisai-expect-result">[ TRUE TRUE ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-lift-comparison-equal-lengths" data-category="core">
   <h3>Two vectors of equal length combine element-wise</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 3 1 ] LT</pre>
-  <pre class="ajisai-expect-result">{ TRUE FALSE }</pre>
+  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1829,14 +1840,14 @@ COND } 'EVENP' DEF
 <section class="ajisai-case" id="core-lift-no-singleton-projection" data-category="core">
   <h3>A one-element vector is lifted over, not projected to its element</h3>
   <pre class="ajisai-source">[ 3 ] 4 LT</pre>
-  <pre class="ajisai-expect-result">{ TRUE }</pre>
+  <pre class="ajisai-expect-result">[ TRUE ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-lift-comparison-nil-lane" data-category="core">
   <h3>Each lane preserves the scalar law's NIL distinction</h3>
   <pre class="ajisai-source">[ 1 NIL ] 2 LT</pre>
-  <pre class="ajisai-expect-result">{ TRUE NIL }</pre>
+  <pre class="ajisai-expect-result">[ TRUE NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2098,33 +2109,21 @@ COND } 'EVENP' DEF
      through the structure of the following MUSIC@PLAY audio effect. -->
 
 
-<!-- ===================== REFLECTION ===================== -->
-<section class="ajisai-case" id="reflection-code-to-data" data-category="core">
-<h3>REFLECT exposes canonical token data</h3><pre class="ajisai-source">{ 1 2 ADD } REFLECT</pre><pre class="ajisai-expect-result">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-data-exec" data-category="core">
-<h3>Canonical data crosses the boundary before EXEC</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ] REFLECT EXEC</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-data-does-not-execute" data-category="core">
-<h3>REFLECT never evaluates represented code</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ] REFLECT</pre><pre class="ajisai-expect-result">{ 1 2 ADD }</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-empty-round-trip" data-category="core">
-<h3>Empty CodeBlock round trips</h3><pre class="ajisai-source">{ } REFLECT REFLECT</pre><pre class="ajisai-expect-result">{ }</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-dynamic-def" data-category="core">
-<h3>Canonical data can explicitly define a Word</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'symbol' 'ADD' ] ] REFLECT 'INC-R' DEF 5 INC-R</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-symbol-string-distinct" data-category="core">
-<h3>Symbol and String token records remain distinct</h3><pre class="ajisai-source">{ ADD } REFLECT { 'ADD' } REFLECT EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-malformed-errors" data-category="core">
-<h3>Malformed code data is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' 'extra' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">malformed canonical code data</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-keep" data-category="core">
-<h3>KEEP preserves the reflected operand</h3><pre class="ajisai-source">{ 1 } KEEP REFLECT</pre><pre class="ajisai-expect-result">{ 1 } [ 'AJISAI-CODE-1' [ 'number' '1' ] ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-lexemes-preserved" data-category="core">
-<h3>REFLECT preserves lexical token spelling</h3><pre class="ajisai-source">{ 1 1/1 1.0 ADD add + 'ADD' } REFLECT</pre><pre class="ajisai-expect-result">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '1/1' ] [ 'number' '1.0' ] [ 'symbol' 'ADD' ] [ 'symbol' 'add' ] [ 'symbol' '+' ] [ 'string' 'ADD' ] ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-undefined-symbol-is-not-resolved" data-category="core">
-<h3>REFLECT constructs unresolved code without resolving it</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'symbol' 'UNDEFINED-BY-REFLECT' ] ] REFLECT</pre><pre class="ajisai-expect-result">{ UNDEFINED-BY-REFLECT }</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-dictionary-independent" data-category="core">
-<h3>Code data is independent of User dictionary state</h3><pre class="ajisai-source">{ FOO-R } REFLECT { 1 } 'FOO-R' DEF { FOO-R } REFLECT EQ</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-wrong-header-errors" data-category="core">
-<h3>Wrong code-data version is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-2' [ 'number' '1' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="reflection-arbitrary-vector-errors" data-category="core">
-<h3>An arbitrary Vector is not code data</h3><pre class="ajisai-source">[ 'ordinary' 'vector' ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
+<!-- ===================== CodeBlock/Vector unification (LANG.VALUES.DISJOINT, LANG.SOURCE.CODE) ===================== -->
+<!-- `REFLECT` (formerly here as "REFLECTION") is gone: it existed to cross a
+     boundary between two domains, CodeBlock and Vector, that this unification
+     removes. Its capabilities are ordinary consequences of `{ }` and `[ ]`
+     denoting the same domain now, demonstrated directly below rather than
+     through a dedicated crossing word — there is no boundary left to name. -->
+
+<section class="ajisai-case" id="core-brace-and-bracket-spellings-are-equal" data-category="core">
+<h3>{ } and [ ] are two spellings of one value: EQ holds across them</h3><pre class="ajisai-source">{ 1 2 ADD } [ 1 2 ADD ] EQ</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="core-brace-spelled-vector-is-an-ordinary-vector" data-category="core">
+<h3>A { }-spelled Vector is an ordinary Vector: LENGTH reaches it like any other</h3><pre class="ajisai-source">{ 1 2 ADD } LENGTH</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="core-bare-name-is-a-symbol-distinct-from-its-string" data-category="core">
+<h3>A bare name denotes a Symbol, distinct from the same spelling as a String</h3><pre class="ajisai-source">{ ADD } [ 0 ] GET { 'ADD' } [ 0 ] GET EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="core-computed-vector-defines-a-word" data-category="core">
+<h3>DEF accepts any Vector as a body, computed or literal</h3><pre class="ajisai-source">[ 1 ] { ADD } CONCAT 'INC-C' DEF 5 INC-C</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
 <!-- Beta Standard Word contract cases (Issue #1429, Phase 3). -->
 <!-- Local bindings (LANG.SOURCE.FRAME). -->
 <section class="ajisai-case" id="core-binding-names-a-value" data-category="core"><h3>A binding names a value for the rest of the frame</h3><pre class="ajisai-source">[ 2 7 ] [ 'W' 'B' ] BIND W B ADD W MUL</pre><pre class="ajisai-expect-result">18/1</pre><div class="ajisai-expect-effects"></div></section>

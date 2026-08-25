@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **66 Words**, of which **37** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **65 Words**, of which **36** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -613,7 +613,7 @@ Apply a code block to each element of a vector.
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 ] { 2 MUL } MAP`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `FILTER`
 
@@ -627,7 +627,7 @@ Keep only the elements for which a predicate block returns TRUE.
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 ] { 2 = } FILTER`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `FOLD`
 
@@ -641,7 +641,7 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 ] [ 0 ] { + } FOLD`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `ANY`
 
@@ -655,7 +655,7 @@ TRUE if at least one element satisfies the predicate.
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 ] { 2 = } ANY`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `ALL`
 
@@ -669,7 +669,7 @@ TRUE if every element satisfies the predicate.
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 2 4 ] { 2 MOD 0 = } ALL`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `CHARS`
 
@@ -756,16 +756,16 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 
 ## `COND`
 
-Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.
+Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** variable input(s) → 1 output(s); `conditional` consumption
+- **Stack:** 2 input(s) → 1 output(s); `conditional` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
-- **Syntax:** `1 { TRUE } { 'y' } { IDLE } { 'n' } COND`
+- **Syntax:** `1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND`
 - **ERROR conditions:** `invalidClauseShape`, `nonTruthGuard`
 
 ## `EXEC`
@@ -780,7 +780,7 @@ Evaluate a code block.
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
 - **Syntax:** `{ 1 2 ADD } EXEC`
-- **ERROR conditions:** `nonCodeBlock`, `nestedExecutionError`
+- **ERROR conditions:** `notExecutable`, `nestedExecutionError`
 
 ## `PROBE`
 
@@ -794,7 +794,7 @@ Infer a CodeBlock's contract against the current dictionary, without evaluating 
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`, `LANG.CONTRACT.CHECK`
 - **Syntax:** `{ 1 2 ADD } PROBE`
-- **ERROR conditions:** `nonCodeBlock`
+- **ERROR conditions:** `notExecutable`
 
 ## `NIL`
 
@@ -917,18 +917,3 @@ Write the top stack value to the output stream, consuming it. A string is writte
 - **Effects:** `consoleWrite`
 - **Clauses:** `LANG.EFFECTS.OUTPUT`, `LANG.MACHINE.ORDER`
 - **Syntax:** `42 PRINT`
-
-## `REFLECT`
-
-Convert between a CodeBlock and its canonical structured data representation without evaluating the code.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `reflection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.SOURCE.REFLECTION`
-- **Syntax:** `CodeBlock REFLECT
-code-data REFLECT`
-- **ERROR conditions:** `nonReflectableValue`, `malformedCodeData`

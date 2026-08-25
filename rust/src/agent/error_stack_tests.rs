@@ -86,7 +86,7 @@ mod error_stack_tests {
         // The block that was applied is small, so it is still there in full:
         // the budget drops what it must, not everything.
         assert_eq!(
-            report["stackDisplay"][2], "{ * }",
+            report["stackDisplay"][2], "[ * ]",
             "an affordable slot is untouched"
         );
     }

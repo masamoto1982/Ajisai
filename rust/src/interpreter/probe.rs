@@ -3,18 +3,18 @@
 //! `ajisai check --contract` and `ajisai contract` already run this same
 //! inference (`Interpreter::infer_word_contract`) over a named dictionary
 //! Word, from outside the language. `PROBE` is the same operation reached
-//! from inside it: narrowing a description (a CodeBlock) into what can be
-//! known about it without running it, over `Interpreter::
-//! infer_contract_for_block`. Narrowing is total here — a well-formed
-//! CodeBlock always yields a knowledge Vector, never NIL — because the
-//! trichotomy this check reports (`LANG.CONTRACT.CHECK`: verified / cannot
-//! verify / violated) lives inside the returned value, as `confidence` and
-//! `gaps`, not in PROBE's own outcome category.
+//! from inside it: narrowing a description (any Vector, since the CodeBlock/
+//! Vector unification) into what can be known about it without running it,
+//! over `Interpreter::infer_contract_for_block`. Narrowing is total here — a
+//! well-formed operand always yields a knowledge Vector, never NIL — because
+//! the trichotomy this check reports (`LANG.CONTRACT.CHECK`: verified /
+//! cannot verify / violated) lives inside the returned value, as
+//! `confidence` and `gaps`, not in PROBE's own outcome category.
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::word_contract::WordContract;
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Interpretation, Value};
 
 pub(crate) fn op_probe(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
@@ -28,13 +28,22 @@ pub(crate) fn op_probe(interp: &mut Interpreter) -> Result<()> {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
 
-    let ValueData::CodeBlock(tokens) = &value.data else {
+    // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
+    let Some(elements) = value.as_vector_view() else {
         if !is_keep_mode {
             interp.stack.push(value);
         }
         return Err(AjisaiError::from("PROBE requires a CodeBlock"));
     };
-    let tokens = tokens.clone();
+    let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements) {
+        Ok(t) => t,
+        Err(e) => {
+            if !is_keep_mode {
+                interp.stack.push(value);
+            }
+            return Err(e);
+        }
+    };
 
     let contract = interp.infer_contract_for_block(&tokens);
     let result = knowledge_vector(&contract);
@@ -131,7 +140,6 @@ fn knowledge_vector(contract: &WordContract) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::Token;
 
     /// Reads PROBE's `[ 'key' value ]`-pair Vector into a lookup by key, so
     /// tests read as assertions about facts rather than about Vector shape.
@@ -215,7 +223,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("{ 1 } KEEP PROBE").await.unwrap();
         assert_eq!(interp.stack.len(), 2);
-        assert!(interp.stack.first().unwrap().is_code_block());
+        assert!(interp.stack.first().unwrap().as_vector_view().is_some());
         assert!(interp.stack.last().unwrap().as_vector().is_some());
     }
 
@@ -226,7 +234,7 @@ mod tests {
         let user_word_count = interp.user_words.len();
         interp
             .stack
-            .push(Value::from_code_block(vec![Token::Symbol("ADD".into())]));
+            .push(Value::from_vector_promoted(vec![Value::from_symbol("ADD")]));
 
         op_probe(&mut interp).unwrap();
 

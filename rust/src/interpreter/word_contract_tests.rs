@@ -280,36 +280,3 @@ async fn a_map_over_a_literal_block_still_widens_regardless_of_purity() {
     let effectful = contract_for("{ { PRINT } MAP } 'PRINTALL' DEF", "PRINTALL").await;
     assert_eq!(effectful.purity, ContractPurity::Effectful);
 }
-
-// ---------------------------------------------------------------------------
-// `REFLECT` regression tests (`word_contract_widen.rs`, `OpaqueReflection`).
-// ---------------------------------------------------------------------------
-
-#[tokio::test]
-async fn reflect_exec_of_code_data_is_never_verified_pure() {
-    // Measured: this body prints "hi" at run time (`ajisai run`), yet before
-    // the `OpaqueReflection` fix this inferred `pure`/`complete` — a false
-    // *verified*, not a false error.
-    let source = "{ [ 'AJISAI-CODE-1' [ 'string' 'hi' ] [ 'symbol' 'PRINT' ] ] \
-                   REFLECT EXEC } 'SNEAK' DEF";
-    let contract = contract_for(source, "SNEAK").await;
-    assert_eq!(contract.purity, ContractPurity::Effectful);
-    assert_eq!(contract.confidence, ContractConfidence::Conservative);
-    assert!(contract
-        .gaps
-        .contains(&crate::agent::contract_gap::GapCode::OpaqueReflection));
-}
-
-#[tokio::test]
-async fn reflect_of_a_literal_block_never_reaching_exec_is_still_conservative() {
-    // The safe direction (CodeBlock -> data, pure introspection) is
-    // deliberately over-approximated too: REFLECT's own contribution is
-    // always the conservative one, regardless of which direction it runs, so
-    // this reports `effectful`/conservative even though it never prints —
-    // never a false error (a `pure` declaration here becomes a note, not an
-    // error), only a stricter "cannot verify" than a provenance-aware model
-    // would give.
-    let contract = contract_for("{ { 1 2 ADD } REFLECT LENGTH } 'W' DEF", "W").await;
-    assert_eq!(contract.purity, ContractPurity::Effectful);
-    assert_eq!(contract.confidence, ContractConfidence::Conservative);
-}

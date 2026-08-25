@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::epoch::EpochSnapshot;
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::{Interpretation, Stack, Token, Value, ValueData};
+use crate::types::{Interpretation, Stack, Token, Value};
 
 use super::compiled_plan::{execute_compiled_plan, CompiledPlan};
 
@@ -26,36 +26,128 @@ pub struct CondClause {
     pub body_plan: Option<Arc<CompiledPlan>>,
 }
 
-/// Dynamic entry point: collect the clause blocks the preceding code pushed,
-/// split them, then dispatch. This is the path the plain interpreter and any
-/// non-lowered `COND` take.
+/// Dynamic entry point: `COND` takes its clauses as a single fixed-position
+/// operand — a Vector whose elements are each a `{ guard | body }` (or
+/// `{ guard } { body }`-paired) clause block — the same convention
+/// `MAP`/`FILTER`/`FOLD` already use for their one code operand
+/// (`extract_executable_code`). This is the path the plain interpreter and
+/// any non-lowered `COND` take.
+///
+/// Earlier revisions tried to rediscover a *run* of adjacent bracketed
+/// literals immediately before `COND` lexically, the same way the pre-
+/// unification runtime used to pop values while they tested as the (now-gone)
+/// `CodeBlock` domain. Both approaches fail for the same reason: nothing
+/// distinguishes "a clause block" from an ordinary Vector value written or
+/// stored right next to it — not a runtime domain (Vector and CodeBlock are
+/// one domain now) and not even source spelling (a `DEF`'d body's clause
+/// blocks round-trip through `value_as_code.rs` and lose their original `{`
+/// vs `[` once they exist as a `Value`). A single fixed-position operand
+/// needs neither: `COND` always has exactly two operands, so there is
+/// nothing to scan for.
 pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
     // Tail position of the enclosing word, if any (set by the compiled-plan
     // tail op). Guards must run as non-tail (they may call the same word in a
     // non-tail position), so clear it here and hand it only to the winning
     // clause body, where a tail self-call becomes an internal backward jump.
     let tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
-    let blocks = collect_top_code_blocks(interp);
-    let clauses = split_clause_blocks(blocks)?;
+
+    let clauses_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let clauses = match extract_clause_blocks(&clauses_val).and_then(split_clause_blocks) {
+        Ok(c) => c,
+        Err(e) => {
+            interp.stack.push(clauses_val);
+            return Err(e);
+        }
+    };
+
     run_cond_core(interp, &clauses, tail_context)
 }
 
-/// Compiled entry point: the clauses were split once at compile time. Collect
-/// the blocks the kept `PushCodeBlock` ops pushed so stack discipline is
-/// preserved; when their count matches the precomputed set they are exactly
-/// those blocks, so dispatch on the precomputed clauses (no clone, no re-split).
-/// Otherwise (an unexpected extra block reached the stack) fall back to the
-/// dynamic split of the actual blocks — keeping behavior identical to `op_cond`.
+/// Bridge the clauses operand into the token streams `split_clause_blocks`
+/// expects: one entry per clause element, each converted back to tokens via
+/// the same `value_as_code.rs` bridge `EXEC`/`PROBE`/`DEF` use.
+fn extract_clause_blocks(clauses_val: &Value) -> Result<Vec<Vec<Token>>> {
+    let elements = clauses_val.as_vector_view().ok_or_else(|| {
+        AjisaiError::from(
+            "COND: expected a Vector of { guard | body } clauses as the second operand",
+        )
+    })?;
+    elements
+        .iter()
+        .map(|clause| {
+            let inner = clause.as_vector_view().ok_or_else(|| {
+                AjisaiError::from("COND: each clause must itself be a { guard | body } block")
+            })?;
+            crate::interpreter::value_as_code::value_elements_to_tokens(&inner)
+        })
+        .collect()
+}
+
+/// Split the raw token content of a single COND clauses-wrapper literal
+/// (already stripped of its own outer `{ }`/`[ ]`) into each direct child
+/// bracket group's inner tokens — one entry per clause. Used only by
+/// `compiled_plan.rs`'s `lower_cond_dispatch`, at compile time, before any
+/// `Value` exists to erase bracket spelling, so it can compile each clause's
+/// guard/body into a sub-plan straight from the tokens as written. Returns
+/// `None` when the content is not made up entirely of adjacent bracket
+/// groups (skipping line breaks) — the compiler then leaves the `COND` on
+/// the dynamic path, where `extract_clause_blocks` above raises whatever
+/// error is appropriate at runtime.
+pub(crate) fn split_wrapper_into_clause_blocks(tokens: &[Token]) -> Option<Vec<Vec<Token>>> {
+    let mut blocks: Vec<Vec<Token>> = Vec::new();
+    let mut i = 0;
+    loop {
+        while matches!(tokens.get(i), Some(Token::LineBreak)) {
+            i += 1;
+        }
+        if i >= tokens.len() {
+            break;
+        }
+        let (open, close) = match &tokens[i] {
+            Token::BlockStart => (Token::BlockStart, Token::BlockEnd),
+            Token::VectorStart => (Token::VectorStart, Token::VectorEnd),
+            _ => return None,
+        };
+        let mut depth: i32 = 1;
+        let mut j = i + 1;
+        let mut block_tokens: Vec<Token> = Vec::new();
+        while j < tokens.len() && depth > 0 {
+            let t = &tokens[j];
+            if *t == open {
+                depth += 1;
+                block_tokens.push(t.clone());
+            } else if *t == close {
+                depth -= 1;
+                if depth > 0 {
+                    block_tokens.push(t.clone());
+                }
+            } else {
+                block_tokens.push(t.clone());
+            }
+            j += 1;
+        }
+        if depth != 0 {
+            return None; // Unclosed — let the normal literal builder raise it.
+        }
+        blocks.push(block_tokens);
+        i = j;
+    }
+    Some(blocks)
+}
+
+/// Compiled entry point: the clauses were split once at compile time
+/// (`lower_cond_dispatch`, `compiled_plan.rs`) from the single clauses-
+/// wrapper literal lexically known to precede this `COND`. The wrapper's
+/// `PushCodeBlock`/`PushVectorLiteral` op still pushes its Value at runtime,
+/// for stack-discipline parity with the interpreted path (and so a compiled
+/// and an interpreted run of the same source see the same stack traffic);
+/// since the split is already known from compile time, that one value is
+/// popped unread rather than re-derived from it.
 pub(crate) fn op_cond_dispatch(interp: &mut Interpreter, precomputed: &[CondClause]) -> Result<()> {
     let tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
-    let blocks = collect_top_code_blocks(interp);
-    if blocks.len() == precomputed.len() && !blocks.is_empty() {
-        interp.runtime_metrics.cond_dispatch_fast_count += 1;
-        run_cond_core(interp, precomputed, tail_context)
-    } else {
-        let clauses = split_clause_blocks(blocks)?;
-        run_cond_core(interp, &clauses, tail_context)
-    }
+    interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    interp.runtime_metrics.cond_dispatch_fast_count += 1;
+    run_cond_core(interp, precomputed, tail_context)
 }
 
 /// Pop the target value and dispatch over `clauses`, running the first clause
@@ -121,24 +213,6 @@ fn run_clause_body(
         value,
         tail_context,
     )
-}
-
-/// Pop the consecutive code blocks on top of the stack, moving their token
-/// vectors out (no clone). Returns them bottom-to-top, matching source order.
-fn collect_top_code_blocks(interp: &mut Interpreter) -> Vec<Vec<Token>> {
-    let mut blocks: Vec<Vec<Token>> = Vec::new();
-    while interp
-        .stack
-        .last()
-        .is_some_and(|v| matches!(v.data, ValueData::CodeBlock(_)))
-    {
-        let value = interp.stack.pop().expect("checked by last()");
-        if let ValueData::CodeBlock(tokens) = value.data {
-            blocks.push(tokens);
-        }
-    }
-    blocks.reverse();
-    blocks
 }
 
 /// Split collected clause blocks into guards and bodies, validating clause

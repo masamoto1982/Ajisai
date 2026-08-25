@@ -175,7 +175,6 @@ fn concat_refuses_a_non_vector_operand() {
         "2 3 CONCAT",
         "[ 1 2 ] TRUE CONCAT",
         "TRUE [ 1 2 ] CONCAT",
-        "{ 1 } [ 2 ] CONCAT",
         // The three spellings of the retired count form. A trailing scalar is
         // now just a non-vector operand.
         "[ 1 2 ] [ 3 4 ] 2 CONCAT",

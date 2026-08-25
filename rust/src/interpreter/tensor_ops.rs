@@ -66,7 +66,7 @@ impl FlatTensor {
             ValueData::ExactScalar(_) => Err(AjisaiError::from(
                 "Tensor conversion does not support exact irrational values",
             )),
-            ValueData::Boolean(_) | ValueData::CodeBlock(_) => Err(AjisaiError::from(
+            ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::from(
                 "Tensor conversion requires scalar or vector",
             )),
         }
@@ -262,7 +262,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
         // CS4 PR-2: U is not a numeric dense-tensor lane (unlike NIL, which is
         // a nil lane), so — like a Boolean — it has no rectangular shape and a
         // vector containing U is broadcast structurally, never densified.
-        ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
+        ValueData::Boolean(_) | ValueData::Symbol(_) => None,
     }
 }
 

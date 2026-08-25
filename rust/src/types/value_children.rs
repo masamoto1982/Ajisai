@@ -1,11 +1,11 @@
-//! Sequence, code-block, and child-access behavior for [`Value`].
+//! Sequence and child-access behavior for [`Value`].
 //!
 //! Invariant: mutation hydrates dense tensors before exposing child storage, so
 //! callers observe one sequence API regardless of the internal representation.
 
 use super::fraction::Fraction;
 use super::value_tensor::{tensor_child, tensor_to_nested_values};
-use super::{Interpretation, Token, Value, ValueData};
+use super::{Interpretation, Value, ValueData};
 use std::sync::Arc;
 
 impl Value {
@@ -19,7 +19,7 @@ impl Value {
             // A String is one value, not a sequence of characters. Its
             // character count is reached through `CHARS`, which is what makes
             // the Vector domain explicit; LENGTH raises `nonVector` on it.
-            ValueData::Boolean(_) | ValueData::Text(_) => 1,
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) => v.len(),
             ValueData::Tensor { data, shape } => {
@@ -29,7 +29,6 @@ impl Value {
                     shape[0]
                 }
             }
-            ValueData::CodeBlock(tokens) => tokens.len(),
         }
     }
 
@@ -48,7 +47,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -70,7 +69,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -86,7 +85,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -102,7 +101,7 @@ impl Value {
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(self),
             ValueData::Nil => None,
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => None,
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => None,
         }
     }
 
@@ -142,7 +141,7 @@ impl Value {
             ValueData::Boolean(_)
             | ValueData::Text(_)
             | ValueData::Tensor { .. }
-            | ValueData::CodeBlock(_) => {}
+            | ValueData::Symbol(_) => {}
         }
     }
 
@@ -158,7 +157,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -174,7 +173,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => return,
+            | ValueData::Symbol(_) => return,
         };
         if index <= v.len() {
             v.insert(index, child);
@@ -193,7 +192,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => return None,
+            | ValueData::Symbol(_) => return None,
         };
         if index < v.len() {
             Some(v.remove(index))
@@ -214,7 +213,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => return None,
+            | ValueData::Symbol(_) => return None,
         };
         if index < v.len() {
             Some(std::mem::replace(&mut v[index], child))
@@ -233,7 +232,7 @@ impl Value {
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -247,7 +246,7 @@ impl Value {
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -271,7 +270,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -288,7 +287,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -321,7 +320,7 @@ impl Value {
             // to no fraction lane, like a Boolean (NIL flattens to a nil
             // lane). Kept in lock-step with `count_fractions` below so buffer
             // sizing stays exact.
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => {}
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => {}
         }
     }
 
@@ -333,7 +332,7 @@ impl Value {
             ValueData::Tensor { data, .. } => data.len(),
             // CS4 PR-2: U contributes no fraction lane (see
             // `collect_fractions_flat_into`), matching a Boolean.
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => 0,
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => 0,
         }
     }
 
@@ -358,30 +357,15 @@ impl Value {
                 }
             }
             ValueData::Tensor { shape, .. } => (**shape).clone(),
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => vec![],
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => vec![],
         }
     }
 
-    #[inline]
-    pub fn is_code_block(&self) -> bool {
-        matches!(self.data, ValueData::CodeBlock(_))
-    }
-
-    #[inline]
-    pub fn as_code_block(&self) -> Option<&Vec<Token>> {
-        let ValueData::CodeBlock(tokens) = &self.data else {
-            return None;
-        };
-        Some(tokens)
-    }
-
-    pub fn from_code_block(tokens: Vec<Token>) -> Self {
-        Self {
-            data: ValueData::CodeBlock(tokens),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
-    }
+    // is_code_block/as_code_block/from_code_block removed with the CodeBlock
+    // domain — see docs/dev/type-unification-work-order-2026-08.md. Call
+    // sites now use as_vector()/as_vector_view() (Tensor-aware) plus the
+    // value-to-tokens bridge in interpreter/value_as_code.rs for "is this
+    // executable" and "run it" respectively.
 
     pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
@@ -394,8 +378,9 @@ impl Value {
             // unassigned and `format_with_hint` dispatches on the data.
             ValueData::Text(_) => Interpretation::Unassigned,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
-            ValueData::Vector(_) | ValueData::Tensor { .. } => Interpretation::Unassigned,
-            ValueData::CodeBlock(_) => Interpretation::Unassigned,
+            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Symbol(_) => {
+                Interpretation::Unassigned
+            }
         }
     }
 }

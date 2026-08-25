@@ -21,7 +21,7 @@ use super::word_contract_flow::FlowSim;
 use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
 };
-use super::word_contract_widen::{is_reflect, opaque_reflection_contract, VectorScope};
+use super::word_contract_widen::VectorScope;
 use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
@@ -402,19 +402,7 @@ impl Interpreter {
                             DepSpace::of_user_word(&dep_contract)
                         });
                         cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
-                        // `flow`/`sim`/`cost_sim` above read `dep_contract`'s
-                        // real, sound projection unconditionally — REFLECT's
-                        // arity/space/cost are unaffected by which direction
-                        // it ran. Only the acc-relevant axes below need the
-                        // conservative substitute (see `contract_gap.rs`'s
-                        // `OpaqueReflection` doc comment for why).
-                        if is_reflect(&dep_name) {
-                            complete = false;
-                            acc.gaps.push(GapCode::OpaqueReflection);
-                            acc.widen_with(&opaque_reflection_contract(&dep_contract));
-                        } else {
-                            acc.widen_with(&dep_contract);
-                        }
+                        acc.widen_with(&dep_contract);
                     }
                     Token::VectorStart
                     | Token::VectorEnd

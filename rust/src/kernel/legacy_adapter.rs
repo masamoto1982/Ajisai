@@ -54,8 +54,16 @@ impl From<&Value> for KernelValue {
             ValueData::Scalar(f) => KernelValue::Scalar(Scalar::from_fraction(f.clone())),
             ValueData::ExactScalar(er) => KernelValue::Scalar(Scalar::from_exact(er.clone())),
             ValueData::Nil => KernelValue::Nil(value.nil_reason().cloned()),
-            ValueData::CodeBlock(tokens) => {
-                KernelValue::CodeBlock(CodeBlock::new(Arc::from(tokens.as_slice())))
+            // The spine has no Symbol variant of its own yet — this bridge
+            // is documented dead code on the runtime path ("no runtime path
+            // calls them in Phase 2"), so a lone Symbol round-trips through
+            // the nearest existing shape (a one-token CodeBlock) rather than
+            // widening KernelValue's own domain, which is out of scope for
+            // the CodeBlock/Vector unification this adapts to.
+            ValueData::Symbol(name) => {
+                KernelValue::CodeBlock(CodeBlock::new(Arc::from([crate::types::Token::Symbol(
+                    Arc::clone(name),
+                )])))
             }
             ValueData::Text(s) => KernelValue::String(Arc::clone(s)),
             ValueData::Vector(children) => {
@@ -93,11 +101,21 @@ impl From<&KernelValue> for Value {
             KernelValue::Nil(None) => {
                 Value::nil_with_absence(AbsenceMetadata::with_reasonless_unknown())
             }
-            KernelValue::CodeBlock(block) => Value {
-                data: ValueData::CodeBlock(block.tokens().to_vec()),
-                hint: Interpretation::Unassigned,
-                absence: None,
-            },
+            // Mirror of the lowering above — unwrap the one-token encoding
+            // back to a Symbol when possible, otherwise fall back to an
+            // empty Symbol (this path is unreachable from any runtime caller
+            // today; see the lowering-side note).
+            KernelValue::CodeBlock(block) => {
+                let name: Arc<str> = match block.tokens() {
+                    [crate::types::Token::Symbol(s)] => Arc::clone(s),
+                    _ => Arc::from(""),
+                };
+                Value {
+                    data: ValueData::Symbol(name),
+                    hint: Interpretation::Unassigned,
+                    absence: None,
+                }
+            }
         }
     }
 }

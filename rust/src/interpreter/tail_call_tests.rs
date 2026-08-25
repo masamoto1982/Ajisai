@@ -12,7 +12,7 @@
 use crate::interpreter::Interpreter;
 
 const COUNTDOWN_DEF: &str =
-    "{\n  { [ 0 ] > | [ 1 ] - DOWN }\n  { IDLE | [ 'done' ] } COND\n} 'DOWN' DEF";
+    "{\n  {\n  { [ 0 ] > | [ 1 ] - DOWN }\n  { IDLE | [ 'done' ] }\n  } COND\n} 'DOWN' DEF";
 
 fn fresh() -> Interpreter {
     Interpreter::new()
@@ -164,14 +164,16 @@ async fn unguarded_self_recursion_still_hits_depth_limit() {
 // `EXEC` the same deferral re-ran the body until the step budget ran out.
 
 const FIB_VIA_MAP: &str = "{\n\
+     {\n\
      { 2 LT | 1 * }\n\
      { IDLE | [ 1 2 ] - { FIB } MAP 0 { + } FOLD }\n\
-     COND } 'FIB' DEF";
+     } COND } 'FIB' DEF";
 
 const COUNT_VIA_EXEC: &str = "{\n\
+     {\n\
      { 0 LTE | 0 * }\n\
      { IDLE | 1 - { CNT } EXEC 1 + }\n\
-     COND } 'CNT' DEF";
+     } COND } 'CNT' DEF";
 
 #[tokio::test]
 async fn self_call_inside_a_map_block_recurses() {
@@ -214,9 +216,10 @@ async fn a_tail_self_call_beside_a_block_still_trampolines() {
     interp
         .execute(
             "{\n\
+             {\n\
              { 0 LTE | 0 * }\n\
              { IDLE | [ 1 ] { 1 * } MAP [ 0 ] GET - SUMD }\n\
-             COND } 'SUMD' DEF",
+             } COND } 'SUMD' DEF",
         )
         .await
         .unwrap();

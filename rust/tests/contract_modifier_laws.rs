@@ -179,7 +179,7 @@ fn keep_preserves_the_operands_of_a_word_that_answers_with_nothing() {
         obs("[ 1 2 ] KEEP [ 'A' 'B' ] BIND B"),
         vec!["[ 1/1 2/1 ]", "[ 'A' 'B' ]", "2/1"]
     );
-    assert_eq!(obs("{ 7 } 'W' KEEP DEF W"), vec!["{ 7 }", "'W'", "7/1"]);
+    assert_eq!(obs("{ 7 } 'W' KEEP DEF W"), vec!["[ 7/1 ]", "'W'", "7/1"]);
     assert_eq!(obs("{ 7 } 'W' DEF 'W' KEEP DEL"), vec!["'W'"]);
 }
 

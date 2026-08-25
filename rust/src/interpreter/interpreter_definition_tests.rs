@@ -444,17 +444,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_def_rejects_data_array_body() {
-        // A data array `[ ... ]` is no longer accepted as a definition body;
-        // only a code block is. Canonical code data must first be reflected.
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await;
-        assert!(
-            result.is_err(),
-            "DEF with a data-array body should be rejected"
-        );
-    }
-    #[tokio::test]
     async fn test_def_ignores_leftover_string_like_value() {
         // A leftover string-like value below the body must not shift argument
         // interpretation: DEF reads exactly the top two positions (name, body).

@@ -95,14 +95,6 @@
         "LANG.MACHINE.ORDER"
       ],
       "effectOrder": "requestOrder"
-    },
-    {
-      "id": "reflection",
-      "clauses": [
-        "LANG.SOURCE.REFLECTION"
-      ],
-      "evaluation": "never",
-      "dictionaryAccess": "none"
     }
   ]
 }

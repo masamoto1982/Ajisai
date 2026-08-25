@@ -226,9 +226,9 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     // ── Control and higher-order words ────────────────────────────────────
     BuiltinLookupDoc {
         word: "COND",
-        behavior: "Reads guard/body clause pairs in order. The first guard\nthat holds selects its body; IDLE marks the else clause.\nIn a tail position the selected body continues the loop\nwithout growing the stack.",
+        behavior: "Pops the clauses, a single Vector of guard/body clause\nblocks, then the target value. Reads the clauses in order;\nthe first guard that holds selects its body; IDLE marks the\nelse clause. In a tail position the selected body continues\nthe loop without growing the stack.",
         examples: &[BuiltinExampleDoc {
-            code: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
+            code: "1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND",
             result: "Pushes 'y'.",
         }],
         failure_note: "When every guard fails and no else clause exists, COND\nraises an error.",

@@ -29,7 +29,7 @@ fn has_no_exact_lexeme(value: &Value) -> bool {
         | ValueData::Scalar(_)
         | ValueData::Tensor { .. }
         | ValueData::Nil
-        | ValueData::CodeBlock(_) => false,
+        | ValueData::Symbol(_) => false,
     }
 }
 

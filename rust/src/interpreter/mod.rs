@@ -28,7 +28,6 @@ pub mod math_ops;
 pub(crate) mod naming_convention_checker;
 mod ordering_ops;
 mod probe;
-mod reflection;
 mod resolve_cache;
 pub mod runtime_limits;
 mod session_lifecycle;
@@ -71,6 +70,7 @@ pub mod interpreter_core;
 mod resolve_word;
 
 mod execution_loop;
+mod value_as_code;
 mod vector_literal;
 
 mod execute_builtin;

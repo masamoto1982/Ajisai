@@ -40,7 +40,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 })
                 .collect(),
             ValueData::ExactScalar(_) => vec![],
-            ValueData::Boolean(_) | ValueData::CodeBlock(_) => vec![],
+            ValueData::Boolean(_) | ValueData::Symbol(_) => vec![],
         }
     }
 
@@ -90,9 +90,10 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             "integer",
             "irrational exact real",
         )),
-        ValueData::Boolean(_) | ValueData::CodeBlock(_) => Err(
-            AjisaiError::create_structure_error("single-element value with integer", "code block"),
-        ),
+        ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::create_structure_error(
+            "single-element value with integer",
+            "code block",
+        )),
     }
 }
 

@@ -182,13 +182,13 @@ async fn collection_standards_have_kernel_only_witnesses() {
         // NIL.
         (
             "[ 5 7 9 ] 7 INDEX-OF",
-            "[ 5 7 9 ] { [ 0 ] GET 7 EQ } { 0 } { [ 1 ] GET 7 EQ } { 1 } \
-             { [ 2 ] GET 7 EQ } { 2 } { IDLE } { NIL } COND",
+            "[ 5 7 9 ] { { [ 0 ] GET 7 EQ } { 0 } { [ 1 ] GET 7 EQ } { 1 } \
+             { [ 2 ] GET 7 EQ } { 2 } { IDLE } { NIL } } COND",
         ),
         (
             "[ 5 7 9 ] 4 INDEX-OF",
-            "[ 5 7 9 ] { [ 0 ] GET 4 EQ } { 0 } { [ 1 ] GET 4 EQ } { 1 } \
-             { [ 2 ] GET 4 EQ } { 2 } { IDLE } { NIL } COND",
+            "[ 5 7 9 ] { { [ 0 ] GET 4 EQ } { 0 } { [ 1 ] GET 4 EQ } { 1 } \
+             { [ 2 ] GET 4 EQ } { 2 } { IDLE } { NIL } } COND",
         ),
     ] {
         equivalent(native, witness).await;

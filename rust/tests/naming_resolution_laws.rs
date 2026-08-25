@@ -162,7 +162,7 @@ fn a_binding_reaches_blocks_written_in_its_frame() {
     // A COND clause is such a block: the isolation COND enforces is of the
     // stack, and a name is not on the stack.
     assert_eq!(
-        obs("5 'T' BIND T { 1 GT } { T } { IDLE } { 0 } COND"),
+        obs("5 'T' BIND T { { 1 GT } { T } { IDLE } { 0 } } COND"),
         vec!["5/1"]
     );
     // A block that binds runs in its own scope per evaluation, so the name is
@@ -244,12 +244,13 @@ fn binding_preserves_an_absence_and_its_reason() {
 /// binding must not.
 #[test]
 fn a_binding_survives_neither_a_recursive_call_nor_a_tail_jump() {
-    let sumto = "{ 'N' BIND N { 0 EQ } { 0 } { IDLE } { N N 1 SUB SUMTO ADD } COND } 'SUMTO' DEF ";
+    let sumto =
+        "{ 'N' BIND N { { 0 EQ } { 0 } { IDLE } { N N 1 SUB SUMTO ADD } } COND } 'SUMTO' DEF ";
     assert_eq!(obs(&format!("{sumto} 5 SUMTO")), vec!["15/1"]);
 
     // Past MAX_USER_WORD_DEPTH, so this is the backward jump rather than a call.
-    let countdown = "{ [ 'ACC' 'N' ] BIND N { 0 EQ } { ACC } \
-                     { IDLE } { ACC N ADD N 1 SUB 2 COLLECT COUNTDOWN } COND } 'COUNTDOWN' DEF ";
+    let countdown = "{ [ 'ACC' 'N' ] BIND N { { 0 EQ } { ACC } \
+                     { IDLE } { ACC N ADD N 1 SUB 2 COLLECT COUNTDOWN } } COND } 'COUNTDOWN' DEF ";
     assert_eq!(
         obs(&format!("{countdown} [ 0 2000 ] COUNTDOWN")),
         vec!["2001000/1"]

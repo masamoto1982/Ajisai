@@ -156,9 +156,10 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
             "scalar value",
             "non-scalar value",
         )),
-        ValueData::Boolean(_) | ValueData::CodeBlock(_) => Err(
-            AjisaiError::create_structure_error("scalar value", "non-scalar value"),
-        ),
+        ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::create_structure_error(
+            "scalar value",
+            "non-scalar value",
+        )),
     }
 }
 

@@ -279,7 +279,23 @@ pub struct Interpreter {
     /// Raised by the deferral site when a guarded tail self-call is recognized
     /// and skipped; consumed by the trampoline loop in `execute_word_core_inner`.
     pub(crate) tail_jump_pending: bool,
-
+    /// Set by `execution_loop.rs`'s main dispatch when a bracketed literal is
+    /// immediately followed by `<name-string> [KEEP] DEF` — the body's own
+    /// written tokens, captured before `Value::from_vector_promoted` builds
+    /// the operand `DEF` will pop. `op_def` (`execute_def.rs`) prefers these
+    /// over re-deriving tokens from the popped Value through
+    /// `value_as_code.rs`'s bridge, which always re-expands a nested Vector
+    /// as `[ ]` regardless of whether it was written `{` or `[` — round-
+    /// tripping a body through it loses exactly the bracket-spelling fact
+    /// `word_contract_widen.rs`'s vector-depth gate reads to tell code from
+    /// data. This is fidelity preservation only, not ambiguity resolution
+    /// (unlike the mechanism `COND` used to need): `DEF`'s two operands are
+    /// already a fixed position, so a pattern mismatch here just means the
+    /// body came from a computed Vector rather than a literal, and `op_def`
+    /// falls back to the bridge exactly as it always could. `None` after
+    /// every `DEF` dispatch (`.take()`n there) and whenever the immediately
+    /// following tokens do not match.
+    pub(crate) pending_def_body_tokens: Option<Vec<crate::types::Token>>,
     // ── Source positions ──────────────────────────────────────────────────
     /// Where each token of the program currently running was written,
     /// index-aligned with its token stream. Empty for any entry point that did
@@ -385,6 +401,7 @@ impl Interpreter {
             tail_self_word: None,
             in_tail_context: false,
             tail_jump_pending: false,
+            pending_def_body_tokens: None,
             source_spans: Vec::new(),
             section_depth: 0,
             current_source_span: None,

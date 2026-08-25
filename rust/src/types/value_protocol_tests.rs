@@ -65,26 +65,16 @@ fn plain_nil_is_still_nil_not_unknown() {
     assert_eq!(node.value, ProtocolValue::Null);
 }
 
-/// A code block is its own domain on the wire, carrying the source that
-/// builds it. It used to serialize as `nil`, so every host drew `NIL` for a
-/// value `NIL?` answers FALSE for and `EXEC` runs — the internal
-/// representation observed as the wrong domain, which SPEC §2.3 rules out.
+/// A Symbol is its own domain on the wire, carrying its bare name. It used
+/// to serialize as `nil` (as part of the pre-unification CodeBlock domain),
+/// so every host drew `NIL` for a value `NIL?` answers FALSE for and `EXEC`
+/// runs — the internal representation observed as the wrong domain, which
+/// SPEC §2.3 rules out.
 #[test]
-fn a_code_block_serializes_as_its_own_domain_with_its_source() {
-    use crate::types::Token;
-    let node = value_to_protocol(
-        &Value::from_code_block(vec![Token::Number("2".into()), Token::Symbol("MUL".into())]),
-        None,
-    );
-    assert_eq!(node.type_str, "codeBlock");
-    assert_eq!(node.value, ProtocolValue::Text("{ 2 MUL }".to_string()));
-}
-
-#[test]
-fn an_empty_code_block_serializes_as_empty_braces() {
-    let node = value_to_protocol(&Value::from_code_block(Vec::new()), None);
-    assert_eq!(node.type_str, "codeBlock");
-    assert_eq!(node.value, ProtocolValue::Text("{ }".to_string()));
+fn a_symbol_serializes_as_its_own_domain_with_its_bare_name() {
+    let node = value_to_protocol(&Value::from_symbol("MUL"), None);
+    assert_eq!(node.type_str, "symbol");
+    assert_eq!(node.value, ProtocolValue::Text("MUL".to_string()));
 }
 
 // --- ExactScalar approximation marker (SPEC §2.3) ---
