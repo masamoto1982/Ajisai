@@ -133,10 +133,6 @@ pub fn canonicalize_core_word_name(name: &str) -> std::borrow::Cow<'_, str> {
     std::borrow::Cow::Owned(name.to_uppercase())
 }
 
-pub fn is_reserved_core_word_alias(name: &str) -> bool {
-    CORE_WORD_ALIASES.iter().any(|entry| entry.alias == name)
-}
-
 pub fn collect_core_word_aliases() -> Vec<(&'static str, &'static str, &'static str, &'static str)>
 {
     CORE_WORD_ALIASES

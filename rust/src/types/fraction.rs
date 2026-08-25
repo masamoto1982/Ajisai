@@ -294,11 +294,6 @@ impl Fraction {
         }
     }
 
-    #[inline]
-    pub fn is_exact_integer(&self) -> bool {
-        self.is_integer()
-    }
-
     /// True for values strictly greater than zero. The denominator is always
     /// normalised positive, so the sign is carried entirely by the numerator.
     #[inline]

@@ -250,13 +250,6 @@ impl Stack {
         }
     }
 
-    /// Replace the whole role plane, normalizing to the value count so the
-    /// length invariant holds. Used by save/restore boundaries.
-    pub fn set_roles(&mut self, mut roles: Vec<Interpretation>) {
-        roles.resize(self.values.len(), Interpretation::Unassigned);
-        self.roles = roles;
-    }
-
     /// Consume the stack into its aligned value and role vectors.
     pub fn into_parts(self) -> (Vec<Value>, Vec<Interpretation>) {
         (self.values, self.roles)

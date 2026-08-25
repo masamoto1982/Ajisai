@@ -120,33 +120,12 @@ pub fn get_builtin_word_metadata(name: &str) -> Option<CorewordMetadata> {
     get_coreword_metadata(name)
 }
 
-pub fn get_words_by_category(category: &str) -> Vec<CorewordMetadata> {
-    let needle = category.to_lowercase();
-    get_builtin_word_registry()
-        .iter()
-        .filter(|word| word.category == needle)
-        .cloned()
-        .collect()
-}
-
-pub fn get_words_by_purity(purity: Purity) -> Vec<CorewordMetadata> {
-    get_builtin_word_registry()
-        .iter()
-        .filter(|word| word.purity == purity)
-        .cloned()
-        .collect()
-}
-
 pub fn get_words_by_profile(profile: WordProfile) -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
         .iter()
         .filter(|word| word.profile == profile)
         .cloned()
         .collect()
-}
-
-pub fn get_core_profile_words() -> Vec<CorewordMetadata> {
-    get_words_by_profile(WordProfile::Core)
 }
 
 pub fn get_hosted_profile_words() -> Vec<CorewordMetadata> {

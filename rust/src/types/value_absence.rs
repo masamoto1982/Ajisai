@@ -5,7 +5,6 @@
 
 use super::{Interpretation, Value, ValueData};
 use crate::error::NilReason;
-use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 
 /// The single derivation of an absence origin from a NIL reason.
@@ -129,21 +128,6 @@ impl Value {
         }
     }
 
-    #[inline]
-    pub fn nil_from_diagnosis(
-        reason: NilReason,
-        origin: AbsenceOrigin,
-        recoverability: Recoverability,
-        diagnosis: DebugDiagnosis,
-    ) -> Self {
-        Self::nil_with_absence(AbsenceMetadata::from_diagnosis(
-            reason,
-            origin,
-            recoverability,
-            diagnosis,
-        ))
-    }
-
     /// Create a reasoned NIL for the Bubble Rule: well-formed operations that
     /// cannot produce a value return Bubble/NIL directly with an explicit
     /// reason.
@@ -182,10 +166,4 @@ impl Value {
             .and_then(|absence| absence.reason.as_ref())
     }
 
-    #[inline]
-    pub fn nil_diagnosis(&self) -> Option<&DebugDiagnosis> {
-        self.absence
-            .as_ref()
-            .and_then(|absence| absence.diagnosis.as_ref())
-    }
 }

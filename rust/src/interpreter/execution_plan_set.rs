@@ -3,13 +3,6 @@ use std::sync::Arc;
 use super::compiled_plan::CompiledPlan;
 use super::EpochSnapshot;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ExecutionRepresentation {
-    Plain,
-    Compiled,
-    Quantized,
-}
-
 #[derive(Debug, Clone)]
 pub struct ExecutionPlanSet {
     pub plain_available: bool,

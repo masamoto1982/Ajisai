@@ -5,7 +5,7 @@
 
 use super::fraction::Fraction;
 use super::value_tensor::{tensor_child, tensor_to_nested_values};
-use super::{Interpretation, Value, ValueData};
+use super::{Value, ValueData};
 use std::sync::Arc;
 
 impl Value {
@@ -73,22 +73,6 @@ impl Value {
         }
     }
 
-    pub fn get_child_mut(&mut self, index: usize) -> Option<&mut Value> {
-        if matches!(self.data, ValueData::Tensor { .. }) {
-            self.hydrate_tensor_to_vector();
-        }
-        match &mut self.data {
-            ValueData::Vector(v) => Arc::make_mut(v).get_mut(index),
-            ValueData::Boolean(_)
-            | ValueData::Text(_)
-            | ValueData::Tensor { .. }
-            | ValueData::Scalar(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Nil
-            | ValueData::Symbol(_) => None,
-        }
-    }
-
     #[inline]
     pub fn first(&self) -> Option<&Value> {
         self.get_child(0)
@@ -145,100 +129,9 @@ impl Value {
         }
     }
 
-    pub fn pop_child(&mut self) -> Option<Value> {
-        if matches!(self.data, ValueData::Tensor { .. }) {
-            self.hydrate_tensor_to_vector();
-        }
-        match &mut self.data {
-            ValueData::Vector(v) => Arc::make_mut(v).pop(),
-            ValueData::Boolean(_)
-            | ValueData::Text(_)
-            | ValueData::Tensor { .. }
-            | ValueData::Scalar(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Nil
-            | ValueData::Symbol(_) => None,
-        }
-    }
-
-    pub fn insert_child(&mut self, index: usize, child: Value) {
-        if matches!(self.data, ValueData::Tensor { .. }) {
-            self.hydrate_tensor_to_vector();
-        }
-        let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) => Arc::make_mut(v),
-            ValueData::Boolean(_)
-            | ValueData::Text(_)
-            | ValueData::Tensor { .. }
-            | ValueData::Scalar(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Nil
-            | ValueData::Symbol(_) => return,
-        };
-        if index <= v.len() {
-            v.insert(index, child);
-        }
-    }
-
-    pub fn remove_child(&mut self, index: usize) -> Option<Value> {
-        if matches!(self.data, ValueData::Tensor { .. }) {
-            self.hydrate_tensor_to_vector();
-        }
-        let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) => Arc::make_mut(v),
-            ValueData::Boolean(_)
-            | ValueData::Text(_)
-            | ValueData::Tensor { .. }
-            | ValueData::Scalar(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Nil
-            | ValueData::Symbol(_) => return None,
-        };
-        if index < v.len() {
-            Some(v.remove(index))
-        } else {
-            None
-        }
-    }
-
-    pub fn replace_child(&mut self, index: usize, child: Value) -> Option<Value> {
-        if matches!(self.data, ValueData::Tensor { .. }) {
-            self.hydrate_tensor_to_vector();
-        }
-        let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) => Arc::make_mut(v),
-            ValueData::Boolean(_)
-            | ValueData::Text(_)
-            | ValueData::Tensor { .. }
-            | ValueData::Scalar(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Nil
-            | ValueData::Symbol(_) => return None,
-        };
-        if index < v.len() {
-            Some(std::mem::replace(&mut v[index], child))
-        } else {
-            None
-        }
-    }
-
     #[inline]
     pub fn as_scalar(&self) -> Option<&Fraction> {
         match &self.data {
-            ValueData::Scalar(f) => Some(f),
-            ValueData::Boolean(_)
-            | ValueData::Text(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Vector(_)
-            | ValueData::Tensor { .. }
-            | ValueData::Nil
-            | ValueData::Symbol(_) => None,
-        }
-    }
-
-    #[inline]
-    pub fn as_scalar_mut(&mut self) -> Option<&mut Fraction> {
-        match &mut self.data {
             ValueData::Scalar(f) => Some(f),
             ValueData::Boolean(_)
             | ValueData::Text(_)
@@ -267,23 +160,6 @@ impl Value {
             ValueData::Tensor { .. } => None,
             ValueData::Boolean(_)
             | ValueData::Text(_)
-            | ValueData::Scalar(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Nil
-            | ValueData::Symbol(_) => None,
-        }
-    }
-
-    #[inline]
-    pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
-        if matches!(self.data, ValueData::Tensor { .. }) {
-            self.hydrate_tensor_to_vector();
-        }
-        match &mut self.data {
-            ValueData::Vector(v) => Some(Arc::make_mut(v)),
-            ValueData::Boolean(_)
-            | ValueData::Text(_)
-            | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -367,20 +243,4 @@ impl Value {
     // value-to-tokens bridge in interpreter/value_as_code.rs for "is this
     // executable" and "run it" respectively.
 
-    pub fn resolve_default_hint(&self) -> Interpretation {
-        match &self.data {
-            ValueData::Nil => Interpretation::Nil,
-            // CS4 PR-2: U's role is `TruthValue`, like a Boolean — its default
-            // rendering role must not fall back to `Nil`.
-            ValueData::Boolean(_) => Interpretation::TruthValue,
-            // A String renders as a String because of its domain, not because
-            // of a role: `Interpretation::Text` is gone, so the role is
-            // unassigned and `format_with_hint` dispatches on the data.
-            ValueData::Text(_) => Interpretation::Unassigned,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
-            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Symbol(_) => {
-                Interpretation::Unassigned
-            }
-        }
-    }
 }

@@ -92,17 +92,4 @@ impl AbsenceMetadata {
         }
     }
 
-    pub fn from_diagnosis(
-        reason: NilReason,
-        origin: AbsenceOrigin,
-        recoverability: Recoverability,
-        diagnosis: DebugDiagnosis,
-    ) -> Self {
-        Self {
-            reason: Some(reason),
-            origin,
-            recoverability,
-            diagnosis: Some(diagnosis),
-        }
-    }
 }
