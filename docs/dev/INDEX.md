@@ -39,6 +39,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `type-unification-phase1-report-2026-08.md` | 改修Ⅰの Phase 1 スパイク報告。使い捨てブランチ（main 非マージ）で (A) 案を実装し conformance 279 件中 23 件の非通過を実測（Phase 0 の見積もり 22 件とほぼ一致）。`COND` の節ブロック発見が統合と構造的に相容れないという新しい壁を発見 | `[観察ノート]` |
 | `type-unification-phase2-report-2026-08.md` | 改修Ⅰの Phase 2 実装報告。`COND` を固定2オペランド規約（`value { { guard \| body } ... } COND`）へ再設計し、`DEF` の契約推論忠実性問題を新たに発見・対処。REFLECT を削除し§5.1の表示非単射性を解消。正典・生成ドキュメント・適合性コーパスを更新、全ゲート緑 | `[観察ノート]` |
 | `spec-impl-readme-reference-consistency-audit-2026-08.md` | 正典・実装・README・Reference 日本語版の四面整合性監査。全 gate 緑・`cargo test --lib` 986 件緑の下で残る乖離 10 件を実機実行で確定。最重要は `spec/host-protocol-v2.schema.json` が統合前の 6 定義域（`codeBlock`）を宣言し `SPECIFICATION.html` の `Symbol` と矛盾する点 | `[観察ノート]` |
+| `zero-based-implementation-reading-2026-08.md` | 正典を参照せず `rust/src` だけから骨格を再構成し、事後に突き合わせた記録。骨格（一つの状態・一つの値木・一つの分配）は正典と一致。数値タワーの三層と Tier 2 先行足場が「比較は全域」の構造的な理由であること、三分法の中辺（未決）が設計として実行時から排除されていることを記述。食い違うのは非正典側——`ValueData::Unknown` を前提にした Rust コメント 8 箇所と `ajisai-minimal-core-identity.md` §2.1 の K3 の柱 | `[観察ノート]` |
 
 ## エージェント/CLI・GUI
 
