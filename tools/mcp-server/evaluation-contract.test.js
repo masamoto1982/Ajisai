@@ -97,7 +97,7 @@ const modelDoc = {
     toolChoice: "auto",
     capturedAt: "2026-08-11T00:00:00Z",
     serverVersion: "0.3.0",
-    engineVersion: "0.2.0-beta.2",
+    engineVersion: "0.2.0-alpha.1",
     registryDigest: "a67241e0",
   },
   traces: [],

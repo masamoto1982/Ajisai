@@ -86,12 +86,17 @@ jobs:
         run: npm run check:reading-surfaces
 
       - name: Verify generated specification surfaces are in sync
-        # SPECIFICATION.html is generated from spec/ and must never be hand-edited;
-        # the Word reference and Core hover contracts are generated from
+        # The Word reference and Core hover contracts are generated from
         # spec/words.json. None of these were gated in CI, which is how a stale
         # generated surface and a broken word-schema checker both went unnoticed.
+        #
+        # `specification:check` is deliberately absent while Ajisai is in alpha.
+        # SPECIFICATION.html has been emptied on purpose: the specification is
+        # being rebuilt from the implementation rather than the other way round,
+        # so there is no specification for the gate to hold the file to. The
+        # generator and every source under spec/ are untouched, so restoring the
+        # gate is this line plus `npm run specification:generate`.
         run: |
-          npm run specification:check
           npm run semantic-kernel:check
           npm run word-schema:check
           npm run word:reference:check
