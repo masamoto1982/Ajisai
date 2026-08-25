@@ -74,7 +74,6 @@ pub enum WordId {
     Def,
     Del,
     Print,
-    Reflect,
 }
 
 /// Semantic family the Word selects its shared laws from.
@@ -2179,7 +2178,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         name: "COND",
         aliases: &[],
         family: Family::Control,
-        stack_inputs: Arity::Variable,
+        stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
         consumption: Consumption::Conditional,
         nil_policy: NilPolicy::RejectNil,
@@ -2557,37 +2556,5 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["consoleWrite"],
-    },
-    GeneratedWord {
-        id: WordId::Reflect,
-        name: "REFLECT",
-        aliases: &[],
-        family: Family::Reflection,
-        stack_inputs: Arity::Fixed(1),
-        stack_outputs: Arity::Fixed(1),
-        consumption: Consumption::Eat,
-        nil_policy: NilPolicy::RejectNil,
-        projection: None,
-        partiality: Partiality::Partial,
-        accepted_domain: None,
-        purity: Purity::Pure,
-        determinism: Determinism::Deterministic,
-        cost: WordCost {
-            steps: CostAxis {
-                class: CostClass::Const,
-                exact: true,
-            },
-            numeric: CostAxis {
-                class: CostClass::Const,
-                exact: false,
-            },
-            collection: CostAxis {
-                class: CostClass::Linear,
-                exact: false,
-            },
-        },
-        vocabulary_tier: VocabularyTier::Kernel,
-        standard_kind: None,
-        effects: &[],
     },
 ];

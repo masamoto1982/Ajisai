@@ -129,7 +129,7 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
                 data.iter().map(|f| format_fraction_to_string(&f)).collect()
             }
             ValueData::Text(s) => vec![s.to_string()],
-            ValueData::CodeBlock(_) => vec!["<code>".to_string()],
+            ValueData::Symbol(name) => vec![name.to_string()],
         }
     }
 

@@ -3,18 +3,20 @@ use crate::interpreter::value_extraction_helpers::{
     extract_word_name_from_value, keep_mode_operands, restore_keep_mode_operands,
 };
 use crate::interpreter::{Interpreter, WordDefinition};
-use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, ValueData};
+use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token};
 use std::collections::HashSet;
 use std::sync::Arc;
 
 /// DEF is strictly two positional arguments: `{ body } 'NAME' DEF`.
 ///
 /// The top of the stack is the name (a string), and directly below it is the
-/// body (a code block `{ }`). No value types are inspected to *guess* roles —
-/// position alone determines them — which is why a leftover string-like value
-/// on the stack can no longer shift argument interpretation. Definitions from
-/// data arrays are intentionally not accepted here; canonical code data must
-/// first cross the explicit `REFLECT` boundary.
+/// body — any Vector, since the CodeBlock/Vector unification
+/// (docs/dev/type-unification-work-order-2026-08.md) — usually written as a
+/// literal `{ }` right there, but not required to be: a Vector built,
+/// stored, or passed through any other means defines just as well. No value
+/// types are inspected to *guess* roles — position alone determines them —
+/// which is why a leftover string-like value on the stack can no longer
+/// shift argument interpretation.
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
@@ -30,13 +32,29 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let tokens = match &def_val.data {
-        ValueData::CodeBlock(tokens) => tokens.clone(),
-        _ => {
-            return Err(AjisaiError::from(
-                "DEF requires a code block { ... } as the definition body",
-            ));
-        }
+    // Prefer the body's own written tokens when the operand was a literal
+    // right here (`execution_loop.rs`'s `def_body_tokens_if_literal_precedes_def`,
+    // see `pending_def_body_tokens`'s doc comment): re-deriving them from
+    // `def_val` through `value_as_code.rs` always re-expands a nested Vector
+    // as `[ ]`, which is fine for *running* the body (either spelling
+    // executes identically) but loses exactly the bracket-spelling fact the
+    // contract engine's vector-depth gate (`word_contract_widen.rs`) reads to
+    // tell code from data. `None` here just means the body came from a
+    // computed Vector rather than a literal, and the bridge is the only way
+    // to get tokens from it.
+    let tokens = match interp.pending_def_body_tokens.take() {
+        Some(tokens) => tokens,
+        None => match def_val.as_vector_view() {
+            // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
+            Some(elements) => {
+                crate::interpreter::value_as_code::value_elements_to_tokens(&elements)?
+            }
+            None => {
+                return Err(AjisaiError::from(
+                    "DEF requires a code block { ... } as the definition body",
+                ));
+            }
+        },
     };
 
     op_def_inner(interp, &name_str, &tokens)?;

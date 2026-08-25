@@ -1,6 +1,5 @@
 pub mod arena;
 mod bigint_gcd;
-pub(crate) mod code_data;
 pub mod display;
 pub mod exact;
 pub mod fraction;
@@ -80,7 +79,12 @@ pub enum ValueData {
         shape: Arc<Vec<usize>>,
     },
     Nil,
-    CodeBlock(Vec<Token>),
+    /// A bare name in code position — a Word reference that is data until
+    /// something executes it. Promoted from the hidden `'symbol'` tag
+    /// REFLECT's canonical wire format used to carry (LANG.SOURCE.REFLECTION,
+    /// now removed): the concept was already there, encoded; this makes it a
+    /// value in its own right instead of a String wearing a tag.
+    Symbol(Arc<str>),
     /// A String: a sequence of Unicode scalar values, and one of the six
     /// disjoint domains of LANG.VALUES.DISJOINT.
     ///
@@ -120,7 +124,11 @@ impl PartialEq for ValueData {
                 tensor_eq_vector(data, shape, v)
             }
             (ValueData::Nil, ValueData::Nil) => true,
-            (ValueData::CodeBlock(a), ValueData::CodeBlock(b)) => a == b,
+            // A Symbol equals a Symbol with the same name, and nothing else —
+            // in particular not a Text of the same spelling: `[ FOO ] { FOO }
+            // EQ` and `[ FOO ] [ 'FOO' ] EQ` are both false (LANG.VALUES.
+            // DISJOINT).
+            (ValueData::Symbol(a), ValueData::Symbol(b)) => a == b,
             // A String equals a String with the same codepoints, and nothing
             // else. It never meets the Vector/Tensor arms above, so `'A'` and
             // `[ 65 ]` now fall to the catch-all and answer false, as
@@ -180,7 +188,7 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
         // value with no numeric lane, so — like a Boolean — it has no
         // rectangular element shape and forces the structural (non-dense)
         // path.
-        ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
+        ValueData::Boolean(_) | ValueData::Symbol(_) => None,
     }
 }
 
@@ -220,7 +228,7 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
 /// `nested_flatten_matches` walks it against a dense tensor's lanes:
 /// `Scalar` contributes its `Fraction`, `Tensor` contributes its own dense
 /// lanes, `Vector` recurses, and anything else (`ExactScalar`, `Nil`,
-/// `Boolean`, `Text`, `CodeBlock`) fails the flatten — mirroring exactly
+/// `Boolean`, `Text`, `Symbol`) fails the flatten — mirroring exactly
 /// which leaves `nested_flatten_matches` is willing to match against a
 /// tensor lane. Used only to make [`ValueData`]'s `Hash` agree with the
 /// `Vector`/`Tensor` cross-equality in `PartialEq`: a value that *can*
@@ -263,7 +271,7 @@ const HASH_TAG_EXACT_SCALAR: u8 = 2;
 const HASH_TAG_DENSE: u8 = 3;
 const HASH_TAG_STRUCT_VECTOR: u8 = 4;
 const HASH_TAG_NIL: u8 = 5;
-const HASH_TAG_CODE_BLOCK: u8 = 6;
+const HASH_TAG_SYMBOL: u8 = 6;
 const HASH_TAG_TEXT: u8 = 7;
 
 impl std::hash::Hash for ValueData {
@@ -299,9 +307,9 @@ impl std::hash::Hash for ValueData {
                 leaves.hash(state);
             }
             ValueData::Nil => state.write_u8(HASH_TAG_NIL),
-            ValueData::CodeBlock(tokens) => {
-                state.write_u8(HASH_TAG_CODE_BLOCK);
-                tokens.hash(state);
+            ValueData::Symbol(name) => {
+                state.write_u8(HASH_TAG_SYMBOL);
+                name.hash(state);
             }
             ValueData::Text(s) => {
                 state.write_u8(HASH_TAG_TEXT);

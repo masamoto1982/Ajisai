@@ -491,11 +491,11 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "COND",
         category: "control",
-        summary: "Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
+        summary: "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
         role: "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
-        stack_effect: "value { guard | body } ... -> [ result ]",
+        stack_effect: "value { { guard | body } ... } -> [ result ]",
         hover_summary: "COND — evaluate guard/body clauses",
-        hover_syntax: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
+        hover_syntax: "1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND",
     },
     GeneratedCoreWordDoc {
         name: "EXEC",
@@ -595,14 +595,5 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         stack_effect: "[ x ] -> [ ]",
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",
-    },
-    GeneratedCoreWordDoc {
-        name: "REFLECT",
-        category: "reflection",
-        summary: "Reflect a CodeBlock into canonical code data, or canonical code data into a CodeBlock.",
-        role: "Reflection primitive: cross the explicit boundary between executable code values and structured code data.",
-        stack_effect: "CodeBlock -> code-data\ncode-data -> CodeBlock",
-        hover_summary: "REFLECT — cross the code/data boundary",
-        hover_syntax: "CodeBlock REFLECT\ncode-data REFLECT",
     },
 ];

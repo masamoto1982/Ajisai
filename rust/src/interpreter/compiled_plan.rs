@@ -192,12 +192,14 @@ fn try_collect_literal_vector(
                         values.push(Value::nil());
                         has_other = true;
                     }
-                    // LANG.VALUES.VECTOR: a name inside a Vector literal is its
-                    // own text as data, never executed. This
-                    // mirrors `collect_vector`, so a symbol-bearing vector is a
-                    // literal and lowers here identically to the interpreter path.
+                    // LANG.VALUES.VECTOR: a name inside a Vector literal
+                    // denotes a Symbol — data until something executes it —
+                    // never executed by appearing here. This mirrors
+                    // `collect_bracketed_with_depth`, so a symbol-bearing
+                    // vector is a literal and lowers here identically to the
+                    // interpreter path.
                     _ => {
-                        values.push(Value::from_string(s));
+                        values.push(Value::from_symbol(s));
                         has_other = true;
                     }
                 }
@@ -323,13 +325,17 @@ fn is_self_tail_call(interp: &Interpreter, op: &CompiledOp) -> bool {
     }
 }
 
-/// Replace each `CallBuiltin("COND")` whose clause blocks are statically known
-/// (a contiguous run of preceding `PushCodeBlock` ops, possibly spanning line
-/// breaks) with a `CondDispatch` carrying the split-once clause table. The
-/// `PushCodeBlock` ops are left in place: they still push the blocks at runtime,
-/// so `op_cond_dispatch` can count them and fall back to the dynamic split if an
-/// unexpected block reached the stack. A clause set that fails to split is left
-/// as the dynamic `COND` so its error still surfaces at runtime.
+/// Replace each `CallBuiltin("COND")` whose clauses operand is statically
+/// known (the single preceding op is a literal `PushCodeBlock` or
+/// `PushVectorLiteral` — `COND`'s clauses are one fixed-position operand, the
+/// same convention `MAP`/`FILTER`/`FOLD` use for their code operand) with a
+/// `CondDispatch` carrying the split-once clause table. That preceding op is
+/// left in place: it still pushes the wrapper value at runtime, so a compiled
+/// and an interpreted run of the same source see the same stack traffic;
+/// since the split is already known from compile time, `op_cond_dispatch`
+/// pops it unread. A clauses operand that fails to split, or isn't a literal
+/// at all, is left as the dynamic `COND` so its error still surfaces (or its
+/// value is derived normally) at runtime.
 ///
 /// When `compiled_clause_enabled`, each clause's guard and body are also
 /// compiled into sub-plans so they run compiled rather than re-interpreted.
@@ -346,20 +352,20 @@ fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
         if !matches!(&lines[li].ops[oi], CompiledOp::CallBuiltin(c) if c.name == "COND") {
             continue;
         }
-        let mut blocks: Vec<Vec<Token>> = Vec::new();
-        let mut k = flat_idx;
-        while k > 0 {
-            k -= 1;
-            let (pli, poi) = positions[k];
-            match &lines[pli].ops[poi] {
-                CompiledOp::PushCodeBlock(b) => blocks.push(b.clone()),
-                _ => break,
-            }
-        }
-        if blocks.is_empty() {
+        if flat_idx == 0 {
             continue;
         }
-        blocks.reverse();
+        let (pli, poi) = positions[flat_idx - 1];
+        let blocks: Option<Vec<Vec<Token>>> = match &lines[pli].ops[poi] {
+            CompiledOp::PushCodeBlock(wrapper_tokens) => {
+                super::control_cond::split_wrapper_into_clause_blocks(wrapper_tokens)
+            }
+            CompiledOp::PushVectorLiteral(value, _) => value
+                .as_vector_view()
+                .and_then(|elements| clause_blocks_from_values(&elements)),
+            _ => None,
+        };
+        let Some(blocks) = blocks else { continue };
         if let Ok(mut clauses) = super::control_cond::split_clause_blocks(blocks) {
             if interp.compiled_clause_enabled {
                 for clause in &mut clauses {
@@ -374,6 +380,21 @@ fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
     for ((li, oi), clauses) in replacements {
         lines[li].ops[oi] = CompiledOp::CondDispatch(clauses);
     }
+}
+
+/// Bridge a literal clauses-vector's already-built elements back to tokens
+/// (`value_as_code.rs`), the same conversion the dynamic path
+/// (`control_cond::extract_clause_blocks`) applies at runtime. Used when the
+/// wrapper was lowered as `PushVectorLiteral` (a `[ ]`-spelled clauses
+/// operand) rather than captured as raw `PushCodeBlock` tokens.
+fn clause_blocks_from_values(elements: &[Value]) -> Option<Vec<Vec<Token>>> {
+    elements
+        .iter()
+        .map(|clause| {
+            let inner = clause.as_vector_view()?;
+            super::value_as_code::value_elements_to_tokens(&inner).ok()
+        })
+        .collect()
 }
 
 fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
@@ -475,10 +496,23 @@ fn execute_compiled_line(
                 interp.stack.push_with_role(v.clone(), *hint);
             }
             CompiledOp::PushCodeBlock(tokens) => {
-                interp.stack.push_with_role(
-                    Value::from_code_block(tokens.clone()),
-                    Interpretation::Unassigned,
-                );
+                // `PushCodeBlock` stays a distinct *compiled op* — it is
+                // still emitted specifically for a `{ }`-spelled literal
+                // (see `collect_code_block` above), which is what lets
+                // `lower_cond_dispatch` keep counting COND's clause blocks
+                // lexically at compile time (docs/dev/type-unification-
+                // work-order-2026-08.md). But the *value* it pushes is now
+                // built through the same unified collector `[ ]` uses
+                // (`vector_literal.rs`), not a separate CodeBlock domain.
+                let mut synthetic = Vec::with_capacity(tokens.len() + 2);
+                synthetic.push(Token::BlockStart);
+                synthetic.extend(tokens.iter().cloned());
+                synthetic.push(Token::BlockEnd);
+                let (values, _consumed, hint) =
+                    Interpreter::collect_bracketed_with_depth(&synthetic, 0, 1)?;
+                interp
+                    .stack
+                    .push_with_role(Value::from_vector_promoted(values), hint);
             }
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(call) => {

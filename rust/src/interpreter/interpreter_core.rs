@@ -279,7 +279,9 @@ pub struct Interpreter {
     /// Raised by the deferral site when a guarded tail self-call is recognized
     /// and skipped; consumed by the trampoline loop in `execute_word_core_inner`.
     pub(crate) tail_jump_pending: bool,
-
+    /// A `DEF` body's own written tokens, captured lexically when a literal
+    /// precedes `<name> [KEEP] DEF` (`execution_loop.rs`, `execute_def.rs`).
+    pub(crate) pending_def_body_tokens: Option<Vec<crate::types::Token>>,
     // ── Source positions ──────────────────────────────────────────────────
     /// Where each token of the program currently running was written,
     /// index-aligned with its token stream. Empty for any entry point that did
@@ -385,6 +387,7 @@ impl Interpreter {
             tail_self_word: None,
             in_tail_context: false,
             tail_jump_pending: false,
+            pending_def_body_tokens: None,
             source_spans: Vec::new(),
             section_depth: 0,
             current_source_span: None,

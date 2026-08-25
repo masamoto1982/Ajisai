@@ -1,5 +1,5 @@
 use super::fraction::Fraction;
-use super::{DenseTensor, Interpretation, Token, Value, ValueData};
+use super::{DenseTensor, Interpretation, Value, ValueData};
 use crate::error::NilReason;
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
@@ -23,7 +23,7 @@ pub enum NodeKind {
         data: Vec<Fraction>,
         shape: Vec<usize>,
     },
-    CodeBlock(Vec<Token>),
+    Symbol(Arc<str>),
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -97,7 +97,7 @@ impl ValueArena {
             | NodeKind::Boolean(_)
             | NodeKind::Scalar(_)
             | NodeKind::Text(_)
-            | NodeKind::CodeBlock(_) => &[],
+            | NodeKind::Symbol(_) => &[],
         }
     }
 }
@@ -137,8 +137,8 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             ValueData::Tensor { data, shape } => {
                 arena.alloc_tensor(data.to_fractions(), (**shape).clone(), value.hint)
             }
-            ValueData::CodeBlock(tokens) => {
-                arena.alloc_node(NodeKind::CodeBlock(tokens.clone()), value.hint)
+            ValueData::Symbol(name) => {
+                arena.alloc_node(NodeKind::Symbol(Arc::clone(name)), value.hint)
             }
         }
     }
@@ -199,8 +199,8 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                 hint: arena.hint(id),
                 absence: None,
             },
-            NodeKind::CodeBlock(tokens) => Value {
-                data: ValueData::CodeBlock(tokens.clone()),
+            NodeKind::Symbol(name) => Value {
+                data: ValueData::Symbol(Arc::clone(name)),
                 hint: arena.hint(id),
                 absence: None,
             },
@@ -305,7 +305,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
             JsonValue::Array(arr)
         }
         NodeKind::Tensor { data, shape } => tensor_to_json(data, shape),
-        NodeKind::CodeBlock(_) => JsonValue::Null,
+        NodeKind::Symbol(name) => JsonValue::String(name.to_string()),
     }
 }
 

@@ -52,7 +52,7 @@ pub(crate) fn measure_operand(value: &Value) -> OperandWork {
             .unwrap_or(OperandWork::leaf(1)),
         // No arithmetic happens on these; the structure error they raise is
         // not work.
-        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::CodeBlock(_) => {
+        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::Symbol(_) => {
             OperandWork::leaf(1)
         }
     }
@@ -118,7 +118,7 @@ fn measure_result(value: &Value) -> (u64, usize) {
             let (child_bits, child_terms) = measure_result(child);
             (bits.max(child_bits), terms.max(child_terms))
         }),
-        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::CodeBlock(_) => {
+        ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::Symbol(_) => {
             (0, 0)
         }
     }

@@ -74,7 +74,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 66 canonical Words and 12 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 66, a 37-Word Semantic Kernel carries the semantic identity of the language and 29 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
+The vocabulary is 65 canonical Words and 12 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 65, a 36-Word Semantic Kernel carries the semantic identity of the language and 29 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -134,11 +134,11 @@ If \(D\) is desugaring and \(O\) observation, then \(O(p)=O(D(p))\) for every we
 <h3 id="lang-source-code">LANG.SOURCE.CODE — Code values</h3>
 
 <p>
-A code block is a tagged value containing source for later evaluation. Producing, storing, displaying, and evaluating code are distinct operations. Evaluation occurs only through a Word whose contract requests it — <code>EXEC</code>, <code>COND</code>, and the higher-order family.
+Code is a Vector holding source for later evaluation — not a distinct domain from data, but the same Vector domain (LANG.VALUES.DISJOINT) read as executable by a Word whose contract requests it. <code>{ }</code> and <code>[ ]</code> are two spellings of the identical construction: <code>{ 1 2 + }</code> and <code>[ 1 2 + ]</code> denote one value (LANG.VALUES.DENOTATION), and either spelling is equally executable. A program's choice of bracket is presentation, the way clause layout already is (LANG.SOURCE.DESUGAR); it is not read back out of the value once built.
 </p>
 
 <p>
-Quoted code is not eagerly executed. Code and data are distinct value domains: executable source lives in a CodeBlock, and a Vector is data and is never executable.
+Producing, storing, displaying, and evaluating a Vector as code are distinct operations regardless of which spelling built it. Quoted code is not eagerly executed: evaluation occurs only through a Word whose contract requests it — <code>EXEC</code>, <code>COND</code>, and the higher-order family — never merely by building or holding the value. A bare name written where a Vector element is being collected denotes a Symbol (LANG.VALUES.VECTOR) — data until something executes it — so a name is not resolved merely by appearing inside a literal, however the literal is bracketed.
 </p>
 
 <h3 id="lang-source-frame">LANG.SOURCE.FRAME — What a block sees</h3>
@@ -153,7 +153,7 @@ Quoted code is not eagerly executed. Code and data are distinct value domains: e
 <h3 id="lang-values-disjoint">LANG.VALUES.DISJOINT — Tagged domains</h3>
 
 <p>
-Values form a disjoint tagged sum of exactly six domains: Scalar, Boolean, String, Vector, NIL, and CodeBlock. Two values are never equal merely because their encodings resemble one another.
+Values form a disjoint tagged sum of exactly six domains: Scalar, Boolean, String, Vector, NIL, and Symbol. A Symbol is a bare name, data until something executes it (LANG.SOURCE.CODE); it is its own domain, reachable standalone (<code>[ ADD ] 0 GET</code> leaves the Symbol <code>ADD</code> on the stack) as well as nested inside a Vector. Two values are never equal merely because their encodings resemble one another: a Symbol is not the String of the same spelling.
 </p>
 
 <p>
@@ -203,7 +203,7 @@ Vector length is semantic even when storage is flattened, shared, or lazily mate
 </p>
 
 <p>
-Inside a Vector literal a name is data, not code: it denotes its own text, and no dictionary lookup occurs. <code>[ FOO ]</code> is the one-element Vector holding the String <code>FOO</code> whether or not <code>FOO</code> is a defined Word, so a Vector literal denotes the same value under every dictionary state. Only <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code> denote values rather than their text. A consequence worth stating: a misspelled name inside a Vector literal is a String element, not an error.
+Inside a Vector literal a name denotes a Symbol (LANG.VALUES.DISJOINT): data until something executes it, and building the literal is not itself execution, so no dictionary lookup occurs there. <code>[ FOO ]</code> is the one-element Vector holding the Symbol <code>FOO</code> whether or not <code>FOO</code> is a defined Word, so a Vector literal denotes the same value under every dictionary state — this holds whichever bracket spelling builds it (LANG.SOURCE.CODE). Only <code>TRUE</code>, <code>FALSE</code> and <code>NIL</code> denote values rather than a Symbol carrying their name. A consequence worth stating: a misspelled name inside a Vector literal is a Symbol element, not an error.
 </p>
 
 <h2 id="lang-machine">4. Machine State and Evaluation</h2>
@@ -250,7 +250,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-modifiers-consumption">LANG.MODIFIERS.CONSUMPTION — The consumption axis</h3>
 
-<p>There is exactly one modifier axis. By default a Word consumes the operands it reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order. A Word whose result is empty is no exception: <code>BIND</code>, <code>DEF</code> and <code>DEL</code> perform their effect and leave their operands where they were. The higher-order Words are the one exception: under <code>KEEP</code>, <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code> and <code>ALL</code> retain the collection they walk and nothing else, because the CodeBlock states what the call is rather than being data the call read, and <code>FOLD</code>'s initial accumulator has been folded into the answer.</p>
+<p>There is exactly one modifier axis. By default a Word consumes the operands it reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order. A Word whose result is empty is no exception: <code>BIND</code>, <code>DEF</code> and <code>DEL</code> perform their effect and leave their operands where they were. The higher-order Words are the one exception: under <code>KEEP</code>, <code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code> and <code>ALL</code> retain the collection they walk and nothing else, because the code operand states what the call is rather than being data the call read, and <code>FOLD</code>'s initial accumulator has been folded into the answer.</p>
 
 <p>A Word selects operands from the top of the stack, validates its registered contract, computes or projects the result, and then commits consumption according to the axis. ERROR does not masquerade as a successful NIL projection.</p>
 
@@ -298,7 +298,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-collections-higher">LANG.COLLECTIONS.HIGHER — Higher-order evaluation</h3>
 
-<p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, and <code>ALL</code> evaluate a CodeBlock once per visited element, in index order, with the block's stack effect isolated to its own operands.</p>
+<p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, and <code>ALL</code> evaluate their code operand (LANG.SOURCE.CODE) once per visited element, in index order, with the block's stack effect isolated to its own operands.</p>
 
 <p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state. The block's single result is the mapped element as it stands, whatever domain it is in: a Vector of one element is a Vector of one element (LANG.VALUES.DISJOINT), so <code>[ 1 2 ] { 1 COLLECT } MAP</code> answers <code>[ [ 1 ] [ 2 ] ]</code> and no Word unwraps a result on the grounds of its length.</p>
 
@@ -328,12 +328,6 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>Every other Word changes nothing: given the same stack and dictionary it produces the same result. A Word that evaluates a supplied code block has the effects of that block and no others, so it is pure exactly when the block is.</p>
 
-<h3 id="lang-source-reflection">LANG.SOURCE.REFLECTION — Explicit code/data reflection</h3>
-
-<p>CodeBlock and Vector remain disjoint domains: a Vector is data and is never directly executable. <code>REFLECT</code> is the sole reversible boundary between a CodeBlock token sequence and the versioned canonical Vector <code>[ 'AJISAI-CODE-1' token-record... ]</code>. Records preserve every token variant and its original Number lexeme, String content, and Symbol spelling; display text is not authoritative code.</p>
-
-<p>Reflection is pure, deterministic, non-evaluating, independent of dictionary state, and performs no name resolution or mutation. Strictly malformed code data is ERROR. On legal values it is an involution under token/structural equality. <code>EXEC</code> continues to accept only CodeBlock. <code>REFLECT</code> is neither a String parser nor a macro expander.</p>
-
 <h2 id="lang-contract">9. Contracts and Static Checking</h2>
 
 <h3 id="lang-contract-registry">LANG.CONTRACT.REGISTRY — Machine-readable contracts</h3>
@@ -344,7 +338,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-contract-check">LANG.CONTRACT.CHECK — Pre-execution check</h3>
 
-<p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>. <code>PROBE</code> reaches the same inference from inside the language, over a CodeBlock rather than a named declaration: it never evaluates its operand, so calling it carries none of the operand's own effects.</p>
+<p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>. <code>PROBE</code> reaches the same inference from inside the language, over a Vector of code (LANG.SOURCE.CODE) rather than a named declaration: it never evaluates its operand, so calling it carries none of the operand's own effects.</p>
 
 <p>The check is deliberately <strong>conservative and partial</strong>. It reports exactly three outcomes per declaration: <em>verified</em>, <em>violated</em>, or <em>cannot verify</em>. Anything outside the syntactic fragment the inference analyzes — a higher-order body whose block is not statically known, or dynamic control — is reported as <em>cannot verify</em> and is never silently passed. A tool that reports <em>verified</em> for an unanalyzable body is nonconforming.</p>
 <p>These three results are the trichotomy of LANG.FAILURE.TRICHOTOMY applied at check time rather than at run time: verified corresponds to a value — the inferred contract itself — cannot verify to a reasoned absence, and violated to an error. The correspondence classifies outcomes, not mechanisms, and does not make the check evaluate the program: division by zero, a failed parse and an out-of-range index already share one outcome category while sharing no mechanism, and an inference that could not decide joins that list on the same terms.</p>

@@ -7,8 +7,7 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, control_cond, execute_def,
     execute_del, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
-    ordering_ops, probe, reflection, shape_ops, sort, tensor_cmds, vector_ops, ConsumptionMode,
-    Interpreter,
+    ordering_ops, probe, shape_ops, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -291,7 +290,6 @@ impl Interpreter {
             }
             WordId::Exec => control::op_exec(self),
             WordId::Probe => probe::op_probe(self),
-            WordId::Reflect => reflection::op_reflect(self),
             WordId::Cond => control_cond::op_cond(self),
             WordId::Bind => bindings::op_bind(self),
             WordId::Def => execute_def::op_def(self),

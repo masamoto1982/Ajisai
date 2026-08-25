@@ -340,9 +340,9 @@ fn single_rational_operand(value: &Value) -> Result<Option<Fraction>> {
             "single-element number",
             "boolean",
         )),
-        ValueData::CodeBlock(_) => Err(AjisaiError::create_structure_error(
+        ValueData::Symbol(_) => Err(AjisaiError::create_structure_error(
             "single-element number",
-            "code block",
+            "symbol",
         )),
         ValueData::Nil => Err(AjisaiError::create_structure_error(
             "single-element number",

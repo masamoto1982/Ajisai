@@ -2276,7 +2276,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonCodeBlock",
+        "notExecutable",
         "blockContractViolation"
       ],
       "purity": "conditional",
@@ -2329,7 +2329,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonCodeBlock",
+        "notExecutable",
         "blockContractViolation"
       ],
       "purity": "conditional",
@@ -2382,7 +2382,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonCodeBlock",
+        "notExecutable",
         "blockContractViolation"
       ],
       "purity": "conditional",
@@ -2434,7 +2434,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonCodeBlock",
+        "notExecutable",
         "blockContractViolation"
       ],
       "purity": "conditional",
@@ -2487,7 +2487,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonCodeBlock",
+        "notExecutable",
         "blockContractViolation"
       ],
       "purity": "conditional",
@@ -2837,7 +2837,7 @@
       "aliases": [],
       "family": "control",
       "stack": {
-        "inputs": "variable",
+        "inputs": 2,
         "outputs": 1
       },
       "consumption": "conditional",
@@ -2871,12 +2871,12 @@
         "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
+        "summary": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
         "hover": "COND — evaluate guard/body clauses",
-        "lookup": "Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
-        "syntax": "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
+        "lookup": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
+        "syntax": "1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND",
         "role": "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
-        "stackEffect": "value { guard | body } ... -> [ result ]"
+        "stackEffect": "value { { guard | body } ... } -> [ result ]"
       },
       "executorKey": "Cond",
       "effects": [],
@@ -2899,7 +2899,7 @@
         "reason": null
       },
       "errorWhen": [
-        "nonCodeBlock",
+        "notExecutable",
         "nestedExecutionError"
       ],
       "purity": "conditional",
@@ -2951,7 +2951,7 @@
         "reason": null
       },
       "errorWhen": [
-        "nonCodeBlock"
+        "notExecutable"
       ],
       "purity": "pure",
       "determinism": "stateRelative",
@@ -3448,57 +3448,6 @@
       ],
       "partiality": "partial",
       "category": "io",
-      "vocabularyTier": "kernel"
-    },
-    {
-      "name": "REFLECT",
-      "aliases": [],
-      "family": "reflection",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonReflectableValue",
-        "malformedCodeData"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "linear",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.SOURCE.REFLECTION"
-      ],
-      "documentation": {
-        "summary": "Reflect a CodeBlock into canonical code data, or canonical code data into a CodeBlock.",
-        "hover": "REFLECT — cross the code/data boundary",
-        "lookup": "Convert between a CodeBlock and its canonical structured data representation without evaluating the code.",
-        "syntax": "CodeBlock REFLECT\ncode-data REFLECT",
-        "role": "Reflection primitive: cross the explicit boundary between executable code values and structured code data.",
-        "stackEffect": "CodeBlock -> code-data\ncode-data -> CodeBlock"
-      },
-      "executorKey": "Reflect",
-      "effects": [],
-      "partiality": "partial",
-      "category": "reflection",
       "vocabularyTier": "kernel"
     }
   ]

@@ -7,7 +7,7 @@
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::value_persist::{decode_stack, encode_stack};
-use crate::types::{Interpretation, Token, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::One;
 use std::str::FromStr;
@@ -39,16 +39,18 @@ fn sqrt(n: i64) -> Value {
 }
 
 #[test]
-fn code_block_survives_round_trip_instead_of_becoming_nil() {
-    // Regression: the observation protocol mapped CodeBlock -> nil, so
-    // save/restore replaced a code block with a genuine NIL.
-    let value = Value::from_code_block(vec![
-        Token::Number(Arc::from("42")),
-        Token::Symbol(Arc::from("ADD")),
-        Token::VectorStart,
-        Token::VectorEnd,
+fn code_shaped_vector_survives_round_trip_instead_of_becoming_nil() {
+    // Regression: the observation protocol used to map the pre-unification
+    // CodeBlock domain to nil, so save/restore replaced a code block with a
+    // genuine NIL. The equivalent code-shaped value post-unification is a
+    // Vector holding a Symbol element, exercising the Vector/Symbol
+    // persistence path `{ 42 ADD [ ] }`/`[ 42 ADD [ ] ]` both build.
+    let value = Value::from_vector_promoted(vec![
+        Value::from_number(Fraction::from(42)),
+        Value::from_symbol("ADD"),
+        Value::from_vector_promoted(vec![]),
     ]);
-    assert!(matches!(value.data, ValueData::CodeBlock(_)));
+    assert!(matches!(value.data, ValueData::Vector(_)));
     assert_stack_roundtrip(value, Interpretation::Unassigned);
 }
 
@@ -124,7 +126,7 @@ fn multi_slot_stack_round_trips_in_order() {
         (Value::from_int(1), Interpretation::RawNumber),
         (sqrt(2), Interpretation::RawNumber),
         (
-            Value::from_code_block(vec![Token::Number(Arc::from("9"))]),
+            Value::from_vector_promoted(vec![Value::from_number(Fraction::from(9))]),
             Interpretation::Unassigned,
         ),
     ];

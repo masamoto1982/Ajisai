@@ -548,14 +548,16 @@ mod tests {
     // the whole User dictionary.
 
     const SELF_RECURSIVE: &str = "{\n\
+         {\n\
          { 0 LTE | 0 * }\n\
          { IDLE | 1 - SELFW }\n\
-         COND } 'SELFW' DEF";
+         } COND } 'SELFW' DEF";
 
     const SELF_RECURSIVE_V2: &str = "{\n\
+         {\n\
          { 0 LTE | 0 * }\n\
          { IDLE | 2 - SELFW }\n\
-         COND } 'SELFW' DEF";
+         } COND } 'SELFW' DEF";
 
     #[tokio::test]
     async fn a_self_recursive_word_can_be_redefined() {
@@ -646,7 +648,7 @@ mod tests {
     async fn lookup_of_a_cond_word_round_trips_through_def() {
         let mut interp = Interpreter::new();
         interp
-            .execute("{\n{ 5 LT | 'small' }\n{ IDLE | 'big' }\nCOND } 'SIZE' DEF")
+            .execute("{\n{\n{ 5 LT | 'small' }\n{ IDLE | 'big' }\n} COND } 'SIZE' DEF")
             .await
             .unwrap();
         let loaded = lookup_source(&interp, "SIZE");

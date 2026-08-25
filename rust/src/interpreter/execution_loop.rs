@@ -36,6 +36,37 @@ pub(crate) fn end_of_source_unit(tokens: &[Token], start: usize) -> usize {
     i
 }
 
+/// If the bracketed literal spanning `tokens[start..start+consumed)` is
+/// immediately followed (no tokens between) by `<name-string> [KEEP] DEF`,
+/// return its inner tokens (brackets excluded) — the body `DEF` is about to
+/// define, as written. `None` on any mismatch, which just means this literal
+/// is not a `DEF` body written in place — see `pending_def_body_tokens`'s
+/// doc comment for why `op_def` wants this at all.
+fn def_body_tokens_if_literal_precedes_def(
+    tokens: &[Token],
+    start: usize,
+    consumed: usize,
+) -> Option<Vec<Token>> {
+    let mut j = start + consumed;
+    if !matches!(tokens.get(j), Some(Token::String(_))) {
+        return None;
+    }
+    j += 1;
+    if matches!(tokens.get(j), Some(Token::Symbol(s))
+        if crate::core_word_aliases::canonicalize_core_word_name(s).as_ref() == "KEEP")
+    {
+        j += 1;
+    }
+    match tokens.get(j) {
+        Some(Token::Symbol(s))
+            if crate::core_word_aliases::canonicalize_core_word_name(s).as_ref() == "DEF" =>
+        {
+            Some(tokens[start + 1..start + consumed - 1].to_vec())
+        }
+        _ => None,
+    }
+}
+
 /// After a core word runs, retag the top-of-stack plane role from a small
 /// name-keyed table (SPEC §12). The interpreted loop applies this after every
 /// symbol; the compiled plan mirrors it after each call op so the two routes
@@ -229,45 +260,30 @@ impl Interpreter {
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
                 }
-                Token::VectorStart => {
+                Token::VectorStart | Token::BlockStart => {
+                    // `{ }` and `[ ]` build through the same unified
+                    // collector (`vector_literal.rs`) — see that module's
+                    // doc comment. This supersedes the old separate raw-
+                    // token-capture-and-wrap-as-CodeBlock behavior `{ }`
+                    // used to have. `COND` takes its clause blocks as a
+                    // single ordinary Vector operand (one more literal built
+                    // and pushed exactly like this one) rather than a
+                    // variable-length run recognized here — see
+                    // `control_cond.rs::op_cond`'s doc comment for why.
                     let (values, consumed, element_hint) =
-                        self.collect_vector(execute_tokens, i)?;
+                        Self::collect_bracketed_with_depth(execute_tokens, i, 1)?;
+                    // A literal immediately followed by `<name> [KEEP] DEF`
+                    // is that DEF's body — captured here, as written, for
+                    // `op_def` to prefer over re-deriving it from the Value
+                    // just built (see `pending_def_body_tokens`'s doc
+                    // comment). A mismatch here is not an error: it just
+                    // means this literal is not a `DEF` body written
+                    // in place, and `op_def` falls back normally.
+                    self.pending_def_body_tokens =
+                        def_body_tokens_if_literal_precedes_def(execute_tokens, i, consumed);
                     self.stack
                         .push_with_role(Value::from_vector_promoted(values), element_hint);
                     i += consumed;
-                    continue;
-                }
-                Token::BlockStart => {
-                    let mut depth: i32 = 1;
-                    let mut j: usize = i + 1;
-                    let mut block_tokens: Vec<Token> = Vec::new();
-
-                    while j < execute_tokens.len() && depth > 0 {
-                        match &execute_tokens[j] {
-                            Token::BlockStart => {
-                                depth += 1;
-                                block_tokens.push(execute_tokens[j].clone());
-                            }
-                            Token::BlockEnd => {
-                                depth -= 1;
-                                if depth > 0 {
-                                    block_tokens.push(execute_tokens[j].clone());
-                                }
-                            }
-                            token => block_tokens.push(token.clone()),
-                        }
-                        j += 1;
-                    }
-
-                    if depth != 0 {
-                        return Err(AjisaiError::MalformedSource("Unclosed code block".into()));
-                    }
-
-                    self.stack.push_with_role(
-                        Value::from_code_block(block_tokens),
-                        Interpretation::Unassigned,
-                    );
-                    i = j;
                     continue;
                 }
                 Token::Symbol(s) => {

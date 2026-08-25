@@ -33,25 +33,17 @@
 //! situations as one, which is exactly the telemetry the gap ids exist to
 //! keep apart.
 //!
-//! A sixth closes a soundness hole rather than a false-error source: a call
-//! to `REFLECT` (`OpaqueReflection`). Every other way a body can reach a
-//! `CodeBlock` value is visible to this walk regardless of provenance — a
-//! literal `{ }` is scanned unconditionally by `Token::Symbol`, irrespective
-//! of vector/block depth, and a value produced by calling another resolved
-//! word already carries that word's own (over-)approximated effects — but
-//! `REFLECT` can turn a `Vector` whose elements are `String` tokens into a
-//! `CodeBlock` whose Word names were never `Symbol` tokens this walk could
-//! resolve. Trusting `REFLECT`'s own registry contract (genuinely
-//! `pure`/`nil-free`/deterministic, for the `CodeBlock`→data direction) for
-//! *what the reflected value does once something runs it* let a body that
-//! prints through `REFLECT EXEC` infer as `pure`/`complete` — not a false
-//! `error` but a false *verified*, which is worse: `check --contract`'s
-//! entire purpose is to let a caller trust a `pure` declaration without
-//! running the code. `REFLECT`'s `flow`/`space`/`cost` stay their real,
-//! sound projection (those axes are unaffected by which direction it ran);
-//! only the widened acc-relevant axes fall back to the conservative ceiling.
+//! A sixth, `OpaqueReflection`, closed a soundness hole around `REFLECT` —
+//! a call that could turn a `Vector` whose elements were `String` tokens
+//! into a `CodeBlock` whose Word names this walk had never seen as `Symbol`
+//! tokens, so trusting `REFLECT`'s own registry contract for what the
+//! reflected value did once run could infer a false `pure`/`complete`.
+//! Retired along with `REFLECT` itself (CodeBlock/Vector unification,
+//! docs/dev/type-unification-work-order-2026-08.md): every Vector is
+//! already visible to this walk the ordinary way, so there is no longer a
+//! second, opaque path back into executable code for it to guard against.
 //!
-//! These six and no others: a seventh incompleteness source is a design
+//! These five and no others: a sixth incompleteness source is a design
 //! decision (which bucket does it belong in, or does it need one of its
 //! own), not something to invent here silently.
 //!
@@ -68,7 +60,6 @@ pub(crate) enum GapCode {
     DependencyUnknown,
     ConservativeSeed,
     UnmodelledControlFlow,
-    OpaqueReflection,
 }
 
 impl GapCode {
@@ -78,7 +69,6 @@ impl GapCode {
         GapCode::DependencyUnknown,
         GapCode::ConservativeSeed,
         GapCode::UnmodelledControlFlow,
-        GapCode::OpaqueReflection,
     ];
 
     pub(crate) fn as_str(self) -> &'static str {
@@ -88,7 +78,6 @@ impl GapCode {
             GapCode::DependencyUnknown => "gap.dependencyUnknown",
             GapCode::ConservativeSeed => "gap.conservativeSeed",
             GapCode::UnmodelledControlFlow => "gap.unmodelledControlFlow",
-            GapCode::OpaqueReflection => "gap.opaqueReflection",
         }
     }
 

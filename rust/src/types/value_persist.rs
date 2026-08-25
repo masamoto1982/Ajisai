@@ -23,7 +23,7 @@
 use crate::error::NilReason;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{DenseTensor, Interpretation, Token, Value, ValueData};
+use crate::types::{DenseTensor, Interpretation, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use serde::{Deserialize, Serialize};
@@ -87,21 +87,6 @@ struct PersistTerm {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "k")]
-enum PersistToken {
-    Number { s: String },
-    Text { s: String },
-    Symbol { s: String },
-    VectorStart,
-    VectorEnd,
-    BlockStart,
-    BlockEnd,
-    NilCoalesce,
-    CondClauseSep,
-    LineBreak,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "t")]
 enum PersistData {
     Bool {
@@ -142,8 +127,9 @@ enum PersistData {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         r: Option<String>,
     },
-    Code {
-        tokens: Vec<PersistToken>,
+    /// A Symbol, persisted as its bare name.
+    Symbol {
+        name: String,
     },
 }
 
@@ -161,38 +147,6 @@ struct PersistSlot {
     v: PersistValue,
     /// Stack-position role tag.
     r: String,
-}
-
-// ---- Token <-> wire ----
-
-fn token_to_wire(token: &Token) -> PersistToken {
-    match token {
-        Token::Number(s) => PersistToken::Number { s: s.to_string() },
-        Token::String(s) => PersistToken::Text { s: s.to_string() },
-        Token::Symbol(s) => PersistToken::Symbol { s: s.to_string() },
-        Token::VectorStart => PersistToken::VectorStart,
-        Token::VectorEnd => PersistToken::VectorEnd,
-        Token::BlockStart => PersistToken::BlockStart,
-        Token::BlockEnd => PersistToken::BlockEnd,
-        Token::NilCoalesce => PersistToken::NilCoalesce,
-        Token::CondClauseSep => PersistToken::CondClauseSep,
-        Token::LineBreak => PersistToken::LineBreak,
-    }
-}
-
-fn token_from_wire(token: &PersistToken) -> Token {
-    match token {
-        PersistToken::Number { s } => Token::Number(Arc::from(s.as_str())),
-        PersistToken::Text { s } => Token::String(Arc::from(s.as_str())),
-        PersistToken::Symbol { s } => Token::Symbol(Arc::from(s.as_str())),
-        PersistToken::VectorStart => Token::VectorStart,
-        PersistToken::VectorEnd => Token::VectorEnd,
-        PersistToken::BlockStart => Token::BlockStart,
-        PersistToken::BlockEnd => Token::BlockEnd,
-        PersistToken::NilCoalesce => Token::NilCoalesce,
-        PersistToken::CondClauseSep => Token::CondClauseSep,
-        PersistToken::LineBreak => Token::LineBreak,
-    }
 }
 
 // ---- Value <-> wire ----
@@ -246,8 +200,8 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
             shape: (**shape).clone(),
         },
         ValueData::Nil => PersistData::Nil { r: None },
-        ValueData::CodeBlock(tokens) => PersistData::Code {
-            tokens: tokens.iter().map(token_to_wire).collect(),
+        ValueData::Symbol(name) => PersistData::Symbol {
+            name: name.to_string(),
         },
     })
 }
@@ -304,9 +258,7 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             }
         }
         PersistData::Nil { .. } => ValueData::Nil,
-        PersistData::Code { tokens } => {
-            ValueData::CodeBlock(tokens.iter().map(token_from_wire).collect())
-        }
+        PersistData::Symbol { name } => ValueData::Symbol(Arc::from(name.as_str())),
     })
 }
 

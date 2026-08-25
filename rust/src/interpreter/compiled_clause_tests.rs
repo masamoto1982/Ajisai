@@ -10,7 +10,7 @@
 use crate::interpreter::Interpreter;
 
 const COUNTDOWN: &str =
-    "{\n  { [ 0 ] > | [ 1 ] - DOWN }\n  { IDLE | [ 'done' ] } COND\n} 'DOWN' DEF";
+    "{\n  {\n  { [ 0 ] > | [ 1 ] - DOWN }\n  { IDLE | [ 'done' ] }\n  } COND\n} 'DOWN' DEF";
 
 fn fresh() -> Interpreter {
     Interpreter::new()

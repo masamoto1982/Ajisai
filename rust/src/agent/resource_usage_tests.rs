@@ -49,7 +49,7 @@ mod resource_usage_tests {
             "{ [ 2 ] * } 'DOUBLE' DEF [ 3 ] DOUBLE",
             "[ 1 20 ] RANGE 1 { * } FOLD",
             "[ 1 20 ] RANGE { [ 2 ] * } MAP",
-            "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n50 DOWN",
+            "{\n{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] }\n} COND\n} 'DOWN' DEF\n50 DOWN",
         ] {
             let report = agent_json(source).await;
             assert!(
@@ -77,7 +77,7 @@ mod resource_usage_tests {
         // The point of a single counter: what a refusal says it observed and
         // what the report says was spent are the same reading.
         let report = agent_json(
-            "{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n200000 DOWN",
+            "{\n{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] }\n} COND\n} 'DOWN' DEF\n200000 DOWN",
         )
         .await;
         assert_eq!(report["status"], "error");

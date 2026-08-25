@@ -359,7 +359,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
         ValueData::Nil => None,
-        ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
+        ValueData::Boolean(_) | ValueData::Symbol(_) => None,
     }
 }
 

@@ -12,8 +12,16 @@ pub(crate) fn extract_executable_code(
     _interp: &mut Interpreter,
     val: &Value,
 ) -> Result<ExecutableCode> {
-    if let Some(tokens) = val.as_code_block() {
-        return Ok(ExecutableCode::CodeBlock(tokens.clone()));
+    // Every Vector is a code operand candidate now (CodeBlock/Vector
+    // unification) — bridged back to tokens (`value_as_code.rs`).
+    // `as_vector_view` (Tensor-aware) — see control.rs's EXEC for why.
+    // Which of the higher-order word's two operands *is* the code one is a
+    // separate question this function does not answer: callers decide by
+    // stack position before reaching it (the top-of-stack operand), same as
+    // before this unification.
+    if let Some(elements) = val.as_vector_view() {
+        let tokens = crate::interpreter::value_as_code::value_elements_to_tokens(&elements)?;
+        return Ok(ExecutableCode::CodeBlock(tokens));
     }
 
     // A Word name is a String (`[ 1 2 3 ] 'DBL' MAP`). This tested for a

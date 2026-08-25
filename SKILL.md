@@ -36,7 +36,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 3. Control and iteration
 
-- Branch: `value { guard } { body } { guard } { body } ... COND`. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use `{ TRUE }` as the final else-guard. The value remains on the stack after COND.
+- Branch: `value { { guard } { body } { guard } { body } ... } COND` — the clauses are one `{ }` of guard/body pairs. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use `{ TRUE }` as the final else-guard. The value remains on the stack after COND.
 - Iterate data, not counters: `MAP` / `FILTER` / `FOLD` with `{ }` blocks (examples in §6). `FOLD` requires an explicit `[ init ]`.
 - Predicates: `ANY` / `ALL` with a `{ predicate }` block.
 - Recursion is allowed in user words (execution-step and depth limits apply; exceeding them is a diagnosed error, not a hang).
@@ -81,7 +81,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 - Comparison pushes a boolean
   `1 2 <` → stack: `TRUE`
 - Comparison lifts over vectors element-wise
-  `[ 1 2 ] [ 3 1 ] <` → stack: `{ TRUE FALSE }`
+  `[ 1 2 ] [ 3 1 ] <` → stack: `[ TRUE FALSE ]`
 - Range: one vector [ start end ] (inclusive)
   `[ 0 5 ] RANGE` → stack: `[ 0/1 1/1 2/1 3/1 4/1 5/1 ]`
 - Range with step: [ start end step ]
@@ -98,8 +98,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 1 2 3 ] { 1 > } ANY` → stack: `TRUE`
 - Define a user word: { body } then name, then DEF
   `{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
-- COND: value on stack, then { guard } { body } pairs (use { TRUE } as else-guard)
-  `4 { 0 GTE } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND` → prints `non-negative`; stack: `4/1`
+- COND: value, then one { } of { guard } { body } pairs (use { TRUE } as else-guard)
+  `4 { { 0 GTE } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } } COND` → prints `non-negative`; stack: `4/1`
 - Strings are bare '...' literals; CHARS/JOIN convert
   `'hello' CHARS REVERSE JOIN` → stack: `'olleh'`
 - Cast a string to an exact number
@@ -127,14 +127,14 @@ produce a value produces NIL (§4); a malformed one raises an error.
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkArity`.
   Fix: FOLD is `vector [ init ] { op } FOLD`: `[ 1 2 3 ] [ 0 ] { + } FOLD`.
-- **COND blocks must come in { guard } { body } pairs** — `5 { 3 > } { 'big' PRINT } { 'small' PRINT } COND`
-  → exit 1, `message: "COND: expected even number of code blocks (guard/body pairs), got 3"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
+- **COND clauses must be wrapped in a single { }** — `5 { 3 > } { 'big' PRINT } COND`
+  → exit 1, `message: "COND: each clause must itself be a { guard | body } block"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
-  Fix: Give every body a guard; the else-branch is `{ TRUE } { ... }`: `5 { 3 > } { 'big' PRINT } { TRUE } { 'small' PRINT } COND`.
-- **COND guards must yield a boolean** — `TRUE { [ 1 ] } { [ 2 ] } COND`
+  Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `{ TRUE } { ... }`: `5 { { 3 > } { 'big' PRINT } { TRUE } { 'small' PRINT } } COND`.
+- **COND guards must yield a boolean** — `TRUE { { [ 1 ] } { [ 2 ] } } COND`
   → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
-  Fix: The first block is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] { predicate } { body } ... COND`.
+  Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] { { predicate } { body } ... } COND`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
   → exit 1, `message: "Cannot broadcast shapes [2] and [3]: axis 0 is 2 on the left and 3 on the right, and neither is 1"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkDisagreeingAxis`.
@@ -163,8 +163,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-66 canonical Words in one flat Core dictionary, of which
-37 form the Semantic Kernel and 29 are Standard Words. Both are
+65 canonical Words in one flat Core dictionary, of which
+36 form the Semantic Kernel and 29 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -224,7 +224,7 @@ no module system and nothing to import.
 | `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `COND` | control | Evaluate guard/body clauses in order, executing the first match. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
+| `COND` | control | Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND` |
 | `EXEC` | control | Evaluate a code block. — e.g. `{ 1 2 ADD } EXEC` |
 | `PROBE` | control | Infer a CodeBlock's contract against the current dictionary, without evaluating it. — e.g. `{ 1 2 ADD } PROBE` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
@@ -236,8 +236,6 @@ no module system and nothing to import.
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
-| `REFLECT` | reflection | Reflect a CodeBlock into canonical code data, or canonical code data into a CodeBlock. — e.g. `CodeBlock REFLECT
-code-data REFLECT` |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |
 | `*` | symbol alias | shorthand for `MUL` |

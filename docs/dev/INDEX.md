@@ -34,9 +34,10 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `language-coherence-review-2026-08.md` | 外部「整合化改修案」の検証と、正典収束計画への差し替え | `[方針記録]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察 | `[観察ノート]` |
 | `ajisai-single-axis-proposal-2026-08.md` | 中心概念を「絞り込み（narrowing）」一本に定める提案。到達不能契約の実測と、七つの改修案。うちⅡ・Ⅲ・Ⅴ・Ⅵ・Ⅶは実施済み（PR #1563/#1564/#1567）、Ⅰは指示書のみ | `[観察ノート]` |
-| `type-unification-work-order-2026-08.md` | 改修Ⅰ（CodeBlock/Vector 統合）の指示書。読み取り専用の前提再検証（Phase 0）→ 使い捨てブランチでの測定スパイク（Phase 1）→ 実装（Phase 2、未着手）の三段階。破壊的変更であり互換性方針の扱いを人間の判断待ちとしている | `[設計根拠]` |
+| `type-unification-work-order-2026-08.md` | 改修Ⅰ（CodeBlock/Vector 統合）の指示書。読み取り専用の前提再検証（Phase 0）→ 使い捨てブランチでの測定スパイク（Phase 1）→ 実装（Phase 2）の三段階。破壊的変更であり、Phase 2 はユーザー承認を得て実施済み | `[設計根拠]` |
 | `type-unification-phase0-report-2026-08.md` | 改修Ⅰの Phase 0 実測報告。`Value::Symbol` 追加で壊れる 48/49 箇所、非交差性に依存する conformance 22 件、書き換えが要る正典 6 節の確定一覧。指示書の停止条件が発火しており Phase 1 は未着手 | `[観察ノート]` |
 | `type-unification-phase1-report-2026-08.md` | 改修Ⅰの Phase 1 スパイク報告。使い捨てブランチ（main 非マージ）で (A) 案を実装し conformance 279 件中 23 件の非通過を実測（Phase 0 の見積もり 22 件とほぼ一致）。`COND` の節ブロック発見が統合と構造的に相容れないという新しい壁を発見 | `[観察ノート]` |
+| `type-unification-phase2-report-2026-08.md` | 改修Ⅰの Phase 2 実装報告。`COND` を固定2オペランド規約（`value { { guard \| body } ... } COND`）へ再設計し、`DEF` の契約推論忠実性問題を新たに発見・対処。REFLECT を削除し§5.1の表示非単射性を解消。正典・生成ドキュメント・適合性コーパスを更新、全ゲート緑 | `[観察ノート]` |
 
 ## エージェント/CLI・GUI
 

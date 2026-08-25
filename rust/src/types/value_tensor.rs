@@ -137,9 +137,7 @@ fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
         ValueData::ExactScalar(_) => None, // ExactScalar cannot be densified into a Fraction tensor
         ValueData::Tensor { data, shape } => Some((data.to_fractions(), (**shape).clone())),
         ValueData::Vector(children) => try_collect_dense(children),
-        ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Nil | ValueData::CodeBlock(_) => {
-            None
-        }
+        ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Nil | ValueData::Symbol(_) => None,
     }
 }
 

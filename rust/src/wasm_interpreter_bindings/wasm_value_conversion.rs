@@ -401,9 +401,9 @@ pub(crate) fn arena_node_to_js(
             js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
         }
-        NodeKind::CodeBlock(_) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        NodeKind::Symbol(name) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"symbol".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &(&**name).into()).unwrap();
         }
     }
 

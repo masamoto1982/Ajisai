@@ -79,8 +79,14 @@ impl Value {
         }
     }
 
+    /// A bare Word reference — data until something executes it. See
+    /// `ValueData::Symbol`'s doc comment.
     pub fn from_symbol(s: &str) -> Self {
-        Self::from_string(s)
+        Self {
+            data: ValueData::Symbol(Arc::from(s)),
+            hint: Interpretation::Unassigned,
+            absence: None,
+        }
     }
 
     #[inline]
@@ -195,7 +201,11 @@ impl Value {
             // `truthValue` axis and value identity, SPEC §2.3), never
             // `absence`.
             ValueData::Nil => SemanticKind::Absence,
-            ValueData::CodeBlock(_) => SemanticKind::Code,
+            // A Symbol is a bare Word reference — the closest existing
+            // bucket on this coarse axis is `Code`, though a lone Symbol
+            // (distinct from the Vector holding it) is arguably its own
+            // thing; unresolved.
+            ValueData::Symbol(_) => SemanticKind::Code,
         }
     }
 
@@ -211,7 +221,11 @@ impl Value {
             // CS4 PR-2: U is a rank-0 scalar truth value (like a Boolean), not
             // an absence.
             ValueData::Nil => ValueShape::Absence,
-            ValueData::CodeBlock(_) => ValueShape::CodeBlock,
+            // `ValueShape::CodeBlock` used to mean "the executable domain";
+            // every Vector is executable now, so the `Vector` arm above
+            // already covers what this used to distinguish. Kept for a lone
+            // Symbol only.
+            ValueData::Symbol(_) => ValueShape::CodeBlock,
         }
     }
 
@@ -235,6 +249,9 @@ impl Value {
                 capabilities.push(Capability::Iterable);
                 capabilities.push(Capability::Indexable);
                 capabilities.push(Capability::UserEditable);
+                // Every Vector is potentially executable now (EXEC no longer
+                // rejects it) — Callable used to be exclusive to CodeBlock.
+                capabilities.push(Capability::Callable);
             }
             // A String keeps the legacy V1 capability set for a string, which
             // `v1_capabilities` still reconstructs from `KernelValue::String`.
@@ -254,7 +271,10 @@ impl Value {
                 capabilities.push(Capability::Diagnosable);
                 capabilities.push(Capability::AiExplainable);
             }
-            ValueData::CodeBlock(_) => capabilities.push(Capability::Callable),
+            // A lone Symbol has no extra capability of its own — it is data
+            // (a Word reference) until the Vector holding it is EXEC'd, at
+            // which point the Vector's Callable capability is what applies.
+            ValueData::Symbol(_) => {}
             // A boolean's only extra capability is `truthValued`, added below.
             ValueData::Boolean(_) => {}
         }
@@ -335,7 +355,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => None,
+            | ValueData::Symbol(_) => None,
         }
     }
 
@@ -365,13 +385,12 @@ impl Value {
     #[inline]
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
-            ValueData::Boolean(_) | ValueData::Text(_) => true,
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => true,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
             ValueData::Vector(rc) => Arc::strong_count(rc) == 1,
             ValueData::Tensor { data, shape } => {
                 Arc::strong_count(data) == 1 && Arc::strong_count(shape) == 1
             }
-            ValueData::CodeBlock(_) => false,
         }
     }
 
@@ -399,7 +418,7 @@ impl Value {
             ValueData::Tensor { data, .. } => {
                 !data.is_empty() && !data.iter().all(|f| f.is_zero() || f.is_nil())
             }
-            ValueData::CodeBlock(_) => true,
+            ValueData::Symbol(_) => true,
         }
     }
 }

@@ -87,9 +87,13 @@ mod tests {
 
     #[test]
     fn data_dependent_arity_has_no_fixed_contract() {
-        // COND's stack arity is "variable" in spec/words.json, so it does not
-        // flow through the fixed-arity wrapper.
-        assert!(WordContract::from_generated(word("COND")).is_none());
+        // COLLECT's stack arity is "variable" in spec/words.json (it gathers
+        // however many values a preceding count names), so it does not flow
+        // through the fixed-arity wrapper. COND used to be this module's
+        // example — its clauses are a single Vector operand now (CodeBlock/
+        // Vector unification, docs/dev/type-unification-work-order-2026-08.md),
+        // so its own arity is fixed at 2 like any other higher-order Word.
+        assert!(WordContract::from_generated(word("COLLECT")).is_none());
     }
 
     /// The regression this whole projection exists to prevent: every value the

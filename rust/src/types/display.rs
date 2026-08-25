@@ -193,7 +193,11 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
             format!("{} {} {}", open, inner.join(" "), close)
         }
         ValueData::Tensor { data, shape } => format_tensor_recursive(data, shape, depth),
-        ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        // A Symbol renders as its own bare name — unquoted, unlike Text —
+        // and every Vector-domain value renders with `[ ]` uniformly now
+        // (the old `{ }`-spelled, lexeme-preserving CodeBlock rendering is
+        // gone with the CodeBlock domain).
+        ValueData::Symbol(name) => name.to_string(),
     }
 }
 
@@ -246,36 +250,6 @@ fn format_tensor_slice_recursive(data: &[Fraction], shape: &[usize], _depth: usi
         })
         .collect();
     format!("[ {} ]", inner.join(" "))
-}
-
-/// Render a code block as the source that would build it: braces included.
-///
-/// The braces are not decoration. A block on the stack used to render as its
-/// bare token text, so `{ 2 MUL }` was drawn `2 MUL` — a form no reader can
-/// tell from a fragment of program, and one that does not read back as the
-/// value it names. `KEEP ID` makes a block on the stack an ordinary sight, so
-/// what is drawn there has to say which of the six domains it is.
-pub(crate) fn format_code_block(tokens: &[super::Token]) -> String {
-    use super::Token;
-    let token_strs: Vec<String> = tokens
-        .iter()
-        .map(|t| match t {
-            Token::Number(n) => n.to_string(),
-            Token::String(s) => format!("'{}'", s),
-            Token::Symbol(s) => s.to_string(),
-            Token::VectorStart => "[".to_string(),
-            Token::VectorEnd => "]".to_string(),
-            Token::BlockStart => "{".to_string(),
-            Token::BlockEnd => "}".to_string(),
-            Token::NilCoalesce => "^".to_string(),
-            Token::CondClauseSep => "|".to_string(),
-            Token::LineBreak => "\n".to_string(),
-        })
-        .collect();
-    if token_strs.is_empty() {
-        return "{ }".to_string();
-    }
-    format!("{{ {} }}", token_strs.join(" "))
 }
 
 /// Canonical numeric rendering: every number is shown as a reduced
@@ -384,7 +358,7 @@ fn boolean_element_label(child: &Value) -> &'static str {
             }
         }
         ValueData::ExactScalar(_) => "TRUE",
-        ValueData::CodeBlock(_) => "TRUE",
+        ValueData::Symbol(_) => "TRUE",
     }
 }
 
@@ -408,17 +382,24 @@ fn format_as_boolean(value: &Value) -> String {
                 "TRUE".to_string()
             }
         }
+        // A TruthValue-hinted Vector renders with `[ ]`, the one spelling
+        // every Vector-domain value now uses uniformly (`{ }` was a second,
+        // colliding spelling for exactly this shape before the CodeBlock/
+        // Vector unification — LANG.VALUES.DISJOINT never had two renderings
+        // for one value, and now it does not have to). Each element still
+        // renders as its truth-role label (TRUE/FALSE/NIL), independent of
+        // that outer bracket choice.
         ValueData::Vector(v) => {
             if v.is_empty() {
-                return "{ }".to_string();
+                return "[ ]".to_string();
             }
 
             let inner: Vec<&str> = v.iter().map(boolean_element_label).collect();
-            format!("{{ {} }}", inner.join(" "))
+            format!("[ {} ]", inner.join(" "))
         }
         ValueData::Tensor { data, .. } => {
             if data.is_empty() {
-                return "{ }".to_string();
+                return "[ ]".to_string();
             }
             let inner: Vec<&str> = data
                 .iter()
@@ -432,20 +413,21 @@ fn format_as_boolean(value: &Value) -> String {
                     }
                 })
                 .collect();
-            format!("{{ {} }}", inner.join(" "))
+            format!("[ {} ]", inner.join(" "))
         }
-        ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        ValueData::Symbol(name) => name.to_string(),
     }
 }
 
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
-        ValueData::Text(_) | ValueData::Boolean(_) => format_value_recursive(data, 0),
+        ValueData::Text(_) | ValueData::Boolean(_) | ValueData::Symbol(_) => {
+            format_value_recursive(data, 0)
+        }
         ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
         ValueData::Vector(_) | ValueData::Tensor { .. } => format_value_recursive(data, 0),
-        ValueData::CodeBlock(tokens) => format_code_block(tokens),
     }
 }
 

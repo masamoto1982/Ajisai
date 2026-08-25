@@ -49,7 +49,7 @@ use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
 use num_traits::Zero;
 
-use crate::interpreter::word_identity::{content_digest, encode_token};
+use crate::interpreter::word_identity::content_digest;
 use crate::types::exact::{Algebraic, ExactReal};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
@@ -172,17 +172,11 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) -> Option<()> {
             bytes.push(b'S');
             write_str(bytes, s);
         }
-        ValueData::CodeBlock(tokens) => {
-            bytes.push(b'K');
-            write_u64(bytes, tokens.len() as u64);
-            for token in tokens {
-                // Same inter-token separator `body_content_key` uses ahead of
-                // `encode_token`: without it, a single `Symbol("AYB")` and the
-                // two tokens `Symbol("A"), Symbol("YB")`-shaped pairs are not
-                // guaranteed to stay distinguishable once concatenated.
-                bytes.push(0x1f);
-                encode_token(bytes, token);
-            }
+        // A Symbol digests as its bare name under its own tag, distinct from
+        // ValueData::Text's 'S' tag.
+        ValueData::Symbol(name) => {
+            bytes.push(b'Y');
+            write_str(bytes, name);
         }
         ValueData::Scalar(f) => encode_rational(bytes, f),
         ValueData::ExactScalar(exact) => match exact {

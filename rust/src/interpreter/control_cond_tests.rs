@@ -8,7 +8,7 @@ mod tests {
     async fn test_cond_exhausted_error() {
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("[ 5 ] { [ 0 ] < } { 'negative' } COND")
+            .execute("[ 5 ] { { [ 0 ] < } { 'negative' } } COND")
             .await;
         assert!(
             result.is_err(),
@@ -26,7 +26,7 @@ mod tests {
     #[tokio::test]
     async fn test_cond_invalid_pair_count_error() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 ] { [ 0 ] < } COND").await;
+        let result = interp.execute("[ 1 ] { { [ 0 ] < } } COND").await;
         assert!(
             result.is_err(),
             "COND should fail on odd blocks: {:?}",
@@ -42,7 +42,9 @@ mod tests {
     #[tokio::test]
     async fn test_cond_clause_requires_exactly_one_separator() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 42 ] { [ 0 ] < | 'a' | 'b' } COND").await;
+        let result = interp
+            .execute("[ 42 ] { { [ 0 ] < | 'a' | 'b' } } COND")
+            .await;
         assert!(result.is_err(), "multiple separators should fail");
         let message = result.err().unwrap().to_string();
         assert!(
@@ -55,7 +57,7 @@ mod tests {
     #[tokio::test]
     async fn test_cond_clause_separator_left_side_required() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 42 ] { | 'positive' } COND").await;
+        let result = interp.execute("[ 42 ] { { | 'positive' } } COND").await;
         assert!(result.is_err(), "empty guard should fail");
         let message = result.err().unwrap().to_string();
         assert!(
@@ -70,7 +72,7 @@ mod tests {
     async fn test_cond_first_matching_clause_wins() {
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("[ 1 ] { [ 1 ] = } { 'first' } { [ 1 ] = } { 'second' } COND")
+            .execute("[ 1 ] { { [ 1 ] = } { 'first' } { [ 1 ] = } { 'second' } } COND")
             .await;
         assert!(result.is_ok(), "COND should succeed: {:?}", result);
         let as_str = format!("{}", interp.stack.last().expect("stack top"));
@@ -104,7 +106,7 @@ mod example_words_tests {
             .await
             .unwrap();
         interp
-            .execute("{ { [ 15 ] MOD [ 0 ] = } { 'FizzBuzz' PRINT } { [ 3 ] MOD [ 0 ] = } { 'Fizz' PRINT } { [ 5 ] MOD [ 0 ] = } { 'Buzz' PRINT } { TRUE } { KEEP PRINT } COND } 'FIZZBUZZ' DEF")
+            .execute("{ { { [ 15 ] MOD [ 0 ] = } { 'FizzBuzz' PRINT } { [ 3 ] MOD [ 0 ] = } { 'Fizz' PRINT } { [ 5 ] MOD [ 0 ] = } { 'Buzz' PRINT } { TRUE } { KEEP PRINT } } COND } 'FIZZBUZZ' DEF")
             .await
             .unwrap();
         let _ = interp.collect_output();
@@ -220,7 +222,7 @@ mod example_words_tests {
     async fn idle_fires_in_the_order_it_is_written() {
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("TRUE\n{ IDLE | 1 }\n{ TRUE | 0 }\nCOND")
+            .execute("TRUE\n{\n{ IDLE | 1 }\n{ TRUE | 0 }\n}\nCOND")
             .await;
         assert!(result.is_ok(), "{:?}", result);
         assert_eq!(
@@ -234,7 +236,7 @@ mod example_words_tests {
     async fn a_clause_above_idle_still_wins() {
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("5\n{ 99 GT | 'a' }\n{ IDLE | 'b' }\n{ 0 GT | 'c' }\nCOND")
+            .execute("5\n{\n{ 99 GT | 'a' }\n{ IDLE | 'b' }\n{ 0 GT | 'c' }\n}\nCOND")
             .await;
         assert!(result.is_ok(), "{:?}", result);
         assert_eq!(interp.stack[0].as_text().unwrap(), "b");
@@ -248,11 +250,11 @@ mod example_words_tests {
         let mut flat = Interpreter::new();
         let mut tall = Interpreter::new();
         assert!(flat
-            .execute("5 { 3 GT | 'big' } { IDLE | 'small' } COND")
+            .execute("5 { { 3 GT | 'big' } { IDLE | 'small' } } COND")
             .await
             .is_ok());
         assert!(tall
-            .execute("5\n{ 3 GT | 'big' }\n{ IDLE | 'small' }\nCOND")
+            .execute("5\n{\n{ 3 GT | 'big' }\n{ IDLE | 'small' }\n}\nCOND")
             .await
             .is_ok());
         assert_eq!(
@@ -270,7 +272,7 @@ mod example_words_tests {
     async fn a_word_body_may_hold_a_multi_line_cond() {
         let mut interp = Interpreter::new();
         let define = interp
-            .execute("{ { { 0 GT | 1 }\n{ IDLE | 0 }\nCOND } MAP } 'STEPFN' DEF")
+            .execute("{ { { { 0 GT | 1 }\n{ IDLE | 0 }\n} COND } MAP } 'STEPFN' DEF")
             .await;
         assert!(define.is_ok(), "{:?}", define);
         interp.collect_output();
