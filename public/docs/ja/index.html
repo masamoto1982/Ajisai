@@ -655,7 +655,7 @@
                         </div>
                     </div>
                     <h3>リテラル中の裸の名前</h3>
-                    <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>それ自身のテキスト</strong>であり、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は<code>[ 'FOO' 'BAR' ]</code>と完全に等価です。これは各要素を引用符で囲まずに文字列のベクトルを書ける方法でもありますが、値に名前を付け始めたときに戸惑いやすい点でもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください。詳しくは<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はテキストになる</a>を参照してください。</p>
+                    <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>Symbol</strong>を表し、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は2つのSymbolからなるベクトル<code>[ FOO BAR ]</code>です。テキストが欲しければ引用符で囲んでください――<code>[ 'FOO' 'BAR' ]</code>はStringのベクトルになります。これは値に名前を付け始めたときに戸惑いやすい点でもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください。詳しくは<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はSymbolになる</a>を参照してください。</p>
                     <h3><code>[ ]</code>と<code>NIL</code>の違い</h3>
                     <p class="ref-note"><code>[ ]</code>は空ベクトルです。値を1つも持たないコレクションですが、書いたり入れ子にしたり測ったりできる普通の値であり、<code>[ ] LENGTH</code>は<code>0</code>になります。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、泡になるのではなく<code>[ ]</code>を返します。<code>[ 1 2 3 ] { 5 GT } FILTER</code>の結果は<code>[ ]</code>です。</p>
 
@@ -1742,7 +1742,7 @@
                     <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。これが、あるワードが<code>MAP</code>や<code>EXEC</code>に渡す<code>{ }</code>の内側から自分自身を呼び出せる理由であり、その呼び出しが普通の再帰呼び出しになる理由です。</p>
 
                     <h3 id="cond">条件分岐(<code>COND</code>)</h3>
-                    <p><code>COND</code>は、ガードと本体の組、すなわち節を順に評価し、最初にtrueになったガードの本体を実行します。節形式では、<code>|</code>がガードと本体を区切り、各節はちょうど1行を占めます。<code>TRUE</code>は常にtrueなelseガードを作ります。</p>
+                    <p><code>COND</code>は2つの引数を取ります。ディスパッチ対象の値と、ガード・本体の節をまとめた1つの<code>{ }</code>です。節を順に評価し、最初にtrueになったガードの本体を実行します。節形式では、<code>|</code>がガードと本体を区切り、各節はちょうど1行を占めます。<code>TRUE</code>は常にtrueなelseガードを作ります。</p>
                     <p>else節は<code>IDLE</code>とも綴ることができ、こちらの綴りが好ましいものです。<code>IDLE</code>は65個のWordのうちの1つではなく、Dictionaryパネルにも見つかりません。位置によって読み取られるキーワードであり、ガードとしてのみ意味を持ち、<em>それより前のどの節も発火しなかったときにこの節が発火する</em>ことを意味します。<code>TRUE</code>も、ガードが読み取る値を積むことで同じ結果に達しますが、動作はしても語ることは少ないです。<code>IDLE</code>はどの節がフォールバックであるかを明示します。</p>
                     <p class="ref-note"><code>IDLE</code>は<em>それが書かれた場所で</em>発火します。節は上から下へ試され、<code>IDLE</code>もその順序の中で自分の番を待ちます。したがって<code>IDLE</code>より下に書かれたものには決して到達しません。最後に置いてください。そもそも「フォールバック」とはそういう意味です。</p>
                     <div class="sample">
@@ -1754,12 +1754,13 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 0 ]
+{
 { [ 0 ] &lt; | 'negative' }
 { [ 0 ] = | 'zero' }
 { TRUE | 'positive' }
-COND</code></td>
+} COND</code></td>
                                     <td><code>'zero'</code></td>
-                                    <td class="notes">節形式：<code>|</code>の左がガード、右が本体。慣例として1行に1節。</td>
+                                    <td class="notes">節形式：<code>|</code>の左がガード、右が本体。節は1つの<code>{ }</code>にまとめ、慣例として1行に1節。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1776,9 +1777,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ -5 ] { [ 0 ] &lt; } { 'negative' } { TRUE } { 'positive' } COND</code></td>
+                                    <td><code>[ -5 ] { { [ 0 ] &lt; } { 'negative' } { TRUE } { 'positive' } } COND</code></td>
                                     <td><code>'negative'</code></td>
-                                    <td class="notes">対形式：ガードと本体のブロックを交互に並べる。</td>
+                                    <td class="notes">対形式：ガードと本体のブロックを交互に並べる。これも1つの節用<code>{ }</code>。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1799,9 +1800,10 @@ COND</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>5
+{
 { 3 &lt; | 'small' }
 { IDLE | 'big' }
-COND</code></td>
+} COND</code></td>
                                     <td><code>'big'</code></td>
                                     <td class="notes"><code>IDLE</code>がフォールバック節を明示する。</td>
                                 </tr>
@@ -1982,8 +1984,7 @@ COND</code></td>
                     <p class="ref-note">複製のための唯一の道具は<code>KEEP</code>です。1つの値を読み取り1つを積むワードに前置すると、結果の下にオペランドを残します。したがって<code>KEEP REVERSE REVERSE</code>は最上位のベクトルをコピーし、<a href="#stack">スタックと修飾子</a>の恒等ワードを使った<code>KEEP ID</code>は、どんな種類の値でもコピーします。2つのオペランドを取るワードに前置すると<em>両方</em>のオペランドを保持しますが、これはめったに望んだ結果ではありません。<code>[ 10 3 ] KEEP [ 0 ] GET</code>は、インデックスのベクトルもスタックに残してしまいます。</p>
 
                     <h3>データとしてのコード</h3>
-                    <p class="ref-note">スタック上に置かれたコードブロックは、波括弧も含めて、書かれたときのソースそのままの姿を見せます。<code>{ 2 MUL }</code>と表示され、空なら<code>{ }</code>です。これは独自の種類の値なので、それに対する<code>NIL?</code>は<code>FALSE</code>であり、<code>EXEC</code>はそれを実行します。<code>KEEP ID</code>でブロックをコピーして回っているなら、Stackパネルにはこの姿が見えるはずです。</p>
-                    <p>コードブロックとベクトルは<strong>異なる種類の値</strong>です。ベクトルはデータであり実行可能になることは決してなく、<code>EXEC</code>が受け付けるのはコードブロックだけです。<code>REFLECT</code>だけが両者の間を橋渡しします。コードブロックをトークンレコードの正準ベクトルに変え、またそのベクトルをブロックへ戻します。その間、何も評価せず、辞書も参照しません。</p>
+                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>{ }</code>と<code>[ ]</code>は同じ構築の2通りの綴りなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>{ 2 MUL }</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>{ }</code>は<code>[ ]</code>です。<code>{ 1 2 + } [ 1 2 + ] EQ</code>は<code>TRUE</code>――プログラムをどちらの括弧で書いたかは、それが作った値の一部ではありません。どちらの綴りの中でも裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1992,9 +1993,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 1 2 + } REFLECT</code></td>
-                                    <td><code>[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' '+' ] ]</code></td>
-                                    <td class="notes">ブロックは検査可能なデータになる：バージョンタグに続き、トークンごとに1つのレコード。</td>
+                                    <td><code>{ 1 2 + } [ 1 2 + ] EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">2通りの綴り、1つの値：<code>EQ</code>には見分けがつかない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2011,9 +2012,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 1 2 + } REFLECT REFLECT EXEC</code></td>
+                                    <td><code>[ 1 2 ADD ] EXEC</code></td>
                                     <td><code>3/1</code></td>
-                                    <td class="notes">反射(reflection)は可逆であり、往復させれば実行可能なブロックに戻る。</td>
+                                    <td class="notes"><code>EXEC</code>はオペランドをどちらの括弧が作ったか気にしない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2022,11 +2023,9 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">各レコードは、数の字句、文字列の内容、書かれたままの記号といったトークンの元の綴りを保持するので、この橋渡しの過程で何も失われません。正準なコードデータでないベクトルはエラーであり、泡ではありません。<code>[ 1 2 ] REFLECT</code>は推測せずにエラーを送出します。</p>
                     <h4>実行時の値をブロックの中に入れる</h4>
                     <p>ブロックはソースなので、プログラムの実行中に計算した値はその中には入っていません。<code>MAP</code>や<code>FILTER</code>はブロックだけしか取らないため、ここで現実的な疑問が生じます。実行時にしか分からない閾値でフィルタするには、どうすればよいのでしょうか。<code>{ 5 LT }</code>はリテラルの5と比較しますが、その数がプログラムの計算結果である場合、書くべき5はどこにもありません。</p>
-                    <p><code>REFLECT</code>は両方向でこれに答えます。欲しいブロックのトークンレコードを組み立て、実行時の値は<code>STR</code>でその字句に変換したうえで、<code>REFLECT</code>でブロックへ橋渡しして戻します。結果は普通のブロックであり、ブロックを取るすべてのワードがそれを受け入れます。</p>
-                    <p class="ref-note">ここが、字句を持たない数が制約として現れる唯一の場所です。数値の文法が書けるのは整数と比の形だけなので、<code>2 SQRT</code>のような厳密な無理数には<code>STR</code>が生成できる綴りがなく、<code>STR</code>はそれに近い有理数を返すのではなく理由<code>invalidEncoding</code>を伴う<code>NIL</code>を返します。埋め込みたい場合は、分解能を選んでそう明示してください。<code>2 SQRT 10000 QUANTIZE STR</code>は<code>'7071/5000'</code>になり、その近似はソースの中に目に見える形で残ります。</p>
+                    <p>ブロックは普通のベクトルなので、普通のベクトル用ワードで組み立てられます。<code>CONCAT</code>は、実行時の値を持つ1要素ベクトルと、ブロックの実行に必要なSymbolを持つ1要素ベクトルを結合します――<code>[ 5 ] { LT }</code>は<code>[ 5 LT ]</code>になり、その結果はどんなブロックとも変わりません。<code>{ }</code>で書かれていなくても、ブロックを取るすべてのワードがそれを受け入れます。独立した橋渡しは不要で、これは上のサンプルがすでに示していた構築そのものです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2036,7 +2035,7 @@ COND</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 3 1 4 1 5 9 2 6 ]
-'AJISAI-CODE-1' 'number' 5 STR 2 COLLECT 'symbol' 'LT' 2 COLLECT 3 COLLECT REFLECT
+[ 5 ] { LT } CONCAT
 FILTER</code></td>
                                     <td><code>[ 3/1 1/1 4/1 1/1 2/1 ]</code></td>
                                     <td class="notes">ここでの<code>5</code>は普通のスタック値。プログラムが計算した何かに置き換えれば、述語もそれに従う。</td>
@@ -2048,7 +2047,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">真ん中の行は、ベクトル<code>[ 'AJISAI-CODE-1' [ 'number' '5' ] [ 'symbol' 'LT' ] ]</code>を、部品ごとに組み立てているものとして読んでください。<code>2 COLLECT</code>が各2要素レコードをまとめ、最後の<code>3 COLLECT</code>がタグと2つのレコードをまとめます。これがAjisaiにおける部分適用のすべてです。そのための独立したワードはなく、必要もありません。ブロックとは、内容を計算できる値だからです。</p>
+                    <p class="ref-note">これがAjisaiにおける部分適用のすべてです。そのための独立したワードはなく、必要もありません。ブロックとは、他のどんなベクトルとも同じように内容を計算できる値だからです。</p>
 
                     <h3 id="iterative">反復のコスト(<code>QUANTIZE</code>)</h3>
                     <p>厳密算術は、ループのコストを変えます。このリファレンスの他のすべての節はプログラムが<em>何を意味するか</em>についてですが、この節はそれを繰り返すことが<em>何のコストを伴うか</em>についてです。厳密性が見返りに何かを要求してくる、唯一の場所だからです。</p>
@@ -2259,9 +2258,9 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3 id="name-inside-brackets"><code>[ ]</code>の中の名前は値ではなくテキスト</h3>
-                    <p>束縛で戸惑いやすいのは、ここ1箇所だけです。自分のプログラムで詰まる前に、目を通しておいてください。ベクトルリテラルの中では、裸の名前は<strong>それ自身のテキスト</strong>になります。これは<code>[ ]</code>一般についての規則であり、束縛された名前も例外ではありません。したがって<code>3 'K' BIND</code>の後、<code>[ K ]</code>は<code>[ 3/1 ]</code>ではなく、要素数1のベクトル<code>[ 'K' ]</code>です。</p>
-                    <p>これが人を戸惑わせるのは、このリファレンスのイディオムが<code>[ 0 ] GET</code>や<code>[ 3 ] TAKE</code>のように書かれているため、自然な次の一手が<code>XS [ K ] TAKE</code>になってしまうからです。そしてこれは<code>expected integer, got string</code>で失敗します。意図を表す2つの書き方があります。</p>
+                    <h3 id="name-inside-brackets"><code>[ ]</code>の中の名前は値ではなくSymbol</h3>
+                    <p>束縛で戸惑いやすいのは、ここ1箇所だけです。自分のプログラムで詰まる前に、目を通しておいてください。ベクトルリテラルの中では、裸の名前はSymbol――何かが実行するまではデータ――を表し、参照されることはありません。束縛された名前も例外ではありません。したがって<code>3 'K' BIND</code>の後、<code>[ K ]</code>は<code>[ 3/1 ]</code>ではなく、Symbol<code>K</code>を保持する要素数1のベクトル<code>[ K ]</code>です。</p>
+                    <p>これが人を戸惑わせるのは、このリファレンスのイディオムが<code>[ 0 ] GET</code>や<code>[ 3 ] TAKE</code>のように書かれているため、自然な次の一手が<code>XS [ K ] TAKE</code>になってしまうからです。そしてこれは失敗します。SymbolはTAKEが期待する整数ではないからです。意図を表す2つの書き方があります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2277,7 +2276,7 @@ FILTER</code></td>
                                 <tr>
                                     <td><code>3 'K' BIND K 1 COLLECT</code></td>
                                     <td><code>[ 3/1 ]</code></td>
-                                    <td class="notes">本当に要素数1のベクトルが欲しいときは、組み立てる。<code>COLLECT</code>は値を読むが、<code>[ ]</code>はテキストを読む。</td>
+                                    <td class="notes">本当に要素数1のベクトルが欲しいときは、組み立てる。<code>COLLECT</code>は値を読むが、<code>[ ]</code>はSymbolを読む。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2316,7 +2315,7 @@ FILTER</code></td>
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
                     <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は65個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この65個のワードは、<strong>36語のSemantic Kernel</strong>と<strong>29語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力、コードとデータの間の橋渡しが含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。65個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>この65個のワードは、<strong>36語のSemantic Kernel</strong>と<strong>29語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。65個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>

@@ -163,8 +163,8 @@ const canonicalExamples = [
   { title: 'ANY / ALL take predicate blocks', code: '[ 1 2 3 ] { 1 > } ANY' },
   { title: 'Define a user word: { body } then name, then DEF', code: "{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM" },
   {
-    title: 'COND: value on stack, then { guard } { body } pairs (use { TRUE } as else-guard)',
-    code: "4 { 0 GTE } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND",
+    title: 'COND: value, then one { } of { guard } { body } pairs (use { TRUE } as else-guard)',
+    code: "4 { { 0 GTE } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } } COND",
   },
   { title: 'Strings are bare \'...\' literals; CHARS/JOIN convert', code: "'hello' CHARS REVERSE JOIN" },
   { title: 'Cast a string to an exact number', code: "'42' NUM" },
@@ -191,14 +191,14 @@ const commonErrors = [
     fix: 'FOLD is `vector [ init ] { op } FOLD`: `[ 1 2 3 ] [ 0 ] { + } FOLD`.',
   },
   {
-    title: 'COND blocks must come in { guard } { body } pairs',
-    code: "5 { 3 > } { 'big' PRINT } { 'small' PRINT } COND",
-    fix: "Give every body a guard; the else-branch is `{ TRUE } { ... }`: `5 { 3 > } { 'big' PRINT } { TRUE } { 'small' PRINT } COND`.",
+    title: 'COND clauses must be wrapped in a single { }',
+    code: "5 { 3 > } { 'big' PRINT } COND",
+    fix: "COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `{ TRUE } { ... }`: `5 { { 3 > } { 'big' PRINT } { TRUE } { 'small' PRINT } } COND`.",
   },
   {
     title: 'COND guards must yield a boolean',
-    code: 'TRUE { [ 1 ] } { [ 2 ] } COND',
-    fix: 'The first block is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] { predicate } { body } ... COND`.',
+    code: 'TRUE { { [ 1 ] } { [ 2 ] } } COND',
+    fix: 'The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] { { predicate } { body } ... } COND`.',
   },
   {
     title: 'Broadcast shape mismatch',
@@ -381,7 +381,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 3. Control and iteration
 
-- Branch: \`value { guard } { body } { guard } { body } ... COND\`. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use \`{ TRUE }\` as the final else-guard. The value remains on the stack after COND.
+- Branch: \`value { { guard } { body } { guard } { body } ... } COND\` — the clauses are one \`{ }\` of guard/body pairs. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use \`{ TRUE }\` as the final else-guard. The value remains on the stack after COND.
 - Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with \`{ }\` blocks (examples in §6). \`FOLD\` requires an explicit \`[ init ]\`.
 - Predicates: \`ANY\` / \`ALL\` with a \`{ predicate }\` block.
 - Recursion is allowed in user words (execution-step and depth limits apply; exceeding them is a diagnosed error, not a hang).

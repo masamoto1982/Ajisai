@@ -15,10 +15,6 @@
       "reason": "variableArity"
     },
     {
-      "word": "COND",
-      "reason": "variableArity"
-    },
-    {
       "word": "VENT",
       "reason": "controlArity"
     },
@@ -1278,21 +1274,13 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "LT",
       "inputs": [
         "boolean",
         "scalar"
-      ],
-      "outcome": "error:valueShape"
-    },
-    {
-      "word": "LT",
-      "inputs": [
-        "boolean",
-        "boolean"
       ],
       "outcome": "error:valueShape"
     },
@@ -1300,6 +1288,14 @@
       "word": "LT",
       "inputs": [
         "boolean",
+        "boolean"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "LT",
+      "inputs": [
+        "boolean",
         "string"
       ],
       "outcome": "error:valueShape"
@@ -1478,7 +1474,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "LT",
@@ -1518,7 +1514,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "LTE",
@@ -1566,7 +1562,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "LTE",
@@ -1766,7 +1762,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "LTE",
@@ -1806,7 +1802,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GT",
@@ -1854,7 +1850,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GT",
@@ -2054,7 +2050,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GT",
@@ -2094,7 +2090,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GTE",
@@ -2142,7 +2138,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GTE",
@@ -2342,7 +2338,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GTE",
@@ -2382,7 +2378,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ADD",
@@ -2430,7 +2426,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ADD",
@@ -2574,7 +2570,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ADD",
@@ -2630,7 +2626,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ADD",
@@ -2654,7 +2650,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ADD",
@@ -2670,7 +2666,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "SUB",
@@ -2718,7 +2714,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "SUB",
@@ -2862,7 +2858,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "SUB",
@@ -2918,7 +2914,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "SUB",
@@ -2942,7 +2938,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "SUB",
@@ -2958,7 +2954,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MUL",
@@ -3006,7 +3002,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MUL",
@@ -3150,7 +3146,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MUL",
@@ -3206,7 +3202,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MUL",
@@ -3230,7 +3226,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MUL",
@@ -3246,7 +3242,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "DIV",
@@ -3294,7 +3290,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "DIV",
@@ -3438,7 +3434,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "DIV",
@@ -3494,7 +3490,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "DIV",
@@ -3518,7 +3514,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "DIV",
@@ -3534,7 +3530,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MOD",
@@ -3582,7 +3578,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MOD",
@@ -3726,7 +3722,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MOD",
@@ -3782,7 +3778,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MOD",
@@ -3806,7 +3802,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MOD",
@@ -3822,7 +3818,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "FLOOR",
@@ -3864,7 +3860,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "ROUND",
@@ -3906,7 +3902,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "QUANTIZE",
@@ -3954,7 +3950,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "QUANTIZE",
@@ -4098,7 +4094,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "QUANTIZE",
@@ -4154,7 +4150,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "QUANTIZE",
@@ -4194,7 +4190,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ABS",
@@ -4236,7 +4232,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "NEG",
@@ -4278,7 +4274,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "MIN",
@@ -4326,7 +4322,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MIN",
@@ -4470,7 +4466,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MIN",
@@ -4526,7 +4522,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MIN",
@@ -4550,7 +4546,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MIN",
@@ -4566,7 +4562,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MAX",
@@ -4614,7 +4610,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MAX",
@@ -4758,7 +4754,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MAX",
@@ -4814,7 +4810,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MAX",
@@ -4838,7 +4834,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "MAX",
@@ -4853,19 +4849,19 @@
       "inputs": [
         "codeblock",
         "codeblock"
-      ],
-      "outcome": "error:valueShape"
-    },
-    {
-      "word": "SQRT",
-      "inputs": [
-        "scalar"
       ],
       "outcome": "value"
     },
     {
       "word": "SQRT",
       "inputs": [
+        "scalar"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SQRT",
+      "inputs": [
         "boolean"
       ],
       "outcome": "error:valueShape"
@@ -4896,7 +4892,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "RANDOM",
@@ -4944,7 +4940,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "RANDOM",
@@ -5144,7 +5140,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "RANDOM",
@@ -5184,7 +5180,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GET",
@@ -5376,7 +5372,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GET",
@@ -5432,7 +5428,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "GET",
@@ -5456,7 +5452,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "GET",
@@ -5472,7 +5468,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "LENGTH",
@@ -5514,7 +5510,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -5706,7 +5702,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -5762,7 +5758,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -5802,7 +5798,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "CONCAT",
@@ -5994,7 +5990,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "CONCAT",
@@ -6074,7 +6070,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "CONCAT",
@@ -6090,7 +6086,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "REVERSE",
@@ -6132,7 +6128,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "RANGE",
@@ -6258,7 +6254,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ORDER",
@@ -6300,7 +6296,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "UNIQUE",
@@ -6342,7 +6338,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "TALLY",
@@ -6384,7 +6380,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ZIP",
@@ -6468,7 +6464,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -7719,7 +7715,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -7728,7 +7724,7 @@
         "codeblock",
         "boolean"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -7737,7 +7733,7 @@
         "codeblock",
         "string"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -7746,7 +7742,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -7764,7 +7760,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -8097,7 +8093,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8106,7 +8102,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8115,7 +8111,7 @@
         "scalar",
         "string"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8124,7 +8120,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8142,7 +8138,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8367,7 +8363,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8376,7 +8372,7 @@
         "codeblock",
         "boolean"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8385,7 +8381,7 @@
         "codeblock",
         "string"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8394,7 +8390,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "PUT",
@@ -8412,7 +8408,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:index"
     },
     {
       "word": "GROUP",
@@ -8604,7 +8600,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:vectorLength"
     },
     {
       "word": "GROUP",
@@ -8684,7 +8680,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "error:vectorLength"
     },
     {
       "word": "GROUP",
@@ -8700,7 +8696,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "INDEX-OF",
@@ -8948,7 +8944,7 @@
         "codeblock",
         "scalar"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "INDEX-OF",
@@ -8956,7 +8952,7 @@
         "codeblock",
         "boolean"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "nil:missingField"
     },
     {
       "word": "INDEX-OF",
@@ -8964,7 +8960,7 @@
         "codeblock",
         "string"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "nil:missingField"
     },
     {
       "word": "INDEX-OF",
@@ -8972,7 +8968,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "nil:missingField"
     },
     {
       "word": "INDEX-OF",
@@ -8980,7 +8976,7 @@
         "codeblock",
         "nil"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "nil:missingField"
     },
     {
       "word": "INDEX-OF",
@@ -8988,7 +8984,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "nil:missingField"
     },
     {
       "word": "MAP",
@@ -9020,7 +9016,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9068,7 +9064,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9116,7 +9112,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9164,7 +9160,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "MAP",
@@ -9212,7 +9208,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "nil:literal"
     },
     {
       "word": "MAP",
@@ -9260,7 +9256,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "MAP",
@@ -9276,7 +9272,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "FILTER",
@@ -9308,7 +9304,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9356,7 +9352,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9404,7 +9400,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9452,7 +9448,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9500,7 +9496,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "nil:literal"
     },
     {
       "word": "FILTER",
@@ -9548,7 +9544,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9600,7 +9596,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9654,7 +9650,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9708,7 +9704,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9762,7 +9758,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9816,7 +9812,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9870,7 +9866,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9924,7 +9920,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9978,7 +9974,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10032,7 +10028,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10086,7 +10082,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10140,7 +10136,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10194,7 +10190,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10248,7 +10244,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10302,7 +10298,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10356,7 +10352,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10410,7 +10406,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10464,7 +10460,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10518,7 +10514,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10572,7 +10568,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -10626,7 +10622,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -10680,7 +10676,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -10734,7 +10730,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -10788,7 +10784,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -10842,7 +10838,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -10896,7 +10892,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -10950,7 +10946,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11004,7 +11000,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11058,7 +11054,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11112,7 +11108,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "nil:literal"
     },
     {
       "word": "FOLD",
@@ -11166,7 +11162,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11220,7 +11216,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11238,7 +11234,7 @@
         "scalar",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11274,7 +11270,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11292,7 +11288,7 @@
         "boolean",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11328,7 +11324,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11346,7 +11342,7 @@
         "string",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11382,7 +11378,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11400,7 +11396,7 @@
         "vector",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11436,7 +11432,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11454,7 +11450,7 @@
         "nil",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11490,7 +11486,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "FOLD",
@@ -11508,7 +11504,7 @@
         "codeblock",
         "codeblock"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "ANY",
@@ -11540,7 +11536,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11588,7 +11584,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11636,7 +11632,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11684,7 +11680,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11732,7 +11728,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "ANY",
@@ -11780,7 +11776,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11828,7 +11824,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11876,7 +11872,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11924,7 +11920,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11972,7 +11968,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -12020,7 +12016,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "ALL",
@@ -12068,7 +12064,7 @@
         "codeblock",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -12168,7 +12164,7 @@
       "inputs": [
         "codeblock"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "TRIM",
@@ -12585,6 +12581,294 @@
       "outcome": "value"
     },
     {
+      "word": "COND",
+      "inputs": [
+        "scalar",
+        "scalar"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "scalar",
+        "boolean"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "scalar",
+        "string"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "scalar",
+        "vector"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "scalar",
+        "nil"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "scalar",
+        "codeblock"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "boolean",
+        "scalar"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "boolean",
+        "boolean"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "boolean",
+        "string"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "boolean",
+        "vector"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "boolean",
+        "nil"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "boolean",
+        "codeblock"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "string",
+        "scalar"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "string",
+        "boolean"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "string",
+        "string"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "string",
+        "vector"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "string",
+        "nil"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "string",
+        "codeblock"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "vector",
+        "scalar"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "vector",
+        "boolean"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "vector",
+        "string"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "vector",
+        "vector"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "vector",
+        "nil"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "vector",
+        "codeblock"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "nil",
+        "scalar"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "nil",
+        "boolean"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "nil",
+        "string"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "nil",
+        "vector"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "nil",
+        "nil"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "nil",
+        "codeblock"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "codeblock",
+        "scalar"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "codeblock",
+        "boolean"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "codeblock",
+        "string"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "codeblock",
+        "vector"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "codeblock",
+        "nil"
+      ],
+      "outcome": "error:valueShape"
+    },
+    {
+      "word": "COND",
+      "inputs": [
+        "codeblock",
+        "codeblock"
+      ],
+      "outcome": "error:unknown"
+    },
+    {
       "word": "EXEC",
       "inputs": [
         "scalar"
@@ -12610,7 +12894,7 @@
       "inputs": [
         "vector"
       ],
-      "outcome": "error:valueShape"
+      "outcome": "value"
     },
     {
       "word": "EXEC",
@@ -12652,7 +12936,7 @@
       "inputs": [
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "PROBE",
@@ -13211,7 +13495,7 @@
         "vector",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "value"
     },
     {
       "word": "DEF",
@@ -13412,48 +13696,6 @@
     },
     {
       "word": "PRINT",
-      "inputs": [
-        "codeblock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "REFLECT",
-      "inputs": [
-        "scalar"
-      ],
-      "outcome": "error:unknown"
-    },
-    {
-      "word": "REFLECT",
-      "inputs": [
-        "boolean"
-      ],
-      "outcome": "error:unknown"
-    },
-    {
-      "word": "REFLECT",
-      "inputs": [
-        "string"
-      ],
-      "outcome": "error:unknown"
-    },
-    {
-      "word": "REFLECT",
-      "inputs": [
-        "vector"
-      ],
-      "outcome": "error:unknown"
-    },
-    {
-      "word": "REFLECT",
-      "inputs": [
-        "nil"
-      ],
-      "outcome": "error:valueShape"
-    },
-    {
-      "word": "REFLECT",
       "inputs": [
         "codeblock"
       ],

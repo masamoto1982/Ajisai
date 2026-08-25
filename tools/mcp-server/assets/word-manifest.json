@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 66,
-    "semanticKernelWords": 37,
+    "canonicalWords": 65,
+    "semanticKernelWords": 36,
     "standardWords": 29,
-    "corewords": 66,
+    "corewords": 65,
     "aliases": 12,
     "inputHelpers": 1,
     "surface_forms": 10,
-    "manifestEntries": 89
+    "manifestEntries": 88
   },
   "entries": [
     {
@@ -1199,23 +1199,6 @@
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
-    },
-    {
-      "id": "core.reflect",
-      "kind": "coreword",
-      "surface": "REFLECT",
-      "category": "reflection",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "REFLECT",
-      "coverage_entry_id": "core.reflect",
-      "semantic_role": "Primitive",
-      "algebraic_family": "reflection",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.reflection.involution"
-      ],
-      "classification": "Core"
     },
     {
       "id": "alias.plus",
