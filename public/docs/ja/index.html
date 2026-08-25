@@ -2196,7 +2196,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ [ 2 ] * } 'DBL' DEF
+                                    <td><code>{ 2 * } 'DBL' DEF
 [ 1 2 3 ] 'DBL' MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
@@ -2451,7 +2451,7 @@ FILTER</code></td>
                                     <td class="notes">argmin：昇順の最初の位置。代わりに<code>[ -1 ] GET</code>を使えばargmaxになる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS KEEP SUM XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL SUM XS LENGTH DIV</code></td>
+                                    <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS SUM XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL SUM XS LENGTH DIV</code></td>
                                     <td><code>2/1</code></td>
                                     <td class="notes">分散：中心化し、二乗し、平均する。標準偏差はさらに<code>SQRT</code>を1回。</td>
                                 </tr>

@@ -58,7 +58,8 @@
     {
       "presentation": "structural",
       "value": {
-        "type": "codeBlock"
+        "type": "symbol",
+        "value": "ADD"
       }
     }
   ]

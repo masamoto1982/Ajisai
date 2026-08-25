@@ -142,6 +142,22 @@ names or spawn diagnostics into it; that belongs on stderr, and
   value is the exact re-measured median with the field present, not a
   rounded-up guess, so the budget stays exact for the new deterministic
   reality rather than exact for a baseline the wire format no longer has.
+  `2760` then moved to `2762` on the same terms when the release stage went
+  from `0.2.0-beta.2` to `0.2.0-alpha.1`: `engineVersion` is one character
+  longer and rides in two places in a response, so the median grew by exactly
+  two bytes. Measured both ways to be sure it was only that — reverting the
+  metadata to `0.2.0-beta.2` gives 2760 back, and restoring `0.2.0-alpha.1`
+  gives 2762 — so the figure is again the exact re-measured median rather than
+  a rounded-up guess.
+
+  **Note for whoever changes the version next.** This budget is now coupled to
+  the *length* of the version string, which is not something a reader of
+  `performance.json` would guess. Any future stage change whose string is a
+  different length will trip this gate the same way, and the fix is the same:
+  re-measure and re-baseline exactly, never round up. If that becomes annoying
+  rather than instructive, the durable fix is to make the benchmark normalize
+  `engineVersion` to a fixed-width placeholder before measuring, so the budget
+  tracks the wire format rather than the release stage.
 - `number-baseline.js` and `eval/number-baseline.json`: deliberately narrow
   comparison with JavaScript `Number`, including exact controls. Do not present
   it as a general language or CAS benchmark.

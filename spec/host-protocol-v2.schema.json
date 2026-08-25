@@ -38,7 +38,7 @@
       "properties": {
         "type": {
           "description": "The value domain.",
-          "enum": ["scalar", "boolean", "string", "vector", "nil", "codeBlock"]
+          "enum": ["scalar", "boolean", "string", "vector", "nil", "symbol"]
         },
         "numerator": {
           "type": "string",
@@ -53,7 +53,7 @@
           "description": "scalar: present and true when the value is backed by an exact real rather than a rational."
         },
         "value": {
-          "description": "boolean: the truth value; string: the text.",
+          "description": "boolean: the truth value; string: the text; symbol: the bare name.",
           "type": ["boolean", "string"]
         },
         "items": {

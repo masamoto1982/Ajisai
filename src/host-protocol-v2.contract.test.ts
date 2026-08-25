@@ -17,7 +17,7 @@ describe('HostProtocolV2 contract', () => {
             'string',
             'vector',
             'nil',
-            'codeBlock',
+            'symbol',
         ]);
         expect(schema.$defs.observedValue.properties.presentation.enum).toEqual([
             'structural',
@@ -44,7 +44,7 @@ describe('HostProtocolV2 contract', () => {
             },
             { type: 'nil', reason: 'divisionByZero' },
             { type: 'nil', reason: null },
-            { type: 'codeBlock' },
+            { type: 'symbol', value: 'ADD' },
         ]);
     });
 
@@ -62,14 +62,14 @@ describe('HostProtocolV2 contract', () => {
         const decodedTypes = new Set(
             decodeV2Document(golden).stack.map((observed) => observed.value.type),
         );
-        // codeBlock is the one domain not exercised as a top-level distinct type
-        // beyond the golden; assert every decoded type is declared, and every
-        // declared type is decodable by construction of the golden + decoder.
+        // The golden carries one value of every declared domain, so this
+        // asserts the two sets agree in both directions: every decoded type is
+        // declared, and the declared set is exactly the six.
         for (const type of decodedTypes) {
             expect(declared.has(type)).toBe(true);
         }
         expect(declared).toEqual(
-            new Set(['scalar', 'boolean', 'string', 'vector', 'nil', 'codeBlock']),
+            new Set(['scalar', 'boolean', 'string', 'vector', 'nil', 'symbol']),
         );
     });
 

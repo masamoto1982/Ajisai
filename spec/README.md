@@ -26,11 +26,18 @@ than duplicating GUI behavior in a replacement implementation.
 
 `SPECIFICATION.html` is a distribution artifact assembled from the semantic
 sources, the implementation-rules fragment, and `specification.template.html`.
-Run `npm run specification:generate` after an authoritative source change and
-`npm run specification:check` in quality gates.
+
+**It is empty while Ajisai is in alpha, and `specification:check` is out of the
+CI gate for as long as that holds.** The published specification described a
+language further along than the implementation had earned, so it was withdrawn
+rather than maintained: effort goes to the implementation, and the
+specification will be regenerated from it before beta is declared again.
+Nothing here was deleted to achieve that — every source in this directory is
+current and still drives code generation. Restoring the document is
+`npm run specification:generate` plus putting the gate back.
 
 `npm run semantic-kernel:check` enforces the budgets that keep the language
-small: at most 400 lines of kernel, 12 semantic families, 57 canonical Words,
+small: at most 400 lines of kernel, 12 semantic families, 70 canonical Words,
 and 16 aliases, with every family and clause reference resolving. The budgets
 are ceilings — shrinking is always allowed, growing is a deliberate
 specification change.

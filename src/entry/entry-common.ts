@@ -4,6 +4,7 @@ import { initWasm } from '../wasm-module-loader';
 import type { WasmModule, AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
 
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
+declare const __AJISAI_RELEASE_VERSION__: string;
 
 declare global {
     interface Window {
@@ -21,12 +22,27 @@ function formatTimestamp(date: Date): string {
     return `${year}${month}${day}${hours}${minutes}`;
 }
 
+/**
+ * Label the header badge with *which build this is*, and disclose the release
+ * version it carries on hover.
+ *
+ * These are two different facts and the badge used to conflate them. The
+ * timestamp answers "when was this built" — it moves on every build, including
+ * one with no source change, and it is recorded nowhere but the artifact, so
+ * no build can be recovered from it. The release version answers "what does
+ * this promise" — it moves only when a human decides the compatibility story
+ * changed, and `check:version-sync` holds four manifests to it. Spelling the
+ * timestamp `ver.` invited reading it as the version, which is the one thing it
+ * is not; `build.` says what it is, and the tooltip supplies the version the
+ * badge no longer pretends to be.
+ */
 export function setBuildVersionLabel(): void {
     const versionElement = document.querySelector<HTMLElement>('.version');
     if (!versionElement) return;
 
     const timestamp = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
-    versionElement.textContent = `ver.${timestamp}`;
+    versionElement.textContent = `build.${timestamp}`;
+    versionElement.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}\nBuild ${timestamp}`;
 }
 
 /**

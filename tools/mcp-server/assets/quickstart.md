@@ -238,7 +238,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Postfix, stack-based. Operands first, word last: `[ 1 ] [ 2 ] +`.
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
 - Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar.
-- Strings: `'single quotes'` (a codepoint vector with text role). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
+- Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
 - Code blocks: `{ ... }` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF.
 - User word: `{ body } 'NAME' DEF` then call `NAME`. Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.

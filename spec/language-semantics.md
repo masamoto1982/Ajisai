@@ -5,7 +5,7 @@
 
 <p>Status: <strong>Canonical</strong><br>
 Version: <strong>2026-07-29</strong><br>
-Release stage: <strong>0.2.0-beta.2</strong>, beginning at commit <code>350834ee22ca1f1583eaa50e35d69f8ac29cac3e</code> — the first commit that meets every condition of the beta vocabulary and compatibility freeze. The development stage before it ends at commit <code>ebb66a5f9d14a6c8d6610488724e476e652abc35</code>.</p>
+Release stage: <strong>0.2.0-alpha.1</strong>. The beta declared at commit <code>350834ee22ca1f1583eaa50e35d69f8ac29cac3e</code> has been withdrawn: it was premature. This document is not published while the alpha runs — <code>SPECIFICATION.html</code> is deliberately empty, and the specification will be regenerated from the implementation before beta is declared again. Nothing here binds an implementation in the meantime, and no compatibility promise is in force.</p>
 
 <p>
 This document defines the correspondence between Ajisai source programs and observable values, states, effects, and diagnoses. It is a compact semantic kernel: differences between individual Words belong to the machine-readable vocabulary registry, not to parallel prose definitions.

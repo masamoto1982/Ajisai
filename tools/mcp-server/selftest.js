@@ -510,7 +510,7 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
   check(
     "compute reports engine provenance and applied limits",
     compute.structuredContent?.mcp?.serverVersion === serverVersion() &&
-      compute.structuredContent?.mcp?.engineVersion === "0.2.0-beta.2" &&
+      compute.structuredContent?.mcp?.engineVersion === "0.2.0-alpha.1" &&
       compute.structuredContent?.mcp?.limits?.wallTimeMs === 5000 &&
       compute.structuredContent?.mcp?.limits?.materializedElements === 100000 &&
       compute.structuredContent?.mcp?.limits?.bigintBits === 262144 &&

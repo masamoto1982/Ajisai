@@ -2,8 +2,6 @@
 
 use std::sync::Arc;
 
-use crate::types::Token;
-
 use super::nil::NilReason;
 use super::scalar::Scalar;
 
@@ -36,23 +34,14 @@ pub enum KernelValue {
     /// (migration plan §9). The *origin*, *recoverability*, and *diagnosis* of
     /// an absence live in diagnostic/trace state, not on the value.
     Nil(Option<NilReason>),
-    /// A quoted, unevaluated block of code.
-    CodeBlock(CodeBlock),
-}
-
-/// A quoted, unevaluated token sequence (SPEC `LANG.VALUES.CODEBLOCK`).
-#[derive(Clone, Debug, PartialEq)]
-pub struct CodeBlock {
-    tokens: Arc<[Token]>,
-}
-
-impl CodeBlock {
-    pub fn new(tokens: Arc<[Token]>) -> Self {
-        Self { tokens }
-    }
-
-    /// The block's tokens, in source order.
-    pub fn tokens(&self) -> &[Token] {
-        &self.tokens
-    }
+    /// A bare name — data until something executes it (SPEC
+    /// `LANG.VALUES.DISJOINT`). Its own domain, reachable standalone as well
+    /// as nested inside a Vector.
+    ///
+    /// This used to be a `CodeBlock` holding a token sequence, back when code
+    /// was a domain of its own. The CodeBlock/Vector unification retired that:
+    /// code is a Vector read as executable, not a separate shape, so the sixth
+    /// domain is the Symbol a Vector element can be rather than the block a
+    /// Vector could never be.
+    Symbol(Arc<str>),
 }
