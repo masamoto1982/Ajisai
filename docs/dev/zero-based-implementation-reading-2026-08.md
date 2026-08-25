@@ -1,124 +1,180 @@
-# ゼロベース実装読解 — 正典の散文を一切参照せず `rust/src` だけから再構成する（2026-08）
+# ゼロベース実装読解 — 正典の散文を参照せず `rust/src` だけから再構成する（2026-08）
 
 > Status: **Non-canonical / `[観察ノート]`.** 本書は Ajisai の意味論を一切定義しない。
-> 正典は `spec/` 配下の各ソースのみ。本書はその正典を**意図的に一度も参照せず**、
-> `rust/src` の実装だけを読んで「本当に美しい最小の公理系」を独立に再構成する
-> 実験である。導出した記述が正典と一致しない箇所は、実装のバグか、正典の
-> 記述不足か、正典と実装のどちらを正すべきかの三通りがあり得るが、本書は
-> それを裁定しない。裁定は仕様所有者の仕事であり、本書は材料を提供するだけである。
+> 正典は `spec/` 配下の各ソースのみ。本書は正典を**意図的に一度も参照せずに**
+> `rust/src` だけを読んで言語の骨格を独立に再構成し、**その後で**正典と突き合わせた
+> 記録である。実装・正典ともに一切変更していない。
 
-## 0. 方法
+## 0. 方法と、その途中で自分が犯した誤り
 
-`spec/*.md` `spec/*.json` `SPECIFICATION.html` を一切読まず、`rust/src` のソースと
-その中のコメント・テストだけを読んだ。コメントも「実装の言明」として扱ったが、
-コメントと実際のコード(型定義・match腕・実行される分岐)が食い違う場合は
-**コードを事実として採用し、コメントは検証対象の主張として扱った**。
+`spec/*.md` `spec/*.json` `SPECIFICATION.html` を読まずに `rust/src` だけを読み、
+骨格を再構成した。コメントも「実装の言明」として読んだが、コメントとコード
+（型定義・match腕・実行される分岐）が食い違う場合は**コードを事実とし、
+コメントは検証対象の主張として**扱った。
 
-## 1. 実際に見つかった値モデル
+**本書の初稿は、この最後の規律を自分自身に適用し損ねて誤った結論を出した。**
+初稿は「正典が三値論理を柱として謳っているのに実装は二値だ」と書いた。実際には
+正典は三値論理を謳っていない——`LANG.VALUES.TRUTH` の見出しは
+"**Two-valued truth**" であり、本文は「真偽領域はちょうど TRUE と FALSE の二値、
+すべての比較は決定する」「NIL は未決ではなく不在である」と明記している。
+突き合わせを最後に回した手順自体は正しかったが、突き合わせの相手を
+`ajisai-minimal-core-identity.md`（非正典の設計メモ）と取り違えたまま結論を書いた。
+訂正した結論が §3 であり、この誤りの構造そのものが §3.3 の論点になる。
+
+## 1. 実装から再構成した骨格
 
 ```rust
 struct Value {
-    data: ValueData,               // タグ付き和
-    hint: Interpretation,          // 表示ロール……のはずだが、実際は意味論も運ぶ
+    data: ValueData,
+    hint: Interpretation,
     absence: Option<AbsenceMetadata>,
 }
 
 enum ValueData {
     Boolean(bool),
     Scalar(Fraction),
-    ExactScalar(ExactReal),        // Scalar の遅延無理数版（同一ドメイン内の第二表現）
+    ExactScalar(ExactReal),   // Scalar と同一ドメインの第二表現（遅延無理数）
     Vector(Arc<Vec<Value>>),
-    Tensor { data: Arc<DenseTensor>, shape: Arc<Vec<usize>> },  // Vector の高密度キャッシュ
+    Tensor { .. },            // Vector と同一ドメインの第二表現（全数値矩形のキャッシュ）
     Nil,
     Symbol(Arc<str>),
     Text(Arc<str>),
 }
 ```
 
-8 variant、しかし観測可能なドメインは6つ(Scalar/ExactScalarとVector/Tensorがそれぞれ
-1ドメインの2表現に畳まれるため)。ここまでは既に読んだ正典の記述と一致しており、
-実装は綺麗である。
+8 variant、観測可能なドメインは 6。二組の (ドメイン, 高速表現) の対
+——`Scalar`/`ExactScalar` と `Vector`/`Tensor`——が variant 数と
+ドメイン数の差を説明しきる。**実装だけを読んで数えたドメイン数が、後で
+突き合わせた正典の `LANG.VALUES.DISJOINT`（Scalar/Boolean/String/Vector/NIL/Symbol）
+と一致した。** 表現の選択はどちらの対でも観測不能である（§5）。
 
-**しかし `hint: Interpretation` が二重の役目を負っている。** 名前は「表示ロール」だが、
-実際には `ValueData::Nil` を「真のNIL」と「論理的U」に**分岐させる唯一の手掛かり**に
-なっている(§3)。これは「内部表現は観測不能、表示は値から導かれる」という値の同一性
-原則(`LANG.VALUES.DENOTATION` 相当の規律、既に読んだ正典にある)と緊張関係にある——
-`hint` が変われば `truth_value()` の返す意味論的な答え("unknown" か絶対に出ない値か)が
-変わるので、これは純粋な表示情報ではなく、値の一部になっている。
+実行モデルも同様に素直だった。分配点は
+`execute_word_core_inner`（`interpreter/execute_builtin.rs`）ただ一つで、
+束縛 → 辞書解決 → `def.lines.is_empty()` による Core/User の一分岐しかない。
+語ごとの特別な分配経路は存在しない。フレーム規律は実測で本当に二つ:
 
-## 2. 実行モデルは本当に「一つの分配 + 二つの規律」
+- **透過（whole-stack）** — `execute_nested_block`。`EXEC` と `DEF` 本体。
+- **隔離（isolated frame）** — `mem::swap` でスタックを退避し、対象値だけを積み、
+  ブロックを実行し、結果を 1 個取り出して復元する。`MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`
+  と `COND` のガード評価。
 
-`execute_word_core_inner`(`interpreter/execute_builtin.rs`)が唯一の分配点。
-束縛 → 辞書解決 → `def.lines.is_empty()` で Core(id付きmatch) か User(本体ループ)かの
-一分岐、それだけ。特殊語ごとの別分配経路は無い。
+改修Ⅵ（「フレーム表を四行から二則へ」）が正典で主張した構造を、実装が裏切って
+いない。ただし二則は今も別々のコード形状であり、「n=all と n=1 の特殊形」として
+一つの関数にパラメータ化する余地は残っている（実害はなく、美観の問題）。
 
-フレーム規律は実測で**本当に二つ、かつ独立したコード形状**として存在する:
+## 2. 数値タワーは、実装の中で最も美しい部分である
 
-- **透過(whole-stack)**: `execute_nested_block`。`EXEC` と `DEF` 本体、および
-  `MAP`/`FILTER`/`ANY`/`ALL` のブロック呼び出し自体が使う下請け。スタックはそのまま。
-- **隔離(isolated frame)**: `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`/`COND`のガード評価が使う、
-  `mem::swap` でスタックを退避 → 対象値だけ積む → ブロック実行 → 1個だけ取り出す →
-  退避したスタックを戻す、という共通パターン。
+`types/exact/` は三層に分かれ、層は `Observation` という単一のインターフェース
+（`observation.rs`）を共有する。値がどの層を流れるかは観測不能である。
 
-これは改修Ⅵ(「フレーム表を四行から二則へ」)が正典で主張した通りの構造で、
-**実装がそれを裏付けている**。ここは美しい。ただし2つの規律は今もコードとして
-別々に書かれていて、1つのパラメータ化された関数には収束していない
-(「同じ操作の n=all/n=1 特殊形」として統一できる余地はある)。
+| tier | 表現 | 比較の停止性 |
+|---|---|---|
+| 0 | `Rational(Fraction)` | 即決（区間が一点） |
+| 1 | `AlgebraicSqrt` / `Gosper` | 有限の water で必ず決定 |
+| 2 | `Computable`（遅延縮小区間） | **starve しうる** |
 
-## 3. 最大の発見 — 「K3三値論理」は実行時にほぼ存在しない
+`Refine::Starved` を返せるのは Tier 2 だけであり（`observation.rs`）、
+これが論理的 Unknown（U）の唯一の正当な源である。そして `computable.rs` は
+自らこう宣言する:
 
-`ajisai-minimal-core-identity.md`(このセッションで既に読んだ設計メモ)は
-Ajisaiの同一性を担う四本柱の一つとして次を挙げていた:
+> **No vocabulary constructs this tier yet.** The type exists so the `ExactScalar`
+> enum, the comparison router, and the U diagnosis have their Tier 2 arms wired
+> and tested ahead of the first Tier 2 word; unit tests pin that the current
+> vocabulary cannot reach it.
 
-> `k3.domain/meet/join/involution`(#1-4) — **まだ分からない**を論理で GLB/LUB 透過
-> 語(代表): `TRUE` `FALSE` `AND` `OR` `NOT`
+つまり Tier 2 は**死んだコードではなく、意図的な先行足場**である。`pi.rs` が
+π を Tier 2 の厳密区間として既に実装しており（語彙からは到達不能）、
+将来 π・e・log を入れる日のために比較ルータと U 診断の腕が配線され、
+テストで「現在の語彙からは到達できないこと」が固定されている。
 
-実装を読むと、これは実行時には成立していない。
+**この設計の帰結が、正典の「比較は全域である」という主張の正体である。**
+数値領域は「有理数と √ 拡大」と列挙されているのではなく、
+「実装が提示する正規形により等号と順序が有限時間で決定できる実数の全体」という
+**条件**で定義されている（`LANG.VALUES.EXACT`。改修Ⅳの成果）。Tier ≤1 はその条件を
+満たす現在の証拠であり、条件を満たすからこそ比較は決定する。全域性は別途の保証
+ではなく、領域の定義の半分である。
 
-- `logic.rs` の `AND`/`OR`/`NOT` は**厳密に二値**。オペランドが真の Boolean で
-  なければハードエラー。NIL パススルーの特例はあるが、Unknown 分岐は
-  `compute_boolean_binary`/`compute_inverted_value` のどこにも無い。
-- 「U」は `comparison.rs` の予算切れ比較(`ExactCmp::Starved`)が返す**観測軸の
-  文字列**("unknown")としてのみ存在する。これはチェック時・診断用の投影であって、
-  スタック上を流れる第三の真偽値ではない。
-- U の実体は独自の値ドメインではなく、**`ValueData::Nil` に
-  `Interpretation::TruthValue` という補助タグを付けただけ**
-  (`value_absence.rs::truth_value_for_role` の `ValueData::Nil => Some("unknown")` 腕)。
+実測でも一致する:
 
-つまり「K3」を名乗れるほどの三値論理系(AND/OR/NOTが三値をGLB/LUBで畳み込む)は、
-今のランタイムには実装されていない。あるのは「NILの一種として符号化された、
-表示軸でだけ 'unknown' と読める値」であり、それを三値論理として演算する語は無い。
+```
+8 SQRT 2 SQRT 2 SQRT + =   → TRUE
+2 SQRT 2 SQRT =            → TRUE
+```
 
-### 3.1 さらに: 実装のコメント自身が、存在しない型を8箇所で主張している
+## 3. 訂正された発見 — 食い違っているのは正典ではなく、非正典の記述である
+
+初稿の結論は誤りだった。正典と実装は一致している。食い違っているのは
+**それ以外の三つの表面**である。
+
+### 3.1 実装のコメント 8 箇所が、存在しない型を前提に書かれている
 
 `error.rs` `value_absence.rs` `execution_loop.rs` `nil_diagnostics.rs`
-`nil_diagnostics_tests.rs` `protocol_string_tests.rs` など複数ファイルのコメント・
-テストが、口を揃えてこう主張する:
+`nil_diagnostics_tests.rs` `protocol_string_tests.rs` などのコメントとテスト名が、
+口を揃えて次を主張する:
 
 > U は独自の `ValueData::Unknown` variant であり、NIL ノードではない。
-> `is_unknown()` で検出せよ、内部表現を直接matchするな。
-> (CS4 PR-2 で独自 variant 化、PR-3 で旧理由 `LogicallyUnknown` を廃止)
+> `is_unknown()` で検出せよ、内部表現を直接 match するな。
+> （CS4 PR-2 で独自 variant 化、PR-3 で旧理由 `LogicallyUnknown` を廃止）
 
-しかし:
+実測:
 
-- `types/mod.rs` の `ValueData` 定義に `Unknown` variant は存在しない(実測、§1)。
-- `is_unknown()` という関数はリポジトリ全体に**定義が一つも無い**
-  (`grep -rn "fn is_unknown"` がヒットしない)。
-- `unknown_advertises_truth_valued_capability` というテスト(名前も上記の物語を
-  前提にしている)は、実際には `Capability::TruthValued.as_protocol_str() ==
-  "truthValued"` という無関係な文字列一致しか検証しておらず、`ValueData::Unknown`
-  を一度も構築していない。
+- `types/mod.rs` の `ValueData` に `Unknown` variant は**無い**。
+- `is_unknown()` は**定義が一つも無い**（`grep -rn "fn is_unknown" src/` が空）。
+- `unknown_advertises_truth_valued_capability` というテストは、名前に反して
+  `Capability::TruthValued.as_protocol_str() == "truthValued"` という無関係な
+  文字列一致しか検証せず、U を一度も構築しない。
 
-これは「CS4」という名の一連のリファクタリング(Uを独自型に昇格し、NILとの型レベルの
-ファイアウォールを作る)が、**複数ファイルにわたって構想・文書化されたが、
-実装そのものが存在しないか、実装後に差し戻されてコメントだけ取り残された**状態を
-示している。改修Ⅲが `spec/words.json` で刈った「到達不能な契約」の残骸と同じ現象が、
-今度は Rust のソースコード自身の中で(散文の正典ではなく!)起きている。
+「CS4」と呼ばれる一連の改修が、複数ファイルにわたって**構想され文書化されたが、
+型そのものは landing しなかった**（あるいは landing 後に差し戻され、コメントだけ
+取り残された）。U の実体は今も `ValueData::Nil` に `Interpretation::TruthValue`
+を付けた値であり、`truth_value_for_role` の `ValueData::Nil => Some("unknown")`
+の腕がそれを表示軸へ投影している。
 
-### 3.2 これは実害のあるバグでもある
+### 3.2 `ajisai-minimal-core-identity.md` §2.1 の K3 の柱は、現行正典と矛盾する
 
-`value_semantics.rs::capabilities()` は `ValueData::Nil` に無条件で
-`Capability::NilPassthrough` を付与する:
+同メモは Ajisai の**同一性を担う**四本柱の一つとして次を挙げる:
+
+> `k3.domain/meet/join/involution`(#1-4) — **まだ分からない**を論理で GLB/LUB 透過
+> 語（代表）: `TRUE` `FALSE` `AND` `OR` `NOT`
+
+現行正典 `LANG.VALUES.TRUTH` は真偽を二値と規定し、`AND`/`OR`/`NOT` を
+「通常の Boolean 演算」と規定する。`logic.rs` はその通り厳密に二値で、
+Unknown 分岐を持たない（NIL パススルーの特例はある）。したがってこの柱は
+**現行の言語には存在しない**。
+
+同メモは概念削減・単一軸提案より前に書かれており、その後の決定を反映していない。
+決定的なのは `ajisai-single-axis-proposal-2026-08.md` §4「採らない案」で、
+そこには次が明記されている:
+
+> `UNKNOWN` / 三値 Kleene 論理の復活 — 軸はこれを**必要としない**。絞り込みの
+> 途中状態は検査時にのみ存在し、実行時の値には決してならない。……**改修Ⅱを
+> 「UNKNOWN の復活」と読んではならない。**
+
+同提案の改修Ⅰ〜Ⅶはすべて実装済みである。よって「実行時に三値論理を持たない」は
+実装の遅れではなく、**承認され実施された設計判断**である。
+
+### 3.3 三つの表面は、同じ一つの病気である
+
+初稿の誤りも含めて、これらは同型である——**宣言と、それを裏づける機構との間に
+橋が無い**。
+
+| 表面 | 宣言 | 橋の不在 |
+|---|---|---|
+| Rust のコメント（§3.1） | 「U は独自 variant」 | コメントは型検査されない |
+| 設計メモ（§3.2） | 「K3 は同一性の柱」 | 非正典文書は CI が読まない |
+| 本書の初稿 | 「正典が三値を謳う」 | 私が正典を最後まで読まなかった |
+
+改修Ⅲが `spec/words.json` から刈った「到達不能な契約」（実装参照 0 件のフィールド
+65 語全件）と、これは同じ病気の別の宿主である。改修Ⅲはゲート
+（`check:unreachable-contract`）を作って `spec/` のフィールド名に対しては再発を
+止めたが、その射程は `spec/` のトップレベル分類フィールドに限られる。Rust の
+コメントも、`docs/dev/` の設計メモも、そのゲートの外にある。
+
+## 4. 派生した発見
+
+### 4.1 `capabilities()` は U に `NilPassthrough` を与える — 潜在的な罠
+
+`value_semantics.rs::capabilities()`:
 
 ```rust
 ValueData::Nil => {
@@ -128,105 +184,106 @@ ValueData::Nil => {
 }
 ```
 
-すぐ上のコメントは「Uはこれを持ってはいけない、NilPassthroughを広告すると
-Uを吸収してよいというファイアウォール違反の主張になる」と明記しているのに、
-`hint` による分岐が実際には無い。したがって**予算切れ比較が返すUは、
-MCP/ホストプロトコル経由で観測可能な `capabilities` 配列に
-`"nilPassthrough"` を(誤って)含む**。これは今回のセッションの元々の目的
-(長所をMCP経由でAIに開放する)に直接反する——エージェントは「これは
-NILとして安全に読み飛ばせる」という誤った信号を受け取ることになる。
+直上のコメントは「U はこれを持ってはならない。`NilPassthrough` を広告することは
+『U を NIL として吸収してよい』という、ファイアウォールに反する主張になる」と
+明記するが、`hint` による分岐は無い。
 
-この不整合は他のどのコード経路からも `Capability::NilPassthrough` が
-実際にクエリされていないため(protocol文字列としてシリアライズされるだけ)、
-実行時の誤動作は起きない。しかし外部に公開される診断情報としては誤りである。
+**これは現在バグとして発火しない。** U は Tier 2 からしか生じず、Tier 2 は
+語彙から到達不能だから（§2）、到達可能なすべての `ValueData::Nil` は本物の NIL で
+あり、`NilPassthrough` はそれらに対して正しい。初稿はこれを「MCP 越しに観測可能な
+実バグ」と書いたが、**誤りである**。
 
-## 4. 副次的な発見 — 横断的関心事が「一箇所」に集約されていない
+正確には、**最初の Tier 2 語が入った瞬間に発火するように装填された罠**である。
+`computable.rs` は「比較ルータと U 診断の腕を先行配線した」と述べるが、
+`capabilities()` はその先行配線から漏れている。Tier 2 を入れる作業が、
+このファイルを見に来る保証は何も無い。
 
-### 4.1 KEEP修飾子は、N個の演算実装それぞれに散らばっている
+### 4.2 KEEP と NIL パススルーは、N 個の実装がそれぞれ守っている
 
-`KEEP` は `Interpreter` 上の一つのモードフラグだが、これを実際に読んで
-「消費するかクローンするか」を決めるのは、`logic.rs` `comparison.rs` など
-**個々の `op_*` 実装がそれぞれ自分で** `interp.consumption_mode ==
-ConsumptionMode::Keep` をチェックするコードになっている。中央の分配点
-(`execute_word_core_inner`)は User Word の呼び出し境界でだけこれを一括処理し
-(オペランドをスナップショットして後で復元)、Core Word(組み込み語)については
-各実装に委ねている。
+`KEEP` は `Interpreter` 上の一つのモードフラグだが、Core 語については
+個々の `op_*` が自分で `interp.consumption_mode == ConsumptionMode::Keep` を読んで
+分岐する。中央の分配点が一括処理するのは User 語の呼び出し境界だけである
+（オペランドをスナップショットし、`restore_kept_operands` で復元する）。
 
-### 4.2 NIL パススルーも同様に散らばっている
+NIL パススルーも同様に、`logic.rs`・`comparison.rs`（`lift_comparison`）・共有ヘルパ
+`nil_passthrough_binary` などが個別に `is_nil()` を見る。中央の分配点にあるのは
+生成後の診断トレース（`trace_direct_nil_produced`）であって、パススルーを
+強制するゲートではない。
 
-「理由付きNILは派生語を変えずに透過する」というBubbleパススルー規律
-(`ajisai-minimal-core-identity.md`が同一性の柱の一つとして挙げるもの)は、
-`logic.rs`・`comparison.rs`(`lift_comparison`)・共有ヘルパ
-`nil_passthrough_binary` など、**個々の演算実装がそれぞれ`is_nil()`を
-チェックして自前でパススルーする**形で実現されている。中央の分配点には、
-NILが生成された後の診断トレース(`trace_direct_nil_produced`)はあるが、
-NILパススルー自体を強制する中央ゲートは無い。
+`words.json` の `nilPolicy`/`consumption` が宣言する契約と、それを守るコードの間に
+機械的な橋が無い。新しい `op_*` がチェックを書き忘れても、コンパイラは何も言わない。
+§3.3 の病気の、四つ目の宿主である。
 
-### 4.3 両者は同じ形の問題である
+### 4.3 `WordDefinition::Capabilities` は設定されるが一度も読まれない
 
-KEEPもNILパススルーも、「この語は特定の規律に従わなければならない」という
-契約が、**一つの場所で強制されるのではなく、N個の実装がそれぞれ正しく
-書くことに依存している**。これは`words.json`の`nilPolicy`/`consumption`
-フィールドが宣言する契約と、実際にそれを守るコードの間に、機械的な
-架け橋が無いことを意味する——ある `op_*` が新設されたとき、NILパススルーの
-チェックを書き忘れても、コンパイラは何も言わない。§3で見つけたのと同じ
-「宣言と実装の間に橋が無い」という病気の、三箇所目の発現である。
+`Capabilities` ビットフラグ（`PURE`/`IO`/`TIME`/`RANDOM`/`MUTATES_DICT`）は
+ビルトイン登録時に設定され（`WordId::Print => Capabilities::IO`）、ユーザー語は
+常に `PURE` になる。しかし**実行時にこれを読んで許可/拒否する経路は一つも無い**。
+`run_effect_schema` 自身のコメントが「出力だけが唯一ホストに届く効果なので、
+ゲートすべき capability は存在しない」と述べている。
 
-## 5. 副次的な発見 — もう一つの「宣言されているが読まれない」フィールド
+改修Ⅲが `spec/words.json` から刈った `capability`/`hostedEffect` と同じ形の
+死んだ宣言が、Rust 内部の構造体に残っている。改修Ⅲの監査は `spec/` とその
+読み手（生成スクリプト）を grep したため、この兄弟を見落としたと思われる。
 
-`WordDefinition` は `Capabilities` というビットフラグ(`PURE`/`IO`/`TIME`/
-`RANDOM`/`MUTATES_DICT`等、`types/mod.rs`)を持つ。ビルトイン語登録時に
-値が設定され(例: `WordId::Print => Capabilities::IO`)、ユーザー語は常に
-`PURE`が設定される。しかし**このビットフラグを実行時にチェックして何かを
-許可/拒否するコードはランタイムに一つも無い**——`run_effect_schema`自身の
-コメントが「出力だけが唯一ホストに届く効果なので、ゲートするcapabilityは
-存在しない」と明言している。
+## 5. Tensor / Vector の観測不能性（確認）
 
-これは改修Ⅲが `spec/words.json` から刈った `capability`/`hostedEffect`
-フィールド(65語全件、実装参照0件)と**全く同じ形の死んだ宣言**だが、
-場所が違う——`spec/`の正典ではなく、Rust内部の`WordDefinition`構造体に
-今も生きている。改修Ⅲの監査は`spec/`とその読み手(生成スクリプト)だけを
-grepしたため、この兄弟のような死骸をおそらく見落としている。
+昇格条件は `value_tensor.rs::try_collect_dense` が決める: 全葉が
+`ValueData::Scalar` で、各段が矩形で、かつ全 Fraction の分子分母が `i64` に
+収まること（`tensor_storage.rs::extract_i64_pair`）。一つでも欠ければ静かに
+ネスト `Vector` に落ちる。昇格は既定であり、明示的な選択ではない。
 
-## 6. まとめ — 「本当に美しい」形と、今の形の差分
+観測面では `eq`/`as_vector_view`/`shape()`/`len()`/`child()` が両表現を同一に
+扱い、`push_child` は Tensor を Vector へ hydrate してから進む。表現を言語から
+問う Core 語は無い。**「内部表現は観測不能」という規律が、ここでは実際に
+守られている。**
 
-実装だけから逆算すると、Ajisaiの本当に最小の骨格は次の三点に見える。
-これは正典が既に主張している三分法(絞り込みの三値: 値・NIL(理由付き)・
-ERROR)と一致しており、そこは実装が裏切っていない。
+## 6. まとめ
 
-1. **一つの状態**: (Stack, Dictionary, Output) の組。
-2. **一つの値木**: タグ付き葉、または葉のVector。Tensorは全数値矩形Vectorの
-   キャッシュに過ぎず観測上ほぼ透明。
-3. **一つの分配**: 名前 → 組み込み(idマッチ) | ユーザー本体(トークン再生)。
-   フレーム規律は今のところ二形態(透過/隔離)で、まだ一つのパラメータには
-   畳み込まれていない。
+実装だけから再構成した骨格は三点に収束し、正典と一致する。
 
-対して、**今の実装との差分**は三つの具体的な穴として見える:
+1. **一つの状態** — (Stack, Dictionary, Output)。
+2. **一つの値木** — タグ付き葉、または葉の Vector。二組の高速表現は観測不能。
+3. **一つの分配** — 名前 → 組み込み | ユーザー本体。フレーム規律は二則。
 
-| 穴 | 症状 | 規模 |
+そして数値領域は、条件（有限時間で等号と順序が決定できること）によって定義され、
+Tier ≤1 がその証拠であり、Tier 2 の足場が「条件を満たさない値をどう扱うか」を
+先行して配線している。**「比較は全域である」は宣言ではなく、この構造の帰結である。**
+
+利用者の言う三分法——欠落・未決・不正——を実装に照らすと、次のように読める。
+
+| | 実行時 | 検査時 |
 |---|---|---|
-| K3三値論理が同一性の柱として宣言されているが、AND/OR/NOTは二値のまま。Uは独自ドメインではなくNilの隠しタグ。 | 8ファイルのコメント/テストが存在しない型`ValueData::Unknown`を前提に書かれている。`capabilities()`がUに`NilPassthrough`を誤って付与し、MCP越しに観測可能。 | 大(同一性の主張と実装の間の食い違い) |
-| KEEPとNILパススルーが中央集約されず、N個の`op_*`実装がそれぞれ自分で規律を守る形になっている。 | 契約(`words.json`の`nilPolicy`/`consumption`)を実装が守っているかを機械的に保証する橋が無い。新しい語を書くとき忘れても検出されない。 | 中(設計の一貫性、まだ実害の報告なし) |
-| `WordDefinition::Capabilities`ビットフラグが設定されるが一切読まれない。 | 改修Ⅲが`spec/words.json`側で刈ったのと同じ死骸が、Rust内部に兄弟として残っている。 | 小(改修Ⅲと同じ手順で即座に刈れる) |
+| 欠落 | 理由付き NIL（`AbsenceMetadata`） | — |
+| **未決** | **存在しない（構造的に排除されている）** | `cannot verify` + `gap.*` |
+| 不正 | ERROR（構造化診断） | `violated` |
 
-## 7. 提案(優先度順、いずれも未実施・未承認)
+**未決が実行時に無いのは欠落ではなく、設計の成果である。** 領域を「決定できる値の
+全体」と定義したから、未決な比較は原理的に生じない。三分法の中辺は検査時
+（契約推論の三値: verified / cannot verify / violated）へ移されており、
+`trichotomy-unification.md` が「二つの三分法は同一の軸を二つの高さで切ったもの」と
+論じたのは、まさにこの構造である。実行時の三分法は
+**値 / 理由付き不在 / 不正**であって、真偽の三値ではない。
 
-1. **[即時・低リスク]** `capabilities()`のNilPassthroughバグを塞ぐ——Uに相当する
-   `hint == TruthValue`のNilには`NilPassthrough`/`Diagnosable`/`AiExplainable`を
-   与えない分岐を足す。1関数の修正。
-2. **[即時・低リスク]** §5の死んだ`Capabilities`ビットフラグを、改修Ⅲと同じ基準
-   (「読み手が無い宣言は到達不能な契約」)で刈るか、実際に何かをゲートする
-   ように配線するかを決める。
-3. **[要・設計判断]** 「CS4」の物語(Uを独自variant化する)を、実際に最後まで
-   実装するか、それとも8箇所のコメント/テストを今の実装(Nil+hintタグ)に
-   合わせて書き戻すかを決める。中途半端な現状——正典は三値論理を柱として謳い、
-   コードのコメントは独自型があると謳い、実際のコードはどちらでもない——が
-   最も悪い。**この決定は`ajisai-minimal-core-identity.md`の§2.1にも波及する**
-   (K3をidentity層の柱として維持するなら実装が要る。維持しないなら同メモの
-   四本柱は三本になる)。
-4. **[中規模・任意]** KEEPとNILパススルーを、改修Ⅵがフレーム表にしたのと同じ
-   発想で、中央の分配点(`execute_word_core_inner`)に一本化できないか検討する。
-   `words.json`の`nilPolicy`/`consumption`フィールドを「宣言するだけの散文」
-   から「実際に実行を駆動する入力」に格上げする方向。
+## 7. 提案（優先度順・いずれも未実施）
 
-いずれも本書は実装・正典を一切変更していない。
+1. **[即時・低リスク]** §3.1 の 8 箇所のコメントとテスト名を、実装の現状
+   （U は `Nil` + `TruthValue` hint、Tier 2 からのみ到達可能、現在は語彙から
+   到達不能）に合わせて書き戻す。存在しない型と関数を指す記述は、読み手を
+   確実に誤らせる——本書の初稿がその実例である。
+2. **[即時・低リスク]** §4.1 の `capabilities()` に `hint == TruthValue` の
+   分岐を足し、罠を今のうちに解除する。到達不能な今こそ、挙動を変えずに
+   直せる唯一の時期である。Tier 2 語が入ってからでは、これは回帰になる。
+3. **[即時・低リスク]** §4.3 の死んだ `Capabilities` ビットフラグを、改修Ⅲと
+   同じ基準で刈るか、実際に何かをゲートするよう配線するかを決める。
+4. **[要・仕様所有者の裁定]** §3.2 の `ajisai-minimal-core-identity.md` §2.1 を
+   訂正する。K3 は identity 層の柱から外れ、四本柱は三本になる
+   （欠落の透過 / 予算付き順序 / 構造化診断）。あるいは Tier 2 の到来時に
+   K3 が実行時へ入ってくるという条件付きの柱として書き直す。
+   **同メモは「Ajisai の同一性とは何か」を定義する文書であり、そこに現行言語に
+   存在しない柱が立っていることは、他のどの stale よりも重い。**
+5. **[中規模・任意]** §4.2 の KEEP と NIL パススルーを中央の分配点へ寄せ、
+   `words.json` の `nilPolicy`/`consumption` を「宣言するだけの散文」から
+   「実行を駆動する入力」へ格上げできないか検討する。
+
+提案 1・2・3 は互いに独立で、いずれも観測可能な挙動を変えない。
