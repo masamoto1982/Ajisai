@@ -318,21 +318,6 @@ pub struct Interpreter {
     /// singleton tensor/vector wrappers in Consume and Keep modes. Disable via
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
-
-    /// When true (default), compiled builtin call sites keep a monomorphic
-    /// shape cache that routes scalar-fastpath-shaped operands straight to
-    /// the D1 fast path (hidden-class-style call-site specialization; see
-    /// `shape_ic.rs`). Routing only — observable values are unchanged.
-    /// Disable via `AJISAI_NO_SHAPE_IC` for an A/B comparison.
-
-    /// When true (default), `MAP`/`FILTER`/`FOLD` and the predicate family may
-    /// route eligible quantized blocks through the specialized kernels in
-    /// `higher_order/fast_kernels.rs` (per-element and bulk). Routing only —
-    /// the kernels decline any input whose outcome the generic route defines
-    /// differently (e.g. division by zero), so observable values, errors, and
-    /// NIL reasons are unchanged. Disable via `AJISAI_NO_FAST_KERNEL` for an
-    /// A/B comparison.
-    pub(crate) fast_kernel_enabled: bool,
 }
 
 impl Default for Interpreter {
@@ -395,7 +380,6 @@ impl Interpreter {
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
-            fast_kernel_enabled: std::env::var("AJISAI_NO_FAST_KERNEL").is_err(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -445,10 +429,6 @@ impl Interpreter {
 
     pub fn drain_error_flow_trace(&mut self) -> Vec<super::error_flow_trace::ErrorFlowEvent> {
         std::mem::take(&mut self.error_flow_trace_log)
-    }
-
-    pub fn peek_error_flow_trace(&self) -> &[super::error_flow_trace::ErrorFlowEvent] {
-        &self.error_flow_trace_log
     }
 
     /// Record `word` as the Word a failure happened *inside*, when the frame
@@ -514,10 +494,6 @@ impl Interpreter {
             diagnosis: Some(diagnosis),
             error_text: err.to_string(),
         });
-    }
-
-    pub fn clear_error_flow_trace(&mut self) {
-        self.error_flow_trace_log.clear();
     }
 
     pub fn current_epoch_snapshot(&self) -> EpochSnapshot {
@@ -639,25 +615,6 @@ impl Interpreter {
         self.scalar_fastpath_enabled = enabled;
     }
 
-    /// Enable or disable the call-site shape inline cache for compiled
-    /// builtin calls. In-process equivalent of `AJISAI_NO_SHAPE_IC`; takes
-    /// effect immediately for subsequent compiled call sites. Routing only —
-    /// disabling it never changes observable values, just the route taken.
-    pub fn set_shape_ic_enabled(&mut self, _enabled: bool) {}
-
-    /// Enable or disable pure HOF kernel memoization (`MAP`). In-process
-    /// equivalent of `AJISAI_NO_HOF_MEMO`; lets a benchmark or differential
-    /// test A/B the memoized path against re-running the kernel. Takes effect
-    /// immediately for subsequent `MAP` calls.
-    /// Enable or disable the specialized HOF kernels (per-element and bulk)
-    /// in `higher_order/fast_kernels.rs`. In-process equivalent of
-    /// `AJISAI_NO_FAST_KERNEL`; lets a differential test or benchmark A/B the
-    /// kernel route against the generic quantized-block route. Routing only —
-    /// disabling it never changes observable values, errors, or NIL reasons.
-    pub fn set_fast_kernel_enabled(&mut self, enabled: bool) {
-        self.fast_kernel_enabled = enabled;
-    }
-
     /// Override the execution step budget (water level). Raising it lets a
     /// benchmark drive a tail-recursive loop far past the default
     /// `DEFAULT_MAX_EXECUTION_STEPS` to observe O(1)-native-stack iteration.
@@ -742,9 +699,5 @@ impl Interpreter {
 
     pub fn update_stack_with_hints(&mut self, values: Vec<Value>, hints: Vec<Interpretation>) {
         self.stack = Stack::from_values_and_roles(values, hints);
-    }
-
-    pub fn collect_stack_hints(&self) -> &[Interpretation] {
-        self.stack.roles()
     }
 }

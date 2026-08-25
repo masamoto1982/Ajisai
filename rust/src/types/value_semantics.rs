@@ -98,15 +98,6 @@ impl Value {
         }
     }
 
-    #[inline]
-    pub fn from_children_with_hint(children: Vec<Value>, hint: Interpretation) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(children)),
-            hint,
-            absence: None,
-        }
-    }
-
     /// Build a Vector value (LANG.VALUES.VECTOR).
     ///
     /// The empty Vector is a Vector. It used to become
@@ -379,18 +370,6 @@ impl Value {
                 })
             }
             _ => std::borrow::Cow::Borrowed(self),
-        }
-    }
-
-    #[inline]
-    pub fn is_uniquely_owned(&self) -> bool {
-        match &self.data {
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => true,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
-            ValueData::Vector(rc) => Arc::strong_count(rc) == 1,
-            ValueData::Tensor { data, shape } => {
-                Arc::strong_count(data) == 1 && Arc::strong_count(shape) == 1
-            }
         }
     }
 

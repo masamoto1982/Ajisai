@@ -128,11 +128,6 @@ impl ExactReal {
     }
 
     #[inline]
-    pub fn is_rational(&self) -> bool {
-        matches!(self, Self::Rational(_))
-    }
-
-    #[inline]
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Rational(f) => f.is_nil(),

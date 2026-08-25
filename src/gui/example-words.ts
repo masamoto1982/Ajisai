@@ -1,8 +1,5 @@
 import type { UserWord } from '../wasm-interpreter-types';
 
-
-export const EXAMPLE_WORDS_VERSION = 13;
-
 // `KEEP` is spelled out. It used to have the symbol `,,`, which every one of
 // these definitions was written against; once every symbol became one
 // character `,,` stopped being a name the dictionary holds, so the seeded

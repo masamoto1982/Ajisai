@@ -382,34 +382,6 @@ impl DebugDiagnosis {
         }
     }
 
-    /// Build the diagnostic context for a continued-fraction comparison
-    /// that produced the logical `Unknown` (U) because the
-    /// partial-quotient budget was exhausted (SPEC §7.4.1). `word` is the
-    /// comparison Coreword that produced U (e.g. `"COMPARE-WITHIN"`,
-    /// `"LT"`); `agreed_prefix` is the number of leading partial quotients
-    /// that matched before the budget ran out, carried machine-readably in
-    /// the `agreed_prefix` field (SPEC §4.5.0).
-    pub fn comparison_unknown(word: Option<&str>, agreed_prefix: usize) -> Self {
-        let where_ = classify_locus(word);
-        DebugDiagnosis {
-            when: ErrorPhase::ExecuteWord,
-            where_,
-            why: CauseClass::NilFlow,
-            summary: format!(
-                "executeWord / {} / comparison undecidable within budget; agreedPrefix={}",
-                word.unwrap_or("comparison"),
-                agreed_prefix
-            ),
-            evidence: vec![
-                "truthValue=unknown".to_string(),
-                format!("agreedPrefix={}", agreed_prefix),
-            ],
-            next_checks: Vec::new(),
-            agreed_prefix: Some(agreed_prefix),
-            candidates: Vec::new(),
-            resource_limit: None,
-        }
-    }
     /// Build the AI-facing structured diagnostic payload used by tests, WASM
     /// adapters, and review tooling. Human-readable `summary` stays separate;
     /// this payload exposes stable protocol fields so agents can distinguish

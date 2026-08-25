@@ -4,47 +4,6 @@ use num_bigint::BigInt;
 use num_traits::{One, Zero};
 
 impl Fraction {
-    #[inline]
-    pub fn mul_by_integer(&self, n: &Fraction) -> Fraction {
-        debug_assert!(n.is_integer());
-
-        if let (Some((a, b)), Some((n_val, _))) = (self.extract_i64_pair(), n.extract_i64_pair()) {
-            let g: i64 = compute_gcd_i64(n_val, b);
-            let n_r: i128 = (n_val / g) as i128;
-            let b_r: i128 = (b / g) as i128;
-            let num: i128 = (a as i128) * n_r;
-            return Self::create_from_i128(num, b_r);
-        }
-
-        let (sn, sd): (BigInt, BigInt) = self.to_bigint_pair();
-        let nn: BigInt = n.numerator();
-        let g: BigInt = balanced_bigint_gcd(&nn, &sd);
-        let n_reduced: BigInt = &nn / &g;
-        let b_reduced: BigInt = &sd / &g;
-        Self::create_already_reduced(sn * n_reduced, b_reduced)
-    }
-
-    #[inline]
-    pub fn div_by_integer(&self, n: &Fraction) -> Fraction {
-        debug_assert!(n.is_integer());
-        debug_assert!(!n.is_zero());
-
-        if let (Some((a, b)), Some((n_val, _))) = (self.extract_i64_pair(), n.extract_i64_pair()) {
-            let g: i64 = compute_gcd_i64(a, n_val);
-            let a_r: i128 = (a / g) as i128;
-            let n_r: i128 = (n_val / g) as i128;
-            let den: i128 = (b as i128) * n_r;
-            return Self::create_from_i128(a_r, den);
-        }
-
-        let (sn, sd): (BigInt, BigInt) = self.to_bigint_pair();
-        let nn: BigInt = n.numerator();
-        let g: BigInt = balanced_bigint_gcd(&sn, &nn);
-        let a_reduced: BigInt = &sn / &g;
-        let n_reduced: BigInt = &nn / &g;
-        Self::create_already_reduced(a_reduced, sd * n_reduced)
-    }
-
     pub fn add(&self, other: &Fraction) -> Fraction {
         if self.is_nil() || other.is_nil() {
             return Self::nil();
