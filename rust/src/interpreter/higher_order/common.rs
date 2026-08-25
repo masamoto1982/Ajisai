@@ -23,7 +23,7 @@ pub(crate) fn extract_executable_code(
     }
 
     Err(AjisaiError::from(
-        "EXTRACT_EXECUTABLE_CODE: expected code block (: ... ;) or word name, got other value",
+        "EXTRACT_EXECUTABLE_CODE: expected code block ({ ... }) or word name, got other value",
     ))
 }
 
