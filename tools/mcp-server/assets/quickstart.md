@@ -437,7 +437,7 @@ no module system and nothing to import.
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND` |
 | `EXEC` | control | Evaluate a code block. — e.g. `{ 1 2 ADD } EXEC` |
-| `PROBE` | control | Infer a CodeBlock's contract against the current dictionary, without evaluating it. — e.g. `{ 1 2 ADD } PROBE` |
+| `PROBE` | control | Infer a code block's contract against the current dictionary, without evaluating it. — e.g. `{ 1 2 ADD } PROBE` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |

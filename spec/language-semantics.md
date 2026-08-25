@@ -5,7 +5,7 @@
 
 <p>Status: <strong>Canonical</strong><br>
 Version: <strong>2026-07-29</strong><br>
-Release stage: <strong>0.2.0-beta.1</strong>, beginning at commit <code>350834ee22ca1f1583eaa50e35d69f8ac29cac3e</code> — the first commit that meets every condition of the beta vocabulary and compatibility freeze. The development stage before it ends at commit <code>ebb66a5f9d14a6c8d6610488724e476e652abc35</code>.</p>
+Release stage: <strong>0.2.0-beta.2</strong>, beginning at commit <code>350834ee22ca1f1583eaa50e35d69f8ac29cac3e</code> — the first commit that meets every condition of the beta vocabulary and compatibility freeze. The development stage before it ends at commit <code>ebb66a5f9d14a6c8d6610488724e476e652abc35</code>.</p>
 
 <p>
 This document defines the correspondence between Ajisai source programs and observable values, states, effects, and diagnoses. It is a compact semantic kernel: differences between individual Words belong to the machine-readable vocabulary registry, not to parallel prose definitions.
@@ -310,7 +310,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 66 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. The host's lookup, hover, the Reference, and execution must identify the same canonical entry.</p>
+<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 65 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. The host's lookup, hover, the Reference, and execution must identify the same canonical entry.</p>
 
 <h3 id="lang-dictionary-mutation">LANG.DICTIONARY.MUTATION — User Words</h3>
 

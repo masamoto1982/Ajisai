@@ -784,7 +784,7 @@ Evaluate a code block.
 
 ## `PROBE`
 
-Infer a CodeBlock's contract against the current dictionary, without evaluating it. The result is a Vector of key/value pairs — purity, determinism, NIL behavior, effects, confidence, and any gap reasons inference could not resolve — the same inference `ajisai check --contract` runs from outside the language, reached from inside it. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.
+Infer a code block's contract against the current dictionary, without evaluating it. The result is a Vector of key/value pairs — purity, determinism, NIL behavior, effects, confidence, and any gap reasons inference could not resolve — the same inference `ajisai check --contract` runs from outside the language, reached from inside it. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
