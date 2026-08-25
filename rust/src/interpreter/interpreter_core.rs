@@ -700,5 +700,4 @@ impl Interpreter {
     pub fn update_stack_with_hints(&mut self, values: Vec<Value>, hints: Vec<Interpretation>) {
         self.stack = Stack::from_values_and_roles(values, hints);
     }
-
 }

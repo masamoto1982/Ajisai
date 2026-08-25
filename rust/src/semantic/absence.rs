@@ -91,5 +91,4 @@ impl AbsenceMetadata {
             diagnosis: None,
         }
     }
-
 }

@@ -165,5 +165,4 @@ impl Value {
             .as_ref()
             .and_then(|absence| absence.reason.as_ref())
     }
-
 }
