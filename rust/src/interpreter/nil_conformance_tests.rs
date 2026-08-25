@@ -180,8 +180,9 @@ const PROJECTING_WORDS: &[&str] = &[
 /// Word declare a projection and still escape every probe just by having some
 /// other policy, and four Words did. Three of them were declaring something
 /// untrue: `SORT` (`passthrough`) and `UNIQUE` (`rejectNil`) declared
-/// `emptyVector`, a condition no program can reach because an empty vector is
-/// inexpressible, and `NIL?` (`consumeNil`) declared the same condition as
+/// `emptyVector`, a condition neither of them projects under — an empty
+/// sequence sorts and dedupes to an empty sequence, not to an absence — and
+/// `NIL?` (`consumeNil`) declared the same condition as
 /// `NIL-REASON` but answers `FALSE`, never NIL. All
 /// three are now `never`. The fourth, `NIL-REASON`, genuinely projects under
 /// `consumeNil`, so keying on the condition alone brings it into the probed set

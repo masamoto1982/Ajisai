@@ -20,7 +20,7 @@ export type V2Value =
     | { readonly type: 'string'; readonly value: string }
     | { readonly type: 'vector'; readonly items: readonly V2Value[] }
     | { readonly type: 'nil'; readonly reason: string | null }
-    | { readonly type: 'codeBlock' };
+    | { readonly type: 'symbol'; readonly value: string };
 
 export interface V2ObservedValue {
     readonly value: V2Value;
@@ -86,8 +86,13 @@ const decodeValue = (raw: unknown): V2Value => {
             }
             return { type: 'nil', reason };
         }
-        case 'codeBlock':
-            return { type: 'codeBlock' };
+        case 'symbol': {
+            const { value } = raw;
+            if (typeof value !== 'string') {
+                throw new V2DecodeError('symbol value must be a string');
+            }
+            return { type: 'symbol', value };
+        }
         default:
             throw new V2DecodeError(`unknown value type: ${String(raw.type)}`);
     }

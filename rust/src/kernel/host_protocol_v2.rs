@@ -54,7 +54,7 @@ pub fn value_to_v2(value: &KernelValue) -> Json {
             "type": "nil",
             "reason": reason.as_ref().map(|reason| reason.as_protocol_str()),
         }),
-        KernelValue::CodeBlock(_) => json!({ "type": "codeBlock" }),
+        KernelValue::Symbol(name) => json!({ "type": "symbol", "value": name.as_ref() }),
     }
 }
 
@@ -82,7 +82,6 @@ mod tests {
     use super::*;
     use crate::error::NilReason;
     use crate::kernel::scalar::Scalar;
-    use crate::kernel::value::CodeBlock;
     use crate::types::fraction::Fraction;
     use std::sync::Arc;
 
@@ -124,7 +123,7 @@ mod tests {
                     presentation: PresentationHint::Structural,
                 },
                 ObservedValue {
-                    value: KernelValue::CodeBlock(CodeBlock::new(Arc::from(Vec::new()))),
+                    value: KernelValue::Symbol(Arc::from("ADD")),
                     presentation: PresentationHint::Structural,
                 },
             ],

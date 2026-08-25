@@ -41,7 +41,7 @@ mod legacy_adapter;
 pub use nil::NilReason;
 pub use observation::{Observation, ObservedValue, PresentationHint};
 pub use scalar::Scalar;
-pub use value::{CodeBlock, KernelValue};
+pub use value::KernelValue;
 
 #[cfg(test)]
 mod tests {
@@ -57,7 +57,7 @@ mod tests {
             KernelValue::String(Arc::from("hello")),
             KernelValue::Vector(Arc::from([KernelValue::Boolean(false)])),
             KernelValue::Nil(None),
-            KernelValue::CodeBlock(CodeBlock::new(Arc::from([]))),
+            KernelValue::Symbol(Arc::from("ADD")),
         ];
         // The spine has exactly six value domains; this array is the whole set.
         assert_eq!(domains.len(), 6);
