@@ -509,7 +509,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "PROBE",
         category: "control",
-        summary: "Infer a CodeBlock's contract against the current dictionary, without evaluating it.",
+        summary: "Infer a code block's contract against the current dictionary, without evaluating it.",
         role: "Control primitive: narrow a description into what can be known about it without running it.",
         stack_effect: "[ { code } ] -> [ knowledge ]",
         hover_summary: "PROBE — infer a contract without running it",
