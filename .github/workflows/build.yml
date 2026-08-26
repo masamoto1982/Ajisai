@@ -3,6 +3,14 @@ name: Build and Deploy Ajisai
 on:
   push:
     branches: [ main ]
+  # Manual trigger. A push is otherwise the only thing that builds the site,
+  # so a push whose run never got created leaves main's HEAD with no run to
+  # re-run and no way to deploy it short of another commit. That happened on
+  # 2026-08-26: during a GitHub Actions incident the run for the merge of
+  # #1582 was never created, stranding the site on the previous commit. This
+  # deploys whatever ref it is dispatched against, so recovery no longer
+  # requires inventing a commit.
+  workflow_dispatch:
 
 permissions:
   contents: read
