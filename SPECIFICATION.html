@@ -237,12 +237,14 @@ Ajisai is built from ten concepts. Everything below is one of them, or a consequ
 
 <h3 id="lang-authority-sources">LANG.AUTHORITY.SOURCES — Normative sources</h3>
 
-<p>
-This Language Semantics is authoritative for program meaning. <code>spec/words.json</code> is authoritative for the vocabulary, <code>spec/semantic-families.json</code> for the laws Words share, <code>spec/gui-semantics.md</code> for presentation, and <code>spec/host-protocol-v2.schema.json</code> for the boundary between them. <code>SPECIFICATION.html</code> is generated from those sources and is not edited directly.
-</p>
+<p>Five sources are authoritative, each for a different part of the language:</p>
+
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Source</th><th>Authoritative for</th></tr></thead><tbody><tr><td>This Language Semantics</td><td>Program meaning</td></tr><tr><td><code>spec/words.json</code></td><td>The vocabulary</td></tr><tr><td><code>spec/semantic-families.json</code></td><td>The laws Words share</td></tr><tr><td><code>spec/gui-semantics.md</code></td><td>Presentation</td></tr><tr><td><code>spec/host-protocol-v2.schema.json</code></td><td>The boundary between them</td></tr></tbody></table></div>
+
+<p><code>SPECIFICATION.html</code> is generated from those five sources and is not edited directly.</p>
 
 <p>
-Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the list above defines nothing; <code>docs/dev/</code> holds design notes and history on those terms.
+Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the table above defines nothing; <code>docs/dev/</code> holds design notes and history on those terms.
 </p>
 
 <h3 id="lang-authority-present">LANG.AUTHORITY.PRESENT — Present-tense description</h3>
@@ -261,19 +263,17 @@ Superseded designs, migration history, and the reasoning behind a change are rec
 Ajisai identity is the correspondence from normalized source to the ordered observation of stack, output, dictionary state, and structured diagnosis. Two implementations are semantically equivalent when that correspondence agrees for every conforming program.
 </p>
 
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>65</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>12</td><td>Symbolic aliases — surface forms of those Words, not counted as vocabulary</td></tr><tr><td>36</td><td>Semantic Kernel Words, within the 65 — carry the language's semantic identity</td></tr><tr><td>29</td><td>Standard Words, within the 65 — carry its practical surface</td></tr></tbody></table></div>
+
 <p>
-The vocabulary is 65 canonical Words and 12 symbolic aliases (<code>docs/word-manifest.json</code> is the count of record). Aliases are surface forms of those Words and are not counted as vocabulary. Within the 65, a 36-Word Semantic Kernel carries the semantic identity of the language and 29 Standard Words carry its practical surface; both are ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
+Kernel and Standard are both ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
 
-<p>
-AST, IR, dispatch, caching, storage layout, numeric representation, and optimization are unobservable. An implementation may change them when all observations and host protocol payload meanings remain unchanged.
-</p>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Category</th><th>Examples</th></tr></thead><tbody><tr><td>Unobservable — free to change when all observations and host protocol payload meanings stay unchanged</td><td>AST, IR, dispatch, caching, storage layout, numeric representation, optimization</td></tr><tr><td>Not a semantic discriminant</td><td>Internal exact-real representation, Rust enum names, debug strings, allocation identity, GUI colors, private serialization</td></tr></tbody></table></div>
 
-<p>
-Internal exact-real representation, Rust enum names, debug strings, allocation identity, GUI colors, and private serialization are not semantic discriminants. In particular an implementation may execute a Word by any route it likes, provided the route is unobservable.
-</p>
+<p>In particular an implementation may execute a Word by any route it likes, provided the route is unobservable.</p>
 
 <h2 id="lang-source">2. Source and Desugaring</h2>
 
@@ -331,8 +331,8 @@ Producing, storing, displaying, and evaluating a Vector as code are distinct ope
 
 <h3 id="lang-source-frame">LANG.SOURCE.FRAME — What a block sees</h3>
 <p>A block has no stack discipline of its own: the Word that evaluates it decides what the block reaches and what it may leave, and the block's text does not say which rule applies. The difference is whether a <code>+</code> written inside it finds two operands or none. Two rules cover every case.</p>
-<p><strong>Whole-stack.</strong> A user Word's body (<code>DEF</code>) and <code>EXEC</code> see the whole stack and leave whatever they push, however many values.</p>
-<p><strong>Isolated frame.</strong> Every other block-evaluating Word runs its block alone in a frame holding a fixed number of values, and the block must leave exactly one: leaving none is ERROR, and anything below the top goes with the frame. <code>COND</code> isolates the target — one value — for every guard and the winning body. <code>MAP</code>, <code>FILTER</code>, <code>ANY</code>, and <code>ALL</code> isolate the current element — one value — and <code>FOLD</code> isolates the accumulator and the current element — two values.</p>
+
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Rule</th><th>Applies to</th><th>Frame holds</th><th>On leaving</th></tr></thead><tbody><tr><td>Whole-stack</td><td>A user Word's body (<code>DEF</code>) and <code>EXEC</code></td><td>The whole stack</td><td>Leaves whatever it pushes, however many values</td></tr><tr><td>Isolated frame</td><td><code>COND</code> — the target, for every guard and the winning body · <code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code> — the current element · <code>FOLD</code> — the accumulator and the current element</td><td>A fixed number of values (one, except <code>FOLD</code>'s two)</td><td>Must leave exactly one; leaving none is ERROR, and anything below the top goes with the frame</td></tr></tbody></table></div>
 <p>Isolation is what lets a recursive <code>COND</code> word terminate cleanly — working values a clause body pushes cannot leak past it, so a tail self-call starts from one value however much scaffolding the body built — and the discard above is its cost. A block written inside another block is data where it is written, evaluated only when the Word receiving it runs it, under that Word's rule and not the enclosing block's; a self-call inside such a block is an ordinary call.</p>
 <p>A frame also holds <strong>local bindings</strong>. <code>BIND</code> consumes a value and a name and makes the name that value for the rest of the frame, however many times it is written; several names destructure a Vector of the same length. The isolation above is of the stack, not of names, so the blocks a Word evaluates read the frame they were written in — and a Word call does not: a body reads its own bindings and its operands and nothing of its caller's, so what a Word means never depends on where it is called. A binding ends with its frame, and a name is a Word or a binding and never both.</p>
 
@@ -424,7 +424,9 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-machine-limits">LANG.MACHINE.LIMITS — Work limits</h3>
 
-<p>Two limits exist and they mean different things. The <strong>execution-step limit</strong> bounds total work; exhausting it raises its registered ERROR. The <strong>materialization ceiling</strong> bounds how large a single generated collection may become; a well-formed request that exceeds it projects to NIL with reason <code>spaceExhausted</code>.</p>
+<p>Two limits exist and they mean different things:</p>
+
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Limit</th><th>Bounds</th><th>On exhaustion</th></tr></thead><tbody><tr><td>Execution-step limit</td><td>Total work</td><td>Registered ERROR</td></tr><tr><td>Materialization ceiling</td><td>Size of one generated collection</td><td>NIL, reason <code>spaceExhausted</code>, for an otherwise well-formed request</td></tr></tbody></table></div>
 
 <p>Both are host safety controls rather than language-semantic constraints: their numeric values are implementation freedom, but the outcome category each produces is normative.</p>
 
@@ -446,7 +448,9 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-failure-trichotomy">LANG.FAILURE.TRICHOTOMY — Value, absence, misuse</h3>
 
-<p>Every attempted operation ends in exactly one of three categories. Success yields its registered outputs. Well-formed partial failure yields NIL with a reason. Malformed use yields ERROR.</p>
+<p>Every attempted operation ends in exactly one of three categories:</p>
+
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Category</th><th>Outcome</th></tr></thead><tbody><tr><td>Success</td><td>Its registered outputs</td></tr><tr><td>Well-formed partial failure</td><td>NIL with a reason</td></tr><tr><td>Malformed use</td><td>ERROR</td></tr></tbody></table></div>
 
 <p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. Recovery operates on absence alone: <code>VENT</code> acts on a NIL top, while an ERROR propagates and halts evaluation.</p>
 
@@ -528,8 +532,12 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>. <code>PROBE</code> reaches the same inference from inside the language, over a Vector of code (LANG.SOURCE.CODE) rather than a named declaration: it never evaluates its operand, so calling it carries none of the operand's own effects.</p>
 
-<p>The check is deliberately <strong>conservative and partial</strong>. It reports exactly three outcomes per declaration: <em>verified</em>, <em>violated</em>, or <em>cannot verify</em>. Anything outside the syntactic fragment the inference analyzes — a higher-order body whose block is not statically known, or dynamic control — is reported as <em>cannot verify</em> and is never silently passed. A tool that reports <em>verified</em> for an unanalyzable body is nonconforming.</p>
-<p>These three results are the trichotomy of LANG.FAILURE.TRICHOTOMY applied at check time rather than at run time: verified corresponds to a value — the inferred contract itself — cannot verify to a reasoned absence, and violated to an error. The correspondence classifies outcomes, not mechanisms, and does not make the check evaluate the program: division by zero, a failed parse and an out-of-range index already share one outcome category while sharing no mechanism, and an inference that could not decide joins that list on the same terms.</p>
+<p>The check is deliberately <strong>conservative and partial</strong>. It reports exactly three outcomes per declaration, each the trichotomy of LANG.FAILURE.TRICHOTOMY applied at check time rather than at run time:</p>
+
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Check-time outcome</th><th>Run-time counterpart</th></tr></thead><tbody><tr><td><em>Verified</em></td><td>A value — the inferred contract itself</td></tr><tr><td><em>Cannot verify</em></td><td>A reasoned absence</td></tr><tr><td><em>Violated</em></td><td>An error</td></tr></tbody></table></div>
+
+<p>Anything outside the syntactic fragment the inference analyzes — a higher-order body whose block is not statically known, or dynamic control — is reported as <em>cannot verify</em> and is never silently passed. A tool that reports <em>verified</em> for an unanalyzable body is nonconforming.</p>
+<p>The correspondence classifies outcomes, not mechanisms, and does not make the check evaluate the program: division by zero, a failed parse and an out-of-range index already share one outcome category while sharing no mechanism, and an inference that could not decide joins that list on the same terms.</p>
 
 <h2 id="lang-observation">10. Observation and Host Protocol</h2>
 
@@ -537,7 +545,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>Ajisai exposes four projections: Input, Output, Stack, and Dictionary. Presentation may tile or select them according to the Presentation Profile, but their language-side contents are determined here.</p>
 
-<p>Output is the ordered text observation; Stack is the ordered typed values; Dictionary is the resolved Core and User catalog; Input is normalized source and host editing state where applicable.</p>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Projection</th><th>Content</th></tr></thead><tbody><tr><td>Output</td><td>The ordered text observation</td></tr><tr><td>Stack</td><td>The ordered typed values</td></tr><tr><td>Dictionary</td><td>The resolved Core and User catalog</td></tr><tr><td>Input</td><td>Normalized source and host editing state, where applicable</td></tr></tbody></table></div>
 
 <h3 id="lang-observation-protocol">LANG.OBSERVATION.PROTOCOL — The host protocol</h3>
 
