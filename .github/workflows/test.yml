@@ -139,6 +139,14 @@ jobs:
       - name: Contract fields are reachable, not declared and unread
         run: npm run check:unreachable-contract
 
+      - name: docs/dev/ load-bearing memos name symbols that still exist
+        # `[設計根拠]`/`[方針記録]` memos (docs/dev/INDEX.md) are read as
+        # load-bearing rather than a point-in-time snapshot. This is the same
+        # question as the step above, run the other direction: a memo's
+        # claim about a Rust type/variant or function must still be true of
+        # rust/src, rust/tests, or src. See scripts/check-docs-dev-drift.mjs.
+        run: npm run check:docs-dev-drift
+
       - name: Package, crate and Tauri versions agree
         run: npm run check:version-sync
 
