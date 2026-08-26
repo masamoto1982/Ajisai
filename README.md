@@ -18,6 +18,8 @@ The name comes from *hydrangea*, whose scientific name means "water vessel" — 
 | Breach | Evaluation halts because of improper use |
 
 ## Status
+| | |
+|---|---|
 | Release stage | `0.2.0-alpha.1` |
 | Specification | Withdrawn from beta and being regenerated from the implementation — see [`spec/README.md`](spec/README.md) |
 | Compatibility promise | None while alpha holds |
