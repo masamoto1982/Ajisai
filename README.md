@@ -17,13 +17,6 @@ The name comes from *hydrangea*, whose scientific name means "water vessel" — 
 | Bubble | `NIL`, whose cause can be read out mechanically |
 | Breach | Evaluation halts because of improper use |
 
-| | |
-|---|---|
-| Numbers | Exact — no rounding, ever |
-| Vectors | The one way to hold many values; arithmetic and comparison lift element-wise |
-| Partial failure | Stays visible and diagnosable — never a silently coerced value |
-| Contracts | Every built-in Word carries a machine-readable one, checkable before a program runs |
-
 ## Status
 
 | | |
