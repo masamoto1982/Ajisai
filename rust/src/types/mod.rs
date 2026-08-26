@@ -183,11 +183,10 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
         ValueData::Text(_) => None,
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) => nested_vector_shape(items),
-        // CS4 PR-2: U is not a dense-tensor lane. NIL is (a nil lane, via the
-        // valid-mask), so it counts as a rank-0 element here; U is a truth
-        // value with no numeric lane, so — like a Boolean — it has no
-        // rectangular element shape and forces the structural (non-dense)
-        // path.
+        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
+        // has no dedicated variant, so it takes the `Nil` arm above too and
+        // counts as a rank-0 element (a nil lane, via the valid-mask), same
+        // as an operational NIL.
         ValueData::Boolean(_) | ValueData::Symbol(_) => None,
     }
 }

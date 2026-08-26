@@ -104,10 +104,15 @@ fn every_nil_reason_has_a_distinct_lower_camel_protocol_string() {
 fn unknown_advertises_truth_valued_capability() {
     // SPEC §7.5 / §2.3: the logical Unknown (U) is observed through the
     // `truthValue` axis as `unknown` and advertises the `truthValued`
-    // capability. Since CS4, U is its own `ValueData::Unknown` variant, not a
-    // NIL node carrying a `logicallyUnknown` reason (that reason was retired in
-    // PR-3), so no NIL-reason protocol string represents U.
-    assert_eq!(Capability::TruthValued.as_protocol_str(), "truthValued");
+    // capability. U has no dedicated `ValueData` variant — it is `Nil`
+    // data carrying the `TruthValue` hint — and no vocabulary word can
+    // construct it yet (Tier ≤1 exact comparison is always decidable; see
+    // `types/exact/computable.rs`), so build it directly here.
+    use crate::types::{Interpretation, Value};
+    let mut u = Value::nil();
+    u.hint = Interpretation::TruthValue;
+    assert_eq!(u.truth_value(), Some("unknown"));
+    assert!(u.has_capability(Capability::TruthValued));
 }
 #[test]
 fn definite_truth_values_expose_truth_value_axis() {

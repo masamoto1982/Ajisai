@@ -12,10 +12,10 @@ impl Value {
     #[inline]
     pub fn len(&self) -> usize {
         match &self.data {
+            // The logical Unknown (U — `Nil` carrying the `TruthValue`
+            // hint) has no dedicated variant, so it falls through this same
+            // `Nil` arm and reports length 0, same as an operational NIL.
             ValueData::Nil => 0,
-            // CS4 PR-2: U is a single scalar truth value, so it has length 1
-            // like a Boolean (not 0 like an absence). It is not indexable —
-            // `get_child`/`child` return `None`, exactly as for a Boolean.
             // A String is one value, not a sequence of characters. Its
             // character count is reached through `CHARS`, which is what makes
             // the Vector domain explicit; LENGTH raises `nonVector` on it.
@@ -119,9 +119,10 @@ impl Value {
                 // Cannot push_child into an ExactScalar — silently ignore
                 // (ExactScalar is always a scalar leaf, never mutated into a vector).
             }
-            // CS4 PR-2: pushing into U is a no-op, like a Boolean — U is a
-            // scalar truth value, not an empty container to be seeded into a
-            // vector (that NIL affordance does not apply to a definite datum).
+            // The logical Unknown (U — `Nil` carrying the `TruthValue`
+            // hint) has no dedicated variant, so it takes the `Nil` arm
+            // above and becomes a one-element Vector too, same as an
+            // operational NIL.
             ValueData::Boolean(_)
             | ValueData::Text(_)
             | ValueData::Tensor { .. }
@@ -192,10 +193,12 @@ impl Value {
             ValueData::Tensor { data, .. } => {
                 buf.extend(data.iter());
             }
-            // CS4 PR-2: U is a truth value, not numeric content — it flattens
-            // to no fraction lane, like a Boolean (NIL flattens to a nil
-            // lane). Kept in lock-step with `count_fractions` below so buffer
-            // sizing stays exact.
+            // The logical Unknown (U — `Nil` carrying the `TruthValue`
+            // hint) has no dedicated variant, so it takes the `Nil` arm
+            // above and flattens to a nil lane, same as an operational NIL.
+            // A Boolean/Text/Symbol flattens to no fraction lane. Kept in
+            // lock-step with `count_fractions` below so buffer sizing stays
+            // exact.
             ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => {}
         }
     }
@@ -206,8 +209,9 @@ impl Value {
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) => v.iter().map(|c| c.count_fractions()).sum(),
             ValueData::Tensor { data, .. } => data.len(),
-            // CS4 PR-2: U contributes no fraction lane (see
-            // `collect_fractions_flat_into`), matching a Boolean.
+            // U takes the `Nil` arm above and contributes one fraction lane
+            // (see `collect_fractions_flat_into`); a Boolean/Text/Symbol
+            // contributes none.
             ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => 0,
         }
     }

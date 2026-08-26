@@ -26,9 +26,6 @@ impl fmt::Display for Value {
 }
 
 pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
-    // The logical Unknown (U, SPEC §7.5) always renders as `UNKNOWN`,
-    // regardless of the effective hint, so it is never shown as `NIL`.
-    // Display-only and non-canonical (SPEC §12.2).
     // An operational NIL (a bubble carrying absence metadata) always renders
     // as `NIL`, regardless of the effective hint. A positional hint can carry
     // a word's declared output role (e.g. CHR is declared to yield TEXT),
@@ -37,8 +34,7 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     // hint) already shows `NIL` here, so this keeps hint-driven callers
     // consistent with it. The empty string `''` is itself a NIL with reason
     // `EmptySequence` (see `Value::from_string`), so it likewise renders as
-    // `NIL`, matching its canonical form. Mirrors the Unknown rule above
-    // (SPEC §4.5; §12.2).
+    // `NIL`, matching its canonical form (SPEC §4.5; §12.2).
     if matches!(value.data, ValueData::Nil) && value.absence_metadata().is_some() {
         return "NIL".to_string();
     }
@@ -157,11 +153,9 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         // Stack surface used to consult a role to decide whether a vector of
         // numbers was "really" text, and now there is nothing to decide.
         ValueData::Text(s) => format!("'{}'", s),
-        // CS4 PR-2: U renders as `UNKNOWN` everywhere, including when nested
-        // inside a non-truth collection — the same label the top-level
-        // `is_unknown()` guards produce, and consistent with a Boolean
-        // rendering `TRUE`/`FALSE` at any depth (SPEC §12.2). U is never shown
-        // as `NIL`.
+        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
+        // has no dedicated variant, so it takes the `Nil` arm above and
+        // renders as `NIL`, same as an operational NIL.
         // A definite boolean renders uniformly as TRUE/FALSE in every role
         // (SPEC §12.2), so the three-valued axis is observable consistently
         // whether the boolean came from a literal, a comparison, or a logic
@@ -315,13 +309,12 @@ pub fn format_for_output(value: &Value) -> String {
     format_with_hint(value, value.hint)
 }
 
-/// Boolean label for a single element of a truth-valued vector/tensor.
-/// The logical Unknown (U, SPEC §7.5) renders as `UNKNOWN`; an
-/// operational NIL stays `NIL`.
+/// Boolean label for a single element of a truth-valued vector/tensor. An
+/// operational NIL renders as `NIL`; the logical Unknown (U, SPEC §7.5) —
+/// `Nil` data carrying the `TruthValue` hint, no dedicated variant — takes
+/// the same arm below and renders as `NIL` too.
 fn boolean_element_label(child: &Value) -> &'static str {
     match &child.data {
-        // U is handled by the `is_unknown()` guard above, so this arm is
-        // unreachable; grouped with NIL only for exhaustiveness.
         ValueData::Nil => "NIL",
         // A String is not a truth value, so it has no boolean label; it can
         // only reach here inside a `TruthValue`-role vector, where rendering
@@ -363,11 +356,10 @@ fn boolean_element_label(child: &Value) -> &'static str {
 }
 
 fn format_as_boolean(value: &Value) -> String {
-    // The logical Unknown is handled by `format_with_hint`, but guard
-    // here too so the function is correct in isolation.
     match &value.data {
-        // U is handled by the `is_unknown()` guard above; grouped with NIL
-        // only for exhaustiveness.
+        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint,
+        // no dedicated variant) takes this same arm and renders as `NIL`,
+        // same as an operational NIL.
         ValueData::Nil => "NIL".to_string(),
         ValueData::Text(_) => format_value_recursive(&value.data, 0),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
