@@ -32,11 +32,12 @@ pub enum NilReason {
     /// `absence.origin = comparisonBudget` rather than a SAFE-caught
     /// error.
     Undecidable,
-    // CS4 PR-3: `LogicallyUnknown` was retired. The logical truth value
-    // Unknown (U, SPEC §7.5) is now its own `ValueData::Unknown` variant, not a
-    // NIL node carrying a reason, so no `NilReason` value represents U. There
-    // is no reverse decode of `NilReason` from a protocol string, so the
-    // retired name needs no boundary handling.
+    // `LogicallyUnknown` was retired: no `NilReason` value represents the
+    // logical truth value Unknown (U, SPEC §7.5). U has no dedicated
+    // `ValueData` variant — it is `Nil` data carrying the `TruthValue`
+    // hint, not a NIL node carrying a reason — so there is no reverse
+    // decode of `NilReason` from a protocol string, and the retired name
+    // needs no boundary handling.
     /// A well-formed generative operation (`RANGE`, `FILL`) whose materialized
     /// result would exceed the space water level (`max_materialized_elements`).
     /// The Bubble Rule projects this to NIL with `absence.origin = spaceBudget`

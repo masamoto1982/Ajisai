@@ -68,16 +68,14 @@ impl Value {
         ))
     }
 
-    /// Construct the logical truth value `Unknown` (U), SPEC §7.5 / §7.4.1.
-    ///
-    /// U is its own [`ValueData::Unknown`] variant carrying the
-    /// `Interpretation::TruthValue` role — **not** a NIL node. It is a
-    /// logical value, distinct at the type level from operational absence, so
-    /// no NIL call site can absorb it. Detect it with [`is_unknown`], never by
-    /// matching the storage representation.
-    #[inline]
     /// Whether this value carries the `TruthValue` interpretation role. Used at
-    /// observation boundaries to attach the `truthValue` axis.
+    /// observation boundaries to attach the `truthValue` axis. The logical
+    /// truth value `Unknown` (U, SPEC §7.5 / §7.4.1) is `ValueData::Nil`
+    /// carrying this role — there is no dedicated `Unknown` variant — so
+    /// `is_truth_value()` combined with `matches!(self.data, ValueData::Nil)`
+    /// is how U is detected, never by assuming a distinct storage
+    /// representation.
+    #[inline]
     pub fn is_truth_value(&self) -> bool {
         self.hint == Interpretation::TruthValue
     }

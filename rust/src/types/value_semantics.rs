@@ -41,7 +41,8 @@ impl Value {
     /// for any non-Boolean value. This is the data-plane truth accessor:
     /// unlike [`Value::is_truthy`] it never coerces a number, vector, or
     /// other shape into a truth value. The logical Unknown (U) is not a
-    /// Boolean, so it returns `None` here (test it with [`Value::is_unknown`]).
+    /// Boolean, so it returns `None` here — U is `Nil` data carrying the
+    /// `TruthValue` hint; read it with [`Value::truth_value`] instead.
     #[inline]
     pub fn as_truth(&self) -> Option<bool> {
         match &self.data {
@@ -152,17 +153,22 @@ impl Value {
         matches!(self.data, ValueData::Nil)
     }
 
-    /// As [`is_nil`]: operational-absence test. The logical Unknown (U) is
-    /// not absent.
+    /// As [`is_nil`]: operational-absence test.
     #[inline]
     pub fn is_absent(&self) -> bool {
         matches!(self.data, ValueData::Nil)
     }
 
-    /// Operational NIL only: an operational absence node that is, by
-    /// construction, never the logical truth value Unknown (U). Retained as
-    /// the intent-revealing name at the firewall boundary (SPEC §7.5 / §2.3);
-    /// now identical to [`is_nil`] because U has its own variant.
+    /// Retained as the intent-revealing name at the firewall boundary (SPEC
+    /// §7.5 / §2.3): the logical truth value Unknown (U) is meant never to
+    /// register here. Currently identical to [`is_nil`] — U has no
+    /// dedicated variant of its own (it is `Nil` data carrying the
+    /// `TruthValue` hint), and this check does not look at `hint`, so it
+    /// does not yet distinguish the two. U is unreachable from the current
+    /// vocabulary (see `types/exact/computable.rs`), so this has no
+    /// observable effect today; it is worth revisiting alongside
+    /// [`Value::capabilities`]'s `NilPassthrough` handling before a Tier 2
+    /// word can construct U.
     #[inline]
     pub fn is_operational_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
@@ -186,11 +192,10 @@ impl Value {
             // protocol axis, so making String a domain costs V1 nothing.
             ValueData::Text(_) => SemanticKind::Collection,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
-            // CS4 PR-2: U is a truth value, not an operational absence. Like a
-            // definite Boolean it reports `number` on the coarse `semanticKind`
-            // axis (for protocol stability — its distinctness lives in the
-            // `truthValue` axis and value identity, SPEC §2.3), never
-            // `absence`.
+            // The logical Unknown (U — `Nil` carrying the `TruthValue`
+            // hint) reports `absence` on this coarse `semanticKind` axis,
+            // same as an operational NIL; its distinctness lives on the
+            // `truthValue` axis and in value identity (SPEC §2.3), not here.
             ValueData::Nil => SemanticKind::Absence,
             // A Symbol is a bare Word reference — the closest existing
             // bucket on this coarse axis is `Code`, though a lone Symbol
@@ -209,8 +214,9 @@ impl Value {
             ValueData::Text(_) => ValueShape::Vector,
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
-            // CS4 PR-2: U is a rank-0 scalar truth value (like a Boolean), not
-            // an absence.
+            // The logical Unknown (U — `Nil` carrying the `TruthValue`
+            // hint) reports `absence` on this coarse `shape` axis too, same
+            // as an operational NIL.
             ValueData::Nil => ValueShape::Absence,
             // `ValueShape::CodeBlock` used to mean "the executable domain";
             // every Vector is executable now, so the `Vector` arm above
@@ -251,14 +257,18 @@ impl Value {
                 capabilities.push(Capability::Indexable);
                 capabilities.push(Capability::UserEditable);
             }
-            // CS4 PR-2: U carries a diagnosis (its `agreedPrefix`) and is
-            // AI-explainable, but it is emphatically **not** a NIL-passthrough
-            // value — advertising `NilPassthrough` would contradict the very
-            // firewall that keeps U from being absorbed as an operational NIL
-            // (SPEC §2.3 / §7.5). It gains `truthValued` below via
-            // `is_truth_value`.
+            // The logical Unknown (U) carries a diagnosis (its
+            // `agreedPrefix`) and is AI-explainable, but it is emphatically
+            // **not** a NIL-passthrough value — advertising `NilPassthrough`
+            // would contradict the very firewall that keeps U from being
+            // absorbed as an operational NIL (SPEC §2.3 / §7.5). U is `Nil`
+            // data carrying the `TruthValue` hint (there is no dedicated
+            // `Unknown` variant), so that case is excluded here by hint. It
+            // gains `truthValued` below via `is_truth_value`.
             ValueData::Nil => {
-                capabilities.push(Capability::NilPassthrough);
+                if self.hint != Interpretation::TruthValue {
+                    capabilities.push(Capability::NilPassthrough);
+                }
                 capabilities.push(Capability::Diagnosable);
                 capabilities.push(Capability::AiExplainable);
             }
@@ -377,11 +387,12 @@ impl Value {
     pub fn is_truthy(&self) -> bool {
         match &self.data {
             ValueData::Boolean(b) => *b,
-            // CS4 PR-2 (reviewed): `is_truthy` is a total two-valued
-            // coercion. U is neither definitely true nor false, so it
-            // conservatively collapses to `false` — the same result as NIL,
-            // hence the shared arm. Control words that must honour the third
-            // value branch on `is_unknown()` first (e.g. COND), never here.
+            // `is_truthy` is a total two-valued coercion. U (`Nil` carrying
+            // the `TruthValue` hint) is neither definitely true nor false,
+            // so it conservatively collapses to `false` — the same result as
+            // an operational NIL, hence the shared arm. Control words that
+            // must honour the third value branch on `is_truth_value()` first
+            // (e.g. COND), never here.
             ValueData::Nil => false,
             // A String is not a truth value. LANG.VALUES.TRUTH is two-valued
             // over Booleans, and the logic Words reject anything else outright

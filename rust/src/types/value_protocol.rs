@@ -261,15 +261,18 @@ pub(crate) fn value_to_protocol(
             semantics: None,
         };
     }
-    // The logical Unknown (U, SPEC §7.5) is observed through the
-    // `truthValue` axis as `unknown`, never as a NIL. Detected via the
-    // canonical `is_unknown()` predicate (SPEC §2.3 firewall: the internal
-    // NIL representation is not observable).
+    // The logical Unknown (U, SPEC §7.5) is meant to be observed through
+    // the `truthValue` axis as `unknown`, never surfaced as a NIL node —
+    // but U has no dedicated `ValueData` variant (it is `Nil` data
+    // carrying the `TruthValue` hint) and there is no guard here that
+    // looks at `hint`, so it currently falls into the `Nil` arm below and
+    // reports `type: "nil"` (with `displayHint: "truthValue"`), not the
+    // firewalled shape this comment describes. This has no observable
+    // effect today because U is unreachable from the current vocabulary
+    // (see `types/exact/computable.rs`); it is worth revisiting before a
+    // Tier 2 word can construct U.
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
-        // U is handled by the `is_unknown()` early return above, so this arm
-        // is unreachable; it deliberately reports `truthValue`, never `nil`,
-        // to uphold the firewall (SPEC §2.3) even if that guard ever moves.
         ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),
         ValueData::ExactScalar(er) => {
             // Serialize ExactScalar as best rational approximation with large

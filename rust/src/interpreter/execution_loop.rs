@@ -159,10 +159,12 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
 
 fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
     let top = interp.stack.last()?;
-    // Only operational NIL participates in error-flow tracing. The logical
-    // Unknown (U) is a `ValueData::Unknown` truth value, not a NIL, so it is
-    // excluded here by `is_nil()` (SPEC §4.5.2 / §7.5); no NIL reason can
-    // represent U since CS4 PR-3 retired `LogicallyUnknown`.
+    // Only operational NIL is meant to participate in error-flow tracing
+    // (SPEC §4.5.2 / §7.5); the logical Unknown (U) — `Nil` data carrying
+    // the `TruthValue` hint, not a dedicated variant — should not. `is_nil`
+    // does not look at `hint`, so it does not currently distinguish the
+    // two; this has no observable effect today because U is unreachable
+    // from the current vocabulary (see `types/exact/computable.rs`).
     if !top.is_nil() {
         return None;
     }

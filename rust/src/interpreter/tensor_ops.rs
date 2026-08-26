@@ -259,9 +259,9 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
             shape.extend(first);
             Some(shape)
         }
-        // CS4 PR-2: U is not a numeric dense-tensor lane (unlike NIL, which is
-        // a nil lane), so — like a Boolean — it has no rectangular shape and a
-        // vector containing U is broadcast structurally, never densified.
+        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
+        // has no dedicated variant, so it takes the `Nil` arm above too and
+        // is a rectangular nil lane, same as an operational NIL.
         ValueData::Boolean(_) | ValueData::Symbol(_) => None,
     }
 }
