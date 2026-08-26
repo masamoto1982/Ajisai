@@ -4,7 +4,18 @@
 
 # Ajisai
 
-An AI-first, vector-oriented dataflow language for auditable, exact vector computation with machine-readable contracts.
+Ajisai is an AI-first, vector-oriented dataflow language for auditable, exact vector computation with machine-readable contracts. Fractions and the Vector data structure carry the central role.
+
+The name comes from *hydrangea*, whose scientific name means "water vessel" — and Ajisai's own metaphor follows it: a fraction is water, and Vector is the vessel that holds it. Ajisai explains itself through this water-centered metaphor throughout.
+
+| Metaphor | What it stands for |
+|---|---|
+| Vessel | The Stack, realized as a Vector in the data structure — it can nest |
+| Water | An exact rational number — closed under `SQRT`, never rounded |
+| Flow | Dataflow through an operation |
+| Ripple | `PRINT` output |
+| Bubble | `NIL`, whose cause can be read out mechanically |
+| Breach | Evaluation halts because of improper use |
 
 | | |
 |---|---|
@@ -20,19 +31,6 @@ An AI-first, vector-oriented dataflow language for auditable, exact vector compu
 | Release stage | `0.2.0-alpha.1` |
 | Specification | Withdrawn from beta and being regenerated from the implementation — see [`spec/README.md`](spec/README.md) |
 | Compatibility promise | None while alpha holds |
-
-## The language in one picture
-
-The name *Ajisai* comes from hydrangea, often interpreted as a "water vessel." Ajisai uses water as its main metaphor.
-
-| Water metaphor | Language meaning | Observable idea |
-|---|---|---|
-| Vessel | the Stack — a Vector holding what has been poured in | `[ ]`, nesting, indexing |
-| Water | a value poured into the vessel; exact rationals (extended by `SQRT`) are its purest form | Scalars, booleans, strings, vectors, code blocks |
-| Flow | water moving between pouring and the ripple it leaves | Dataflow through operations |
-| Ripple | the trace a flow leaves at the surface | `PRINT` output |
-| Bubble | a well-formed operation could not produce a value | `NIL`, carrying a machine-readable reason |
-| Breach | the vessel or channel gives way — malformed use | raised error, propagates and halts evaluation |
 
 ## Ten concepts
 
