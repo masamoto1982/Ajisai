@@ -8,8 +8,15 @@
 >
 > 前提文書: `concept-reduction-2026-07.md`（十概念への削減）、
 > `reduction-consistency-audit-2026-07.md`（削減後整合監査）。本書はその実装側続編である。
-
----
+>
+> **検証追記（2026-08-26, `check:docs-dev-drift` 導入時）**: §3.3 の UNKNOWN 系識別子
+> （`SemanticKind::Unknown` / `ValueShape::Unknown` 等）と、§3.5・§10 の module 系識別子
+> （`ValueOrigin::ModuleWord` / `canonical_module()` / `module_word_call()` /
+> `BuiltinExecutorKey::Force` 等）は、現行 `rust/src`・`rust/tests` を機械的に
+> 全文照合しても一件もヒットしない——執筆時点の「残骸」「Phase 9 候補」としての記述は
+> 古く、対象はこの限りで既に消えている。本文は執筆時点のスナップショットとして
+> そのまま保持し、書き換えない。他のセクション（Phase 進行状況など）が現行実装と
+> 一致するかは未検証である。
 
 ## 0. 結論の要約
 
