@@ -62,10 +62,11 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
 /// "implementation-defined display budget").
 const CF_DISPLAY_BUDGET: usize = 32;
 
-/// Render a numeric scalar value as the canonical nested
-/// continued-fraction form (SPEC §4.2.3): `( a0 ( a1 ( a2 ) ) )`.
-/// Lazy irrationals truncate at CF_DISPLAY_BUDGET terms with a `...)`
-/// marker on the innermost level.
+/// Render a numeric scalar value as the canonical flat continued-fraction
+/// form (SPEC §4.2.3): `( a0; a1, a2 )`, matching the classical
+/// `[a0; a1, a2, …]` notation with `(` `)` in place of `[` `]` (SPEC
+/// §3.4 reserves `(` `)` for exactly this). Lazy irrationals truncate at
+/// CF_DISPLAY_BUDGET terms with a trailing `…` marker.
 pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
     // Obtain the partial-quotient sequence and whether it is truncated.
     let (terms, truncated): (Vec<BigInt>, bool) = match &value.data {
@@ -92,32 +93,50 @@ pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
         // Non-scalar values fall back to the structural rendering.
         _ => return format_value_recursive(&value.data, 0),
     };
-    render_cf_nested(&terms, truncated)
+    render_cf_flat(&terms, truncated)
 }
 
-/// Build the nested right-associative CF string from partial quotients.
-/// finite [a0,a1,a2] -> "( a0 ( a1 ( a2 ) ) )"
-/// truncated [a0,a1,a2] -> "( a0 ( a1 ( a2 ...) ) )"
-fn render_cf_nested(terms: &[BigInt], truncated: bool) -> String {
+/// Build the flat CF string from partial quotients, in the classical
+/// `[a0; a1, a2, …]` convention (SPEC §4.2.3) with `(` `)` standing in
+/// for `[` `]`:
+/// finite   [a0]         -> "( a0 )"          (no tail, no `;`)
+/// finite   [a0,a1,a2]   -> "( a0; a1, a2 )"
+/// truncated [a0,a1,a2]  -> "( a0; a1, a2, … )"
+/// truncated [a0]        -> "( a0; … )"
+/// truncated []          -> "( … )"
+///
+/// The `;` marks the one real distinction the notation carries: `a0` is
+/// any integer, while the tail terms are each a positive integer — the
+/// partial quotients of a value that is itself always ≥ 1 (the "complete
+/// quotient" one level down). The truncation marker is the Unicode
+/// ellipsis `…` rather than ASCII `...`: Ajisai numbers never render with
+/// a `.` (fractions always print `n/d`), so a literal `.` next to a digit
+/// would be the one place a display string could look like a malformed
+/// decimal; `…` is a different code point entirely, so no such reading is
+/// possible even by accident.
+fn render_cf_flat(terms: &[BigInt], truncated: bool) -> String {
     if terms.is_empty() {
-        return "( )".to_string();
+        return if truncated {
+            "( … )".to_string()
+        } else {
+            "( )".to_string()
+        };
     }
-    let mut s = String::new();
-    for t in terms {
-        s.push_str("( ");
-        s.push_str(&t.to_string());
-        s.push(' ');
+    let mut s = String::from("( ");
+    s.push_str(&terms[0].to_string());
+    if terms.len() > 1 || truncated {
+        s.push_str("; ");
+        let tail: Vec<String> = terms[1..].iter().map(BigInt::to_string).collect();
+        s.push_str(&tail.join(", "));
+        if truncated {
+            if terms.len() > 1 {
+                s.push_str(", …");
+            } else {
+                s.push('…');
+            }
+        }
     }
-    if truncated {
-        // The `...)` marker provides the innermost closing paren.
-        s.push_str("...)");
-    } else {
-        s.push(')');
-    }
-    // Close the remaining opened levels.
-    for _ in 0..terms.len() - 1 {
-        s.push_str(" )");
-    }
+    s.push_str(" )");
     s
 }
 
@@ -259,18 +278,18 @@ fn format_fraction(f: &Fraction) -> String {
 
 /// Display an `ExactReal`. Rational variants use the canonical
 /// `numerator/denominator` form. Irrational variants (`AlgebraicSqrt`,
-/// `Gosper`) render in the canonical nested continued-fraction form of
-/// SPEC §4.2.3 — `( a0 ( a1 ( a2 ... ) ) )` — truncated at the display
-/// budget with a `...)` marker for lazy CFs. This keeps the default
-/// numeric surface exact and AI-readable: arithmetic on irrationals is
-/// computed exactly on the CF representation (Gosper, SPEC §7.3), so the
-/// display must not collapse it to an approximate rational.
+/// `Gosper`) render in the canonical flat continued-fraction form of
+/// SPEC §4.2.3 — `( a0; a1, a2 )` — truncated at the display budget with
+/// a trailing `…` for lazy CFs. This keeps the default numeric surface
+/// exact and AI-readable: arithmetic on irrationals is computed exactly
+/// on the CF representation (Gosper, SPEC §7.3), so the display must not
+/// collapse it to an approximate rational.
 fn format_exact_real(er: &ExactReal) -> String {
     match er {
         ExactReal::Rational(f) => format_fraction(f),
         _ => match er.partial_quotients() {
-            // Collapsed to a finite (rational) CF: render the exact nested form.
-            Some(qs) => render_cf_nested(&qs, false),
+            // Collapsed to a finite (rational) CF: render the exact flat form.
+            Some(qs) => render_cf_flat(&qs, false),
             // Lazy irrational: emit partial quotients up to the display budget.
             None => {
                 let qs = er.partial_quotients_bounded(CF_DISPLAY_BUDGET);
@@ -282,11 +301,11 @@ fn format_exact_real(er: &ExactReal) -> String {
                     // budget. Render the undetermined-CF marker rather than an
                     // empty `( )` or an approximate `~` rational — `exactTerms`
                     // beside it still carries the value exactly.
-                    "( ...)".to_string()
+                    "( … )".to_string()
                 } else {
                     // Always a prefix: this arm is only reached for a value
                     // whose expansion does not terminate.
-                    render_cf_nested(&qs, true)
+                    render_cf_flat(&qs, true)
                 }
             }
         },
@@ -425,7 +444,7 @@ fn format_as_datetime(data: &ValueData) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::render_cf_nested;
+    use super::render_cf_flat;
     use num_bigint::BigInt;
 
     fn bi(n: i64) -> BigInt {
@@ -433,39 +452,41 @@ mod tests {
     }
 
     #[test]
-    fn render_cf_nested_exact_forms() {
-        assert_eq!(render_cf_nested(&[bi(1)], false), "( 1 )");
-        assert_eq!(render_cf_nested(&[bi(1), bi(2)], false), "( 1 ( 2 ) )");
+    fn render_cf_flat_exact_forms() {
+        assert_eq!(render_cf_flat(&[bi(1)], false), "( 1 )");
+        assert_eq!(render_cf_flat(&[bi(1), bi(2)], false), "( 1; 2 )");
         assert_eq!(
-            render_cf_nested(&[bi(1), bi(2), bi(2)], false),
-            "( 1 ( 2 ( 2 ) ) )"
+            render_cf_flat(&[bi(1), bi(2), bi(2)], false),
+            "( 1; 2, 2 )"
         );
         assert_eq!(
-            render_cf_nested(&[bi(1), bi(2), bi(2)], true),
-            "( 1 ( 2 ( 2 ...) ) )"
+            render_cf_flat(&[bi(1), bi(2), bi(2)], true),
+            "( 1; 2, 2, … )"
         );
-        assert_eq!(render_cf_nested(&[], false), "( )");
+        assert_eq!(render_cf_flat(&[bi(1)], true), "( 1; … )");
+        assert_eq!(render_cf_flat(&[], false), "( )");
+        assert_eq!(render_cf_flat(&[], true), "( … )");
     }
 
     #[test]
-    fn irrational_renders_as_nested_cf_not_approximation() {
+    fn irrational_renders_as_flat_cf_not_approximation() {
         use super::format_exact_real;
         use crate::types::exact::ExactReal;
         use crate::types::fraction::Fraction;
         use num_bigint::BigInt;
 
-        // √2 = [1; 2, 2, 2, …]. Default display must be the canonical nested
+        // √2 = [1; 2, 2, 2, …]. Default display must be the canonical flat
         // CF form (SPEC §4.2.3), never `sqrt(...)` or a `~`-approximation.
         let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
             .expect("√2 is a valid algebraic sqrt");
         let s = format_exact_real(&sqrt2);
         assert!(
-            s.starts_with("( 1 ( 2 ( 2 "),
-            "expected nested CF, got {s:?}"
+            s.starts_with("( 1; 2, 2, "),
+            "expected flat CF, got {s:?}"
         );
         assert!(
-            s.contains("...)"),
-            "lazy CF must carry the `...)` truncation marker, got {s:?}"
+            s.ends_with(", … )"),
+            "lazy CF must carry the trailing `…` truncation marker, got {s:?}"
         );
         assert!(
             !s.contains("sqrt"),
@@ -475,6 +496,7 @@ mod tests {
             !s.contains('~'),
             "must not use ~approximation display, got {s:?}"
         );
+        assert!(!s.contains('.'), "CF display must never contain a literal '.', got {s:?}");
         let opens = s.matches('(').count();
         let closes = s.matches(')').count();
         assert_eq!(opens, closes, "unbalanced parens in {s:?}");
@@ -486,14 +508,14 @@ mod tests {
     }
 
     #[test]
-    fn render_cf_nested_balanced_parens() {
+    fn render_cf_flat_balanced_parens() {
         for terms in [
             vec![bi(1)],
             vec![bi(1), bi(2)],
             vec![bi(2), bi(2), bi(2), bi(2)],
         ] {
             for truncated in [false, true] {
-                let s = render_cf_nested(&terms, truncated);
+                let s = render_cf_flat(&terms, truncated);
                 let opens = s.matches('(').count();
                 let closes = s.matches(')').count();
                 assert_eq!(opens, closes, "unbalanced parens in {s:?}");

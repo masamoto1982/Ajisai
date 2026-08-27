@@ -36,8 +36,8 @@
 //!    `PartialEq for Value` never reads `hint` and always reads the NIL
 //!    reason, so the digest follows exactly that split.
 //!  * **`stackDisplay` is not the value.** It is SPEC §4.2.3's continued
-//!    fraction truncated at a display budget (`√2` runs to ~194 characters
-//!    and ends in `...)`), so hashing it would fold two different numbers to
+//!    fraction truncated at a display budget (`√2` runs to ~101 characters
+//!    and ends in `… )`), so hashing it would fold two different numbers to
 //!    one digest the moment either runs past the budget. The digest always
 //!    encodes the value itself.
 //!

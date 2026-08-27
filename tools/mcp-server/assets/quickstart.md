@@ -128,7 +128,7 @@ fields on that same result are **not** the value, and reading either as if it
 were will mislead you:
 
 - `stackDisplay` shows the canonical continued fraction, truncated at a display
-  budget (`( 1 ( 2 ( 2 …)`). It is a rendering, and an incomplete one.
+  budget (`( 1; 2, 2, … )`). It is a rendering, and an incomplete one.
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 
