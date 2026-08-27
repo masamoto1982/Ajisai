@@ -505,7 +505,7 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
   check(
     "compute writes the algebraic value short beside the terms it renders",
     sqrt?.semantics?.exactDisplay === "sqrt(2)" &&
-      compute.structuredContent?.stackDisplay?.[0]?.includes("...)") === true,
+      compute.structuredContent?.stackDisplay?.[0]?.includes("…") === true,
   );
   check(
     "compute reports engine provenance and applied limits",

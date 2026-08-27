@@ -158,7 +158,8 @@ display, meant to be read rather than parsed.
 
 The two that mislead are the ones a consumer meets first. `stackDisplay` is the
 SPEC §4.2.3 continued fraction **truncated at a display budget** — √2 runs to
-~194 characters and ends in `...)`, so it looks complete and is not — and the
+`( 1; 2, 2, … )`, ~101 characters, ending in the truncation marker `…`, so it
+looks complete and is not — and the
 node's own `value` is a rational approximation flagged `semantics.approximate`,
 so it looks exact and is not. Neither field changed; `exactDisplay` is what
 makes reading them unnecessary.

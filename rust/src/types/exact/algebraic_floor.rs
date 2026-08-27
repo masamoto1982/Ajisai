@@ -38,8 +38,8 @@ fn fraction_floor(f: &Fraction) -> BigInt {
 /// Budgeting the work instead of the terms costs the common case nothing: a
 /// one- or two-term value (`2 SQRT`, `2 SQRT 3 SQRT +`) spends well under this
 /// and still gets all 32 quotients. An expansion that would cost seconds stops
-/// early and renders the `...)` truncation it was always entitled to, or the
-/// `( ...)` undetermined marker when not even `a0` is affordable. Neither loses
+/// early and renders the trailing `…` truncation it was always entitled to, or
+/// the `( … )` undetermined marker when not even `a0` is affordable. Neither loses
 /// anything: for an algebraic value the CF is a rendering, and `exactTerms`
 /// (with `exactDisplay` beside it) is the value.
 ///

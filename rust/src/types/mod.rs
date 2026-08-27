@@ -55,8 +55,8 @@ pub enum Interpretation {
     /// A diagnostic absence value.
     Nil,
     /// Canonical AI-readable continued-fraction serialization
-    /// (SPEC §4.2.3, §12.2): the nested right-associative form
-    /// `( a0 ( a1 ( a2 ) ) )`, with a `...)` truncation marker for
+    /// (SPEC §4.2.3, §12.2): the flat classical-notation form
+    /// `( a0; a1, a2 )`, with a trailing `…` truncation marker for
     /// lazy irrationals. Round-trip-safe machine serialization role.
     ContinuedFraction,
 }

@@ -43,6 +43,17 @@ mod cf_budget_tests {
         format_with_hint(value, role)
     }
 
+    /// Count the partial quotients actually written in a flat CF display —
+    /// the numeric tokens, ignoring `(` `)` `;` `,` `…` and spaces. A more
+    /// direct proxy than counting characters now that the display no
+    /// longer opens one `(` per term.
+    fn cf_term_count(display: &str) -> usize {
+        display
+            .split(|c: char| !(c.is_ascii_digit() || c == '-'))
+            .filter(|s| !s.is_empty())
+            .count()
+    }
+
     #[tokio::test]
     async fn an_ordinary_irrational_still_writes_its_whole_display() {
         // The budget has to be invisible where it matters most. `2 SQRT` is the
@@ -51,11 +62,11 @@ mod cf_budget_tests {
         // trade than the problem it fixes.
         let display = rendered("2 SQRT").await;
         assert!(
-            display.starts_with("( 1 ( 2 ( 2 ( 2 "),
+            display.starts_with("( 1; 2, 2, 2, "),
             "√2 must still expand to its canonical CF, got: {display}"
         );
         assert!(
-            display.matches("( ").count() >= 32,
+            cf_term_count(&display) >= 32,
             "and to the full display budget of 32 quotients, got: {display}"
         );
     }
@@ -64,7 +75,7 @@ mod cf_budget_tests {
     async fn a_two_term_sum_still_writes_its_whole_display() {
         let display = rendered("2 SQRT 3 SQRT +").await;
         assert!(
-            display.matches("( ").count() >= 32,
+            cf_term_count(&display) >= 32,
             "a two-term value is cheap to expand, got: {display}"
         );
     }
@@ -75,22 +86,22 @@ mod cf_budget_tests {
         // whole of it spent after the value was already computed.
         let display = rendered(&algebraic_product(4)).await;
         assert!(
-            display.ends_with("...)"),
+            display.ends_with("… )"),
             "a cut-short expansion must carry the truncation marker, got: {display}"
         );
         assert!(
-            display.matches("( ").count() < 32,
+            cf_term_count(&display) < 32,
             "and must actually be shorter than the term budget, got: {display}"
         );
     }
 
     #[tokio::test]
     async fn an_unaffordable_expansion_renders_the_undetermined_marker() {
-        // Sixty-four terms: not even `a0` is worth its price. `( ...)` is the
+        // Sixty-four terms: not even `a0` is worth its price. `( … )` is the
         // marker the display already had for a CF it could not determine.
         let display = rendered(&algebraic_product(6)).await;
         assert_eq!(
-            display, "( ...)",
+            display, "( … )",
             "an expansion nobody can afford must say so, not guess"
         );
     }
@@ -126,11 +137,11 @@ mod cf_budget_tests {
             let (value, _) = stack.iter_slots().last().expect("a value");
             let display = format_with_hint(value, Interpretation::ContinuedFraction);
             assert!(
-                display.ends_with(") )") || display.ends_with(" )"),
+                display.ends_with(" )"),
                 "`{source}` is exact and finite, got: {display}"
             );
             assert!(
-                !display.contains("...)"),
+                !display.contains('…'),
                 "`{source}` terminates and must not be marked truncated, got: {display}"
             );
         }
@@ -143,11 +154,11 @@ mod cf_budget_tests {
         // rendering it as a finished CF would state a false value.
         let display = rendered(&algebraic_product(3)).await;
         assert!(
-            display.contains("...)"),
+            display.contains('…'),
             "an irrational's expansion never terminates, got: {display}"
         );
         assert!(
-            display.matches("( ").count() < 32,
+            cf_term_count(&display) < 32,
             "and this one was cut short by the budget, not by the term count, got: {display}"
         );
     }
@@ -165,7 +176,7 @@ mod cf_budget_tests {
         let (value, _) = stack.iter_slots().last().expect("a value");
         let hinted = format_with_hint(value, Interpretation::ContinuedFraction);
         assert!(
-            hinted.ends_with("...)"),
+            hinted.ends_with("… )"),
             "the CF-hinted rendering must be marked truncated too, got: {hinted}"
         );
     }

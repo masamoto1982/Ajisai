@@ -2,7 +2,7 @@
 // from its structured protocol form (never by parsing display strings).
 //
 // This module is presentation only. The canonical display strings
-// (`3/1`, `[ 1/1 2/1 ]`, the nested continued-fraction form) remain the
+// (`3/1`, `[ 1/1 2/1 ]`, the flat continued-fraction form) remain the
 // observable semantics the conformance suite checks; the LaTeX produced
 // here is an alternate GUI rendering of the same structured `Value`.
 // Values without a faithful math reading return `null`, and the caller
