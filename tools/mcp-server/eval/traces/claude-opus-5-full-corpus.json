@@ -351,13 +351,13 @@
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -370,7 +370,7 @@
       "language": "en",
       "selectedTool": "check",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 3,
@@ -383,13 +383,13 @@
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -402,7 +402,7 @@
       "language": "ja",
       "selectedTool": "check",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 3,
@@ -415,7 +415,7 @@
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -428,7 +428,7 @@
       "language": "en",
       "selectedTool": "infer_contracts",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -441,7 +441,7 @@
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -454,7 +454,7 @@
       "language": "ja",
       "selectedTool": "infer_contracts",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -1594,14 +1594,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 1 2 3 4 ] { 2 MOD 0 EQ } FILTER"
+            "source": "[ 1 2 3 4 ] [ 2 MOD 0 EQ ] FILTER"
           }
         }
       ],
       "language": "en",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 1 2 3 4 ] { 2 MOD 0 EQ } FILTER"
+        "source": "[ 1 2 3 4 ] [ 2 MOD 0 EQ ] FILTER"
       },
       "observed": {
         "toolCalls": 1,
@@ -1614,14 +1614,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 1 2 3 4 ] { 2 MOD 0 EQ } FILTER"
+            "source": "[ 1 2 3 4 ] [ 2 MOD 0 EQ ] FILTER"
           }
         }
       ],
       "language": "ja",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 1 2 3 4 ] { 2 MOD 0 EQ } FILTER"
+        "source": "[ 1 2 3 4 ] [ 2 MOD 0 EQ ] FILTER"
       },
       "observed": {
         "toolCalls": 1,
@@ -1634,14 +1634,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 1 2 3 4 ] 1 { MUL } FOLD"
+            "source": "[ 1 2 3 4 ] 1 [ MUL ] FOLD"
           }
         }
       ],
       "language": "en",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 1 2 3 4 ] 1 { MUL } FOLD"
+        "source": "[ 1 2 3 4 ] 1 [ MUL ] FOLD"
       },
       "observed": {
         "toolCalls": 1,
@@ -1654,14 +1654,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 1 2 3 4 ] 1 { MUL } FOLD"
+            "source": "[ 1 2 3 4 ] 1 [ MUL ] FOLD"
           }
         }
       ],
       "language": "ja",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 1 2 3 4 ] 1 { MUL } FOLD"
+        "source": "[ 1 2 3 4 ] 1 [ MUL ] FOLD"
       },
       "observed": {
         "toolCalls": 1,
@@ -1674,14 +1674,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 1 2 3 ] { 2 EQ } ANY\n[ 1 2 3 ] 2 INDEX-OF"
+            "source": "[ 1 2 3 ] [ 2 EQ ] ANY\n[ 1 2 3 ] 2 INDEX-OF"
           }
         }
       ],
       "language": "en",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 1 2 3 ] { 2 EQ } ANY\n[ 1 2 3 ] 2 INDEX-OF"
+        "source": "[ 1 2 3 ] [ 2 EQ ] ANY\n[ 1 2 3 ] 2 INDEX-OF"
       },
       "observed": {
         "toolCalls": 1,
@@ -1694,14 +1694,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 1 2 3 ] 2 INDEX-OF\n[ 1 2 3 ] { 2 EQ } ANY"
+            "source": "[ 1 2 3 ] 2 INDEX-OF\n[ 1 2 3 ] [ 2 EQ ] ANY"
           }
         }
       ],
       "language": "ja",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 1 2 3 ] 2 INDEX-OF\n[ 1 2 3 ] { 2 EQ } ANY"
+        "source": "[ 1 2 3 ] 2 INDEX-OF\n[ 1 2 3 ] [ 2 EQ ] ANY"
       },
       "observed": {
         "toolCalls": 1,
@@ -1714,14 +1714,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 2 4 ] { 2 MOD 0 EQ } ALL"
+            "source": "[ 2 4 ] [ 2 MOD 0 EQ ] ALL"
           }
         }
       ],
       "language": "en",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 2 4 ] { 2 MOD 0 EQ } ALL"
+        "source": "[ 2 4 ] [ 2 MOD 0 EQ ] ALL"
       },
       "observed": {
         "toolCalls": 1,
@@ -1734,14 +1734,14 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[ 2 4 ] { 2 MOD 0 EQ } ALL"
+            "source": "[ 2 4 ] [ 2 MOD 0 EQ ] ALL"
           }
         }
       ],
       "language": "ja",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[ 2 4 ] { 2 MOD 0 EQ } ALL"
+        "source": "[ 2 4 ] [ 2 MOD 0 EQ ] ALL"
       },
       "observed": {
         "toolCalls": 1,
@@ -3073,7 +3073,7 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "( 文庫1ページ約600字 → 500ページ = 300000字 )\n300000\n[ 400 500 700 ] { 300000 SWAP DIV } MAP\n( 上の書き方が通るか不明なので素直に )\n[ 750 600 429 ]\n[ 750 600 429 ] { 60 DIV } MAP"
+            "source": "( 文庫1ページ約600字 → 500ページ = 300000字 )\n300000\n[ 400 500 700 ] [ 300000 SWAP DIV ] MAP\n( 上の書き方が通るか不明なので素直に )\n[ 750 600 429 ]\n[ 750 600 429 ] [ 60 DIV ] MAP"
           }
         },
         {
@@ -3086,7 +3086,7 @@
       "language": "ja",
       "selectedTool": "compute",
       "arguments": {
-        "source": "( 文庫1ページ約600字 → 500ページ = 300000字 )\n300000\n[ 400 500 700 ] { 300000 SWAP DIV } MAP\n( 上の書き方が通るか不明なので素直に )\n[ 750 600 429 ]\n[ 750 600 429 ] { 60 DIV } MAP"
+        "source": "( 文庫1ページ約600字 → 500ページ = 300000字 )\n300000\n[ 400 500 700 ] [ 300000 SWAP DIV ] MAP\n( 上の書き方が通るか不明なので素直に )\n[ 750 600 429 ]\n[ 750 600 429 ] [ 60 DIV ] MAP"
       },
       "observed": {
         "toolCalls": 2,

@@ -122,7 +122,7 @@
    },
    "expectedTool": "check",
    "arguments": {
-    "source": "{ [ 1 ] + } 'INC' DEF"
+    "source": "[ [ 1 ] + ] 'INC' DEF"
    },
    "expect": {
     "/status": "ok",
@@ -138,7 +138,7 @@
    },
    "expectedTool": "infer_contracts",
    "arguments": {
-    "source": "{ [ 1 ] + } 'INC' DEF"
+    "source": "[ [ 1 ] + ] 'INC' DEF"
    },
    "expect": {
     "/status": "ok",
@@ -554,7 +554,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] { 2 * } MAP"
+    "source": "[ 1 2 3 ] [ 2 * ] MAP"
    },
    "expect": {
     "/status": "ok",
@@ -570,7 +570,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] { 2 MOD 0 = } FILTER"
+    "source": "[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER"
    },
    "expect": {
     "/status": "ok",
@@ -586,7 +586,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] 1 { * } FOLD"
+    "source": "[ 1 2 3 4 ] 1 [ * ] FOLD"
    },
    "expect": {
     "/status": "ok",
@@ -602,7 +602,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] { 2 = } ANY"
+    "source": "[ 1 2 3 ] [ 2 = ] ANY"
    },
    "expect": {
     "/status": "ok",
@@ -618,7 +618,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 2 4 ] { 2 MOD 0 = } ALL"
+    "source": "[ 2 4 ] [ 2 MOD 0 = ] ALL"
    },
    "expect": {
     "/status": "ok",
@@ -844,7 +844,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "{ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * } 'C' DEF C C C C C C C C C C C C C C C C C C C"
+    "source": "[ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C"
    },
    "expect": {
     "/status": "error",
@@ -878,7 +878,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "{\n{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] }\n} COND\n} 'DOWN' DEF\n200000 DOWN"
+    "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN"
    },
    "expect": {
     "/status": "error",

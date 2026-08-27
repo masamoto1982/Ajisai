@@ -36,14 +36,14 @@ function materialize(probe) {
         .map(([left, right], index) => `${left} SQRT ${right} SQRT +${index > 0 ? " *" : ""}`)
         .join(" ");
       if (!probe.repetitions) return cascade;
-      return `{ ${cascade} } 'C' DEF${" C".repeat(probe.repetitions)}`;
+      return `[ ${cascade} ] 'C' DEF${" C".repeat(probe.repetitions)}`;
     }
     if (probe.generator === "widePowers") {
       // One 4096-digit literal, parsed once into a user word, multiplied in N
       // times. Each product widens the accumulator by the literal's width, so
       // the result's bit length is N times it and the boundary is a count of
       // multiplications rather than a committed 80,000-digit number.
-      return `{ ${"9".repeat(probe.digits)} * } 'M' DEF 1${" M".repeat(probe.multiplications)}`;
+      return `[ ${"9".repeat(probe.digits)} * ] 'M' DEF 1${" M".repeat(probe.multiplications)}`;
     }
   }
   throw new Error(`unsupported limit probe: ${JSON.stringify(probe)}`);

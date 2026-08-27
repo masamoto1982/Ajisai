@@ -44,7 +44,7 @@
     },
     {
       "name": "a misspelled user Word is matched against the live dictionary",
-      "source": "{ [ 2 ] * } 'DOUBLE' DEF [ 3 ] DOUBEL",
+      "source": "[ [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBEL",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",
@@ -112,7 +112,7 @@
     },
     {
       "name": "execution budget exhaustion is a language ERROR",
-      "source": "{\n{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] }\n} COND\n} 'DOWN' DEF\n200000 DOWN",
+      "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "resourceLimit",
@@ -152,7 +152,7 @@
     },
     {
       "name": "a run reports the resources it actually spent",
-      "source": "[ 1 20 ] RANGE 1 { * } FOLD",
+      "source": "[ 1 20 ] RANGE 1 [ * ] FOLD",
       "expect": {
         "/status": "ok",
         "/resourceUsage/executionSteps": 22,
