@@ -18,11 +18,12 @@ The name comes from *hydrangea*, whose scientific name means "water vessel" — 
 | Breach | Evaluation halts because of improper use |
 
 ## Status
-| | |
-|---|---|
-| Release stage | `0.2.0-alpha.1` |
-| Specification | Withdrawn from beta and being regenerated from the implementation — see [`spec/README.md`](spec/README.md) |
-| Compatibility promise | None while alpha holds |
+
+<table>
+<tr><td>Release stage</td><td><code>0.2.0-alpha.1</code></td></tr>
+<tr><td>Specification</td><td>Withdrawn from beta and being regenerated from the implementation — see <a href="spec/README.md"><code>spec/README.md</code></a></td></tr>
+<tr><td>Compatibility promise</td><td>None while alpha holds</td></tr>
+</table>
 
 ## Ten concepts
 
