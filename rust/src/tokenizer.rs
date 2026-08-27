@@ -91,8 +91,20 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
                 "RESERVED-END"
             };
             return Err(format!(
-                "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). The continued-fraction display form is a serialization artifact only; use '{{' and '}}' for code blocks.",
+                "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). The continued-fraction display form is a serialization artifact only; use '[' and ']' for code blocks.",
                 chars[i], concept
+            ));
+        }
+
+        // `{` and `}` are not valid Ajisai source characters: the CodeBlock/
+        // Vector unification (docs/dev/type-unification-work-order-2026-08.md)
+        // made `{ }` and `[ ]` build the identical value, and this later pass
+        // retired the second spelling rather than keep two ways to write one
+        // thing. `[` and `]` are the only bracket now, for both data and code.
+        if chars[i] == '{' || chars[i] == '}' {
+            return Err(format!(
+                "'{}' is not a valid Ajisai source character: '{{' and '}}' were retired when code blocks and vectors were unified — use '[' and ']' for both data and code.",
+                chars[i]
             ));
         }
         // A structural delimiter is the only kind of character that is a token
@@ -173,26 +185,9 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
     for token in tokens {
         match token {
             Token::VectorStart => delimiters.push(Token::VectorStart),
-            Token::BlockStart => delimiters.push(Token::BlockStart),
             Token::VectorEnd if delimiters.pop() == Some(Token::VectorStart) => {}
-            Token::BlockEnd if delimiters.pop() == Some(Token::BlockStart) => {}
-            Token::VectorEnd | Token::BlockEnd => return Err("mismatched code delimiter".into()),
-            // A stored Word body's `|` reaches this validator already
-            // re-expanded as `[ ]` rather than `{ }` — a nested clause
-            // block, once built as a Vector, no longer remembers which
-            // bracket spelling wrote it (CodeBlock/Vector unification,
-            // docs/dev/type-unification-work-order-2026-08.md), and
-            // `value_as_code.rs`'s bridge back to tokens always re-expands a
-            // nested Vector as `[ ]`. So both spellings are accepted as a
-            // valid enclosing delimiter for `|` here; whether it actually
-            // sits inside a legitimate COND clause is decided later, when
-            // `split_clause_blocks` tries to split the block that held it.
-            Token::CondClauseSep
-                if !matches!(
-                    delimiters.last(),
-                    Some(&Token::BlockStart) | Some(&Token::VectorStart)
-                ) =>
-            {
+            Token::VectorEnd => return Err("mismatched code delimiter".into()),
+            Token::CondClauseSep if !matches!(delimiters.last(), Some(&Token::VectorStart)) => {
                 return Err("'|' separator is only valid directly inside a code block".into())
             }
             _ => {}
@@ -221,6 +216,9 @@ pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
 /// The characters that build nesting rather than names: they can never be part
 /// of a word, so they delimit tokens without any whitespace around them.
 fn is_structural_char(c: char) -> bool {
+    // `{` and `}` are not valid source (see the check in `tokenize_with_spans`)
+    // but must still end a token here so a name like `ABC{` splits into a
+    // Symbol and a `{` rather than swallowing the brace into the name.
     matches!(c, '[' | ']' | '{' | '}' | '(' | ')')
 }
 
@@ -242,8 +240,6 @@ fn structural_token(c: char) -> Option<Token> {
     match c {
         '[' => Some(Token::VectorStart),
         ']' => Some(Token::VectorEnd),
-        '{' => Some(Token::BlockStart),
-        '}' => Some(Token::BlockEnd),
         _ => None,
     }
 }
@@ -293,55 +289,24 @@ fn check_bracket_matching(input: &str) -> Result<(), String> {
         }
 
         match c {
-            '[' | '{' => stack.push(c),
+            '[' => stack.push(c),
             ']' => match stack.pop() {
                 Some('[') => {}
-                Some(open) => {
-                    return Err(format!(
-                        "Mismatched brackets: '{}' is closed by ']', expected '{}'",
-                        open,
-                        closing_bracket(open)
-                    ));
-                }
                 None => {
                     return Err("Unexpected ']' without matching '['".to_string());
                 }
-            },
-            '}' => match stack.pop() {
-                Some('{') => {}
-                Some(open) => {
-                    return Err(format!(
-                        "Mismatched brackets: '{}' is closed by '}}', expected '{}'",
-                        open,
-                        closing_bracket(open)
-                    ));
-                }
-                None => {
-                    return Err("Unexpected '}' without matching '{'".to_string());
-                }
+                Some(_) => unreachable!("only '[' is ever pushed"),
             },
             _ => {}
         }
         i += 1;
     }
 
-    if let Some(open) = stack.last() {
-        return Err(format!(
-            "Unclosed '{}': expected '{}'",
-            open,
-            closing_bracket(*open)
-        ));
+    if stack.last().is_some() {
+        return Err("Unclosed '[': expected ']'".to_string());
     }
 
     Ok(())
-}
-
-fn closing_bracket(open: char) -> char {
-    match open {
-        '[' => ']',
-        '{' => '}',
-        _ => '?',
-    }
 }
 
 enum QuoteParseResult {

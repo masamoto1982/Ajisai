@@ -31,7 +31,7 @@ pub(crate) fn extract_executable_code(
     }
 
     Err(AjisaiError::from(
-        "EXTRACT_EXECUTABLE_CODE: expected code block ({ ... }) or word name, got other value",
+        "EXTRACT_EXECUTABLE_CODE: expected a Vector ([ ... ]) or word name, got other value",
     ))
 }
 
@@ -42,7 +42,7 @@ pub(crate) fn extract_executable_code(
 /// value: a scalar is not a Boolean even when it is non-zero, a singleton
 /// Vector is not its element, and NIL is absence rather than falsity. Each of
 /// those used to be accepted here, which gave `FILTER` a truthiness rule no
-/// other Word shared — `[ 1 2 3 ] { 1 } FILTER` silently kept every element
+/// other Word shared — `[ 1 2 3 ] [ 1 ] FILTER` silently kept every element
 /// instead of raising the nonconforming-type ERROR its contract registers.
 /// A caller that wants a numeric condition writes the comparison it means,
 /// e.g. `0 NEQ`.

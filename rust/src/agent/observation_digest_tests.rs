@@ -236,8 +236,8 @@ mod observation_digest_tests {
     /// dictionaries must not collapse to one digest.
     #[tokio::test]
     async fn dictionary_state_is_observable() {
-        let a = digest_field("{ 1 } 'F' DEF").await;
-        let b = digest_field("{ 2 } 'G' DEF").await;
+        let a = digest_field("[ 1 ] 'F' DEF").await;
+        let b = digest_field("[ 2 ] 'G' DEF").await;
         assert!(a.is_string(), "expected a digest string, got {a}");
         assert_ne!(a, b);
     }

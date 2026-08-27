@@ -372,8 +372,6 @@ pub enum Token {
     Symbol(Arc<str>),
     VectorStart,
     VectorEnd,
-    BlockStart,
-    BlockEnd,
     NilCoalesce,
     CondClauseSep,
     LineBreak,

@@ -67,13 +67,11 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
 /// the same word — the point of looking one up being to load an existing
 /// definition, edit it, and define it once more.
 ///
-/// The body is wrapped in a **code block**. It used to be wrapped in `[ ]`, and
-/// the result did not round-trip in either direction: `DEF` refuses a Vector
-/// body ("DEF requires a code block { ... } as the definition body"), and even
-/// as a value the meaning differed, since LANG.VALUES.VECTOR makes a bare name
-/// inside `[ ]` its own text rather than a call. For a word whose body holds
-/// `|` clauses the loaded text did not even tokenize, because `|` is COND-clause
-/// sugar and is meaningless inside a Vector.
+/// The body is wrapped in `[ ]`, the sole bracket left once `{ }` was retired
+/// (`docs/dev/type-unification-work-order-2026-08.md`): `DEF` takes any
+/// Vector as its body, and a bare name inside one is a Symbol — data until
+/// something executes it — so a `[ ]`-wrapped body round-trips exactly like
+/// the one that defined the word, whatever it called.
 ///
 /// A multi-line body keeps its line structure. COND no longer requires one `|`
 /// clause per line, so this is presentation rather than meaning — but it is the
@@ -85,11 +83,11 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
 /// word's name; the comment carries the text without changing what runs.
 fn render_def_source(definition: &str, name: &str, description: Option<&str>) -> String {
     let body = if definition.is_empty() {
-        "{ NIL }".to_string()
+        "[ NIL ]".to_string()
     } else if definition.contains('\n') {
-        format!("{{\n{}\n}}", definition)
+        format!("[\n{}\n]", definition)
     } else {
-        format!("{{ {} }}", definition)
+        format!("[ {} ]", definition)
     };
     let source = format!("{} '{}' DEF", body, name);
     match description {

@@ -8,27 +8,23 @@ use super::value_extraction_helpers::create_number_value;
 use super::{ConsumptionMode, Interpreter};
 
 /// Index just past the single *source unit* that begins at `start` in `tokens`:
-/// either one ordinary token, or one balanced `[ ]` / `{ }` group (nesting
+/// either one ordinary token, or one balanced `[ ]` group (nesting
 /// respected). This is the one, canonical definition of the unit that a non-NIL
 /// `VENT` (`^` or the spelled-out name — both `Token::NilCoalesce`) skips
 /// unevaluated (SPEC §6.4). `start` at or past the end is returned unchanged, so
 /// a directive with no following unit is a no-op skip.
 pub(crate) fn end_of_source_unit(tokens: &[Token], start: usize) -> usize {
-    let open = match tokens.get(start) {
-        Some(tok @ (Token::VectorStart | Token::BlockStart)) => tok.clone(),
+    match tokens.get(start) {
+        Some(Token::VectorStart) => {}
         Some(_) => return start + 1,
         None => return start,
-    };
-    let close = match open {
-        Token::VectorStart => Token::VectorEnd,
-        _ => Token::BlockEnd,
     };
     let mut depth = 1usize;
     let mut i = start + 1;
     while i < tokens.len() && depth > 0 {
-        if tokens[i] == open {
+        if tokens[i] == Token::VectorStart {
             depth += 1;
-        } else if tokens[i] == close {
+        } else if tokens[i] == Token::VectorEnd {
             depth -= 1;
         }
         i += 1;
@@ -262,12 +258,10 @@ impl Interpreter {
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
                 }
-                Token::VectorStart | Token::BlockStart => {
-                    // `{ }` and `[ ]` build through the same unified
-                    // collector (`vector_literal.rs`) — see that module's
-                    // doc comment. This supersedes the old separate raw-
-                    // token-capture-and-wrap-as-CodeBlock behavior `{ }`
-                    // used to have. `COND` takes its clause blocks as a
+                Token::VectorStart => {
+                    // `[ ]` is the sole bracket, built through
+                    // `vector_literal.rs`'s collector — see that module's
+                    // doc comment. `COND` takes its clause blocks as a
                     // single ordinary Vector operand (one more literal built
                     // and pushed exactly like this one) rather than a
                     // variable-length run recognized here — see
@@ -387,9 +381,6 @@ impl Interpreter {
                             }
                         }
                     }
-                }
-                Token::BlockEnd => {
-                    return Err(AjisaiError::from("Unexpected code block end"));
                 }
                 Token::NilCoalesce => {
                     // VENT (`^` / spelled-out `VENT`, SPEC §6.4): inspect the top.

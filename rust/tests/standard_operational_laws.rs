@@ -23,7 +23,7 @@ fn effect_payloads(interpreter: &Interpreter) -> Vec<&str> {
 async fn map_visits_in_index_order_with_isolated_stacks_and_ordered_effects() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] { KEEP PRINT 10 ADD } MAP")
+        .execute("[ 3 1 2 ] [ KEEP PRINT 10 ADD ] MAP")
         .await
         .unwrap();
 
@@ -35,7 +35,7 @@ async fn map_visits_in_index_order_with_isolated_stacks_and_ordered_effects() {
 async fn filter_visits_in_index_order_and_observes_predicate_truth() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] { KEEP PRINT 1 GT } FILTER")
+        .execute("[ 3 1 2 ] [ KEEP PRINT 1 GT ] FILTER")
         .await
         .unwrap();
 
@@ -46,14 +46,14 @@ async fn filter_visits_in_index_order_and_observes_predicate_truth() {
 #[tokio::test]
 async fn any_and_all_short_circuit_before_unvisited_effects() {
     let mut any = Interpreter::new();
-    any.execute("[ 1 2 3 ] { KEEP PRINT 2 EQ } ANY")
+    any.execute("[ 1 2 3 ] [ KEEP PRINT 2 EQ ] ANY")
         .await
         .unwrap();
     assert_eq!(effect_payloads(&any), ["1/1", "2/1"]);
     assert_eq!(rendered_stack(&any), ["TRUE"]);
 
     let mut all = Interpreter::new();
-    all.execute("[ 1 2 3 ] { KEEP PRINT 2 LT } ALL")
+    all.execute("[ 1 2 3 ] [ KEEP PRINT 2 LT ] ALL")
         .await
         .unwrap();
     assert_eq!(effect_payloads(&all), ["1/1", "2/1"]);
@@ -64,7 +64,7 @@ async fn any_and_all_short_circuit_before_unvisited_effects() {
 async fn higher_order_errors_restore_the_original_operand_atomically() {
     for word in ["MAP", "FILTER", "ANY", "ALL"] {
         let mut interpreter = Interpreter::new();
-        let source = format!("[ 3 1 2 ] {{ UNKNOWN-CALLBACK }} {word}");
+        let source = format!("[ 3 1 2 ] [ UNKNOWN-CALLBACK ] {word}");
         assert!(interpreter.execute(&source).await.is_err(), "{word}");
         assert_eq!(
             rendered_stack(&interpreter),
@@ -238,7 +238,7 @@ async fn random_is_a_pure_function_of_its_seed() {
 
     let mut in_unit_interval = Interpreter::new();
     in_unit_interval
-        .execute("7 64 RANDOM KEEP { 0 LT } ANY 'BELOW' BIND { 1 GTE } ANY")
+        .execute("7 64 RANDOM KEEP [ 0 LT ] ANY 'BELOW' BIND [ 1 GTE ] ANY")
         .await
         .unwrap();
     assert_eq!(rendered_stack(&in_unit_interval), ["FALSE"]);

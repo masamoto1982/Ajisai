@@ -612,7 +612,7 @@ Apply a code block to each element of a vector.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] { 2 MUL } MAP`
+- **Syntax:** `[ 1 2 3 ] [ 2 MUL ] MAP`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `FILTER`
@@ -626,7 +626,7 @@ Keep only the elements for which a predicate block returns TRUE.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] { 2 = } FILTER`
+- **Syntax:** `[ 1 2 3 ] [ 2 = ] FILTER`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `FOLD`
@@ -640,7 +640,7 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] [ 0 ] { + } FOLD`
+- **Syntax:** `[ 1 2 3 ] [ 0 ] [ + ] FOLD`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `ANY`
@@ -654,7 +654,7 @@ TRUE if at least one element satisfies the predicate.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] { 2 = } ANY`
+- **Syntax:** `[ 1 2 3 ] [ 2 = ] ANY`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `ALL`
@@ -668,7 +668,7 @@ TRUE if every element satisfies the predicate.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 2 4 ] { 2 MOD 0 = } ALL`
+- **Syntax:** `[ 2 4 ] [ 2 MOD 0 = ] ALL`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `CHARS`
@@ -756,7 +756,7 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 
 ## `COND`
 
-Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.
+Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
@@ -765,7 +765,7 @@ Evaluate guard/body clauses in order, executing the first match. The clauses are
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
-- **Syntax:** `1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND`
+- **Syntax:** `1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND`
 - **ERROR conditions:** `invalidClauseShape`, `nonTruthGuard`
 
 ## `EXEC`
@@ -779,7 +779,7 @@ Evaluate a code block.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
-- **Syntax:** `{ 1 2 ADD } EXEC`
+- **Syntax:** `[ 1 2 ADD ] EXEC`
 - **ERROR conditions:** `notExecutable`, `nestedExecutionError`
 
 ## `PROBE`
@@ -793,7 +793,7 @@ Infer a code block's contract against the current dictionary, without evaluating
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`, `LANG.CONTRACT.CHECK`
-- **Syntax:** `{ 1 2 ADD } PROBE`
+- **Syntax:** `[ 1 2 ADD ] PROBE`
 - **ERROR conditions:** `notExecutable`
 
 ## `NIL`
@@ -888,7 +888,7 @@ Define a user word from a body and a name.
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
-- **Syntax:** `{ 2 * } 'DOUBLE' DEF`
+- **Syntax:** `[ 2 * ] 'DOUBLE' DEF`
 - **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`
 
 ## `DEL`
@@ -902,7 +902,7 @@ Delete a user word from the dictionary.
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
-- **Syntax:** `{ [ 1 ] } 'W' DEF 'W' DEL`
+- **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
 - **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`
 
 ## `PRINT`

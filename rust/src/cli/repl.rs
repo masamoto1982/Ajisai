@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn definitions_persist_across_lines() {
-        let r = eval_all(&["{ [ 2 ] * } 'DBL' DEF", "[ 21 ] DBL"]);
+        let r = eval_all(&["[ [ 2 ] * ] 'DBL' DEF", "[ 21 ] DBL"]);
         assert_eq!(r[1].status, ReplStatus::Ok);
         assert_eq!(r[1].stack_display, vec!["[ 42/1 ]".to_string()]);
     }

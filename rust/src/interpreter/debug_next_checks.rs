@@ -239,16 +239,16 @@ pub(crate) fn build_next_checks(
                 "checkDelimiters",
                 ("Check delimiters", "区切り記号を確認する"),
                 (
-                    "Check that { } and [ ] pair up and no block was left unclosed.",
-                    "{ } [ ] の対応と、閉じ忘れた block がないか確認する",
+                    "Check that every [ and ] pair up and no vector was left unclosed.",
+                    "[ ] の対応と、閉じ忘れた vector がないか確認する",
                 ),
             ));
             out.push(check(
                 "checkClauseForm",
                 ("Check clause form", "節の形を確認する"),
                 (
-                    "'|' is only legal directly inside a code block, and needs both a guard and a body.",
-                    "'|' は code block の直下にのみ書ける。guard と body の両方が必要",
+                    "'|' is only legal directly inside a vector, and needs both a guard and a body.",
+                    "'|' は vector の直下にのみ書ける。guard と body の両方が必要",
                 ),
             ));
         }

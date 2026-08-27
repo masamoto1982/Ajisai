@@ -228,7 +228,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "COND",
         behavior: "Pops the clauses, a single Vector of guard/body clause\nblocks, then the target value. Reads the clauses in order;\nthe first guard that holds selects its body; IDLE marks the\nelse clause. In a tail position the selected body continues\nthe loop without growing the stack.",
         examples: &[BuiltinExampleDoc {
-            code: "1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND",
+            code: "1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND",
             result: "Pushes 'y'.",
         }],
         failure_note: "When every guard fails and no else clause exists, COND\nraises an error.",
@@ -238,7 +238,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "MAP",
         behavior: "Pops the code block, then the target vector, applies the\nblock to each element, and pushes the vector of results.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 ] { 2 MUL } MAP",
+            code: "[ 1 2 3 ] [ 2 MUL ] MAP",
             result: "Pushes [ 2 4 6 ].",
         }],
         failure_note: "An element the block cannot produce a value for follows\nthe Bubble Rule: that lane becomes a Bubble/NIL, e.g.\ndividing by zero maps the element to NIL.",
@@ -248,7 +248,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "FILTER",
         behavior: "Pops the predicate block, then the target vector, and\npushes the vector of elements for which the predicate\nholds.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 ] { 2 = } FILTER",
+            code: "[ 1 2 3 ] [ 2 = ] FILTER",
             result: "Pushes [ 2 ].",
         }],
         failure_note: "",
@@ -258,7 +258,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "FOLD",
         behavior: "Pops the combining block, then the initial value, then the\ntarget vector, and combines the elements left to right\ninto a single result, starting from the initial value.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 ] [ 0 ] { + } FOLD",
+            code: "[ 1 2 3 ] [ 0 ] [ + ] FOLD",
             result: "Pushes [ 6 ].",
         }],
         failure_note: "",
@@ -269,7 +269,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "DEF",
         behavior: "Pops the name, then the body block, and defines a user\nword under that name in the dictionary.",
         examples: &[BuiltinExampleDoc {
-            code: "{ 2 * } 'DOUBLE' DEF",
+            code: "[ 2 * ] 'DOUBLE' DEF",
             result: "Defines DOUBLE; 5 DOUBLE then pushes 10.",
         }],
         failure_note: "Redefining a built-in word is refused.",
@@ -279,7 +279,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "DEL",
         behavior: "Pops the name and deletes that user word from the\ndictionary.",
         examples: &[BuiltinExampleDoc {
-            code: "{ [ 1 ] } 'W' DEF 'W' DEL",
+            code: "[ [ 1 ] ] 'W' DEF 'W' DEL",
             result: "Defines a word, then removes it from the dictionary.",
         }],
         failure_note: "Deleting a built-in word is refused. So is deleting a word\nother words still depend on.",

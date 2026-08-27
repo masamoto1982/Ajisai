@@ -265,8 +265,8 @@ async fn every_reachable_nil_carries_a_reason() {
         ("'abc' NUM", NilReason::InvalidEncoding),
         // A NIL target keeps its reason through the higher-order Words rather
         // than being replaced by a blank one.
-        ("1 0 / { 1 } MAP", NilReason::DivisionByZero),
-        ("1 0 / { TRUE } FILTER", NilReason::DivisionByZero),
+        ("1 0 / [ 1 ] MAP", NilReason::DivisionByZero),
+        ("1 0 / [ TRUE ] FILTER", NilReason::DivisionByZero),
         ("1 0 / STR", NilReason::DivisionByZero),
     ];
 

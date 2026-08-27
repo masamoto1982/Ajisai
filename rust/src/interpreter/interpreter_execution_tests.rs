@@ -25,7 +25,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let code = r#"
-{ [2] [3] + } 'ADDTEST' DEF
+[ [2] [3] + ] 'ADDTEST' DEF
 ADDTEST
 "#;
 
@@ -72,7 +72,7 @@ ADDTEST
     async fn test_def_with_new_syntax() {
         let mut interp = Interpreter::new();
 
-        let code = "{ [ 42 ] } 'ANSWER' DEF";
+        let code = "[ [ 42 ] ] 'ANSWER' DEF";
 
         let result = interp.execute(code).await;
         assert!(

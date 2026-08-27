@@ -33,7 +33,7 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
 }
 
 const SIZE_DEF: &str =
-    "{\n  {\n  { [ 5 ] > | [ 'big' ] }\n  { IDLE | [ 'small' ] }\n  } COND\n} 'SIZE' DEF";
+    "[\n  [\n  [ [ 5 ] > | [ 'big' ] ]\n  [ IDLE | [ 'small' ] ]\n  ] COND\n] 'SIZE' DEF";
 
 #[test]
 fn dispatch_fast_path_fires() {
@@ -48,7 +48,7 @@ fn dispatch_preserves_cond_errors() {
     // A COND whose clauses cannot be split (odd block count, pair style) must
     // still raise the same error under the compiled path.
     let mut interp = Interpreter::new();
-    let err = block_on(interp.execute("[ 1 ] { { TRUE } { FALSE } { TRUE } } COND"))
+    let err = block_on(interp.execute("[ 1 ] [ [ TRUE ] [ FALSE ] [ TRUE ] ] COND"))
         .unwrap_err()
         .to_string();
     assert!(

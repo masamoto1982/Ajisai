@@ -7,7 +7,7 @@
 //! in full and letting the whole envelope exceed a host's response ceiling
 //! trades the answer for the residue, which is backwards.
 //!
-//! It was not hypothetical. `[ 1 21000 ] RANGE 1 { * } FOLD` is refused by the
+//! It was not hypothetical. `[ 1 21000 ] RANGE 1 [ * ] FOLD` is refused by the
 //! work meter with `numericWork of 10000573 exceeds the limit of 10000000` —
 //! precisely the diagnosis an agent needs — but the failing stack holds a
 //! 21,000-element vector and an 81,649-digit partial product, so the envelope

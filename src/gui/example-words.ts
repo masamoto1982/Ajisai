@@ -28,12 +28,12 @@ export const EXAMPLE_USER_WORDS: UserWord[] = [
     // FizzBuzz: teaches COND. The value on the stack is offered to each guard
     // in turn; the first guard that leaves TRUE runs its body. The 15 guard
     // must come before 3 and 5 because a multiple of 15 also matches them.
-    // COND takes its clauses as one { } (CodeBlock/Vector unification,
+    // COND takes its clauses as one [ ] (CodeBlock/Vector unification,
     // docs/dev/type-unification-work-order-2026-08.md): a fixed two-operand
     // call like MAP's, not a variable-length run of blocks before it.
     {
         name: 'FIZZBUZZ',
         definition:
-            "{ { [ 15 ] MOD [ 0 ] = } { 'FizzBuzz' PRINT } { [ 3 ] MOD [ 0 ] = } { 'Fizz' PRINT } { [ 5 ] MOD [ 0 ] = } { 'Buzz' PRINT } { TRUE } { KEEP PRINT } } COND",
+            "[ [ [ 15 ] MOD [ 0 ] = ] [ 'FizzBuzz' PRINT ] [ [ 3 ] MOD [ 0 ] = ] [ 'Fizz' PRINT ] [ [ 5 ] MOD [ 0 ] = ] [ 'Buzz' PRINT ] [ TRUE ] [ KEEP PRINT ] ] COND",
     },
 ];
