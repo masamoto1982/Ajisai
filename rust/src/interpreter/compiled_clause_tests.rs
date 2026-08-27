@@ -10,7 +10,7 @@
 use crate::interpreter::Interpreter;
 
 const COUNTDOWN: &str =
-    "{\n  {\n  { [ 0 ] > | [ 1 ] - DOWN }\n  { IDLE | [ 'done' ] }\n  } COND\n} 'DOWN' DEF";
+    "[\n  [\n  [ [ 0 ] > | [ 1 ] - DOWN ]\n  [ IDLE | [ 'done' ] ]\n  ] COND\n] 'DOWN' DEF";
 
 fn fresh() -> Interpreter {
     Interpreter::new()
@@ -58,10 +58,10 @@ async fn compiled_clause_disabled_count_is_zero() {
 }
 #[tokio::test]
 async fn unguarded_recursion_unaffected_by_compiled_clauses() {
-    // `{ REC }` has no COND, so no compiled clause is involved; it must keep the
+    // `[ REC ]` has no COND, so no compiled clause is involved; it must keep the
     // native recursion-depth error rather than trampolining.
     let mut interp = fresh();
-    interp.execute("{ REC } 'REC' DEF").await.unwrap();
+    interp.execute("[ REC ] 'REC' DEF").await.unwrap();
     let err = interp.execute("REC").await.unwrap_err().to_string();
     assert!(
         err.contains("recursion limit exceeded"),

@@ -69,7 +69,7 @@ fn protocol_strings_are_lower_camel_case() {
         "FALSE",
         "1 0 /",
         "[ 1 2 3 ]",
-        "{ 1 ADD }",
+        "[ 1 ADD ]",
         "2 SQRT",
     ] {
         for v in run(src) {
@@ -95,7 +95,7 @@ proptest! {
     /// **Totality + determinism**: `render` is defined on every SPEC §12.2 role
     /// for every well-formed value (the role match is exhaustive over the 8
     /// roles) and is a deterministic pure function — two calls agree. (Probe
-    /// finding: an empty code block `{ }` renders to the empty string, so
+    /// finding: an empty vector `[ ]` renders to the empty string, so
     /// nonemptiness is *not* a render law; totality and determinism are.)
     #[test]
     fn render_total_and_deterministic_over_all_roles(src in any_value_src()) {

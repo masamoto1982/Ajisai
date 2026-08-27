@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn check_is_execution_free_and_structured() {
-        let response = check("{ [ 1 ] + } 'INC' DEF 'must-not-print' PRINT", true);
+        let response = check("[ [ 1 ] + ] 'INC' DEF 'must-not-print' PRINT", true);
         let json = response.to_json();
         assert_eq!(response.exit_code(), 0);
         assert_eq!(json["status"], "ok");
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn infer_contracts_returns_a_common_agent_envelope() {
-        let response = infer_contracts("{ [ 1 ] + } 'INC' DEF").to_json();
+        let response = infer_contracts("[ [ 1 ] + ] 'INC' DEF").to_json();
         assert_eq!(response["status"], "ok");
         assert_eq!(response["contracts"][0]["name"], "INC");
     }

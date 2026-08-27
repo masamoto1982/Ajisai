@@ -23,12 +23,12 @@ use crate::interpreter::{Interpreter, DEFAULT_MAX_EXECUTION_STEPS};
 /// millions, so 200,000 completes comfortably under it. Kept as the fixed
 /// probe for the "raised limit" direction below, where the point is that an
 /// explicit `--step-limit` still works, not that it is large.
-const DOWN_PROBE: &str = "{
-{
-{ [ 0 ] > | [ 1 ] - DOWN }
-{ IDLE | [ 'done' ] }
-} COND
-} 'DOWN' DEF
+const DOWN_PROBE: &str = "[
+[
+[ [ 0 ] > | [ 1 ] - DOWN ]
+[ IDLE | [ 'done' ] ]
+] COND
+] 'DOWN' DEF
 200000 DOWN";
 
 /// Write `source` to a unique temp file and return its path.
@@ -110,7 +110,7 @@ fn down_probe_exceeds_the_real_default_budget_without_step_limit() {
     // margin to spare.
     let iterations = DEFAULT_MAX_EXECUTION_STEPS + 10;
     let probe = format!(
-        "{{\n{{\n{{ [ 0 ] > | [ 1 ] - DOWN }}\n{{ IDLE | [ 'done' ] }}\n}} COND\n}} 'DOWN' DEF\n{iterations} DOWN"
+        "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n{iterations} DOWN"
     );
     let path = write_program("real-default", &probe);
     let code = run_cli(&["run", path.to_str().unwrap()]);

@@ -181,8 +181,6 @@ const LIT_SLOT: Slot = slot(true, false, SpaceClass::Const);
 const INPUT_SLOT: Slot = slot(false, true, SpaceClass::Linear);
 /// Provenance lost: assume the worst about its size.
 const UNKNOWN_SLOT: Slot = slot(false, false, SpaceClass::Unbounded);
-/// Present but structurally inert (a quotation value).
-const INERT_SLOT: Slot = slot(false, false, SpaceClass::Const);
 
 /// The per-word contribution facts the simulation needs about a resolved
 /// dependency, projected from its (builtin or inferred) contract.
@@ -251,9 +249,6 @@ fn apply_to_size(class: SpaceClass, size: SpaceClass) -> SpaceClass {
 /// provenance instead of duplicating the slot stack and risking divergence.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum OperandProfile {
-    /// Inside a block: deliberately not attributed here at all (any execution
-    /// of the block is charged at the higher-order word's own call site).
-    Skipped,
     /// Attributed, but no provenance is justified — a data-dependent arity, or
     /// a call among vector-literal elements the model does not track.
     Unknown,
@@ -275,7 +270,6 @@ pub(crate) struct SpaceSim {
     /// Underflow no longer provably reaches a word input (heights unknown).
     poisoned: bool,
     bound: SpaceBound,
-    block_depth: u32,
     vector_depth: u32,
     vector_dirty: bool,
 }
@@ -286,7 +280,6 @@ impl SpaceSim {
             slots: Vec::new(),
             poisoned: false,
             bound: SpaceBound::IDENTITY,
-            block_depth: 0,
             vector_depth: 0,
             vector_dirty: false,
         }
@@ -305,27 +298,14 @@ impl SpaceSim {
         self.poisoned = true;
     }
 
-    /// A structural token outside any symbol dispatch. Blocks push one inert
-    /// quotation value and their inner tokens are not simulated (any execution
-    /// of the block goes through a higher-order word, which is classified
-    /// `Unbounded` at *its* call site). Vector literals collapse to one slot.
+    /// A structural token outside any symbol dispatch. Vector literals
+    /// collapse to one slot; their inner tokens are not simulated (any
+    /// execution of one goes through a higher-order word, which is
+    /// classified `Unbounded` at *its* call site).
     pub(crate) fn feed_structural(&mut self, token: &Token) {
         match token {
-            Token::BlockStart => {
-                if self.vector_depth > 0 {
-                    // A block among vector elements is outside the model.
-                    self.vector_dirty = true;
-                }
-                self.block_depth += 1;
-            }
-            Token::BlockEnd => {
-                self.block_depth = self.block_depth.saturating_sub(1);
-                if self.block_depth == 0 && self.vector_depth == 0 {
-                    self.slots.push(INERT_SLOT);
-                }
-            }
-            Token::VectorStart if self.block_depth == 0 => self.vector_depth += 1,
-            Token::VectorEnd if self.block_depth == 0 => {
+            Token::VectorStart => self.vector_depth += 1,
+            Token::VectorEnd => {
                 self.vector_depth = self.vector_depth.saturating_sub(1);
                 if self.vector_depth == 0 {
                     if self.vector_dirty {
@@ -341,16 +321,13 @@ impl SpaceSim {
             }
             // The lazy fallback unit of `^` and COND clause separators change
             // heights along a path the linear walk cannot follow.
-            Token::NilCoalesce | Token::CondClauseSep if self.block_depth == 0 => self.degrade(),
+            Token::NilCoalesce | Token::CondClauseSep => self.degrade(),
             _ => {}
         }
     }
 
     /// A `Number`/`String` literal token.
     pub(crate) fn feed_literal(&mut self) {
-        if self.block_depth > 0 {
-            return;
-        }
         if self.vector_depth == 0 {
             self.slots.push(LIT_SLOT);
         }
@@ -359,9 +336,6 @@ impl SpaceSim {
 
     /// A symbol that failed to resolve: unknown flow and unknown growth.
     pub(crate) fn feed_unresolved(&mut self) {
-        if self.block_depth > 0 {
-            return;
-        }
         if self.vector_depth > 0 {
             self.vector_dirty = true;
             return;
@@ -376,7 +350,6 @@ impl SpaceSim {
     pub(crate) fn abandon_line(&mut self) {
         self.bound.join(SpaceBound::CONSERVATIVE);
         self.degrade();
-        self.block_depth = 0;
         self.vector_depth = 0;
         self.vector_dirty = false;
     }
@@ -384,9 +357,6 @@ impl SpaceSim {
     /// A resolved dependency call. Returns what was learned about its operand
     /// slots, for a second bound model riding the same walk.
     pub(crate) fn feed_word(&mut self, dep: &DepSpace) -> OperandProfile {
-        if self.block_depth > 0 {
-            return OperandProfile::Skipped;
-        }
         if self.vector_depth > 0 {
             self.vector_dirty = true;
             return OperandProfile::Unknown;

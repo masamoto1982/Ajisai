@@ -143,14 +143,14 @@ mod arithmetic_meter_tests {
 
     #[tokio::test]
     async fn vector_accumulator_growth_meets_the_same_ceiling_a_scalar_one_does() {
-        // `[ 1 21000 ] RANGE [ 1 ] { * } FOLD` returned a 271,233-bit integer
+        // `[ 1 21000 ] RANGE [ 1 ] [ * ] FOLD` returned a 271,233-bit integer
         // under an agent profile declaring 262,144 — charged nothing, no
         // ceiling firing — while the identical fold with a scalar accumulator
         // was refused. The difference was one pair of brackets. Reproduced at a
         // low injected ceiling, so the test builds nothing huge.
         for source in [
-            "[ 1 40 ] RANGE 1 { * } FOLD",
-            "[ 1 40 ] RANGE [ 1 ] { * } FOLD",
+            "[ 1 40 ] RANGE 1 [ * ] FOLD",
+            "[ 1 40 ] RANGE [ 1 ] [ * ] FOLD",
         ] {
             assert_refused_by!(
                 source,
@@ -171,9 +171,9 @@ mod arithmetic_meter_tests {
         // `FOLD` — the same fold with a scalar accumulator was charged all
         // along, and it was the vector-shaped one that escaped. Kept so a
         // future optimization that bypasses the dispatch entry is caught here.
-        let direct = charged_by("[ 1 20 ] RANGE 1 { * } FOLD").await;
-        let user_word = charged_by("{ * } 'MULW' DEF [ 1 20 ] RANGE 1 'MULW' FOLD").await;
-        let exec = charged_by("[ 1 20 ] RANGE 1 { { * } EXEC } FOLD").await;
+        let direct = charged_by("[ 1 20 ] RANGE 1 [ * ] FOLD").await;
+        let user_word = charged_by("[ * ] 'MULW' DEF [ 1 20 ] RANGE 1 'MULW' FOLD").await;
+        let exec = charged_by("[ 1 20 ] RANGE 1 [ [ * ] EXEC ] FOLD").await;
         assert!(direct > 0, "a 20-step fold must reach the meter");
         assert_eq!(
             direct, user_word,

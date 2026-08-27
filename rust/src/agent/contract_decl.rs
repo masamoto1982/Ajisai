@@ -265,24 +265,24 @@ fn parse_count(words: &[&str], side: &str) -> Result<u16, String> {
     }
 }
 
-/// Extract every top-level `{ body } 'NAME' DEF` from `tokens`, returning
-/// `(NAME, body-tokens)` pairs in source order. Nested blocks are respected;
+/// Extract every top-level `[ body ] 'NAME' DEF` from `tokens`, returning
+/// `(NAME, body-tokens)` pairs in source order. Nested vectors are respected;
 /// this reads the token stream only — it executes nothing.
 fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
     let mut defs = Vec::new();
-    // Record depth-0 `{ ... }` spans as (open_index, close_index).
+    // Record depth-0 `[ ... ]` spans as (open_index, close_index).
     let mut depth = 0i32;
     let mut open_at: Option<usize> = None;
     let mut spans: Vec<(usize, usize)> = Vec::new();
     for (idx, token) in tokens.iter().enumerate() {
         match token {
-            Token::BlockStart => {
+            Token::VectorStart => {
                 if depth == 0 {
                     open_at = Some(idx);
                 }
                 depth += 1;
             }
-            Token::BlockEnd => {
+            Token::VectorEnd => {
                 depth -= 1;
                 if depth == 0 {
                     if let Some(open) = open_at.take() {
@@ -295,7 +295,7 @@ fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
     }
 
     for (open, close) in spans {
-        // After the closing `}`, skip line breaks and look for String(name) DEF.
+        // After the closing `]`, skip line breaks and look for String(name) DEF.
         let mut j = close + 1;
         while matches!(tokens.get(j), Some(Token::LineBreak)) {
             j += 1;

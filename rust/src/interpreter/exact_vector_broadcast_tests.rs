@@ -37,7 +37,7 @@ fn is_exact_real_lane(value: &Value) -> bool {
 /// never collapsing to a tensor-conversion error.
 #[tokio::test]
 async fn irrational_vector_plus_irrational_vector_is_exact() {
-    let stack = run_ok("[ 2 3 ] { SQRT } MAP [ 2 3 ] { SQRT } MAP +").await;
+    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 2 3 ] [ SQRT ] MAP +").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
     assert_eq!(children.len(), 2, "result must keep both lanes");
@@ -74,7 +74,7 @@ async fn irrational_scalar_broadcasts_across_rational_vector() {
 async fn irrational_vector_length_mismatch_errors() {
     let mut interp = Interpreter::new();
     let result = interp
-        .execute("[ 2 3 ] { SQRT } MAP [ 2 3 4 ] { SQRT } MAP +")
+        .execute("[ 2 3 ] [ SQRT ] MAP [ 2 3 4 ] [ SQRT ] MAP +")
         .await;
     assert!(
         result.is_err(),
@@ -87,7 +87,7 @@ async fn irrational_vector_length_mismatch_errors() {
 /// matching the scalar `√x 0 /` Bubble Rule rather than aborting the vector.
 #[tokio::test]
 async fn irrational_vector_div_by_zero_lane_is_bubble() {
-    let stack = run_ok("[ 2 3 ] { SQRT } MAP [ 1 0 ] /").await;
+    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 0 ] /").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
     assert_eq!(children.len(), 2);

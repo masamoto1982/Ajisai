@@ -9,7 +9,7 @@
 //
 // Per line it:
 //   - collapses runs of spaces/tabs to a single space;
-//   - surrounds the always-standalone delimiters [ ] { } | ~ ^ with spaces, so
+//   - surrounds the always-standalone delimiters [ ] | ^ with spaces, so
 //     `[1 2 3]` becomes `[ 1 2 3 ]` and `[[1]]` becomes `[ [ 1 ] ]`;
 //   - keeps string literals ('...') and comments (#...) verbatim;
 //   - re-indents the line by the bracket/block nesting depth open at its start.
@@ -27,13 +27,20 @@ const INDENT_UNIT = '  ';
 // part of a word or number. This is tokenizer.rs::is_special_char minus the
 // characters whose tokenization depends on context (' # > = ( )), which are left
 // untouched so a two-character spelling such as `>=` is never mis-split.
-const STANDALONE_DELIMITERS = new Set(['[', ']', '{', '}', '|', '^']);
-const OPENING_BRACKETS = new Set(['[', '{']);
-const CLOSING_BRACKETS = new Set([']', '}']);
+// `{`/`}` were retired as source characters entirely (docs/dev/type-
+// unification-work-order-2026-08.md): `[ ]` is the sole bracket, for both
+// data and code, so they are no longer structural here either.
+const STANDALONE_DELIMITERS = new Set(['[', ']', '|', '^']);
+const OPENING_BRACKETS = new Set(['[']);
+const CLOSING_BRACKETS = new Set([']']);
 
 // Mirrors tokenizer.rs::is_string_close_delimiter: a `'` closes a string when
 // the next character is whitespace, end-of-input, or a special character other
-// than another quote.
+// than another quote. `{`/`}` are included even though they are no longer
+// valid source: tokenizer.rs's `is_structural_char` still treats them as
+// token-enders (so a name or string ends cleanly at one instead of a
+// misplaced `{` being swallowed into it), which is what lets the tokenizer
+// raise its "not a valid Ajisai source character" error precisely there.
 const STRING_CLOSE_SPECIALS = new Set([
     '[', ']', '{', '}', '(', ')', '#', '>', '=', '|', '^',
 ]);
@@ -132,16 +139,16 @@ const scanLines = (source: string): string[][] | null => {
     return lines;
 };
 
-// Whether the block opening at `start` (`tokens[start] === '{'`) contains a `|`
-// at its own top level — that is, whether it is a COND guard clause rather than
-// an ordinary code block.
+// Whether the vector opening at `start` (`tokens[start] === '['`) contains a
+// `|` at its own top level — that is, whether it is a COND guard clause rather
+// than an ordinary vector.
 const isCondClauseBlock = (tokens: string[], start: number): boolean => {
     let depth = 0;
     for (let i = start; i < tokens.length; i += 1) {
         const token = tokens[i];
-        if (token === '{') {
+        if (token === '[') {
             depth += 1;
-        } else if (token === '}') {
+        } else if (token === ']') {
             depth -= 1;
             if (depth === 0) return false;
         } else if (token === '|' && depth === 1) {
@@ -168,7 +175,7 @@ const splitCondClauseLines = (tokens: string[]): string[][] => {
     let clausesOnLine = 0;
 
     for (let i = 0; i < tokens.length; i += 1) {
-        if (tokens[i] === '{' && isCondClauseBlock(tokens, i)) {
+        if (tokens[i] === '[' && isCondClauseBlock(tokens, i)) {
             if (clausesOnLine >= 1 && current.length > 0) {
                 out.push(current);
                 current = [];

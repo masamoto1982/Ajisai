@@ -22,7 +22,7 @@ mod contract_report_tests {
         // A bare `RANGE` materializes a length set by its operand's *value*,
         // provably unbounded over input size (`word_cost_tests.rs`'s
         // `value_driven_materializer_is_unbounded_over_input_size`).
-        let reports = report_contracts("{ RANGE } 'MK' DEF");
+        let reports = report_contracts("[ RANGE ] 'MK' DEF");
         let json = reports_json(&reports);
         let mk = json
             .as_array()
@@ -40,7 +40,7 @@ mod contract_report_tests {
         // collection beyond its own operand at a merely plausible
         // `superlinear` bound (never measured to attain it, so inexact).
         // `steps`/`numeric` belong in `suggested`; `collection` must not.
-        let line = suggested("{ JOIN } 'J' DEF", "J");
+        let line = suggested("[ JOIN ] 'J' DEF", "J");
         assert!(line.contains("steps=const"), "line was: {line}");
         assert!(line.contains("numeric=const"), "line was: {line}");
         assert!(
@@ -57,7 +57,7 @@ mod contract_report_tests {
         // Emitting a bare `cost` keyword with zero `axis=class` terms would
         // fail `contract_cost::parse_cost_terms` and break `suggested`'s only
         // purpose: pasting into source and passing `check --contract`.
-        let line = suggested("{ [ 1 ] MAP } 'M' DEF", "M");
+        let line = suggested("[ [ 1 ] MAP ] 'M' DEF", "M");
         assert!(
             !line.contains("cost"),
             "cost keyword must be omitted with no exact axis: {line}"
@@ -81,7 +81,7 @@ mod contract_report_tests {
         // the checker cannot even parse — which is exactly the round trip
         // this test exists to rule out.
         let source =
-            "{ ADD } 'A' DEF\n{ JOIN } 'J' DEF\n{ [ 1 ] MAP } 'M' DEF\n{ [ 0 10 ] RANGE } 'K' DEF";
+            "[ ADD ] 'A' DEF\n[ JOIN ] 'J' DEF\n[ [ 1 ] MAP ] 'M' DEF\n[ [ 0 10 ] RANGE ] 'K' DEF";
         let reports = report_contracts(source);
         assert_eq!(reports.len(), 4, "expected one report per defined word");
         let mut annotated = source.to_string();
@@ -119,9 +119,9 @@ mod contract_report_tests {
         // Regression for the space term: `space:linear` was emitted here
         // while `contract_decl.rs` has no `space:` production, so the whole
         // directive was rejected as malformed and `check --contract` exited
-        // 1 on its own suggestion. `{ ADD }` is space-exact (`space:linear`
+        // 1 on its own suggestion. `[ ADD ]` is space-exact (`space:linear`
         // in the report), which is precisely the case that used to emit it.
-        let line = suggested("{ ADD } 'A' DEF", "A");
+        let line = suggested("[ ADD ] 'A' DEF", "A");
         assert!(
             !line.contains("space"),
             "suggested must carry only checkable terms: {line}"
@@ -134,7 +134,7 @@ mod contract_report_tests {
         // `input_driven_arithmetic_is_exactly_linear_in_numeric_work`), so the
         // full `cost` term is always present — locking the required
         // steps → numeric → collection order in one literal string.
-        let source = "{ ADD } 'A' DEF";
+        let source = "[ ADD ] 'A' DEF";
         let line = suggested(source, "A");
         assert!(
             line.contains("cost steps=const numeric=linear collection=const"),

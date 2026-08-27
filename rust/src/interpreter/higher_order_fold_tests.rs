@@ -46,19 +46,19 @@ mod tests {
     async fn test_any_basic_and_nil_and_user_word() {
         let mut interp = Interpreter::new();
         let ok = interp
-            .execute("[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY")
+            .execute("[ 1 3 5 8 ] [ [ 2 ] MOD [ 0 ] = ] ANY")
             .await;
         assert!(ok.is_ok(), "ANY basic failed: {:?}", ok);
         assert_eq!(top_scalar_i64(&interp), 1);
 
         let mut interp2 = Interpreter::new();
-        let ok2 = interp2.execute("NIL { [ 2 ] MOD [ 0 ] = } ANY").await;
+        let ok2 = interp2.execute("NIL [ [ 2 ] MOD [ 0 ] = ] ANY").await;
         assert!(ok2.is_ok(), "ANY NIL failed: {:?}", ok2);
         assert_eq!(top_scalar_i64(&interp2), 0);
 
         let mut interp3 = Interpreter::new();
         interp3
-            .execute("{ [ 2 ] MOD [ 0 ] = } 'IS_EVEN' DEF")
+            .execute("[ [ 2 ] MOD [ 0 ] = ] 'IS_EVEN' DEF")
             .await
             .unwrap();
         let ok3 = interp3.execute("[ 1 3 6 ] 'IS_EVEN' ANY").await;
@@ -79,7 +79,7 @@ mod tests {
     async fn test_filter_reaches_and_by_name() {
         let mut and_interp = Interpreter::new();
         let and_result = and_interp
-            .execute("[ TRUE FALSE TRUE ] { TRUE AND } FILTER")
+            .execute("[ TRUE FALSE TRUE ] [ TRUE AND ] FILTER")
             .await;
         assert!(
             and_result.is_ok(),
@@ -91,7 +91,7 @@ mod tests {
         // dictionary does not have, inside a block body like anywhere else.
         let mut alias_interp = Interpreter::new();
         let alias_result = alias_interp
-            .execute("[ TRUE FALSE TRUE ] { TRUE & } FILTER")
+            .execute("[ TRUE FALSE TRUE ] [ TRUE & ] FILTER")
             .await;
         assert!(
             alias_result.is_err(),
@@ -123,9 +123,9 @@ mod tests {
     #[tokio::test]
     async fn test_higher_order_predicates_reject_non_boolean() {
         for source in [
-            "[ 1 2 3 ] { 1 } FILTER",
-            "[ 1 2 3 ] { NIL } ANY",
-            "[ 1 2 3 ] { [ TRUE ] } ALL",
+            "[ 1 2 3 ] [ 1 ] FILTER",
+            "[ 1 2 3 ] [ NIL ] ANY",
+            "[ 1 2 3 ] [ [ TRUE ] ] ALL",
         ] {
             let mut interp = Interpreter::new();
             let result = interp.execute(source).await;

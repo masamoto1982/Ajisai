@@ -381,20 +381,20 @@
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         }
       ],
       "language": "en",
       "selectedTool": "check",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -407,20 +407,20 @@
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         }
       ],
       "language": "ja",
       "selectedTool": "check",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -433,7 +433,7 @@
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -446,7 +446,7 @@
       "language": "en",
       "selectedTool": "infer_contracts",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -459,20 +459,20 @@
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         }
       ],
       "language": "ja",
       "selectedTool": "infer_contracts",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,

@@ -33,7 +33,7 @@
         （水路の破れ）。
     -->
     <style>
-        :root {
+        :root [
             --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
             --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
 
@@ -50,20 +50,20 @@
 
             --color-light:  oklch(98.2% 0.002 247.8);
             --color-medium: oklch(94.3% 0.006 264.5);
-        }
+        ]
 
-        * {
+        * [
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
+        ]
 
-        html, body {
+        html, body [
             min-height: 100%;
             overflow-x: hidden;
-        }
+        ]
 
-        body {
+        body [
             font-family: var(--font-stack-primary);
             background: oklch(100% 0 0);
             color: var(--color-text);
@@ -71,38 +71,38 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-        }
+        ]
 
-        a {
+        a [
             color: var(--color-primary);
             text-decoration: none;
 
-            &:hover { color: var(--color-secondary); }
-        }
+            &:hover [ color: var(--color-secondary); ]
+        ]
 
         /* 移ろい: 青紫・赤紫・淡水色・淡緑の四色が巡るグラデーション。
            0% と 100% を同一にしてループ時の急な色変化を避ける。 */
-        @property --mv-h-a { syntax: "<number>"; inherits: false; initial-value: 265; }
-        @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 300; }
-        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 90%; }
-        @property --mv-c-a { syntax: "<number>"; inherits: false; initial-value: 0.085; }
-        @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.085; }
+        @property --mv-h-a [ syntax: "<number>"; inherits: false; initial-value: 265; ]
+        @property --mv-h-b [ syntax: "<number>"; inherits: false; initial-value: 300; ]
+        @property --mv-l [ syntax: "<percentage>"; inherits: false; initial-value: 90%; ]
+        @property --mv-c-a [ syntax: "<number>"; inherits: false; initial-value: 0.085; ]
+        @property --mv-c-b [ syntax: "<number>"; inherits: false; initial-value: 0.085; ]
 
-        @keyframes mv-hydrangea-hues {
-            0%,  100% { --mv-h-a: 265; --mv-h-b: 300; }
-            25%       { --mv-h-a: 305; --mv-h-b: 325; }
-            50%       { --mv-h-a: 195; --mv-h-b: 225; }
-            75%       { --mv-h-a: 150; --mv-h-b: 178; }
-        }
-        @keyframes mv-chroma {
-            0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.085; }
-            40%      { --mv-c-a: 0.095; --mv-c-b: 0.095; }
-            65%      { --mv-c-a: 0.065; --mv-c-b: 0.065; }
-        }
-        @keyframes mv-light { 0%, 100% { --mv-l: 90%; } 50% { --mv-l: 93%; } }
+        @keyframes mv-hydrangea-hues [
+            0%,  100% [ --mv-h-a: 265; --mv-h-b: 300; ]
+            25%       [ --mv-h-a: 305; --mv-h-b: 325; ]
+            50%       [ --mv-h-a: 195; --mv-h-b: 225; ]
+            75%       [ --mv-h-a: 150; --mv-h-b: 178; ]
+        ]
+        @keyframes mv-chroma [
+            0%, 100% [ --mv-c-a: 0.085; --mv-c-b: 0.085; ]
+            40%      [ --mv-c-a: 0.095; --mv-c-b: 0.095; ]
+            65%      [ --mv-c-a: 0.065; --mv-c-b: 0.065; ]
+        ]
+        @keyframes mv-light [ 0%, 100% [ --mv-l: 90%; ] 50% [ --mv-l: 93%; ] ]
 
         .ref-header,
-        .ref-footer {
+        .ref-footer [
             background: linear-gradient(
                 to right in oklch,
                 oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
@@ -112,13 +112,13 @@
                 mv-hydrangea-hues 260s ease-in-out infinite,
                 mv-chroma 210s ease-in-out infinite,
                 mv-light 170s ease-in-out infinite;
-        }
+        ]
 
-        @media (prefers-reduced-motion: reduce) {
-            .ref-header, .ref-footer { animation: none; }
-        }
+        @media (prefers-reduced-motion: reduce) [
+            .ref-header, .ref-footer [ animation: none; ]
+        ]
 
-        .ref-header {
+        .ref-header [
             border-bottom: var(--border-main);
             padding: 1rem 2rem;
             display: flex;
@@ -126,42 +126,42 @@
             align-items: stretch;
             gap: 0.5rem;
             color: var(--color-text);
-        }
+        ]
 
-        .app-header-top {
+        .app-header-top [
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
             width: 100%;
-        }
+        ]
 
-        .app-brand-meta {
+        .app-brand-meta [
             display: flex;
             align-items: center;
             gap: 0.5rem;
-        }
+        ]
 
-        .app-brand-block {
+        .app-brand-block [
             display: flex;
             align-items: center;
             gap: 0.4rem;
             color: inherit;
-        }
+        ]
 
-        .logo {
+        .logo [
             width: 40px;
             height: 40px;
             object-fit: contain;
-        }
+        ]
 
-        .ref-header h1 {
+        .ref-header h1 [
             font-size: 1.5rem;
             font-weight: 500;
             color: var(--color-text);
-        }
+        ]
 
-        .ref-tagline {
+        .ref-tagline [
             display: inline-block;
             font-size: 0.75rem;
             color: oklch(100% 0 0);
@@ -170,9 +170,9 @@
             border-radius: 6px;
             padding: 0.125rem 0.5rem;
             line-height: 1.5;
-        }
+        ]
 
-        .visually-hidden {
+        .visually-hidden [
             position: absolute;
             width: 1px;
             height: 1px;
@@ -182,7 +182,7 @@
             clip: rect(0, 0, 0, 0);
             white-space: nowrap;
             border: 0;
-        }
+        ]
 
         /* 言語切替: ブランド行の Reference タグの右隣に置く。リンクだと
            「切り替えられる部品」だと気付かれず、現在表示中の言語もラベルに
@@ -190,7 +190,7 @@
            のエリアセレクタ (area-selector select、components.css) と同じ
            <select> ベースの部品にして、選択中の項目＝表示中の言語とする。
            言語が増えても <option> を足すだけで済む。 */
-        .lang-select {
+        .lang-select [
             display: inline-block;
             font-family: var(--font-stack-mono);
             font-size: 0.75rem;
@@ -203,25 +203,25 @@
             cursor: pointer;
             transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 
-            &:hover {
+            &:hover [
                 color: var(--color-text);
                 border-color: var(--color-text-light);
-            }
+            ]
 
-            &:focus {
+            &:focus [
                 outline: none;
                 color: var(--color-text);
                 background: var(--color-light);
-            }
-        }
+            ]
+        ]
 
-        .header-actions {
+        .header-actions [
             display: flex;
             justify-content: flex-end;
             gap: 0.5rem;
-        }
+        ]
 
-        .btn {
+        .btn [
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -238,48 +238,48 @@
             color: var(--color-text);
             background: #fff;
 
-            &:hover {
+            &:hover [
                 background: var(--color-light);
                 color: var(--color-text);
-            }
-        }
+            ]
+        ]
 
         /* コンテンツ: 横軸 3:7。左 30% が navigation、右 70% が article。
            モバイルでは縦積みで article → navigation の順に並ぶよう、DOM は
            article を先に置き、デスクトップでは order で nav を左へ移す。 */
-        .ref-main {
+        .ref-main [
             flex: 1;
             display: flex;
             flex-direction: column;
-        }
+        ]
 
-        .ref-article {
+        .ref-article [
             padding: 1.5rem 2rem 3rem;
             min-width: 0;
-        }
+        ]
 
-        .ref-nav {
+        .ref-nav [
             padding: 1.5rem 2rem;
             border-top: var(--border-main);
             background: var(--color-light);
 
-            & h2 {
+            & h2 [
                 font-size: 0.95rem;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
                 color: var(--color-text-light);
                 margin-bottom: 0.75rem;
-            }
+            ]
 
             /* navigation is a plain list of links. Leave link colors (unvisited /
                visited), underline, and hover to the user-agent default — minimal,
                unadorned styling. */
             & a,
-            & a:hover {
+            & a:hover [
                 color: revert;
                 text-decoration: revert;
-            }
-        }
+            ]
+        ]
 
         /* Each .ref-page is one page. Visibility is declarative: the URL fragment
            selects the visible page through :target, so no JS show/hide is needed
@@ -288,120 +288,120 @@
            were merged away are kept as <h3 id> so their links stay alive — so a
            page whose descendant is targeted opens too. When nothing at all is
            targeted — a bare URL — :has() falls back to showing the first page. */
-        .ref-page {
+        .ref-page [
             display: none;
-        }
+        ]
 
         .ref-page:target,
-        .ref-page:has(:target) {
+        .ref-page:has(:target) [
             display: block;
-        }
+        ]
 
-        .ref-main:not(:has(:target)) #intro {
+        .ref-main:not(:has(:target)) #intro [
             display: block;
-        }
+        ]
 
-        .ref-article {
-            & h2 {
+        .ref-article [
+            & h2 [
                 font-size: 1.4rem;
                 font-weight: 600;
                 margin-bottom: 0.5rem;
                 padding-bottom: 0.3rem;
                 border-bottom: var(--border-main);
-            }
+            ]
 
-            & h3 {
+            & h3 [
                 font-size: 1.05rem;
                 font-weight: 600;
                 margin: 1.25rem 0 0.4rem;
-            }
+            ]
 
-            & p { margin: 0.5rem 0; }
+            & p [ margin: 0.5rem 0; ]
 
             & ol.ref-list,
-            & ul.ref-list {
+            & ul.ref-list [
                 margin: 0.5rem 0;
                 padding-left: 1.5rem;
 
-                & li { margin: 0.25rem 0; }
-            }
+                & li [ margin: 0.25rem 0; ]
+            ]
 
-            & code {
+            & code [
                 font-family: var(--font-stack-mono);
                 font-size: 0.9em;
                 background: var(--color-medium);
                 padding: 0.1rem 0.3rem;
                 border-radius: 3px;
-            }
-        }
+            ]
+        ]
 
         /* The "Open in Playground" button sits on its own line at the bottom
            right of each section. */
         /* Each sample is a self-contained unit: a one-row table (sample code,
            expected value, notes) followed by its own "Open in Playground"
            button at the bottom right. */
-        .sample {
+        .sample [
             margin: 1.25rem 0;
 
-            & .sample-actions {
+            & .sample-actions [
                 display: flex;
                 justify-content: flex-end;
                 margin-top: 0.5rem;
-            }
-        }
+            ]
+        ]
 
         /* The table is wrapped in a horizontally scrollable container so long
            code rows can be scrolled (and copied) on narrow viewports instead of
            being clipped by the page's hidden horizontal overflow. */
-        .ref-table-wrap {
+        .ref-table-wrap [
             overflow-x: auto;
-        }
+        ]
 
-        .ref-table {
+        .ref-table [
             width: 100%;
             border-collapse: collapse;
 
             & th,
-            & td {
+            & td [
                 border: var(--border-main);
                 padding: 0.5rem 0.75rem;
                 text-align: left;
                 vertical-align: top;
-            }
+            ]
 
-            & th {
+            & th [
                 background: var(--color-light);
                 font-weight: 600;
                 font-size: 0.8rem;
                 color: var(--color-text-light);
-            }
+            ]
 
-            & td code {
+            & td code [
                 background: none;
                 padding: 0;
                 font-family: var(--font-stack-mono);
                 font-size: 0.85rem;
                 color: var(--color-text);
                 white-space: pre;
-            }
+            ]
 
-            & td.notes {
+            & td.notes [
                 font-size: 0.85rem;
                 color: var(--color-text-light);
-            }
-        }
+            ]
+        ]
 
         /* Word/sugar summary tables (not samples): same look, slightly tighter. */
-        .word-table {
+        .word-table [
             margin: 0.75rem 0 1.25rem;
-        }
+        ]
 
-        .ref-note {
+        .ref-note [
             font-size: 0.85rem;
             color: var(--color-text-light);
-        }
+        ]
 
-        .ref-footer {
+        .ref-footer [
             border-top: var(--border-main);
             padding: 0.75rem 2rem;
             display: flex;
@@ -411,82 +411,82 @@
             color: var(--color-text);
             font-size: 0.875rem;
             text-align: center;
-        }
+        ]
 
-        .ref-footer a {
+        .ref-footer a [
             color: var(--color-text-light);
 
-            &:hover { color: var(--color-text); }
-        }
+            &:hover [ color: var(--color-text); ]
+        ]
 
         /* デスクトップ: 横軸 3:7。nav を左（30%）、article を右（70%）に。
            align-items: stretch（既定)により両カラムが同じ高さに伸び、nav の
            背景色と分割線がコンテンツ領域の縦 100% を覆う。 */
-        @media (min-width: 769px) {
-            .ref-main {
+        @media (min-width: 769px) [
+            .ref-main [
                 flex-direction: row;
                 align-items: stretch;
-            }
+            ]
 
-            .ref-nav {
+            .ref-nav [
                 order: -1;
                 flex: 0 0 30%;
                 max-width: 30%;
                 border-top: none;
                 border-right: var(--border-main);
-            }
+            ]
 
-            .ref-article {
+            .ref-article [
                 flex: 1 1 70%;
-            }
-        }
+            ]
+        ]
 
         /* モバイル: header（固定表示）→ article → navigation → footer（固定表示）。
            ビューポートを固定し、間のコンテンツ領域（.ref-main）だけを縦スクロール
            させる。これで header / footer は sticky に頼らず確実に固定され、一つの
            section を読み終えると自然と navigation に到達する。 */
-        @media (max-width: 768px) {
-            html, body {
+        @media (max-width: 768px) [
+            html, body [
                 height: 100%;
                 overflow: hidden;
-            }
+            ]
 
-            body {
+            body [
                 height: 100vh;
                 height: 100dvh;
                 min-height: 0;
-            }
+            ]
 
             .ref-header,
-            .ref-footer {
+            .ref-footer [
                 flex: 0 0 auto;
-            }
+            ]
 
-            .ref-main {
+            .ref-main [
                 flex: 1 1 auto;
                 min-height: 0;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
-            }
+            ]
 
-            .ref-header { padding: 1rem 2rem; }
-            .ref-article { padding: 1.25rem 1rem 2rem; }
-            .ref-nav { padding: 1.25rem 1rem; }
-        }
+            .ref-header [ padding: 1rem 2rem; ]
+            .ref-article [ padding: 1.25rem 1rem 2rem; ]
+            .ref-nav [ padding: 1.25rem 1rem; ]
+        ]
     </style>
 
     <!-- KaTeX (self-hosted, see docs/dev/ajisai-authoring-style.md Section 4). -->
     <link rel="stylesheet" href="../../vendor/katex/katex.min.css">
     <script defer src="../../vendor/katex/katex.min.js"></script>
     <script defer src="../../vendor/katex/contrib/auto-render.min.js"
-            onload="renderMathInElement(document.body, {
+            onload="renderMathInElement(document.body, [
                 delimiters: [
-                    { left: '\\(', right: '\\)', display: false },
-                    { left: '\\[', right: '\\]', display: true }
+                    [ left: '\\(', right: '\\)', display: false ],
+                    [ left: '\\[', right: '\\]', display: true ]
                 ],
                 ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
                 throwOnError: false
-            });"></script>
+            ]);"></script>
 </head>
 <body>
     <header class="ref-header">
@@ -589,14 +589,14 @@
                     <p>トークンが区切られる条件は、次の3通りだけです。</p>
                     <ul class="ref-list">
                         <li>空白文字(スペース、タブ、改行)</li>
-                        <li>構造区切り文字(<code>[</code> <code>]</code> <code>{</code> <code>}</code> <code>(</code> <code>)</code>)</li>
+                        <li>構造区切り文字(<code>[</code> <code>]</code> <code>[</code> <code>]</code> <code>(</code> <code>)</code>)</li>
                         <li>コメントの開始(行末までの<code>#</code>)</li>
                     </ul>
                     <p>これ以外の文字は、記号や句読点を含めすべて通常の名前を構成する文字として扱われます。</p>
-                    <p class="ref-note"><code>(</code>と<code>)</code>はトークンを区切る構造文字の一種ですが、ソースコードの中では使えません。書けば必ずエラーになる予約済みの記号です。無理数の値を入れ子の連分数として表示するための専用表記であり、コードブロックには常に<code>{</code> <code>}</code>を使います。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
+                    <p class="ref-note"><code>(</code>と<code>)</code>はトークンを区切る構造文字の一種ですが、ソースコードの中では使えません。書けば必ずエラーになる予約済みの記号です。無理数の値を入れ子の連分数として表示するための専用表記であり、コードブロックには常に<code>[</code> <code>]</code>を使います。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
                     <h3>演算子と空白の必要性</h3>
                     <p>一般的な演算記号もワード(名前)の一種であるため、前後に空白が必要です。<code>2 +</code>は<code>2</code>と<code>+</code>の2つのトークンとして正しく解釈されます。<code>2+</code>は「2+」という1つの名前とみなされ、加算ではなく未定義ワードとしてエラーになります。</p>
-                    <p class="ref-note">角括弧<code>[</code> <code>]</code>や波括弧<code>{</code> <code>}</code>は例外で、それ自体が前後の境界となるため、前後に空白がなくても独立したトークンとして区切られます。<code>[ 1 2 ]LENGTH</code>は、空白で区切った場合とまったく同じに解釈されます。</p>
+                    <p class="ref-note">角括弧<code>[</code> <code>]</code>や波括弧<code>[</code> <code>]</code>は例外で、それ自体が前後の境界となるため、前後に空白がなくても独立したトークンとして区切られます。<code>[ 1 2 ]LENGTH</code>は、空白で区切った場合とまったく同じに解釈されます。</p>
                     <h3>記号ワードとトークン判定</h3>
                     <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ほとんどの記号は1文字ですが、比較系のワードには2文字の記号が3つあります。<code>&lt;=</code>が<code>LTE</code>、<code>&gt;=</code>が<code>GTE</code>、<code>!=</code>が<code>NEQ</code>にあたります。トークンが終わるのは空白または区切り文字のときだけで、途中で終わることは決してないため、2文字の記号があっても上の規則は何も複雑になりません。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
                     <h3>コメント</h3>
@@ -615,7 +615,7 @@
                         </table>
                     </div>
                     <h3>改行が意味を持つところ</h3>
-                    <p>基本規則として、改行はスペースと同様にトークンを区切る空白として扱われます。そのため、プログラムは好きなだけ多くの行にわたって書いてかまいません。ただし<strong>唯一の例外</strong>があります。ワード定義の本体では、<em>その本体自身の階層にある</em>改行が1つの文の終わりと次の文の始まりを意味します。<code>{ }</code>ブロックや<code>[ ]</code>ベクトルの内部に書かれた改行はその値の内側にあり、何も区切りません。したがってブロックは何行にわたっても1つの文のままです。それ以外の場所、たとえば<code>COND</code>式では改行に特別な意味はなく、1行で書いても複数行に分けて書いてもまったく同じプログラムとして実行されます。</p>
+                    <p>基本規則として、改行はスペースと同様にトークンを区切る空白として扱われます。そのため、プログラムは好きなだけ多くの行にわたって書いてかまいません。ただし<strong>唯一の例外</strong>があります。ワード定義の本体では、<em>その本体自身の階層にある</em>改行が1つの文の終わりと次の文の始まりを意味します。<code>[ ]</code>ブロックや<code>[ ]</code>ベクトルの内部に書かれた改行はその値の内側にあり、何も区切りません。したがってブロックは何行にわたっても1つの文のままです。それ以外の場所、たとえば<code>COND</code>式では改行に特別な意味はなく、1行で書いても複数行に分けて書いてもまったく同じプログラムとして実行されます。</p>
                     <h3>数値リテラル</h3>
                     <p>小数リテラルは、小数点の<strong>両側</strong>に少なくとも1桁の数字を必要とします。<code>0.5</code>や<code>5.0</code>は数ですが、<code>.5</code>や<code>5.</code>は数ではありません。この規則により小数点が数の先頭や末尾の文字になることは決してなく、単独の<code>.</code>を不完全なリテラルではなく通常の名前として安全に使えます。</p>
                     <h3>文字列リテラル</h3>
@@ -686,7 +686,7 @@
                     <h3>リテラル中の裸の名前</h3>
                     <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>Symbol</strong>を表し、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は2つのSymbolからなるベクトル<code>[ FOO BAR ]</code>です。テキストが欲しければ引用符で囲んでください――<code>[ 'FOO' 'BAR' ]</code>はStringのベクトルになります。これは値に名前を付け始めたときに戸惑いやすい点でもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください。詳しくは<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はSymbolになる</a>を参照してください。</p>
                     <h3><code>[ ]</code>と<code>NIL</code>の違い</h3>
-                    <p class="ref-note"><code>[ ]</code>は空ベクトルです。値を1つも持たないコレクションですが、書いたり入れ子にしたり測ったりできる普通の値であり、<code>[ ] LENGTH</code>は<code>0</code>になります。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、泡になるのではなく<code>[ ]</code>を返します。<code>[ 1 2 3 ] { 5 GT } FILTER</code>の結果は<code>[ ]</code>です。</p>
+                    <p class="ref-note"><code>[ ]</code>は空ベクトルです。値を1つも持たないコレクションですが、書いたり入れ子にしたり測ったりできる普通の値であり、<code>[ ] LENGTH</code>は<code>0</code>になります。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、泡になるのではなく<code>[ ]</code>を返します。<code>[ 1 2 3 ] [ 5 GT ] FILTER</code>の結果は<code>[ ]</code>です。</p>
 
                     <h3 id="numbers">厳密な数</h3>
                     <p>Ajisaiにおけるすべての数値は<strong>厳密数</strong>として扱われます。</p>
@@ -1014,13 +1014,13 @@
                     <p><code>KEEP</code>は<em>直後の1つのワードだけ</em>に前置され、記号は持たず、そのまま綴って書きます。Ajisaiの修飾子はこれひとつだけで、値の複製や入れ替え、破棄のためだけに用意された専用のワード群のようなものはありません。ワードの振る舞いに関するそれ以外のすべては、ワードそのものに内在しています。したがって呼び出しを読むということは、名前と、たかだか1つの前置修飾子を読むことにすぎません。</p>
                     <p class="ref-note">補足: Forthのような古典的なスタック指向言語には、値の複製・入れ替え・破棄を担う専用のワード群、いわゆる「スタックシャッフラー」が用意されていることがあります。Ajisaiにはそうした仕組み自体がなく、<code>KEEP</code>ひとつがその役割を兼ねます。</p>
                     <h3>呼び出し単位で効く</h3>
-                    <p><code>KEEP</code>を前置する対象は自分で定義したワードでもよく、その場合も意味は変わりません。<code>KEEP</code>が保持するのは<strong>その呼び出し</strong>のオペランドであり、本体がたまたま内部で使う値ではありません。<code>{ 2 MUL } 'DOUBLE' DEF</code>があるとき、<code>5 KEEP DOUBLE</code>は<code>5/1 10/1</code>になります。本体自身が持つ<code>2</code>は本体内部の話であり、呼び出し側のスタックには決して届きません。</p>
+                    <p><code>KEEP</code>を前置する対象は自分で定義したワードでもよく、その場合も意味は変わりません。<code>KEEP</code>が保持するのは<strong>その呼び出し</strong>のオペランドであり、本体がたまたま内部で使う値ではありません。<code>[ 2 MUL ] 'DOUBLE' DEF</code>があるとき、<code>5 KEEP DOUBLE</code>は<code>5/1 10/1</code>になります。本体自身が持つ<code>2</code>は本体内部の話であり、呼び出し側のスタックには決して届きません。</p>
                     <h3>あらゆる値のコピー装置になる</h3>
-                    <p>1つ覚えておくとよい帰結があります。渡された値をそのまま返すワードを用意しておくと、<code>KEEP</code>は<em>あらゆる種類</em>の値のコピー装置になります。たとえば<code>{ 1 COLLECT [ 0 ] GET } 'ID' DEF</code>は、値を包んでまた取り出すだけのワードです。<code>'hi' KEEP ID</code>は2つの文字列を残しますし、算術演算では複製できない真偽値やコードブロックについても同じことが成り立ちます。</p>
+                    <p>1つ覚えておくとよい帰結があります。渡された値をそのまま返すワードを用意しておくと、<code>KEEP</code>は<em>あらゆる種類</em>の値のコピー装置になります。たとえば<code>[ 1 COLLECT [ 0 ] GET ] 'ID' DEF</code>は、値を包んでまた取り出すだけのワードです。<code>'hi' KEEP ID</code>は2つの文字列を残しますし、算術演算では複製できない真偽値やコードブロックについても同じことが成り立ちます。</p>
                     <h3>結果を積まないワードも例外ではない</h3>
                     <p><code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではありません。これらに<code>KEEP</code>を付けたときに残るのは、そのオペランドそのままの姿です。<code>5 KEEP 'X' BIND</code>は値に名前を付け<em>つつ</em>、<code>5/1 'X'</code>を元の場所に残します。</p>
                     <h3>唯一の例外: 高階ワード</h3>
-                    <p class="ref-note">例外は高階ワードだけです。<code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>ANY</code>、<code>ALL</code>は、自分が走査する<em>コレクション</em>だけを保持し、それ以外は保持しません。したがって<code>[ 1 2 ] KEEP { 2 MUL } MAP</code>は<code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code>になります。ブロックは残らず、<code>FOLD</code>の場合は開始時の累積値も残りません。ブロックは呼び出しが読み取ったデータというより、その呼び出しが<em>何であるか</em>を表すものであり、累積値は答えに畳み込まれています。それ以外のすべてのワードは、読み取ったものをすべて保持します。<code>[ 10 3 ] KEEP [ 0 ] GET</code>も例外ではなく、<code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>の3つすべてが残ります。</p>
+                    <p class="ref-note">例外は高階ワードだけです。<code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>ANY</code>、<code>ALL</code>は、自分が走査する<em>コレクション</em>だけを保持し、それ以外は保持しません。したがって<code>[ 1 2 ] KEEP [ 2 MUL ] MAP</code>は<code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code>になります。ブロックは残らず、<code>FOLD</code>の場合は開始時の累積値も残りません。ブロックは呼び出しが読み取ったデータというより、その呼び出しが<em>何であるか</em>を表すものであり、累積値は答えに畳み込まれています。それ以外のすべてのワードは、読み取ったものをすべて保持します。<code>[ 10 3 ] KEEP [ 0 ] GET</code>も例外ではなく、<code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>の3つすべてが残ります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1393,7 +1393,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 10 20 30 40 ] 'YS' BIND<br>[ 2 ] { 1 COLLECT 'I' BIND YS I GET } MAP</code></td>
+                                    <td><code>[ 10 20 30 40 ] 'YS' BIND<br>[ 2 ] [ 1 COLLECT 'I' BIND YS I GET ] MAP</code></td>
                                     <td><code>[ 30/1 ]</code></td>
                                     <td class="notes">インデックスは1つだが、結果はやはりベクトル。<code>[ 2 0 ]</code>なら同じ行は<code>[ 30/1 10/1 ]</code>になるので、後続のコードは2つの形を扱う必要がない。</td>
                                 </tr>
@@ -1749,7 +1749,7 @@
 
                 <section id="control" class="ref-page">
                     <h2>制御構文(<code>COND</code>, <code>MAP</code>)</h2>
-                    <h3 id="blocks-frames">ブロックと評価文脈(<code>{ }</code>)</h3>
+                    <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
                     <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
@@ -1765,13 +1765,13 @@
                             </tbody>
                         </table>
                     </div>
-                    <p>したがって<code>{ + } 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 { + } EXEC</code>も同様です。どちらもスタック全体を見るからです。しかし<code>100 [ 1 2 ] { + } MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
-                    <p class="ref-note">「最上位より下にあるものは捨てられる」は読み返しておいてください。これが静かに起こるからです。2つの値を残す述語もそのまま通ります。<code>[ 1 2 3 ] { 1 GT TRUE } FILTER</code>はすべてを残します。最上位の<code>TRUE</code>が答えであり、その下の比較結果は捨てられるからです。エラーになるのは<em>何も</em>残さなかったときだけです。高階ワードのブロックが説明のつかない答えを返したら、それが残しているものの個数を数えてください。</p>
-                    <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] { 'x' 1 ADD } MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。自分で定義したワードのところで、この掘り下げは止まります。その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
-                    <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。これが、あるワードが<code>MAP</code>や<code>EXEC</code>に渡す<code>{ }</code>の内側から自分自身を呼び出せる理由であり、その呼び出しが普通の再帰呼び出しになる理由です。</p>
+                    <p>したがって<code>[ + ] 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 [ + ] EXEC</code>も同様です。どちらもスタック全体を見るからです。しかし<code>100 [ 1 2 ] [ + ] MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
+                    <p class="ref-note">「最上位より下にあるものは捨てられる」は読み返しておいてください。これが静かに起こるからです。2つの値を残す述語もそのまま通ります。<code>[ 1 2 3 ] [ 1 GT TRUE ] FILTER</code>はすべてを残します。最上位の<code>TRUE</code>が答えであり、その下の比較結果は捨てられるからです。エラーになるのは<em>何も</em>残さなかったときだけです。高階ワードのブロックが説明のつかない答えを返したら、それが残しているものの個数を数えてください。</p>
+                    <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] [ 'x' 1 ADD ] MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。自分で定義したワードのところで、この掘り下げは止まります。その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
+                    <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。これが、あるワードが<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>の内側から自分自身を呼び出せる理由であり、その呼び出しが普通の再帰呼び出しになる理由です。</p>
 
                     <h3 id="cond">条件分岐(<code>COND</code>)</h3>
-                    <p><code>COND</code>は2つの引数を取ります。ディスパッチ対象の値と、ガード・本体の節をまとめた1つの<code>{ }</code>です。節を順に評価し、最初にtrueになったガードの本体を実行します。節形式では、<code>|</code>がガードと本体を区切り、各節はちょうど1行を占めます。<code>TRUE</code>は常にtrueなelseガードを作ります。</p>
+                    <p><code>COND</code>は2つの引数を取ります。ディスパッチ対象の値と、ガード・本体の節をまとめた1つの<code>[ ]</code>です。節を順に評価し、最初にtrueになったガードの本体を実行します。節形式では、<code>|</code>がガードと本体を区切り、各節はちょうど1行を占めます。<code>TRUE</code>は常にtrueなelseガードを作ります。</p>
                     <p>else節は<code>IDLE</code>とも綴ることができ、こちらの綴りが好ましいものです。<code>IDLE</code>は65個のWordのうちの1つではなく、Dictionaryパネルにも見つかりません。位置によって読み取られるキーワードであり、ガードとしてのみ意味を持ち、<em>それより前のどの節も発火しなかったときにこの節が発火する</em>ことを意味します。<code>TRUE</code>も、ガードが読み取る値を積むことで同じ結果に達しますが、動作はしても語ることは少ないです。<code>IDLE</code>はどの節がフォールバックであるかを明示します。</p>
                     <p class="ref-note"><code>IDLE</code>は<em>それが書かれた場所で</em>発火します。節は上から下へ試され、<code>IDLE</code>もその順序の中で自分の番を待ちます。したがって<code>IDLE</code>より下に書かれたものには決して到達しません。最後に置いてください。そもそも「フォールバック」とはそういう意味です。</p>
                     <div class="sample">
@@ -1783,13 +1783,13 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 0 ]
-{
-{ [ 0 ] &lt; | 'negative' }
-{ [ 0 ] = | 'zero' }
-{ TRUE | 'positive' }
-} COND</code></td>
+[
+[ [ 0 ] &lt; | 'negative' ]
+[ [ 0 ] = | 'zero' ]
+[ TRUE | 'positive' ]
+] COND</code></td>
                                     <td><code>'zero'</code></td>
-                                    <td class="notes">節形式：<code>|</code>の左がガード、右が本体。節は1つの<code>{ }</code>にまとめ、慣例として1行に1節。</td>
+                                    <td class="notes">節形式：<code>|</code>の左がガード、右が本体。節は1つの<code>[ ]</code>にまとめ、慣例として1行に1節。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1806,9 +1806,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ -5 ] { { [ 0 ] &lt; } { 'negative' } { TRUE } { 'positive' } } COND</code></td>
+                                    <td><code>[ -5 ] [ [ [ 0 ] &lt; ] [ 'negative' ] [ TRUE ] [ 'positive' ] ] COND</code></td>
                                     <td><code>'negative'</code></td>
-                                    <td class="notes">対形式：ガードと本体のブロックを交互に並べる。これも1つの節用<code>{ }</code>。</td>
+                                    <td class="notes">対形式：ガードと本体のブロックを交互に並べる。これも1つの節用<code>[ ]</code>。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1829,10 +1829,10 @@
                             <tbody>
                                 <tr>
                                     <td><code>5
-{
-{ 3 &lt; | 'small' }
-{ IDLE | 'big' }
-} COND</code></td>
+[
+[ 3 &lt; | 'small' ]
+[ IDLE | 'big' ]
+] COND</code></td>
                                     <td><code>'big'</code></td>
                                     <td class="notes"><code>IDLE</code>がフォールバック節を明示する。</td>
                                 </tr>
@@ -1845,12 +1845,12 @@
                     </div>
                     <h3>節が見るもの</h3>
                     <p><code>COND</code>の節は、目に見えるスタックの上では実行されません。すべてのガード、そして発火した節の本体は、<strong><code>COND</code>がディスパッチしている値ちょうど1つだけを保持する、隔離されたフレーム</strong>の中で実行されます。そこから戻ってくるのもちょうど1つの値で、本体が終わったときに最上位にあるものだけです。これは、スタック全体を見るワードの本体や<code>EXEC</code>とは異なります。このページ冒頭の<a href="#blocks-frames">ブロックと評価文脈</a>にある表が、5つの規則をまとめたものです。</p>
-                    <p>ここから導かれる帰結が2つあります。1つは、節の本体が<code>COND</code>より前にスタックにあった値に到達できないことです。<code>1 2 3 4</code>に続けて本体が<code>+</code>である節を書くとスタックアンダーフローになります。<code>+</code>が見つけるのはディスパッチ対象の値だけだからです。もう1つは、複数の値で終わる本体が最上位のものだけを保持することです。<code>{ TRUE | 7 8 9 }</code>は<code>9</code>を答え、<code>7</code>と<code>8</code>はフレームとともに消えます。</p>
+                    <p>ここから導かれる帰結が2つあります。1つは、節の本体が<code>COND</code>より前にスタックにあった値に到達できないことです。<code>1 2 3 4</code>に続けて本体が<code>+</code>である節を書くとスタックアンダーフローになります。<code>+</code>が見つけるのはディスパッチ対象の値だけだからです。もう1つは、複数の値で終わる本体が最上位のものだけを保持することです。<code>[ TRUE | 7 8 9 ]</code>は<code>9</code>を答え、<code>7</code>と<code>8</code>はフレームとともに消えます。</p>
                     <p class="ref-note">この隔離こそが、<code>COND</code>による再帰を実用的にしています。自己呼び出しに至るまでに作業用の値を組み立てる節の本体は、それらを片付ける必要がありません。作業用の値はフレームを生き延びられないので、前の回がどれだけ足場を組んでいようと、再帰の各回は1つの値から始まります。</p>
 
                     <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>ANY</code>・<code>ALL</code>)</h3>
-                    <p>コードブロック<code>{ }</code>は第一級の値です。高階ワードは、ブロックや、定義済みワードの引用された名前を、ベクトルの各要素に適用します。</p>
-                    <p class="ref-note">ブロックが残したものが、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] { 1 COLLECT } MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] { REVERSE } MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません。点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
+                    <p>コードブロック<code>[ ]</code>は第一級の値です。高階ワードは、ブロックや、定義済みワードの引用された名前を、ベクトルの各要素に適用します。</p>
+                    <p class="ref-note">ブロックが残したものが、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません。点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1859,7 +1859,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] { 2 MUL } MAP</code></td>
+                                    <td><code>[ 1 2 3 ] [ 2 MUL ] MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">各要素にブロックを適用する。</td>
                                 </tr>
@@ -1878,7 +1878,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 2 MUL } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</code></td>
+                                    <td><code>[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">定義済みのワードは、その引用された名前で渡せる。</td>
                                 </tr>
@@ -1897,7 +1897,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] { [ 2 ] MOD [ 0 ] = } FILTER</code></td>
+                                    <td><code>[ 1 2 3 4 ] [ [ 2 ] MOD [ 0 ] = ] FILTER</code></td>
                                     <td><code>[ 2/1 4/1 ]</code></td>
                                     <td class="notes">述語がtrueになる要素を残す(ここでは偶数)。</td>
                                 </tr>
@@ -1935,7 +1935,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY</code></td>
+                                    <td><code>[ 1 3 5 8 ] [ [ 2 ] MOD [ 0 ] = ] ANY</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">少なくとも1つの要素が述語を満たせばtrue。短絡評価される。</td>
                                 </tr>
@@ -1954,7 +1954,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 4 6 8 ] { [ 2 ] MOD [ 0 ] = } ALL</code></td>
+                                    <td><code>[ 2 4 6 8 ] [ [ 2 ] MOD [ 0 ] = ] ALL</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">すべての要素が述語を満たせばtrue。最初のfalseで短絡評価される。</td>
                                 </tr>
@@ -1977,7 +1977,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 0 { + } FOLD } 'PSUM' DEF
+                                    <td><code>[ 0 [ + ] FOLD ] 'PSUM' DEF
 [ 3 4 ] PSUM</code></td>
                                     <td><code>7/1</code></td>
                                     <td class="notes">引数はベクトルそのもの。展開するのではなく畳み込む。</td>
@@ -1997,7 +1997,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ [ 1 -1 ] * 0 { + } FOLD } 'PDIFF' DEF
+                                    <td><code>[ [ 1 -1 ] * 0 [ + ] FOLD ] 'PDIFF' DEF
 2 5 * 3 2 COLLECT PDIFF</code></td>
                                     <td><code>7/1</code></td>
                                     <td class="notes">非対称なワードは、ブロードキャストで位置に重みを付けてから畳み込む。<code>2 COLLECT</code>は計算済みの2つの値をまとめる。</td>
@@ -2009,11 +2009,11 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>[ 0 ] GET</code>は最初の要素、<code>[ -1 ] GET</code>は最後の要素です。したがって<code>{ SORT [ -1 ] GET } 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>はベクトル版のswapであり、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
+                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>[ 0 ] GET</code>は最初の要素、<code>[ -1 ] GET</code>は最後の要素です。したがって<code>[ SORT [ -1 ] GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>はベクトル版のswapであり、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
                     <p class="ref-note">複製のための唯一の道具は<code>KEEP</code>です。1つの値を読み取り1つを積むワードに前置すると、結果の下にオペランドを残します。したがって<code>KEEP REVERSE REVERSE</code>は最上位のベクトルをコピーし、<a href="#stack">スタックと修飾子</a>の恒等ワードを使った<code>KEEP ID</code>は、どんな種類の値でもコピーします。2つのオペランドを取るワードに前置すると<em>両方</em>のオペランドを保持しますが、これはめったに望んだ結果ではありません。<code>[ 10 3 ] KEEP [ 0 ] GET</code>は、インデックスのベクトルもスタックに残してしまいます。</p>
 
                     <h3>データとしてのコード</h3>
-                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>{ }</code>と<code>[ ]</code>は同じ構築の2通りの綴りなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>{ 2 MUL }</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>{ }</code>は<code>[ ]</code>です。<code>{ 1 2 + } [ 1 2 + ] EQ</code>は<code>TRUE</code>――プログラムをどちらの括弧で書いたかは、それが作った値の一部ではありません。どちらの綴りの中でも裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
+                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>[ ]</code>は両方にとって唯一の括弧であり、後で評価されるためのソースを保持したベクトルというだけで、データとは別の領域ではありません。あるワードの契約がそれをコードとして要求したときに実行可能なものとして読まれるだけなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>[ 2 MUL ]</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>[ ]</code>は<code>[ ]</code>です。<code>[ 1 2 + ] [ 1 2 + ] EQ</code>は<code>TRUE</code>――値がどう組み立てられたか（構築履歴）はその値の一部ではないので、あるベクトルが「コード」か「データ」かは使われ方より前には決まりません。ブロックの中の裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2022,9 +2022,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 1 2 + } [ 1 2 + ] EQ</code></td>
+                                    <td><code>[ 1 2 + ] [ 1 2 + ] EQ</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">2通りの綴り、1つの値：<code>EQ</code>には見分けがつかない。</td>
+                                    <td class="notes">構築の経緯は値の一部ではない：<code>EQ</code>には見分けがつかない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2043,7 +2043,7 @@
                                 <tr>
                                     <td><code>[ 1 2 ADD ] EXEC</code></td>
                                     <td><code>3/1</code></td>
-                                    <td class="notes"><code>EXEC</code>はオペランドをどちらの括弧が作ったか気にしない。</td>
+                                    <td class="notes"><code>EXEC</code>はオペランドがどう組み立てられたかを気にしない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2053,8 +2053,8 @@
                         </div>
                     </div>
                     <h4>実行時の値をブロックの中に入れる</h4>
-                    <p>ブロックはソースなので、プログラムの実行中に計算した値はその中には入っていません。<code>MAP</code>や<code>FILTER</code>はブロックだけしか取らないため、ここで現実的な疑問が生じます。実行時にしか分からない閾値でフィルタするには、どうすればよいのでしょうか。<code>{ 5 LT }</code>はリテラルの5と比較しますが、その数がプログラムの計算結果である場合、書くべき5はどこにもありません。</p>
-                    <p>ブロックは普通のベクトルなので、普通のベクトル用ワードで組み立てられます。<code>CONCAT</code>は、実行時の値を持つ1要素ベクトルと、ブロックの実行に必要なSymbolを持つ1要素ベクトルを結合します――<code>[ 5 ] { LT }</code>は<code>[ 5 LT ]</code>になり、その結果はどんなブロックとも変わりません。<code>{ }</code>で書かれていなくても、ブロックを取るすべてのワードがそれを受け入れます。独立した橋渡しは不要で、これは上のサンプルがすでに示していた構築そのものです。</p>
+                    <p>ブロックはソースなので、プログラムの実行中に計算した値はその中には入っていません。<code>MAP</code>や<code>FILTER</code>はブロックだけしか取らないため、ここで現実的な疑問が生じます。実行時にしか分からない閾値でフィルタするには、どうすればよいのでしょうか。<code>[ 5 LT ]</code>はリテラルの5と比較しますが、その数がプログラムの計算結果である場合、書くべき5はどこにもありません。</p>
+                    <p>ブロックは普通のベクトルなので、普通のベクトル用ワードで組み立てられます。<code>CONCAT</code>は、実行時の値を持つ1要素ベクトルと、ブロックの実行に必要なSymbolを持つ1要素ベクトルを結合します――<code>[ 5 ] [ LT ]</code>は<code>[ 5 LT ]</code>になり、その結果はどんなブロックとも変わりません。<code>[ ]</code>で書かれていなくても、ブロックを取るすべてのワードがそれを受け入れます。独立した橋渡しは不要で、これは上のサンプルがすでに示していた構築そのものです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2064,7 +2064,7 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 3 1 4 1 5 9 2 6 ]
-[ 5 ] { LT } CONCAT
+[ 5 ] [ LT ] CONCAT
 FILTER</code></td>
                                     <td><code>[ 3/1 1/1 4/1 1/1 2/1 ]</code></td>
                                     <td class="notes">ここでの<code>5</code>は普通のスタック値。プログラムが計算した何かに置き換えれば、述語もそれに従う。</td>
@@ -2091,7 +2091,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 2 SUB 1/10 MUL } 'DELTA' DEF<br>{ KEEP DELTA NEG ADD } 'STEP' DEF<br>[ 0 6 ] RANGE 10 { 2 COLLECT [ 0 ] GET STEP } FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ KEEP DELTA NEG ADD ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
                                     <td><code>7282969/1250000</code></td>
                                     <td class="notes">10からの7ステップ(<code>[ 0 6 ] RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
                                 </tr>
@@ -2113,7 +2113,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 2 SUB 1/10 MUL } 'DELTA' DEF<br>{ KEEP DELTA NEG ADD 1000 QUANTIZE } 'STEP' DEF<br>[ 0 20 ] RANGE 10 { 2 COLLECT [ 0 ] GET STEP } FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ KEEP DELTA NEG ADD 1000 QUANTIZE ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
                                     <td><code>2877/1000</code></td>
                                     <td class="notes">21ステップ経っても分母は1000のまま。<code>[ 0 20 ] RANGE</code>は0から20までの21要素。量子化しない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
                                 </tr>
@@ -2196,7 +2196,7 @@ FILTER</code></td>
                 <section id="words" class="ref-page">
                     <h2>ワードと名前(<code>DEF</code>, <code>BIND</code>)</h2>
                     <h3 id="define"><code>DEF</code>で新しいワードを作る</h3>
-                    <p>新しいワードは、コードブロックと名前から定義されます：<code>{ body } 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
+                    <p>新しいワードは、コードブロックと名前から定義されます：<code>[ body ] 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2205,7 +2205,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ [ 10 ] + } 'ADD10' DEF
+                                    <td><code>[ [ 10 ] + ] 'ADD10' DEF
 5 ADD10</code></td>
                                     <td><code>[ 15/1 ]</code></td>
                                     <td class="notes"><code>ADD10</code>を定義し、それを呼び出す。</td>
@@ -2225,7 +2225,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 2 * } 'DBL' DEF
+                                    <td><code>[ 2 * ] 'DBL' DEF
 [ 1 2 3 ] 'DBL' MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
@@ -2238,7 +2238,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3>DEFが検査すること、しないこと</h3>
-                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです。<code>{ TOTALL 1 } 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
+                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです。<code>[ TOTALL 1 ] 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
                     <p>これは検査漏れではなく設計上の選択です。名前は呼び出し時に解決されます。これにより、あるワードが自分より後に定義される別のワードを呼び出せます。2つのワードが互いを呼び合うこともでき、定義を依存関係に合わせて並べ替える必要は決してありません。</p>
                     <p class="ref-note">その代償として、本体の中の誤字は、何かがそれを呼び出すまで静かに潜んでいます。これを事前に検出できるのがヘッドレスCLIです。<code>ajisai check</code>は何も実行せずにファイル中のすべての名前を解決し、未知のものを報告します。<code>ajisai check --contract</code>はさらに宣言されたワード契約も検証します。Playgroundにはこれに相当するものがなく、アプリの中では、ワードを呼び出すこと自体が検査になります。</p>
                     <h3>ワードの管理</h3>
@@ -2325,7 +2325,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>3 'LIMIT' BIND [ 1 5 2 9 ] { LIMIT LT } FILTER</code></td>
+                                    <td><code>3 'LIMIT' BIND [ 1 5 2 9 ] [ LIMIT LT ] FILTER</code></td>
                                     <td><code>[ 1/1 2/1 ]</code></td>
                                     <td class="notes">ブロックは<code>LIMIT</code>が束縛されている場所に書かれているので、<code>LIMIT</code>と書ける。</td>
                                 </tr>
@@ -2337,7 +2337,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p><strong>名前は、呼び出した先のワードの中までは届きません。</strong>ワードの意味は、そのオペランドと辞書だけで決まり、それ以外の何ものでもありません。これがワードを単体で読めるようにしています。本体が読むのは自分自身の束縛だけであり、呼び出し元の束縛を読むことは決してありません。中でその値が必要なら、オペランドとして渡してください。それこそがオペランドの役目です。これを誤ると、未知のワードとして報告されるのではなく、はっきりとそう告げられます。</p>
-                    <p>束縛を行うワードは、呼び出し元に対して何の名前も残しません。また実行の束縛は、その実行が終われば消えます。これは意図的です。フレームより長く生き延びる名前があれば、それは辞書の隣にある、編集可能な第2の名前空間になってしまうからです。ここには名前空間は1つしかありません。保持しておきたいデータには、<code>{ [ 1 2 3 ] } 'XS' DEF</code>のようにワードを定義してください。これはまさに辞書が本来するべき仕事です。</p>
+                    <p>束縛を行うワードは、呼び出し元に対して何の名前も残しません。また実行の束縛は、その実行が終われば消えます。これは意図的です。フレームより長く生き延びる名前があれば、それは辞書の隣にある、編集可能な第2の名前空間になってしまうからです。ここには名前空間は1つしかありません。保持しておきたいデータには、<code>[ [ 1 2 3 ] ] 'XS' DEF</code>のようにワードを定義してください。これはまさに辞書が本来するべき仕事です。</p>
                     <h3>名前はワードか束縛のどちらか、両方にはなれない</h3>
                     <p>CoreワードまたはUserワードがすでに持っている名前を束縛することはできず、現在束縛されている名前でワードを定義することもできません。どちらの方向も拒否されるので、ある名前がどちらを経由して解決されたのかを考える必要は決してありません。<code>W</code>、<code>DX</code>、<code>LIMIT</code>のような短い使い捨ての名前は、ここではまさにふさわしいものです。ワード名と違って命名規則の警告の対象にもなりません。これらはローカルであり、そのスコープは目の前の画面の中に収まっているからです。</p>
 
@@ -2359,19 +2359,19 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 10 ADD } &#39;ADD10&#39; DEF
+                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
 5 ADD10</code></td>
                                     <td><code>15/1</code></td>
                                     <td class="notes">定義済みのワードは、その名前で参照される。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>{ 1 } &#39;ADD&#39; DEF</code></td>
+                                    <td><code>[ 1 ] &#39;ADD&#39; DEF</code></td>
                                     <td>error</td>
                                     <td class="notes">Coreは封印されているので、Coreの名前を奪うことはできない。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>{ 10 ADD } &#39;ADD10&#39; DEF
-{ 20 ADD } &#39;ADD10&#39; DEF
+                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
+[ 20 ADD ] &#39;ADD10&#39; DEF
 5 ADD10</code></td>
                                     <td><code>25/1</code></td>
                                     <td class="notes">再定義は、唯一のUserエントリを束縛し直す。ただし他のワードがそれに依存している場合は、<code>DEF</code>が拒否する。</td>
@@ -2460,7 +2460,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] 1 { MUL } FOLD</code></td>
+                                    <td><code>[ 1 2 3 4 ] 1 [ MUL ] FOLD</code></td>
                                     <td><code>24/1</code></td>
                                     <td class="notes">積。和には専用のワード<code>SUM</code>があり、同じ<code>FOLD</code>の形で<code>MIN</code>や<code>MAX</code>を使えば極値になる。</td>
                                 </tr>
@@ -2470,7 +2470,7 @@ FILTER</code></td>
                                     <td class="notes">内積：要素ごとに掛けてから合計する。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A { V MUL SUM } MAP</code></td>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A [ V MUL SUM ] MAP</code></td>
                                     <td><code>[ 17/1 39/1 ]</code></td>
                                     <td class="notes">行列とベクトルの積：行ごとに1つの内積。</td>
                                 </tr>

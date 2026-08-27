@@ -75,12 +75,12 @@ pub fn vector_src() -> impl Strategy<Value = String> {
     })
 }
 
-/// Pushes a single code block (callable).
+/// Pushes a single code-shaped Vector (callable).
 pub fn block_src() -> impl Strategy<Value = String> {
     prop_oneof![
-        Just("{ 1 ADD }".to_string()),
-        Just("{ DUP MUL }".to_string()),
-        Just("{ }".to_string()),
+        Just("[ 1 ADD ]".to_string()),
+        Just("[ DUP MUL ]".to_string()),
+        Just("[ ]".to_string()),
     ]
 }
 
@@ -134,7 +134,7 @@ pub fn effect_free_src() -> impl Strategy<Value = String> {
         irrational_src(),
         vector_src(),
         (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
-        (small(), small()).prop_map(|(a, b)| format!("{{ 1 ADD }} 'INC' DEF {a} INC {b} ADD")),
+        (small(), small()).prop_map(|(a, b)| format!("[ 1 ADD ] 'INC' DEF {a} INC {b} ADD")),
     ]
 }
 
@@ -163,7 +163,7 @@ pub fn serial_outbound_call() -> impl Strategy<Value = (String, String)> {
 // ──────────────────────── Phase 8: child runtimes ───────────────────────────
 
 /// A **deterministic, completing block body** for child-runtime laws: run
-/// standalone and via `{ body } SPAWN AWAIT` it leaves the same final stack
+/// standalone and via `[ body ] SPAWN AWAIT` it leaves the same final stack
 /// (no host effects, no genuine error — domain failures project to NIL and the
 /// child still *completes*, probe finding). Used to pin the law
 /// "AWAIT observes the child's ⟦body⟧ final configuration".
@@ -172,7 +172,7 @@ pub fn completing_block_body() -> impl Strategy<Value = String> {
         (small(), small()).prop_map(|(a, b)| format!("{a} {b} ADD")),
         (small(), small()).prop_map(|(a, b)| format!("{a} {b} MUL")),
         (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
-        small().prop_map(|a| format!("{a} {{ 1 ADD }} EXEC")),
+        small().prop_map(|a| format!("{a} [ 1 ADD ] EXEC")),
         small().prop_map(|a| format!("{a} 0 /")), // div-by-zero → NIL, still completes
         Just("TRUE FALSE AND".to_string()),
         Just("[ 3 1 2 ] 0 GET".to_string()),

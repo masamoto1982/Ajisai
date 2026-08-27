@@ -12,7 +12,7 @@
 use crate::interpreter::Interpreter;
 
 const COUNTDOWN_DEF: &str =
-    "{\n  {\n  { [ 0 ] > | [ 1 ] - DOWN }\n  { IDLE | [ 'done' ] }\n  } COND\n} 'DOWN' DEF";
+    "[\n  [\n  [ [ 0 ] > | [ 1 ] - DOWN ]\n  [ IDLE | [ 'done' ] ]\n  ] COND\n] 'DOWN' DEF";
 
 fn fresh() -> Interpreter {
     Interpreter::new()
@@ -129,11 +129,11 @@ async fn trampoline_records_backward_jumps() {
 
 #[tokio::test]
 async fn unguarded_self_recursion_still_hits_depth_limit() {
-    // `{ REC }` has no base case and no COND guard: it is deliberately NOT
+    // `[ REC ]` has no base case and no COND guard: it is deliberately NOT
     // trampolined, so it must surface the native recursion-depth error rather
     // than spin forever or trap. This pins the boundary of the optimization.
     let mut interp = fresh();
-    interp.execute("{ REC } 'REC' DEF").await.unwrap();
+    interp.execute("[ REC ] 'REC' DEF").await.unwrap();
     let err = interp.execute("REC").await.unwrap_err();
     // SPEC §11.1: the depth guard has its own user-level category — it must
     // not surface as a stringly-typed Custom error.
@@ -151,35 +151,35 @@ async fn unguarded_self_recursion_still_hits_depth_limit() {
 }
 
 // ── Nested-block self-recursion is NOT a tail self-call ────────────────────
-// A code block is data where it is written: `{ FIB } MAP` hands `MAP` a value,
+// A vector is data where it is written: `[ FIB ] MAP` hands `MAP` a value,
 // and `MAP` decides when and how often to run it. So a self-call inside such a
 // block is an ordinary call, never the enclosing word's tail position.
 //
 // The deferral site used to read `in_tail_context` straight off the interpreter,
-// which stayed set while a tail COND clause body ran. `{ FIB } MAP` written in
+// which stayed set while a tail COND clause body ran. `[ FIB ] MAP` written in
 // that body therefore looked like a guarded tail self-call: the site skipped
 // `FIB` for the first element and raised `tail_jump_pending`, which a later
 // frame's cleanup swallowed. The program answered a wrong number with no error
 // and no NIL — the one outcome LANG.FAILURE.TRICHOTOMY rules out. Through
 // `EXEC` the same deferral re-ran the body until the step budget ran out.
 
-const FIB_VIA_MAP: &str = "{\n\
-     {\n\
-     { 2 LT | 1 * }\n\
-     { IDLE | [ 1 2 ] - { FIB } MAP 0 { + } FOLD }\n\
-     } COND } 'FIB' DEF";
+const FIB_VIA_MAP: &str = "[\n\
+     [\n\
+     [ 2 LT | 1 * ]\n\
+     [ IDLE | [ 1 2 ] - [ FIB ] MAP 0 [ + ] FOLD ]\n\
+     ] COND ] 'FIB' DEF";
 
-const COUNT_VIA_EXEC: &str = "{\n\
-     {\n\
-     { 0 LTE | 0 * }\n\
-     { IDLE | 1 - { CNT } EXEC 1 + }\n\
-     } COND } 'CNT' DEF";
+const COUNT_VIA_EXEC: &str = "[\n\
+     [\n\
+     [ 0 LTE | 0 * ]\n\
+     [ IDLE | 1 - [ CNT ] EXEC 1 + ]\n\
+     ] COND ] 'CNT' DEF";
 
 #[tokio::test]
 async fn self_call_inside_a_map_block_recurses() {
     let mut interp = fresh();
     interp.execute(FIB_VIA_MAP).await.unwrap();
-    interp.execute("[ 0 10 ] RANGE { FIB } MAP").await.unwrap();
+    interp.execute("[ 0 10 ] RANGE [ FIB ] MAP").await.unwrap();
     assert_eq!(
         top_string(&interp),
         "[ 0/1 1/1 1/1 2/1 3/1 5/1 8/1 13/1 21/1 34/1 55/1 ]"
@@ -215,11 +215,11 @@ async fn a_tail_self_call_beside_a_block_still_trampolines() {
     let mut interp = fresh();
     interp
         .execute(
-            "{\n\
-             {\n\
-             { 0 LTE | 0 * }\n\
-             { IDLE | [ 1 ] { 1 * } MAP [ 0 ] GET - SUMD }\n\
-             } COND } 'SUMD' DEF",
+            "[\n\
+             [\n\
+             [ 0 LTE | 0 * ]\n\
+             [ IDLE | [ 1 ] [ 1 * ] MAP [ 0 ] GET - SUMD ]\n\
+             ] COND ] 'SUMD' DEF",
         )
         .await
         .unwrap();

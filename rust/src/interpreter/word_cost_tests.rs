@@ -22,7 +22,7 @@ async fn input_driven_arithmetic_is_exactly_linear_in_numeric_work() {
     // attained. It never loops internally (const steps) and touches no
     // collection — measured, `[ 0 400 ] RANGE 2 MUL` charges 401 numericWork
     // and zero collectionWork beyond the RANGE itself.
-    let cost = cost_of("{ ADD } 'A' DEF", "A").await;
+    let cost = cost_of("[ ADD ] 'A' DEF", "A").await;
     assert_eq!(cost.steps, (CostClass::Const, true));
     assert_eq!(cost.numeric, (CostClass::Linear, true));
     assert_eq!(cost.collection, (CostClass::Const, true));
@@ -35,7 +35,7 @@ async fn literal_operands_refine_a_linear_charge_to_const() {
     // un-refined while keeping its exactness witness made the true
     // declaration `cost numeric=const` a hard `error` — a false error, the
     // one thing this model must never produce. The literal operands pin it.
-    let cost = cost_of("{ 1 2 ADD } 'S' DEF", "S").await;
+    let cost = cost_of("[ 1 2 ADD ] 'S' DEF", "S").await;
     assert_eq!(cost.numeric, (CostClass::Const, true));
     assert_eq!(cost.steps, (CostClass::Const, true));
 }
@@ -47,10 +47,10 @@ async fn value_driven_materializer_is_unbounded_over_input_size() {
     // RANGE` charges 340,017 against the very same 2-element operand. Calling
     // that `linear` let a false declaration verify. `word_space` classifies
     // this pair the same way for the same reason.
-    let cost = cost_of("{ RANGE } 'MK' DEF", "MK").await;
+    let cost = cost_of("[ RANGE ] 'MK' DEF", "MK").await;
     assert_eq!(cost.collection, (CostClass::Unbounded, true));
 
-    let fill = cost_of("{ FILL } 'F' DEF", "F").await;
+    let fill = cost_of("[ FILL ] 'F' DEF", "F").await;
     assert_eq!(fill.collection, (CostClass::Unbounded, true));
 }
 
@@ -59,7 +59,7 @@ async fn a_literal_operand_pins_even_a_value_driven_materializer() {
     // The two fixes have to land together: making RANGE `Unbounded` without
     // the refinement would turn the *true* declaration `cost collection=const`
     // on a literal-driven range into a false error instead.
-    let cost = cost_of("{ [ 0 10 ] RANGE } 'K' DEF", "K").await;
+    let cost = cost_of("[ [ 0 10 ] RANGE ] 'K' DEF", "K").await;
     assert_eq!(cost.collection, (CostClass::Const, true));
 }
 
@@ -68,7 +68,7 @@ async fn higher_order_word_is_unbounded_on_every_axis_but_not_exact() {
     // MAP runs a caller-supplied body a data-dependent number of times: the
     // sound upper bound is unbounded on all three axes, but never a proven
     // witness (the body could be trivial) — a note, never a false error.
-    let cost = cost_of("{ [ 1 ] MAP } 'M' DEF", "M").await;
+    let cost = cost_of("[ [ 1 ] MAP ] 'M' DEF", "M").await;
     for axis in [cost.steps, cost.numeric, cost.collection] {
         assert_eq!(axis, (CostClass::Unbounded, false));
     }
@@ -83,7 +83,7 @@ async fn collection_word_is_linear_collection_but_const_numeric_and_steps() {
     // `CostSim`'s `IDENTITY` seed tying at `Const` (`CostBound::join`'s
     // documented "exact is the OR of the two" rule at an equal class,
     // mirroring `SpaceBound::join`), not a claim about SORT specifically.
-    let cost = cost_of("{ SORT } 'S2' DEF", "S2").await;
+    let cost = cost_of("[ SORT ] 'S2' DEF", "S2").await;
     assert_eq!(cost.collection, (CostClass::Linear, true));
     assert_eq!(cost.numeric.0, CostClass::Const);
     assert_eq!(cost.steps.0, CostClass::Const);
@@ -94,14 +94,14 @@ async fn user_word_chain_composes_a_dependency_bound() {
     // A user word wrapping SORT inherits its cost; a word calling that one
     // stays at the same bound (the dependency's bound composes unchanged —
     // Phase 5 does not refine per call site, unlike `word_space`).
-    let cost = cost_of("{ SORT } 'BASE' DEF { BASE } 'WRAP' DEF", "WRAP").await;
+    let cost = cost_of("[ SORT ] 'BASE' DEF [ BASE ] 'WRAP' DEF", "WRAP").await;
     assert_eq!(cost.collection, (CostClass::Linear, true));
     assert_eq!(cost.numeric.0, CostClass::Const);
 }
 
 #[tokio::test]
 async fn recursion_is_conservative_unbounded_on_every_axis() {
-    let cost = cost_of("{ REC } 'REC' DEF", "REC").await;
+    let cost = cost_of("[ REC ] 'REC' DEF", "REC").await;
     for axis in [cost.steps, cost.numeric, cost.collection] {
         assert_eq!(axis, (CostClass::Unbounded, false));
     }
@@ -109,7 +109,7 @@ async fn recursion_is_conservative_unbounded_on_every_axis() {
 
 #[tokio::test]
 async fn unresolved_dependency_degrades_to_conservative_cost() {
-    let cost = cost_of("{ [ 0 10 ] DUP RANGE } 'U' DEF", "U").await;
+    let cost = cost_of("[ [ 0 10 ] DUP RANGE ] 'U' DEF", "U").await;
     for axis in [cost.steps, cost.numeric, cost.collection] {
         assert_eq!(axis, (CostClass::Unbounded, false));
     }

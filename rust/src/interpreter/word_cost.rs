@@ -257,11 +257,9 @@ impl CostSim {
 
     pub(crate) fn feed_structural(&mut self, token: &Token) {
         match token {
-            Token::BlockStart => self.block_depth += 1,
-            Token::BlockEnd => self.block_depth = self.block_depth.saturating_sub(1),
             // `^` and `|` branch along a path this linear walk cannot
             // follow, exactly as `SpaceSim::feed_structural` treats them.
-            Token::NilCoalesce | Token::CondClauseSep if self.block_depth == 0 => {
+            Token::NilCoalesce | Token::CondClauseSep => {
                 self.bound.join(CostBound::CONSERVATIVE);
             }
             _ => {}
@@ -269,9 +267,6 @@ impl CostSim {
     }
 
     pub(crate) fn feed_unresolved(&mut self) {
-        if self.block_depth > 0 {
-            return;
-        }
         self.bound.join(CostBound::CONSERVATIVE);
     }
 
@@ -280,8 +275,6 @@ impl CostSim {
     /// re-deriving it from a second copy of the slot stack.
     pub(crate) fn feed_word(&mut self, dep: &DepCost, operands: OperandProfile) {
         let (all_lit, all_traced, size) = match operands {
-            // Attributed at the higher-order word that runs the block, not here.
-            OperandProfile::Skipped => return,
             // Counted, but no refinement and no witness is justified.
             OperandProfile::Unknown => (false, false, CostClass::Unbounded),
             OperandProfile::Known {

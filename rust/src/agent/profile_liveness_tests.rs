@@ -182,7 +182,7 @@ mod profile_liveness_tests {
     /// and quadratic in the width it reaches by construction.
     fn widening_chain(multiplications: usize) -> String {
         format!(
-            "{{ {} * }} 'M' DEF 1{}",
+            "[ {} * ] 'M' DEF 1{}",
             "9".repeat(4096),
             " M".repeat(multiplications)
         )
@@ -283,7 +283,7 @@ mod profile_liveness_tests {
         // is for.
         for profile in [mcp_profile(), playground_profile()] {
             let repeated = format!(
-                "{{ {} }} 'C' DEF{}",
+                "[ {} ] 'C' DEF{}",
                 algebraic_cascade(profile.cumulative_cascade_factors),
                 " C".repeat(profile.cumulative_cascade_reps)
             );

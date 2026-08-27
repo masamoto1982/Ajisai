@@ -144,7 +144,6 @@ pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
 /// execution — this only front-loads the same failure for `check`.
 pub(crate) fn check_structure(tokens: &[Token]) -> Result<(), String> {
     let mut vector_depth: i64 = 0;
-    let mut block_depth: i64 = 0;
     for token in tokens {
         match token {
             Token::VectorStart => vector_depth += 1,
@@ -154,21 +153,11 @@ pub(crate) fn check_structure(tokens: &[Token]) -> Result<(), String> {
                     return Err("Unexpected vector end".to_string());
                 }
             }
-            Token::BlockStart => block_depth += 1,
-            Token::BlockEnd => {
-                block_depth -= 1;
-                if block_depth < 0 {
-                    return Err("Unexpected code block end".to_string());
-                }
-            }
             _ => {}
         }
     }
     if vector_depth > 0 {
         return Err("Unclosed vector".to_string());
-    }
-    if block_depth > 0 {
-        return Err("Unclosed code block".to_string());
     }
     Ok(())
 }

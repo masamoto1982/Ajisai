@@ -51,7 +51,7 @@ describe('formatAjisaiSource', () => {
     });
 
     test('is idempotent on already-canonical input', () => {
-        const canonical = '{ [ 1 ] [ 2 ] + } \'ADD12\' DEF';
+        const canonical = '[ [ 1 ] [ 2 ] + ] \'ADD12\' DEF';
         expect(formatAjisaiSource(canonical)).toBe(canonical);
     });
 
@@ -80,23 +80,23 @@ describe('formatAjisaiSource', () => {
 
     test('indents the body of a multi-line block and dedents its close', () => {
         const input = [
-            '{',
-            '{ [ 5 ] > | [ \'big\' ] }',
-            '{ IDLE   | [ \'small\' ] } COND',
-            '} \'SIZE\' DEF',
+            '[',
+            '[ [ 5 ] > | [ \'big\' ] ]',
+            '[ IDLE   | [ \'small\' ] ] COND',
+            '] \'SIZE\' DEF',
         ].join('\n');
         const expected = [
-            '{',
-            '  { [ 5 ] > | [ \'big\' ] }',
-            '  { IDLE | [ \'small\' ] } COND',
-            '} \'SIZE\' DEF',
+            '[',
+            '  [ [ 5 ] > | [ \'big\' ] ]',
+            '  [ IDLE | [ \'small\' ] ] COND',
+            '] \'SIZE\' DEF',
         ].join('\n');
         expect(formatAjisaiSource(input)).toBe(expected);
     });
 
     test('indents nested multi-line blocks by depth', () => {
-        const input = '{\n{\n[ 1 ]\n}\n}';
-        const expected = '{\n  {\n    [ 1 ]\n  }\n}';
+        const input = '[\n[\n[ 1 ]\n]\n]';
+        const expected = '[\n  [\n    [ 1 ]\n  ]\n]';
         expect(formatAjisaiSource(input)).toBe(expected);
     });
 
@@ -127,7 +127,7 @@ describe('formatAjisaiSource', () => {
     });
 
     test('formatting is idempotent on a multi-line block', () => {
-        const messy = '{\n{ [ 5 ] >|[ \'big\' ] }\n} \'SIZE\' DEF';
+        const messy = '[\n[ [ 5 ] >|[ \'big\' ] ]\n] \'SIZE\' DEF';
         const once = formatAjisaiSource(messy);
         expect(formatAjisaiSource(once)).toBe(once);
     });
@@ -139,24 +139,24 @@ describe('formatAjisaiSource', () => {
 // its guards.
 describe('formatAjisaiSource COND clause splitting', () => {
     test('splits a one-line COND into one clause per line', () => {
-        expect(formatAjisaiSource('{ { 2 LT | 1 * } { IDLE | 1 - FOO } COND } \'FOO\' DEF'))
-            .toBe("{ { 2 LT | 1 * }\n  { IDLE | 1 - FOO } COND } 'FOO' DEF");
+        expect(formatAjisaiSource('[ [ 2 LT | 1 * ] [ IDLE | 1 - FOO ] COND ] \'FOO\' DEF'))
+            .toBe("[ [ 2 LT | 1 * ]\n  [ IDLE | 1 - FOO ] COND ] 'FOO' DEF");
     });
 
     test('a single clause on a line is left alone', () => {
-        const source = "5\n{ 3 LT | 'small' }\n{ IDLE | 'big' }\nCOND";
+        const source = "5\n[ 3 LT | 'small' ]\n[ IDLE | 'big' ]\nCOND";
         expect(formatAjisaiSource(source)).toBe(source);
     });
 
-    test('an ordinary block with no bar is not a clause and is not split', () => {
-        expect(formatAjisaiSource('[ 1 2 ] { 1 * } MAP { 2 * } MAP'))
-            .toBe('[ 1 2 ] { 1 * } MAP { 2 * } MAP');
+    test('an ordinary vector with no bar is not a clause and is not split', () => {
+        expect(formatAjisaiSource('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP'))
+            .toBe('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP');
     });
 
     test('clauses inside a word body are split, wherever they are nested', () => {
         // Every clause that *begins* on the physical line gets its own,
         // however deep, so the form is the same at every nesting level.
-        expect(formatAjisaiSource("{ { A | 1 } { B | 2 } COND } 'W' DEF"))
-            .toBe("{ { A | 1 }\n  { B | 2 } COND } 'W' DEF");
+        expect(formatAjisaiSource("[ [ A | 1 ] [ B | 2 ] COND ] 'W' DEF"))
+            .toBe("[ [ A | 1 ]\n  [ B | 2 ] COND ] 'W' DEF");
     });
 });

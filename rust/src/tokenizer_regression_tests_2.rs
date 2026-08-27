@@ -252,19 +252,21 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_code_block_tokens() {
-        let result = tokenize("{ [ 2 ] * }").unwrap();
-        assert_eq!(result[0], Token::BlockStart);
-        assert_eq!(result[result.len() - 1], Token::BlockEnd);
+    fn test_brace_is_rejected_as_source() {
+        let result = tokenize("{ [ 2 ] * }");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
-    fn test_code_block_def_syntax() {
-        let result = tokenize("{ [ 2 ] * } 'DOUBLE' DEF").unwrap();
-        assert_eq!(result[0], Token::BlockStart);
-        assert_eq!(result[5], Token::BlockEnd);
-        assert!(matches!(&result[6], Token::String(s) if s.as_ref() == "DOUBLE"));
-        assert!(matches!(&result[7], Token::Symbol(s) if s.as_ref() == "DEF"));
+    fn test_brace_is_rejected_in_def_syntax() {
+        let result = tokenize("{ [ 2 ] * } 'DOUBLE' DEF");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
@@ -301,41 +303,25 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_multiline_code_block_allowed() {
-        // The single-line block constraint was removed: a `{ }` body may now
-        // span multiple lines, with each internal line break preserved as a
-        // statement separator inside the code block.
-        let input = "{ KEEP [ 1 ] =\n[ 10 ] } 'CHECK_ONE' DEF";
+    fn test_multiline_vector_body_allowed() {
+        // A `[ ]` body may span multiple lines, with each internal line break
+        // preserved as a statement separator inside it.
+        let input = "[ KEEP [ 1 ] =\n[ 10 ] ] 'CHECK_ONE' DEF";
         let result = tokenize(input);
-        assert!(result.is_ok(), "multi-line code block should tokenize");
+        assert!(result.is_ok(), "multi-line vector body should tokenize");
         assert!(
             result.unwrap().contains(&crate::types::Token::LineBreak),
             "internal line break must be preserved as a statement separator"
         );
     }
+
     #[test]
-    fn test_close_paren_rejected_after_brace() {
-        let result = tokenize("{ [ 2 ] * )");
+    fn test_open_paren_rejected_before_bracket_close() {
+        let result = tokenize("( [ 2 ] * ]");
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
             .contains("not a valid Ajisai source character"));
-    }
-
-    #[test]
-    fn test_open_paren_rejected_before_brace_close() {
-        let result = tokenize("( [ 2 ] * }");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
-    }
-
-    #[test]
-    fn test_mismatched_bracket_brace() {
-        let result = tokenize("[ 1 2 3 }");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Mismatched brackets"));
     }
 
     #[test]
@@ -348,15 +334,15 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_mismatched_brace_bracket() {
-        let result = tokenize("{ [ 2 ] * ]");
+    fn test_stray_close_bracket_rejected() {
+        let result = tokenize("[ 1 2 3 ] ]");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Mismatched brackets"));
+        assert!(result.unwrap_err().contains("Unexpected ']'"));
     }
 
     #[test]
-    fn test_matched_braces_ok() {
-        let result = tokenize("{ [ 2 ] * }");
+    fn test_matched_brackets_ok() {
+        let result = tokenize("[ [ 2 ] * ]");
         assert!(result.is_ok());
     }
 
@@ -371,7 +357,7 @@ mod tokenizer_regression_tests_2 {
 
     #[test]
     fn test_paren_rejected_in_nested_position() {
-        let result = tokenize("{ ( [ 1 ] + ) }");
+        let result = tokenize("[ ( [ 1 ] + ) ]");
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
@@ -379,10 +365,10 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_mismatched_nested_brackets() {
-        let result = tokenize("{ [ 1 ] + ]");
+    fn test_unclosed_nested_bracket_rejected() {
+        let result = tokenize("[ [ 1 ] +");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Mismatched brackets"));
+        assert!(result.unwrap_err().contains("Unclosed"));
     }
 
     #[test]

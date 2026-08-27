@@ -2,7 +2,7 @@
 //! holding.
 //!
 //! The case these exist for: the work meter refuses
-//! `[ 1 21000 ] RANGE 1 { * } FOLD` and names `numericWork`, but the stack at
+//! `[ 1 21000 ] RANGE 1 [ * ] FOLD` and names `numericWork`, but the stack at
 //! that moment holds a 21,000-element vector and an 81,649-digit partial
 //! product. Serialized in full that is 5.7 MB, which a host response ceiling
 //! turns into "your answer was too big" — the opposite of what the program
@@ -32,7 +32,7 @@ mod error_stack_tests {
     }
 
     /// The source whose refusal used to be unreportable.
-    const RUNAWAY_FOLD: &str = "[ 1 21000 ] RANGE 1 { * } FOLD";
+    const RUNAWAY_FOLD: &str = "[ 1 21000 ] RANGE 1 [ * ] FOLD";
 
     #[tokio::test]
     async fn a_refusal_reports_its_resource_rather_than_its_residue() {
@@ -138,9 +138,9 @@ mod error_stack_tests {
     }
 
     /// Eighteen 256-term algebraic values, refused by the work meter.
-    const REPEATED_CASCADE: &str = "{ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * \
+    const REPEATED_CASCADE: &str = "[ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * \
 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * \
-47 SQRT 53 SQRT + * } 'C' DEF C C C C C C C C C C C C C C C C C C C";
+47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C";
 
     #[tokio::test]
     async fn eliding_an_algebraic_value_drops_the_part_that_is_large() {

@@ -351,7 +351,7 @@
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -364,7 +364,7 @@
       "language": "en",
       "selectedTool": "check",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -377,20 +377,20 @@
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         }
       ],
       "language": "ja",
       "selectedTool": "check",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -403,7 +403,7 @@
         {
           "name": "infer_contracts",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -416,7 +416,7 @@
       "language": "en",
       "selectedTool": "infer_contracts",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -429,7 +429,7 @@
         {
           "name": "check",
           "arguments": {
-            "source": "{ [ 1 ] + } 'INC' DEF"
+            "source": "[ [ 1 ] + ] 'INC' DEF"
           }
         },
         {
@@ -442,7 +442,7 @@
       "language": "ja",
       "selectedTool": "check",
       "arguments": {
-        "source": "{ [ 1 ] + } 'INC' DEF"
+        "source": "[ [ 1 ] + ] 'INC' DEF"
       },
       "observed": {
         "toolCalls": 2,
@@ -1648,7 +1648,7 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[1 2 3 4] 1 { MUL } FOLD"
+            "source": "[1 2 3 4] 1 [ MUL ] FOLD"
           }
         },
         {
@@ -1661,7 +1661,7 @@
       "language": "ja",
       "selectedTool": "compute",
       "arguments": {
-        "source": "[1 2 3 4] 1 { MUL } FOLD"
+        "source": "[1 2 3 4] 1 [ MUL ] FOLD"
       },
       "observed": {
         "toolCalls": 2,
@@ -1680,7 +1680,7 @@
         {
           "name": "compute",
           "arguments": {
-            "source": "[1 2 3] { 2 EQ } ANY"
+            "source": "[1 2 3] [ 2 EQ ] ANY"
           }
         }
       ],

@@ -63,14 +63,14 @@
       "declared": 100000,
       "under": {
         "kind": "source",
-        "source": "{\n{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] }\n} COND\n} 'DOWN' DEF\n1000 DOWN",
+        "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n1000 DOWN",
         "expect": {
           "/status": "ok"
         }
       },
       "over": {
         "kind": "source",
-        "source": "{\n{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] }\n} COND\n} 'DOWN' DEF\n200000 DOWN",
+        "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN",
         "expect": {
           "/status": "error",
           "/diagnosis/why": "resourceLimit",

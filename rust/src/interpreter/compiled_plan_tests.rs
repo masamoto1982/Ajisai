@@ -33,14 +33,17 @@ fn compiled_plan_invalidates_on_dictionary_epoch_change() {
     assert!(!is_plan_valid(&plan, &interp));
 }
 #[test]
-fn compile_collects_code_block_literal() {
+fn compile_collects_vector_literal() {
     let interp = Interpreter::new();
     let wd = test_word(vec![
-        Token::BlockStart,
+        Token::VectorStart,
         Token::Number("1".into()),
         Token::Symbol("+".into()),
-        Token::BlockEnd,
+        Token::VectorEnd,
     ]);
     let plan = compile_word_definition(&wd, &interp);
-    assert!(matches!(plan.lines[0].ops[0], CompiledOp::PushCodeBlock(_)));
+    assert!(matches!(
+        plan.lines[0].ops[0],
+        CompiledOp::PushVectorLiteral(_, _)
+    ));
 }

@@ -104,7 +104,7 @@ This numeric grammar is the single definition of what text denotes a number. A c
 </p>
 
 <p>
-Whitespace separates tokens and is otherwise insignificant, with one exception, which is stated here so that it is not discovered by hitting it: inside a definition body a line break at the body's own level separates statements. A break written inside a <code>{ }</code> block or a <code>[ ]</code> vector is interior to that value and separates nothing, so a multi-line block is one statement however many lines it spans. <code>COND</code> imposes no layout rule of its own: one <code>|</code> clause per line is the canonical form and the formatter produces it, but a <code>COND</code> written flat denotes the same program.
+Whitespace separates tokens and is otherwise insignificant, with one exception, which is stated here so that it is not discovered by hitting it: inside a definition body a line break at the body's own level separates statements. A break written inside a <code>[ ]</code> vector is interior to that value and separates nothing, so a multi-line vector is one statement however many lines it spans. <code>COND</code> imposes no layout rule of its own: one <code>|</code> clause per line is the canonical form and the formatter produces it, but a <code>COND</code> written flat denotes the same program.
 </p>
 
 <p>
@@ -134,11 +134,11 @@ If \(D\) is desugaring and \(O\) observation, then \(O(p)=O(D(p))\) for every we
 <h3 id="lang-source-code">LANG.SOURCE.CODE — Code values</h3>
 
 <p>
-Code is a Vector holding source for later evaluation — not a distinct domain from data, but the same Vector domain (LANG.VALUES.DISJOINT) read as executable by a Word whose contract requests it. <code>{ }</code> and <code>[ ]</code> are two spellings of the identical construction: <code>{ 1 2 + }</code> and <code>[ 1 2 + ]</code> denote one value (LANG.VALUES.DENOTATION), and either spelling is equally executable. A program's choice of bracket is presentation, the way clause layout already is (LANG.SOURCE.DESUGAR); it is not read back out of the value once built.
+Code is a Vector holding source for later evaluation — not a distinct domain from data, but the same Vector domain (LANG.VALUES.DISJOINT) read as executable by a Word whose contract requests it. <code>[ ]</code> is the sole bracket, for both: <code>[ 1 2 + ]</code> is equally a data literal and, wherever a Word's contract requests it, executable code. A value's construction history is not part of it (LANG.VALUES.DENOTATION), so nothing about how a Vector came to exist marks it as "code" or "data" ahead of use.
 </p>
 
 <p>
-Producing, storing, displaying, and evaluating a Vector as code are distinct operations regardless of which spelling built it. Quoted code is not eagerly executed: evaluation occurs only through a Word whose contract requests it — <code>EXEC</code>, <code>COND</code>, and the higher-order family — never merely by building or holding the value. A bare name written where a Vector element is being collected denotes a Symbol (LANG.VALUES.VECTOR) — data until something executes it — so a name is not resolved merely by appearing inside a literal, however the literal is bracketed.
+Producing, storing, displaying, and evaluating a Vector as code are distinct operations. Quoted code is not eagerly executed: evaluation occurs only through a Word whose contract requests it — <code>EXEC</code>, <code>COND</code>, and the higher-order family — never merely by building or holding the value. A bare name written where a Vector element is being collected denotes a Symbol (LANG.VALUES.VECTOR) — data until something executes it — so a name is not resolved merely by appearing inside a literal.
 </p>
 
 <h3 id="lang-source-frame">LANG.SOURCE.FRAME — What a block sees</h3>
@@ -304,7 +304,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, and <code>ALL</code> evaluate their code operand (LANG.SOURCE.CODE) once per visited element, in index order, with the block's stack effect isolated to its own operands.</p>
 
-<p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state. The block's single result is the mapped element as it stands, whatever domain it is in: a Vector of one element is a Vector of one element (LANG.VALUES.DISJOINT), so <code>[ 1 2 ] { 1 COLLECT } MAP</code> answers <code>[ [ 1 ] [ 2 ] ]</code> and no Word unwraps a result on the grounds of its length.</p>
+<p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state. The block's single result is the mapped element as it stands, whatever domain it is in: a Vector of one element is a Vector of one element (LANG.VALUES.DISJOINT), so <code>[ 1 2 ] [ 1 COLLECT ] MAP</code> answers <code>[ [ 1 ] [ 2 ] ]</code> and no Word unwraps a result on the grounds of its length.</p>
 
 <h3 id="lang-collections-budget">LANG.COLLECTIONS.BUDGET — Materialization</h3>
 

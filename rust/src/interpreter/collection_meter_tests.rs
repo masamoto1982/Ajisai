@@ -80,7 +80,7 @@ mod collection_meter_tests {
         // Hash` turned that scan into one hash-and-lookup per element, so the
         // charge now tracks element count; distinctness only adds the small,
         // linear cost of copying every new value into the result.
-        let uniform = charged_by("[ 0 3999 ] RANGE { 1 MOD } MAP UNIQUE").await;
+        let uniform = charged_by("[ 0 3999 ] RANGE [ 1 MOD ] MAP UNIQUE").await;
         let distinct = charged_by("[ 0 3999 ] RANGE UNIQUE").await;
         assert!(
             distinct < uniform * 3,
@@ -111,7 +111,7 @@ mod collection_meter_tests {
         // Equality on a nested element is a loop over that element, so "one
         // element" is only a unit of work when the elements are scalars.
         let flat = charged_by("[ 0 199 ] RANGE UNIQUE").await;
-        let nested = charged_by("[ 0 199 ] RANGE { [ 1 16 ] RANGE + } MAP UNIQUE").await;
+        let nested = charged_by("[ 0 199 ] RANGE [ [ 1 16 ] RANGE + ] MAP UNIQUE").await;
         assert!(
             nested > flat * 8,
             "sixteen leaves per element must cost more than one: {nested} \
@@ -132,7 +132,7 @@ mod collection_meter_tests {
         // width-independent `COLLECTION_COPY_UNITS`) no longer gets diluted
         // by an O(n) amplification that hit both sides equally.
         let rational = charged_by_word("[ 2 121 ] RANGE", "UNIQUE").await;
-        let algebraic = charged_by_word("[ 2 121 ] RANGE { SQRT } MAP", "UNIQUE").await;
+        let algebraic = charged_by_word("[ 2 121 ] RANGE [ SQRT ] MAP", "UNIQUE").await;
         assert!(
             algebraic > rational * 30,
             "an algebraic element must be priced as one: {algebraic} against \
@@ -146,9 +146,9 @@ mod collection_meter_tests {
         // width of an element moves. Multiplying by the wide literal is what
         // makes the elements genuine BigInts rather than machine words — the
         // step where the measured cost jumps twelvefold.
-        let narrow = charged_by_word("[ 1 200 ] RANGE { 2 MOD 1 + } MAP", "UNIQUE").await;
+        let narrow = charged_by_word("[ 1 200 ] RANGE [ 2 MOD 1 + ] MAP", "UNIQUE").await;
         let wide = charged_by_word(
-            &format!("[ 1 200 ] RANGE {{ 2 MOD 1 + {} * }} MAP", "9".repeat(512)),
+            &format!("[ 1 200 ] RANGE [ 2 MOD 1 + {} * ] MAP", "9".repeat(512)),
             "UNIQUE",
         )
         .await;

@@ -21,7 +21,7 @@ use super::word_contract_flow::FlowSim;
 use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
 };
-use super::word_contract_widen::VectorScope;
+use super::word_contract_widen::{classify_vector_positions, LiteralContext};
 use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
@@ -114,7 +114,7 @@ fn leaf_cache_key(word_identity: String) -> WordContractCacheKey {
 }
 
 impl WordContract {
-    fn conservative(key: WordContractCacheKey) -> Self {
+    pub(crate) fn conservative(key: WordContractCacheKey) -> Self {
         Self {
             flow: ContractFlow::Dynamic,
             purity: ContractPurity::Effectful,
@@ -197,7 +197,7 @@ impl From<MassContract> for ContractFlow {
 }
 
 #[derive(Clone)]
-struct AccumulatedContract {
+pub(crate) struct AccumulatedContract {
     flow: ContractFlow,
     purity: ContractPurity,
     effects: Vec<String>,
@@ -206,7 +206,7 @@ struct AccumulatedContract {
     order_sensitivity: OrderSensitivity,
     nil_behavior: NilBehavior,
     confidence: ContractConfidence,
-    gaps: Vec<GapCode>,
+    pub(crate) gaps: Vec<GapCode>,
 }
 
 impl AccumulatedContract {
@@ -224,7 +224,7 @@ impl AccumulatedContract {
         }
     }
 
-    fn widen_with(&mut self, other: &WordContract) {
+    pub(crate) fn widen_with(&mut self, other: &WordContract) {
         self.purity = widen_purity(self.purity, other.purity);
         for effect in &other.effects {
             if !self.effects.contains(effect) {
@@ -242,7 +242,7 @@ impl AccumulatedContract {
     }
 }
 
-fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
+pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
     let key = leaf_cache_key(format!("static:{}:{}", name, def.registration_order));
     let Some(meta) = get_coreword_metadata(name) else {
         return WordContract::conservative(key);
@@ -334,26 +334,35 @@ impl Interpreter {
         let mut acc = AccumulatedContract::from_contract(&seed);
         let mut sim = SpaceSim::new();
         let mut cost_sim = CostSim::new();
-        let mut scope = VectorScope::new();
         let mut complete = true;
 
         'lines: for line in def.lines.iter() {
-            for token in line.body_tokens.iter() {
+            let contexts = classify_vector_positions(&line.body_tokens);
+            for (idx, token) in line.body_tokens.iter().enumerate() {
                 match token {
                     Token::Number(_) | Token::String(_) => {
                         flow.feed_literal();
                         sim.feed_literal();
                         cost_sim.feed_literal();
                     }
-                    // A vector-literal interior is data (`[ 'a' PRINT 'b' ]`
-                    // is `[ 'a' 'PRINT' 'b' ]`, PRINT never resolves or
-                    // runs): treated exactly like a Number/String literal,
-                    // not attempted as a call, so it makes no contribution to
-                    // `acc` at all — see `word_contract_widen.rs`.
-                    Token::Symbol(_) if scope.in_vector_literal() => {
+                    // A vector-literal interior pushes one opaque value as
+                    // far as arity/space/cost are concerned, whatever it
+                    // contains (`word_contract_widen.rs`). Whether the
+                    // Symbol itself ever runs — and so contributes to `acc`
+                    // — depends on whether this `[ ]` is inert data or a
+                    // higher-order Word's code operand.
+                    Token::Symbol(symbol) if contexts[idx].in_vector_literal() => {
                         flow.feed_literal();
                         sim.feed_literal();
                         cost_sim.feed_literal();
+                        if contexts[idx] == LiteralContext::Code {
+                            self.widen_with_code_operand_symbol(
+                                symbol,
+                                visiting,
+                                &mut acc,
+                                &mut complete,
+                            );
+                        }
                     }
                     Token::Symbol(symbol) => {
                         let canonical =
@@ -406,15 +415,12 @@ impl Interpreter {
                     }
                     Token::VectorStart
                     | Token::VectorEnd
-                    | Token::BlockStart
-                    | Token::BlockEnd
                     | Token::NilCoalesce
                     | Token::CondClauseSep
                     | Token::LineBreak => {
                         flow.feed_structural(token);
                         sim.feed_structural(token);
                         cost_sim.feed_structural(token);
-                        scope.feed_structural(token);
                     }
                 }
             }
@@ -461,7 +467,11 @@ impl Interpreter {
         Some(contract)
     }
 
-    fn contract_cache_key(&self, name: &str, def: &WordDefinition) -> WordContractCacheKey {
+    pub(crate) fn contract_cache_key(
+        &self,
+        name: &str,
+        def: &WordDefinition,
+    ) -> WordContractCacheKey {
         let mut dependency_identities: Vec<String> = def
             .dependencies
             .iter()

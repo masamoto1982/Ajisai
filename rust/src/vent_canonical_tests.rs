@@ -88,12 +88,6 @@ async fn vent_canonical_skips_balanced_vector_group() {
 }
 
 #[tokio::test]
-async fn vent_canonical_skips_balanced_block_group() {
-    assert_eq!(display(&run_ok("1 ^ { 2 3 ADD }").await), "1/1");
-    assert_eq!(display(&run_ok("1 VENT { 2 3 ADD }").await), "1/1");
-}
-
-#[tokio::test]
 async fn vent_canonical_skips_nested_group_atomically() {
     assert_eq!(display(&run_ok("1 ^ [ [ 2 ] 3 ]").await), "1/1");
     assert_eq!(display(&run_ok("1 VENT [ [ 2 ] 3 ]").await), "1/1");

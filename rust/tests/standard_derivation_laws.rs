@@ -182,13 +182,13 @@ async fn collection_standards_have_kernel_only_witnesses() {
         // NIL.
         (
             "[ 5 7 9 ] 7 INDEX-OF",
-            "[ 5 7 9 ] { { [ 0 ] GET 7 EQ } { 0 } { [ 1 ] GET 7 EQ } { 1 } \
-             { [ 2 ] GET 7 EQ } { 2 } { IDLE } { NIL } } COND",
+            "[ 5 7 9 ] [ [ [ 0 ] GET 7 EQ ] [ 0 ] [ [ 1 ] GET 7 EQ ] [ 1 ] \
+             [ [ 2 ] GET 7 EQ ] [ 2 ] [ IDLE ] [ NIL ] ] COND",
         ),
         (
             "[ 5 7 9 ] 4 INDEX-OF",
-            "[ 5 7 9 ] { { [ 0 ] GET 4 EQ } { 0 } { [ 1 ] GET 4 EQ } { 1 } \
-             { [ 2 ] GET 4 EQ } { 2 } { IDLE } { NIL } } COND",
+            "[ 5 7 9 ] [ [ [ 0 ] GET 4 EQ ] [ 0 ] [ [ 1 ] GET 4 EQ ] [ 1 ] \
+             [ [ 2 ] GET 4 EQ ] [ 2 ] [ IDLE ] [ NIL ] ] COND",
         ),
     ] {
         equivalent(native, witness).await;
@@ -221,12 +221,12 @@ async fn text_standards_have_kernel_only_witnesses() {
 #[tokio::test]
 async fn sum_is_the_addition_fold() {
     for (native, witness) in [
-        ("[ 1 2 3 4 ] SUM", "[ 1 2 3 4 ] 0 { ADD } FOLD"),
-        ("[ ] SUM", "[ ] 0 { ADD } FOLD"),
-        ("[ 1/2 1/3 ] SUM", "[ 1/2 1/3 ] 0 { ADD } FOLD"),
+        ("[ 1 2 3 4 ] SUM", "[ 1 2 3 4 ] 0 [ ADD ] FOLD"),
+        ("[ ] SUM", "[ ] 0 [ ADD ] FOLD"),
+        ("[ 1/2 1/3 ] SUM", "[ 1/2 1/3 ] 0 [ ADD ] FOLD"),
         (
             "[ [ 1 2 ] [ 3 4 ] ] SUM",
-            "[ [ 1 2 ] [ 3 4 ] ] 0 { ADD } FOLD",
+            "[ [ 1 2 ] [ 3 4 ] ] 0 [ ADD ] FOLD",
         ),
     ] {
         equivalent(native, witness).await;

@@ -72,8 +72,8 @@ proptest! {
     #[test]
     fn map_identity(xs in vec_ne()) {
         let v = vlit(&xs);
-        assert_law("map-id-empty-block", &format!("{v} {{ }} MAP"), &v);
-        assert_law("map-id-dot-block", &format!("{v} {{ }} MAP"), &v);
+        assert_law("map-id-empty-block", &format!("{v} [ ] MAP"), &v);
+        assert_law("map-id-dot-block", &format!("{v} [ ] MAP"), &v);
     }
 
     /// Map fusion `MAP g ∘ MAP f = MAP (g∘f)` (functoriality of the lift).
@@ -82,8 +82,8 @@ proptest! {
         let v = vlit(&xs);
         assert_law(
             "map-fusion",
-            &format!("{v} {{ 2 * }} MAP {{ 1 + }} MAP"),
-            &format!("{v} {{ 2 * 1 + }} MAP"),
+            &format!("{v} [ 2 * ] MAP [ 1 + ] MAP"),
+            &format!("{v} [ 2 * 1 + ] MAP"),
         );
     }
 
@@ -94,7 +94,7 @@ proptest! {
     fn fold_add_catamorphism((a, b, c) in triple()) {
         assert_law(
             "fold-add",
-            &format!("[ {a} {b} {c} ] 0 {{ ADD }} FOLD"),
+            &format!("[ {a} {b} {c} ] 0 [ ADD ] FOLD"),
             &format!("{a} {b} ADD {c} ADD"),
         );
     }
@@ -104,7 +104,7 @@ proptest! {
     fn fold_mul_catamorphism((a, b, c) in triple()) {
         assert_law(
             "fold-mul",
-            &format!("[ {a} {b} {c} ] 1 {{ MUL }} FOLD"),
+            &format!("[ {a} {b} {c} ] 1 [ MUL ] FOLD"),
             &format!("{a} {b} MUL {c} MUL"),
         );
     }
@@ -114,7 +114,7 @@ proptest! {
     /// `EXEC` of a block is its inline expansion.
     #[test]
     fn exec_is_inline(a in small(), b in small()) {
-        assert_law("exec-inline", &format!("{a} {b} {{ ADD }} EXEC"), &format!("{a} {b} ADD"));
+        assert_law("exec-inline", &format!("{a} {b} [ ADD ] EXEC"), &format!("{a} {b} ADD"));
     }
 }
 
@@ -125,8 +125,8 @@ fn filter_is_idempotent() {
     for v in ["[ 1 2 3 4 5 ]", "[ 5 4 3 2 1 ]", "[ 3 1 4 1 5 ]"] {
         assert_law(
             "filter-idempotent",
-            &format!("{v} {{ 2 > }} FILTER {{ 2 > }} FILTER"),
-            &format!("{v} {{ 2 > }} FILTER"),
+            &format!("{v} [ 2 > ] FILTER [ 2 > ] FILTER"),
+            &format!("{v} [ 2 > ] FILTER"),
         );
     }
 }
@@ -136,8 +136,8 @@ fn filter_predicates_commute() {
     for v in ["[ 1 2 3 4 5 ]", "[ 5 4 3 2 1 ]"] {
         assert_law(
             "filter-commute",
-            &format!("{v} {{ 2 > }} FILTER {{ 4 < }} FILTER"),
-            &format!("{v} {{ 4 < }} FILTER {{ 2 > }} FILTER"),
+            &format!("{v} [ 2 > ] FILTER [ 4 < ] FILTER"),
+            &format!("{v} [ 4 < ] FILTER [ 2 > ] FILTER"),
         );
     }
 }
@@ -154,8 +154,8 @@ fn all_any_de_morgan() {
     for (v, p) in cases {
         assert_law(
             &format!("all-is-not-any-not[{v};{p}]"),
-            &format!("{v} {{ {p} }} ALL"),
-            &format!("{v} {{ {p} NOT }} ANY NOT"),
+            &format!("{v} [ {p} ] ALL"),
+            &format!("{v} [ {p} NOT ] ANY NOT"),
         );
     }
 }

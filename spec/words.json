@@ -2302,9 +2302,9 @@
         "summary": "Apply a code block to each element of a vector.",
         "hover": "MAP — apply block to each element",
         "lookup": "Apply a code block to each element of a vector.",
-        "syntax": "[ 1 2 3 ] { 2 MUL } MAP",
+        "syntax": "[ 1 2 3 ] [ 2 MUL ] MAP",
         "role": "Higher-order primitive: Apply a code block to each element of a vector.",
-        "stackEffect": "[ vec ] { body } -> [ mapped ]"
+        "stackEffect": "[ vec ] [ body ] -> [ mapped ]"
       },
       "executorKey": "Map",
       "effects": [],
@@ -2355,9 +2355,9 @@
         "summary": "Keep only the elements for which a predicate block returns TRUE.",
         "hover": "FILTER — keep elements matching predicate",
         "lookup": "Keep only the elements for which a predicate block returns TRUE.",
-        "syntax": "[ 1 2 3 ] { 2 = } FILTER",
+        "syntax": "[ 1 2 3 ] [ 2 = ] FILTER",
         "role": "Higher-order primitive: Keep only the elements for which a predicate block returns TRUE.",
-        "stackEffect": "[ vec ] { pred } -> [ kept ]"
+        "stackEffect": "[ vec ] [ pred ] -> [ kept ]"
       },
       "executorKey": "Filter",
       "effects": [],
@@ -2408,9 +2408,9 @@
         "summary": "Reduce a vector to a single value using an initial accumulator and combiner block.",
         "hover": "FOLD — reduce with initial value",
         "lookup": "Reduce a vector to a single value using an initial accumulator and combiner block.",
-        "syntax": "[ 1 2 3 ] [ 0 ] { + } FOLD",
+        "syntax": "[ 1 2 3 ] [ 0 ] [ + ] FOLD",
         "role": "Higher-order primitive: Reduce a vector to a single value using an initial accumulator and combiner block.",
-        "stackEffect": "[ vec ] [ init ] { combine } -> [ result ]"
+        "stackEffect": "[ vec ] [ init ] [ combine ] -> [ result ]"
       },
       "executorKey": "Fold",
       "effects": [],
@@ -2460,9 +2460,9 @@
         "summary": "TRUE if at least one element satisfies the predicate.",
         "hover": "ANY — true if any element matches",
         "lookup": "TRUE if at least one element satisfies the predicate.",
-        "syntax": "[ 1 2 3 ] { 2 = } ANY",
+        "syntax": "[ 1 2 3 ] [ 2 = ] ANY",
         "role": "Higher-order primitive: TRUE if at least one element satisfies the predicate.",
-        "stackEffect": "[ vec ] { pred } -> [ TRUE | FALSE ]"
+        "stackEffect": "[ vec ] [ pred ] -> [ TRUE | FALSE ]"
       },
       "executorKey": "Any",
       "effects": [],
@@ -2513,9 +2513,9 @@
         "summary": "TRUE if every element satisfies the predicate.",
         "hover": "ALL — true if all elements match",
         "lookup": "TRUE if every element satisfies the predicate.",
-        "syntax": "[ 2 4 ] { 2 MOD 0 = } ALL",
+        "syntax": "[ 2 4 ] [ 2 MOD 0 = ] ALL",
         "role": "Higher-order primitive: TRUE if every element satisfies the predicate.",
-        "stackEffect": "[ vec ] { pred } -> [ TRUE | FALSE ]"
+        "stackEffect": "[ vec ] [ pred ] -> [ TRUE | FALSE ]"
       },
       "executorKey": "All",
       "effects": [],
@@ -2871,12 +2871,12 @@
         "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
+        "summary": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
         "hover": "COND — evaluate guard/body clauses",
-        "lookup": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
-        "syntax": "1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND",
+        "lookup": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
+        "syntax": "1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND",
         "role": "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
-        "stackEffect": "value { { guard | body } ... } -> [ result ]"
+        "stackEffect": "value [ [ guard | body ] ... ] -> [ result ]"
       },
       "executorKey": "Cond",
       "effects": [],
@@ -2926,9 +2926,9 @@
         "summary": "Evaluate a code block.",
         "hover": "EXEC — evaluate a code block",
         "lookup": "Evaluate a code block.",
-        "syntax": "{ 1 2 ADD } EXEC",
+        "syntax": "[ 1 2 ADD ] EXEC",
         "role": "Control primitive: Evaluate a code block.",
-        "stackEffect": "[ { code } ] -> [ result... ]"
+        "stackEffect": "[ code ] -> [ result... ]"
       },
       "executorKey": "Exec",
       "effects": [],
@@ -2978,9 +2978,9 @@
         "summary": "Infer a code block's contract against the current dictionary, without evaluating it.",
         "hover": "PROBE — infer a contract without running it",
         "lookup": "Infer a code block's contract against the current dictionary, without evaluating it. The result is a Vector of key/value pairs — purity, determinism, NIL behavior, effects, confidence, and any gap reasons inference could not resolve — the same inference `ajisai check --contract` runs from outside the language, reached from inside it. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.",
-        "syntax": "{ 1 2 ADD } PROBE",
+        "syntax": "[ 1 2 ADD ] PROBE",
         "role": "Control primitive: narrow a description into what can be known about it without running it.",
-        "stackEffect": "[ { code } ] -> [ knowledge ]"
+        "stackEffect": "[ code ] -> [ knowledge ]"
       },
       "executorKey": "Probe",
       "effects": [],
@@ -3332,9 +3332,9 @@
         "summary": "Define a user word from a body and a name.",
         "hover": "DEF — define user word",
         "lookup": "Define a user word from a body and a name.",
-        "syntax": "{ 2 * } 'DOUBLE' DEF",
+        "syntax": "[ 2 * ] 'DOUBLE' DEF",
         "role": "Dictionary primitive: Define a user word from a body and a name.",
-        "stackEffect": "{ body } [ name ] -> []"
+        "stackEffect": "[ body ] [ name ] -> []"
       },
       "executorKey": "Def",
       "effects": [
@@ -3387,7 +3387,7 @@
         "summary": "Delete a user word from the dictionary.",
         "hover": "DEL — delete user word",
         "lookup": "Delete a user word from the dictionary.",
-        "syntax": "{ [ 1 ] } 'W' DEF 'W' DEL",
+        "syntax": "[ [ 1 ] ] 'W' DEF 'W' DEL",
         "role": "Dictionary primitive: Delete a user word from the dictionary.",
         "stackEffect": "[ name ] -> []"
       },

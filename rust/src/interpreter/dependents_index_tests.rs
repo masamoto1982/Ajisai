@@ -24,8 +24,8 @@ mod tests {
     #[tokio::test]
     async fn direct_dependent_is_reported() {
         let mut interp = Interpreter::new();
-        interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
-        interp.execute("{ A } 'B' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'A' DEF").await.unwrap();
+        interp.execute("[ A ] 'B' DEF").await.unwrap();
 
         assert_eq!(
             interp.collect_dependents("A"),
@@ -43,9 +43,9 @@ mod tests {
     #[tokio::test]
     async fn transitive_chain_is_followed() {
         let mut interp = Interpreter::new();
-        interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
-        interp.execute("{ A } 'B' DEF").await.unwrap();
-        interp.execute("{ B } 'C' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'A' DEF").await.unwrap();
+        interp.execute("[ A ] 'B' DEF").await.unwrap();
+        interp.execute("[ B ] 'C' DEF").await.unwrap();
 
         assert_eq!(
             interp.collect_dependents("A"),
@@ -72,9 +72,9 @@ mod tests {
     #[tokio::test]
     async fn multiple_direct_dependents() {
         let mut interp = Interpreter::new();
-        interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
-        interp.execute("{ A } 'B' DEF").await.unwrap();
-        interp.execute("{ A } 'C' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'A' DEF").await.unwrap();
+        interp.execute("[ A ] 'B' DEF").await.unwrap();
+        interp.execute("[ A ] 'C' DEF").await.unwrap();
 
         assert_eq!(
             interp.collect_dependents("A"),
@@ -90,12 +90,12 @@ mod tests {
     #[tokio::test]
     async fn redefine_drops_stale_reverse_edge() {
         let mut interp = Interpreter::new();
-        interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
-        interp.execute("{ A } 'B' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'A' DEF").await.unwrap();
+        interp.execute("[ A ] 'B' DEF").await.unwrap();
         assert_eq!(interp.collect_dependents("A"), set(&["B"]));
 
         // B no longer references A. B has no dependents, so no force is needed.
-        interp.execute("{ [ 2 ] } 'B' DEF").await.unwrap();
+        interp.execute("[ [ 2 ] ] 'B' DEF").await.unwrap();
 
         assert!(
             interp.collect_dependents("A").is_empty(),
@@ -107,8 +107,8 @@ mod tests {
     #[tokio::test]
     async fn delete_referrer_clears_reverse_edge() {
         let mut interp = Interpreter::new();
-        interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
-        interp.execute("{ A } 'B' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'A' DEF").await.unwrap();
+        interp.execute("[ A ] 'B' DEF").await.unwrap();
         assert_eq!(interp.collect_dependents("A"), set(&["B"]));
 
         // B is a leaf (nothing depends on it), so a plain DEL is allowed.
@@ -125,7 +125,7 @@ mod tests {
     #[tokio::test]
     async fn unknown_word_has_no_dependents() {
         let mut interp = Interpreter::new();
-        interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
+        interp.execute("[ [ 1 ] ] 'A' DEF").await.unwrap();
 
         assert!(
             interp.collect_dependents("NOPE").is_empty(),

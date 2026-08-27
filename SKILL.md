@@ -88,18 +88,18 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 0 10 2 ] RANGE` → stack: `[ 0/1 2/1 4/1 6/1 8/1 10/1 ]`
 - Fill a tensor: [ shape... value ]
   `[ 2 2 7 ] FILL` → stack: `[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]`
-- MAP with a { } code block
-  `[ 0 4 ] RANGE { [ 2 ] * } MAP` → stack: `[ [ 0/1 ] [ 2/1 ] [ 4/1 ] [ 6/1 ] [ 8/1 ] ]`
+- MAP with a [ ] code block
+  `[ 0 4 ] RANGE [ [ 2 ] * ] MAP` → stack: `[ [ 0/1 ] [ 2/1 ] [ 4/1 ] [ 6/1 ] [ 8/1 ] ]`
 - FILTER keeps matching elements
-  `[ 0 10 ] RANGE { 5 > } FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
+  `[ 0 10 ] RANGE [ 5 > ] FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
 - FOLD needs an explicit initial value
-  `[ 1 2 3 ] [ 0 ] { + } FOLD` → stack: `[ 6/1 ]`
+  `[ 1 2 3 ] [ 0 ] [ + ] FOLD` → stack: `[ 6/1 ]`
 - ANY / ALL take predicate blocks
-  `[ 1 2 3 ] { 1 > } ANY` → stack: `TRUE`
-- Define a user word: { body } then name, then DEF
-  `{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
-- COND: value, then one { } of { guard } { body } pairs (use { TRUE } as else-guard)
-  `4 { { 0 GTE } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } } COND` → prints `non-negative`; stack: `4/1`
+  `[ 1 2 3 ] [ 1 > ] ANY` → stack: `TRUE`
+- Define a user word: [ body ] then name, then DEF
+  `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
+- COND: value, then one [ ] of [ guard ] [ body ] pairs (use [ TRUE ] as else-guard)
+  `4 [ [ 0 GTE ] [ 'non-negative' PRINT ] [ TRUE ] [ 'negative' PRINT ] ] COND` → prints `non-negative`; stack: `4/1`
 - Strings are bare '...' literals; CHARS/JOIN convert
   `'hello' CHARS REVERSE JOIN` → stack: `'olleh'`
 - Cast a string to an exact number
@@ -123,18 +123,18 @@ produce a value produces NIL (§4); a malformed one raises an error.
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkArity`.
   Fix: Push both operands before the operator: `[ 1 ] [ 2 ] +`. Ajisai is postfix; there is no infix form.
-- **FOLD without an initial value** — `[ 1 2 3 ] { + } FOLD`
+- **FOLD without an initial value** — `[ 1 2 3 ] [ + ] FOLD`
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkArity`.
-  Fix: FOLD is `vector [ init ] { op } FOLD`: `[ 1 2 3 ] [ 0 ] { + } FOLD`.
-- **COND clauses must be wrapped in a single { }** — `5 { 3 > } { 'big' PRINT } COND`
-  → exit 1, `message: "COND: each clause must itself be a { guard | body } block"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
+  Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.
+- **COND clauses must be wrapped in a single [ ]** — `5 [ 3 > ] [ 'big' PRINT ] COND`
+  → exit 1, `message: "COND: each clause must itself be a [ guard | body ] block"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
-  Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `{ TRUE } { ... }`: `5 { { 3 > } { 'big' PRINT } { TRUE } { 'small' PRINT } } COND`.
-- **COND guards must yield a boolean** — `TRUE { { [ 1 ] } { [ 2 ] } } COND`
+  Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
+- **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
   → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
-  Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] { { predicate } { body } ... } COND`.
+  Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] [ [ predicate ] [ body ] ... ] COND`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
   → exit 1, `message: "Cannot broadcast shapes [2] and [3]: axis 0 is 2 on the left and 3 on the right, and neither is 1"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkDisagreeingAxis`.
@@ -156,7 +156,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD or recursive user words.
-- **Parentheses ( )** (`( 1 2 )` fails) — Reserved for the continued-fraction *display* form only. Vectors are `[ ]`, code blocks are `{ }`.
+- **Parentheses ( )** (`( 1 2 )` fails) — Reserved for the continued-fraction *display* form only. `[ ]` is the sole bracket, for both vectors and code.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.
 
@@ -213,28 +213,28 @@ no module system and nothing to import.
 | `PUT` | vector | A copy of a vector with the element at one index replaced. — e.g. `[ 1 2 3 ] 1 9 PUT` |
 | `GROUP` | vector | Bundle values by the key at the same position, in UNIQUE key order. — e.g. `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
-| `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { 2 MUL } MAP` |
-| `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { 2 = } FILTER` |
-| `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
-| `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { 2 = } ANY` |
-| `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { 2 MOD 0 = } ALL` |
+| `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] [ 2 MUL ] MAP` |
+| `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] [ 2 = ] FILTER` |
+| `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] [ + ] FOLD` |
+| `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] [ 2 = ] ANY` |
+| `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] [ 2 MOD 0 = ] ALL` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
 | `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `COND` | control | Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a { guard | body } (or paired { guard } { body }) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 { { TRUE } { 'y' } { IDLE } { 'n' } } COND` |
-| `EXEC` | control | Evaluate a code block. — e.g. `{ 1 2 ADD } EXEC` |
-| `PROBE` | control | Infer a code block's contract against the current dictionary, without evaluating it. — e.g. `{ 1 2 ADD } PROBE` |
+| `COND` | control | Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND` |
+| `EXEC` | control | Evaluate a code block. — e.g. `[ 1 2 ADD ] EXEC` |
+| `PROBE` | control | Infer a code block's contract against the current dictionary, without evaluating it. — e.g. `[ 1 2 ADD ] PROBE` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
-| `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
-| `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
+| `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
+| `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `[ [ 1 ] ] 'W' DEF 'W' DEL` |
 | `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |

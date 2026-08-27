@@ -88,22 +88,22 @@ proptest! {
 /// `5 KEEP TWICE` answered `5 2 10`.
 #[test]
 fn keep_preserves_the_operands_of_a_user_word_call_not_its_body_literals() {
-    assert_eq!(obs("{ 2 * } 'TWICE' DEF 5 KEEP TWICE"), vec!["5/1", "10/1"]);
-    assert_eq!(obs("{ 1 - } 'DEC' DEF 5 KEEP DEC"), vec!["5/1", "4/1"]);
+    assert_eq!(obs("[ 2 * ] 'TWICE' DEF 5 KEEP TWICE"), vec!["5/1", "10/1"]);
+    assert_eq!(obs("[ 1 - ] 'DEC' DEF 5 KEEP DEC"), vec!["5/1", "4/1"]);
     // A binary User Word retains both operands, matching the Core Word law.
     assert_eq!(
-        obs("{ + } 'PLUS' DEF 3 5 KEEP PLUS"),
+        obs("[ + ] 'PLUS' DEF 3 5 KEEP PLUS"),
         vec!["3/1", "5/1", "8/1"]
     );
     // Reaching below the operands it was handed is still one operand region:
     // the body eats two and leaves one, and both eaten operands come back.
     assert_eq!(
-        obs("{ + 5 - } 'F' DEF 3 5 KEEP F"),
+        obs("[ + 5 - ] 'F' DEF 3 5 KEEP F"),
         vec!["3/1", "5/1", "3/1"]
     );
     // A Word that consumes nothing has no operand region, so `KEEP` retains
     // nothing extra.
-    assert_eq!(obs("{ 7 } 'SEVEN' DEF 3 KEEP SEVEN"), vec!["3/1", "7/1"]);
+    assert_eq!(obs("[ 7 ] 'SEVEN' DEF 3 KEEP SEVEN"), vec!["3/1", "7/1"]);
 }
 
 /// The bifurcation law of `keep_is_bifurcation` holds for User Words too:
@@ -111,8 +111,8 @@ fn keep_preserves_the_operands_of_a_user_word_call_not_its_body_literals() {
 #[test]
 fn keep_is_bifurcation_across_abstraction() {
     let mut expected = obs("3 5");
-    expected.extend(obs("{ + } 'PLUS' DEF 3 5 PLUS"));
-    assert_eq!(expected, obs("{ + } 'PLUS' DEF 3 5 KEEP PLUS"));
+    expected.extend(obs("[ + ] 'PLUS' DEF 3 5 PLUS"));
+    assert_eq!(expected, obs("[ + ] 'PLUS' DEF 3 5 KEEP PLUS"));
 }
 
 /// With `KEEP` settled at the call boundary, a total identity Word makes
@@ -120,7 +120,7 @@ fn keep_is_bifurcation_across_abstraction() {
 /// arithmetic or vector trick reaches (Text, truth values, code blocks).
 #[test]
 fn keep_over_a_total_identity_word_copies_any_value() {
-    let id = "{ 1 COLLECT [ 0 ] GET } 'ID' DEF ";
+    let id = "[ 1 COLLECT [ 0 ] GET ] 'ID' DEF ";
     assert_eq!(
         obs(&format!("{id} 'hello' KEEP ID")),
         vec!["'hello'", "'hello'"]
@@ -137,23 +137,23 @@ fn keep_over_a_total_identity_word_copies_any_value() {
 #[test]
 fn keep_on_a_higher_order_word_retains_the_collection() {
     assert_eq!(
-        obs("[ 1 2 ] KEEP { 2 MUL } MAP"),
+        obs("[ 1 2 ] KEEP [ 2 MUL ] MAP"),
         vec!["[ 1/1 2/1 ]", "[ 2/1 4/1 ]"]
     );
     assert_eq!(
-        obs("[ 1 2 3 ] KEEP { 1 GT } FILTER"),
+        obs("[ 1 2 3 ] KEEP [ 1 GT ] FILTER"),
         vec!["[ 1/1 2/1 3/1 ]", "[ 2/1 3/1 ]"]
     );
     assert_eq!(
-        obs("[ 1 2 3 ] 0 KEEP { ADD } FOLD"),
+        obs("[ 1 2 3 ] 0 KEEP [ ADD ] FOLD"),
         vec!["[ 1/1 2/1 3/1 ]", "6/1"]
     );
     assert_eq!(
-        obs("[ 1 2 3 ] KEEP { 1 GT } ANY"),
+        obs("[ 1 2 3 ] KEEP [ 1 GT ] ANY"),
         vec!["[ 1/1 2/1 3/1 ]", "TRUE"]
     );
     assert_eq!(
-        obs("[ 1 2 3 ] KEEP { 1 GT } ALL"),
+        obs("[ 1 2 3 ] KEEP [ 1 GT ] ALL"),
         vec!["[ 1/1 2/1 3/1 ]", "FALSE"]
     );
     // Every other Word keeps all of its operands, the `GET` of the Reference
@@ -179,8 +179,8 @@ fn keep_preserves_the_operands_of_a_word_that_answers_with_nothing() {
         obs("[ 1 2 ] KEEP [ 'A' 'B' ] BIND B"),
         vec!["[ 1/1 2/1 ]", "[ 'A' 'B' ]", "2/1"]
     );
-    assert_eq!(obs("{ 7 } 'W' KEEP DEF W"), vec!["[ 7/1 ]", "'W'", "7/1"]);
-    assert_eq!(obs("{ 7 } 'W' DEF 'W' KEEP DEL"), vec!["'W'"]);
+    assert_eq!(obs("[ 7 ] 'W' KEEP DEF W"), vec!["[ 7/1 ]", "'W'", "7/1"]);
+    assert_eq!(obs("[ 7 ] 'W' DEF 'W' KEEP DEL"), vec!["'W'"]);
 }
 
 /// A `KEEP`-ed call that fails reports the failure. The modifier does not
@@ -188,7 +188,7 @@ fn keep_preserves_the_operands_of_a_word_that_answers_with_nothing() {
 #[test]
 fn a_failed_keep_call_reports_the_failure() {
     // `EXEC` on a number is malformed use, so the call errors out.
-    let message = run_err("{ EXEC } 'BOOM' DEF 5 KEEP BOOM");
+    let message = run_err("[ EXEC ] 'BOOM' DEF 5 KEEP BOOM");
     assert!(!message.is_empty());
 }
 

@@ -27,8 +27,8 @@ pub struct CondClause {
 }
 
 /// Dynamic entry point: `COND` takes its clauses as a single fixed-position
-/// operand — a Vector whose elements are each a `{ guard | body }` (or
-/// `{ guard } { body }`-paired) clause block — the same convention
+/// operand — a Vector whose elements are each a `[ guard | body ]` (or
+/// `[ guard ] [ body ]`-paired) clause block — the same convention
 /// `MAP`/`FILTER`/`FOLD` already use for their one code operand
 /// (`extract_executable_code`). This is the path the plain interpreter and
 /// any non-lowered `COND` take.
@@ -69,70 +69,18 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
 fn extract_clause_blocks(clauses_val: &Value) -> Result<Vec<Vec<Token>>> {
     let elements = clauses_val.as_vector_view().ok_or_else(|| {
         AjisaiError::from(
-            "COND: expected a Vector of { guard | body } clauses as the second operand",
+            "COND: expected a Vector of [ guard | body ] clauses as the second operand",
         )
     })?;
     elements
         .iter()
         .map(|clause| {
             let inner = clause.as_vector_view().ok_or_else(|| {
-                AjisaiError::from("COND: each clause must itself be a { guard | body } block")
+                AjisaiError::from("COND: each clause must itself be a [ guard | body ] block")
             })?;
             crate::interpreter::value_as_code::value_elements_to_tokens(&inner)
         })
         .collect()
-}
-
-/// Split the raw token content of a single COND clauses-wrapper literal
-/// (already stripped of its own outer `{ }`/`[ ]`) into each direct child
-/// bracket group's inner tokens — one entry per clause. Used only by
-/// `compiled_plan.rs`'s `lower_cond_dispatch`, at compile time, before any
-/// `Value` exists to erase bracket spelling, so it can compile each clause's
-/// guard/body into a sub-plan straight from the tokens as written. Returns
-/// `None` when the content is not made up entirely of adjacent bracket
-/// groups (skipping line breaks) — the compiler then leaves the `COND` on
-/// the dynamic path, where `extract_clause_blocks` above raises whatever
-/// error is appropriate at runtime.
-pub(crate) fn split_wrapper_into_clause_blocks(tokens: &[Token]) -> Option<Vec<Vec<Token>>> {
-    let mut blocks: Vec<Vec<Token>> = Vec::new();
-    let mut i = 0;
-    loop {
-        while matches!(tokens.get(i), Some(Token::LineBreak)) {
-            i += 1;
-        }
-        if i >= tokens.len() {
-            break;
-        }
-        let (open, close) = match &tokens[i] {
-            Token::BlockStart => (Token::BlockStart, Token::BlockEnd),
-            Token::VectorStart => (Token::VectorStart, Token::VectorEnd),
-            _ => return None,
-        };
-        let mut depth: i32 = 1;
-        let mut j = i + 1;
-        let mut block_tokens: Vec<Token> = Vec::new();
-        while j < tokens.len() && depth > 0 {
-            let t = &tokens[j];
-            if *t == open {
-                depth += 1;
-                block_tokens.push(t.clone());
-            } else if *t == close {
-                depth -= 1;
-                if depth > 0 {
-                    block_tokens.push(t.clone());
-                }
-            } else {
-                block_tokens.push(t.clone());
-            }
-            j += 1;
-        }
-        if depth != 0 {
-            return None; // Unclosed — let the normal literal builder raise it.
-        }
-        blocks.push(block_tokens);
-        i = j;
-    }
-    Some(blocks)
 }
 
 /// Compiled entry point: the clauses were split once at compile time
@@ -233,7 +181,7 @@ pub(crate) fn split_clause_blocks(blocks: Vec<Vec<Token>>) -> Result<Vec<CondCla
 
     if !all_with_sep && !none_with_sep {
         return Err(AjisaiError::from(
-            "COND: mixed clause styles are not allowed; use either {guard}{body} pairs or {guard | body} clauses consistently",
+            "COND: mixed clause styles are not allowed; use either [guard][body] pairs or [guard | body] clauses consistently",
         ));
     }
 

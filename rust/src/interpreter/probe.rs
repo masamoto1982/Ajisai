@@ -167,7 +167,7 @@ mod tests {
     #[tokio::test]
     async fn a_pure_block_reports_pure_and_complete() {
         let mut interp = Interpreter::new();
-        interp.execute("{ 1 2 ADD } PROBE").await.unwrap();
+        interp.execute("[ 1 2 ADD ] PROBE").await.unwrap();
         let result = interp.stack.last().cloned().unwrap();
         assert_eq!(field(&result, "purity").as_text(), Some("pure"));
         assert_eq!(field(&result, "confidence").as_text(), Some("complete"));
@@ -178,7 +178,7 @@ mod tests {
     #[tokio::test]
     async fn an_effectful_block_reports_its_effect_without_ever_running() {
         let mut interp = Interpreter::new();
-        interp.execute("{ 42 PRINT } PROBE").await.unwrap();
+        interp.execute("[ 42 PRINT ] PROBE").await.unwrap();
         let result = interp.stack.last().cloned().unwrap();
         assert_eq!(field(&result, "purity").as_text(), Some("effectful"));
         assert_eq!(strings(field(&result, "effects")), vec!["consoleWrite"]);
@@ -192,7 +192,7 @@ mod tests {
     async fn an_unresolved_dependency_is_a_gap_not_an_error() {
         let mut interp = Interpreter::new();
         interp
-            .execute("{ TOTALLY-UNDEFINED-WORD } PROBE")
+            .execute("[ TOTALLY-UNDEFINED-WORD ] PROBE")
             .await
             .unwrap();
         let result = interp.stack.last().cloned().unwrap();
@@ -203,7 +203,7 @@ mod tests {
     #[tokio::test]
     async fn an_empty_block_probes_to_a_trivial_contract() {
         let mut interp = Interpreter::new();
-        interp.execute("{ } PROBE").await.unwrap();
+        interp.execute("[ ] PROBE").await.unwrap();
         let result = interp.stack.last().cloned().unwrap();
         assert_eq!(field(&result, "purity").as_text(), Some("pure"));
         assert_eq!(field(&result, "confidence").as_text(), Some("complete"));
@@ -221,7 +221,7 @@ mod tests {
     #[tokio::test]
     async fn keep_preserves_the_block_beneath_the_result() {
         let mut interp = Interpreter::new();
-        interp.execute("{ 1 } KEEP PROBE").await.unwrap();
+        interp.execute("[ 1 ] KEEP PROBE").await.unwrap();
         assert_eq!(interp.stack.len(), 2);
         assert!(interp.stack.first().unwrap().as_vector_view().is_some());
         assert!(interp.stack.last().unwrap().as_vector().is_some());

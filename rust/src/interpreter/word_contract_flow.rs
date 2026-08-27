@@ -2,20 +2,18 @@
 //!
 //! Split out of `word_contract.rs`, where the same job was done by a
 //! `FlowAccumulator` that read *every* token of a word body as if it stood at
-//! the top level. That reading was unsound, because two of Ajisai's source
-//! forms are **literals whose interior is not code**:
+//! the top level. That reading was unsound, because `[ ... ]` is a **literal
+//! whose interior is not code**: it is evaluated only if some higher-order
+//! Word later runs it as the Vector it built, never at the point it is
+//! written — `[ 1 2 ADD ]` is the three-element vector `[ 1/1 2/1 'ADD' ]`,
+//! not a call to `ADD`.
 //!
-//!  * `[ ... ]` is a data literal. Its interior is never evaluated: `[ 1 2 ADD ]`
-//!    is the three-element vector `[ 1/1 2/1 'ADD' ]`, not a call to `ADD`.
-//!  * `{ ... }` is a code literal. Its interior is evaluated only if some
-//!    higher-order Word later runs the block, never at the point it is written.
-//!
-//! Both push exactly one value and consume nothing. The old walk instead
-//! counted each interior `Number`/`String` as a push and *applied* each
-//! interior `Symbol`'s arity, so `{ [ 1 2 ] } 'PAIR' DEF` inferred
-//! `( 0 -- 2 )` for a word that produces one vector, and
-//! `{ { 2 MUL } MAP } 'DOUBLE-ALL' DEF` inferred `( 2 -- 1 )` for a word whose
-//! true arity is `( 1 -- 1 )`. Those inferences are reported at
+//! A literal pushes exactly one value and consumes nothing, whatever it
+//! contains. The old walk instead counted each interior `Number`/`String` as
+//! a push and *applied* each interior `Symbol`'s arity, so `[ [ 1 2 ] ]`
+//! `'PAIR' DEF` inferred `( 0 -- 2 )` for a word that produces one vector,
+//! and `[ [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF` inferred `( 2 -- 1 )` for a word
+//! whose true arity is `( 1 -- 1 )`. Those inferences are reported at
 //! `ContractConfidence::Complete`, so a *correct* `#:contract` declaration was
 //! rejected as a proven violation — a false `error`, which
 //! `LANG.CONTRACT.CHECK` forbids and which `word_space.rs`'s module comment
@@ -48,8 +46,8 @@
 //! that moves values: it prefixes the next Word and makes that Word read its
 //! operands without consuming them (`LANG.MODIFIERS.CONSUMPTION`). Applying
 //! its `( 0 -- 0 )` and then the next Word's arity unchanged describes
-//! neither. Measured: `2 3 KEEP ADD` leaves `2 3 5`, so `{ KEEP ADD }` is
-//! `( 2 -- 3 )` — while the old walk inferred `( 2 -- 1 )` and rejected the
+//! neither. Measured: `2 3 KEEP ADD` leaves `2 3 5`, so a body of
+//! `KEEP ADD` is `( 2 -- 3 )` — while the old walk inferred `( 2 -- 1 )` and rejected the
 //! true declaration as a violation.
 //!
 //! The modifier is therefore held as a pending flag and applied to the next
@@ -80,7 +78,6 @@ pub(crate) struct FlowSim {
     /// Simulated stack height contributed by the body so far.
     height: u16,
     vector_depth: u32,
-    block_depth: u32,
     /// A `KEEP` has been read and applies to the next Word.
     pending_keep: bool,
 }
@@ -90,10 +87,10 @@ impl FlowSim {
         FlowSim::default()
     }
 
-    /// Inside a `[ ... ]` or `{ ... }`, where tokens are literal content
+    /// Inside a `[ ... ]`, where tokens are literal content
     /// rather than code and contribute nothing to the height.
     fn in_literal(&self) -> bool {
-        self.vector_depth > 0 || self.block_depth > 0
+        self.vector_depth > 0
     }
 
     fn push_value(&mut self) {
@@ -113,9 +110,7 @@ impl FlowSim {
     pub(crate) fn feed_structural(&mut self, token: &Token) {
         match token {
             Token::VectorStart => self.vector_depth += 1,
-            Token::VectorEnd => self.close(true),
-            Token::BlockStart => self.block_depth += 1,
-            Token::BlockEnd => self.close(false),
+            Token::VectorEnd => self.close(),
             // Both select between paths of differing height; see the module
             // comment. Inside a literal they are content, not control.
             Token::NilCoalesce | Token::CondClauseSep => {
@@ -127,20 +122,15 @@ impl FlowSim {
         }
     }
 
-    /// Close a `]` (`vector`) or `}` (block). A delimiter that closes nothing
-    /// means the body is unbalanced, so every height from here on is a guess:
-    /// give up rather than resynchronize onto an invented depth.
-    fn close(&mut self, vector: bool) {
-        let depth = if vector {
-            &mut self.vector_depth
-        } else {
-            &mut self.block_depth
-        };
-        if *depth == 0 {
+    /// Close a `]`. A delimiter that closes nothing means the body is
+    /// unbalanced, so every height from here on is a guess: give up rather
+    /// than resynchronize onto an invented depth.
+    fn close(&mut self) {
+        if self.vector_depth == 0 {
             self.unmodelled = true;
             return;
         }
-        *depth -= 1;
+        self.vector_depth -= 1;
         if !self.in_literal() {
             self.push_value();
         }
@@ -187,7 +177,6 @@ impl FlowSim {
     pub(crate) fn abandon_line(&mut self) {
         self.dynamic = true;
         self.vector_depth = 0;
-        self.block_depth = 0;
         self.pending_keep = false;
     }
 
