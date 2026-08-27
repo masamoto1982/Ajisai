@@ -5,7 +5,7 @@
 
 <p>Status: <strong>Canonical</strong><br>
 Version: <strong>2026-07-29</strong><br>
-Release stage: <strong>0.2.0-alpha.1</strong>. No compatibility promise is in force while alpha holds.</p>
+Release stage: <strong>Alpha</strong>. No compatibility promise is in force.</p>
 
 <p>
 This document defines the correspondence between Ajisai source programs and observable values, states, effects, and diagnoses. It is a compact semantic kernel: differences between individual Words belong to the machine-readable vocabulary registry, not to parallel prose definitions.

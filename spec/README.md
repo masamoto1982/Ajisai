@@ -38,6 +38,13 @@ drives code generation. Putting the gate back — the last step before beta is
 declared again — is adding `specification:check` to CI once the committed copy
 is expected to stay current on every change, not merely regeneratable.
 
+A numbered version (e.g. `0.2.0-alpha.1`) is a build identifier for the
+package (`package.json`, `src-tauri/tauri.conf.json`) during alpha, not a
+language version: alpha carries no compatibility promise, so there is nothing
+for a language version number to pin. The specification's own Status block
+tracks the release stage by name (`Alpha`) instead, and gets a real version
+number once beta is declared.
+
 `npm run semantic-kernel:check` enforces the budgets that keep the language
 small: at most 400 lines of kernel, 12 semantic families, 70 canonical Words,
 and 16 aliases, with every family and clause reference resolving. The budgets

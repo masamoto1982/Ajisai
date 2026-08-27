@@ -20,7 +20,7 @@ The name comes from *hydrangea*, whose scientific name means "water vessel" — 
 ## Status
 
 <table>
-<tr><td>Release stage</td><td><code>0.2.0-alpha.1</code></td></tr>
+<tr><td>Release stage</td><td>Alpha</td></tr>
 <tr><td>Specification</td><td>Regenerated from the implementation — see <a href="spec/README.md"><code>spec/README.md</code></a></td></tr>
 <tr><td>Compatibility promise</td><td>None while alpha holds</td></tr>
 </table>
