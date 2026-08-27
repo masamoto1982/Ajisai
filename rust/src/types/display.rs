@@ -455,10 +455,7 @@ mod tests {
     fn render_cf_flat_exact_forms() {
         assert_eq!(render_cf_flat(&[bi(1)], false), "( 1 )");
         assert_eq!(render_cf_flat(&[bi(1), bi(2)], false), "( 1; 2 )");
-        assert_eq!(
-            render_cf_flat(&[bi(1), bi(2), bi(2)], false),
-            "( 1; 2, 2 )"
-        );
+        assert_eq!(render_cf_flat(&[bi(1), bi(2), bi(2)], false), "( 1; 2, 2 )");
         assert_eq!(
             render_cf_flat(&[bi(1), bi(2), bi(2)], true),
             "( 1; 2, 2, … )"
@@ -480,10 +477,7 @@ mod tests {
         let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
             .expect("√2 is a valid algebraic sqrt");
         let s = format_exact_real(&sqrt2);
-        assert!(
-            s.starts_with("( 1; 2, 2, "),
-            "expected flat CF, got {s:?}"
-        );
+        assert!(s.starts_with("( 1; 2, 2, "), "expected flat CF, got {s:?}");
         assert!(
             s.ends_with(", … )"),
             "lazy CF must carry the trailing `…` truncation marker, got {s:?}"
@@ -496,7 +490,10 @@ mod tests {
             !s.contains('~'),
             "must not use ~approximation display, got {s:?}"
         );
-        assert!(!s.contains('.'), "CF display must never contain a literal '.', got {s:?}");
+        assert!(
+            !s.contains('.'),
+            "CF display must never contain a literal '.', got {s:?}"
+        );
         let opens = s.matches('(').count();
         let closes = s.matches(')').count();
         assert_eq!(opens, closes, "unbalanced parens in {s:?}");
