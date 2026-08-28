@@ -206,17 +206,8 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
     }
 }
 
-/// Compute `schema(a, b)` through the Semantic Spine's Kernel primitives
-/// (migration plan §12 Phase 4, §10.11) instead of calling `Fraction`'s own
-/// methods directly. This is the first live-dispatch route the Spine feeds:
-/// `push_scalar_fastpath_result`'s caller has already charged and will check
-/// the result size, and `scalar_fast_operand` has already reduced both
-/// operands to a plain rational — so this only has to round-trip through
-/// `KernelValue::Scalar` and translate the one failure mode (division by
-/// zero) the legacy `Result<Fraction>` shape expects. `kernel::arithmetic`'s
-/// own differential tests already establish that its primitives agree with
-/// these `Fraction` methods operand-for-operand; this is that agreement put
-/// to use rather than re-proven here.
+/// `schema(a, b)` via the Semantic Spine (migration plan §12 Phase 4, §10.12).
+/// The caller already charged, checks the result size, and gave us rationals.
 fn schema_via_kernel(
     schema: ExactArithmeticSchema,
     a: &Fraction,
@@ -233,14 +224,9 @@ fn schema_via_kernel(
         ExactArithmeticSchema::Div => kernel_arithmetic::div,
     };
     match &primitive(&operands)[0] {
-        KernelValue::Scalar(result) => Ok(result
-            .as_fraction()
-            .cloned()
-            .expect("kernel arithmetic returns a rational Scalar for two rational operands")),
+        KernelValue::Scalar(result) => Ok(result.as_fraction().cloned().expect("rational")),
         KernelValue::Nil(Some(NilReason::DivisionByZero)) => Err(AjisaiError::DivisionByZero),
-        other => {
-            unreachable!("kernel arithmetic primitive returned {other:?} for two Scalar operands")
-        }
+        other => unreachable!("kernel arithmetic returned {other:?} for two Scalar operands"),
     }
 }
 
