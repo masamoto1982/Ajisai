@@ -93,7 +93,7 @@ impl ExactReal {
                 // terminate, and a terminating final term is not stable
                 // under perturbation, so each endpoint's last term is
                 // dropped before intersecting. Often empty — displayed as
-                // the undetermined-CF marker `( … )`.
+                // the undetermined-CF marker `[ … ]`.
                 let iv = c.enclosure_at(budget as u64);
                 let mut lo_cf = rational_partial_quotients(iv.lo.numerator(), iv.lo.denominator());
                 let mut hi_cf = rational_partial_quotients(iv.hi.numerator(), iv.hi.denominator());

@@ -395,7 +395,7 @@ canonical value.
 in exactly the cases `exactTerms` is. It exists because the two other
 renderings of an algebraic value on the same report are each misleading as what
 they resemble: `stackDisplay` is the SPEC §4.2.3 continued fraction *truncated
-at a display budget* (√2 runs to ~194 characters and ends in `...)`), and
+at a display budget* (√2 runs to ~194 characters and ends in `...]`), and
 `value` is a rational approximation. It is a display: read it, compute with
 `exactTerms`. Because it renders the stored normal form faithfully, two values
 `=` decides are equal can still be written differently (`sqrt(8)` and

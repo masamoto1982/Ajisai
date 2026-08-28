@@ -63,10 +63,11 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
 const CF_DISPLAY_BUDGET: usize = 32;
 
 /// Render a numeric scalar value as the canonical flat continued-fraction
-/// form (SPEC §4.2.3): `( a0; a1, a2 )`, matching the classical
-/// `[a0; a1, a2, …]` notation with `(` `)` in place of `[` `]` (SPEC
-/// §3.4 reserves `(` `)` for exactly this). Lazy irrationals truncate at
-/// CF_DISPLAY_BUDGET terms with a trailing `…` marker.
+/// form (SPEC §4.2.3): `[ a0; a1, a2 ]`, matching the classical
+/// `[a0; a1, a2, …]` notation directly — `[` `]` is the sole bracket in
+/// Ajisai, so the CF display uses it as-is rather than standing in for it.
+/// Lazy irrationals truncate at CF_DISPLAY_BUDGET terms with a trailing `…`
+/// marker.
 pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
     // Obtain the partial-quotient sequence and whether it is truncated.
     let (terms, truncated): (Vec<BigInt>, bool) = match &value.data {
@@ -97,13 +98,12 @@ pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
 }
 
 /// Build the flat CF string from partial quotients, in the classical
-/// `[a0; a1, a2, …]` convention (SPEC §4.2.3) with `(` `)` standing in
-/// for `[` `]`:
-/// finite   [a0]         -> "( a0 )"          (no tail, no `;`)
-/// finite   [a0,a1,a2]   -> "( a0; a1, a2 )"
-/// truncated [a0,a1,a2]  -> "( a0; a1, a2, … )"
-/// truncated [a0]        -> "( a0; … )"
-/// truncated []          -> "( … )"
+/// `[a0; a1, a2, …]` convention (SPEC §4.2.3):
+/// finite   [a0]         -> "[ a0 ]"          (no tail, no `;`)
+/// finite   [a0,a1,a2]   -> "[ a0; a1, a2 ]"
+/// truncated [a0,a1,a2]  -> "[ a0; a1, a2, … ]"
+/// truncated [a0]        -> "[ a0; … ]"
+/// truncated []          -> "[ … ]"
 ///
 /// The `;` marks the one real distinction the notation carries: `a0` is
 /// any integer, while the tail terms are each a positive integer — the
@@ -117,12 +117,12 @@ pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
 fn render_cf_flat(terms: &[BigInt], truncated: bool) -> String {
     if terms.is_empty() {
         return if truncated {
-            "( … )".to_string()
+            "[ … ]".to_string()
         } else {
-            "( )".to_string()
+            "[ ]".to_string()
         };
     }
-    let mut s = String::from("( ");
+    let mut s = String::from("[ ");
     s.push_str(&terms[0].to_string());
     if terms.len() > 1 || truncated {
         s.push_str("; ");
@@ -136,7 +136,7 @@ fn render_cf_flat(terms: &[BigInt], truncated: bool) -> String {
             }
         }
     }
-    s.push_str(" )");
+    s.push_str(" ]");
     s
 }
 
@@ -279,7 +279,7 @@ fn format_fraction(f: &Fraction) -> String {
 /// Display an `ExactReal`. Rational variants use the canonical
 /// `numerator/denominator` form. Irrational variants (`AlgebraicSqrt`,
 /// `Gosper`) render in the canonical flat continued-fraction form of
-/// SPEC §4.2.3 — `( a0; a1, a2 )` — truncated at the display budget with
+/// SPEC §4.2.3 — `[ a0; a1, a2 ]` — truncated at the display budget with
 /// a trailing `…` for lazy CFs. This keeps the default numeric surface
 /// exact and AI-readable: arithmetic on irrationals is computed exactly
 /// on the CF representation (Gosper, SPEC §7.3), so the display must not
@@ -299,9 +299,9 @@ fn format_exact_real(er: &ExactReal) -> String {
                     // value carrying so many algebraic terms that one
                     // floor-and-reciprocate step exceeds the whole expansion
                     // budget. Render the undetermined-CF marker rather than an
-                    // empty `( )` or an approximate `~` rational — `exactTerms`
+                    // empty `[ ]` or an approximate `~` rational — `exactTerms`
                     // beside it still carries the value exactly.
-                    "( … )".to_string()
+                    "[ … ]".to_string()
                 } else {
                     // Always a prefix: this arm is only reached for a value
                     // whose expansion does not terminate.
@@ -453,16 +453,16 @@ mod tests {
 
     #[test]
     fn render_cf_flat_exact_forms() {
-        assert_eq!(render_cf_flat(&[bi(1)], false), "( 1 )");
-        assert_eq!(render_cf_flat(&[bi(1), bi(2)], false), "( 1; 2 )");
-        assert_eq!(render_cf_flat(&[bi(1), bi(2), bi(2)], false), "( 1; 2, 2 )");
+        assert_eq!(render_cf_flat(&[bi(1)], false), "[ 1 ]");
+        assert_eq!(render_cf_flat(&[bi(1), bi(2)], false), "[ 1; 2 ]");
+        assert_eq!(render_cf_flat(&[bi(1), bi(2), bi(2)], false), "[ 1; 2, 2 ]");
         assert_eq!(
             render_cf_flat(&[bi(1), bi(2), bi(2)], true),
-            "( 1; 2, 2, … )"
+            "[ 1; 2, 2, … ]"
         );
-        assert_eq!(render_cf_flat(&[bi(1)], true), "( 1; … )");
-        assert_eq!(render_cf_flat(&[], false), "( )");
-        assert_eq!(render_cf_flat(&[], true), "( … )");
+        assert_eq!(render_cf_flat(&[bi(1)], true), "[ 1; … ]");
+        assert_eq!(render_cf_flat(&[], false), "[ ]");
+        assert_eq!(render_cf_flat(&[], true), "[ … ]");
     }
 
     #[test]
@@ -477,9 +477,9 @@ mod tests {
         let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
             .expect("√2 is a valid algebraic sqrt");
         let s = format_exact_real(&sqrt2);
-        assert!(s.starts_with("( 1; 2, 2, "), "expected flat CF, got {s:?}");
+        assert!(s.starts_with("[ 1; 2, 2, "), "expected flat CF, got {s:?}");
         assert!(
-            s.ends_with(", … )"),
+            s.ends_with(", … ]"),
             "lazy CF must carry the trailing `…` truncation marker, got {s:?}"
         );
         assert!(
@@ -494,9 +494,9 @@ mod tests {
             !s.contains('.'),
             "CF display must never contain a literal '.', got {s:?}"
         );
-        let opens = s.matches('(').count();
-        let closes = s.matches(')').count();
-        assert_eq!(opens, closes, "unbalanced parens in {s:?}");
+        let opens = s.matches('[').count();
+        let closes = s.matches(']').count();
+        assert_eq!(opens, closes, "unbalanced brackets in {s:?}");
 
         // A perfect square collapses to the exact rational form.
         let sqrt4 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(4), BigInt::from(1)))
@@ -505,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn render_cf_flat_balanced_parens() {
+    fn render_cf_flat_balanced_brackets() {
         for terms in [
             vec![bi(1)],
             vec![bi(1), bi(2)],
@@ -513,9 +513,9 @@ mod tests {
         ] {
             for truncated in [false, true] {
                 let s = render_cf_flat(&terms, truncated);
-                let opens = s.matches('(').count();
-                let closes = s.matches(')').count();
-                assert_eq!(opens, closes, "unbalanced parens in {s:?}");
+                let opens = s.matches('[').count();
+                let closes = s.matches(']').count();
+                assert_eq!(opens, closes, "unbalanced brackets in {s:?}");
             }
         }
     }

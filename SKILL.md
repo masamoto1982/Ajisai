@@ -156,7 +156,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD or recursive user words.
-- **Parentheses ( )** (`( 1 2 )` fails) — Reserved for the continued-fraction *display* form only. `[ ]` is the sole bracket, for both vectors and code.
+- **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.
 

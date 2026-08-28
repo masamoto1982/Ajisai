@@ -91,7 +91,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
                 "RESERVED-END"
             };
             return Err(format!(
-                "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). The continued-fraction display form is a serialization artifact only; use '[' and ']' for code blocks.",
+                "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). '[' and ']' are the sole bracket in Ajisai, for code blocks and for the continued-fraction display form alike.",
                 chars[i], concept
             ));
         }

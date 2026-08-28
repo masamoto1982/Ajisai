@@ -62,7 +62,7 @@ mod cf_budget_tests {
         // trade than the problem it fixes.
         let display = rendered("2 SQRT").await;
         assert!(
-            display.starts_with("( 1; 2, 2, 2, "),
+            display.starts_with("[ 1; 2, 2, 2, "),
             "√2 must still expand to its canonical CF, got: {display}"
         );
         assert!(
@@ -86,7 +86,7 @@ mod cf_budget_tests {
         // whole of it spent after the value was already computed.
         let display = rendered(&algebraic_product(4)).await;
         assert!(
-            display.ends_with("… )"),
+            display.ends_with("… ]"),
             "a cut-short expansion must carry the truncation marker, got: {display}"
         );
         assert!(
@@ -97,11 +97,11 @@ mod cf_budget_tests {
 
     #[tokio::test]
     async fn an_unaffordable_expansion_renders_the_undetermined_marker() {
-        // Sixty-four terms: not even `a0` is worth its price. `( … )` is the
+        // Sixty-four terms: not even `a0` is worth its price. `[ … ]` is the
         // marker the display already had for a CF it could not determine.
         let display = rendered(&algebraic_product(6)).await;
         assert_eq!(
-            display, "( … )",
+            display, "[ … ]",
             "an expansion nobody can afford must say so, not guess"
         );
     }
@@ -137,7 +137,7 @@ mod cf_budget_tests {
             let (value, _) = stack.iter_slots().last().expect("a value");
             let display = format_with_hint(value, Interpretation::ContinuedFraction);
             assert!(
-                display.ends_with(" )"),
+                display.ends_with(" ]"),
                 "`{source}` is exact and finite, got: {display}"
             );
             assert!(
@@ -176,7 +176,7 @@ mod cf_budget_tests {
         let (value, _) = stack.iter_slots().last().expect("a value");
         let hinted = format_with_hint(value, Interpretation::ContinuedFraction);
         assert!(
-            hinted.ends_with("… )"),
+            hinted.ends_with("… ]"),
             "the CF-hinted rendering must be marked truncated too, got: {hinted}"
         );
     }

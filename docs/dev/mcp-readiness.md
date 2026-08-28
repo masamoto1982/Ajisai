@@ -215,7 +215,7 @@ Completed:
   What it replaces is not a missing field but a misleading first impression:
   the two renderings a consumer meets before the terms are `stackDisplay` (the
   SPEC §4.2.3 continued fraction, *truncated at a display budget* — ~194
-  characters for √2, ending in `...)`) and the node's own `value` (a rational
+  characters for √2, ending in `...]`) and the node's own `value` (a rational
   approximation flagged `approximate`). One looks complete and is not; the
   other looks exact and is not. Neither is changed: `stackDisplay` remains the
   shared projection the CLI, REPL and playground render, and altering it stays
@@ -350,8 +350,8 @@ which answers with a timeout that names nothing.
 floor-and-reciprocate step at `terms³ × limbs` before the step runs. The same
 table now reads 4.7 ms / 18.9 ms / 4.9 ms / 5.8 ms / 0.0 ms. `2 SQRT` still
 expands to all 32 quotients — the common case pays nothing — while a value too
-dear to expand renders the `...)` truncation it was always entitled to, or the
-`( ...)` undetermined marker when not even `a0` is affordable. Nothing is lost:
+dear to expand renders the `...]` truncation it was always entitled to, or the
+`[ ...]` undetermined marker when not even `a0` is affordable. Nothing is lost:
 for an algebraic value the CF is a rendering and `exactTerms` is the value. The
 same budget bounds `best_rational_approximation`, which feeds the
 `approximate: true` rational on the wire through the identical expansion.
@@ -396,7 +396,7 @@ ceiling fires before the anonymous `wallTimeMs` timeout.
 `max_algebraic_terms` is now **512**, derived rather than rounded: `exactTerms`
 for 512 terms is 31,745 bytes, 3.0% of `responseBytes`, where 4,096 terms was
 278,110 bytes and 26.5% — a quarter of the whole response for one number that
-renders as `( ...)` and that no computation wants. Nine two-radical factors
+renders as `[ ...]` and that no computation wants. Nine two-radical factors
 reach 512 terms and succeed; the tenth doubling is refused by name in ~13 ms at
 21% of the work budget, so a re-measure of `ALGEBRAIC_PAIR_UNITS` cannot
 silently change which ceiling answers. `max_bigint_bits` is deliberately *not*
