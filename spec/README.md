@@ -38,12 +38,15 @@ drives code generation. Putting the gate back — the last step before beta is
 declared again — is adding `specification:check` to CI once the committed copy
 is expected to stay current on every change, not merely regeneratable.
 
-A numbered version (e.g. `0.2.0-alpha.1`) is a build identifier for the
-package (`package.json`, `src-tauri/tauri.conf.json`) during alpha, not a
-language version: alpha carries no compatibility promise, so there is nothing
-for a language version number to pin. The specification's own Status block
-tracks the release stage by name (`Alpha`) instead, and gets a real version
-number once beta is declared.
+Ajisai carries exactly two version numbers, not three: the implementation's
+(`package.json`, `src-tauri/tauri.conf.json`, e.g. `0.2.0-alpha.1`) and the
+specification's own. A build-date stamp on the specification would have been
+a third, redundant axis, so the Status block does not carry one; git history
+is the record of when a given specification text was current. Alpha carries
+no compatibility promise, so there is nothing yet for a language version
+number to pin — the Status block names the release stage instead
+(`Alpha`), and the specification gets its own real version number, tracked
+independently of the implementation's, once beta is declared.
 
 `npm run semantic-kernel:check` enforces the budgets that keep the language
 small: at most 400 lines of kernel, 12 semantic families, 70 canonical Words,

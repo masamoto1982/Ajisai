@@ -4,7 +4,6 @@
 <h1 id="ajisai-language-semantics">Ajisai Language Semantics</h1>
 
 <p>Status: <strong>Canonical</strong><br>
-Version: <strong>2026-07-29</strong><br>
 Release stage: <strong>Alpha</strong>. No compatibility promise is in force.</p>
 
 <p>
