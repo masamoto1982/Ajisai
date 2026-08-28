@@ -33,7 +33,7 @@
         （水路の破れ）。
     -->
     <style>
-        :root [
+        :root {
             --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
             --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
 
@@ -50,20 +50,20 @@
 
             --color-light:  oklch(98.2% 0.002 247.8);
             --color-medium: oklch(94.3% 0.006 264.5);
-        ]
+        }
 
-        * [
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        ]
+        }
 
-        html, body [
+        html, body {
             min-height: 100%;
             overflow-x: hidden;
-        ]
+        }
 
-        body [
+        body {
             font-family: var(--font-stack-primary);
             background: oklch(100% 0 0);
             color: var(--color-text);
@@ -71,38 +71,38 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-        ]
+        }
 
-        a [
+        a {
             color: var(--color-primary);
             text-decoration: none;
 
-            &:hover [ color: var(--color-secondary); ]
-        ]
+            &:hover { color: var(--color-secondary); }
+        }
 
         /* 移ろい: 青紫・赤紫・淡水色・淡緑の四色が巡るグラデーション。
            0% と 100% を同一にしてループ時の急な色変化を避ける。 */
-        @property --mv-h-a [ syntax: "<number>"; inherits: false; initial-value: 265; ]
-        @property --mv-h-b [ syntax: "<number>"; inherits: false; initial-value: 300; ]
-        @property --mv-l [ syntax: "<percentage>"; inherits: false; initial-value: 90%; ]
-        @property --mv-c-a [ syntax: "<number>"; inherits: false; initial-value: 0.085; ]
-        @property --mv-c-b [ syntax: "<number>"; inherits: false; initial-value: 0.085; ]
+        @property --mv-h-a { syntax: "<number>"; inherits: false; initial-value: 265; }
+        @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 300; }
+        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 90%; }
+        @property --mv-c-a { syntax: "<number>"; inherits: false; initial-value: 0.085; }
+        @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.085; }
 
-        @keyframes mv-hydrangea-hues [
-            0%,  100% [ --mv-h-a: 265; --mv-h-b: 300; ]
-            25%       [ --mv-h-a: 305; --mv-h-b: 325; ]
-            50%       [ --mv-h-a: 195; --mv-h-b: 225; ]
-            75%       [ --mv-h-a: 150; --mv-h-b: 178; ]
-        ]
-        @keyframes mv-chroma [
-            0%, 100% [ --mv-c-a: 0.085; --mv-c-b: 0.085; ]
-            40%      [ --mv-c-a: 0.095; --mv-c-b: 0.095; ]
-            65%      [ --mv-c-a: 0.065; --mv-c-b: 0.065; ]
-        ]
-        @keyframes mv-light [ 0%, 100% [ --mv-l: 90%; ] 50% [ --mv-l: 93%; ] ]
+        @keyframes mv-hydrangea-hues {
+            0%,  100% { --mv-h-a: 265; --mv-h-b: 300; }
+            25%       { --mv-h-a: 305; --mv-h-b: 325; }
+            50%       { --mv-h-a: 195; --mv-h-b: 225; }
+            75%       { --mv-h-a: 150; --mv-h-b: 178; }
+        }
+        @keyframes mv-chroma {
+            0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.085; }
+            40%      { --mv-c-a: 0.095; --mv-c-b: 0.095; }
+            65%      { --mv-c-a: 0.065; --mv-c-b: 0.065; }
+        }
+        @keyframes mv-light { 0%, 100% { --mv-l: 90%; } 50% { --mv-l: 93%; } }
 
         .ref-header,
-        .ref-footer [
+        .ref-footer {
             background: linear-gradient(
                 to right in oklch,
                 oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
@@ -112,13 +112,13 @@
                 mv-hydrangea-hues 260s ease-in-out infinite,
                 mv-chroma 210s ease-in-out infinite,
                 mv-light 170s ease-in-out infinite;
-        ]
+        }
 
-        @media (prefers-reduced-motion: reduce) [
-            .ref-header, .ref-footer [ animation: none; ]
-        ]
+        @media (prefers-reduced-motion: reduce) {
+            .ref-header, .ref-footer { animation: none; }
+        }
 
-        .ref-header [
+        .ref-header {
             border-bottom: var(--border-main);
             padding: 1rem 2rem;
             display: flex;
@@ -126,42 +126,42 @@
             align-items: stretch;
             gap: 0.5rem;
             color: var(--color-text);
-        ]
+        }
 
-        .app-header-top [
+        .app-header-top {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
             width: 100%;
-        ]
+        }
 
-        .app-brand-meta [
+        .app-brand-meta {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-        ]
+        }
 
-        .app-brand-block [
+        .app-brand-block {
             display: flex;
             align-items: center;
             gap: 0.4rem;
             color: inherit;
-        ]
+        }
 
-        .logo [
+        .logo {
             width: 40px;
             height: 40px;
             object-fit: contain;
-        ]
+        }
 
-        .ref-header h1 [
+        .ref-header h1 {
             font-size: 1.5rem;
             font-weight: 500;
             color: var(--color-text);
-        ]
+        }
 
-        .ref-tagline [
+        .ref-tagline {
             display: inline-block;
             font-size: 0.75rem;
             color: oklch(100% 0 0);
@@ -170,9 +170,9 @@
             border-radius: 6px;
             padding: 0.125rem 0.5rem;
             line-height: 1.5;
-        ]
+        }
 
-        .visually-hidden [
+        .visually-hidden {
             position: absolute;
             width: 1px;
             height: 1px;
@@ -182,7 +182,7 @@
             clip: rect(0, 0, 0, 0);
             white-space: nowrap;
             border: 0;
-        ]
+        }
 
         /* 言語切替: ブランド行の Reference タグの右隣に置く。リンクだと
            「切り替えられる部品」だと気付かれず、現在表示中の言語もラベルに
@@ -190,7 +190,7 @@
            のエリアセレクタ (area-selector select、components.css) と同じ
            <select> ベースの部品にして、選択中の項目＝表示中の言語とする。
            言語が増えても <option> を足すだけで済む。 */
-        .lang-select [
+        .lang-select {
             display: inline-block;
             font-family: var(--font-stack-mono);
             font-size: 0.75rem;
@@ -203,25 +203,25 @@
             cursor: pointer;
             transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 
-            &:hover [
+            &:hover {
                 color: var(--color-text);
                 border-color: var(--color-text-light);
-            ]
+            }
 
-            &:focus [
+            &:focus {
                 outline: none;
                 color: var(--color-text);
                 background: var(--color-light);
-            ]
-        ]
+            }
+        }
 
-        .header-actions [
+        .header-actions {
             display: flex;
             justify-content: flex-end;
             gap: 0.5rem;
-        ]
+        }
 
-        .btn [
+        .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -238,48 +238,48 @@
             color: var(--color-text);
             background: #fff;
 
-            &:hover [
+            &:hover {
                 background: var(--color-light);
                 color: var(--color-text);
-            ]
-        ]
+            }
+        }
 
         /* コンテンツ: 横軸 3:7。左 30% が navigation、右 70% が article。
            モバイルでは縦積みで article → navigation の順に並ぶよう、DOM は
            article を先に置き、デスクトップでは order で nav を左へ移す。 */
-        .ref-main [
+        .ref-main {
             flex: 1;
             display: flex;
             flex-direction: column;
-        ]
+        }
 
-        .ref-article [
+        .ref-article {
             padding: 1.5rem 2rem 3rem;
             min-width: 0;
-        ]
+        }
 
-        .ref-nav [
+        .ref-nav {
             padding: 1.5rem 2rem;
             border-top: var(--border-main);
             background: var(--color-light);
 
-            & h2 [
+            & h2 {
                 font-size: 0.95rem;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
                 color: var(--color-text-light);
                 margin-bottom: 0.75rem;
-            ]
+            }
 
             /* navigation is a plain list of links. Leave link colors (unvisited /
                visited), underline, and hover to the user-agent default — minimal,
                unadorned styling. */
             & a,
-            & a:hover [
+            & a:hover {
                 color: revert;
                 text-decoration: revert;
-            ]
-        ]
+            }
+        }
 
         /* Each .ref-page is one page. Visibility is declarative: the URL fragment
            selects the visible page through :target, so no JS show/hide is needed
@@ -288,120 +288,120 @@
            were merged away are kept as <h3 id> so their links stay alive — so a
            page whose descendant is targeted opens too. When nothing at all is
            targeted — a bare URL — :has() falls back to showing the first page. */
-        .ref-page [
+        .ref-page {
             display: none;
-        ]
+        }
 
         .ref-page:target,
-        .ref-page:has(:target) [
+        .ref-page:has(:target) {
             display: block;
-        ]
+        }
 
-        .ref-main:not(:has(:target)) #intro [
+        .ref-main:not(:has(:target)) #intro {
             display: block;
-        ]
+        }
 
-        .ref-article [
-            & h2 [
+        .ref-article {
+            & h2 {
                 font-size: 1.4rem;
                 font-weight: 600;
                 margin-bottom: 0.5rem;
                 padding-bottom: 0.3rem;
                 border-bottom: var(--border-main);
-            ]
+            }
 
-            & h3 [
+            & h3 {
                 font-size: 1.05rem;
                 font-weight: 600;
                 margin: 1.25rem 0 0.4rem;
-            ]
+            }
 
-            & p [ margin: 0.5rem 0; ]
+            & p { margin: 0.5rem 0; }
 
             & ol.ref-list,
-            & ul.ref-list [
+            & ul.ref-list {
                 margin: 0.5rem 0;
                 padding-left: 1.5rem;
 
-                & li [ margin: 0.25rem 0; ]
-            ]
+                & li { margin: 0.25rem 0; }
+            }
 
-            & code [
+            & code {
                 font-family: var(--font-stack-mono);
                 font-size: 0.9em;
                 background: var(--color-medium);
                 padding: 0.1rem 0.3rem;
                 border-radius: 3px;
-            ]
-        ]
+            }
+        }
 
         /* The "Open in Playground" button sits on its own line at the bottom
            right of each section. */
         /* Each sample is a self-contained unit: a one-row table (sample code,
            expected value, notes) followed by its own "Open in Playground"
            button at the bottom right. */
-        .sample [
+        .sample {
             margin: 1.25rem 0;
 
-            & .sample-actions [
+            & .sample-actions {
                 display: flex;
                 justify-content: flex-end;
                 margin-top: 0.5rem;
-            ]
-        ]
+            }
+        }
 
         /* The table is wrapped in a horizontally scrollable container so long
            code rows can be scrolled (and copied) on narrow viewports instead of
            being clipped by the page's hidden horizontal overflow. */
-        .ref-table-wrap [
+        .ref-table-wrap {
             overflow-x: auto;
-        ]
+        }
 
-        .ref-table [
+        .ref-table {
             width: 100%;
             border-collapse: collapse;
 
             & th,
-            & td [
+            & td {
                 border: var(--border-main);
                 padding: 0.5rem 0.75rem;
                 text-align: left;
                 vertical-align: top;
-            ]
+            }
 
-            & th [
+            & th {
                 background: var(--color-light);
                 font-weight: 600;
                 font-size: 0.8rem;
                 color: var(--color-text-light);
-            ]
+            }
 
-            & td code [
+            & td code {
                 background: none;
                 padding: 0;
                 font-family: var(--font-stack-mono);
                 font-size: 0.85rem;
                 color: var(--color-text);
                 white-space: pre;
-            ]
+            }
 
-            & td.notes [
+            & td.notes {
                 font-size: 0.85rem;
                 color: var(--color-text-light);
-            ]
-        ]
+            }
+        }
 
         /* Word/sugar summary tables (not samples): same look, slightly tighter. */
-        .word-table [
+        .word-table {
             margin: 0.75rem 0 1.25rem;
-        ]
+        }
 
-        .ref-note [
+        .ref-note {
             font-size: 0.85rem;
             color: var(--color-text-light);
-        ]
+        }
 
-        .ref-footer [
+        .ref-footer {
             border-top: var(--border-main);
             padding: 0.75rem 2rem;
             display: flex;
@@ -411,68 +411,68 @@
             color: var(--color-text);
             font-size: 0.875rem;
             text-align: center;
-        ]
+        }
 
-        .ref-footer a [
+        .ref-footer a {
             color: var(--color-text-light);
 
-            &:hover [ color: var(--color-text); ]
-        ]
+            &:hover { color: var(--color-text); }
+        }
 
         /* デスクトップ: 横軸 3:7。nav を左（30%）、article を右（70%）に。
            align-items: stretch（既定)により両カラムが同じ高さに伸び、nav の
            背景色と分割線がコンテンツ領域の縦 100% を覆う。 */
-        @media (min-width: 769px) [
-            .ref-main [
+        @media (min-width: 769px) {
+            .ref-main {
                 flex-direction: row;
                 align-items: stretch;
-            ]
+            }
 
-            .ref-nav [
+            .ref-nav {
                 order: -1;
                 flex: 0 0 30%;
                 max-width: 30%;
                 border-top: none;
                 border-right: var(--border-main);
-            ]
+            }
 
-            .ref-article [
+            .ref-article {
                 flex: 1 1 70%;
-            ]
-        ]
+            }
+        }
 
         /* モバイル: header（固定表示）→ article → navigation → footer（固定表示）。
            ビューポートを固定し、間のコンテンツ領域（.ref-main）だけを縦スクロール
            させる。これで header / footer は sticky に頼らず確実に固定され、一つの
            section を読み終えると自然と navigation に到達する。 */
-        @media (max-width: 768px) [
-            html, body [
+        @media (max-width: 768px) {
+            html, body {
                 height: 100%;
                 overflow: hidden;
-            ]
+            }
 
-            body [
+            body {
                 height: 100vh;
                 height: 100dvh;
                 min-height: 0;
-            ]
+            }
 
             .ref-header,
-            .ref-footer [
+            .ref-footer {
                 flex: 0 0 auto;
-            ]
+            }
 
-            .ref-main [
+            .ref-main {
                 flex: 1 1 auto;
                 min-height: 0;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
-            ]
+            }
 
-            .ref-header [ padding: 1rem 2rem; ]
-            .ref-article [ padding: 1.25rem 1rem 2rem; ]
-            .ref-nav [ padding: 1.25rem 1rem; ]
-        ]
+            .ref-header { padding: 1rem 2rem; }
+            .ref-article { padding: 1.25rem 1rem 2rem; }
+            .ref-nav { padding: 1.25rem 1rem; }
+        }
     </style>
 
     <!-- KaTeX (self-hosted, see docs/dev/ajisai-authoring-style.md Section 4). -->
