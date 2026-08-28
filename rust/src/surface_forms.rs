@@ -120,14 +120,14 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         concept: "RESERVED-BEGIN",
         kind: SurfaceFormKind::ReservedMarker,
         runtime_word: false,
-        summary: "Reserved (continued-fraction serialization); not valid in source",
+        summary: "Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)",
     },
     SurfaceForm {
         surface: ")",
         concept: "RESERVED-END",
         kind: SurfaceFormKind::ReservedMarker,
         runtime_word: false,
-        summary: "Reserved (continued-fraction serialization); not valid in source",
+        summary: "Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)",
     },
 ];
 

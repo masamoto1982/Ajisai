@@ -236,7 +236,7 @@ const forbiddenPatterns = [
   {
     pattern: 'Parentheses ( )',
     code: '( 1 2 )',
-    why: 'Reserved for the continued-fraction *display* form only. `[ ]` is the sole bracket, for both vectors and code.',
+    why: 'Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.',
   },
   {
     pattern: 'Double-quoted strings',
@@ -258,7 +258,7 @@ function renderResult(json) {
   const parts = [];
   if (json.output.length > 0) parts.push(`prints \`${json.output.join(' ⏎ ')}\``);
   // An algebraic slot's stack display is the SPEC §4.2.3 continued fraction,
-  // truncated at a display budget: √2 ran to ~194 characters ending in `...)`,
+  // truncated at a display budget: √2 ran to ~194 characters ending in `...]`,
   // which told a reader nothing about the value and left the impression that
   // an exact square root is a complicated object. `semantics.exactDisplay`
   // writes the same value short, and comes from the same verified `--json`

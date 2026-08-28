@@ -48,6 +48,6 @@ async fn render_uses_slot_role_not_value_hint() {
         .push_with_role(one_third, Interpretation::ContinuedFraction);
     assert_eq!(
         render_stack(interp.get_stack()),
-        vec!["( 0; 3 )".to_string()]
+        vec!["[ 0; 3 ]".to_string()]
     );
 }

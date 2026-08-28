@@ -86,7 +86,7 @@ fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
 /// A consumer reading an algebraic result top-down meets two renderings of the
 /// number before it meets the number, and neither is it. `stackDisplay` is the
 /// SPEC §4.2.3 continued fraction *truncated at a display budget* — √2 runs to
-/// `( 1; 2, 2, … )`, ~101 characters, ending in the truncation marker `…` —
+/// `[ 1; 2, 2, … ]`, ~101 characters, ending in the truncation marker `…` —
 /// and the node's own `value` is a
 /// rational approximation, flagged `approximate`. Each is correct as what it
 /// is and misleading as what it resembles: the first looks complete and is
