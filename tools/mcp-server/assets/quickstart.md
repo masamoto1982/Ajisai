@@ -384,9 +384,9 @@ no module system and nothing to import.
 |---|---|---|
 | `TRUE` | constant | Push the boolean TRUE onto the stack. — e.g. `TRUE` |
 | `FALSE` | constant | Push the boolean FALSE onto the stack. — e.g. `FALSE` |
-| `AND` | logic | Logical AND. A NIL operand passes through. — e.g. `TRUE TRUE &` |
-| `OR` | logic | Logical OR. A NIL operand passes through. — e.g. `TRUE FALSE OR` |
-| `NOT` | logic | Logical negation. A NIL operand passes through. — e.g. `TRUE NOT` |
+| `AND` | logic | Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN. — e.g. `TRUE TRUE &` |
+| `OR` | logic | Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN. — e.g. `TRUE FALSE OR` |
+| `NOT` | logic | Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged. — e.g. `TRUE NOT` |
 | `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
 | `NEQ` | comparison | Test inequality of two values. — e.g. `1 2 NEQ` |
 | `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
