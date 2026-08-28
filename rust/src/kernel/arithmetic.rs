@@ -1,5 +1,5 @@
-//! Spine-level arithmetic primitives for the `ADD`/`SUB`/`MUL`/`DIV` family
-//! (migration plan §12, Phase 4).
+//! Spine-level arithmetic primitives for the `ADD`/`SUB`/`MUL`/`DIV`/`FLOOR`/`NEG`
+//! family (migration plan §12, Phase 4).
 //!
 //! These are the first Words routed through the shared [`execute_word`] wrapper.
 //! A primitive computes only: the wrapper has already applied arity and NIL
@@ -11,6 +11,10 @@
 //! interpreter). Operands outside that domain — exact-real scalars, vectors,
 //! tensors — are left to the legacy executor until a later phase widens the
 //! primitives; here they yield a reasonless NIL rather than a wrong number.
+//! `SQRT` is not covered here: over the rational domain it can still leave
+//! `Fraction` (a non-perfect-square root is an exact-real value), so it needs
+//! the wider `KernelValue`/`ScalarRepr` surface a later phase adds rather than
+//! this module's Fraction-only primitives.
 //!
 //! [`execute_word`]: super::execute::execute_word
 
@@ -65,6 +69,24 @@ pub fn div(operands: &[KernelValue]) -> Vec<KernelValue> {
     )
 }
 
+/// Apply a unary rational operation. A non-rational operand yields a
+/// reasonless NIL (out of Phase 4 scope), same as [`binary`].
+fn unary(operands: &[KernelValue], op: impl Fn(&Fraction) -> Fraction) -> Vec<KernelValue> {
+    let result = match operands.first().and_then(scalar_fraction) {
+        Some(a) => KernelValue::Scalar(Scalar::from_fraction(op(&a))),
+        None => KernelValue::Nil(None),
+    };
+    vec![result]
+}
+
+pub fn floor(operands: &[KernelValue]) -> Vec<KernelValue> {
+    unary(operands, Fraction::floor)
+}
+
+pub fn neg(operands: &[KernelValue]) -> Vec<KernelValue> {
+    unary(operands, |a| Fraction::from(0_i64).sub(a))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,6 +128,18 @@ mod tests {
         );
     }
 
+    /// The unary counterpart of [`assert_agrees`].
+    async fn assert_agrees_unary(word: &str, primitive: Primitive, a: &str) {
+        let operands = vec![eval_top(a).await];
+        let mut stack = KernelStack::from_values(operands);
+        execute_word(&contract(word), primitive, Consumption::Eat, &mut stack).unwrap();
+        assert_eq!(stack.len(), 1);
+        let spine = stack.as_slice()[0].clone();
+
+        let legacy = eval_top(&format!("{a} {word}")).await;
+        assert_eq!(spine, legacy, "spine and legacy disagree on `{a} {word}`");
+    }
+
     #[tokio::test]
     async fn add_matches_the_live_executor() {
         assert_agrees("ADD", add, "3", "4").await;
@@ -141,5 +175,21 @@ mod tests {
             stack.as_slice()[0],
             KernelValue::Nil(Some(NilReason::DivisionByZero))
         );
+    }
+
+    #[tokio::test]
+    async fn floor_matches_the_live_executor() {
+        assert_agrees_unary("FLOOR", floor, "7").await;
+        assert_agrees_unary("FLOOR", floor, "7/2").await;
+        assert_agrees_unary("FLOOR", floor, "-7/2").await;
+        assert_agrees_unary("FLOOR", floor, "-3").await;
+    }
+
+    #[tokio::test]
+    async fn neg_matches_the_live_executor() {
+        assert_agrees_unary("NEG", neg, "5").await;
+        assert_agrees_unary("NEG", neg, "-5").await;
+        assert_agrees_unary("NEG", neg, "1/3").await;
+        assert_agrees_unary("NEG", neg, "0").await;
     }
 }

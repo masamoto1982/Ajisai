@@ -698,6 +698,35 @@ code-point vectors` は見出し自体が**欠陥を仕様として記述して�
 `NOW` / `TIMESTAMP` / `LOWER` / `UPPER` / `WIDTH` / `MATH@*` など**存在しない語**が
 多数残っている。ロール上書き表そのものの棚卸しは別変更。
 
+### 10.11 Phase 4 の語彙拡張（`FLOOR` / `NEG`）
+
+§10.1 が「まだ live」と記録した経路とは別に、Phase 4 の**適用範囲そのもの**を
+`ADD`/`SUB`/`MUL`/`DIV` の二項算術族から一歩広げた。`kernel/arithmetic.rs` に
+単項版の `unary` ラッパーを追加し、`FLOOR`（`Fraction::floor`）と `NEG`
+（`Fraction::from(0).sub`）を同じ Fraction-only fast path・reasonless NIL
+fallback パターンで実装した。差分テスト（`floor_matches_the_live_executor` /
+`neg_matches_the_live_executor`）は有理数・負数・非整数の入力で spine と legacy
+の一致を確認する。既存 985 件のテストは全緑のまま、`cargo fmt` / `cargo clippy
+-D warnings` も無警告。
+
+**`SQRT` を含めなかった理由**: `ADD`/`FLOOR`/`NEG` は有理数入力なら有理数を返す
+（体として閉じている）が、`SQRT` は非平方数の有理数から exact-real 値へ出る
+ため、この module の「`Fraction` しか運ばない」前提の外側にある。`KernelValue`
+の `Scalar` は既に `ScalarRepr::{Float,Exact}` を持てる設計（`kernel/scalar.rs`）
+だが、`Scalar::from_exact` を primitive の戻り値として使う経路はまだ差分テスト
+されていない。次の一歩は `SQRT` 単独で widen することであり、`ADD` 等を
+exact-real 対応に広げる話ではない。
+
+**§10.1 で指摘された次の障壁（未着手のまま残す）**: `execute_word` を実際の
+runtime dispatch（`interpreter/execute_builtin.rs` の `WordId::Add =>
+arithmetic::op_add(self)` 等）へ配線するには、legacy 側の `op_add` が内部で
+行っているランタイム制御——`charge_binary_schema` / `check_result_size` に
+よるリソース上限の計測——を spine 側にも実装するか、dispatch 側で二重に
+適用する必要がある。`kernel::execute::execute_word` は現時点でこれらを
+一切行わないため、素朴に dispatch を差し替えると計測・上限判定を素通り
+させてしまう。これは Word 単位の primitive 追加より大きい変更で、
+Phase 4 の「dispatch 配線」はこの制約を解決してから着手する。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）
