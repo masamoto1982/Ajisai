@@ -727,6 +727,57 @@ arithmetic::op_add(self)` 等）へ配線するには、legacy 側の `op_add` �
 させてしまう。これは Word 単位の primitive 追加より大きい変更で、
 Phase 4 の「dispatch 配線」はこの制約を解決してから着手する。
 
+### 10.12 Phase 4 の dispatch 配線（scalar-scalar 算術族）
+
+§10.11 が残した課題は「計測・上限判定を二重にせず、どう `execute_word` を
+runtime dispatch に配線するか」だった。実測すると、legacy 側にはすでに
+**計測が dispatch 入口 1 箇所に集約された内部最適化経路**が存在していた:
+`apply_exact_arithmetic_schema`（`interpreter/arithmetic.rs`）は `NIL`
+チェックの直後、どのルートを選ぶより前に `charge_binary_schema` で一度だけ
+課金し、そのあと SIMD・exact-real・`push_scalar_fastpath_result`（scalar
+または単一要素 Tensor/Vector）・汎用ブロードキャストの順にルートを試す。
+`push_scalar_fastpath_result` は課金**後**に呼ばれ、`Fraction` の四則演算
+そのものを直接呼んでいた（`schema.fraction(&a.fraction, &b.fraction)`）。
+
+課金・上限判定はこの関数の外側（呼び出し元と、結果を受け取った後の
+`check_result_size`）にすでに集約されているため、**この関数の中身だけを
+Kernel primitive 呼び出しに差し替えれば、計測を二重化も素通りもさせずに
+dispatch を Spine へ配線できる**。したがって:
+
+- `interpreter/arithmetic.rs` に `schema_via_kernel(schema, a, b)` を追加。
+  2 つの `Fraction` を `KernelValue::Scalar` に包み、
+  `kernel::arithmetic::{add,sub,mul,div}` を直接呼んで結果を `Fraction` に
+  戻す。`kernel::execute::execute_word`（arity/NIL policy wrapper）は
+  ここでは経由しない——`push_scalar_fastpath_result` の時点で両オペランド
+  は既に非 NIL の有理数と判明済みで、arity も 2 で固定されているため、
+  wrapper が適用する契約はこの呼び出し点では自明に満たされており、
+  再検査は二重作業になる。wrapper は「契約から一般に execute する」ための
+  ものであり、契約が既知の呼び出し点で primitive を直接呼ぶことは
+  Phase 4 の目的（Spine の計算を実行に使う）に反しない。
+- `push_scalar_fastpath_result` 内の `schema.fraction(...)` 呼び出しを
+  `schema_via_kernel(...)` に置き換え。
+- 単一要素 Tensor/Vector にラップされた場合も含めて置き換えた
+  （`ScalarFastWrap::Tensor` 分岐も同じ `Fraction` 計算 1 回に帰着するため、
+  `Scalar` 限定にする必要はなかった）。
+
+**検証**: `interpreter/scalar_fastpath_tests.rs`
+（fastpath 有効/無効でスタック値・表示・hint が同一であることを保証する
+差分回帰網、§9 に既載）を含む `cargo test --all-targets` が全緑
+（17 バイナリ、失敗 0）。`cargo fmt --check` / `cargo clippy --all-targets
+-- -D warnings` も無警告。`scripts/check-semantic-firewall.sh` の
+Semantic Spine public-API closure と `node scripts/check-minimal-core.mjs`
+（36/36 Kernel witness）も不変。
+
+これで `ADD`/`SUB`/`MUL`/`DIV` の scalar-scalar（および単一要素
+Tensor/Vector）経路は実際に `kernel::arithmetic` を通って計算される。
+**残る範囲**: `FLOOR`/`NEG` はまだ dispatch 配線されていない（legacy の
+`lift_unary_numeric`/`apply_unary_math` 経由のまま）。二項算術と異なり
+単項語は課金点が単項用に別経路のため、同じパターンを単項に広げるのが
+次の一歩。ベクタ全体を跨ぐ汎用ブロードキャスト（`apply_binary_broadcast_
+with_metrics` / `apply_exact_real_recursive_broadcast`）と exact-real
+オペランドは、Phase 4 のスコープ外（kernel/arithmetic.rs の docstring
+どおり）のまま legacy 実行のみ。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）

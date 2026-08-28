@@ -8,6 +8,8 @@ use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, push_result,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::kernel::arithmetic as kernel_arithmetic;
+use crate::kernel::{KernelValue, Scalar as KernelScalar};
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -204,6 +206,30 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
     }
 }
 
+/// `schema(a, b)` via the Semantic Spine (migration plan §12 Phase 4, §10.12).
+/// The caller already charged, checks the result size, and gave us rationals.
+fn schema_via_kernel(
+    schema: ExactArithmeticSchema,
+    a: &Fraction,
+    b: &Fraction,
+) -> Result<Fraction> {
+    let operands = [
+        KernelValue::Scalar(KernelScalar::from_fraction(a.clone())),
+        KernelValue::Scalar(KernelScalar::from_fraction(b.clone())),
+    ];
+    let primitive: fn(&[KernelValue]) -> Vec<KernelValue> = match schema {
+        ExactArithmeticSchema::Add => kernel_arithmetic::add,
+        ExactArithmeticSchema::Sub => kernel_arithmetic::sub,
+        ExactArithmeticSchema::Mul => kernel_arithmetic::mul,
+        ExactArithmeticSchema::Div => kernel_arithmetic::div,
+    };
+    match &primitive(&operands)[0] {
+        KernelValue::Scalar(result) => Ok(result.as_fraction().cloned().expect("rational")),
+        KernelValue::Nil(Some(NilReason::DivisionByZero)) => Err(AjisaiError::DivisionByZero),
+        other => unreachable!("kernel arithmetic returned {other:?} for two Scalar operands"),
+    }
+}
+
 fn push_scalar_fastpath_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
@@ -225,7 +251,7 @@ fn push_scalar_fastpath_result(
 
     // The work of this operation was charged at the dispatch entry, before any
     // route was chosen — see `charge_binary_schema`.
-    let result = match schema.fraction(&a.fraction, &b.fraction) {
+    let result = match schema_via_kernel(schema, &a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
         Err(AjisaiError::DivisionByZero) => division_by_zero_bubble(),
         Err(error) => return Err(error),
