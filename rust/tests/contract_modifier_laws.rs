@@ -353,10 +353,14 @@ fn key_word_contracts_match_spec_7_14() {
         assert_eq!(m.safety_level, SafetyLevel::B, "{cmp}");
     }
 
+    // `AND`/`OR`/`NOT` declare `kleeneAbsorbing`, not a blanket `passthrough`:
+    // a NIL operand does not always survive to the result (FALSE absorbs it
+    // into `AND`, TRUE into `OR`), so the primitive must decide instead of a
+    // generic bubble (LANG.VALUES.TRUTH).
     for logic in ["AND", "OR", "NOT"] {
         let m = c(logic);
         assert_eq!(m.partiality, Partiality::Total, "{logic}");
-        assert_eq!(m.nil_policy, NilPolicy::Passthrough, "{logic}");
+        assert_eq!(m.nil_policy, NilPolicy::KleeneAbsorbing, "{logic}");
         assert_eq!(m.safety_level, SafetyLevel::A, "{logic}");
     }
 }

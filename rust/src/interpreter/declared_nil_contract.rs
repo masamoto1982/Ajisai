@@ -95,10 +95,18 @@ impl Interpreter {
             // `createsNil` and `preserveReason` describe what the Word does
             // with non-NIL operands; `consumeNil` and `inspectNil` make the NIL
             // itself the Word's subject. None of them constrain dispatch.
+            //
+            // `kleeneAbsorbing` (strong-Kleene `AND`/`OR`, LANG.VALUES.TRUTH)
+            // cannot be decided from a NIL operand alone: whether it settles
+            // to a definite result or to UNKNOWN depends on the *other*
+            // operand (FALSE absorbs `AND`, TRUE absorbs `OR`), so dispatch
+            // must always reach the primitive rather than pre-empt it the way
+            // a blanket `passthrough` does.
             NilPolicy::CreatesNil
             | NilPolicy::ConsumeNil
             | NilPolicy::InspectNil
-            | NilPolicy::PreserveReason => NilContract::Run,
+            | NilPolicy::PreserveReason
+            | NilPolicy::KleeneAbsorbing => NilContract::Run,
         }
     }
 

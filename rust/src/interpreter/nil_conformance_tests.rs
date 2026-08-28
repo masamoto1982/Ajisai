@@ -6,10 +6,8 @@
 //! asserts the *runtime* honors each word's declared `nil_policy` and the
 //! Bubble Rule (SPEC §4.5.1, §7.12, §11.2).
 //!
-//! The completeness tests are registry-driven: they enumerate the live
-//! registry and fail if a newly added Core passthrough / projecting word
-//! is not covered by a behavioral probe here. That coupling is what lets
-//! coverage grow automatically with the language instead of drifting.
+//! The completeness tests are registry-driven: a newly added Core
+//! passthrough / projecting word without a behavioral probe here fails.
 //!
 //! Trace: docs/quality/TRACEABILITY_MATRIX.md (NIL/Bubble conformance).
 
@@ -45,10 +43,10 @@ enum NilClass {
     BinaryBlanket,
     /// Unary word: NIL operand yields NIL.
     UnaryNil,
-    /// Boolean AND: a NIL operand passes through.
+    /// AND/OR/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
     ThreeValAnd,
-    /// Boolean OR: a NIL operand passes through.
     ThreeValOr,
+    ThreeValNot,
 }
 
 /// The Core (canonical-home == Core) passthrough words and their NIL
@@ -70,7 +68,7 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("LTE", NilClass::BinaryBlanket),
     ("GT", NilClass::BinaryBlanket),
     ("GTE", NilClass::BinaryBlanket),
-    ("NOT", NilClass::UnaryNil),
+    ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
 ];
@@ -90,12 +88,13 @@ fn core_passthrough_completeness() {
     // Every Core passthrough word in a covered category must be classified,
     // and every classified word must still be a Core passthrough word.
     for meta in get_builtin_word_registry() {
-        let covered = meta.nil_policy == NilPolicy::Passthrough
-            && COVERED_CATEGORIES.contains(&meta.category.as_str());
+        let probed = meta.nil_policy == NilPolicy::Passthrough
+            || meta.nil_policy == NilPolicy::KleeneAbsorbing;
+        let covered = probed && COVERED_CATEGORIES.contains(&meta.category.as_str());
         if covered {
             assert!(
                 lookup_class(&meta.name).is_some(),
-                "Core passthrough word `{}` (category {}) is not classified in \
+                "Core passthrough/Kleene word `{}` (category {}) is not classified in \
                  CORE_PASSTHROUGH; add its NIL behavior class",
                 meta.name,
                 meta.category
@@ -103,15 +102,18 @@ fn core_passthrough_completeness() {
         }
     }
 
-    for (name, _) in CORE_PASSTHROUGH {
+    for (name, class) in CORE_PASSTHROUGH {
         let meta = get_builtin_word_registry()
             .iter()
             .find(|m| &m.name == name)
             .unwrap_or_else(|| panic!("classified word `{name}` is not registered"));
+        let want = match class {
+            NilClass::BinaryBlanket | NilClass::UnaryNil => NilPolicy::Passthrough,
+            _ => NilPolicy::KleeneAbsorbing,
+        };
         assert_eq!(
-            meta.nil_policy,
-            NilPolicy::Passthrough,
-            "`{name}` is classified as passthrough but registry says {:?}",
+            meta.nil_policy, want,
+            "`{name}` is classified as {class:?} but registry says {:?}",
             meta.nil_policy
         );
     }
@@ -139,9 +141,8 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
                 assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
                 assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
             }
-            // AND / OR pass NIL through rather than absorbing it into a
-            // definite operand; covered by the corpus's logic cases.
-            NilClass::ThreeValAnd | NilClass::ThreeValOr => {}
+            // Not a blanket collapse; see `kleene_truth_conformance_tests`.
+            NilClass::ThreeValAnd | NilClass::ThreeValOr | NilClass::ThreeValNot => {}
         }
     }
 }

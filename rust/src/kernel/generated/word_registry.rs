@@ -179,6 +179,8 @@ pub enum NilPolicy {
     CreatesNil,
     /// `passthroughThenProject`
     PassthroughThenProject,
+    /// `kleeneAbsorbing`
+    KleeneAbsorbing,
 }
 
 impl NilPolicy {
@@ -192,6 +194,7 @@ impl NilPolicy {
             NilPolicy::InspectNil => "inspectNil",
             NilPolicy::CreatesNil => "createsNil",
             NilPolicy::PassthroughThenProject => "passthroughThenProject",
+            NilPolicy::KleeneAbsorbing => "kleeneAbsorbing",
         }
     }
 }
@@ -549,7 +552,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
         consumption: Consumption::Eat,
-        nil_policy: NilPolicy::Passthrough,
+        nil_policy: NilPolicy::KleeneAbsorbing,
         projection: None,
         partiality: Partiality::Total,
         accepted_domain: None,
@@ -581,7 +584,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
         consumption: Consumption::Eat,
-        nil_policy: NilPolicy::Passthrough,
+        nil_policy: NilPolicy::KleeneAbsorbing,
         projection: None,
         partiality: Partiality::Total,
         accepted_domain: None,
@@ -613,7 +616,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_inputs: Arity::Fixed(1),
         stack_outputs: Arity::Fixed(1),
         consumption: Consumption::Eat,
-        nil_policy: NilPolicy::Passthrough,
+        nil_policy: NilPolicy::KleeneAbsorbing,
         projection: None,
         partiality: Partiality::Total,
         accepted_domain: None,

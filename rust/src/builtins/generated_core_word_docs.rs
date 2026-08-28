@@ -32,8 +32,8 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "AND",
         category: "logic",
-        summary: "Logical AND. A NIL operand passes through.",
-        role: "Logic primitive: Logical AND with three-valued (Kleene) NIL handling.",
+        summary: "Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.",
+        role: "Logic primitive: strong-Kleene three-valued AND (LANG.VALUES.TRUTH).",
         stack_effect: "[ a ] [ b ] -> [ a AND b ]",
         hover_summary: "AND — logical AND",
         hover_syntax: "TRUE TRUE &",
@@ -41,8 +41,8 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "OR",
         category: "logic",
-        summary: "Logical OR. A NIL operand passes through.",
-        role: "Logic primitive: Logical OR with three-valued (Kleene) NIL handling.",
+        summary: "Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.",
+        role: "Logic primitive: strong-Kleene three-valued OR (LANG.VALUES.TRUTH).",
         stack_effect: "[ a ] [ b ] -> [ a OR b ]",
         hover_summary: "OR — logical OR",
         hover_syntax: "TRUE FALSE OR",
@@ -50,8 +50,8 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "NOT",
         category: "logic",
-        summary: "Logical negation. A NIL operand passes through.",
-        role: "Logic primitive: Logical negation.",
+        summary: "Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged.",
+        role: "Logic primitive: strong-Kleene three-valued NOT (LANG.VALUES.TRUTH).",
         stack_effect: "[ a ] -> [ NOT a ]",
         hover_summary: "NOT — logical negation",
         hover_syntax: "TRUE NOT",

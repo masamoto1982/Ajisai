@@ -176,9 +176,9 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         // has no dedicated variant, so it takes the `Nil` arm above and
         // renders as `NIL`, same as an operational NIL.
         // A definite boolean renders uniformly as TRUE/FALSE in every role
-        // (SPEC §12.2), so the three-valued axis is observable consistently
-        // whether the boolean came from a literal, a comparison, or a logic
-        // word. Display-only and non-canonical.
+        // (LANG.VALUES.TRUTH), so the three-valued axis is observable
+        // consistently whether the boolean came from a literal, a
+        // comparison, or a logic word. Display-only and non-canonical.
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
@@ -329,7 +329,7 @@ pub fn format_for_output(value: &Value) -> String {
 }
 
 /// Boolean label for a single element of a truth-valued vector/tensor. An
-/// operational NIL renders as `NIL`; the logical Unknown (U, SPEC §7.5) —
+/// operational NIL renders as `NIL`; the logical Unknown (U, LANG.VALUES.TRUTH) —
 /// `Nil` data carrying the `TruthValue` hint, no dedicated variant — takes
 /// the same arm below and renders as `NIL` too.
 fn boolean_element_label(child: &Value) -> &'static str {

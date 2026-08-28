@@ -159,19 +159,17 @@ impl Value {
         matches!(self.data, ValueData::Nil)
     }
 
-    /// Retained as the intent-revealing name at the firewall boundary (SPEC
-    /// §7.5 / §2.3): the logical truth value Unknown (U) is meant never to
-    /// register here. Currently identical to [`is_nil`] — U has no
-    /// dedicated variant of its own (it is `Nil` data carrying the
-    /// `TruthValue` hint), and this check does not look at `hint`, so it
-    /// does not yet distinguish the two. U is unreachable from the current
-    /// vocabulary (see `types/exact/computable.rs`), so this has no
-    /// observable effect today; it is worth revisiting alongside
-    /// [`Value::capabilities`]'s `NilPassthrough` handling before a Tier 2
-    /// word can construct U.
+    /// The intent-revealing name at the firewall boundary (LANG.VALUES.TRUTH):
+    /// the logical truth value Unknown (U) must never register here. U has no
+    /// dedicated variant of its own — it is `Nil` data carrying the
+    /// `TruthValue` hint — so this excludes exactly that hint, the same test
+    /// [`Value::capabilities`]'s `NilPassthrough` handling uses. `AND`, `OR`,
+    /// and `NOT` construct U directly (LANG.VALUES.TRUTH's Kleene tables), so
+    /// this distinction is load-bearing, not defensive: `TRUE NIL AND NIL?`
+    /// must answer `FALSE`, not `TRUE`.
     #[inline]
     pub fn is_operational_nil(&self) -> bool {
-        matches!(self.data, ValueData::Nil)
+        matches!(self.data, ValueData::Nil) && self.hint != Interpretation::TruthValue
     }
 
     #[inline]
@@ -179,7 +177,7 @@ impl Value {
         match &self.data {
             // A definite boolean is truth-valued, not numeric; its truth is
             // observed through the `truthValue` axis and `truthValued`
-            // capability (SPEC §2.3). It reports `number` on the coarse
+            // capability (LANG.VALUES.TRUTH). It reports `number` on the coarse
             // `semanticKind` axis only for protocol stability — distinctness
             // from a number lives in value identity (`TRUE 1 EQ` is false),
             // not in this axis.
@@ -195,7 +193,7 @@ impl Value {
             // The logical Unknown (U — `Nil` carrying the `TruthValue`
             // hint) reports `absence` on this coarse `semanticKind` axis,
             // same as an operational NIL; its distinctness lives on the
-            // `truthValue` axis and in value identity (SPEC §2.3), not here.
+            // `truthValue` axis (LANG.VALUES.TRUTH) and in value identity, not here.
             ValueData::Nil => SemanticKind::Absence,
             // A Symbol is a bare Word reference — the closest existing
             // bucket on this coarse axis is `Code`, though a lone Symbol
@@ -261,10 +259,10 @@ impl Value {
             // `agreedPrefix`) and is AI-explainable, but it is emphatically
             // **not** a NIL-passthrough value — advertising `NilPassthrough`
             // would contradict the very firewall that keeps U from being
-            // absorbed as an operational NIL (SPEC §2.3 / §7.5). U is `Nil`
-            // data carrying the `TruthValue` hint (there is no dedicated
-            // `Unknown` variant), so that case is excluded here by hint. It
-            // gains `truthValued` below via `is_truth_value`.
+            // absorbed as an undifferentiated operational NIL (LANG.VALUES.TRUTH).
+            // U is `Nil` data carrying the `TruthValue` hint (there is no
+            // dedicated `Unknown` variant), so that case is excluded here by
+            // hint. It gains `truthValued` below via `is_truth_value`.
             ValueData::Nil => {
                 if self.hint != Interpretation::TruthValue {
                     capabilities.push(Capability::NilPassthrough);
@@ -281,7 +279,7 @@ impl Value {
         }
         // Truth-valued values (true / false / unknown) advertise the
         // `truthValued` capability so consumers know to read the
-        // `truthValue` axis (SPEC §2.3, §12.2). This covers definite
+        // `truthValue` axis (LANG.VALUES.TRUTH). This covers definite
         // booleans (Scalar + TruthValue role) and the logical U.
         if self.is_truth_value() {
             capabilities.push(Capability::TruthValued);

@@ -33,7 +33,7 @@ pub enum NilReason {
     /// error.
     Undecidable,
     // `LogicallyUnknown` was retired: no `NilReason` value represents the
-    // logical truth value Unknown (U, SPEC §7.5). U has no dedicated
+    // logical truth value Unknown (U, LANG.VALUES.TRUTH). U has no dedicated
     // `ValueData` variant — it is `Nil` data carrying the `TruthValue`
     // hint, not a NIL node carrying a reason — so there is no reverse
     // decode of `NilReason` from a protocol string, and the retired name

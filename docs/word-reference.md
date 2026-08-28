@@ -33,12 +33,12 @@ Push the boolean FALSE onto the stack.
 
 ## `AND`
 
-Logical AND. A NIL operand passes through.
+Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`
@@ -47,12 +47,12 @@ Logical AND. A NIL operand passes through.
 
 ## `OR`
 
-Logical OR. A NIL operand passes through.
+Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.
 
 - **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `booleanLogic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`
@@ -61,12 +61,12 @@ Logical OR. A NIL operand passes through.
 
 ## `NOT`
 
-Logical negation. A NIL operand passes through.
+Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`

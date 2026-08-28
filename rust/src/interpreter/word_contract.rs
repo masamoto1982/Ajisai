@@ -256,6 +256,10 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
         NilPolicy::RejectNil => NilBehavior::RejectsNil,
         // `inspectNil` reads NIL-ness rather than propagating it — `ConsumesNil`.
         NilPolicy::ConsumeNil | NilPolicy::InspectNil => NilBehavior::ConsumesNil,
+        // `kleeneAbsorbing` may or may not produce a NIL depending on the
+        // other operand (LANG.VALUES.TRUTH) — the same "plan for either"
+        // shape as `passthroughThenProject`, so it widens the same way.
+        NilPolicy::KleeneAbsorbing => NilBehavior::MayCreate,
     };
     let (space, space_exact) = super::word_space::builtin_space_for(name);
     let cost = super::word_cost::builtin_cost_for(name);

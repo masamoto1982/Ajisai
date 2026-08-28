@@ -70,7 +70,7 @@ impl Value {
 
     /// Whether this value carries the `TruthValue` interpretation role. Used at
     /// observation boundaries to attach the `truthValue` axis. The logical
-    /// truth value `Unknown` (U, SPEC §7.5 / §7.4.1) is `ValueData::Nil`
+    /// truth value `Unknown` (U, LANG.VALUES.TRUTH) is `ValueData::Nil`
     /// carrying this role — there is no dedicated `Unknown` variant — so
     /// `is_truth_value()` combined with `matches!(self.data, ValueData::Nil)`
     /// is how U is detected, never by assuming a distinct storage
@@ -80,13 +80,14 @@ impl Value {
         self.hint == Interpretation::TruthValue
     }
 
-    /// The observable `truthValue` axis (SPEC §2.3) under a given effective
-    /// interpretation role: `Some("true")`, `Some("false")`, or
-    /// `Some("unknown")` for truth-valued values, and `None` otherwise.
+    /// The observable `truthValue` axis (LANG.VALUES.TRUTH, LANG.OBSERVATION.PROTOCOL)
+    /// under a given effective interpretation role: `Some("true")`,
+    /// `Some("false")`, or `Some("unknown")` for truth-valued values, and
+    /// `None` otherwise.
     ///
     /// The role is taken as a parameter because a definite boolean produced
     /// by a comparison/logic word carries its `TruthValue` role in the
-    /// semantic plane (SPEC §12.2), not on the value's own `hint`. The
+    /// semantic plane, not on the value's own `hint`. The
     /// logical Unknown (U) is always `unknown` regardless of the role, since
     /// it is detected from its reason. This is the single canonical mapping
     /// from a value to its three-valued logical surface; external consumers

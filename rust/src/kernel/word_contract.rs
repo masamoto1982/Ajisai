@@ -79,6 +79,16 @@ mod tests {
     }
 
     #[test]
+    fn and_is_kleene_absorbing_not_a_blanket_passthrough() {
+        let contract = WordContract::from_generated(word("AND")).expect("AND is fixed-arity");
+        assert_eq!(contract.nil_policy, NilPolicy::KleeneAbsorbing);
+        // A NIL operand does not blanket-short-circuit AND/OR the way it does
+        // for the arithmetic family: FALSE can still absorb it into FALSE, so
+        // the shared wrapper must not pre-empt the primitive here.
+        assert!(!passes_nil_through(contract.nil_policy));
+    }
+
+    #[test]
     fn div_passes_nil_through_then_projects() {
         let contract = WordContract::from_generated(word("DIV")).expect("DIV is fixed-arity");
         assert_eq!(contract.nil_policy, NilPolicy::PassthroughThenProject);

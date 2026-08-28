@@ -111,7 +111,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "kleeneAbsorbing",
       "projection": {
         "when": "never",
         "reason": null
@@ -139,11 +139,11 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Logical AND. A NIL operand passes through.",
+        "summary": "Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.",
         "hover": "AND — logical AND",
-        "lookup": "Logical AND. A NIL operand passes through.",
+        "lookup": "Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.",
         "syntax": "TRUE TRUE &",
-        "role": "Logic primitive: Logical AND with three-valued (Kleene) NIL handling.",
+        "role": "Logic primitive: strong-Kleene three-valued AND (LANG.VALUES.TRUTH).",
         "stackEffect": "[ a ] [ b ] -> [ a AND b ]"
       },
       "executorKey": "And",
@@ -161,7 +161,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "kleeneAbsorbing",
       "projection": {
         "when": "never",
         "reason": null
@@ -189,11 +189,11 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Logical OR. A NIL operand passes through.",
+        "summary": "Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.",
         "hover": "OR — logical OR",
-        "lookup": "Logical OR. A NIL operand passes through.",
+        "lookup": "Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.",
         "syntax": "TRUE FALSE OR",
-        "role": "Logic primitive: Logical OR with three-valued (Kleene) NIL handling.",
+        "role": "Logic primitive: strong-Kleene three-valued OR (LANG.VALUES.TRUTH).",
         "stackEffect": "[ a ] [ b ] -> [ a OR b ]"
       },
       "executorKey": "Or",
@@ -212,7 +212,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "kleeneAbsorbing",
       "projection": {
         "when": "never",
         "reason": null
@@ -240,11 +240,11 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Logical negation. A NIL operand passes through.",
+        "summary": "Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged.",
         "hover": "NOT — logical negation",
-        "lookup": "Logical negation. A NIL operand passes through.",
+        "lookup": "Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged.",
         "syntax": "TRUE NOT",
-        "role": "Logic primitive: Logical negation.",
+        "role": "Logic primitive: strong-Kleene three-valued NOT (LANG.VALUES.TRUTH).",
         "stackEffect": "[ a ] -> [ NOT a ]"
       },
       "executorKey": "Not",
