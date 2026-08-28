@@ -117,6 +117,8 @@ mod interpreter_execution_tests;
 #[cfg(test)]
 mod interpreter_mode_tests;
 #[cfg(test)]
+mod kleene_truth_conformance_tests;
+#[cfg(test)]
 mod math_ops_tests;
 #[cfg(test)]
 mod nil_conformance_tests;
