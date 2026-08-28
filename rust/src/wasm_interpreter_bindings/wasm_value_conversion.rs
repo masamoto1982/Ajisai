@@ -140,11 +140,11 @@ fn absence_to_protocol_js(absence: &crate::semantic::AbsenceMetadata) -> JsValue
 /// consulted them.
 fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     let obj = js_sys::Object::new();
-    // The `truthValue` axis (SPEC §2.3) is the only observable surface for
-    // the three-valued logic: `true` / `false` / `unknown`. It is derived
+    // The `truthValue` axis (LANG.VALUES.TRUTH) is the only observable surface
+    // for the three-valued logic: `true` / `false` / `unknown`. It is derived
     // from the *effective* interpretation role, because a definite boolean
     // carries the `TruthValue` role in the semantic plane rather than on the
-    // value's own hint (SPEC §12.2). Present only on truth-valued values.
+    // value's own hint. Present only on truth-valued values.
     let truth = value.truth_value_for_role(effective);
     if let Some(truth) = truth {
         set_prop(&obj, "truthValue", &truth.into());

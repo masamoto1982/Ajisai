@@ -6,9 +6,10 @@
     {
       "id": "booleanLogic",
       "clauses": [
-        "LANG.VALUES.TRUTH"
+        "LANG.VALUES.TRUTH",
+        "LANG.VALUES.NIL"
       ],
-      "truth": "twoValued",
+      "truth": "threeValued",
       "nilPolicy": "contractSpecific"
     },
     {

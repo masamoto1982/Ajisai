@@ -69,11 +69,14 @@ async fn nil_check_is_false_for_present_value() {
 /// MC/DC: the logical Unknown (U) shares NIL storage but is NOT an operational
 /// absence, so `NIL?` must report FALSE. This flips only the `is_operational_nil`
 /// condition relative to the DIV case above, isolating its independent effect
-/// and proving the firewall (SPEC §2.3 / §7.5).
+/// and proving the firewall (LANG.VALUES.TRUTH).
+///
+/// `TRUE NIL AND` is the strong-Kleene UNKNOWN row (neither operand absorbs
+/// the other), so it produces a genuine U — `AND`/`OR`/`NOT` are what makes
+/// U reachable from source at all.
 #[tokio::test]
 async fn nil_check_is_false_for_logical_unknown() {
-    // ((√2+1) − (√2+1)) == 0 is undecidable within the budget, so EQ yields U.
-    let interp = run("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ NIL?").await;
+    let interp = run("TRUE NIL AND NIL?").await;
     assert_eq!(
         interp.get_stack()[1].as_truth(),
         Some(false),

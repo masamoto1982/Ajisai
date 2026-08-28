@@ -259,7 +259,8 @@
             "passthrough",
             "inspectNil",
             "createsNil",
-            "passthroughThenProject"
+            "passthroughThenProject",
+            "kleeneAbsorbing"
           ]
         },
         "projection": {

@@ -262,16 +262,16 @@ pub(crate) fn value_to_protocol(
             semantics: None,
         };
     }
-    // The logical Unknown (U, SPEC §7.5) is meant to be observed through
-    // the `truthValue` axis as `unknown`, never surfaced as a NIL node —
-    // but U has no dedicated `ValueData` variant (it is `Nil` data
-    // carrying the `TruthValue` hint) and there is no guard here that
-    // looks at `hint`, so it currently falls into the `Nil` arm below and
-    // reports `type: "nil"` (with `displayHint: "truthValue"`), not the
-    // firewalled shape this comment describes. This has no observable
-    // effect today because U is unreachable from the current vocabulary
-    // (see `types/exact/computable.rs`); it is worth revisiting before a
-    // Tier 2 word can construct U.
+    // The logical Unknown (U, LANG.VALUES.TRUTH) is observed through the
+    // `truthValue` axis as `unknown`. U has no dedicated `ValueData` variant
+    // — it is `Nil` data carrying the `TruthValue` hint — so it falls into
+    // the `Nil` arm below like any other NIL and reports `type: "nil"`,
+    // `value: null`. `displayHint` still carries `"truthValue"` (`effective`
+    // is `value.hint` here, and U's hint is `TruthValue`), which is the axis
+    // LANG.OBSERVATION.FIREWALL says a consumer must read instead of `type` —
+    // so this shape is firewalled correctly, just not by hiding `type: "nil"`.
+    // `AND`, `OR`, and `NOT` construct U directly now (no Tier 2 numeric
+    // domain needed), so this path is live, not aspirational.
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
         ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),

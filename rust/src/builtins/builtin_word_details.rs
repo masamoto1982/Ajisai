@@ -165,6 +165,9 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
             NilPolicy::PreserveReason => {
                 lines.push("A NIL value keeps its reason through this word.")
             }
+            NilPolicy::KleeneAbsorbing => lines.push(
+                "A dominating definite operand (FALSE for AND, TRUE for OR) absorbs a NIL operand into that definite result; otherwise a NIL operand yields NIL as UNKNOWN.",
+            ),
         }
         // The accepted domain qualifies everything above it. `total` says what
         // happens to an operand the Word accepts, and read alone it promised

@@ -45,10 +45,33 @@ enum NilClass {
     BinaryBlanket,
     /// Unary word: NIL operand yields NIL.
     UnaryNil,
-    /// Boolean AND: a NIL operand passes through.
+    /// Boolean AND: strong-Kleene absorption. FALSE absorbs a NIL operand
+    /// into FALSE; otherwise a NIL operand yields NIL, standing for UNKNOWN
+    /// (LANG.VALUES.TRUTH).
     ThreeValAnd,
-    /// Boolean OR: a NIL operand passes through.
+    /// Boolean OR: strong-Kleene absorption. TRUE absorbs a NIL operand into
+    /// TRUE; otherwise a NIL operand yields NIL, standing for UNKNOWN
+    /// (LANG.VALUES.TRUTH).
     ThreeValOr,
+    /// Boolean NOT: no second operand to absorb into, so a NIL operand
+    /// always yields NIL, standing for UNKNOWN — but still declares
+    /// `kleeneAbsorbing`, not a blanket `passthrough`, so its primitive (not
+    /// the generic bubble) decides and can type the result as UNKNOWN
+    /// (`Interpretation::TruthValue`) rather than an undifferentiated
+    /// absence.
+    ThreeValNot,
+}
+
+impl NilClass {
+    /// The `nilPolicy` this class's word must declare in the registry.
+    fn declared_policy(self) -> NilPolicy {
+        match self {
+            NilClass::BinaryBlanket | NilClass::UnaryNil => NilPolicy::Passthrough,
+            NilClass::ThreeValAnd | NilClass::ThreeValOr | NilClass::ThreeValNot => {
+                NilPolicy::KleeneAbsorbing
+            }
+        }
+    }
 }
 
 /// The Core (canonical-home == Core) passthrough words and their NIL
@@ -70,7 +93,7 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("LTE", NilClass::BinaryBlanket),
     ("GT", NilClass::BinaryBlanket),
     ("GTE", NilClass::BinaryBlanket),
-    ("NOT", NilClass::UnaryNil),
+    ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
 ];
@@ -90,12 +113,14 @@ fn core_passthrough_completeness() {
     // Every Core passthrough word in a covered category must be classified,
     // and every classified word must still be a Core passthrough word.
     for meta in get_builtin_word_registry() {
-        let covered = meta.nil_policy == NilPolicy::Passthrough
-            && COVERED_CATEGORIES.contains(&meta.category.as_str());
+        let covered = matches!(
+            meta.nil_policy,
+            NilPolicy::Passthrough | NilPolicy::KleeneAbsorbing
+        ) && COVERED_CATEGORIES.contains(&meta.category.as_str());
         if covered {
             assert!(
                 lookup_class(&meta.name).is_some(),
-                "Core passthrough word `{}` (category {}) is not classified in \
+                "Core passthrough/Kleene word `{}` (category {}) is not classified in \
                  CORE_PASSTHROUGH; add its NIL behavior class",
                 meta.name,
                 meta.category
@@ -103,15 +128,15 @@ fn core_passthrough_completeness() {
         }
     }
 
-    for (name, _) in CORE_PASSTHROUGH {
+    for (name, class) in CORE_PASSTHROUGH {
         let meta = get_builtin_word_registry()
             .iter()
             .find(|m| &m.name == name)
             .unwrap_or_else(|| panic!("classified word `{name}` is not registered"));
         assert_eq!(
             meta.nil_policy,
-            NilPolicy::Passthrough,
-            "`{name}` is classified as passthrough but registry says {:?}",
+            class.declared_policy(),
+            "`{name}` is classified as {class:?} but registry says {:?}",
             meta.nil_policy
         );
     }
@@ -139,9 +164,66 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
                 assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
                 assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
             }
-            // AND / OR pass NIL through rather than absorbing it into a
-            // definite operand; covered by the corpus's logic cases.
-            NilClass::ThreeValAnd | NilClass::ThreeValOr => {}
+            // AND / OR / NOT are not a blanket collapse: whether (and how) a
+            // NIL operand survives to the result is decided by their own
+            // primitive under strong Kleene composition, not this generic
+            // probe. See `strong_kleene_and_or_truth_tables`.
+            NilClass::ThreeValAnd | NilClass::ThreeValOr | NilClass::ThreeValNot => {}
+        }
+    }
+}
+
+/// The full strong-Kleene truth tables for `AND`/`OR` (LANG.VALUES.TRUTH),
+/// with NIL standing for UNKNOWN. FALSE absorbs into `AND` and TRUE absorbs
+/// into `OR` even against a NIL operand; only where neither operand is the
+/// absorbing value does a NIL operand surface in the result.
+#[tokio::test]
+async fn strong_kleene_and_or_truth_tables() {
+    for (code, expect_nil, expect_bool) in [
+        // AND: definite rows.
+        ("TRUE TRUE AND", false, Some(true)),
+        ("TRUE FALSE AND", false, Some(false)),
+        ("FALSE TRUE AND", false, Some(false)),
+        ("FALSE FALSE AND", false, Some(false)),
+        // AND: FALSE absorbs a NIL operand into FALSE, from either side.
+        ("FALSE NIL AND", false, Some(false)),
+        ("NIL FALSE AND", false, Some(false)),
+        // AND: TRUE does not settle it, so a NIL operand surfaces as UNKNOWN.
+        ("TRUE NIL AND", true, None),
+        ("NIL TRUE AND", true, None),
+        ("NIL NIL AND", true, None),
+        // OR: definite rows.
+        ("TRUE TRUE OR", false, Some(true)),
+        ("TRUE FALSE OR", false, Some(true)),
+        ("FALSE TRUE OR", false, Some(true)),
+        ("FALSE FALSE OR", false, Some(false)),
+        // OR: TRUE absorbs a NIL operand into TRUE, from either side.
+        ("TRUE NIL OR", false, Some(true)),
+        ("NIL TRUE OR", false, Some(true)),
+        // OR: FALSE does not settle it, so a NIL operand surfaces as UNKNOWN.
+        ("FALSE NIL OR", true, None),
+        ("NIL FALSE OR", true, None),
+        ("NIL NIL OR", true, None),
+        // NOT: no second operand to absorb into, so NIL stays NIL.
+        ("TRUE NOT", false, Some(false)),
+        ("FALSE NOT", false, Some(true)),
+        ("NIL NOT", true, None),
+    ] {
+        let stack = run_ok(code).await;
+        assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
+        if expect_nil {
+            assert!(is_nil(&stack[0]), "`{code}` must produce NIL (UNKNOWN)");
+            assert_eq!(
+                stack[0].truth_value(),
+                Some("unknown"),
+                "`{code}`'s NIL result must observe as truthValue `unknown`"
+            );
+        } else {
+            assert_eq!(
+                stack[0].as_truth(),
+                expect_bool,
+                "`{code}` must decide {expect_bool:?}"
+            );
         }
     }
 }

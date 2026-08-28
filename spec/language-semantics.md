@@ -173,14 +173,17 @@ In particular FALSE is not scalar zero, TRUE is not scalar one, and an absent va
 
 <p>A real that no exhibited normal form reaches — \(\pi\), \(e\), a logarithm — is not an Ajisai value. Widening the domain means exhibiting a normal form that meets the condition; it does not mean amending the condition.</p>
 
-<h3 id="lang-values-truth">LANG.VALUES.TRUTH — Two-valued truth</h3>
+<h3 id="lang-values-truth">LANG.VALUES.TRUTH — Three-valued truth</h3>
 
 <p>
-The Boolean domain has exactly two values, TRUE and FALSE. <code>AND</code>, <code>OR</code>, and <code>NOT</code> are the ordinary Boolean operations, and every comparison decides.
+The Boolean domain has exactly three truth values: TRUE, FALSE, and UNKNOWN. TRUE and FALSE are the two Boolean data values; UNKNOWN is not a fourth variant but NIL (LANG.VALUES.NIL) read in truth position — a Word with nothing to decide from produces NIL, and NIL standing where a truth value is expected reads as UNKNOWN. <code>AND</code>, <code>OR</code>, and <code>NOT</code> compose all three values by the strong Kleene tables below; composition is not passthrough, so an absent operand yields UNKNOWN only where the other operand does not already settle the result by itself.
 </p>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th><code>AND</code></th><th>TRUE</th><th>FALSE</th><th>UNKNOWN</th></tr></thead><tbody><tr><td>TRUE</td><td>TRUE</td><td>FALSE</td><td>UNKNOWN</td></tr><tr><td>FALSE</td><td>FALSE</td><td>FALSE</td><td>FALSE</td></tr><tr><td>UNKNOWN</td><td>UNKNOWN</td><td>FALSE</td><td>UNKNOWN</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th><code>OR</code></th><th>TRUE</th><th>FALSE</th><th>UNKNOWN</th></tr></thead><tbody><tr><td>TRUE</td><td>TRUE</td><td>TRUE</td><td>TRUE</td></tr><tr><td>FALSE</td><td>TRUE</td><td>FALSE</td><td>UNKNOWN</td></tr><tr><td>UNKNOWN</td><td>TRUE</td><td>UNKNOWN</td><td>UNKNOWN</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th><code>NOT</code></th><th>TRUE</th><th>FALSE</th><th>UNKNOWN</th></tr></thead><tbody><tr><td></td><td>FALSE</td><td>TRUE</td><td>UNKNOWN</td></tr></tbody></table></div>
 
 <p>
-Absence and misuse live outside this domain: an operation that cannot produce a value produces NIL, which is absence rather than undecidability, and an operation that is malformed raises ERROR.
+FALSE dominates <code>AND</code> and TRUE dominates <code>OR</code> even against an UNKNOWN operand, decided by the definite operand alone; where neither operand settles it, the output is UNKNOWN and carries whichever operand's absence reason applies — the left operand's, when both are absent (LANG.FAILURE.PASSTHROUGH's left-to-right rule). Every comparison over the exact domain (LANG.VALUES.EXACT) still decides in finite time and yields TRUE or FALSE, never UNKNOWN: totality there is a domain property, not a limit this clause imposes, and UNKNOWN enters the truth domain only through an absent operand, never an undecided comparison. Misuse still lives outside this domain: an operation that is malformed raises ERROR, which is never a truth value. The host protocol observes all three values through one <code>truthValue</code> axis (LANG.OBSERVATION.PROTOCOL), reported as <code>"true"</code>, <code>"false"</code>, or <code>"unknown"</code> — a consumer reads this axis rather than inferring truth from the internal NIL representation or display text (LANG.OBSERVATION.FIREWALL).
 </p>
 
 <h3 id="lang-values-nil">LANG.VALUES.NIL — Diagnostic absence</h3>

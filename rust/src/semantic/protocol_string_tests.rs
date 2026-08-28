@@ -102,12 +102,12 @@ fn every_nil_reason_has_a_distinct_lower_camel_protocol_string() {
 
 #[test]
 fn unknown_advertises_truth_valued_capability() {
-    // SPEC §7.5 / §2.3: the logical Unknown (U) is observed through the
+    // LANG.VALUES.TRUTH: the logical Unknown (U) is observed through the
     // `truthValue` axis as `unknown` and advertises the `truthValued`
     // capability. U has no dedicated `ValueData` variant — it is `Nil`
-    // data carrying the `TruthValue` hint — and no vocabulary word can
-    // construct it yet (Tier ≤1 exact comparison is always decidable; see
-    // `types/exact/computable.rs`), so build it directly here.
+    // data carrying the `TruthValue` hint. `AND`/`OR`/`NOT` construct it at
+    // the interpreter level (`interpreter::logic::as_unknown`); this test
+    // stays at the `Value` level, so it still builds one directly.
     use crate::types::{Interpretation, Value};
     let mut u = Value::nil();
     u.hint = Interpretation::TruthValue;

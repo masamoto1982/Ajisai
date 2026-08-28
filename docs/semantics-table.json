@@ -72,7 +72,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "AND",
@@ -168,7 +168,7 @@
         "string",
         "nil"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "AND",
@@ -216,7 +216,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "AND",
@@ -232,7 +232,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "AND",
@@ -248,7 +248,7 @@
         "nil",
         "string"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "AND",
@@ -256,7 +256,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "AND",
@@ -360,7 +360,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "OR",
@@ -408,7 +408,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "nil:literal"
+      "outcome": "value"
     },
     {
       "word": "OR",
@@ -456,7 +456,7 @@
         "string",
         "nil"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "OR",
@@ -504,7 +504,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "OR",
@@ -520,7 +520,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "OR",
@@ -528,7 +528,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "nil:literal"
+      "outcome": "value"
     },
     {
       "word": "OR",
@@ -536,7 +536,7 @@
         "nil",
         "string"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "OR",
@@ -544,7 +544,7 @@
         "nil",
         "vector"
       ],
-      "outcome": "nil:literal"
+      "outcome": "error:valueShape"
     },
     {
       "word": "OR",
