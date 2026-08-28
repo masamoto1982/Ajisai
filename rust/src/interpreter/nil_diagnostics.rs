@@ -13,14 +13,13 @@
 //!   * **Observation, not consumption.** Each word retains the inspected value
 //!     on the stack and pushes its result above it, mirroring the LENGTH/GET
 //!     inspection-word precedent of SPEC §7.1.1. A diagnosis is an observation.
-//!   * **Operational NIL only.** They key off [`Value::is_operational_nil`],
-//!     which keeps the logical Unknown (U) — `Nil` data carrying the
-//!     `TruthValue` hint, a truth value rather than an operational absence —
-//!     from ever being reported as absent or leaking a NIL reason
-//!     (LANG.VALUES.TRUTH firewall). U has no dedicated variant, so
-//!     `is_operational_nil` excludes it by hint. `AND`, `OR`, and `NOT`
-//!     construct U directly, so this is a live type invariant, not a
-//!     coincidence of what the vocabulary happens to be able to construct.
+//!   * **Every absence, U included.** They key off
+//!     [`Value::is_operational_nil`], which is every `Nil` value. The logical
+//!     Unknown (U) is a NIL read in truth position (LANG.VALUES.TRUTH), so it
+//!     is an absence: `NIL?` answers TRUE for it and `NIL-REASON` reports the
+//!     reason it arrived with. Excluding U here briefly made
+//!     `1 0 DIV TRUE AND NIL-REASON` answer `notAvailable` while the protocol
+//!     published `absence.reason = divisionByZero` for the same value.
 //!
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
 //! a predicate answers its question — and `NIL-REASON` projects a NIL whose

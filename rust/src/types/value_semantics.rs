@@ -159,17 +159,30 @@ impl Value {
         matches!(self.data, ValueData::Nil)
     }
 
-    /// The intent-revealing name at the firewall boundary (LANG.VALUES.TRUTH):
-    /// the logical truth value Unknown (U) must never register here. U has no
-    /// dedicated variant of its own — it is `Nil` data carrying the
-    /// `TruthValue` hint — so this excludes exactly that hint, the same test
-    /// [`Value::capabilities`]'s `NilPassthrough` handling uses. `AND`, `OR`,
-    /// and `NOT` construct U directly (LANG.VALUES.TRUTH's Kleene tables), so
-    /// this distinction is load-bearing, not defensive: `TRUE NIL AND NIL?`
-    /// must answer `FALSE`, not `TRUE`.
+    /// As [`is_nil`]: operational-absence test, and deliberately *not*
+    /// narrower than one.
+    ///
+    /// The logical Unknown (U) is `Nil` data carrying the `TruthValue` hint,
+    /// and this briefly excluded that hint, on the theory that U is a truth
+    /// value rather than an absence. That conflated two different things
+    /// under one name. The U this language actually has arises from a NIL
+    /// operand read in truth position (LANG.VALUES.TRUTH): something *is*
+    /// absent, so `NIL?` must answer TRUE and `NIL-REASON` must still report
+    /// the reason it arrived with. Excluding it here made
+    /// `1 0 DIV TRUE AND NIL-REASON` answer `notAvailable` while the host
+    /// protocol went on publishing `absence.reason = divisionByZero` for the
+    /// very same value — the language contradicting its own protocol, and
+    /// LANG.VALUES.NIL ("the reason is the entire observable content of a
+    /// NIL") along with it.
+    ///
+    /// A U that is genuinely *not* an absence — an undecided comparison
+    /// between two reals that both exist — would want that firewall. No such
+    /// value exists yet (comparison over the exact domain is total,
+    /// LANG.VALUES.EXACT), so the distinction belongs to whatever introduces
+    /// one, not here.
     #[inline]
     pub fn is_operational_nil(&self) -> bool {
-        matches!(self.data, ValueData::Nil) && self.hint != Interpretation::TruthValue
+        matches!(self.data, ValueData::Nil)
     }
 
     #[inline]
@@ -255,18 +268,16 @@ impl Value {
                 capabilities.push(Capability::Indexable);
                 capabilities.push(Capability::UserEditable);
             }
-            // The logical Unknown (U) carries a diagnosis (its
-            // `agreedPrefix`) and is AI-explainable, but it is emphatically
-            // **not** a NIL-passthrough value — advertising `NilPassthrough`
-            // would contradict the very firewall that keeps U from being
-            // absorbed as an undifferentiated operational NIL (LANG.VALUES.TRUTH).
-            // U is `Nil` data carrying the `TruthValue` hint (there is no
-            // dedicated `Unknown` variant), so that case is excluded here by
-            // hint. It gains `truthValued` below via `is_truth_value`.
+            // Every NIL advertises `nilPassthrough`, the logical Unknown (U)
+            // included. U used to be excluded here by its `TruthValue` hint,
+            // which advertised something untrue the moment `AND`/`OR`/`NOT`
+            // made U reachable: `TRUE NIL AND 1 ADD` answers NIL, so U does
+            // pass through, and a capability a consumer branches on
+            // (LANG.OBSERVATION.FIREWALL) may not say otherwise. U's
+            // distinction from an ordinary NIL is the `truthValue` axis it
+            // gains below via `is_truth_value`, not a withheld capability.
             ValueData::Nil => {
-                if self.hint != Interpretation::TruthValue {
-                    capabilities.push(Capability::NilPassthrough);
-                }
+                capabilities.push(Capability::NilPassthrough);
                 capabilities.push(Capability::Diagnosable);
                 capabilities.push(Capability::AiExplainable);
             }
