@@ -66,21 +66,36 @@ async fn nil_check_is_false_for_present_value() {
     );
 }
 
-/// MC/DC: the logical Unknown (U) shares NIL storage but is NOT an operational
-/// absence, so `NIL?` must report FALSE. This flips only the `is_operational_nil`
-/// condition relative to the DIV case above, isolating its independent effect
-/// and proving the firewall (LANG.VALUES.TRUTH).
+/// The logical Unknown (U) is a NIL read in truth position
+/// (LANG.VALUES.TRUTH), so it is an absence and `NIL?` answers TRUE — the
+/// same answer `^` (VENT) acts on, and the same story the host protocol
+/// tells about it (`semanticKind: absence`, a published `absence.reason`).
 ///
 /// `TRUE NIL AND` is the strong-Kleene UNKNOWN row (neither operand absorbs
 /// the other), so it produces a genuine U — `AND`/`OR`/`NOT` are what makes
 /// U reachable from source at all.
 #[tokio::test]
-async fn nil_check_is_false_for_logical_unknown() {
+async fn nil_check_is_true_for_logical_unknown() {
     let interp = run("TRUE NIL AND NIL?").await;
     assert_eq!(
         interp.get_stack()[1].as_truth(),
-        Some(false),
-        "NIL? on the logical Unknown must be FALSE (firewall)"
+        Some(true),
+        "NIL? on the logical Unknown must be TRUE: U is an absence"
+    );
+}
+
+/// A reason survives being read in truth position. `AND` used to swallow it:
+/// `1 0 DIV TRUE AND NIL-REASON` answered `notAvailable` while the protocol
+/// still published `absence.reason = divisionByZero` for that value, so the
+/// language contradicted its own boundary and LANG.VALUES.NIL ("the reason
+/// is the entire observable content of a NIL").
+#[tokio::test]
+async fn nil_reason_survives_a_kleene_word() {
+    let interp = run("1 0 DIV TRUE AND NIL-REASON").await;
+    assert_eq!(
+        top_text(&interp).as_deref(),
+        Some("divisionByZero"),
+        "an UNKNOWN must keep the reason it arrived with"
     );
 }
 

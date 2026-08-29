@@ -905,10 +905,35 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-logic-unknown-is-not-operational-nil" data-category="core">
-  <h3>UNKNOWN from AND/OR/NOT is not an operational NIL: NIL? answers FALSE</h3>
+<!-- Being read in truth position adds the truthValue axis; it takes no
+     observation away. UNKNOWN is still the NIL it is, so every absence-facing
+     Word answers about it exactly as it would about any other NIL. -->
+
+<section class="ajisai-case" id="core-logic-unknown-is-an-absence" data-category="core">
+  <h3>UNKNOWN is an absence: NIL? answers TRUE</h3>
   <pre class="ajisai-source">TRUE NIL AND NIL?</pre>
-  <pre class="ajisai-expect-result">NIL FALSE</pre>
+  <pre class="ajisai-expect-result">NIL TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-logic-unknown-keeps-its-reason" data-category="core">
+  <h3>UNKNOWN keeps the reason it arrived with: NIL-REASON still reports it</h3>
+  <pre class="ajisai-source">1 0 DIV TRUE AND NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-logic-unknown-is-vented" data-category="core">
+  <h3>VENT recovers an UNKNOWN, like any other absence</h3>
+  <pre class="ajisai-source">TRUE NIL AND ^ 99</pre>
+  <pre class="ajisai-expect-result">99/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-logic-unknown-passes-through" data-category="core">
+  <h3>UNKNOWN passes through a passthrough Word, like any other absence</h3>
+  <pre class="ajisai-source">TRUE NIL AND 1 ADD</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
