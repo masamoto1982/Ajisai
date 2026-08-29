@@ -51,19 +51,31 @@ value itself carries `semantics.absence.reason` on the stack.
 - Provide a fallback with `^`: `[ 1 ] [ 0 ] DIV ^ [ 99 ]` → stack `[ 99/1 ]`.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
-## 5. Exactness — comparison always decides
+## 5. Exactness — comparison decides over the algebraic field
 
 Numbers are exact rationals, closed under `SQRT`. Arithmetic never rounds,
 coefficients are arbitrary-precision, and **every comparison of two scalars
-decides**: there is no budget, no refinement limit, and no undecided outcome.
+built from rationals and `SQRT` decides**: there is no budget, no refinement
+limit, and no undecided outcome over that field.
 
 ```ajisai
 8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
 ```
 
 → stack `TRUE` (exit 0). Values built through different
-histories are the same value when they denote the same real. Truth is
-two-valued: `TRUE` and `FALSE`, nothing else. An operation that cannot
+histories are the same value when they denote the same real.
+
+`PI` is the one value outside that field: a general computable real with no
+algebraic normal form. Comparing two independently-built `PI` values can
+exhaust the comparison's refinement budget without deciding:
+
+```ajisai
+PI PI EQ
+```
+
+→ stack `NIL` (exit 0, truthValue `unknown`). Truth has
+three values: `TRUE`, `FALSE`, and this logical UNKNOWN, which is also what a
+NIL operand reads as in a truth position (§4). An operation that cannot
 produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)
@@ -163,8 +175,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-65 canonical Words in one flat Core dictionary, of which
-36 form the Semantic Kernel and 29 are Standard Words. Both are
+66 canonical Words in one flat Core dictionary, of which
+37 form the Semantic Kernel and 29 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -195,6 +207,7 @@ no module system and nothing to import.
 | `MIN` | math | Smaller of two numbers, element-wise with broadcasting. — e.g. `1 2 MIN` |
 | `MAX` | math | Larger of two numbers, element-wise with broadcasting. — e.g. `1 2 MAX` |
 | `SQRT` | math | Exact square root of a non-negative rational, element-wise over a vector. — e.g. `2 SQRT` |
+| `PI` | constant | The Tier 2 computable real π. — e.g. `PI` |
 | `RANDOM` | math | Count exact rationals in [0,1), determined entirely by the seed. — e.g. `7 3 RANDOM` |
 | `GET` | vector | Select elements of a vector by index. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |

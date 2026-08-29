@@ -4895,6 +4895,11 @@
       "outcome": "error:sourceForm"
     },
     {
+      "word": "PI",
+      "inputs": [],
+      "outcome": "value"
+    },
+    {
       "word": "RANDOM",
       "inputs": [
         "scalar",

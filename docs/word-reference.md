@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **65 Words**, of which **36** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **66 Words**, of which **37** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -80,7 +80,7 @@ Test equality of two values.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
@@ -95,7 +95,7 @@ Test inequality of two values.
 - **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
@@ -110,7 +110,7 @@ Test less-than comparison.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
@@ -125,7 +125,7 @@ Test less-than-or-equal comparison.
 - **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
@@ -140,7 +140,7 @@ Test greater-than comparison.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
@@ -155,7 +155,7 @@ Test greater-than-or-equal comparison.
 - **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
@@ -287,7 +287,7 @@ Absolute value of a number.
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
@@ -315,7 +315,7 @@ Smaller of two numbers, element-wise with broadcasting.
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
@@ -329,7 +329,7 @@ Larger of two numbers, element-wise with broadcasting.
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
@@ -348,6 +348,19 @@ Exact square root of a non-negative rational, element-wise over a vector. The re
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `2 SQRT`
+
+## `PI`
+
+Push π: a general computable real with no algebraic normal form (LANG.VALUES.EXACT). A comparison against it refines a rational enclosure and may exhaust its budget, yielding UNKNOWN.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `exactArithmetic`
+- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **NIL policy:** `preserveReason`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`
+- **Syntax:** `PI`
 
 ## `RANDOM`
 
@@ -482,7 +495,7 @@ Return a copy of a vector sorted in ascending order.
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
@@ -496,7 +509,7 @@ The indices that would sort a vector ascending; ties keep their original order.
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`

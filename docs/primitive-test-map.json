@@ -7,7 +7,7 @@
     "primitives": 24,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 18,
-    "distinct_conformance_cases": 74
+    "distinct_conformance_cases": 72
   },
   "primitives": [
     {
@@ -690,27 +690,25 @@
       ]
     },
     {
-      "id": "algebra.reflection.involution",
-      "algebraic_family": "reflection",
-      "kind": "isomorphism",
+      "id": "algebra.exact-real.computable-real",
+      "algebraic_family": "exact-arithmetic",
+      "kind": "construction",
       "status": "accepted",
       "derived_word_count": 1,
       "law_test_count": 1,
-      "conformance_case_count": 7,
+      "conformance_case_count": 5,
       "derived_words": [
-        "core.reflect"
+        "core.pi"
       ],
       "law_tests": [
-        "rust/src/types/code_data.rs"
+        "rust/src/interpreter/tier2_undecidable_conformance_tests.rs"
       ],
       "conformance_cases": [
-        "reflection-arbitrary-vector-errors",
-        "reflection-code-to-data",
-        "reflection-data-exec",
-        "reflection-dictionary-independent",
-        "reflection-lexemes-preserved",
-        "reflection-undefined-symbol-is-not-resolved",
-        "reflection-wrong-header-errors"
+        "core-pi-decides-against-a-separated-rational",
+        "core-pi-is-a-computable-real",
+        "core-pi-pi-eq-is-unknown",
+        "core-pi-pi-lt-is-unknown",
+        "core-pi-pi-min-is-nil"
       ]
     }
   ]

@@ -94,7 +94,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // anything unbounded.
         Get | Length | Probe => (Const, false),
         NilCheck | NilReason => (Const, false),
-        True | False | Nil => (Const, false),
+        True | False | Nil | Pi => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse => (Linear, true),
         Take | Collect => (Linear, false),

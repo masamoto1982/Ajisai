@@ -60,14 +60,10 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("SUM", NilClass::UnaryNil),
     // MOD / FLOOR / ROUND create NIL on a domain miss and are covered
     // by projecting_word_set_matches_registry.
-    // The comparison words pass NIL operands through. Comparison itself is
-    // total (LANG.VALUES.EXACT), so they never create NIL.
-    ("EQ", NilClass::BinaryBlanket),
-    ("NEQ", NilClass::BinaryBlanket),
-    ("LT", NilClass::BinaryBlanket),
-    ("LTE", NilClass::BinaryBlanket),
-    ("GT", NilClass::BinaryBlanket),
-    ("GTE", NilClass::BinaryBlanket),
+    // The comparison words (EQ/NEQ/LT/LTE/GT/GTE) are PassthroughThenProject,
+    // not pure Passthrough — a Tier 2 pair can exhaust its comparison budget
+    // and project to Unknown (LANG.VALUES.EXACT) — so they belong to
+    // PROJECTING_WORDS / tier2_undecidable_conformance_tests, not here.
     ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
@@ -151,30 +147,23 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
 
 /// Projecting words: a well-formed domain miss yields Bubble/NIL with a
 /// reason; malformed use raises an ordinary error.
+// `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`NEQ`/`ORDER`/`SORT` are probed
+// in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
+// exhausts its comparison budget. `RANDOM`/`RANGE`/`SQRT`/`STR` are probed in
+// `shape_ops`, beside the Word itself.
+#[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "DIV",
-    "FILL",
-    "FLOOR",
-    "GET",
-    "INDEX-OF",
-    "MOD",
-    "NIL-REASON",
-    "NUM",
-    "QUANTIZE",
-    // Probed in `shape_ops`, beside the Word itself.
-    "RANDOM",
-    "RANGE",
-    "ROUND",
-    "SQRT",
-    "STR",
+    "ABS", "DIV", "EQ", "FILL", "FLOOR", "GET", "GT", "GTE", "INDEX-OF", "LT", "LTE", "MAX",
+    "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "QUANTIZE", "RANDOM", "RANGE", "ROUND",
+    "SORT", "SQRT", "STR",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a
 /// NIL it produced, so **every** Word that declares one carries a behavioral
-/// probe. Declaring a NIL *policy* is not that claim: ABS/NEG/SIGN/MIN/MAX
-/// declare `passthroughThenProject` with a projection of `never`, so nothing
-/// about them can produce a NIL and they need no probe. The condition is what
-/// this set is keyed on.
+/// probe. Declaring a NIL *policy* is not that claim: `NEG` declares
+/// `passthroughThenProject` with a projection of `never`, so nothing about it
+/// can produce a NIL and it needs no probe. The condition is what this set is
+/// keyed on.
 ///
 /// It used to be keyed on the policy as well — `createsNil` or
 /// `passthroughThenProject`, *and* a declared condition. That conjunction let a
@@ -355,10 +344,10 @@ async fn nil_check_answers_rather_than_projecting() {
 
 #[tokio::test]
 async fn bubble_creation_comparison_nil_input() {
-    // Comparison words are Projecting/Passthrough (SPEC §7.14, revised). A
+    // Comparison words are Projecting/PassthroughThenProject (SPEC §7.14). A
     // NIL operand propagates as NIL output via the passthrough rule
-    // (SPEC §4.5.1, §7.12). (Budget exhaustion instead yields Unknown, not
-    // a NIL — covered by the comparison Unknown tests.)
+    // (SPEC §4.5.1, §7.12). (Budget exhaustion instead yields Unknown, a NIL
+    // tagged TruthValue — covered by `tier2_undecidable_conformance_tests`.)
     for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
         for code in [
             format!("NIL 1 {name}"),

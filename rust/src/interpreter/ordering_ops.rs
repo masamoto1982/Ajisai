@@ -9,10 +9,11 @@
 //! *expresses* it; these are here because expressibility was never the whole
 //! question.
 
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 use std::collections::HashMap;
 
@@ -83,7 +84,7 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
     }
 
     match order_indices(&items) {
-        Ok(perm) => {
+        Ok(Some(perm)) => {
             let out: Vec<Value> = perm
                 .into_iter()
                 .map(|i| Value::from_int(i as i64))
@@ -91,6 +92,17 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
             interp
                 .stack
                 .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
+            Ok(())
+        }
+        // A required comparison exhausted its refinement budget: no
+        // permutation exists to report, so `ORDER` yields the logical
+        // Unknown (LANG.VALUES.EXACT) — a plain NIL, since a permutation
+        // vector is not a truth value.
+        Ok(None) => {
+            interp.stack.push(Value::bubble_with_reason(
+                NilReason::Undecidable,
+                Recoverability::Retryable,
+            ));
             Ok(())
         }
         Err(e) => {

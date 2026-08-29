@@ -42,6 +42,11 @@ fn neg_scalar(value: &Value) -> Result<Value> {
 }
 
 /// The scalar law of `ABS`, lifted by [`lift_unary_numeric`].
+///
+/// A Tier 2 operand (`PI`) compared against zero may exhaust its refinement
+/// budget without deciding a sign — `Undecided` there is the logical Unknown
+/// (LANG.VALUES.EXACT), a plain NIL rather than an error: the operand is
+/// perfectly well-formed, ABS's output domain is numeric, not truth.
 fn abs_scalar(value: &Value) -> Result<Value> {
     let zero = Value::from_fraction(Fraction::from(0));
     match crate::interpreter::comparison::three_way_compare(value, &zero)? {
@@ -50,9 +55,9 @@ fn abs_scalar(value: &Value) -> Result<Value> {
             Ok(Value::from_exact_real(er.neg()))
         }
         crate::interpreter::comparison::OrderOutcome::Decided(_) => Ok(value.clone()),
-        crate::interpreter::comparison::OrderOutcome::Undecided(_) => {
-            Err(AjisaiError::from("operand is outside the exact domain"))
-        }
+        crate::interpreter::comparison::OrderOutcome::Undecided(_) => Ok(
+            Value::bubble_with_reason(NilReason::Undecidable, Recoverability::Retryable),
+        ),
     }
 }
 
@@ -109,8 +114,13 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 1)?;
     match lift_unary_numeric(&operands[0], &abs_scalar) {
         Ok(result) => {
+            let role = if result.is_nil() {
+                Interpretation::Nil
+            } else {
+                Interpretation::RawNumber
+            };
             push_result(interp, result);
-            interp.stack.set_last_role(Interpretation::RawNumber);
+            interp.stack.set_last_role(role);
             Ok(())
         }
         Err(e) => {
@@ -118,6 +128,26 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
             Err(e)
         }
     }
+}
+
+/// `PI` pushes the Tier 2 computable real π (LANG.VALUES.EXACT): a general
+/// computable real with no algebraic normal form. It is the first Word that
+/// constructs a Tier 2 value, so comparing against it is the first
+/// source-reachable way a comparison's refinement budget can actually
+/// exhaust — every value the rest of the vocabulary can build (Tier 0
+/// rationals, Tier 1 algebraics) decides in finite time.
+///
+/// Freshly constructed on every call, deliberately not memoized as a shared
+/// singleton: two separately-built computable reals are conservatively
+/// unequal (`Computable`'s own `PartialEq` is process identity, never a
+/// value's), so `PI PI EQ` is a genuine, deterministic Unknown rather than a
+/// referential-identity shortcut. Arity 0, so `KEEP` has nothing to keep.
+pub(crate) fn op_pi(interp: &mut Interpreter) -> Result<()> {
+    let value = Value::from_exact_real(ExactReal::Computable(crate::types::exact::pi::pi()));
+    interp
+        .stack
+        .push_with_role(value, Interpretation::RawNumber);
+    Ok(())
 }
 
 /// Apply a binary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
@@ -218,15 +248,20 @@ where
             crate::interpreter::comparison::OrderOutcome::Decided(ord) => {
                 Ok(if pick_left(ord) { a.clone() } else { b.clone() })
             }
-            crate::interpreter::comparison::OrderOutcome::Undecided(_) => {
-                Err(AjisaiError::from("operand is outside the exact domain"))
-            }
+            crate::interpreter::comparison::OrderOutcome::Undecided(_) => Ok(
+                Value::bubble_with_reason(NilReason::Undecidable, Recoverability::Retryable),
+            ),
         }
     };
     match lift_binary_numeric(&operands[0], &operands[1], &select) {
         Ok(result) => {
+            let role = if result.is_nil() {
+                Interpretation::Nil
+            } else {
+                Interpretation::RawNumber
+            };
             push_result(interp, result);
-            interp.stack.set_last_role(Interpretation::RawNumber);
+            interp.stack.set_last_role(role);
             Ok(())
         }
         Err(e) => {

@@ -1,8 +1,16 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::comparison::{three_way_compare, OrderOutcome};
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::semantic::Recoverability;
 use crate::types::Value;
 use std::cell::RefCell;
+
+/// The logical Unknown as a plain NIL (SPEC §7.4.3): `SORT`/`ORDER`'s output
+/// domain is a vector, not a truth value, so — unlike the comparison words'
+/// `undecidable_truth_value` — this carries no `TruthValue` hint.
+fn undecidable_nil() -> Value {
+    Value::bubble_with_reason(NilReason::Undecidable, Recoverability::Retryable)
+}
 
 fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value> {
     perm.iter()
@@ -16,9 +24,9 @@ enum SortAttempt {
     /// Every required comparison decided; `perm` is the ascending permutation
     /// of the original indices.
     Ordered(Vec<usize>),
-    /// A required comparison could not be made because an element is outside
-    /// the exact domain. Comparison over that domain is total, so this is a
-    /// domain problem rather than an undecided ordering.
+    /// A required comparison exhausted its refinement budget (LANG.VALUES.EXACT):
+    /// a Tier 2 pair (`PI`) that never separated. One undecidable pair leaves
+    /// the whole order unestablished.
     Undecided,
     /// An element was structurally non-comparable (non-numeric) — malformed use
     /// (LANG.FAILURE.ERROR).
@@ -72,12 +80,14 @@ fn try_sort_indices(items: &[Value]) -> SortAttempt {
 ///
 /// Shared so the two Words cannot disagree about an ordering: `xs ORDER` and
 /// `xs SORT` are the same comparison sequence, read two ways.
-pub(crate) fn order_indices(items: &[Value]) -> Result<Vec<usize>> {
+///
+/// `Ok(None)` is the undecidable case: a required comparison exhausted its
+/// budget, so no permutation exists to report. `Err(_)` stays reserved for
+/// malformed use (a structurally non-comparable element).
+pub(crate) fn order_indices(items: &[Value]) -> Result<Option<Vec<usize>>> {
     match try_sort_indices(items) {
-        SortAttempt::Ordered(perm) => Ok(perm),
-        // Comparison over the exact domain is total (LANG.VALUES.EXACT), so an
-        // undecided pair means an operand outside that domain.
-        SortAttempt::Undecided => Err(AjisaiError::from("element is outside the exact domain")),
+        SortAttempt::Ordered(perm) => Ok(Some(perm)),
+        SortAttempt::Undecided => Ok(None),
         SortAttempt::Malformed(e) => Err(e),
     }
 }
@@ -140,14 +150,8 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
         SortAttempt::Undecided => {
-            // Comparison over the exact domain is total (LANG.VALUES.EXACT),
-            // so an undecided pair means an operand outside that domain.
-            if !is_keep_mode {
-                interp.stack.push(val);
-            }
-            Err(AjisaiError::from(
-                "SORT: element is outside the exact domain",
-            ))
+            interp.stack.push(undecidable_nil());
+            Ok(())
         }
         SortAttempt::Malformed(e) => {
             if !is_keep_mode {
