@@ -317,6 +317,7 @@ impl Interpreter {
             WordId::Min => math_ops::op_min(self),
             WordId::Max => math_ops::op_max(self),
             WordId::Sqrt => math_ops::op_sqrt(self),
+            WordId::Pi => math_ops::op_pi(self),
             WordId::Sort => sort::op_sort(self),
             WordId::Order => ordering_ops::op_order(self),
             WordId::Unique => ordering_ops::op_unique(self),

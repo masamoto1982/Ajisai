@@ -678,6 +678,21 @@
         "MUSIC@EXPLAIN"
       ],
       "status": "accepted"
+    },
+    {
+      "id": "algebra.exact-real.computable-real",
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "kind": "construction",
+      "description": "A general computable real given as a monotonically-refining nested rational-interval stream with no closed algebraic normal form; equality and order over it are only semi-decidable, so the budgeted comparison (algebra.exact-real.budgeted-order) genuinely reaches U rather than always deciding.",
+      "admission_reason": "Accepted because no composition of the existing vocabulary reaches a value outside the multiquadratic field (LANG.VALUES.EXACT): every other Word decides in finite time through an exhibited normal form, so widening past that field needs a genuinely new construction rather than a derived one.",
+      "introduced_by": [
+        "PI"
+      ],
+      "can_derive": [
+        "PI"
+      ],
+      "status": "accepted"
     }
   ],
   "entries": [
@@ -3478,6 +3493,39 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "VENT"
+    },
+    {
+      "id": "core.pi",
+      "kind": "coreword",
+      "surface": "PI",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html LANG.VALUES.EXACT",
+        "SPECIFICATION.html LANG.VALUES.TRUTH"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/tier2_undecidable_conformance_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-pi-is-a-computable-real",
+        "core-pi-decides-against-a-separated-rational",
+        "core-pi-pi-eq-is-unknown",
+        "core-pi-pi-lt-is-unknown",
+        "core-pi-pi-min-is-nil"
+      ],
+      "status": "Formalized",
+      "notes": "The sole present witness of a general computable real (LANG.VALUES.EXACT): the first Word that constructs a value outside the multiquadratic field, so a comparison against it can genuinely exhaust its budget and yield UNKNOWN. Built by Machin's formula with rigorous alternating-series error bounds, no floating point. Freshly constructed on every call, never memoized as a shared singleton, so PI PI EQ is a genuine budget exhaustion rather than a referential-identity shortcut. Persisting a Tier 2 value is out of scope for now and errors gracefully (rust/src/types/value_persist.rs).",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.computable-real"
+      ],
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     }
   ],
   "unclassified_allowlist": []

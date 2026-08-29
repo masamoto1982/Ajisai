@@ -128,6 +128,8 @@ mod nil_contract_conformance_tests;
 mod nil_diagnostics_tests;
 #[cfg(test)]
 mod nil_reason_tests;
+#[cfg(test)]
+mod tier2_undecidable_conformance_tests;
 
 pub use interpreter_core::*;
 pub use runtime_limits::RuntimeLimits;

@@ -62,13 +62,14 @@ fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
 
 #[test]
 fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
-    // SPEC §7.14 (revised): all six comparison primitives are
-    // Projecting/Passthrough/B. They are Projecting because every
-    // well-shaped input yields a `TruthValue` result — the
-    // comparison-budget exhaustion path (§7.4.1) projects onto the
-    // logical `Unknown` (U), a TruthValue result, not a reasoned NIL.
-    // They are Passthrough because they still pass NIL operands through
-    // (§7.12); they are no longer CreatesNil for the undecidable case.
+    // SPEC §7.14: all six comparison primitives are
+    // Projecting/PassthroughThenProject/B. They are Projecting because a
+    // Tier 2 (`PI`) pair can exhaust its comparison-refinement budget
+    // (§7.4.1) without deciding — that genuine incomparability projects onto
+    // the logical `Unknown` (U), a reasoned NIL tagged `TruthValue` so it
+    // reads as U rather than as an ordinary absence. They are
+    // PassthroughThenProject because they still pass a NIL operand through
+    // first (§7.12), and only then may project the budget-exhaustion case.
     for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
@@ -80,8 +81,8 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
         );
         assert_eq!(
             meta.nil_policy,
-            NilPolicy::Passthrough,
-            "{} must be Passthrough (SPEC §7.14, revised)",
+            NilPolicy::PassthroughThenProject,
+            "{} must be PassthroughThenProject (SPEC §7.14)",
             name
         );
         assert_eq!(

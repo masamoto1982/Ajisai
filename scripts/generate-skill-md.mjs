@@ -326,11 +326,15 @@ function verifiedNilSection() {
 }
 
 function verifiedExactnessSection() {
-  // Comparison over the exact domain is total: values built through different
-  // histories compare equal when they denote the same real.
+  // Comparison over the algebraic field is total: values built through
+  // different histories compare equal when they denote the same real.
   const json = expectOk('8 SQRT 2 SQRT 2 SQRT + =');
   if (json.stackDisplay.join(' ') !== 'TRUE') fail('sqrt(8) must equal sqrt(2)+sqrt(2)');
-  return { decided: json.stackDisplay.join(' ') };
+  // PI is the one Tier 2 value: a comparison against it can exhaust its
+  // refinement budget and yield the logical UNKNOWN instead of deciding.
+  const undecided = expectOk('PI PI EQ');
+  if (undecided.stackDisplay.join(' ') !== 'NIL') fail('PI PI EQ must be undecidable (NIL)');
+  return { decided: json.stackDisplay.join(' '), undecided: undecided.stackDisplay.join(' ') };
 }
 
 // ---------------------------------------------------------------------------
@@ -396,19 +400,31 @@ value itself carries \`semantics.absence.reason\` on the stack.
 - Provide a fallback with \`^\`: \`[ 1 ] [ 0 ] DIV ^ [ 99 ]\` → stack \`${nil.fallbackStack}\`.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
-## 5. Exactness — comparison always decides
+## 5. Exactness — comparison decides over the algebraic field
 
 Numbers are exact rationals, closed under \`SQRT\`. Arithmetic never rounds,
 coefficients are arbitrary-precision, and **every comparison of two scalars
-decides**: there is no budget, no refinement limit, and no undecided outcome.
+built from rationals and \`SQRT\` decides**: there is no budget, no refinement
+limit, and no undecided outcome over that field.
 
 \`\`\`ajisai
 8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
 \`\`\`
 
 → stack \`${exactness.decided}\` (exit 0). Values built through different
-histories are the same value when they denote the same real. Truth is
-two-valued: \`TRUE\` and \`FALSE\`, nothing else. An operation that cannot
+histories are the same value when they denote the same real.
+
+\`PI\` is the one value outside that field: a general computable real with no
+algebraic normal form. Comparing two independently-built \`PI\` values can
+exhaust the comparison's refinement budget without deciding:
+
+\`\`\`ajisai
+PI PI EQ
+\`\`\`
+
+→ stack \`${exactness.undecided}\` (exit 0, truthValue \`unknown\`). Truth has
+three values: \`TRUE\`, \`FALSE\`, and this logical UNKNOWN, which is also what a
+NIL operand reads as in a truth position (§4). An operation that cannot
 produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)

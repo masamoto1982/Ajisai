@@ -1811,10 +1811,53 @@ W</pre>
 
 <!-- ===================== MATH module (core: pure words) ===================== -->
 
-<!-- Tier 2 (§4.2): MATH@PI is the first vocabulary that constructs a general
+<!-- Tier 2 (§4.2): `PI` is the first Word that constructs a general
      computable real, so a comparison can now reach the logical UNKNOWN, while
-     a Tier 0/1 operand still decides regardless of budget. MATH@ENCLOSE
-     observes a rational enclosure under an explicit water budget. -->
+     every Tier 0/1 operand a program can otherwise build still decides
+     regardless of budget (LANG.VALUES.EXACT). -->
+
+<section class="ajisai-case" id="core-pi-is-a-computable-real" data-category="core">
+  <h3>PI is a Tier 2 computable real</h3>
+  <pre class="ajisai-source">PI</pre>
+  <pre class="ajisai-expect-result">[ 3; 7, 15, 1, 292, 1, … ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-pi-decides-against-a-separated-rational" data-category="core">
+  <h3>PI compared against a clearly-separated rational still decides</h3>
+  <pre class="ajisai-source">PI 3 GT</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- Two independently-constructed PI values have numerically-identical, not
+     pointer-identical, enclosures: they never separate under continued
+     refinement, so the comparison budget exhausts and the relation is
+     genuinely UNKNOWN rather than false (LANG.VALUES.TRUTH). -->
+
+<section class="ajisai-case" id="core-pi-pi-eq-is-unknown" data-category="core">
+  <h3>Two independently-built PI values are an undecidable equality</h3>
+  <pre class="ajisai-source">PI PI EQ</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-pi-pi-lt-is-unknown" data-category="core">
+  <h3>Two independently-built PI values are an undecidable order</h3>
+  <pre class="ajisai-source">PI PI LT</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- MIN/MAX/SORT/ORDER's output domain is numeric, not truth, so the same
+     undecidable pair projects to a plain NIL rather than UNKNOWN. -->
+
+<section class="ajisai-case" id="core-pi-pi-min-is-nil" data-category="core">
+  <h3>MIN of an undecidable PI pair is NIL, not a selected operand</h3>
+  <pre class="ajisai-source">PI PI MIN</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 
 <!-- ===================== CORE: the two-tier dictionary ===================== -->
 <!-- LANG.DICTIONARY.RESOLUTION: "The dictionary has two tiers ... Those two

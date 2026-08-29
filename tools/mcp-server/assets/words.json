@@ -264,10 +264,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "unsupportedComparison",
@@ -319,10 +319,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "unsupportedComparison",
@@ -375,10 +375,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "unsupportedComparison",
@@ -430,10 +430,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "unsupportedComparison",
@@ -486,10 +486,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "unsupportedComparison",
@@ -541,10 +541,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "unsupportedComparison",
@@ -1036,8 +1036,8 @@
       "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "nonNumeric"
@@ -1143,8 +1143,8 @@
       "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "nonNumeric",
@@ -1176,7 +1176,7 @@
         "hover": "Smaller of two numbers.",
         "lookup": "Smaller of two numbers, element-wise with broadcasting.",
         "syntax": "1 2 MIN",
-        "role": "Comparison-selected operand; comparison is total, so it always decides.",
+        "role": "Comparison-selected operand; an undecidable Tier 2 pair yields UNKNOWN.",
         "stackEffect": "[ a ] [ b ] -> [ min ]"
       },
       "executorKey": "Min",
@@ -1198,8 +1198,8 @@
       "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "nonNumeric",
@@ -1231,7 +1231,7 @@
         "hover": "Larger of two numbers.",
         "lookup": "Larger of two numbers, element-wise with broadcasting.",
         "syntax": "1 2 MAX",
-        "role": "Comparison-selected operand; comparison is total, so it always decides.",
+        "role": "Comparison-selected operand; an undecidable Tier 2 pair yields UNKNOWN.",
         "stackEffect": "[ a ] [ b ] -> [ max ]"
       },
       "executorKey": "Max",
@@ -1291,6 +1291,54 @@
       "partiality": "projecting",
       "acceptedDomain": "numeric",
       "category": "math",
+      "vocabularyTier": "kernel"
+    },
+    {
+      "name": "PI",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT"
+      ],
+      "documentation": {
+        "summary": "The Tier 2 computable real π.",
+        "hover": "PI — the constant π",
+        "lookup": "Push π: a general computable real with no algebraic normal form (LANG.VALUES.EXACT). A comparison against it refines a rational enclosure and may exhaust its budget, yielding UNKNOWN.",
+        "syntax": "PI",
+        "role": "Constant primitive: the first Word that constructs a Tier 2 computable real.",
+        "stackEffect": "-> [ PI ]"
+      },
+      "executorKey": "Pi",
+      "effects": [],
+      "partiality": "total",
+      "category": "constant",
       "vocabularyTier": "kernel"
     },
     {
@@ -1777,10 +1825,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "nonVector",
@@ -1812,7 +1860,7 @@
         "hover": "Return a copy of a vector sorted in ascending order.",
         "lookup": "Return a copy of a vector sorted in ascending order.",
         "syntax": "[ 3 1 2 ] SORT",
-        "role": "Total ordering over exact scalars.",
+        "role": "Ordering over exact scalars; an undecidable pair yields UNKNOWN.",
         "stackEffect": "[ vec ] -> [ sorted ]"
       },
       "executorKey": "Sort",
@@ -1832,10 +1880,10 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "never",
-        "reason": null
+        "when": "budgetExhausted",
+        "reason": "undecidable"
       },
       "errorWhen": [
         "nonVector",

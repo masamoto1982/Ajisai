@@ -1,6 +1,7 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::semantic::Recoverability;
 use crate::types::exact::{ExactCmp, ExactReal};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
@@ -40,15 +41,15 @@ impl OrderingKind {
     }
 }
 
-/// Result of a three-valued scalar comparison (SPEC §7.4.1): a decided
-/// boolean, or the logical `Unknown` (U) carrying the refinement-step
-/// diagnosis surfaced as `diagnosis.agreedPrefix`. Tier ≤ 1 operands —
-/// everything the current vocabulary can construct — always decide, so
-/// the `Unknown` arm is reserved for Tier 2 observations (and, as a
-/// defensive fallback, an absent operand that slipped past the NIL
-/// passthrough).
+/// Result of a three-valued scalar comparison (LANG.VALUES.TRUTH): a decided
+/// boolean, or the logical `Unknown` (U). Tier ≤ 1 operands (rational,
+/// algebraic) always decide; `Undecided` is reached only when a Tier 2
+/// operand's (`PI`'s) comparison-refinement budget exhausts without
+/// separating the pair — and, as a defensive fallback, an absent operand
+/// that slipped past the NIL passthrough.
 enum ScalarCmp {
     Decided(bool),
+    Undecided,
 }
 
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
@@ -59,11 +60,34 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
         .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
+/// The logical Unknown (U): a NIL read in truth position (LANG.VALUES.TRUTH),
+/// carrying the reason a comparison could not decide. Mirrors
+/// `interpreter::logic::as_unknown` — U's `hint` is `TruthValue` directly
+/// (not just the stack role) so `Value::truth_value()` reports `"unknown"`
+/// from the value alone, and `NIL?`/`NIL-REASON`/`VENT` still see the
+/// absence it is (SPEC: being read in truth position adds an observation, it
+/// takes none away).
+fn undecidable_truth_value() -> Value {
+    let mut v = Value::bubble_with_reason(NilReason::Undecidable, Recoverability::Retryable);
+    v.hint = Interpretation::TruthValue;
+    v
+}
+
+fn push_undecidable_result(interp: &mut Interpreter) {
+    interp.stack.push(undecidable_truth_value());
+    let stack_len = interp.stack.len();
+    interp
+        .stack
+        .set_role_at(stack_len - 1, Interpretation::TruthValue);
+}
+
 /// Compare two scalar values under an ordering kind. Returns `Err(_)` for
-/// structurally-non-comparable operands. Comparison over the exact domain is
-/// total (LANG.VALUES.EXACT): both-rational operands take the Fraction fast
-/// path, and any pair involving an algebraic decides through the total
-/// `ExactReal::cmp_exact`. There is no undecided outcome.
+/// structurally-non-comparable operands. Both-rational operands take the
+/// Fraction fast path; an algebraic pair decides through the total
+/// `ExactReal::cmp_exact`. A pair involving a Tier 2 operand (`PI`) may
+/// exhaust its refinement budget without separating — `Undecided`, not an
+/// error: the operands are perfectly well-formed, the comparison just could
+/// not decide within its water.
 fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<ScalarCmp> {
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
@@ -71,11 +95,7 @@ fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Resu
         (Some(af), Some(bf)) => ScalarCmp::Decided(kind.apply_to_fraction(af, bf)),
         _ => match a.cmp_exact(&b) {
             ExactCmp::Decided(o) => ScalarCmp::Decided(kind.apply_ordering(o)),
-            ExactCmp::Starved { .. } | ExactCmp::Absent => {
-                return Err(AjisaiError::from(
-                    "comparison: operand is outside the exact domain",
-                ))
-            }
+            ExactCmp::Starved { .. } | ExactCmp::Absent => ScalarCmp::Undecided,
         },
     })
 }
@@ -256,6 +276,7 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
             }
             match compare_scalar_pair(a_val, b_val, kind)? {
                 ScalarCmp::Decided(b) => Ok(Value::from_bool(b)),
+                ScalarCmp::Undecided => Ok(undecidable_truth_value()),
             }
         }
         (Some(items), None) => {
@@ -392,11 +413,14 @@ fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
     }
 }
 
-/// Scalar–scalar equality (SPEC §7.4.1). Both-Rational operands decide
+/// Scalar–scalar equality (LANG.VALUES.EXACT). Both-Rational operands decide
 /// via `Fraction` `PartialEq` — value equality on canonical reduced
 /// rationals. Anything mixing in a Tier 1 algebraic decides through the
 /// total `ExactReal::cmp_exact` — equal values built through different
-/// histories (√8 vs √2+√2) decide `Equal` exactly.
+/// histories (√8 vs √2+√2) decide `Equal` exactly. A pair involving a Tier 2
+/// operand may starve: equality of two computable reals is fundamentally
+/// undecidable (`types::exact::computable`), so `Undecided` here is never a
+/// false `FALSE` the way it briefly was — it is the honest answer.
 fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
     let (a, b) = match (
         extract_exact_real_for_comparison(a_val),
@@ -411,7 +435,7 @@ fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
         (Some(af), Some(bf)) => ScalarCmp::Decided(af == bf),
         _ => match a.cmp_exact(&b) {
             ExactCmp::Decided(o) => ScalarCmp::Decided(o == std::cmp::Ordering::Equal),
-            ExactCmp::Starved { .. } | ExactCmp::Absent => ScalarCmp::Decided(false),
+            ExactCmp::Starved { .. } | ExactCmp::Absent => ScalarCmp::Undecided,
         },
     }
 }
@@ -444,6 +468,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
     match pairwise_eq(&a_val, &b_val) {
         ScalarCmp::Decided(eq) => push_boolean_result(interp, if invert { !eq } else { eq }),
+        ScalarCmp::Undecided => push_undecidable_result(interp),
     }
     Ok(())
 }

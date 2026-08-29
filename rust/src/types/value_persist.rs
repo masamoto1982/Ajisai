@@ -177,8 +177,9 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
                         })
                         .collect(),
                 },
-                // Tier 2 computable reals are not constructible by any current
-                // vocabulary word, so no stack value can reach this arm.
+                // `PI` (and any arithmetic built from it) reaches this arm: Tier
+                // 2 persistence round-tripping is out of scope for now, so it
+                // stays a graceful error rather than a silent lossy encoding.
                 None => return Err("cannot persist a Tier-2 computable exact real".to_string()),
             },
         },

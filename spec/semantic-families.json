@@ -18,8 +18,8 @@
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT"
       ],
-      "decidability": "total",
-      "nilPolicy": "passthrough"
+      "decidability": "totalOverField",
+      "nilPolicy": "passthroughThenProject"
     },
     {
       "id": "exactArithmetic",
