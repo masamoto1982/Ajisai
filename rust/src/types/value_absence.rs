@@ -59,7 +59,7 @@ impl Value {
     }
 
     #[inline]
-    pub fn nil_with_reason(reason: NilReason) -> Self {
+    pub fn nil_with_reason_unknown(reason: NilReason) -> Self {
         let origin = absence_origin_for_reason(&reason);
         Self::nil_with_absence(AbsenceMetadata::with_reason(
             reason,
@@ -136,10 +136,7 @@ impl Value {
     /// varies for one reason — a disconnected port is `Fatal` while an empty
     /// read buffer is `Retryable` — and cannot be read off the reason alone.
     #[inline]
-    pub fn nil_with_reason_and_recoverability(
-        reason: NilReason,
-        recoverability: Recoverability,
-    ) -> Self {
+    pub fn nil_with_reason(reason: NilReason, recoverability: Recoverability) -> Self {
         let origin = absence_origin_for_reason(&reason);
         Self::nil_with_absence(AbsenceMetadata::with_reason(reason, origin, recoverability))
     }

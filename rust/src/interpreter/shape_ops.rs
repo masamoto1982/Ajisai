@@ -309,7 +309,7 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
         }
         interp
             .stack
-            .push(Value::nil_with_reason(NilReason::SpaceExhausted));
+            .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
         return Ok(());
     }
 

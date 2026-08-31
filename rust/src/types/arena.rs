@@ -70,7 +70,7 @@ impl ValueArena {
     }
 
     /// Allocate an absence that keeps its reason across the arena boundary.
-    pub fn alloc_nil_with_reason(
+    pub fn alloc_nil_with_reason_unknown(
         &mut self,
         reason: Option<NilReason>,
         hint: Interpretation,
@@ -114,7 +114,9 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             // word constructs U yet), so the gap is latent. Tracked for a
             // dedicated follow-up.
             ValueData::Text(s) => arena.alloc_string(s),
-            ValueData::Nil => arena.alloc_nil_with_reason(value.nil_reason().copied(), value.hint),
+            ValueData::Nil => {
+                arena.alloc_nil_with_reason_unknown(value.nil_reason().copied(), value.hint)
+            }
             ValueData::Boolean(b) => arena.alloc_node(NodeKind::Boolean(*b), value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
             ValueData::ExactScalar(er) => {
@@ -154,7 +156,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
             NodeKind::Text(s) => Value::from_string(s),
             NodeKind::Nil(reason) => {
                 let mut nil = match reason {
-                    Some(reason) => Value::nil_with_reason(*reason),
+                    Some(reason) => Value::nil_with_reason_unknown(*reason),
                     None => Value {
                         data: ValueData::Nil,
                         hint: arena.hint(id),

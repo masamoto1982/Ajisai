@@ -68,10 +68,7 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
 /// absence it is (SPEC: being read in truth position adds an observation, it
 /// takes none away).
 fn undecidable_truth_value() -> Value {
-    let mut v = Value::nil_with_reason_and_recoverability(
-        NilReason::Undecidable,
-        Recoverability::Retryable,
-    );
+    let mut v = Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable);
     v.hint = Interpretation::TruthValue;
     v
 }
@@ -269,7 +266,7 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
     match (a_items, b_items) {
         (None, None) => {
             if a_val.is_nil() || b_val.is_nil() {
-                return Ok(Value::nil_with_reason(
+                return Ok(Value::nil_with_reason_unknown(
                     a_val
                         .nil_reason()
                         .or_else(|| b_val.nil_reason())

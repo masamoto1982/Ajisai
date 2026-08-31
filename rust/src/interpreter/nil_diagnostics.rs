@@ -78,7 +78,7 @@ fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&'static 
         ),
         None => push_result(
             interp,
-            Value::nil_with_reason(NilReason::NotAvailable),
+            Value::nil_with_reason_unknown(NilReason::NotAvailable),
             Interpretation::Nil,
         ),
     }

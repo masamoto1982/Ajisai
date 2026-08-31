@@ -500,7 +500,7 @@ mod comparison_budget_infrastructure_tests {
         // test pins the helper that the comparison.rs refactor calls:
         // building NIL with reason `Undecidable` must yield the
         // §7.4.1 origin `ComparisonBudget`.
-        let v = Value::nil_with_reason(NilReason::Undecidable);
+        let v = Value::nil_with_reason_unknown(NilReason::Undecidable);
         let absence = v.absence_metadata().expect("nil carries absence");
         assert_eq!(absence.reason, Some(NilReason::Undecidable));
         assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
@@ -671,7 +671,7 @@ mod phase_seven_eq_budget_tests {
 
     #[tokio::test]
     async fn eq_undecidable_nil_carries_comparison_budget_origin() {
-        let v = crate::types::Value::nil_with_reason(NilReason::Undecidable);
+        let v = crate::types::Value::nil_with_reason_unknown(NilReason::Undecidable);
         let absence = v.absence_metadata().expect("nil carries absence");
         assert_eq!(absence.reason, Some(NilReason::Undecidable));
         assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);

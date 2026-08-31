@@ -24,7 +24,7 @@ fn checked_shape_product(shape: &[usize]) -> Option<usize> {
 fn push_undecidable_nil(interp: &mut Interpreter) {
     interp
         .stack
-        .push(Value::nil_with_reason(NilReason::Undecidable));
+        .push(Value::nil_with_reason_unknown(NilReason::Undecidable));
     let stack_len = interp.stack.len();
     interp.stack.set_role_at(stack_len - 1, Interpretation::Nil);
 }
@@ -294,7 +294,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             }
             interp
                 .stack
-                .push(Value::nil_with_reason(NilReason::SpaceExhausted));
+                .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
             return Ok(());
         }
     };
@@ -394,7 +394,7 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
             }
             interp
                 .stack
-                .push(Value::nil_with_reason(NilReason::DomainMiss));
+                .push(Value::nil_with_reason_unknown(NilReason::DomainMiss));
             let len = interp.stack.len();
             interp.stack.set_role_at(len - 1, Interpretation::Nil);
             return Ok(());

@@ -56,7 +56,7 @@ fn convert_value_to_string(val: &Value) -> Result<Value> {
     // with `QUANTIZE`, where the denominator is the caller's choice and the
     // approximation is visible in the source.
     if has_no_exact_lexeme(val) {
-        return Ok(Value::nil_with_reason_and_recoverability(
+        return Ok(Value::nil_with_reason(
             NilReason::InvalidEncoding,
             Recoverability::Recoverable,
         ));
@@ -92,7 +92,7 @@ fn convert_value_to_number(val: &Value) -> Result<Value> {
         match parsed {
             Some(fraction) => return Ok(create_number_value(fraction)),
             None => {
-                return Ok(Value::nil_with_reason_and_recoverability(
+                return Ok(Value::nil_with_reason(
                     NilReason::InvalidEncoding,
                     Recoverability::Recoverable,
                 ));
@@ -128,7 +128,7 @@ fn convert_value_to_boolean(val: &Value) -> Result<Value> {
         } else if upper == "FALSE" {
             return Ok(Value::from_bool(false));
         } else {
-            return Ok(Value::nil_with_reason(NilReason::InvalidEncoding));
+            return Ok(Value::nil_with_reason_unknown(NilReason::InvalidEncoding));
         }
     }
     if is_number_value(val) {

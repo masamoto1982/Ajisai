@@ -187,7 +187,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         // above (zero step, infinite direction) remain ordinary errors.
         interp
             .stack
-            .push(Value::nil_with_reason(NilReason::SpaceExhausted));
+            .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
         return Ok(());
     }
 

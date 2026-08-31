@@ -58,10 +58,7 @@ pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
         None => {
             push_result(
                 interp,
-                Value::nil_with_reason_and_recoverability(
-                    NilReason::MissingField,
-                    Recoverability::Recoverable,
-                ),
+                Value::nil_with_reason(NilReason::MissingField, Recoverability::Recoverable),
             );
         }
     }

@@ -58,10 +58,7 @@ fn consume_stacktop_binary(interp: &mut Interpreter) {
 }
 
 fn division_by_zero_projection() -> Value {
-    Value::nil_with_reason_and_recoverability(
-        NilReason::DivisionByZero,
-        Recoverability::Recoverable,
-    )
+    Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
 }
 
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when

@@ -9,7 +9,7 @@ use std::cell::RefCell;
 /// domain is a vector, not a truth value, so — unlike the comparison words'
 /// `undecidable_truth_value` — this carries no `TruthValue` hint.
 fn undecidable_nil() -> Value {
-    Value::nil_with_reason_and_recoverability(NilReason::Undecidable, Recoverability::Retryable)
+    Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable)
 }
 
 fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value> {
