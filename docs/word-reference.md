@@ -848,9 +848,9 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
 - **Syntax:** `1 0 / NIL-REASON`
 
-## `VENT`
+## `OR-NIL`
 
-Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.
+Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. Also spelled VENT for backward compatibility.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
@@ -860,7 +860,7 @@ Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
 - **Syntax:** `NIL ^ [ 0 ]`
-- **Aliases:** `^`
+- **Aliases:** `^`, `VENT`
 - **ERROR conditions:** `missingFollowingSourceUnit`
 
 ## `KEEP`

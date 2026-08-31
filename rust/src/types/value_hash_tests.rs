@@ -182,9 +182,8 @@ mod value_hash_tests {
         // agree. `Value::hash` folds `nil_reason` in for this — without it,
         // `UNIQUE` over a vector of differently-caused NILs would collapse
         // them into one.
-        let division =
-            Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Unknown);
-        let missing = Value::bubble_with_reason(NilReason::MissingField, Recoverability::Unknown);
+        let division = Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown);
+        let missing = Value::nil_with_reason(NilReason::MissingField, Recoverability::Unknown);
         assert_ne!(division, missing, "different reasons are different values");
         assert_ne!(
             hash_of(&division),
@@ -235,8 +234,8 @@ mod value_hash_tests {
             Value::from_string(""),
             Value::from_string("A"),
             Value::from_string("hello"),
-            Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Unknown),
-            Value::bubble_with_reason(NilReason::MissingField, Recoverability::Unknown),
+            Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown),
+            Value::nil_with_reason(NilReason::MissingField, Recoverability::Unknown),
             sqrt_of(2),
             sqrt_of(3),
             sqrt_of(12),

@@ -22,8 +22,8 @@ pub fn small() -> impl Strategy<Value = i64> {
     -20i64..=20
 }
 
-/// A nonzero divisor (keeps `_ _ /` away from the Bubble path when a value is
-/// wanted; a separate [`nil_src`] exercises the division-by-zero NIL).
+/// A nonzero divisor (keeps `_ _ /` away from the NIL-projection path when a
+/// value is wanted; a separate [`nil_src`] exercises the division-by-zero NIL).
 pub fn nonzero() -> impl Strategy<Value = i64> {
     (1i64..=20).prop_flat_map(|n| prop_oneof![Just(n), Just(-n)])
 }
@@ -49,7 +49,7 @@ pub fn boolean_src() -> impl Strategy<Value = String> {
     ]
 }
 
-/// Pushes a reasoned NIL via the Bubble Rule (division by zero, §11.2).
+/// Pushes a reasoned NIL via the NIL Projection Rule (division by zero, §11.2).
 pub fn nil_src() -> impl Strategy<Value = String> {
     small().prop_map(|n| format!("{n} 0 /"))
 }
@@ -179,7 +179,7 @@ pub fn completing_block_body() -> impl Strategy<Value = String> {
     ]
 }
 
-/// A block body that raises a **genuine error** (not a domain Bubble), so the
+/// A block body that raises a **genuine error** (not a domain projection), so the
 /// child terminates `failed`: an unknown word or a stack underflow.
 pub fn failing_block_body() -> impl Strategy<Value = String> {
     prop_oneof![

@@ -243,8 +243,8 @@ async fn random_is_a_pure_function_of_its_seed() {
         .unwrap();
     assert_eq!(rendered_stack(&in_unit_interval), ["FALSE"]);
 
-    // Beyond the space water level a well-formed request bubbles rather than
-    // exhausting the host, the same answer RANGE and FILL give.
+    // Beyond the space water level a well-formed request projects onto NIL
+    // rather than exhausting the host, the same answer RANGE and FILL give.
     let mut too_many = Interpreter::new();
     too_many.execute("7 99999999 RANDOM").await.unwrap();
     let value = too_many.get_stack().last().expect("RANDOM result");

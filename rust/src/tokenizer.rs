@@ -372,19 +372,21 @@ fn is_string_close_delimiter(c: char) -> bool {
 /// sugar share one token stream and one lazy execution path — the spelled-out
 /// name must not fall through to a stack-consuming builtin or an `UnknownWord`.
 ///
-/// Matching is case-folded (`vent` == `VENT`) but only on a bare, whole-word
-/// token: a qualified name such as `MATH@VENT` is a single token containing `@`
+/// Matching is case-folded (`or-nil` == `OR-NIL`) but only on a bare, whole-word
+/// token: a qualified name such as `MATH@OR-NIL` is a single token containing `@`
 /// and never compares equal, and string literals are lexed earlier, so neither
 /// is misconverted. Because the tokenizer emits the control token directly,
 /// these names are also not shadowable by a user definition.
 fn parse_control_directive_word(s: &str) -> Option<Token> {
     // A control directive is emitted as its own token because the execution loop
-    // reads the *following* source unit positionally. Both spellings of VENT and
-    // the COND clause separator arrive here as ordinary name tokens, so they obey
-    // exactly the same boundary rule as every other name.
+    // reads the *following* source unit positionally. All spellings of OR-NIL
+    // (canonical, its `^` sugar, and the legacy `VENT` spelling) and the COND
+    // clause separator arrive here as ordinary name tokens, so they obey exactly
+    // the same boundary rule as every other name.
     match s {
         "^" => Some(Token::NilCoalesce),
         "|" => Some(Token::CondClauseSep),
+        _ if s.eq_ignore_ascii_case("OR-NIL") => Some(Token::NilCoalesce),
         _ if s.eq_ignore_ascii_case("VENT") => Some(Token::NilCoalesce),
         _ => None,
     }

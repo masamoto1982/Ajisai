@@ -69,7 +69,7 @@ mod contract_decl_tests {
     }
 
     #[test]
-    fn vent_reports_the_unmodelled_control_flow_gap() {
+    fn or_nil_reports_the_unmodelled_control_flow_gap() {
         let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");

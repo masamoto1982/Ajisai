@@ -19,12 +19,12 @@ fn checked_shape_product(shape: &[usize]) -> Option<usize> {
 
 /// Push a SPEC §7.4.1 Undecidable NIL. Used when an exact-real (CF)
 /// arithmetic word cannot resolve its result within the partial-quotient
-/// budget; the Bubble Rule (SPEC §11.2) places NIL on the stack instead
+/// budget; the NIL Projection Rule (SPEC §11.2) places NIL on the stack instead
 /// of raising an error, matching the comparison-budget exhaustion path.
 fn push_undecidable_nil(interp: &mut Interpreter) {
     interp
         .stack
-        .push(Value::nil_with_reason(NilReason::Undecidable));
+        .push(Value::nil_with_reason_unknown(NilReason::Undecidable));
     let stack_len = interp.stack.len();
     interp.stack.set_role_at(stack_len - 1, Interpretation::Nil);
 }
@@ -74,7 +74,7 @@ where
 
     // ExactScalar path: exact irrational via CF (SPEC §4.2.2). When the
     // CF stream exhausts its partial-quotient budget the result is
-    // undecidable, so project to a Bubble NIL (SPEC §7.4.1, §11.2)
+    // undecidable, so project to a NIL (SPEC §7.4.1, §11.2)
     // instead of raising an error — matching the comparison-budget path.
     if let ValueData::ExactScalar(er) = &val.data {
         match exact_op(er) {
@@ -151,7 +151,7 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                 }
                 // a mod b = a - b * floor(a/b). A `None` here (after the
                 // zero check) means an absent operand slipped through:
-                // project to a Bubble NIL rather than erroring.
+                // project to NIL rather than erroring.
                 let modulo = a
                     .div(&b)
                     .and_then(|q| q.floor())
@@ -285,16 +285,16 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             // Phase 3 (structural-memory-safety roadmap): a well-formed shape
             // whose element product exceeds the space water level (or overflows
             // `usize`) is a well-formed operation that cannot materialize within
-            // budget. The Bubble Rule projects it onto a diagnosable NIL (reason
-            // `spaceExhausted`), recoverable with `^` (VENT), instead of a
-            // channel error. Under KEEP the operands are retained as on the
+            // budget. The NIL Projection Rule projects it onto a diagnosable NIL
+            // (reason `spaceExhausted`), recoverable with `^` (OR-NIL), instead of
+            // a channel error. Under KEEP the operands are retained as on the
             // success path.
             if interp.consumption_mode == ConsumptionMode::Keep {
                 interp.stack.push(args_val);
             }
             interp
                 .stack
-                .push(Value::nil_with_reason(NilReason::SpaceExhausted));
+                .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
             return Ok(());
         }
     };
@@ -394,7 +394,7 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
             }
             interp
                 .stack
-                .push(Value::nil_with_reason(NilReason::DomainMiss));
+                .push(Value::nil_with_reason_unknown(NilReason::DomainMiss));
             let len = interp.stack.len();
             interp.stack.set_role_at(len - 1, Interpretation::Nil);
             return Ok(());

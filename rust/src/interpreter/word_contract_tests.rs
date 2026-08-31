@@ -171,7 +171,7 @@ async fn a_symbol_inside_a_vector_literal_is_content_not_a_call() {
 }
 
 #[tokio::test]
-async fn vent_leaves_the_flow_unmodelled_rather_than_wrong() {
+async fn or_nil_leaves_the_flow_unmodelled_rather_than_wrong() {
     // `^` selects between paths of differing height, so no fixed arity
     // describes it. Reported as a gap, which can only ever produce a note.
     let contract = contract_for("[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF", "FALLBACK").await;

@@ -192,13 +192,13 @@ fn a_failed_keep_call_reports_the_failure() {
     assert!(!message.is_empty());
 }
 
-// ─────────────────── projecting words bubble domain misses ──────────────────
+// ───────────────── projecting words project onto NIL for domain misses ──────
 
 /// `Projecting`/`CreatesNil` words project a well-formed domain miss onto NIL
-/// rather than raising (SPEC §7.14, Bubble Rule §11.2): division by zero and an
-/// out-of-range `GET` both yield NIL, not an error.
+/// rather than raising (SPEC §7.14, NIL Projection Rule §11.2): division by
+/// zero and an out-of-range `GET` both yield NIL, not an error.
 #[test]
-fn projecting_words_bubble_domain_misses() {
+fn projecting_words_project_onto_nil_for_domain_misses() {
     assert_eq!(obs("1 0 DIV"), vec!["NIL"]);
     assert_eq!(obs("1 0 /"), vec!["NIL"]);
     // GET declares `consumption: eat` (LANG.MODIFIERS.CONSUMPTION): both
@@ -253,9 +253,9 @@ fn every_coreword_declares_a_reachable_contract() {
 /// `A` used to also imply *deterministic*, on the reasoning that the strongest
 /// safety class must be reproducible. The canonical declarations show those are
 /// independent axes, and reading them made three counterexamples visible at
-/// once: `KEEP` and `VENT` are safety `A` and `stateRelative` —
+/// once: `KEEP` and `OR-NIL` are safety `A` and `stateRelative` —
 /// they compute nothing and touch no value, but what they *do* is change how
-/// the next Word runs. `VENT` also broke the "A must be pure" half by
+/// the next Word runs. `OR-NIL` also broke the "A must be pure" half by
 /// declaring `conditional`, the class the hand-written vocabulary could not
 /// express. None of that makes them unsafe, which is what `A` is about; it
 /// makes determinism the wrong question to ask here, so the clause is gone
@@ -360,7 +360,7 @@ fn key_word_contracts_match_spec_7_14() {
     // `AND`/`OR`/`NOT` declare `kleeneAbsorbing`, not a blanket `passthrough`:
     // a NIL operand does not always survive to the result (FALSE absorbs it
     // into `AND`, TRUE into `OR`), so the primitive must decide instead of a
-    // generic bubble (LANG.VALUES.TRUTH).
+    // generic projection (LANG.VALUES.TRUTH).
     for logic in ["AND", "OR", "NOT"] {
         let m = c(logic);
         assert_eq!(m.partiality, Partiality::Total, "{logic}");

@@ -56,10 +56,11 @@ enum Outcome {
 /// the decision taken. Remove an entry when its executor is corrected.
 /// Empty, and it stays that way: the dispatch guard in `execute_builtin` now
 /// settles both directions of the contract from the declaration — `rejectNil`
-/// refuses to run, `passthrough` yields the bubble — so no executor is left to
-/// disagree with the canon. The last two entries were `SORT` (raised an error
-/// on a NIL it declares it passes through) and `STR` (passed the NIL but
-/// destroyed its reason, making the bubble undiagnosable). Both conform now.
+/// refuses to run, `passthrough` yields the projected NIL — so no executor is
+/// left to disagree with the canon. The last two entries were `SORT` (raised
+/// an error on a NIL it declares it passes through) and `STR` (passed the NIL
+/// but destroyed its reason, making the projection undiagnosable). Both
+/// conform now.
 const KNOWN_DIVERGENCES: &[(&str, Outcome, &str)] = &[];
 
 fn divergence(name: &str) -> Option<Outcome> {
@@ -93,8 +94,8 @@ async fn observe(program: &str) -> Outcome {
 /// operands or how it inspects NIL-ness, so they place no obligation here.
 fn required(policy: NilPolicy) -> Option<Outcome> {
     match policy {
-        // A bubble flows downstream and stays diagnosable, so the reason must
-        // survive (SPEC §7.12).
+        // A projected NIL flows downstream and stays diagnosable, so the
+        // reason must survive (SPEC §7.12).
         NilPolicy::Passthrough | NilPolicy::PassthroughThenProject | NilPolicy::PreserveReason => {
             Some(Outcome::NilWithReason)
         }
@@ -110,7 +111,7 @@ fn required(policy: NilPolicy) -> Option<Outcome> {
 }
 
 /// A program that puts `arity` NIL operands on the stack and applies `word`.
-/// `1 0 DIV` is the canonical reasoned bubble (`divisionByZero`).
+/// `1 0 DIV` is the canonical reasoned projection (`divisionByZero`).
 fn probe_program(word: &str, arity: u8) -> String {
     let nils = vec!["1 0 DIV"; arity as usize].join(" ");
     format!("{nils} {word}")
@@ -222,12 +223,13 @@ fn search_words_reject_a_nil_needle() {
 }
 
 /// Rejection is safe by construction — it runs nothing and touches no stack —
-/// but passing a bubble through has to *produce* the result and unwind the
-/// operands itself, so the guard takes over a duty the executors used to
+/// but passing a projected NIL through has to *produce* the result and unwind
+/// the operands itself, so the guard takes over a duty the executors used to
 /// discharge: honoring the consumption mode (SPEC §5.2). `EAT` replaces the
-/// declared operand window with the bubble; `KEEP` leaves the window in place
-/// and stacks the bubble above it. Both are pinned for a unary and a binary
-/// Word, together with the depth of the stack the guard leaves behind.
+/// declared operand window with the projected NIL; `KEEP` leaves the window
+/// in place and stacks the projected NIL above it. Both are pinned for a
+/// unary and a binary Word, together with the depth of the stack the guard
+/// leaves behind.
 #[test]
 fn passthrough_unwinds_the_operand_window_under_both_consumption_modes() {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -236,20 +238,21 @@ fn passthrough_unwinds_the_operand_window_under_both_consumption_modes() {
         .expect("tokio current-thread runtime");
 
     for (program, depth) in [
-        // Unary: SORT eats its vector, so only the bubble is left.
+        // Unary: SORT eats its vector, so only the projected NIL is left.
         ("1 0 DIV SORT", 1),
         ("1 0 DIV KEEP SORT", 2),
         // Binary: ADD eats both operands. Under KEEP both survive.
         ("1 0 DIV 1 ADD", 1),
         ("1 0 DIV 1 KEEP ADD", 3),
-        // The bubble need not be the receiver: any operand position carries it.
+        // The projected NIL need not be the receiver: any operand position
+        // carries it.
         ("1 1 0 DIV ADD", 1),
     ] {
         let (observed, left) = runtime.block_on(observe_depth(program));
         assert_eq!(
             observed,
             Outcome::NilWithReason,
-            "`{program}` must yield the bubble with its reason intact"
+            "`{program}` must yield the projected NIL with its reason intact"
         );
         assert_eq!(
             left, depth,

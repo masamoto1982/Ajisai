@@ -11,7 +11,7 @@
 //
 // Sugar and alias surfaces are folded onto their canonical Core word using
 // the alias entries of the word manifest (e.g. `+` counts as ADD, `^` as
-// VENT, `~` as FLOW, `;`/`;;` as their modifier pairs), so a case written
+// OR-NIL, `~` as FLOW, `;`/`;;` as their modifier pairs), so a case written
 // in sugar still covers the canonical word.
 //
 // A module word counts as covered when its qualified surface (MODULE@WORD)
@@ -49,7 +49,6 @@ for (const e of manifest.entries) {
     sugarMap.set(e.surface, [e.canonical]);
   }
 }
-sugarMap.set('^', ['VENT']);
 sugarMap.set(';', ['TOP', 'EAT']);
 sugarMap.set(';;', ['STAK', 'KEEP']);
 

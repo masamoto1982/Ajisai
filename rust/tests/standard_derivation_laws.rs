@@ -39,7 +39,7 @@ const KERNEL_WORDS: &[&str] = &[
     "NIL",
     "NIL?",
     "NIL-REASON",
-    "VENT",
+    "OR-NIL",
     "KEEP",
     "DEF",
     "DEL",

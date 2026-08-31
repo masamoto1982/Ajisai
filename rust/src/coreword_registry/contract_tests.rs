@@ -45,8 +45,8 @@ fn aq_ver_contract_a_every_word_has_contract_metadata() {
 /// fresh reasoned NIL. `passthroughThenProject` is the declaration that
 /// says both; `createsNil` — all the hand-written vocabulary could
 /// express — said only the second, which is why `1 0 DIV 1 ADD` looked
-/// like a Word creating an absence out of nothing rather than one bubble
-/// flowing into the next.
+/// like a Word creating an absence out of nothing rather than one
+/// projected NIL flowing into the next.
 #[test]
 fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
     let div = get_coreword_metadata("DIV").expect("DIV must be in registry");
@@ -142,7 +142,7 @@ fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
 fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
     // SPEC §4.5.0 / §7.15: the five diagnostic absence accessors inspect a
     // NIL rather than propagate it, so their nil_policy is ConsumesNil (the
-    // VENT-family "inspect or branch on NIL" classification). They are pure,
+    // OR-NIL-family "inspect or branch on NIL" classification). They are pure,
     // total, safety-A observations that retain their inspection target, so
     // their mass contract is Dynamic (net +1, like the LENGTH/GET
     // inspection words of §7.1.1 — a Fixed contract would mis-model the

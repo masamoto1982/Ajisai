@@ -55,9 +55,10 @@ fn abs_scalar(value: &Value) -> Result<Value> {
             Ok(Value::from_exact_real(er.neg()))
         }
         crate::interpreter::comparison::OrderOutcome::Decided(_) => Ok(value.clone()),
-        crate::interpreter::comparison::OrderOutcome::Undecided(_) => Ok(
-            Value::bubble_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-        ),
+        crate::interpreter::comparison::OrderOutcome::Undecided(_) => Ok(Value::nil_with_reason(
+            NilReason::Undecidable,
+            Recoverability::Retryable,
+        )),
     }
 }
 
@@ -249,7 +250,7 @@ where
                 Ok(if pick_left(ord) { a.clone() } else { b.clone() })
             }
             crate::interpreter::comparison::OrderOutcome::Undecided(_) => Ok(
-                Value::bubble_with_reason(NilReason::Undecidable, Recoverability::Retryable),
+                Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
             ),
         }
     };
@@ -338,6 +339,6 @@ fn sqrt_scalar(value: &Value) -> Result<Value> {
     // `from_exact_real` collapses a rational result back to Scalar.
     Ok(match ExactReal::from_sqrt_rational(f.clone()) {
         Some(er) => Value::from_exact_real(er),
-        None => Value::bubble_with_reason(NilReason::DomainMiss, Recoverability::Recoverable),
+        None => Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Recoverable),
     })
 }

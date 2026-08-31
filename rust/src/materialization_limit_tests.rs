@@ -10,10 +10,10 @@
 //!
 //! Phase 3 of the structural-memory-safety roadmap turns the *space-budget*
 //! miss of the generative words — a well-formed input whose materialized result
-//! exceeds the water level — into a diagnosable Bubble/NIL (reason
-//! `SpaceExhausted`) that a pipeline can recover with `^` (VENT), rather than a
-//! channel error. `RESHAPE`'s over-limit case is a shape *mismatch* (malformed),
-//! so it remains an ordinary error.
+//! exceeds the ceiling — into a diagnosable projected NIL (reason
+//! `SpaceExhausted`) that a pipeline can recover with `^` (OR-NIL), rather than
+//! a channel error. `RESHAPE`'s over-limit case is a shape *mismatch*
+//! (malformed), so it remains an ordinary error.
 
 #[cfg(test)]
 mod materialization_limit_tests {
@@ -29,33 +29,34 @@ mod materialization_limit_tests {
     }
 
     #[tokio::test]
-    async fn range_projects_unbounded_count_onto_a_space_bubble() {
+    async fn range_projects_unbounded_count_onto_a_space_ceiling() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 0 9999999999999 ] RANGE").await;
         assert!(
             result.is_ok(),
-            "an over-budget RANGE must bubble, not error: {result:?}"
+            "an over-budget RANGE must project onto NIL, not error: {result:?}"
         );
         assert_eq!(
             top_nil_reason(&interp),
             Some(NilReason::SpaceExhausted),
-            "RANGE over the space water level must leave a SpaceExhausted NIL"
+            "RANGE over the space ceiling must leave a SpaceExhausted NIL"
         );
     }
 
     #[tokio::test]
-    async fn range_space_bubble_is_vent_recoverable() {
-        // The whole point of a bubble over an error: a pipeline can recover it.
+    async fn range_space_projection_is_or_nil_recoverable() {
+        // The whole point of a projected NIL over an error: a pipeline can
+        // recover it.
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 0 9999999999999 ] RANGE ^ [ 42 ]").await;
         assert!(
             result.is_ok(),
-            "VENT must recover the space bubble: {result:?}"
+            "OR-NIL must recover the space-exhausted NIL: {result:?}"
         );
         assert_eq!(
             top_nil_reason(&interp),
             None,
-            "after VENT the fallback value, not a NIL, is on top"
+            "after OR-NIL the fallback value, not a NIL, is on top"
         );
     }
 
@@ -67,20 +68,21 @@ mod materialization_limit_tests {
         assert_eq!(
             top_nil_reason(&interp),
             None,
-            "a small RANGE is not a bubble"
+            "a small RANGE does not project onto NIL"
         );
     }
 
     #[tokio::test]
     async fn range_handles_extreme_bounds_without_overflow() {
         // start/end at the i64 extremes: the span arithmetic must not overflow
-        // while computing the over-budget element count, and the result bubbles.
+        // while computing the over-budget element count, and the result
+        // projects onto NIL.
         let mut interp = Interpreter::new();
         let program = format!("[ {} {} ] RANGE", i64::MIN, i64::MAX);
         let result = interp.execute(&program).await;
         assert!(
             result.is_ok(),
-            "full-i64-span RANGE must bubble, not panic: {result:?}"
+            "full-i64-span RANGE must project onto NIL, not panic: {result:?}"
         );
         assert_eq!(top_nil_reason(&interp), Some(NilReason::SpaceExhausted));
     }
@@ -98,27 +100,28 @@ mod materialization_limit_tests {
     }
 
     #[tokio::test]
-    async fn fill_projects_oversized_product_onto_a_space_bubble() {
+    async fn fill_projects_oversized_product_onto_a_space_ceiling() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1000000 1000000 7 ] FILL").await;
         assert!(
             result.is_ok(),
-            "a billion-element FILL must bubble, not error: {result:?}"
+            "a billion-element FILL must project onto NIL, not error: {result:?}"
         );
         assert_eq!(top_nil_reason(&interp), Some(NilReason::SpaceExhausted));
     }
 
     #[tokio::test]
-    async fn fill_projects_shape_product_overflow_onto_a_space_bubble() {
+    async fn fill_projects_shape_product_overflow_onto_a_space_ceiling() {
         // The product of these dimensions overflows usize; the old
-        // `shape.iter().product()` panicked here, then it errored, now it bubbles.
+        // `shape.iter().product()` panicked here, then it errored, now it
+        // projects onto NIL.
         let mut interp = Interpreter::new();
         let result = interp
             .execute("[ 99999999 99999999 99999999 1 ] FILL")
             .await;
         assert!(
             result.is_ok(),
-            "an overflowing FILL shape must bubble, not panic: {result:?}"
+            "an overflowing FILL shape must project onto NIL, not panic: {result:?}"
         );
         assert_eq!(top_nil_reason(&interp), Some(NilReason::SpaceExhausted));
     }
@@ -131,7 +134,7 @@ mod materialization_limit_tests {
         assert_eq!(
             top_nil_reason(&interp),
             None,
-            "a small FILL is not a bubble"
+            "a small FILL does not project onto NIL"
         );
     }
 }

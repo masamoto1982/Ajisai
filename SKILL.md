@@ -244,7 +244,7 @@ no module system and nothing to import.
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
-| `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
+| `OR-NIL` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
@@ -262,7 +262,8 @@ no module system and nothing to import.
 | `>=` | symbol alias | shorthand for `GTE` |
 | `!=` | symbol alias | shorthand for `NEQ` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
-| `^` | syntax sugar | shorthand for `VENT` |
+| `^` | syntax sugar | shorthand for `OR-NIL` |
+| `VENT` | syntax sugar | shorthand for `OR-NIL` |
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
 | `\|` | control directive | COND-CLAUSE — only inside the construct that defines it |
 | `IDLE` | control directive | COND-ELSE-GUARD — only inside the construct that defines it |

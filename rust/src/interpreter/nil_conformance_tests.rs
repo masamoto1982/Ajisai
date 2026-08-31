@@ -1,15 +1,15 @@
-//! Contract-driven NIL / Bubble-Rule behavioral conformance (phase B).
+//! Contract-driven NIL / NIL-Projection-Rule behavioral conformance (phase B).
 //!
 //! Earlier coverage asserted the *metadata* of the Coreword registry
 //! (every word has a contract, fields are internally consistent). This
 //! suite closes the complementary gap: it drives the interpreter and
 //! asserts the *runtime* honors each word's declared `nil_policy` and the
-//! Bubble Rule (SPEC §4.5.1, §7.12, §11.2).
+//! NIL Projection Rule (SPEC §4.5.1, §7.12, §11.2).
 //!
 //! The completeness tests are registry-driven: a newly added Core
 //! passthrough / projecting word without a behavioral probe here fails.
 //!
-//! Trace: docs/quality/TRACEABILITY_MATRIX.md (NIL/Bubble conformance).
+//! Trace: docs/quality/TRACEABILITY_MATRIX.md (NIL projection conformance).
 
 use crate::coreword_registry::{get_builtin_word_registry, NilPolicy};
 use crate::error::NilReason;
@@ -143,9 +143,9 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
     }
 }
 
-// --- Bubble creation: Projecting / CreatesNil words (SPEC §11.2) ----------
+// --- NIL projection: Projecting / CreatesNil words (SPEC §11.2) ----------
 
-/// Projecting words: a well-formed domain miss yields Bubble/NIL with a
+/// Projecting words: a well-formed domain miss yields a reasoned NIL with a
 /// reason; malformed use raises an ordinary error.
 // `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`NEQ`/`ORDER`/`SORT` are probed
 // in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
@@ -189,13 +189,13 @@ fn projecting_word_set_matches_registry() {
     expected.sort_unstable();
     assert_eq!(
         registry, expected,
-        "projecting word set drifted from PROJECTING_WORDS; add a Bubble \
+        "projecting word set drifted from PROJECTING_WORDS; add a NIL-projection \
          behavioral probe for any new word"
     );
 }
 
 /// Run `code`, require it to land on a NIL, and answer that NIL's reason.
-/// Shared by every Bubble-creation probe below, since a projection is "NIL with
+/// Shared by every NIL-projection probe below, since a projection is "NIL with
 /// the reason the contract registers" (LANG.FAILURE.PROJECT) and only the
 /// reason differs between them.
 async fn projected_reason(code: &str) -> Option<String> {
@@ -225,7 +225,7 @@ async fn top_of(code: &str) -> crate::types::Value {
 /// yields a reasoned NIL rather than an error — the `SQRT` of a negative rule.
 /// Malformed use (an operand that is not a single number at all) still raises.
 #[tokio::test]
-async fn bubble_creation_quantize_projects_on_a_denominator_outside_its_domain() {
+async fn nil_projection_quantize_projects_on_a_denominator_outside_its_domain() {
     for code in ["7 0 QUANTIZE", "7 -4 QUANTIZE", "7 3/2 QUANTIZE"] {
         assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
     }
@@ -248,7 +248,7 @@ async fn bubble_creation_quantize_projects_on_a_denominator_outside_its_domain()
 /// becomes a token: building a closure over an exact irrational quietly
 /// substituted a rational look-alike for it.
 #[tokio::test]
-async fn bubble_creation_str_projects_on_a_number_with_no_lexeme() {
+async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
     for code in [
         "2 SQRT STR",
         "2 SQRT 3 SQRT ADD STR",
@@ -284,7 +284,7 @@ async fn bubble_creation_str_projects_on_a_number_with_no_lexeme() {
 /// with the reason its contract registers", and `LANG.VALUES.NIL` makes the
 /// reason a NIL's entire observable content.
 #[tokio::test]
-async fn bubble_creation_nil_reason_projects_on_a_reasonless_value() {
+async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
     for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
         assert_eq!(
             projected_reason(code).await.as_deref(),
@@ -343,7 +343,7 @@ async fn nil_check_answers_rather_than_projecting() {
 }
 
 #[tokio::test]
-async fn bubble_creation_comparison_nil_input() {
+async fn nil_projection_comparison_nil_input() {
     // Comparison words are Projecting/PassthroughThenProject (SPEC §7.14). A
     // NIL operand propagates as NIL output via the passthrough rule
     // (SPEC §4.5.1, §7.12). (Budget exhaustion instead yields Unknown, a NIL
@@ -368,7 +368,7 @@ async fn bubble_creation_comparison_nil_input() {
 #[tokio::test]
 async fn projecting_arithmetic_nil_input_passes_through() {
     // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil, but a NIL operand
-    // still propagates as NIL via the universal Bubble Rule (SPEC §4.5.1)
+    // still propagates as NIL via the universal NIL Projection Rule (SPEC §4.5.1)
     // — the CreatesNil policy is about CF-budget exhaustion on irrational
     // operands, not about rejecting NIL inputs.
     for name in &["FLOOR", "ROUND"] {
@@ -385,20 +385,20 @@ async fn projecting_arithmetic_nil_input_passes_through() {
 }
 
 #[tokio::test]
-async fn malformed_use_raises_error_not_bubble() {
+async fn malformed_use_raises_error_not_a_projected_nil() {
     // SPEC §11.2: "そもそも使い方が違う -> エラー". A non-numeric DIV operand
     // and a malformed GET index are structural misuse, not domain misses.
     assert!(
         run("'x' 1 DIV").await.is_err(),
-        "non-numeric DIV operand must raise an error, not Bubble/NIL"
+        "non-numeric DIV operand must raise an error, not project onto NIL"
     );
     assert!(
         run("1 [ 1 2 ] GET").await.is_err(),
-        "malformed GET index must raise an error, not Bubble/NIL"
+        "malformed GET index must raise an error, not a projected NIL"
     );
 }
 
-// --- VENT (^) replaces Bubble/NIL with a fallback (SPEC §11.2) ---------
+// --- OR-NIL (^) replaces a reasoned NIL with a fallback (SPEC §11.2) ---
 
 #[tokio::test]
 async fn or_nil_supplies_fallback_and_clears_reason() {
@@ -410,13 +410,13 @@ async fn or_nil_supplies_fallback_and_clears_reason() {
     let stack = run_ok("[ 42 ] ^ [ 0 ]").await;
     assert_eq!(format!("{}", stack[0]), "[ 42/1 ]");
 
-    // a reasoned Bubble (division by zero) is replaced; no NIL survives
+    // a reasoned NIL (division by zero) is replaced; no NIL survives
     let stack = run_ok("1 0 DIV ^ [ 7 ]").await;
-    assert!(!is_nil(&stack[0]), "VENT must consume the Bubble");
+    assert!(!is_nil(&stack[0]), "OR-NIL must consume the reasoned NIL");
     assert_eq!(format!("{}", stack[0]), "[ 7/1 ]");
 }
 
-// --- A raised error propagates; a well-formed Bubble keeps its reason -----
+// --- A raised error propagates; a well-formed projected NIL keeps its reason
 
 #[tokio::test]
 async fn raised_errors_propagate_instead_of_projecting_to_nil() {
@@ -436,14 +436,14 @@ async fn raised_errors_propagate_instead_of_projecting_to_nil() {
 }
 
 #[tokio::test]
-async fn direct_bubble_preserves_its_own_reason() {
-    // A well-formed Bubble (division by zero) keeps its own reason.
+async fn direct_projection_preserves_its_own_reason() {
+    // A well-formed projected NIL (division by zero) keeps its own reason.
     let stack = run_ok("1 0 DIV").await;
     assert!(is_nil(&stack[0]));
     assert_eq!(
         reason_of(&stack[0]),
         Some(NilReason::DivisionByZero),
-        "a direct Bubble keeps its DivisionByZero reason"
+        "a direct projection keeps its DivisionByZero reason"
     );
 }
 
@@ -477,9 +477,9 @@ mod properties {
             }
         }
 
-        // Division by a zero divisor is a total projection to a reasoned Bubble.
+        // Division by a zero divisor is a total projection to a reasoned NIL.
         #[test]
-        fn division_by_zero_is_reasoned_bubble(a in -50i64..50) {
+        fn division_by_zero_is_a_reasoned_projection(a in -50i64..50) {
             let stack = block_on(run(&format!("{a} 0 DIV")))
                 .unwrap_or_else(|e| panic!("`{a} 0 DIV` errored: {e}"));
             prop_assert!(stack[0].is_nil());

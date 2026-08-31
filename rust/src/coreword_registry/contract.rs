@@ -38,7 +38,7 @@ impl MassContract {
 ///
 /// Most words are ordinary `RuntimeWord`s dispatched by name and consuming/
 /// producing stack values. The lazy control directive of SPEC §6.4 is not: the
-/// tokenizer emits it as a dedicated token (`^`/`VENT` -> `NilCoalesce`) and the
+/// tokenizer emits it as a dedicated token (`^`/`OR-NIL` -> `NilCoalesce`) and the
 /// execution loop interprets the *following source unit* positionally rather
 /// than popping operands. This enum lets generators and consistency tests assert
 /// that classification instead of parsing the prose.
@@ -51,7 +51,7 @@ pub enum ExecutionForm {
     /// is non-NIL, keeps it and skips the following source unit *unevaluated*;
     /// if it is NIL, discards it and evaluates the following source unit as the
     /// fallback. The fallback is source that follows the directive, never a
-    /// value already on the stack (e.g. `VENT` / `^`).
+    /// value already on the stack (e.g. `OR-NIL` / `^`).
     LazyNextUnitFallback,
 }
 

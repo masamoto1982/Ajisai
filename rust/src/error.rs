@@ -28,7 +28,7 @@ pub enum NilReason {
     /// Comparison-budget exhaustion per SPEC §7.4.1: two lazy CFs
     /// agreed on every emitted partial quotient up to the budget
     /// without diverging, or one of the operands' CF streams reported
-    /// `CfStep::Exhausted`. The Bubble Rule projects this to NIL with
+    /// `CfStep::Exhausted`. The NIL Projection Rule projects this to NIL with
     /// `absence.origin = comparisonBudget` rather than a SAFE-caught
     /// error.
     Undecidable,
@@ -40,15 +40,16 @@ pub enum NilReason {
     // needs no boundary handling.
     /// A well-formed generative operation (`RANGE`, `FILL`) whose materialized
     /// result would exceed the space water level (`max_materialized_elements`).
-    /// The Bubble Rule projects this to NIL with `absence.origin = spaceBudget`
+    /// The NIL Projection Rule projects this to NIL with `absence.origin = spaceBudget`
     /// (SPEC §11.2) rather than aborting the process, so a pipeline can
-    /// recover it with `^` (VENT). Malformed inputs (an infinite `RANGE`, a
+    /// recover it with `^` (OR-NIL). Malformed inputs (an infinite `RANGE`, a
     /// non-conforming `RESHAPE`) remain ordinary errors.
     SpaceExhausted,
     /// A well-formed operation applied to an input outside its domain — the
     /// canonical case being `SQRT` of a negative rational, which
-    /// `SPECIFICATION.html` §5 calls a "well-formed domain miss". The Bubble
-    /// Rule projects it to NIL with `absence.origin = domainMiss` (SPEC §11.2).
+    /// `SPECIFICATION.html` §5 calls a "well-formed domain miss". The NIL
+    /// Projection Rule projects it to NIL with `absence.origin = domainMiss`
+    /// (SPEC §11.2).
     ///
     /// Deliberately named for the classification, not for the operation: a
     /// domain miss is recoverable by supplying a different input, which is what

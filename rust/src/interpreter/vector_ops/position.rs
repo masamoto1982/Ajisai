@@ -104,7 +104,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         }
         .and_then(|idx| target_val.child(idx))
         .unwrap_or_else(|| {
-            Value::bubble_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
+            Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
         })
     };
     let result_elem = match indices.as_slice() {

@@ -7,7 +7,7 @@
     "primitives": 24,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 18,
-    "distinct_conformance_cases": 72
+    "distinct_conformance_cases": 74
   },
   "primitives": [
     {
@@ -317,7 +317,7 @@
         "core.nil-p",
         "core.nil-reason",
         "core.num",
-        "core.vent",
+        "core.or-nil",
         "module.algo.index-of"
       ],
       "law_tests": [
@@ -401,7 +401,7 @@
       "law_test_count": 1,
       "conformance_case_count": 1,
       "derived_words": [
-        "core.vent"
+        "core.or-nil"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -696,7 +696,7 @@
       "status": "accepted",
       "derived_word_count": 1,
       "law_test_count": 1,
-      "conformance_case_count": 5,
+      "conformance_case_count": 7,
       "derived_words": [
         "core.pi"
       ],
@@ -705,6 +705,8 @@
       ],
       "conformance_cases": [
         "core-pi-decides-against-a-separated-rational",
+        "core-pi-equality-entails-its-order",
+        "core-pi-equality-ignores-construction-history",
         "core-pi-is-a-computable-real",
         "core-pi-pi-eq-is-unknown",
         "core-pi-pi-lt-is-unknown",

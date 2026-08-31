@@ -181,13 +181,13 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         // Phase 3 (structural-memory-safety roadmap): a well-formed, finite
         // range whose materialized length exceeds the space water level is a
         // well-formed operation that cannot produce a value within budget. The
-        // Bubble Rule projects it onto a diagnosable NIL (reason
-        // `spaceExhausted`) so a pipeline can recover it with `^` (VENT),
+        // NIL Projection Rule projects it onto a diagnosable NIL (reason
+        // `spaceExhausted`) so a pipeline can recover it with `^` (OR-NIL),
         // instead of a channel error that halts evaluation. The malformed cases
         // above (zero step, infinite direction) remain ordinary errors.
         interp
             .stack
-            .push(Value::nil_with_reason(NilReason::SpaceExhausted));
+            .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
         return Ok(());
     }
 

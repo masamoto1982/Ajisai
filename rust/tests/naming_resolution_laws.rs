@@ -228,8 +228,9 @@ fn destructuring_requires_one_name_per_element() {
     assert_eq!(obs("[ 1 2 3 ] [ 'A' 'B' 'C' ] BIND C A ADD"), vec!["4/1"]);
 }
 
-/// A bound bubble stays a bubble, with its reason, however many times the name
-/// is read. Binding is not an observation of the value (SPEC §7.12).
+/// A bound reasoned NIL stays a reasoned NIL, with its reason, however many
+/// times the name is read. Binding is not an observation of the value
+/// (SPEC §7.12).
 #[test]
 fn binding_preserves_an_absence_and_its_reason() {
     assert_eq!(

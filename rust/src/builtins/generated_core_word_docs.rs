@@ -552,12 +552,12 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "1 0 / NIL-REASON",
     },
     GeneratedCoreWordDoc {
-        name: "VENT",
+        name: "OR-NIL",
         category: "control-directive",
         summary: "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
         role: "Control directive that inspects the stack top. If the top is non-NIL it is kept and the following source unit is skipped UNEVALUATED. If the top is NIL it is discarded and the following source unit is evaluated as the fallback. The fallback is the source that follows the directive, not a value already on the stack.",
         stack_effect: "top non-NIL: keeps top, skips next source unit unevaluated; top NIL: discards top, evaluates next source unit as fallback",
-        hover_summary: "VENT — lazy NIL-coalescing fallback",
+        hover_summary: "OR-NIL — lazy NIL-coalescing fallback",
         hover_syntax: "NIL ^ [ 0 ]",
     },
     GeneratedCoreWordDoc {

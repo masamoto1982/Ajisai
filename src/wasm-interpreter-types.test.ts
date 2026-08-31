@@ -13,7 +13,7 @@ const diagnosis: ProtocolDiagnosis = {
         word: 'DIV'
     },
     why: 'domain',
-    summary: 'Division by zero produced a Bubble/NIL.',
+    summary: 'Division by zero produced a reasoned NIL.',
     evidence: ['right operand was zero'],
     nextChecks: [
         {

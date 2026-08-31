@@ -189,7 +189,7 @@ mod comment_newline_absorption {
 //
 //     '^' => Some((Token::NilCoalesce, 1)),
 //
-// `^` (VENT) is the one single-character alias with its own token, and `=` is an
+// `^` (OR-NIL) is the one single-character alias with its own token, and `=` is an
 // unconditional single-char `EQ` Symbol with no lookahead. We cover the
 // single-char branch plus the bare `=` Symbol.
 mod single_char_aliases {

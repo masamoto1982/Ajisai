@@ -137,9 +137,10 @@ fn derive_vocabulary_text(canonical: &str) -> String {
 }
 
 /// Failure baseline derived from the §7.14 contract metadata. The wording
-/// follows the Bubble Rule framing (three-layer model §2.3): well-formed
-/// operations that cannot produce a value bubble as NIL with a reason,
-/// while malformed usage raises an error.
+/// follows the specification's Bubble Rule framing (three-layer model §2.3,
+/// internally the NIL Projection Rule): well-formed operations that cannot
+/// produce a value project onto NIL with a reason, while malformed usage
+/// raises an error.
 ///
 /// The NIL sentence is derived from the *declared* policy in
 /// `spec/words.json`, so what a reader is told about NIL and what the dispatch

@@ -232,7 +232,7 @@ fn division_by_zero_matches_baseline() {
     let (on, _) = assert_on_equals_off("6 0 /");
     assert!(
         on.runtime_metrics().scalar_fastpath_count >= 1,
-        "division by zero still uses the scalar fast path to produce the same bubble"
+        "division by zero still uses the scalar fast path to produce the same projected NIL"
     );
 }
 

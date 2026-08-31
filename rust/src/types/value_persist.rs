@@ -282,7 +282,7 @@ fn decode_value(value: &PersistValue) -> Result<Value, String> {
     if let PersistData::Nil { r: Some(reason) } = &value.d {
         let reason = NilReason::from_protocol_str(reason)
             .ok_or_else(|| format!("unknown NIL reason: {}", reason))?;
-        let mut decoded = Value::nil_with_reason(reason);
+        let mut decoded = Value::nil_with_reason_unknown(reason);
         decoded.hint = hint_from_tag(&value.h);
         return Ok(decoded);
     }
