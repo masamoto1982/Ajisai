@@ -900,9 +900,9 @@ Define a user word from a body and a name.
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
-- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
+- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.ACYCLIC`
 - **Syntax:** `[ 2 * ] 'DOUBLE' DEF`
-- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`
+- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`, `selfReferentialDefinition`
 
 ## `DEL`
 

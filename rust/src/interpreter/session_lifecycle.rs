@@ -35,9 +35,6 @@ impl Interpreter {
         self.runtime_scratch.clear();
         self.call_stack.clear();
         self.call_depth = 0;
-        self.tail_self_word = None;
-        self.in_tail_context = false;
-        self.tail_jump_pending = false;
         self.source_spans.clear();
         self.section_depth = 0;
         self.current_source_span = None;

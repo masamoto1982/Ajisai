@@ -172,6 +172,7 @@ pub enum ErrorCategory {
     ModeUnsupported,
     BuiltinProtection,
     CondExhausted,
+    SelfReferentialDefinition,
     Custom,
 }
 
@@ -193,6 +194,7 @@ impl ErrorCategory {
             ErrorCategory::ModeUnsupported => "modeUnsupported",
             ErrorCategory::BuiltinProtection => "builtinProtection",
             ErrorCategory::CondExhausted => "condExhausted",
+            ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
             ErrorCategory::Custom => "custom",
         }
     }
@@ -215,6 +217,9 @@ impl ErrorCategory {
             AjisaiError::ModeUnsupported { .. } => ErrorCategory::ModeUnsupported,
             AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
             AjisaiError::CondExhausted => ErrorCategory::CondExhausted,
+            AjisaiError::SelfReferentialDefinition { .. } => {
+                ErrorCategory::SelfReferentialDefinition
+            }
             AjisaiError::Custom(_) => ErrorCategory::Custom,
         }
     }
@@ -345,13 +350,18 @@ pub enum AjisaiError {
         /// [`ResourceProgress`] for why the distinction is the whole point.
         progress: Option<ResourceProgress>,
     },
-    /// The native recursion-depth guard (SPEC §8.4) tripped: `word` reached
-    /// `limit` non-tail recursive activations. A runtime safety control of the
-    /// same rank as the step budget (§5.3), not language semantics; guarded
-    /// tail recursion (§7.7.1) never raises this.
+    /// Native call-depth guard (SPEC §8.4): `word` reached `limit` nested
+    /// activations — a pathologically long acyclic call chain, since the
+    /// DEF-time acyclicity check (§8.7) rules out recursion.
     RecursionLimitExceeded {
         limit: usize,
         word: String,
+    },
+    /// `DEF` refused: `word`'s body names itself, directly or through other
+    /// User words (§8.7's acyclicity invariant). `cycle` closes back on it.
+    SelfReferentialDefinition {
+        word: String,
+        cycle: Vec<String>,
     },
     ModeUnsupported {
         word: String,
@@ -459,6 +469,14 @@ impl fmt::Display for AjisaiError {
             },
             AjisaiError::RecursionLimitExceeded { limit, word } => {
                 write!(f, "recursion limit exceeded ({}) in '{}'", limit, word)
+            }
+            AjisaiError::SelfReferentialDefinition { word, cycle } => {
+                write!(
+                    f,
+                    "Cannot define '{}': self-referential definition ({})",
+                    word,
+                    cycle.join(" -> ")
+                )
             }
             AjisaiError::ModeUnsupported { word, mode } => {
                 write!(f, "{} does not support {} mode (..)", word, mode)

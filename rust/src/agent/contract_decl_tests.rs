@@ -16,19 +16,15 @@ mod contract_decl_tests {
         check(source, true).exit_code()
     }
 
-    #[test]
-    fn recursive_word_reports_recursive_gap() {
-        let source = "[ 1 SUB REC ] 'REC' DEF\n#:contract REC ( 1 -- 1 ) pure nil-free";
-        let decls = contract_decls(source);
-        let findings = decls["findings"].as_array().expect("findings array");
-        assert!(!findings.is_empty(), "expected at least one finding");
-        for finding in findings {
-            assert_eq!(finding["severity"], "note");
-            assert_eq!(finding["code"], "gap.recursiveDependency");
-        }
-        assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
-        assert_eq!(decls["gapSummary"]["byGap"]["gap.recursiveDependency"], 3);
-    }
+    // `gap.recursiveDependency` fired when a word's own contract inference
+    // was re-entered while still being inferred — direct or mutual
+    // recursion. SPEC §8.7's DEF-time acyclicity check now refuses a
+    // self-referential (or mutually cyclic) definition outright, so no word
+    // can ever reach the dictionary in a shape this gap would fire for; the
+    // `GapCode::RecursiveDependency` case in `contract_gap.rs` and
+    // `word_contract.rs` is kept, unreachable, for protocol stability (gap
+    // ids are a published diagnostic vocabulary), but there is no longer a
+    // program that exercises it.
 
     // -----------------------------------------------------------------
     // A correct declaration must never be reported as a violation
@@ -124,10 +120,10 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_counts_add_up() {
-        let source = "[ 1 SUB REC ] 'REC' DEF
+        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF
 [ 1 PRINT ] 'BAD' DEF
 [ 1 SUB ] 'GOOD' DEF
-#:contract REC ( 1 -- 1 ) pure nil-free
+#:contract FALLBACK ( 0 -- 1 )
 #:contract BAD ( 1 -- 0 ) pure
 #:contract GOOD ( 1 -- 1 ) pure nil-free";
         let decls = contract_decls(source);
@@ -145,10 +141,10 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_key_order_is_stable() {
-        let source = "[ 1 SUB REC ] 'REC' DEF
+        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF
 [ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ INNER ] 'CALLER' DEF
-#:contract REC ( 1 -- 1 ) pure nil-free
+#:contract FALLBACK ( 0 -- 1 )
 #:contract CALLER ( 0 -- 1 ) pure nil-free";
         let first = serde_json::to_string(&contract_decls(source)).unwrap();
         let second = serde_json::to_string(&contract_decls(source)).unwrap();
@@ -160,14 +156,14 @@ mod contract_decl_tests {
         let by_gap_start = first.find("\"byGap\":{").expect("byGap object present");
         let by_gap_end = by_gap_start + first[by_gap_start..].find('}').unwrap();
         let by_gap = &first[by_gap_start..by_gap_end];
-        let recursive_pos = by_gap
-            .find("gap.recursiveDependency")
-            .expect("gap.recursiveDependency present in byGap");
+        let unmodelled_pos = by_gap
+            .find("gap.unmodelledControlFlow")
+            .expect("gap.unmodelledControlFlow present in byGap");
         let unresolved_pos = by_gap
             .find("gap.unresolvedWord")
             .expect("gap.unresolvedWord present in byGap");
         assert!(
-            recursive_pos < unresolved_pos,
+            unmodelled_pos < unresolved_pos,
             "byGap keys are not in ascending order: {by_gap}"
         );
     }
@@ -185,14 +181,14 @@ mod contract_decl_tests {
 
     #[test]
     fn unverifiable_declaration_is_a_nil_with_a_reason() {
-        let source = "[ 1 SUB REC ] 'REC' DEF\n#:contract REC ( 1 -- 1 ) pure nil-free";
+        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
-        assert_eq!(decls["declarations"][0]["word"], "REC");
+        assert_eq!(decls["declarations"][0]["word"], "FALLBACK");
         assert_eq!(decls["declarations"][0]["outcome"], "nil");
         assert_eq!(
             decls["declarations"][0]["reason"],
-            "gap.recursiveDependency"
+            "gap.unmodelledControlFlow"
         );
     }
 
@@ -219,10 +215,10 @@ mod contract_decl_tests {
 
     #[test]
     fn nil_dominates_value_in_the_fold() {
-        // REC is unverifiable (nil); GOOD verifies cleanly (value).
-        let source = "[ 1 SUB REC ] 'REC' DEF
+        // FALLBACK is unverifiable (nil); GOOD verifies cleanly (value).
+        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF
 [ 1 SUB ] 'GOOD' DEF
-#:contract REC ( 1 -- 1 ) pure nil-free
+#:contract FALLBACK ( 0 -- 1 )
 #:contract GOOD ( 1 -- 1 ) pure nil-free";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
@@ -241,7 +237,7 @@ mod contract_decl_tests {
     /// that — only a proven `error` does.
     #[test]
     fn outcome_does_not_change_the_exit_code() {
-        let nil_only = "[ 1 SUB REC ] 'REC' DEF\n#:contract REC ( 1 -- 1 ) pure nil-free";
+        let nil_only = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
         assert_eq!(exit_code(nil_only), 0, "cannot-verify must not fail check");
 
         let with_error = "[ 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";

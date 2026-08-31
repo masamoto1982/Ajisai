@@ -274,31 +274,6 @@ fn compile_clause_plan(tokens: &[Token], interp: &Interpreter) -> Option<Arc<Com
     }
 }
 
-fn is_cond_tail_op(op: &CompiledOp) -> bool {
-    matches!(op, CompiledOp::CondDispatch(_))
-        || matches!(op, CompiledOp::CallBuiltin(c) if c.name == "COND")
-}
-
-/// Whether `op` is a call to the word currently being trampolined
-/// (`tail_self_word`). Mirrors the deferral check in `execute_section_core`'s
-/// interpreter path so a compiled clause body trampolines identically.
-fn is_self_tail_call(interp: &Interpreter, op: &CompiledOp) -> bool {
-    let Some(target) = interp.tail_self_word.as_deref() else {
-        return false;
-    };
-    match op {
-        CompiledOp::CallUserWord(name) => name == target,
-        CompiledOp::CallQualifiedWord { namespace, word } => {
-            // `target` is the resolved `namespace@word` form.
-            target.len() == namespace.len() + 1 + word.len()
-                && target.as_bytes().get(namespace.len()) == Some(&b'@')
-                && target.starts_with(namespace.as_str())
-                && target.ends_with(word.as_str())
-        }
-        _ => false,
-    }
-}
-
 /// Replace each `CallBuiltin("COND")` whose clauses operand is statically
 /// known (the single preceding op is a literal `PushVectorLiteral` — `COND`'s
 /// clauses are one fixed-position operand, the same convention
@@ -373,82 +348,24 @@ fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
 }
 
 pub fn execute_compiled_plan(interp: &mut Interpreter, plan: &CompiledPlan) -> Result<()> {
-    let last_line = plan.lines.len().saturating_sub(1);
-    for (idx, line) in plan.lines.iter().enumerate() {
-        // The last line of a word body holds its tail position. Only there can
-        // a tail self-call be eliminated into an internal backward jump.
-        let is_tail_line = idx == last_line;
-        execute_compiled_line(interp, line, is_tail_line)?;
+    for line in plan.lines.iter() {
+        execute_compiled_line(interp, line)?;
     }
     Ok(())
 }
 
-/// Index of the last op in `ops` that actually executes (skipping no-op
-/// markers like `LineBreak`), or `None` when the line is effectively empty.
-fn last_effective_op(ops: &[CompiledOp]) -> Option<usize> {
-    ops.iter()
-        .rposition(|op| !matches!(op, CompiledOp::LineBreak | CompiledOp::BeginGuardedBlock))
-}
-
-fn execute_compiled_line(
-    interp: &mut Interpreter,
-    line: &CompiledLine,
-    is_tail_line: bool,
-) -> Result<()> {
+fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Result<()> {
     if line
         .ops
         .iter()
         .any(|op| matches!(op, CompiledOp::FallbackToken(_)))
     {
-        // A line the compiler could not lower is re-interpreted from its source
-        // tokens, and the interpreted route carries its own tail-call deferral —
-        // but only when `in_tail_context` says the line is in tail position, and
-        // nothing here used to say so. So a body whose last line held any
-        // unresolved symbol lost the trampoline and recursed natively until the
-        // depth guard, which the plain route would have run as a backward jump.
-        //
-        // That was reachable before (a forward reference in the tail line) and
-        // is now ordinary, because a local binding's name is exactly such a
-        // symbol. The condition mirrors `execute_guard_structure`'s: the tail
-        // line of a trampolined word, ending in `COND`.
-        let tail_context = is_tail_line
-            && interp.tail_call_enabled
-            && interp.tail_self_word.is_some()
-            && super::execution_loop::tail_token_is_cond(&line.source_tokens);
-        let previous_tail_context = std::mem::replace(&mut interp.in_tail_context, tail_context);
-        let result = interp.execute_section_core(&line.source_tokens, 0);
-        interp.in_tail_context = previous_tail_context;
-        result?;
-        return Ok(());
+        // A line the compiler could not lower is re-interpreted from its
+        // source tokens.
+        return interp.execute_section_core(&line.source_tokens, 0).map(|_| ());
     }
 
-    // The tail op of the tail line carries the word's tail position. When it is
-    // a `COND` (dynamic or precompiled), propagate tail context into the
-    // selected clause body so a guarded tail self-call there is eliminated (the
-    // "internal GOTO"). The COND op consumes `in_tail_context` on entry, so
-    // setting it here needs no explicit restore.
-    let tail_op = if is_tail_line && interp.tail_call_enabled && interp.tail_self_word.is_some() {
-        last_effective_op(&line.ops)
-    } else {
-        None
-    };
-
-    for (op_idx, op) in line.ops.iter().enumerate() {
-        if tail_op == Some(op_idx) {
-            if is_cond_tail_op(op) {
-                interp.in_tail_context = true;
-            } else if interp.in_tail_context && is_self_tail_call(interp, op) {
-                // A guarded tail self-call reached as a compiled op (e.g. a COND
-                // clause body run compiled). Defer to the trampoline instead of
-                // recursing: leave the computed arguments on the stack and raise
-                // `tail_jump_pending`. `in_tail_context` is true only inside a
-                // tail COND clause body, so the word's own body plan (run with
-                // it false) keeps native recursion and its depth-limit error.
-                interp.tail_jump_pending = true;
-                interp.in_tail_context = false;
-                continue;
-            }
-        }
+    for op in line.ops.iter() {
         match op {
             CompiledOp::PushLiteral(v) => {
                 // The legacy path normalized the new slot's role to `Unassigned`

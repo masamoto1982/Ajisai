@@ -873,12 +873,12 @@
    "id": "ceiling-execution-steps",
    "category": "resourceLimit",
    "prompts": {
-    "en": "Define a Word that counts down from a number to zero, then run it from 200000.",
-    "ja": "ある数から 0 まで数え下げる Word を定義し、200000 から実行してください。"
+    "en": "Sum the numbers 1 through 999, two hundred times over, and add up all two hundred sums.",
+    "ja": "1 から 999 までの合計を 200 回計算し、その 200 個の合計をすべて足し合わせてください。"
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN"
+    "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    },
    "expect": {
     "/status": "error",

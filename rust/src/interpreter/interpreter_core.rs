@@ -19,10 +19,12 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = super::runtime_limits::DEFAULT_MA
 /// recursion expands to several Rust frames (execute_word_core_inner →
 /// plan/structure runner → execution loop → resolve), so the empirical
 /// safe ceiling is roughly 256 levels in debug builds. `DEFAULT_MAX_EXECUTION_STEPS`
-/// is still the primary backstop for non-recursive runaway computation; this
-/// guard turns deep recursion into a recoverable `AjisaiError` regardless of
-/// that step budget's value — a stack overflow is a depth problem, not a
-/// count problem.
+/// is still the primary backstop for runaway computation generally; this
+/// guard turns a pathologically long acyclic call chain into a recoverable
+/// `AjisaiError` regardless of that step budget's value — a stack overflow is
+/// a depth problem, not a count problem. Recursion itself cannot reach this
+/// guard: SPEC §8.7's DEF-time acyclicity check makes a self-referential
+/// definition impossible to construct.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
 /// Cap on how deeply vector literals may nest (`[ [ [ ... ] ] ]`). The literal
@@ -137,6 +139,12 @@ pub struct RuntimeMetrics {
     pub resolve_cache_hit_count: u64,
     pub resolve_cache_miss_count: u64,
     pub resolve_cache_invalidation_count: u64,
+    /// No longer produced: it counted a guarded tail self-call's backward
+    /// jump, and SPEC §8.7's acyclicity check now makes a self-call
+    /// impossible to define. Retained at a constant 0 rather than removed —
+    /// removing a field is what a schema version is for
+    /// (`runtime_metrics_json`), and `tailCallJumpCount` is a published
+    /// report key a host may already read.
     pub tail_call_jump_count: u64,
 }
 
@@ -260,25 +268,6 @@ pub struct Interpreter {
     /// batch and recompute once at the end, avoiding O(N^2) identity hashing.
     pub(crate) defer_identity_recompute: bool,
 
-    // ── Internal tail-call elimination ("internal GOTO") ──────────────────
-    // Guarded tail self-recursion (a self-call in the tail position of a
-    // COND clause body) is run as an internal backward jump instead of a
-    // native recursive call. This keeps such loops in O(1) native stack and
-    // lifts them past `MAX_USER_WORD_DEPTH`, without exposing any jump or
-    // label to the surface language. See `docs/dev/internal-goto-tail-call.md`.
-    /// Master toggle. Defaults to true; set `AJISAI_NO_TAIL_CALL=1` to force
-    /// the legacy native-recursion path (used by the A/B benchmark harness).
-    pub(crate) tail_call_enabled: bool,
-    /// Resolved name of the word whose body is currently executing and is
-    /// eligible for self-tail-call elimination. `Some` only inside a
-    /// trampolined user-word frame.
-    pub(crate) tail_self_word: Option<String>,
-    /// True while executing a token section that sits in the tail position of
-    /// the current word (set by the COND tail op for the selected clause body).
-    pub(crate) in_tail_context: bool,
-    /// Raised by the deferral site when a guarded tail self-call is recognized
-    /// and skipped; consumed by the trampoline loop in `execute_word_core_inner`.
-    pub(crate) tail_jump_pending: bool,
     /// A `DEF` body's own written tokens, captured lexically when a literal
     /// precedes `<name> [KEEP] DEF` (`execution_loop.rs`, `execute_def.rs`).
     pub(crate) pending_def_body_tokens: Option<Vec<crate::types::Token>>,
@@ -368,10 +357,6 @@ impl Interpreter {
             word_identities: HashMap::new(),
             body_store: HashMap::new(),
             defer_identity_recompute: false,
-            tail_call_enabled: std::env::var("AJISAI_NO_TAIL_CALL").is_err(),
-            tail_self_word: None,
-            in_tail_context: false,
-            tail_jump_pending: false,
             pending_def_body_tokens: None,
             source_spans: Vec::new(),
             section_depth: 0,
@@ -572,18 +557,10 @@ impl Interpreter {
     pub fn dictionary_changes_this_run(&self) -> &[String] {
         &self.dictionary_changes_this_run
     }
-    /// Enable or disable internal tail-call elimination (the guarded-tail-`COND`
-    /// backward-jump trampoline). Default is on; this is the in-process
-    /// equivalent of the `AJISAI_NO_TAIL_CALL` environment switch and exists so
-    /// benchmarks can A/B the same interpreter against the legacy recursion path.
     /// Where in the source the interpreter is, as of the last top-level token
     /// it began. `None` for an entry point that did not come from source text.
     pub fn current_source_position(&self) -> Option<crate::tokenizer::SourceSpan> {
         self.current_source_span
-    }
-
-    pub fn set_tail_call_enabled(&mut self, enabled: bool) {
-        self.tail_call_enabled = enabled;
     }
 
     /// Enable or disable precompiled COND clause dispatch (the internal "jump

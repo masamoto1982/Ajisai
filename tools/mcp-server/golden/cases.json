@@ -112,13 +112,13 @@
     },
     {
       "name": "execution budget exhaustion is a language ERROR",
-      "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN",
+      "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "resourceLimit",
         "/aiDiagnostic/kind": "executionLimitExceeded",
         "/errorFlowTrace/0/kind": "wordError",
-        "/errorFlowTrace/0/word": "DOWN",
+        "/errorFlowTrace/0/word": "ADD",
         "/diagnosis/resourceLimit/resource": "executionSteps"
       }
     },

@@ -47,16 +47,12 @@ async fn dependency_chains_widen_monotonically() {
     assert_eq!(impure.purity, ContractPurity::Effectful);
 }
 
-#[tokio::test]
-async fn recursive_words_are_conservative_without_looping() {
-    let direct = contract_for("[ REC ] 'REC' DEF", "REC").await;
-    assert_eq!(direct.confidence, ContractConfidence::Conservative);
-    assert_eq!(direct.flow, ContractFlow::Dynamic);
-
-    let mutual = contract_for("[ B ] 'A' DEF [ A ] 'B' DEF", "A").await;
-    assert_eq!(mutual.confidence, ContractConfidence::Conservative);
-    assert_eq!(mutual.flow, ContractFlow::Dynamic);
-}
+// `recursive_words_are_conservative_without_looping` tested that contract
+// inference went conservative on re-entrant (direct or mutual) recursion.
+// SPEC §8.7's DEF-time acyclicity check now refuses such a definition
+// outright — `[ REC ] 'REC' DEF` and `[ B ] 'A' DEF [ A ] 'B' DEF` both fail
+// before contract inference ever runs — so there is no longer a program that
+// reaches this path.
 
 #[tokio::test]
 async fn redefinition_invalidates_old_contract_cache_key() {

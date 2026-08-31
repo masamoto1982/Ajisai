@@ -16,6 +16,7 @@ fn test_word(tokens: Vec<Token>) -> WordDefinition {
         capabilities: Capabilities::PURE,
         description: None,
         dependencies: HashSet::new(),
+        text_references: HashSet::new(),
         original_source: None,
         namespace: None,
         registration_order: 0,

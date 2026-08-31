@@ -126,30 +126,13 @@ mod tests {
         );
     }
 
-    /// Section 8.6: a recursive word's identity is well-defined (cycle hashing)
-    /// and reproducible across independent interpreters.
-    #[tokio::test]
-    async fn test_recursive_identity_is_stable() {
-        async fn rec_id() -> Option<String> {
-            let mut interp = Interpreter::new();
-            interp.execute("[ REC ] 'REC' DEF").await.unwrap();
-            interp.rebuild_dependencies().unwrap();
-            // The self-reference must be recorded, then hashed as a cycle.
-            assert!(
-                interp
-                    .dependents
-                    .get("REC")
-                    .is_some_and(|d| d.contains("REC")),
-                "recursive self-reference should be tracked"
-            );
-            interp.word_identity("REC").cloned()
-        }
-
-        let first = rec_id().await;
-        let second = rec_id().await;
-        assert!(first.is_some(), "recursive word should have an identity");
-        assert_eq!(first, second, "recursive identity must be reproducible");
-    }
+    // `test_recursive_identity_is_stable` pinned that a self-recursive word's
+    // identity hashed its self-cycle reproducibly. SPEC §8.7's DEF-time
+    // acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so no word's
+    // dependency graph can contain a cycle for `word_identity`'s cycle-hashing
+    // path to see; that path (Section 8.6) is unreachable but kept rather than
+    // torn out, matching this codebase's convention for a retired path (see
+    // e.g. `NilReason::EmptySequence`).
 
     /// Section 8.6: adding a later word with the same spelling as a formerly
     /// unresolved reference must not recapture the existing body or change its
@@ -538,77 +521,39 @@ mod tests {
     }
 
     // ── A word's own self-reference must not lock it ──────────────────────
-    // A recursive word depends on itself. Once that self-edge is in the
-    // dependency index, the guard that protects *callers* from losing a
-    // definition fired on the word itself: `DEF` and `DEL` both refused with
-    // "referenced by FIB — delete those words first", naming the word being
-    // deleted. There was then no Word in the vocabulary that could correct or
-    // remove a recursive definition, so writing one and fixing it — the most
-    // ordinary development loop there is — was impossible without discarding
-    // the whole User dictionary.
-
-    const SELF_RECURSIVE: &str = "[\n\
-         [\n\
-         [ 0 LTE | 0 * ]\n\
-         [ IDLE | 1 - SELFW ]\n\
-         ] COND ] 'SELFW' DEF";
-
-    const SELF_RECURSIVE_V2: &str = "[\n\
-         [\n\
-         [ 0 LTE | 0 * ]\n\
-         [ IDLE | 2 - SELFW ]\n\
-         ] COND ] 'SELFW' DEF";
+    // A recursive word used to depend on itself, and once that self-edge was
+    // in the dependency index, the guard that protects *callers* from losing
+    // a definition fired on the word itself: `DEF` and `DEL` both refused
+    // with "referenced by FIB — delete those words first", naming the word
+    // being deleted. `collect_external_dependents` (`resolve_word.rs`) still
+    // excludes a word's own self-edge from that guard, but SPEC §8.7's
+    // DEF-time acyclicity check now refuses a self-referential definition
+    // outright, so no word can carry a self-edge for the exclusion to matter
+    // to any more; the two tests that pinned it (redefining and deleting a
+    // self-recursive word) were removed along with the scenario. The
+    // protection this exclusion carves an exception out of — a *different*
+    // word's reference still locking one — remains exercised below.
 
     #[tokio::test]
-    async fn a_self_recursive_word_can_be_redefined() {
+    async fn another_word_still_locks_a_referenced_word() {
         let mut interp = Interpreter::new();
-        interp.execute(SELF_RECURSIVE).await.unwrap();
-        // The second DEF is what records the self-edge (SELFW now resolves
-        // while its own body is scanned), so the third is the one that used to
-        // be refused.
-        interp.execute(SELF_RECURSIVE_V2).await.unwrap();
-        let result = interp.execute(SELF_RECURSIVE).await;
-        assert!(
-            result.is_ok(),
-            "a word's own self-reference must not block redefining it: {result:?}"
-        );
-    }
-
-    #[tokio::test]
-    async fn a_self_recursive_word_can_be_deleted() {
-        let mut interp = Interpreter::new();
-        interp.execute(SELF_RECURSIVE).await.unwrap();
-        interp.execute(SELF_RECURSIVE_V2).await.unwrap();
-        let result = interp.execute("'SELFW' DEL").await;
-        assert!(
-            result.is_ok(),
-            "a word's own self-reference must not block deleting it: {result:?}"
-        );
-        assert!(interp.execute("3 SELFW").await.is_err(), "SELFW is gone");
-    }
-
-    #[tokio::test]
-    async fn another_word_still_locks_a_self_recursive_word() {
-        // The protection that matters is unchanged: a *different* word holding
-        // a reference still refuses the redefinition and the deletion.
-        let mut interp = Interpreter::new();
-        interp.execute(SELF_RECURSIVE).await.unwrap();
-        interp.execute("[ SELFW ] 'CALLER' DEF").await.unwrap();
+        interp.execute("[ 1 ADD ] 'W' DEF").await.unwrap();
+        interp.execute("[ W ] 'CALLER' DEF").await.unwrap();
 
         let err = interp
-            .execute(SELF_RECURSIVE_V2)
+            .execute("[ 2 ADD ] 'W' DEF")
             .await
             .unwrap_err()
             .to_string();
         assert!(
             err.contains("CALLER"),
-            "redefinition must still name the external dependent: {err}"
+            "redefinition must name the external dependent: {err}"
         );
 
-        let err = interp.execute("'SELFW' DEL").await.unwrap_err().to_string();
+        let err = interp.execute("'W' DEL").await.unwrap_err().to_string();
         assert!(
             err.contains("CALLER"),
-            "deletion must still name the external dependent: {err}"
+            "deletion must name the external dependent: {err}"
         );
     }
 

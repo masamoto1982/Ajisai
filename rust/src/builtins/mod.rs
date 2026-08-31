@@ -50,6 +50,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
                 capabilities,
                 description: Some(description.to_string()),
                 dependencies: HashSet::new(),
+                text_references: HashSet::new(),
                 original_source: None,
                 namespace: None,
                 registration_order: 0,

@@ -81,9 +81,11 @@ impl Interpreter {
             return self.execute_builtin(&resolved_name);
         }
 
-        // Recursion depth guard: catches blown Rust stack before WASM traps.
-        // The matching decrement is just before the return below; there are
-        // no `?` early returns between this point and the decrement.
+        // Call-depth guard: catches blown Rust stack before WASM traps. Guards
+        // a pathologically long acyclic call chain, not recursion — the
+        // DEF-time acyclicity check (SPEC §8.7) makes recursion impossible to
+        // construct. The matching decrement is just before the return below;
+        // there are no `?` early returns between this point and the decrement.
         if self.call_depth + 1 > super::interpreter_core::MAX_USER_WORD_DEPTH {
             return Err(AjisaiError::RecursionLimitExceeded {
                 limit: super::interpreter_core::MAX_USER_WORD_DEPTH,
@@ -128,58 +130,14 @@ impl Interpreter {
         // operands and its dictionary and nothing else.
         self.open_binding_scope(true);
 
-        // Internal tail-call elimination ("internal GOTO"): mark this frame as
-        // the self-tail-call target, then run its body in a trampoline. A
-        // guarded tail self-call (the tail of a COND clause body) sets
-        // `tail_jump_pending` and unwinds to here instead of recursing, so the
-        // loop re-runs the same body with the next iteration's arguments — a
-        // backward jump that never grows `call_depth` or the native stack.
-        let prev_tail_self = self.tail_self_word.take();
-        let prev_in_tail = self.in_tail_context;
-        self.tail_self_word = Some(resolved_name.clone());
-
-        // The dispatch is inlined into the loop rather than extracted into a
-        // helper so the legacy (non-trampolined) recursion path adds no extra
-        // native-stack frame per call — important because that path is still
-        // bounded only by `MAX_USER_WORD_DEPTH`, and a deeper per-frame cost
-        // would lower the effective depth ceiling.
-        let result = loop {
-            self.in_tail_context = false;
-            self.tail_jump_pending = false;
-            // The trampoline re-runs the body as a backward jump rather than a
-            // call, so the frame stays while the iteration it belongs to does
-            // not: the next round starts with no names, exactly as a fresh call
-            // would.
-            self.clear_innermost_bindings();
-
-            // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
-            // produces the same result whether it went through the compiled
-            // plan or the plain guard structure.
-            let body_result = match plan_set.as_ref().and_then(|set| set.compiled.as_ref()) {
-                Some(compiled) => execute_compiled_plan(self, compiled),
-                None => self.execute_guard_structure(&def.lines),
-            };
-
-            if body_result.is_ok() && self.tail_jump_pending {
-                self.tail_jump_pending = false;
-                // The backward jump still consumes one execution step, so an
-                // unbounded guarded loop terminates via `ExecutionLimitExceeded`
-                // rather than running forever (SPEC §5.3 water level).
-                self.runtime_metrics.tail_call_jump_count += 1;
-                self.execution_step_count += 1;
-                if self.execution_step_count > self.max_execution_steps {
-                    break Err(AjisaiError::ExecutionLimitExceeded {
-                        limit: self.max_execution_steps,
-                    });
-                }
-                continue;
-            }
-            break body_result;
+        // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
+        // produces the same result whether it went through the compiled plan
+        // or the plain guard structure.
+        let result = match plan_set.as_ref().and_then(|set| set.compiled.as_ref()) {
+            Some(compiled) => execute_compiled_plan(self, compiled),
+            None => self.execute_guard_structure(&def.lines),
         };
 
-        self.tail_jump_pending = false;
-        self.in_tail_context = prev_in_tail;
-        self.tail_self_word = prev_tail_self;
         self.close_binding_scope();
 
         let operand_floor = self.stack.end_depth_watch(enclosing_watch);
