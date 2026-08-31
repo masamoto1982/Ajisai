@@ -1849,6 +1849,25 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- LANG.VALUES.DENOTATION: a value is what it denotes, never how it was made.
+     One PI bound and used twice is the same two PI as two freshly built ones, so
+     equality must answer them alike rather than from allocation identity, which
+     LANG.AUTHORITY.FREEDOM lists as no semantic discriminant. -->
+
+<section class="ajisai-case" id="core-pi-equality-ignores-construction-history" data-category="core">
+  <h3>A reused PI is no more decidable than two freshly built ones</h3>
+  <pre class="ajisai-source">PI 'X' BIND X X EQ</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-pi-equality-entails-its-order" data-category="core">
+  <h3>Equality and the order it entails agree on a reused PI</h3>
+  <pre class="ajisai-source">PI 'X' BIND X X GTE</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- MIN/MAX/SORT/ORDER's output domain is numeric, not truth, so the same
      undecidable pair projects to a plain NIL rather than UNKNOWN. -->
 

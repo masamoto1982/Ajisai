@@ -43,8 +43,9 @@ pub enum ExactReal {
     /// Invariant: never rational (rational results demote eagerly).
     Algebraic(Algebraic),
     /// Tier 2: a general computable real — a lazily refined shrinking
-    /// enclosure. No current vocabulary word constructs this variant;
-    /// it is the wired receptacle for future words (π, e, log, …).
+    /// enclosure. `PI` constructs this variant; `e`, `log`, … would join it.
+    /// Its equality is only semi-decidable, so a comparison reaching it may
+    /// starve (LANG.VALUES.EXACT).
     Computable(Computable),
 }
 
@@ -133,6 +134,14 @@ impl ExactReal {
             Self::Rational(f) => f.is_nil(),
             Self::Algebraic(_) | Self::Computable(_) => false,
         }
+    }
+
+    /// Whether this is a Tier 2 computable real, whose `PartialEq`/`Hash` are
+    /// allocation identity rather than value identity. A caller that would
+    /// otherwise answer from a structural comparison must ask this first.
+    #[inline]
+    pub fn is_computable(&self) -> bool {
+        matches!(self, Self::Computable(_))
     }
 
     #[inline]

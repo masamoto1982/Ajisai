@@ -94,3 +94,60 @@ async fn ordering_words_project_undecidable_pi_pair_to_plain_nil() {
     let stack = run_ok("3 1 2 3 COLLECT SORT").await;
     assert!(!stack[0].is_nil(), "a decisive vector must sort");
 }
+
+/// Allocation identity is not a semantic discriminant (LANG.AUTHORITY.FREEDOM),
+/// and construction history cannot be read back out of a value
+/// (LANG.VALUES.DENOTATION). One π bound and used twice is the same two π as
+/// two freshly built ones, so every relation must answer them alike.
+///
+/// It did not: `Computable`'s `PartialEq` is pointer identity, so the shared
+/// pair took `pairwise_eq`'s structural shortcut and `X X EQ` answered TRUE
+/// while `X X GTE` — which equality entails — still answered UNKNOWN.
+#[tokio::test]
+async fn equality_reads_the_value_not_the_allocation() {
+    for op in ["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+        let fresh = run_ok(&format!("PI PI {op}")).await;
+        let shared = run_ok(&format!("PI 'X' BIND X X {op}")).await;
+        assert!(
+            fresh[0].is_nil() && shared[0].is_nil(),
+            "`{op}` must answer UNKNOWN for both a fresh and a shared π pair, \
+             got fresh={:?} shared={:?}",
+            fresh[0],
+            shared[0]
+        );
+        assert_eq!(
+            fresh[0].truth_value(),
+            shared[0].truth_value(),
+            "`{op}` must not split on how the two π were made"
+        );
+    }
+
+    // The same holds one level down: a Vector carrying a Tier 2 element
+    // cannot decide structurally either, and used to answer a flat FALSE.
+    for code in [
+        "PI 1 COLLECT PI 1 COLLECT EQ",
+        "PI 'X' BIND X 1 COLLECT X 1 COLLECT EQ",
+    ] {
+        let stack = run_ok(code).await;
+        assert!(stack[0].is_nil(), "`{code}` must answer UNKNOWN");
+    }
+}
+
+/// Deferring to the budgeted comparison costs no precision where the pair
+/// genuinely decides: only a pair the refinement cannot separate is UNKNOWN.
+#[tokio::test]
+async fn tier2_equality_still_decides_what_it_can() {
+    for (code, expect) in [
+        ("PI 3 EQ", false),
+        ("PI 3 NEQ", true),
+        // Disjoint domains are unequal whatever they carry.
+        ("PI 'a' EQ", false),
+        // A length difference settles a Vector pair without an element.
+        ("PI 1 COLLECT PI 1 2 COLLECT EQ", false),
+        // One decidedly-unequal element settles the Kleene conjunction.
+        ("PI 1 COLLECT 5 1 COLLECT EQ", false),
+    ] {
+        let stack = run_ok(code).await;
+        assert_eq!(stack[0].as_truth(), Some(expect), "`{code}` must decide");
+    }
+}
