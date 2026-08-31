@@ -401,7 +401,10 @@ fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
             a_val.is_nil() && b_val.is_nil() && a_val.nil_reason() == b_val.nil_reason(),
         );
     }
-    if a_val.data == b_val.data {
+    // A Tier 2 operand makes `ValueData` equality answer from allocation
+    // identity, so it may not settle anything (`Value::carries_computable`).
+    let tier2 = a_val.carries_computable() || b_val.carries_computable();
+    if !tier2 && a_val.data == b_val.data {
         return ScalarCmp::Decided(true);
     }
     match (&a_val.data, &b_val.data) {
@@ -409,8 +412,30 @@ fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
         | (ValueData::ExactScalar(_), ValueData::ExactScalar(_))
         | (ValueData::ExactScalar(_), ValueData::Scalar(_))
         | (ValueData::Scalar(_), ValueData::ExactScalar(_)) => scalar_pair_eq(a_val, b_val),
+        (ValueData::Vector(x), ValueData::Vector(y)) if tier2 => vector_pair_eq(x, y),
+        // Disjoint domains are unequal whatever they carry
+        // (LANG.VALUES.DISJOINT), so Tier 2 does not make them undecidable.
         _ => ScalarCmp::Decided(false),
     }
+}
+
+/// Element-wise equality of two Tier 2-carrying Vectors, combined as the
+/// Kleene conjunction the truth domain already uses: one unequal element (or
+/// a length difference) settles FALSE, and only an otherwise-equal pair with
+/// an undecided element is UNKNOWN.
+fn vector_pair_eq(x: &[Value], y: &[Value]) -> ScalarCmp {
+    if x.len() != y.len() {
+        return ScalarCmp::Decided(false);
+    }
+    let mut answer = ScalarCmp::Decided(true);
+    for (p, q) in x.iter().zip(y.iter()) {
+        match pairwise_eq(p, q) {
+            ScalarCmp::Decided(false) => return ScalarCmp::Decided(false),
+            ScalarCmp::Decided(true) => {}
+            ScalarCmp::Undecided => answer = ScalarCmp::Undecided,
+        }
+    }
+    answer
 }
 
 /// Scalar–scalar equality (LANG.VALUES.EXACT). Both-Rational operands decide

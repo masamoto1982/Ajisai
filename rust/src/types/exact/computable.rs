@@ -3,14 +3,14 @@
 //! A `Computable` is a lazily refined, monotonically shrinking rational
 //! enclosure: a pure, deterministic generator from a refinement step to
 //! the interval known after that many steps. This is the tier for values
-//! with no algebraic normal form (a future π, e, log); their comparisons
+//! with no algebraic normal form (π, and a future e, log); their comparisons
 //! genuinely consume water and may starve — the sole legitimate source
-//! of the logical `Unknown` (U).
+//! of the logical `Unknown` (U) that is not an absent operand.
 //!
-//! **No vocabulary constructs this tier yet.** The type exists so the
-//! `ExactScalar` enum, the comparison router, and the U diagnosis have
-//! their Tier 2 arms wired and tested ahead of the first Tier 2 word;
-//! unit tests pin that the current vocabulary cannot reach it.
+//! `PI` constructs this tier, so everything below is reachable from a
+//! program. In particular the allocation identity that `PartialEq`/`Hash`
+//! fall back on must never decide an answer a program can observe: see the
+//! two impls below.
 
 use crate::types::exact::observation::{Observation, RatInterval, Refine, Water};
 use crate::types::fraction::Fraction;
@@ -38,20 +38,33 @@ impl std::fmt::Debug for Computable {
     }
 }
 
-/// Identity of the observation *process*, not the limit value: equality
-/// of two computable reals is undecidable, so `PartialEq` is the
-/// conservative pointer identity (never a wrong `true`; a `false` for
-/// equal limits is the safe answer the comparison router refines past).
+/// Identity of the observation *process*, not the limit value: equality of
+/// two computable reals is undecidable, so `PartialEq` is pointer identity.
+///
+/// This answers from *how a value was made*, which no program may observe:
+/// LANG.VALUES.DENOTATION makes construction history unreadable from a
+/// value, and LANG.AUTHORITY.FREEDOM lists allocation identity as no
+/// semantic discriminant. So a `true` here is not a licence to decide — two
+/// π built separately and one π used twice are the same value, and letting
+/// this impl settle either pair splits them. `Value` equality therefore
+/// routes any Tier 2 operand to the budgeted comparison instead
+/// (`Value::carries_computable`), which answers the honest UNKNOWN.
 impl PartialEq for Computable {
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.gen, &other.gen)
     }
 }
 
-/// Hashes the same pointer identity `==` compares, so the two agree the
-/// only way they can: no vocabulary word constructs this tier yet, so this
-/// exists to keep `ExactReal: Hash` total, not because a program can reach
-/// it.
+/// Hashes the same pointer identity `==` compares, so the two agree the only
+/// way they can — a value-identical hash would need a canonical bucket, and
+/// finding one for a computable real is exactly the undecidable question.
+///
+/// KNOWN LIMITATION: the hash-keyed collection Words (`UNIQUE`, `TALLY`,
+/// `GROUP`, `INDEX-OF`) still bucket through this, so they still answer from
+/// allocation identity for a Tier 2 element — `PI PI 2 COLLECT UNIQUE` keeps
+/// two, the same π bound once and used twice keeps one. Making them project
+/// the undecidable NIL that `SORT`/`ORDER` project is the open follow-up;
+/// the comparison family (`EQ`/`NEQ`) no longer reads this impl at all.
 impl std::hash::Hash for Computable {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         (Arc::as_ptr(&self.gen) as *const ()).hash(state);

@@ -159,6 +159,25 @@ impl Value {
         matches!(self.data, ValueData::Nil)
     }
 
+    /// Whether a Tier 2 computable real sits anywhere inside this value.
+    ///
+    /// `Computable`'s `PartialEq`/`Hash` are allocation identity
+    /// (`types::exact::computable`), so any structural comparison reaching one
+    /// answers from how the value was made rather than from what it denotes —
+    /// which LANG.VALUES.DENOTATION forbids. A caller about to decide from
+    /// `ValueData` equality asks this first and defers to the budgeted
+    /// comparison instead.
+    ///
+    /// Only a Vector needs the walk: a Tensor stores `i64` numerator/
+    /// denominator pairs (`DenseTensor`) and so cannot hold one.
+    pub fn carries_computable(&self) -> bool {
+        match &self.data {
+            ValueData::ExactScalar(er) => er.is_computable(),
+            ValueData::Vector(items) => items.iter().any(Value::carries_computable),
+            _ => false,
+        }
+    }
+
     /// As [`is_nil`]: operational-absence test, and deliberately *not*
     /// narrower than one.
     ///
