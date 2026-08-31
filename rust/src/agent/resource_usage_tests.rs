@@ -42,14 +42,13 @@ mod resource_usage_tests {
     #[tokio::test]
     async fn every_kind_of_execution_reports_the_steps_it_took() {
         // Each of these runs Words; none of them could ever report having done
-        // so. A recursive word, a fold, and a fold through `MAP` cover the
+        // so. A user-word call, a fold, and a fold through `MAP` cover the
         // dispatch routes that reach `execute_word_core`.
         for source in [
             "2 3 / 1 3 / +",
             "[ [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBLE",
             "[ 1 20 ] RANGE 1 [ * ] FOLD",
             "[ 1 20 ] RANGE [ [ 2 ] * ] MAP",
-            "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n50 DOWN",
         ] {
             let report = agent_json(source).await;
             assert!(
@@ -75,11 +74,15 @@ mod resource_usage_tests {
     #[tokio::test]
     async fn the_reported_steps_are_the_ones_the_ceiling_judged() {
         // The point of a single counter: what a refusal says it observed and
-        // what the report says was spent are the same reading.
-        let report = agent_json(
-            "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN",
-        )
-        .await;
+        // what the report says was spent are the same reading. Nested so no
+        // single `RANGE` call approaches `LOCAL_AGENT_RUNTIME_LIMITS`'
+        // 100,000-element materialization ceiling (a different, smaller
+        // budget that would otherwise fire first, as a cheap NIL, before the
+        // step count this test means to exercise ever grows): 200 outer
+        // iterations each folding 999 inner elements costs on the order of
+        // 200,000 steps while every one `RANGE` ever produces stays at 999.
+        let report =
+            agent_json("[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD").await;
         assert_eq!(report["status"], "error");
         let limit = report["diagnosis"]["resourceLimit"]["limit"]
             .as_u64()

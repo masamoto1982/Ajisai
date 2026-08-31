@@ -239,21 +239,32 @@ fn binding_preserves_an_absence_and_its_reason() {
     assert_eq!(obs("1 0 DIV 'B' BIND B B 2 COLLECT"), vec!["[ NIL NIL ]"]);
 }
 
-/// Recursion still terminates, and the trampolined tail call starts each round
-/// with no names — the frame outlives the iteration it belongs to, so the
-/// binding must not.
+/// A Word call is a barrier frame: its body reads its own bindings and its
+/// operands, never a caller's — a name bound above is unreachable inside a
+/// Word it calls, whether that call sits one level down or several (SPEC
+/// §6.3, LANG.SOURCE.FRAME). SPEC §8.7's DEF-time acyclicity check now rules
+/// out testing this through a self-recursive call or a tail-jumped frame
+/// reuse — neither can be defined any more — so both cases below use only
+/// ordinary calls between distinct words.
 #[test]
-fn a_binding_survives_neither_a_recursive_call_nor_a_tail_jump() {
-    let sumto =
-        "[ 'N' BIND N [ [ 0 EQ ] [ 0 ] [ IDLE ] [ N N 1 SUB SUMTO ADD ] ] COND ] 'SUMTO' DEF ";
-    assert_eq!(obs(&format!("{sumto} 5 SUMTO")), vec!["15/1"]);
+fn a_binding_survives_neither_an_ordinary_call_nor_a_deep_call_chain() {
+    // One level down: CALLEE reads the bare name `N` without binding it
+    // itself. If CALLER's binding leaked in, this would answer `5`; the
+    // barrier instead makes `N` unreachable there.
+    let one_level = "[ N ] 'CALLEE' DEF [ 'N' BIND CALLEE ] 'CALLER' DEF ";
+    let err = run_err(&format!("{one_level} 5 CALLER"));
+    assert!(
+        err.contains("bound in another frame"),
+        "a binding must not reach a Word it calls: {err}"
+    );
 
-    // Past MAX_USER_WORD_DEPTH, so this is the backward jump rather than a call.
-    let countdown = "[ [ 'ACC' 'N' ] BIND N [ [ 0 EQ ] [ ACC ] \
-                     [ IDLE ] [ ACC N ADD N 1 SUB 2 COLLECT COUNTDOWN ] ] COND ] 'COUNTDOWN' DEF ";
-    assert_eq!(
-        obs(&format!("{countdown} [ 0 2000 ] COUNTDOWN")),
-        vec!["2001000/1"]
+    // Several levels down: the same barrier must hold transitively through a
+    // chain of distinct (non-cyclic) words, not just at the first call.
+    let chain = "[ N ] 'D' DEF [ D ] 'C' DEF [ C ] 'B' DEF [ 'N' BIND B ] 'A' DEF ";
+    let err = run_err(&format!("{chain} 5 A"));
+    assert!(
+        err.contains("bound in another frame"),
+        "a binding must not reach a Word several calls away: {err}"
     );
 }
 

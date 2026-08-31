@@ -139,10 +139,15 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
     // Section 8.6: resolve this word's references through its own dictionary
     let mut new_dependencies = HashSet::new();
+    // Section 8.7: every named symbol, resolved or not — the acyclicity check
+    // below needs to see a forward reference to a word that does not exist
+    // yet, which `new_dependencies` cannot represent.
+    let mut new_text_references = HashSet::new();
     for line in lines.iter() {
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
+                new_text_references.insert(upper_s.to_string());
                 if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
                     if !resolved_def.is_builtin || resolved_name.contains('@') {
                         new_dependencies.insert(resolved_name);
@@ -150,6 +155,19 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
                 }
             }
         }
+    }
+
+    // Section 8.7: the User dictionary's reference graph is acyclic — no Word
+    // may name itself, directly or through any chain of other User words.
+    // Repetition is expressed only through the bounded higher-order Words
+    // (`MAP`, `FILTER`, `FOLD`, `ANY`, `ALL`) over an already-finite Vector,
+    // never through a Word calling itself: every evaluation is then
+    // structurally finite, not merely bounded by a runtime step budget.
+    if let Some(cycle) = interp.find_reference_cycle(&upper_name, &new_text_references) {
+        return Err(AjisaiError::SelfReferentialDefinition {
+            word: upper_name,
+            cycle,
+        });
     }
 
     for dep_name in &new_dependencies {
@@ -168,6 +186,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         capabilities: Capabilities::PURE,
         description: None,
         dependencies: new_dependencies,
+        text_references: new_text_references,
         original_source: None,
         namespace: None,
         registration_order: interp.next_registration_order(),

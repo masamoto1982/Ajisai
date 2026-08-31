@@ -45,6 +45,7 @@ impl Interpreter {
             capabilities: Capabilities::PURE,
             description: None,
             dependencies: HashSet::new(),
+            text_references: HashSet::new(),
             original_source: None,
             namespace: None,
             registration_order: self.next_registration_order(),

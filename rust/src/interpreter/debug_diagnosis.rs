@@ -282,6 +282,10 @@ impl CauseClass {
             ErrorCategory::ModeUnsupported => CauseClass::ContractViolation,
             ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
             ErrorCategory::CondExhausted => CauseClass::UserLogic,
+            // A cyclic DEF is a static shape rejected before anything runs —
+            // the same kind of fault as `NameConflict`, not a runtime resource
+            // question.
+            ErrorCategory::SelfReferentialDefinition => CauseClass::ContractViolation,
             ErrorCategory::Custom => CauseClass::Unknown,
         }
     }
@@ -453,7 +457,8 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         | Some(ErrorCategory::ModeUnsupported)
         | Some(ErrorCategory::MalformedSource)
         | Some(ErrorCategory::NameConflict)
-        | Some(ErrorCategory::CondExhausted) => "fixProgram",
+        | Some(ErrorCategory::CondExhausted)
+        | Some(ErrorCategory::SelfReferentialDefinition) => "fixProgram",
         Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
         Some(ErrorCategory::ExecutionLimitExceeded)
         | Some(ErrorCategory::RecursionLimitExceeded) => "addBudgetOrFixRecursion",

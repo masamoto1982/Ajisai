@@ -28,7 +28,16 @@ const fail = (message) => {
 //
 // `headroom` below is reported on every green run, so how close the file is
 // sitting is visible without reading this comment.
-const LINE_BUDGET = 400;
+//
+// Raised to 404 for LANG.DICTIONARY.ACYCLIC: the User dictionary's reference
+// graph became acyclic by rule (no definition may name itself, directly or
+// through a chain of other User words), retiring the guarded-tail-recursion
+// feature and its own clause text in LANG.SOURCE.FRAME. Net new content, not
+// reflowed old content — the language now has something it did not have
+// before (every evaluation is structurally finite, not merely
+// resource-bounded) — so this is the deliberate raise the comment above asks
+// for, not a reflex.
+const LINE_BUDGET = 404;
 const lines = language.split('\n').length;
 if (lines > LINE_BUDGET) {
   fail(

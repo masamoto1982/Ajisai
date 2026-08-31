@@ -39,7 +39,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Branch: `value { { guard } { body } { guard } { body } ... } COND` — the clauses are one `{ }` of guard/body pairs. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use `{ TRUE }` as the final else-guard. The value remains on the stack after COND.
 - Iterate data, not counters: `MAP` / `FILTER` / `FOLD` with `{ }` blocks (examples in §6). `FOLD` requires an explicit `[ init ]`.
 - Predicates: `ANY` / `ALL` with a `{ predicate }` block.
-- Recursion is allowed in user words (execution-step and depth limits apply; exceeding them is a diagnosed error, not a hang).
+- No recursion: `DEF` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
 
 ## 4. NIL — absence is a value, not an exception
 
@@ -167,7 +167,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
 ## 8. Forbidden patterns (each verified to fail)
 
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.
-- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD or recursive user words.
+- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD / ANY / ALL.
+- **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.

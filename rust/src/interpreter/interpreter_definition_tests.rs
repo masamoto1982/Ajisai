@@ -277,16 +277,27 @@ mod tests {
         );
     }
 
+    /// A chain of `depth` distinct, non-cyclic User words, `D0` calling `D1`
+    /// calling `D2` ... down to a base case — SPEC §8.7 rules out a cycle, so
+    /// this is the only way left to grow `call_depth` past a chosen bound.
+    /// Returns the source and the entry word's name.
+    fn deep_chain_source(depth: usize) -> (String, &'static str) {
+        let mut source = String::new();
+        for i in 0..depth.saturating_sub(1) {
+            source.push_str(&format!("[ D{} ] 'D{}' DEF\n", i + 1, i));
+        }
+        source.push_str(&format!("[ [ 1 ] ] 'D{}' DEF\n", depth.saturating_sub(1)));
+        (source, "D0")
+    }
+
     #[tokio::test]
     async fn test_direct_recursion_hits_execution_limit() {
         let mut interp = Interpreter::new();
         interp.max_execution_steps = 64;
-        interp.execute("[ REC ] 'REC' DEF").await.unwrap();
-
-        let result = interp.execute("REC").await;
+        let result = interp.execute("[ 1 100 ] RANGE 0 [ ADD ] FOLD").await;
         assert!(
             result.is_err(),
-            "Direct recursion should hit execution limit"
+            "A 100-element fold should hit execution limit"
         );
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -296,19 +307,21 @@ mod tests {
         );
     }
 
-    // Task 6: infinite recursion must surface as a recoverable AjisaiError
-    // and never as a WASM trap from Rust stack exhaustion. The depth guard
-    // fires before the execution-step guard when steps are left high.
+    // Task 6: a pathologically deep (but acyclic) call chain must surface as
+    // a recoverable AjisaiError and never as a WASM trap from Rust stack
+    // exhaustion. The depth guard fires before the execution-step guard when
+    // steps are left high.
     #[tokio::test]
     async fn test_infinite_recursion_hits_recursion_depth_limit() {
         let mut interp = Interpreter::new();
         // Leave the step limit at default so the depth guard fires first.
-        interp.execute("[ REC ] 'REC' DEF").await.unwrap();
+        let (source, entry) = deep_chain_source(300);
+        interp.execute(&source).await.unwrap();
 
-        let result = interp.execute("REC").await;
+        let result = interp.execute(entry).await;
         assert!(
             result.is_err(),
-            "Direct recursion should produce an error, not a trap"
+            "A 300-deep call chain should produce an error, not a trap"
         );
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -347,8 +360,9 @@ mod tests {
     #[tokio::test]
     async fn test_call_depth_resets_after_recursion_error() {
         let mut interp = Interpreter::new();
-        interp.execute("[ REC ] 'REC' DEF").await.unwrap();
-        let _ = interp.execute("REC").await;
+        let (source, entry) = deep_chain_source(300);
+        interp.execute(&source).await.unwrap();
+        let _ = interp.execute(entry).await;
         assert_eq!(
             interp.call_depth, 0,
             "call_depth should unwind back to 0 once the error has propagated"
@@ -384,8 +398,7 @@ mod tests {
     async fn test_execution_limit_error_message() {
         let mut interp = Interpreter::new();
         interp.max_execution_steps = 64;
-        interp.execute("[ REC ] 'REC' DEF").await.unwrap();
-        let result = interp.execute("REC").await;
+        let result = interp.execute("[ 1 100 ] RANGE 0 [ ADD ] FOLD").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(

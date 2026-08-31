@@ -874,7 +874,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN"
+    "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    }
   },
   {
@@ -882,7 +882,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n200000 DOWN"
+    "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    }
   },
   {

@@ -45,12 +45,6 @@ pub struct CondClause {
 /// needs neither: `COND` always has exactly two operands, so there is
 /// nothing to scan for.
 pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
-    // Tail position of the enclosing word, if any (set by the compiled-plan
-    // tail op). Guards must run as non-tail (they may call the same word in a
-    // non-tail position), so clear it here and hand it only to the winning
-    // clause body, where a tail self-call becomes an internal backward jump.
-    let tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
-
     let clauses_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let clauses = match extract_clause_blocks(&clauses_val).and_then(split_clause_blocks) {
         Ok(c) => c,
@@ -60,7 +54,7 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    run_cond_core(interp, &clauses, tail_context)
+    run_cond_core(interp, &clauses)
 }
 
 /// Bridge the clauses operand into the token streams `split_clause_blocks`
@@ -92,20 +86,15 @@ fn extract_clause_blocks(clauses_val: &Value) -> Result<Vec<Vec<Token>>> {
 /// since the split is already known from compile time, that one value is
 /// popped unread rather than re-derived from it.
 pub(crate) fn op_cond_dispatch(interp: &mut Interpreter, precomputed: &[CondClause]) -> Result<()> {
-    let tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
     interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     interp.runtime_metrics.cond_dispatch_fast_count += 1;
-    run_cond_core(interp, precomputed, tail_context)
+    run_cond_core(interp, precomputed)
 }
 
 /// Pop the target value and dispatch over `clauses`, running the first clause
 /// whose guard fires (or the `IDLE` else-clause). Shared by both entry points
 /// so dynamic and compiled COND are behaviorally identical.
-fn run_cond_core(
-    interp: &mut Interpreter,
-    clauses: &[CondClause],
-    tail_context: bool,
-) -> Result<()> {
+fn run_cond_core(interp: &mut Interpreter, clauses: &[CondClause]) -> Result<()> {
     let target_value: Value = match interp.consumption_mode {
         ConsumptionMode::Consume => {
             let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -131,7 +120,7 @@ fn run_cond_core(
     // exactly the code that runs in the default build.
     for clause in clauses {
         if is_idle_guard(&clause.guard) {
-            return run_clause_body(interp, clause, &target_value, tail_context);
+            return run_clause_body(interp, clause, &target_value);
         }
 
         if evaluate_guard_greedy(
@@ -140,7 +129,7 @@ fn run_cond_core(
             clause.guard_plan.as_deref(),
             &target_value,
         )? {
-            return run_clause_body(interp, clause, &target_value, tail_context);
+            return run_clause_body(interp, clause, &target_value);
         }
     }
 
@@ -148,19 +137,8 @@ fn run_cond_core(
 }
 
 /// Run a clause's body, preferring its compiled sub-plan when present.
-fn run_clause_body(
-    interp: &mut Interpreter,
-    clause: &CondClause,
-    value: &Value,
-    tail_context: bool,
-) -> Result<()> {
-    execute_cond_body(
-        interp,
-        &clause.body,
-        clause.body_plan.as_deref(),
-        value,
-        tail_context,
-    )
+fn run_clause_body(interp: &mut Interpreter, clause: &CondClause, value: &Value) -> Result<()> {
+    execute_cond_body(interp, &clause.body, clause.body_plan.as_deref(), value)
 }
 
 /// Split collected clause blocks into guards and bodies, validating clause
@@ -373,7 +351,6 @@ fn execute_cond_body(
     body_tokens: &[Token],
     body_plan: Option<&CompiledPlan>,
     value: &Value,
-    tail_context: bool,
 ) -> Result<()> {
     let saved_stack = interp.stack.clone();
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
@@ -384,14 +361,6 @@ fn execute_cond_body(
         .push_with_role(value.clone(), Interpretation::Unassigned);
     interp.consumption_mode = ConsumptionMode::Consume;
 
-    // This clause body runs in the word's tail position iff the COND itself
-    // did. A tail self-call at the end of the body then defers to the
-    // trampoline instead of recursing; its residual single value (the next
-    // iteration's argument) flows out as this body's result below. The
-    // deferral happens in `execute_section_core` (interpreted) or, when the
-    // body is compiled, in `execute_compiled_line`'s tail-op handling — both
-    // keyed on `in_tail_context` and `tail_self_word`.
-    interp.in_tail_context = tail_context;
     interp.open_binding_scope(false);
     let execution_result: Result<()> = if let Some(plan) = body_plan {
         interp.runtime_metrics.cond_clause_compiled_count += 1;
@@ -400,7 +369,6 @@ fn execute_cond_body(
         interp.execute_section_core(body_tokens, 0).map(|_| ())
     };
     interp.close_binding_scope();
-    interp.in_tail_context = false;
     let (body_result_value, body_result_hint): (Option<Value>, Interpretation) =
         match interp.stack.pop_slot() {
             Some((value, role)) => (Some(value), role),

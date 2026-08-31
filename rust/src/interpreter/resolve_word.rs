@@ -99,10 +99,12 @@ impl Interpreter {
 
         for (word_name, word_def) in &all_words {
             let mut dependencies = HashSet::new();
+            let mut text_references = HashSet::new();
             for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
                     if let crate::types::Token::Symbol(s) = token {
                         let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
+                        text_references.insert(upper_s.to_string());
                         if let Some((resolved_name, resolved_def)) =
                             self.resolve_word_entry(&upper_s)
                         {
@@ -120,7 +122,9 @@ impl Interpreter {
                 }
             }
             if let Some(def) = self.user_words.get_mut(word_name) {
-                Arc::make_mut(def).dependencies = dependencies;
+                let def = Arc::make_mut(def);
+                def.dependencies = dependencies;
+                def.text_references = text_references;
             }
         }
 
@@ -199,6 +203,54 @@ impl Interpreter {
     /// it participates in a dependency cycle. This is the impact set that a
     /// redefinition or deletion of `word_name` can affect, and the scope a later
     /// stage uses to invalidate dependent cached artifacts.
+    /// SPEC §8.7's acyclicity check: would naming `referenced` from the body
+    /// of `defining` (a word not yet in `user_words`, or about to replace its
+    /// current entry) close a cycle back onto `defining`?
+    ///
+    /// Walks `text_references` — not `dependencies` — because a forward
+    /// reference to a not-yet-defined word never resolves at its own DEF time
+    /// and so is invisible to `dependencies`; a later definition of that word
+    /// naming `defining` back would otherwise complete an undetected mutual
+    /// recursion. `text_references` records every referenced name regardless
+    /// of whether it currently resolves, so the graph it forms is sound for
+    /// this check even though it over-approximates the real call graph (it
+    /// also contains Core word names and names that resolve to nothing,
+    /// which simply appear as dead ends below).
+    ///
+    /// Returns the closing chain (`defining` .. `defining`) on the first
+    /// cycle found, or `None` if `referenced` cannot reach `defining`.
+    pub(crate) fn find_reference_cycle(
+        &self,
+        defining: &str,
+        referenced: &HashSet<String>,
+    ) -> Option<Vec<String>> {
+        let mut visited: HashSet<String> = HashSet::new();
+        let mut queue: VecDeque<Vec<String>> = referenced
+            .iter()
+            .map(|name| vec![defining.to_string(), name.clone()])
+            .collect();
+
+        while let Some(path) = queue.pop_front() {
+            let current = path.last().expect("path always has a last element");
+            if current == defining {
+                return Some(path);
+            }
+            if !visited.insert(current.clone()) {
+                continue;
+            }
+            if let Some(def) = self.user_words.get(current) {
+                for next in &def.text_references {
+                    if !visited.contains(next) {
+                        let mut next_path = path.clone();
+                        next_path.push(next.clone());
+                        queue.push_back(next_path);
+                    }
+                }
+            }
+        }
+        None
+    }
+
     pub fn collect_transitive_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
         let mut queue: VecDeque<String> = self

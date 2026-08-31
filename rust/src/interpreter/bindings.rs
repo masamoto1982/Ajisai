@@ -81,15 +81,6 @@ impl Interpreter {
         self.binding_scopes.push(BindingScope::root());
     }
 
-    /// Forget the names of the innermost scope without closing it. The tail-call
-    /// trampoline re-runs a body as a backward jump rather than a call, so the
-    /// scope stays put while the iteration it belongs to does not.
-    pub(crate) fn clear_innermost_bindings(&mut self) {
-        if let Some(scope) = self.binding_scopes.last_mut() {
-            scope.names.clear();
-        }
-    }
-
     /// The value bound to `name` in the frames this one can see.
     pub(crate) fn lookup_binding(&self, name: &str) -> Option<(Value, Interpretation)> {
         for scope in self.binding_scopes.iter().rev() {

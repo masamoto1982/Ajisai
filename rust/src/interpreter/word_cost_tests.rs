@@ -99,13 +99,10 @@ async fn user_word_chain_composes_a_dependency_bound() {
     assert_eq!(cost.numeric.0, CostClass::Const);
 }
 
-#[tokio::test]
-async fn recursion_is_conservative_unbounded_on_every_axis() {
-    let cost = cost_of("[ REC ] 'REC' DEF", "REC").await;
-    for axis in [cost.steps, cost.numeric, cost.collection] {
-        assert_eq!(axis, (CostClass::Unbounded, false));
-    }
-}
+// `recursion_is_conservative_unbounded_on_every_axis` tested that a
+// self-recursive word costed Unbounded on every axis. SPEC §8.7's DEF-time
+// acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so there is no
+// longer a recursive word for cost inference to see.
 
 #[tokio::test]
 async fn unresolved_dependency_degrades_to_conservative_cost() {

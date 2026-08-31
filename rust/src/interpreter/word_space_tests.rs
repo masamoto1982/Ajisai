@@ -85,12 +85,10 @@ async fn higher_order_word_is_unbounded_but_not_exact() {
     );
 }
 
-#[tokio::test]
-async fn recursion_is_conservative_unbounded_without_a_witness() {
-    let (class, exact) = space_of("[ REC ] 'REC' DEF", "REC").await;
-    assert_eq!(class, SpaceClass::Unbounded);
-    assert!(!exact);
-}
+// `recursion_is_conservative_unbounded_without_a_witness` tested that a
+// self-recursive word's space bound went conservative. SPEC §8.7's DEF-time
+// acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so there is no
+// longer a recursive word for space inference to see.
 
 #[tokio::test]
 async fn unresolved_dependency_degrades_without_a_false_witness() {

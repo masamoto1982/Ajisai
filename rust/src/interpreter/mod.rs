@@ -155,6 +155,4 @@ mod core_word_canonicalization_tests;
 #[cfg(test)]
 mod scalar_fastpath_tests;
 #[cfg(test)]
-mod tail_call_tests;
-#[cfg(test)]
 mod vector_literal_tests;

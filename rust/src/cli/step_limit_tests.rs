@@ -2,34 +2,22 @@
 //! execution step budget (water level, SPECIFICATION.html §5.3). The budget
 //! is a runtime safety control, not language semantics, so these tests only
 //! assert *whether* `ExecutionLimitExceeded` is raised — raising the budget
-//! lets a legitimate guarded tail recursion run to completion, lowering it
-//! sandboxes even a short program — plus the CLI usage-error contract
-//! (exit 2 for zero / non-numeric values). Deliberately not part of the
-//! conformance suite: conformance must not depend on any budget value.
+//! lets a legitimately large `FOLD` run to completion, lowering it sandboxes
+//! even a short program — plus the CLI usage-error contract (exit 2 for zero
+//! / non-numeric values). Deliberately not part of the conformance suite:
+//! conformance must not depend on any budget value.
 
 use crate::error::AjisaiError;
 use crate::interpreter::{Interpreter, DEFAULT_MAX_EXECUTION_STEPS};
 
-/// Guarded tail-recursive countdown. `n` iterations cost `n + 2` steps
-/// (measured: `n=100_000` charges 100_002) — the guard check, decrement and
-/// tail call collapse to one charged step per iteration, plus two for the
-/// literal push and the terminal branch; the trampoline itself is O(1)
-/// native stack, so only the step budget stops it.
-///
-/// 200,000 was chosen when the default budget was 100,000: any n past 50,000
-/// would have exceeded it. It no longer does — the default is now derived
-/// from a host time budget (`runtime_limits::DEFAULT_MAX_EXECUTION_STEPS`,
-/// `docs/dev/host-profile-derivation-handoff.md` §4) and grew to the tens of
-/// millions, so 200,000 completes comfortably under it. Kept as the fixed
-/// probe for the "raised limit" direction below, where the point is that an
-/// explicit `--step-limit` still works, not that it is large.
-const DOWN_PROBE: &str = "[
-[
-[ [ 0 ] > | [ 1 ] - DOWN ]
-[ IDLE | [ 'done' ] ]
-] COND
-] 'DOWN' DEF
-200000 DOWN";
+/// A `FOLD` over a generated range: `RANGE` materializes its elements
+/// internally and so counts as a single step regardless of length (SPEC
+/// §5.3), while `FOLD` dispatches its body once per element — a bounded,
+/// non-recursive way to spend a large, roughly-known number of steps. Kept
+/// as the fixed probe for the "raised limit" direction below, where the
+/// point is that an explicit `--step-limit` still works, not that it is
+/// large.
+const FOLD_PROBE: &str = "[ 1 200000 ] RANGE 0 [ ADD ] FOLD";
 
 /// Write `source` to a unique temp file and return its path.
 fn write_program(name: &str, source: &str) -> std::path::PathBuf {
@@ -56,25 +44,25 @@ fn run_cli(args: &[&str]) -> i32 {
 /// could never fail, and which never invoked the CLI at all despite saying it
 /// checked `ajisai run`.
 ///
-/// `DOWN_PROBE` costs 200,002 steps: comfortably past the 100,000 this
-/// default used to be, and a rounding error against what it is now. So a
-/// clean exit here is a real end-to-end statement — the CLI reached the
-/// interpreter default, and that default is at least the old budget — while
-/// staying a fast test. What it deliberately does *not* claim is that the
-/// budget is enforced at its exact declared value; only
+/// `FOLD_PROBE` costs on the order of 200,000 steps: comfortably past the
+/// 100,000 the default used to be, and a rounding error against what it is
+/// now. So a clean exit here is a real end-to-end statement — the CLI
+/// reached the interpreter default, and that default is at least the old
+/// budget — while staying a fast test. What it deliberately does *not* claim
+/// is that the budget is enforced at its exact declared value; only
 /// `down_probe_exceeds_the_real_default_budget_without_step_limit` below can
 /// say that, and it costs real wall time by construction, so it is
 /// `#[ignore]`d.
 #[test]
 fn down_probe_runs_under_the_default_budget_without_step_limit() {
-    let path = write_program("default", DOWN_PROBE);
+    let path = write_program("default", FOLD_PROBE);
     let code = run_cli(&["run", path.to_str().unwrap()]);
     let _ = std::fs::remove_file(&path);
     assert_eq!(
         code, 0,
-        "200000 DOWN costs 200,002 steps and must complete under the derived \
-         default budget of {DEFAULT_MAX_EXECUTION_STEPS}, with no --step-limit \
-         given"
+        "folding 200000 elements costs on the order of 200,000 steps and must \
+         complete under the derived default budget of \
+         {DEFAULT_MAX_EXECUTION_STEPS}, with no --step-limit given"
     );
 }
 
@@ -83,41 +71,37 @@ fn down_probe_succeeds_with_an_explicit_step_limit() {
     // 1,000,000 is no longer a *raised* limit — `DEFAULT_MAX_EXECUTION_STEPS`
     // is far larger now — but the point of this test was always that an
     // explicit `--step-limit` is honored, not that the number is big.
-    let path = write_program("explicit", DOWN_PROBE);
+    let path = write_program("explicit", FOLD_PROBE);
     let code = run_cli(&["run", path.to_str().unwrap(), "--step-limit", "1000000"]);
     let _ = std::fs::remove_file(&path);
     assert_eq!(
         code, 0,
-        "200000 DOWN must complete under an explicit --step-limit 1000000"
+        "folding 200000 elements must complete under an explicit --step-limit 1000000"
     );
 }
 
-/// The real, end-to-end version of the test above: just over
-/// `DEFAULT_MAX_EXECUTION_STEPS` iterations of the trampoline, with no
-/// `--step-limit`, must still exceed the real default. At the measured floor
-/// of ~773-890 steps/ms (release; far slower in the debug build this
-/// normally runs under) this takes on the order of a minute, so it is
-/// `#[ignore]`d rather than run on every `cargo test`. Run deliberately with
-/// `cargo test -- --ignored` after touching `DEFAULT_MAX_EXECUTION_STEPS` or
-/// the interpreter's dispatch path.
+/// The real, end-to-end version of the test above: a `FOLD` over just past
+/// `DEFAULT_MAX_EXECUTION_STEPS` elements, with no `--step-limit`, must still
+/// exceed the real default. At the measured floor of ~773-890 steps/ms
+/// (release; far slower in the debug build this normally runs under) this
+/// takes on the order of a minute, so it is `#[ignore]`d rather than run on
+/// every `cargo test`. Run deliberately with `cargo test -- --ignored` after
+/// touching `DEFAULT_MAX_EXECUTION_STEPS` or the interpreter's dispatch path.
 #[test]
 #[ignore = "exhausting the real default costs real wall time by construction; run explicitly"]
 fn down_probe_exceeds_the_real_default_budget_without_step_limit() {
-    // Each `DOWN` iteration costs ~1 step, not 2 — the guard/decrement/tail
-    // call collapse to one charged step apiece, measured empirically
-    // (`n=100_000` charges 100_002 steps). `+ 10` covers the fixed overhead
-    // (the literal push, the `DEF`, the terminal `IDLE`/`'done'` branch) with
-    // margin to spare.
-    let iterations = DEFAULT_MAX_EXECUTION_STEPS + 10;
-    let probe = format!(
-        "[\n[\n[ [ 0 ] > | [ 1 ] - DOWN ]\n[ IDLE | [ 'done' ] ]\n] COND\n] 'DOWN' DEF\n{iterations} DOWN"
-    );
+    // Generous margin over one step per element: `RANGE` itself is a single
+    // step regardless of length, and `FOLD` costs at least one dispatch per
+    // element, so `elements + elements / 10` comfortably clears the real
+    // default even if per-element overhead is a small multiple of one step.
+    let elements = DEFAULT_MAX_EXECUTION_STEPS + DEFAULT_MAX_EXECUTION_STEPS / 10;
+    let probe = format!("[ 1 {elements} ] RANGE 0 [ ADD ] FOLD");
     let path = write_program("real-default", &probe);
     let code = run_cli(&["run", path.to_str().unwrap()]);
     let _ = std::fs::remove_file(&path);
     assert_eq!(
         code, 1,
-        "{iterations} DOWN must exceed the real default budget of \
+        "folding {elements} elements must exceed the real default budget of \
          {DEFAULT_MAX_EXECUTION_STEPS} steps"
     );
 }
