@@ -362,7 +362,9 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
     {
         // A line the compiler could not lower is re-interpreted from its
         // source tokens.
-        return interp.execute_section_core(&line.source_tokens, 0).map(|_| ());
+        return interp
+            .execute_section_core(&line.source_tokens, 0)
+            .map(|_| ());
     }
 
     for op in line.ops.iter() {

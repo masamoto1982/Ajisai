@@ -295,7 +295,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.max_execution_steps = 64;
         let result = interp.execute("[ 1 100 ] RANGE 0 [ ADD ] FOLD").await;
-        assert!(result.is_err(), "A 100-element fold should hit execution limit");
+        assert!(
+            result.is_err(),
+            "A 100-element fold should hit execution limit"
+        );
         let err_msg = result.unwrap_err().to_string();
         assert!(
             err_msg.contains("Execution step limit"),
