@@ -127,16 +127,19 @@ impl Value {
         }
     }
 
-    /// Create a reasoned NIL for the Bubble Rule: well-formed operations that
-    /// cannot produce a value return Bubble/NIL directly with an explicit
-    /// reason.
+    /// Create a reasoned NIL for the NIL Projection Rule (the specification's
+    /// "Bubble Rule"): well-formed operations that cannot produce a value
+    /// return a reasoned NIL directly with an explicit reason.
     ///
     /// The origin follows from the reason via [`absence_origin_for_reason`] and
     /// is deliberately not a parameter. Recoverability is, because it genuinely
     /// varies for one reason — a disconnected port is `Fatal` while an empty
     /// read buffer is `Retryable` — and cannot be read off the reason alone.
     #[inline]
-    pub fn bubble_with_reason(reason: NilReason, recoverability: Recoverability) -> Self {
+    pub fn nil_with_reason_and_recoverability(
+        reason: NilReason,
+        recoverability: Recoverability,
+    ) -> Self {
         let origin = absence_origin_for_reason(&reason);
         Self::nil_with_absence(AbsenceMetadata::with_reason(reason, origin, recoverability))
     }

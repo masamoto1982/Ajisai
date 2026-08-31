@@ -16,18 +16,19 @@ use super::{ConsumptionMode, Interpreter};
 /// What a Word's declared `nilPolicy` requires of the operands on the stack,
 /// decided before its primitive is reached.
 ///
-/// The passthrough arm names the bubble by its stack position rather than
-/// carrying the value: the decision is made from a borrow of the stack, and a
-/// position keeps the whole enum a couple of words wide.
+/// The passthrough arm names the projected NIL by its stack position rather
+/// than carrying the value: the decision is made from a borrow of the stack,
+/// and a position keeps the whole enum a couple of words wide.
 enum NilContract {
     /// The declaration places no obligation here; run the primitive.
     Run,
     /// A NIL operand is malformed use for this Word.
     Reject,
-    /// A NIL operand is the Word's result; the bubble flows through in place
-    /// of running the primitive. `operands` is the declared operand window to
-    /// unwind, `bubble` the stack index of the NIL that becomes the result.
-    PassThrough { operands: usize, bubble: usize },
+    /// A NIL operand is the Word's result; it flows through in place of
+    /// running the primitive. `operands` is the declared operand window to
+    /// unwind, `nil_index` the stack index of the NIL that becomes the
+    /// result.
+    PassThrough { operands: usize, nil_index: usize },
 }
 
 impl Interpreter {
@@ -65,8 +66,8 @@ impl Interpreter {
                     NilContract::Run
                 }
             }
-            // A NIL operand *is* the result: the bubble flows downstream
-            // carrying its reason (SPEC §7.12, LANG.FAILURE.PASSTHROUGH).
+            // A NIL operand *is* the result: it flows downstream carrying
+            // its reason (SPEC §7.12, LANG.FAILURE.PASSTHROUGH).
             // `passthroughThenProject` differs only in what non-NIL operands
             // may yield, so a NIL input takes the same route — projecting an
             // absence leaves an absence.
@@ -78,7 +79,7 @@ impl Interpreter {
                 if operands.len() < arity {
                     return NilContract::Run;
                 }
-                // The leftmost bubble wins, matching left-to-right evaluation
+                // The leftmost NIL wins, matching left-to-right evaluation
                 // order and the executor-level helpers it replaces.
                 let window = operands.len() - arity;
                 match operands[window..]
@@ -87,7 +88,7 @@ impl Interpreter {
                 {
                     Some(offset) => NilContract::PassThrough {
                         operands: arity,
-                        bubble: window + offset,
+                        nil_index: window + offset,
                     },
                     None => NilContract::Run,
                 }
@@ -110,13 +111,13 @@ impl Interpreter {
         }
     }
 
-    /// Yield the NIL at stack index `bubble` as the Word's result without
+    /// Yield the NIL at stack index `nil_index` as the Word's result without
     /// running its primitive, unwinding the declared operand window under the
     /// active consumption mode (SPEC §5.2): `EAT` removes the operands, `KEEP`
-    /// leaves them in place. The bubble is copied out before the unwind, since
+    /// leaves them in place. The NIL is copied out before the unwind, since
     /// the unwind is what removes it.
-    fn pass_nil_through(&mut self, operands: usize, bubble: usize) {
-        let result = Value::nil_inheriting_absence_from(&self.stack[bubble]);
+    fn pass_nil_through(&mut self, operands: usize, nil_index: usize) {
+        let result = Value::nil_inheriting_absence_from(&self.stack[nil_index]);
         if self.consumption_mode == ConsumptionMode::Consume {
             let remaining = self.stack.len() - operands;
             self.stack.drain(remaining..);
@@ -137,8 +138,11 @@ impl Interpreter {
         match self.declared_nil_contract(word) {
             NilContract::Run => None,
             NilContract::Reject => Some(Err(AjisaiError::create_structure_error("a value", "NIL"))),
-            NilContract::PassThrough { operands, bubble } => {
-                self.pass_nil_through(operands, bubble);
+            NilContract::PassThrough {
+                operands,
+                nil_index,
+            } => {
+                self.pass_nil_through(operands, nil_index);
                 Some(Ok(()))
             }
         }

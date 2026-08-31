@@ -7,7 +7,7 @@
 //! hard-errors on `ExactScalar` (`FlatTensor::from_value`). These tests pin
 //! that such vectors now compute lane-by-lane as exact reals, that the
 //! all-rational route is unchanged, and that the broadcast shape rules and the
-//! per-lane division-by-zero Bubble Rule are preserved.
+//! per-lane division-by-zero NIL Projection Rule are preserved.
 
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
@@ -83,10 +83,11 @@ async fn irrational_vector_length_mismatch_errors() {
     );
 }
 
-/// A per-lane division by zero becomes a recoverable DivisionByZero Bubble,
-/// matching the scalar `√x 0 /` Bubble Rule rather than aborting the vector.
+/// A per-lane division by zero becomes a recoverable DivisionByZero
+/// projection, matching the scalar `√x 0 /` NIL Projection Rule rather than
+/// aborting the vector.
 #[tokio::test]
-async fn irrational_vector_div_by_zero_lane_is_bubble() {
+async fn irrational_vector_div_by_zero_lane_projects_to_nil() {
     let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 0 ] /").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
@@ -96,7 +97,7 @@ async fn irrational_vector_div_by_zero_lane_is_bubble() {
         "first lane √2 / 1 must stay exact, got {:?}",
         children[0]
     );
-    assert!(children[1].is_nil(), "second lane √3 / 0 must be a Bubble");
+    assert!(children[1].is_nil(), "second lane √3 / 0 must be NIL");
     assert_eq!(
         children[1].nil_reason().cloned(),
         Some(NilReason::DivisionByZero),

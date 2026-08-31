@@ -29,7 +29,15 @@ async fn symbol_aliases_execute_same_as_canonical_words() {
 async fn symbol_alias_canonicalizes_to_english_word() {
     use crate::core_word_aliases::canonicalize_core_word_name;
     assert_eq!(canonicalize_core_word_name("+"), "ADD");
-    assert_eq!(canonicalize_core_word_name("^"), "VENT");
+    assert_eq!(canonicalize_core_word_name("^"), "OR-NIL");
+}
+
+/// `VENT` was the canonical name before the water-metaphor decoupling; it
+/// remains a spelled alias so existing programs keep running.
+#[tokio::test]
+async fn legacy_vent_spelling_canonicalizes_to_or_nil() {
+    use crate::core_word_aliases::canonicalize_core_word_name;
+    assert_eq!(canonicalize_core_word_name("VENT"), "OR-NIL");
 }
 
 /// `?` is the host's spelling of a lookup, not a Word alias, so canonicalization

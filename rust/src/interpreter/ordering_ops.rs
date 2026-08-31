@@ -99,7 +99,7 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
         // Unknown (LANG.VALUES.EXACT) — a plain NIL, since a permutation
         // vector is not a truth value.
         Ok(None) => {
-            interp.stack.push(Value::bubble_with_reason(
+            interp.stack.push(Value::nil_with_reason_and_recoverability(
                 NilReason::Undecidable,
                 Recoverability::Retryable,
             ));

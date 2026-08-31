@@ -18,7 +18,7 @@ function readRepo(path) {
 // The returned body *includes* the closing `\n];`. The entry patterns below
 // delimit each item by looking ahead to either the next item or that
 // terminator, so cutting it off silently dropped whichever entry happened to be
-// last — `^` -> VENT and `)` -> RESERVED-END went missing from the manifest that
+// last — `^` -> OR-NIL and `)` -> RESERVED-END went missing from the manifest that
 // way, and the drift check could not see it because the committed file matched
 // the generator's own truncated output.
 function constArrayBody(source, constName) {

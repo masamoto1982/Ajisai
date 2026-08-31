@@ -175,7 +175,7 @@ mod tests {
     }
 
     /// A negative radicand is a per-lane domain miss, not a failure of the
-    /// whole vector: the lane bubbles as NIL and its neighbours survive.
+    /// whole vector: the lane projects onto NIL and its neighbours survive.
     #[tokio::test]
     async fn sqrt_projects_one_bad_lane_to_nil() {
         assert_eq!(lanes("[ 4 -1 ] SQRT").await, vec![Some(2), None]);

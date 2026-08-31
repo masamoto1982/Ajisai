@@ -53,7 +53,7 @@ Ajisai の最大の成果は、継続分数やベクトル演算**そのもの�
 
 | family / primitive | 担う同一性 | 語（代表） | 形式化 |
 |---|---|---|---|
-| `bubble.domain/passthrough/handler`（#10-12） | **値がない**を理由付きで透過 | `NIL` `VENT` | §5 Bubble モナド |
+| `bubble.domain/passthrough/handler`（#10-12） | **値がない**を理由付きで透過 | `NIL` `OR-NIL` | §5 Bubble モナド |
 | `k3.domain/meet/join/involution`（#1-4） | **まだ分からない**を論理で GLB/LUB 透過 | `TRUE` `FALSE` `AND` `OR` `NOT` | §4 Kleene 3 値代数 K3 |
 | `exact-real.budgeted-order`（#6） | 比較が予算内で決まらねば **U を返す**（未決の誠実な保留） | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` `COMPARE-WITHIN` | §3.3 予算付き観測 |
 | `observation.structured-diagnostic`（#27）+ `capability.check`（#29） | **プログラムが間違っている**を、ホスト例外を漏らさず構造化診断として観測 | 構造化診断・capability 不足 | §8 観測関数と同一性 |

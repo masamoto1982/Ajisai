@@ -5,12 +5,12 @@ use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 pub enum AbsenceOrigin {
     Literal,
     /// Division by zero (or by a value indistinguishable from zero within the
-    /// comparison budget) produced a Bubble/NIL under the Bubble Rule
+    /// comparison budget) produced a reasoned NIL under the NIL Projection Rule
     /// (SPEC §11.2). Used together with `NilReason::DivisionByZero`.
     ///
     /// Every construction path reaches this through
     /// `absence_origin_for_reason`, which is the sole derivation of an origin
-    /// from a reason: `DIV` and `POW` by way of `Value::bubble_with_reason`,
+    /// from a reason: `DIV` and `POW` by way of `Value::nil_with_reason`,
     /// `nil_with_reason` for the rest. Call sites cannot name an origin
     /// directly, so a reason and its origin cannot drift apart.
     DivisionByZero,
@@ -28,13 +28,13 @@ pub enum AbsenceOrigin {
     /// SPEC §7.4.1. Used together with `NilReason::Undecidable`.
     ComparisonBudget,
     /// A well-formed generative operation exceeded the space water level
-    /// (`max_materialized_elements`) and was projected to a Bubble/NIL under the
-    /// Bubble Rule (SPEC §11.2). Used together with
+    /// (`max_materialized_elements`) and was projected to NIL under the
+    /// NIL Projection Rule (SPEC §11.2). Used together with
     /// `NilReason::SpaceExhausted`.
     SpaceBudget,
     /// A well-formed operation was applied outside its domain — `SQRT` of a
     /// negative rational, the "well-formed domain miss" of SPEC §5 — and was
-    /// projected to a Bubble/NIL under the Bubble Rule (SPEC §11.2). Used
+    /// projected to NIL under the NIL Projection Rule (SPEC §11.2). Used
     /// together with `NilReason::DomainMiss`.
     DomainMiss,
     /// A diagnostic accessor found nothing to report — the origin paired with

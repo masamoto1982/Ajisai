@@ -79,8 +79,14 @@ mod observation_digest_tests {
             Value::from_bool(false),
             Value::from_string(""),
             Value::from_string("A"),
-            Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Unknown),
-            Value::bubble_with_reason(NilReason::MissingField, Recoverability::Unknown),
+            Value::nil_with_reason_and_recoverability(
+                NilReason::DivisionByZero,
+                Recoverability::Unknown,
+            ),
+            Value::nil_with_reason_and_recoverability(
+                NilReason::MissingField,
+                Recoverability::Unknown,
+            ),
             sqrt_of(2),
             sqrt_of(3),
             sqrt_of(12),
@@ -176,9 +182,14 @@ mod observation_digest_tests {
     /// (LANG.VALUES.NIL), so two differently-caused NILs must digest apart.
     #[test]
     fn nil_reasons_separate_digests() {
-        let division =
-            Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Unknown);
-        let missing = Value::bubble_with_reason(NilReason::MissingField, Recoverability::Unknown);
+        let division = Value::nil_with_reason_and_recoverability(
+            NilReason::DivisionByZero,
+            Recoverability::Unknown,
+        );
+        let missing = Value::nil_with_reason_and_recoverability(
+            NilReason::MissingField,
+            Recoverability::Unknown,
+        );
         assert_ne!(division, missing);
         assert_ne!(digest_of(&division), digest_of(&missing));
     }

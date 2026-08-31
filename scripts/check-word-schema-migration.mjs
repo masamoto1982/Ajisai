@@ -38,7 +38,7 @@ for (const word of words.entries) {
   // dispatch match to be total over `WordId`; this catches the case a total
   // match cannot, a Word folded into a neighbour's arm by mistake.
   const compiledModifiers = new Set(['KEEP']);
-  const directive = new Set(['VENT', 'FLOW']);
+  const directive = new Set(['OR-NIL', 'FLOW']);
   if (compiledModifiers.has(word.name)) {
     if (!compiledPlanSource.includes(`CompiledOp::${word.executorKey}`)) fail(`${word.name} compiled executorKey drift`);
   } else if (directive.has(word.name)) {

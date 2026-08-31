@@ -25,7 +25,7 @@ async fn nil_produced_event_has_execute_word_diagnosis() {
 }
 
 #[tokio::test]
-async fn bubble_produced_by_word_has_execute_word_diagnosis() {
+async fn projection_produced_by_word_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
     interp.execute("10 0 /").await.unwrap();
 
@@ -78,7 +78,10 @@ async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
         .absence
         .as_ref()
         .expect("NilProduced event must carry absence metadata");
-    let reason = absence.reason.as_ref().expect("Bubble/NIL has a reason");
+    let reason = absence
+        .reason
+        .as_ref()
+        .expect("the reasoned NIL has a reason");
 
     assert_eq!(event.kind.as_protocol_str(), "nilProduced");
     assert_eq!(reason.as_protocol_str(), "divisionByZero");
@@ -117,7 +120,7 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
 }
 
 #[tokio::test]
-async fn error_flow_trace_records_direct_bubble_from_word() {
+async fn error_flow_trace_records_direct_projection_from_word() {
     let mut interp = Interpreter::new();
     interp.execute("10 0 /").await.unwrap();
     let trace = interp.drain_error_flow_trace();
@@ -143,14 +146,14 @@ async fn error_flow_trace_drain_clears_log() {
 }
 
 #[tokio::test]
-async fn direct_bubble_carries_division_by_zero_reason() {
+async fn direct_projection_carries_division_by_zero_reason() {
     let mut interp = Interpreter::new();
     interp.execute("10 0 /").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
         1,
-        "stack after `10 0 /` should follow DIV's normal Bubble/NIL stack effect"
+        "stack after `10 0 /` should follow DIV's normal NIL-projection stack effect"
     );
     let top = stack.last().unwrap();
     assert!(top.is_nil());

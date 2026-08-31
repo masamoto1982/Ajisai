@@ -59,13 +59,13 @@ async fn sqrt2_div_sqrt2_is_exact() {
     );
 }
 
-/// `√2 0 /` is a recoverable DivisionByZero Bubble, not a hard error.
+/// `√2 0 /` is a recoverable DivisionByZero projection, not a hard error.
 #[tokio::test]
-async fn sqrt2_div_zero_is_division_by_zero_bubble() {
+async fn sqrt2_div_zero_is_division_by_zero_projection() {
     let stack = run_ok("2 SQRT 0 /").await;
     assert_eq!(stack.len(), 1);
     let top = &stack[0];
-    assert!(top.is_nil(), "√2 0 / must be a Bubble/NIL, got {top:?}");
+    assert!(top.is_nil(), "√2 0 / must be a reasoned NIL, got {top:?}");
     assert_eq!(
         top.nil_reason().cloned(),
         Some(NilReason::DivisionByZero),

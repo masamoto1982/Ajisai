@@ -15,12 +15,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn index_of_missing_is_bubble() {
+    async fn index_of_missing_projects_to_nil() {
         let mut interp = Interpreter::new();
         interp
             .execute("[ 10 20 30 ] 99 INDEX-OF")
             .await
-            .expect("a search miss is a Bubble, not an error");
+            .expect("a search miss projects to NIL, not an error");
         assert_eq!(interp.stack.len(), 1);
         assert!(interp.stack[0].is_nil());
     }

@@ -10,7 +10,7 @@ use super::{ConsumptionMode, Interpreter};
 /// Index just past the single *source unit* that begins at `start` in `tokens`:
 /// either one ordinary token, or one balanced `[ ]` group (nesting
 /// respected). This is the one, canonical definition of the unit that a non-NIL
-/// `VENT` (`^` or the spelled-out name — both `Token::NilCoalesce`) skips
+/// `OR-NIL` (`^` or the spelled-out name — both `Token::NilCoalesce`) skips
 /// unevaluated (SPEC §6.4). `start` at or past the end is returned unchanged, so
 /// a directive with no following unit is a no-op skip.
 pub(crate) fn end_of_source_unit(tokens: &[Token], start: usize) -> usize {
@@ -338,7 +338,8 @@ impl Interpreter {
                     }
                 }
                 Token::NilCoalesce => {
-                    // VENT (`^` / spelled-out `VENT`, SPEC §6.4): inspect the top.
+                    // OR-NIL (`^` / spelled-out `OR-NIL`, or the legacy `VENT`
+                    // spelling, SPEC §6.4): inspect the top.
                     let (value, hint) = self.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
 
                     if !value.is_nil() {

@@ -103,7 +103,7 @@ mod runtime_limits_tests {
     //
     // Phase 3 (structural-memory-safety roadmap): the materialization ceiling is
     // a *space water level*, so a well-formed but over-budget generative call
-    // projects onto a diagnosable Bubble/NIL (reason `SpaceExhausted`) instead
+    // projects onto a diagnosable NIL (reason `SpaceExhausted`) instead
     // of a channel error — deterministically and synchronously, without
     // allocating anything huge. The other ceilings below stay ordinary errors.
 
@@ -116,7 +116,7 @@ mod runtime_limits_tests {
     }
 
     #[tokio::test]
-    async fn range_bubbles_at_a_low_injected_materialization_limit() {
+    async fn range_projects_to_nil_at_a_low_injected_materialization_limit() {
         let mut interp = with_limits(RuntimeLimits {
             max_materialized_elements: 10,
             ..RuntimeLimits::default()
@@ -124,7 +124,7 @@ mod runtime_limits_tests {
         interp
             .execute("[ 0 100 ] RANGE")
             .await
-            .expect("RANGE over the injected element cap must bubble, not error");
+            .expect("RANGE over the injected element cap must project onto NIL, not error");
         assert_eq!(
             top_nil_reason(&interp),
             Some(crate::error::NilReason::SpaceExhausted),
@@ -133,7 +133,7 @@ mod runtime_limits_tests {
     }
 
     #[tokio::test]
-    async fn fill_bubbles_at_a_low_injected_materialization_limit() {
+    async fn fill_projects_to_nil_at_a_low_injected_materialization_limit() {
         let mut interp = with_limits(RuntimeLimits {
             max_materialized_elements: 10,
             ..RuntimeLimits::default()
@@ -141,7 +141,7 @@ mod runtime_limits_tests {
         interp
             .execute("[ 100 100 ] FILL")
             .await
-            .expect("FILL over the injected element cap must bubble, not error");
+            .expect("FILL over the injected element cap must project onto NIL, not error");
         assert_eq!(
             top_nil_reason(&interp),
             Some(crate::error::NilReason::SpaceExhausted),
@@ -149,10 +149,10 @@ mod runtime_limits_tests {
         );
     }
 
-    // ── recovery: a space bubble must not corrupt the interpreter ──────────
+    // ── recovery: a space-exhausted NIL must not corrupt the interpreter ───
 
     #[tokio::test]
-    async fn interpreter_stays_usable_after_a_materialization_space_bubble() {
+    async fn interpreter_stays_usable_after_a_materialization_space_projection() {
         let mut interp = with_limits(RuntimeLimits {
             max_materialized_elements: 10,
             ..RuntimeLimits::default()
@@ -171,7 +171,7 @@ mod runtime_limits_tests {
         assert_eq!(
             interp.get_stack().last().and_then(|v| v.as_i64()),
             Some(5),
-            "2 3 + must evaluate to 5 after a materialization space bubble"
+            "2 3 + must evaluate to 5 after a materialization space projection"
         );
     }
 

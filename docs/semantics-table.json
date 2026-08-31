@@ -15,7 +15,7 @@
       "reason": "variableArity"
     },
     {
-      "word": "VENT",
+      "word": "OR-NIL",
       "reason": "controlArity"
     },
     {

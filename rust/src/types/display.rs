@@ -26,7 +26,7 @@ impl fmt::Display for Value {
 }
 
 pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
-    // An operational NIL (a bubble carrying absence metadata) always renders
+    // An operational NIL (a value carrying absence metadata) always renders
     // as `NIL`, regardless of the effective hint. A positional hint can carry
     // a word's declared output role (e.g. CHR is declared to yield TEXT),
     // which must not mask an absence into a bogus `''`/`FALSE`/datetime

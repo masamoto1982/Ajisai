@@ -107,7 +107,7 @@ fn authored_entry_renders_behavior_examples_and_related() {
     }
     assert!(
         body.contains("indexOutOfBounds"),
-        "GET Failure must name the Bubble reason:\n{}",
+        "GET Failure must name the NIL-projection reason:\n{}",
         body
     );
 }
@@ -140,9 +140,10 @@ fn lookup_reports_the_vocabulary_tier() {
 }
 
 #[test]
-fn bubble_rule_words_describe_nil_not_only_errors() {
+fn nil_projection_rule_words_describe_nil_not_only_errors() {
     // The three-layer model (§2.3) requires GET / DIV / NUM / CHR to
-    // describe their Bubble/NIL cases separately from contract errors.
+    // describe their Bubble/NIL cases (the specification's term for a
+    // reasoned NIL) separately from contract errors.
     for word in ["GET", "DIV", "NUM"] {
         let body = lookup_builtin_detail(word);
         assert!(
@@ -251,7 +252,7 @@ fn comparison_words_have_uniform_stack_effect() {
 
 #[test]
 fn lookup_output_is_utf8_plain_text() {
-    for name in ["ADD", "MAP", "LOOKUP", "DEF", "VENT", "TOP", "PRINT"] {
+    for name in ["ADD", "MAP", "LOOKUP", "DEF", "OR-NIL", "TOP", "PRINT"] {
         let body = lookup_builtin_detail(name);
         assert!(
             !body.chars().any(|c| c.is_control() && c != '\n'),

@@ -299,9 +299,9 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
     }
 
     // The same space water level `RANGE` and `FILL` observe: a well-formed
-    // request that cannot be materialized within budget bubbles as NIL with
-    // reason `spaceExhausted`, recoverable with `^`, rather than driving the
-    // host into an allocation failure.
+    // request that cannot be materialized within budget projects onto NIL
+    // with reason `spaceExhausted`, recoverable with `^`, rather than driving
+    // the host into an allocation failure.
     if count as usize > interp.runtime_limits.max_materialized_elements {
         if keep {
             interp.stack.push(seed_value);
@@ -346,11 +346,11 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
 mod tests {
     use crate::interpreter::Interpreter;
 
-    /// The Bubble probe `nil_conformance_tests::projecting_word_set_matches_registry`
+    /// The projection probe `nil_conformance_tests::projecting_word_set_matches_registry`
     /// requires of every Word that declares a projection condition. `RANDOM`
     /// projects past the space water level, as `RANGE` and `FILL` do: a count
     /// the host cannot materialize is a well-formed request rather than a
-    /// malformed one, so it bubbles and stays recoverable with `^`.
+    /// malformed one, so it projects onto NIL and stays recoverable with `^`.
     #[tokio::test]
     async fn random_projects_past_the_space_water_level() {
         let mut interp = Interpreter::new();

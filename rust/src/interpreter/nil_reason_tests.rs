@@ -13,7 +13,7 @@ fn last_nil_reason(interp: &Interpreter) -> Option<NilReason> {
 }
 
 #[tokio::test]
-async fn division_by_zero_preserves_direct_bubble_reason() {
+async fn division_by_zero_preserves_direct_projection_reason() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 /").await.unwrap();
     let stack = interp.get_stack();
@@ -21,12 +21,12 @@ async fn division_by_zero_preserves_direct_bubble_reason() {
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
         "top of stack must be NIL after division by zero"
     );
-    let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
+    let reason = last_nil_reason(&interp).expect("the reasoned NIL must carry a reason");
     assert_eq!(reason, NilReason::DivisionByZero);
 }
 
 #[tokio::test]
-async fn index_out_of_bounds_preserves_direct_bubble_reason() {
+async fn index_out_of_bounds_preserves_direct_projection_reason() {
     let mut interp = Interpreter::new();
     interp.execute("[ 10 20 ] [ 99 ] GET").await.unwrap();
     let stack = interp.get_stack();
@@ -34,7 +34,7 @@ async fn index_out_of_bounds_preserves_direct_bubble_reason() {
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
         "top of stack must be NIL after out-of-bounds GET"
     );
-    let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
+    let reason = last_nil_reason(&interp).expect("the reasoned NIL must carry a reason");
     assert_eq!(reason, NilReason::IndexOutOfBounds);
 }
 
@@ -49,14 +49,14 @@ async fn unknown_word_propagates_error() {
 }
 
 #[tokio::test]
-async fn successful_bubble_uses_normal_word_stack_effect() {
+async fn successful_projection_uses_normal_word_stack_effect() {
     let mut interp = Interpreter::new();
     interp.execute("1 2 3 0 /").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
         3,
-        "DIV consumes its two operands and pushes a single Bubble/NIL result"
+        "DIV consumes its two operands and pushes a single reasoned NIL result"
     );
     assert_eq!(format!("{}", stack[0]), "1/1");
     assert_eq!(format!("{}", stack[1]), "2/1");
@@ -123,19 +123,19 @@ async fn bare_nil_literal_is_reasoned_as_literal() {
 }
 
 #[tokio::test]
-async fn or_nil_consumes_direct_bubble_nil_and_substitutes_fallback() {
+async fn or_nil_consumes_direct_projected_nil_and_substitutes_fallback() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 /").await.unwrap();
     interp.execute("42 ^").await.unwrap();
     let stack = interp.get_stack();
     assert!(
         !stack.last().unwrap().is_nil(),
-        "top should not be NIL after VENT fallback"
+        "top should not be NIL after OR-NIL fallback"
     );
     assert_eq!(format!("{}", stack.last().unwrap()), "42/1");
 }
 
-mod division_bubble_rule {
+mod division_nil_projection_rule {
     use super::*;
 
     #[tokio::test]
@@ -173,7 +173,7 @@ mod division_bubble_rule {
 }
 
 #[tokio::test]
-async fn bubble_rule_division_by_zero_without_safe_has_direct_reason() {
+async fn nil_projection_rule_division_by_zero_without_safe_has_direct_reason() {
     let mut interp = Interpreter::new();
     interp.execute("10 0 /").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -182,7 +182,7 @@ async fn bubble_rule_division_by_zero_without_safe_has_direct_reason() {
 }
 
 #[tokio::test]
-async fn bubble_rule_division_by_zero_recovers_with_or_nil() {
+async fn nil_projection_rule_division_by_zero_recovers_with_or_nil() {
     let mut interp = Interpreter::new();
     interp.execute("10 0 / ^ 99").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -191,7 +191,7 @@ async fn bubble_rule_division_by_zero_recovers_with_or_nil() {
 }
 
 #[tokio::test]
-async fn bubble_rule_get_out_of_range_without_safe_has_direct_reason() {
+async fn nil_projection_rule_get_out_of_range_without_safe_has_direct_reason() {
     let mut interp = Interpreter::new();
     interp.execute("[ 10 20 ] [ 99 ] GET").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -200,7 +200,7 @@ async fn bubble_rule_get_out_of_range_without_safe_has_direct_reason() {
 }
 
 #[tokio::test]
-async fn bubble_rule_get_out_of_range_recovers_with_or_nil() {
+async fn nil_projection_rule_get_out_of_range_recovers_with_or_nil() {
     let mut interp = Interpreter::new();
     interp.execute("[ 10 20 ] [ 99 ] GET ^ 0").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -209,7 +209,7 @@ async fn bubble_rule_get_out_of_range_recovers_with_or_nil() {
 }
 
 #[tokio::test]
-async fn bubble_rule_contract_violations_remain_errors() {
+async fn nil_projection_rule_contract_violations_remain_errors() {
     let mut interp = Interpreter::new();
     assert!(interp.execute("10 'x' /").await.is_err());
 
@@ -221,7 +221,7 @@ async fn bubble_rule_contract_violations_remain_errors() {
 }
 
 #[tokio::test]
-async fn bubble_rule_num_parse_failure_has_direct_reason_and_fallback() {
+async fn nil_projection_rule_num_parse_failure_has_direct_reason_and_fallback() {
     let mut interp = Interpreter::new();
     interp.execute("'abc' NUM").await.unwrap();
     let top = interp.get_stack().last().expect("top value");

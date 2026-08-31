@@ -25,7 +25,7 @@
 //!
 //! # Why `^` and `|` give up rather than guess
 //!
-//! `^` (VENT) and `|` (the COND clause separator) select between paths whose
+//! `^` (OR-NIL) and `|` (the COND clause separator) select between paths whose
 //! stack heights genuinely differ, so no single fixed arity describes them.
 //! Measured: `2 3 1 0 DIV ^ ADD` leaves one value (the NIL is dropped and the
 //! fallback unit `ADD` runs), while `2 3 4 2 DIV ^ ADD` leaves three (the

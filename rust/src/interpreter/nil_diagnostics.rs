@@ -1,8 +1,8 @@
 //! Diagnostic absence accessors (SPEC §4.5.0 / §7.15).
 //!
-//! `NIL?` and `NIL-REASON` let a program read what a Bubble/NIL carries
+//! `NIL?` and `NIL-REASON` let a program read what a reasoned NIL carries
 //! (SPEC §11.2, `NilReason`) instead of collapsing every absence with a single
-//! `VENT` fallback. They are the whole set: `NIL-ORIGIN`,
+//! `OR-NIL` fallback. They are the whole set: `NIL-ORIGIN`,
 //! `NIL-RECOVERABLE?` and `NIL-DIAGNOSIS` named the origin / recoverability /
 //! diagnosis metadata that the canonical minimal-NIL model does not have, and
 //! are not in `spec/words.json`.
@@ -24,7 +24,7 @@
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
 //! a predicate answers its question — and `NIL-REASON` projects a NIL whose
 //! reason is `notAvailable`: the "well-formed but cannot produce a value" case
-//! of the Bubble Rule (SPEC §11.2), never an error.
+//! of the NIL Projection Rule (SPEC §11.2), never an error.
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::Interpreter;
@@ -40,7 +40,7 @@ fn peek_operational_absence(interp: &Interpreter) -> Option<&AbsenceMetadata> {
         return None;
     }
     // Every operational NIL has metadata; `absence_metadata` is `Some` for a
-    // reasoned bubble and the literal-NIL constructor. Fall back defensively.
+    // reasoned NIL and the literal-NIL constructor. Fall back defensively.
     top.absence_metadata()
 }
 

@@ -57,8 +57,11 @@ fn consume_stacktop_binary(interp: &mut Interpreter) {
     }
 }
 
-fn division_by_zero_bubble() -> Value {
-    Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
+fn division_by_zero_projection() -> Value {
+    Value::nil_with_reason_and_recoverability(
+        NilReason::DivisionByZero,
+        Recoverability::Recoverable,
+    )
 }
 
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
@@ -117,7 +120,7 @@ fn push_exact_real_schema_result(
     // route was chosen — see `charge_binary_schema`.
     let result = match schema.exact_real(&a_exact, &b_exact) {
         Some(r) => Value::from_exact_real(r),
-        None => division_by_zero_bubble(),
+        None => division_by_zero_projection(),
     };
     // Bound accumulation: reject a result whose term count or coefficient
     // bit-length crosses the ceiling, before it is consumed and pushed (so a
@@ -253,7 +256,7 @@ fn push_scalar_fastpath_result(
     // route was chosen — see `charge_binary_schema`.
     let result = match schema_via_kernel(schema, &a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
-        Err(AjisaiError::DivisionByZero) => division_by_zero_bubble(),
+        Err(AjisaiError::DivisionByZero) => division_by_zero_projection(),
         Err(error) => return Err(error),
     };
     // Bound accumulation, so the operand feeding the next multiply is still a
@@ -356,7 +359,7 @@ fn apply_exact_arithmetic_schema(
                 return Ok(());
             }
             Err(AjisaiError::DivisionByZero) => {
-                interp.stack.push(division_by_zero_bubble());
+                interp.stack.push(division_by_zero_projection());
                 return Ok(());
             }
             Err(error) => {
@@ -423,8 +426,8 @@ fn value_contains_exact_scalar(val: &Value) -> bool {
 /// each lane exact. `Value::from_exact_real` renormalizes any lane that lands
 /// back on a rational to a plain `Scalar`, so an all-rational result is
 /// byte-identical to the rational path. Per-lane division by zero becomes a
-/// reasoned `NIL` bubble — the same Bubble Rule the scalar `√x 0 /` path uses
-/// (SPEC §11.2) — rather than aborting the whole vector.
+/// reasoned `NIL` — the same NIL Projection Rule the scalar `√x 0 /` path
+/// uses (SPEC §11.2) — rather than aborting the whole vector.
 fn apply_exact_real_recursive_broadcast(
     a: &Value,
     b: &Value,
@@ -442,7 +445,7 @@ fn apply_exact_real_recursive_broadcast(
             };
             Ok(match schema.exact_real(&ea, &eb) {
                 Some(result) => Value::from_exact_real(result),
-                None => division_by_zero_bubble(),
+                None => division_by_zero_projection(),
             })
         }
         (Some(children), None) => {
@@ -535,7 +538,7 @@ fn push_exact_real_broadcast_result(
     // Homogeneous flat case (equal-length vectors of numeric leaves): each lane
     // is an independent compute-bound exact-real op, so fan it out across the
     // native pool. `Value` is not `Send`, so the kernel computes `Send`
-    // `Option<ExactReal>` lanes (`None` = division-by-zero bubble) and we rebuild
+    // `Option<ExactReal>` lanes (`None` = division-by-zero projection) and we rebuild
     // `Value`s here. The result is identical to the sequential recursion for
     // this shape, lane for lane.
     let result = if let Some((a_lanes, b_lanes)) = exact_flat_leaf_lanes(a, b) {
@@ -547,7 +550,7 @@ fn push_exact_real_broadcast_result(
             .into_iter()
             .map(|lane| match lane {
                 Some(result) => Value::from_exact_real(result),
-                None => division_by_zero_bubble(),
+                None => division_by_zero_projection(),
             })
             .collect();
         Value::from_children(children)

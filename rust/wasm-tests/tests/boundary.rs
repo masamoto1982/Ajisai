@@ -1,7 +1,7 @@
 //! Phase C: end-to-end verification of the real WASM serialization boundary.
 //!
 //! Phases A and B verify the (Value, hint) -> protocol mapping and the
-//! interpreter's NIL/Bubble behavior natively, on the host target -- those
+//! interpreter's NIL-projection behavior natively, on the host target -- those
 //! never cross the `wasm-bindgen` glue. This crate closes the last gap: it
 //! drives the public `AjisaiInterpreter` API compiled to `wasm32`, executes
 //! code, and reads back the actual `JsValue` the GUI receives from
@@ -86,9 +86,9 @@ async fn scalar_comparison_serializes_as_boolean() {
     assert_eq!(field(&node, "value").as_bool(), Some(true));
 }
 
-/// A Bubble/NIL (division by zero) crosses the boundary as a `nil`-typed node.
+/// A reasoned NIL (division by zero) crosses the boundary as a `nil`-typed node.
 #[wasm_bindgen_test]
-async fn bubble_nil_serializes_as_nil() {
+async fn projected_nil_serializes_as_nil() {
     let stack = stack_of("1 0 DIV").await;
     assert_eq!(stack.length(), 1);
     assert_eq!(type_of(&stack.get(0)), "nil");

@@ -1,15 +1,15 @@
-//! CS2: `VENT` canonical-name ↔ sugar unification.
+//! CS2: `OR-NIL` canonical-name ↔ sugar unification.
 //!
-//! SPEC §6.4: `VENT` (sugar `^`) is a *lazy* NIL-coalescing control directive —
-//! if the stack top is non-NIL it is kept and the following source unit is
-//! skipped unevaluated; if it is NIL the top is discarded and the following unit
-//! is evaluated as the fallback.
+//! SPEC §6.4: `OR-NIL` (sugar `^`, legacy spelling `VENT`) is a *lazy*
+//! NIL-coalescing control directive — if the stack top is non-NIL it is kept
+//! and the following source unit is skipped unevaluated; if it is NIL the top
+//! is discarded and the following unit is evaluated as the fallback.
 //!
-//! The canonical spelled-out name and its sugar must produce the *same* token
-//! and therefore the *same* execution result. These tests lock the two spellings
-//! together across the non-NIL keep/skip, the lazy (unevaluated) fallback, the
-//! NIL fallback, balanced vector/block group skips, nesting, and stack
-//! underflow.
+//! The canonical spelled-out name, its sugar, and its legacy `VENT` spelling
+//! must produce the *same* token and therefore the *same* execution result.
+//! These tests lock the spellings together across the non-NIL keep/skip, the
+//! lazy (unevaluated) fallback, the NIL fallback, balanced vector/block group
+//! skips, nesting, and stack underflow.
 
 use crate::builtins::lookup_builtin_spec;
 use crate::coreword_registry::ExecutionForm;
@@ -39,78 +39,89 @@ fn display(stack: &[Value]) -> String {
 // --- non-NIL top: keep it, skip the following unit ------------------------
 
 #[tokio::test]
-async fn vent_canonical_matches_sugar_non_nil_keep() {
-    // Mirrors conformance `core-vent-nonnil-keeps-top`: 5 ^ 99 -> 5/1.
+async fn or_nil_canonical_matches_sugar_non_nil_keep() {
+    // Mirrors conformance `core-or-nil-nonnil-keeps-top`: 5 ^ 99 -> 5/1.
     assert_eq!(display(&run_ok("5 ^ 99").await), "5/1");
+    assert_eq!(display(&run_ok("5 OR-NIL 99").await), "5/1");
     assert_eq!(display(&run_ok("5 VENT 99").await), "5/1");
+    assert_eq!(run_ok("5 ^ 99").await, run_ok("5 OR-NIL 99").await);
     assert_eq!(run_ok("5 ^ 99").await, run_ok("5 VENT 99").await);
     // Case folding: the canonical name is not case-sensitive.
+    assert_eq!(run_ok("5 or-nil 99").await, run_ok("5 OR-NIL 99").await);
     assert_eq!(run_ok("5 vent 99").await, run_ok("5 VENT 99").await);
 }
 
 #[tokio::test]
-async fn vent_canonical_matches_sugar_fallback_unevaluated() {
-    // Mirrors `core-vent-nonnil-fallback-unevaluated`: the fallback is skipped
+async fn or_nil_canonical_matches_sugar_fallback_unevaluated() {
+    // Mirrors `core-or-nil-nonnil-fallback-unevaluated`: the fallback is skipped
     // *unevaluated*, so an undefined word there must not raise. This is the
     // proof that the spelled-out name takes the lazy path, not a strict
     // stack-consuming word (which would try to resolve UNDEFINED-FALLBACK).
     assert_eq!(display(&run_ok("5 ^ UNDEFINED-FALLBACK").await), "5/1");
+    assert_eq!(display(&run_ok("5 OR-NIL UNDEFINED-FALLBACK").await), "5/1");
     assert_eq!(display(&run_ok("5 VENT UNDEFINED-FALLBACK").await), "5/1");
 }
 
 #[tokio::test]
-async fn vent_canonical_matches_sugar_one_token_skip() {
-    // Mirrors `core-vent-one-token-skip-trap`: 1 ^ 2 3 ADD -> 4/1 (only the
+async fn or_nil_canonical_matches_sugar_one_token_skip() {
+    // Mirrors `core-or-nil-one-token-skip-trap`: 1 ^ 2 3 ADD -> 4/1 (only the
     // single token `2` is skipped, then `3 ADD` runs on the kept `1`).
     assert_eq!(display(&run_ok("1 ^ 2 3 ADD").await), "4/1");
+    assert_eq!(display(&run_ok("1 OR-NIL 2 3 ADD").await), "4/1");
     assert_eq!(display(&run_ok("1 VENT 2 3 ADD").await), "4/1");
 }
 
 // --- NIL top: discard it, evaluate the following unit as the fallback -----
 
 #[tokio::test]
-async fn vent_canonical_matches_sugar_nil_fallback() {
+async fn or_nil_canonical_matches_sugar_nil_fallback() {
     assert_eq!(display(&run_ok("NIL ^ 99").await), "99/1");
+    assert_eq!(display(&run_ok("NIL OR-NIL 99").await), "99/1");
     assert_eq!(display(&run_ok("NIL VENT 99").await), "99/1");
+    assert_eq!(run_ok("NIL ^ 99").await, run_ok("NIL OR-NIL 99").await);
     assert_eq!(run_ok("NIL ^ 99").await, run_ok("NIL VENT 99").await);
 }
 
 // --- balanced group skip (vector, block, nested) --------------------------
 
 #[tokio::test]
-async fn vent_canonical_skips_balanced_vector_group() {
-    // Mirrors `core-vent-group-skip-atomic`: the whole `[ ... ]` is one unit.
+async fn or_nil_canonical_skips_balanced_vector_group() {
+    // Mirrors `core-or-nil-group-skip-atomic`: the whole `[ ... ]` is one unit.
     assert_eq!(display(&run_ok("1 ^ [ 2 3 ADD ]").await), "1/1");
+    assert_eq!(display(&run_ok("1 OR-NIL [ 2 3 ADD ]").await), "1/1");
     assert_eq!(display(&run_ok("1 VENT [ 2 3 ADD ]").await), "1/1");
     // A trailing unit after the skipped group still runs.
     assert_eq!(display(&run_ok("1 ^ [ 2 3 ] 4").await), "1/1 4/1");
+    assert_eq!(display(&run_ok("1 OR-NIL [ 2 3 ] 4").await), "1/1 4/1");
     assert_eq!(display(&run_ok("1 VENT [ 2 3 ] 4").await), "1/1 4/1");
 }
 
 #[tokio::test]
-async fn vent_canonical_skips_nested_group_atomically() {
+async fn or_nil_canonical_skips_nested_group_atomically() {
     assert_eq!(display(&run_ok("1 ^ [ [ 2 ] 3 ]").await), "1/1");
+    assert_eq!(display(&run_ok("1 OR-NIL [ [ 2 ] 3 ]").await), "1/1");
     assert_eq!(display(&run_ok("1 VENT [ [ 2 ] 3 ]").await), "1/1");
 }
 
-// --- stack underflow: both spellings error identically --------------------
+// --- stack underflow: all spellings error identically ----------------------
 
 #[tokio::test]
-async fn vent_canonical_matches_sugar_stack_underflow() {
+async fn or_nil_canonical_matches_sugar_stack_underflow() {
     assert!(run("^ 99").await.is_err());
+    assert!(run("OR-NIL 99").await.is_err());
     assert!(run("VENT 99").await.is_err());
 }
 
 // --- machine-readable contract (§7.14 metadata) ---------------------------
 
 #[test]
-fn vent_contract_is_lazy_not_eager_binary() {
-    let vent = lookup_builtin_spec("VENT").expect("VENT spec");
-    // The typed classification, not just the prose, marks VENT as lazy.
-    assert_eq!(vent.execution_form, ExecutionForm::LazyNextUnitFallback);
-    // VENT is realised as a control token, not dispatched by name: its
+fn or_nil_contract_is_lazy_not_eager_binary() {
+    let or_nil = lookup_builtin_spec("OR-NIL").expect("OR-NIL spec");
+    // The typed classification, not just the prose, marks OR-NIL as lazy.
+    assert_eq!(or_nil.execution_form, ExecutionForm::LazyNextUnitFallback);
+    // OR-NIL is realised as a control token, not dispatched by name: its
     // declared arity is `control` on both sides, which is what says so.
-    let declared = crate::kernel::generated::generated_word("VENT").expect("VENT is declared");
+    let declared = crate::kernel::generated::generated_word("OR-NIL").expect("OR-NIL is declared");
     assert_eq!(
         declared.stack_inputs,
         crate::kernel::generated::Arity::Control
@@ -121,12 +132,12 @@ fn vent_contract_is_lazy_not_eager_binary() {
     );
     // The stack-effect prose must not describe the old eager `[a] [b]` binary.
     assert!(
-        !vent.stack_effect.contains("[a] [b]"),
-        "VENT stack_effect must not describe an eager two-operand pop: {:?}",
-        vent.stack_effect
+        !or_nil.stack_effect.contains("[a] [b]"),
+        "OR-NIL stack_effect must not describe an eager two-operand pop: {:?}",
+        or_nil.stack_effect
     );
     // Mass is data-dependent, never a fixed two-in/one-out contract.
-    assert!(crate::coreword_registry::mass_contract("VENT")
+    assert!(crate::coreword_registry::mass_contract("OR-NIL")
         .fixed()
         .is_none());
 }

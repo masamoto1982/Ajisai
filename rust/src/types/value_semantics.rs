@@ -147,7 +147,7 @@ impl Value {
     }
 
     /// NIL test: `true` only for the operational absence node
-    /// ([`ValueData::Nil`], the Bubble).
+    /// ([`ValueData::Nil`]).
     #[inline]
     pub fn is_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)

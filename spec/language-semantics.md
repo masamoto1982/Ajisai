@@ -184,7 +184,7 @@ The Boolean domain has exactly three truth values: TRUE, FALSE, and UNKNOWN. TRU
 
 <p>
 FALSE dominates <code>AND</code> and TRUE dominates <code>OR</code> even against an UNKNOWN operand, decided by the definite operand alone; where neither operand settles it, the output is UNKNOWN and carries whichever operand's absence reason applies — the left operand's, when both are absent (LANG.FAILURE.PASSTHROUGH's left-to-right rule). UNKNOWN enters the truth domain two ways: through an absent operand read in truth position, and through a comparison that cannot decide within its refinement budget (LANG.VALUES.EXACT) — the two carry different reasons but are the same UNKNOWN, composed by the same tables. Every comparison over the algebraic field half of the exact domain still decides in finite time and yields TRUE or FALSE: totality there is a domain property of that field, not a limit this clause imposes. Misuse still lives outside this domain: an operation that is malformed raises ERROR, which is never a truth value. The host protocol observes all three values through one <code>truthValue</code> axis (LANG.OBSERVATION.PROTOCOL), reported as <code>"true"</code>, <code>"false"</code>, or <code>"unknown"</code> — a consumer reads this axis rather than inferring truth from the internal NIL representation or display text (LANG.OBSERVATION.FIREWALL).
-Being read in truth position adds an observation; it takes none away. UNKNOWN is still the NIL it is: <code>NIL?</code> answers TRUE for it, <code>NIL-REASON</code> reports the reason it arrived with, <code>VENT</code> recovers it, and a passthrough Word passes it on — so <code>1 0 DIV TRUE AND</code> is an UNKNOWN whose reason is still <code>divisionByZero</code>. An implementation that reports UNKNOWN as present, or that drops its reason, contradicts LANG.VALUES.NIL.
+Being read in truth position adds an observation; it takes none away. UNKNOWN is still the NIL it is: <code>NIL?</code> answers TRUE for it, <code>NIL-REASON</code> reports the reason it arrived with, <code>OR-NIL</code> recovers it, and a passthrough Word passes it on — so <code>1 0 DIV TRUE AND</code> is an UNKNOWN whose reason is still <code>divisionByZero</code>. An implementation that reports UNKNOWN as present, or that drops its reason, contradicts LANG.VALUES.NIL.
 </p>
 
 <h3 id="lang-values-nil">LANG.VALUES.NIL — Diagnostic absence</h3>
@@ -267,7 +267,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Category</th><th>Outcome</th></tr></thead><tbody><tr><td>Success</td><td>Its registered outputs</td></tr><tr><td>Well-formed partial failure</td><td>NIL with a reason</td></tr><tr><td>Malformed use</td><td>ERROR</td></tr></tbody></table></div>
 
-<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. Recovery operates on absence alone: <code>VENT</code> acts on a NIL top, while an ERROR propagates and halts evaluation.</p>
+<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. Recovery operates on absence alone: <code>OR-NIL</code> acts on a NIL top, while an ERROR propagates and halts evaluation.</p>
 
 <h3 id="lang-failure-project">LANG.FAILURE.PROJECT — Projection</h3>
 
@@ -289,7 +289,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-failure-recovery">LANG.FAILURE.RECOVERY — Recovery</h3>
 
-<p><code>VENT</code> is the single recovery form: a non-NIL top passes through and the following source unit is skipped; a NIL top is discarded and the following source unit is evaluated as the fallback.</p>
+<p><code>OR-NIL</code> is the single recovery form: a non-NIL top passes through and the following source unit is skipped; a NIL top is discarded and the following source unit is evaluated as the fallback. <code>VENT</code> is a backward-compatible spelling of the same directive.</p>
 
 <p>Recovery does not erase absence from already emitted output.</p>
 

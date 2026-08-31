@@ -287,7 +287,7 @@ impl Interpreter {
             WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
             // The positional control directives of SPEC §6.4. The execution
-            // loop interprets these against the source stream — `VENT` decides
+            // loop interprets these against the source stream — `OR-NIL` decides
             // whether the *following source unit* is evaluated and `KEEP`
             // sets the non-default consumption mode — so they are never dispatched by name
             // and have no primitive. Reaching one here means a caller bypassed
