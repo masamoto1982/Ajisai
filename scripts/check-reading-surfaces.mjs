@@ -41,6 +41,8 @@ const EXAMPLE_NAMES = new Set([
   // a deliberate typo, introduced by the Defining Words clause to show that a
   // body's names resolve when the word is called rather than when it is defined
   'TOTALL',
+  // a self-referential definition, introduced to show DEF refuses it
+  'REC',
   // user words defined by the block-frame and two-argument examples
   'ADDW', 'PSUM', 'PDIFF', 'PMAX',
   // the relaxation loop of the Iterative Numerics clause

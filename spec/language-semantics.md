@@ -327,7 +327,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-acyclic">LANG.DICTIONARY.ACYCLIC — No definition may name itself</h3>
 
-<p>The User dictionary's reference graph is acyclic: <code>DEF</code> raises ERROR rather than commit a definition that names the word being defined, directly or through a chain of other User words, however that name is reached (LANG.SOURCE.FRAME). No Word can call itself, so repetition is only the bounded higher-order Words (<code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, <code>ALL</code>) over an already-finite Vector, and every evaluation is structurally finite — stronger than the execution-step ceiling (LANG.MACHINE.LIMITS), which still bounds cost but no longer decides termination.</p>
+<p>The User dictionary's reference graph is acyclic: <code>DEF</code> raises ERROR rather than commit a definition that names the word being defined, directly or through a chain of other User words, however that name is reached (LANG.SOURCE.FRAME). No Word can call itself, so repetition is only the bounded higher-order Words (<code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, <code>ALL</code>) over an already-finite Vector, and every evaluation is structurally finite: termination follows from the dictionary's shape alone, and the execution-step ceiling (LANG.MACHINE.LIMITS) is left to bound cost, not decide it.</p>
 
 <h3 id="lang-effects-output">LANG.EFFECTS.OUTPUT — Output</h3>
 
