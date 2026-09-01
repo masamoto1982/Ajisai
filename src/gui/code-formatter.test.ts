@@ -6,9 +6,11 @@ import { describe, expect, test } from 'vitest';
 import { formatAjisaiSource } from './code-formatter';
 import corpus from '../../tests/formatter-corpus.json';
 
-// The shared corpus (tests/formatter-corpus.json) is the source of truth that
-// pins this GUI formatter and the CLI formatter (rust/src/cli/fmt.rs) to the
-// same behaviour, so the two implementations cannot drift (Phase 8A).
+// tests/formatter-corpus.json pins this formatter's input->expected pairs.
+// There is currently no second implementation reading it (no Rust-side
+// formatter exists in this repo), so it is not itself a cross-implementation
+// drift check; treat it as a regression corpus for this module only, and keep
+// its cases honest against the real tokenizer (rust/src/tokenizer.rs) by hand.
 describe('formatAjisaiSource shared corpus', () => {
     for (const c of corpus.cases) {
         test(`corpus: ${c.name}`, () => {
@@ -42,12 +44,30 @@ describe('formatAjisaiSource', () => {
         expect(formatAjisaiSource('[1 2 3]PRINT')).toBe('[ 1 2 3 ] PRINT');
     });
 
-    test('pads the nil-coalesce marker', () => {
-        // `^` is a special character in the lexer, so padding it cannot change
-        // the token sequence. `~` is not: it belongs to the word around it, so
-        // splitting `a~b` would turn one token into three.
-        expect(formatAjisaiSource('a^c')).toBe('a ^ c');
+    test('does not split a glued caret or bar out of a word', () => {
+        // `^` and `|` are ordinary word characters in the lexer (they end a
+        // token only at whitespace or a bracket, same as `~`), so forcing
+        // spaces around one glued to a name would turn one Symbol token into
+        // three — exactly the meaning change this formatter must not make.
+        expect(formatAjisaiSource('a^c')).toBe('a^c');
+        expect(formatAjisaiSource('a|c')).toBe('a|c');
         expect(formatAjisaiSource('a~b')).toBe('a~b');
+    });
+
+    test('still pads an already-standalone bar between spaced tokens', () => {
+        // Written with its own whitespace, `|` already scans as its own
+        // token; the formatter just normalizes the spacing around it, same as
+        // any other token-to-token gap.
+        expect(formatAjisaiSource('[ a   |   b ]')).toBe('[ a | b ]');
+    });
+
+    test('leaves a string not closed before a following > or = untouched', () => {
+        // `>` and `=` do not end a token in the real tokenizer, so a `'` right
+        // before one does not close the string either; the real tokenizer
+        // reports an unclosed literal for this input, and the formatter
+        // refuses to reformat what it cannot safely rewrite.
+        expect(formatAjisaiSource("'foo'>bar")).toBe("'foo'>bar");
+        expect(formatAjisaiSource("'foo'=bar")).toBe("'foo'=bar");
     });
 
     test('is idempotent on already-canonical input', () => {

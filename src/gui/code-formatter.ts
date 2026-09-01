@@ -9,7 +9,7 @@
 //
 // Per line it:
 //   - collapses runs of spaces/tabs to a single space;
-//   - surrounds the always-standalone delimiters [ ] | ^ with spaces, so
+//   - surrounds the always-standalone delimiters [ ] with spaces, so
 //     `[1 2 3]` becomes `[ 1 2 3 ]` and `[[1]]` becomes `[ [ 1 ] ]`;
 //   - keeps string literals ('...') and comments (#...) verbatim;
 //   - re-indents the line by the bracket/block nesting depth open at its start.
@@ -24,26 +24,34 @@
 const INDENT_UNIT = '  ';
 
 // Characters that are always their own token in Ajisai source and can never be
-// part of a word or number. This is tokenizer.rs::is_special_char minus the
-// characters whose tokenization depends on context (' # > = ( )), which are left
-// untouched so a two-character spelling such as `>=` is never mis-split.
-// `{`/`}` were retired as source characters entirely (docs/dev/type-
+// part of a word or number. This is tokenizer.rs::is_structural_char: only the
+// bracket family. Every other punctuation character — including `|` (the COND
+// clause separator) and `^` — obeys the ordinary word-boundary rule instead:
+// it ends a token only where whitespace, a bracket, or a comment already would,
+// so it is glued into the surrounding word when written without a space (SPEC
+// AQ-VER-002-D/E). Forcing any of them apart here would turn one Symbol token
+// into several, which is exactly the meaning change this formatter must not
+// make. `{`/`}` were retired as source characters entirely (docs/dev/type-
 // unification-work-order-2026-08.md): `[ ]` is the sole bracket, for both
 // data and code, so they are no longer structural here either.
-const STANDALONE_DELIMITERS = new Set(['[', ']', '|', '^']);
+const STANDALONE_DELIMITERS = new Set(['[', ']']);
 const OPENING_BRACKETS = new Set(['[']);
 const CLOSING_BRACKETS = new Set([']']);
 
-// Mirrors tokenizer.rs::is_string_close_delimiter: a `'` closes a string when
-// the next character is whitespace, end-of-input, or a special character other
-// than another quote. `{`/`}` are included even though they are no longer
-// valid source: tokenizer.rs's `is_structural_char` still treats them as
-// token-enders (so a name or string ends cleanly at one instead of a
-// misplaced `{` being swallowed into it), which is what lets the tokenizer
-// raise its "not a valid Ajisai source character" error precisely there.
-const STRING_CLOSE_SPECIALS = new Set([
-    '[', ']', '{', '}', '(', ')', '#', '>', '=', '|', '^',
-]);
+// Mirrors tokenizer.rs::is_string_close_delimiter, which is exactly
+// tokenizer.rs::ends_token: a `'` closes a string when the next character is
+// whitespace, a structural delimiter, or `#`. `{`/`}` are included even though
+// they are no longer valid source: tokenizer.rs's `is_structural_char` still
+// treats them as token-enders (so a name or string ends cleanly at one instead
+// of a misplaced `{` being swallowed into it), which is what lets the
+// tokenizer raise its "not a valid Ajisai source character" error precisely
+// there. `>`, `=`, `|`, and `^` do NOT end a token in the real tokenizer (they
+// are ordinary word characters, resolved to a Word only after the whole token
+// is scanned), so a `'` immediately followed by one of them does not close the
+// string either — the real tokenizer keeps scanning and eventually reports an
+// unclosed literal for such input, which this formatter mirrors by refusing to
+// reformat it (see the `closed` check in scanLines).
+const STRING_CLOSE_SPECIALS = new Set(['[', ']', '{', '}', '(', ')', '#']);
 const isStringCloseDelimiter = (ch: string | undefined): boolean =>
     ch === undefined || /\s/.test(ch) || STRING_CLOSE_SPECIALS.has(ch);
 
