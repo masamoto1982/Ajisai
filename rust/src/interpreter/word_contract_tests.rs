@@ -172,9 +172,9 @@ async fn a_symbol_inside_a_vector_literal_is_content_not_a_call() {
 
 #[tokio::test]
 async fn or_nil_leaves_the_flow_unmodelled_rather_than_wrong() {
-    // `^` selects between paths of differing height, so no fixed arity
+    // `OR-NIL` selects between paths of differing height, so no fixed arity
     // describes it. Reported as a gap, which can only ever produce a note.
-    let contract = contract_for("[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF", "FALLBACK").await;
+    let contract = contract_for("[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF", "FALLBACK").await;
     assert_eq!(contract.flow, ContractFlow::Dynamic);
     assert_eq!(contract.confidence, ContractConfidence::Conservative);
     assert!(contract

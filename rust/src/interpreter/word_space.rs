@@ -319,7 +319,7 @@ impl SpaceSim {
                     self.vector_dirty = false;
                 }
             }
-            // The lazy fallback unit of `^` and COND clause separators change
+            // The lazy fallback unit of `OR-NIL` and COND clause separators change
             // heights along a path the linear walk cannot follow.
             Token::NilCoalesce | Token::CondClauseSep => self.degrade(),
             _ => {}

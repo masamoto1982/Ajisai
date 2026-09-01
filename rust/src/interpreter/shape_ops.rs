@@ -300,7 +300,7 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
 
     // The same space water level `RANGE` and `FILL` observe: a well-formed
     // request that cannot be materialized within budget projects onto NIL
-    // with reason `spaceExhausted`, recoverable with `^`, rather than driving
+    // with reason `spaceExhausted`, recoverable with `OR-NIL`, rather than driving
     // the host into an allocation failure.
     if count as usize > interp.runtime_limits.max_materialized_elements {
         if keep {
@@ -350,7 +350,7 @@ mod tests {
     /// requires of every Word that declares a projection condition. `RANDOM`
     /// projects past the space water level, as `RANGE` and `FILL` do: a count
     /// the host cannot materialize is a well-formed request rather than a
-    /// malformed one, so it projects onto NIL and stays recoverable with `^`.
+    /// malformed one, so it projects onto NIL and stays recoverable with `OR-NIL`.
     #[tokio::test]
     async fn random_projects_past_the_space_water_level() {
         let mut interp = Interpreter::new();

@@ -558,7 +558,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Control directive that inspects the stack top. If the top is non-NIL it is kept and the following source unit is skipped UNEVALUATED. If the top is NIL it is discarded and the following source unit is evaluated as the fallback. The fallback is the source that follows the directive, not a value already on the stack.",
         stack_effect: "top non-NIL: keeps top, skips next source unit unevaluated; top NIL: discards top, evaluates next source unit as fallback",
         hover_summary: "OR-NIL — lazy NIL-coalescing fallback",
-        hover_syntax: "NIL ^ [ 0 ]",
+        hover_syntax: "NIL OR-NIL [ 0 ]",
     },
     GeneratedCoreWordDoc {
         name: "KEEP",

@@ -92,20 +92,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         kind: CoreWordAliasKind::InputHelper,
         summary: "Insert quoted word marker",
     },
-    CoreWordAlias {
-        alias: "^",
-        canonical: Some("OR-NIL"),
-        kind: CoreWordAliasKind::SyntaxSugar,
-        summary: "NIL coalescing",
-    },
-    // VENT was the canonical name before the water-metaphor decoupling; kept
-    // as a spelled alias so existing programs keep running.
-    CoreWordAlias {
-        alias: "VENT",
-        canonical: Some("OR-NIL"),
-        kind: CoreWordAliasKind::SyntaxSugar,
-        summary: "NIL coalescing (legacy spelling of OR-NIL)",
-    },
 ];
 
 pub fn lookup_core_word_alias(alias: &str) -> Option<&'static CoreWordAlias> {

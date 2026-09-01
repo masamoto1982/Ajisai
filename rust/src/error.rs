@@ -42,7 +42,7 @@ pub enum NilReason {
     /// result would exceed the space water level (`max_materialized_elements`).
     /// The NIL Projection Rule projects this to NIL with `absence.origin = spaceBudget`
     /// (SPEC §11.2) rather than aborting the process, so a pipeline can
-    /// recover it with `^` (OR-NIL). Malformed inputs (an infinite `RANGE`, a
+    /// recover it with `OR-NIL`. Malformed inputs (an infinite `RANGE`, a
     /// non-conforming `RESHAPE`) remain ordinary errors.
     SpaceExhausted,
     /// A well-formed operation applied to an input outside its domain — the

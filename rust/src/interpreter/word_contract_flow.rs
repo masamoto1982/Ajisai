@@ -23,15 +23,16 @@
 //! already does, and updates the height only at depth zero, where the tokens
 //! really are code.
 //!
-//! # Why `^` and `|` give up rather than guess
+//! # Why `OR-NIL` and `|` give up rather than guess
 //!
-//! `^` (OR-NIL) and `|` (the COND clause separator) select between paths whose
+//! `OR-NIL` and `|` (the COND clause separator) select between paths whose
 //! stack heights genuinely differ, so no single fixed arity describes them.
-//! Measured: `2 3 1 0 DIV ^ ADD` leaves one value (the NIL is dropped and the
-//! fallback unit `ADD` runs), while `2 3 4 2 DIV ^ ADD` leaves three (the
-//! value stands and the fallback unit is skipped). The old walk ignored both
-//! tokens outright and counted the fallback unit as an unconditional push, so
-//! `1 0 DIV ^ 9` inferred `( 0 -- 2 )` for a body that leaves one value.
+//! Measured: `2 3 1 0 DIV OR-NIL ADD` leaves one value (the NIL is dropped and
+//! the fallback unit `ADD` runs), while `2 3 4 2 DIV OR-NIL ADD` leaves three
+//! (the value stands and the fallback unit is skipped). The old walk ignored
+//! both tokens outright and counted the fallback unit as an unconditional
+//! push, so `1 0 DIV OR-NIL 9` inferred `( 0 -- 2 )` for a body that leaves
+//! one value.
 //!
 //! `Dynamic` is the honest answer, but `Dynamic` alone still licenses a hard
 //! error against a declared fixed arity. So the two cases are kept apart:

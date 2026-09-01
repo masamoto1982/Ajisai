@@ -70,7 +70,7 @@ mod contract_decl_tests {
 
     #[test]
     fn or_nil_reports_the_unmodelled_control_flow_gap() {
-        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
+        let source = "[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty(), "expected at least one finding");
@@ -120,7 +120,7 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_counts_add_up() {
-        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF
+        let source = "[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF
 [ 1 PRINT ] 'BAD' DEF
 [ 1 SUB ] 'GOOD' DEF
 #:contract FALLBACK ( 0 -- 1 )
@@ -141,7 +141,7 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_key_order_is_stable() {
-        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF
+        let source = "[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF
 [ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ INNER ] 'CALLER' DEF
 #:contract FALLBACK ( 0 -- 1 )
@@ -181,7 +181,7 @@ mod contract_decl_tests {
 
     #[test]
     fn unverifiable_declaration_is_a_nil_with_a_reason() {
-        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
+        let source = "[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
         assert_eq!(decls["declarations"][0]["word"], "FALLBACK");
@@ -216,7 +216,7 @@ mod contract_decl_tests {
     #[test]
     fn nil_dominates_value_in_the_fold() {
         // FALLBACK is unverifiable (nil); GOOD verifies cleanly (value).
-        let source = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF
+        let source = "[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF
 [ 1 SUB ] 'GOOD' DEF
 #:contract FALLBACK ( 0 -- 1 )
 #:contract GOOD ( 1 -- 1 ) pure nil-free";
@@ -237,7 +237,7 @@ mod contract_decl_tests {
     /// that — only a proven `error` does.
     #[test]
     fn outcome_does_not_change_the_exit_code() {
-        let nil_only = "[ 1 0 DIV ^ 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
+        let nil_only = "[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF\n#:contract FALLBACK ( 0 -- 1 )";
         assert_eq!(exit_code(nil_only), 0, "cannot-verify must not fail check");
 
         let with_error = "[ 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";

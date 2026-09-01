@@ -11,7 +11,7 @@
 //! Phase 3 of the structural-memory-safety roadmap turns the *space-budget*
 //! miss of the generative words — a well-formed input whose materialized result
 //! exceeds the ceiling — into a diagnosable projected NIL (reason
-//! `SpaceExhausted`) that a pipeline can recover with `^` (OR-NIL), rather than
+//! `SpaceExhausted`) that a pipeline can recover with `OR-NIL`, rather than
 //! a channel error. `RESHAPE`'s over-limit case is a shape *mismatch*
 //! (malformed), so it remains an ordinary error.
 
@@ -48,7 +48,9 @@ mod materialization_limit_tests {
         // The whole point of a projected NIL over an error: a pipeline can
         // recover it.
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 0 9999999999999 ] RANGE ^ [ 42 ]").await;
+        let result = interp
+            .execute("[ 0 9999999999999 ] RANGE OR-NIL [ 42 ]")
+            .await;
         assert!(
             result.is_ok(),
             "OR-NIL must recover the space-exhausted NIL: {result:?}"

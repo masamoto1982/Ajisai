@@ -580,7 +580,7 @@
                     <h4>3. 大きなコレクションの省略表示</h4>
                     <p class="ref-note">コレクションの要素数が非常に多い場合、Stack領域には先頭部分のみが描画され、末尾に<em>…あと199900件</em>のようなマーカーが付与されます。このマーカーは画面描画上の都合による注記であり、内部データが切り詰められているわけではありません。スタック上のコレクション自体は完全な状態で保持されており、すべてのワードはデータ全体を参照します。<code>LENGTH</code>も実際の要素数を返します。</p>
                     <h4>4. 記号・トークンの表記</h4>
-                    <p>本書の本文中で灰色の背景が付いているテキストは、すべてAjisaiのトークンを表します。灰色の背景は、その表記が地の文ではなくプログラムコードの一部であることを示しています。なお記号のトークンは、すべて特定のワードの別表記です。<code>+</code>は<code>ADD</code>、<code>^</code>は<code>OR-NIL</code>にあたります。<code>OR-NIL</code>には<code>VENT</code>という綴りもあり、どちらを書いても同じワードです。</p>
+                    <p>本書の本文中で灰色の背景が付いているテキストは、すべてAjisaiのトークンを表します。灰色の背景は、その表記が地の文ではなくプログラムコードの一部であることを示しています。なお記号のトークンは、すべて特定のワードの別表記です。<code>+</code>は<code>ADD</code>にあたります。</p>
                 </section>
 
                 <section id="tokens" class="ref-page">
@@ -957,7 +957,7 @@
                         </div>
                     </div>
                     <h3>代わりの値を与える: <code>OR-NIL</code></h3>
-                    <p><code>OR-NIL</code>(<code>^</code>、<code>VENT</code>とも綴る)は、最上位の値が泡のときだけ代わりの値を与えます。この代わりの値は<code>^</code>の直後に書かれたソースそのものであり、あらかじめスタックに積んでおいた値ではありません。最上位が泡でなければ<em>評価すらされずに読み飛ばされる</em>ので、重い処理や副作用のある式を書いても、実際に泡が出たときにしか実行されません。</p>
+                    <p><code>OR-NIL</code>は、最上位の値が泡のときだけ代わりの値を与えます。この代わりの値は<code>OR-NIL</code>の直後に書かれたソースそのものであり、あらかじめスタックに積んでおいた値ではありません。最上位が泡でなければ<em>評価すらされずに読み飛ばされる</em>ので、重い処理や副作用のある式を書いても、実際に泡が出たときにしか実行されません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -966,9 +966,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 / ^ 99</code></td>
+                                    <td><code>1 0 / OR-NIL 99</code></td>
                                     <td><code>99/1</code></td>
-                                    <td class="notes"><code>OR-NIL</code>(<code>^</code>)は泡を代わりの値に置き換える。</td>
+                                    <td class="notes"><code>OR-NIL</code>は泡を代わりの値に置き換える。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -985,7 +985,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>7 2 / ^ 99</code></td>
+                                    <td><code>7 2 / OR-NIL 99</code></td>
                                     <td><code>7/2</code></td>
                                     <td class="notes">結果が実際の値であるとき、フォールバックは使われない。</td>
                                 </tr>
@@ -1330,7 +1330,7 @@
                                 <tr>
                                     <td><code>1 0 DIV TRUE AND</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">左のオペランドが泡になったので、その不在が結果まで伝わる。必要な箇所で<code>^</code>を使って回復させる。</td>
+                                    <td class="notes">左のオペランドが泡になったので、その不在が結果まで伝わる。必要な箇所で<code>OR-NIL</code>を使って回復させる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2191,7 +2191,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">泡なので、<code>^</code>(<code>OR-NIL</code>)で代わりの値に差し替えて先へ進めます。<code>[ 0 999999999999 ] RANGE ^ [ ]</code>は空ベクトルへ回復します。決壊にはこの回復手段がありません。</p>
+                    <p class="ref-note">泡なので、<code>OR-NIL</code>で代わりの値に差し替えて先へ進めます。<code>[ 0 999999999999 ] RANGE OR-NIL [ ]</code>は空ベクトルへ回復します。決壊にはこの回復手段がありません。</p>
                 </section>
 
                 <section id="words" class="ref-page">

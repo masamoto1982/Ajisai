@@ -850,7 +850,7 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 
 ## `OR-NIL`
 
-Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. Also spelled VENT for backward compatibility.
+Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
@@ -859,8 +859,7 @@ Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `NIL ^ [ 0 ]`
-- **Aliases:** `^`, `VENT`
+- **Syntax:** `NIL OR-NIL [ 0 ]`
 - **ERROR conditions:** `missingFollowingSourceUnit`
 
 ## `KEEP`

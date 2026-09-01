@@ -28,7 +28,7 @@ reaching for it exactly where it would have helped. The 65 Words are:
 | collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `ANY` `ALL` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
-| absence | `NIL` `NIL?` `NIL-REASON` `OR-NIL` (`^`) |
+| absence | `NIL` `NIL?` `NIL-REASON` `OR-NIL` |
 | naming, control, output | `DEF` `BIND` `DEL` · `COND` `EXEC` · `PRINT` `KEEP` |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
@@ -94,10 +94,10 @@ call still succeeds:
 ```
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
-and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with `^`:
+and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with `OR-NIL`:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-[ 1 ] [ 0 ] / ^ [ 99 ]
+[ 1 ] [ 0 ] / OR-NIL [ 99 ]
 ```
 
 ## 4. Exact arithmetic: what to read, and what not to
@@ -259,7 +259,7 @@ pushes `NIL` (reason: `divisionByZero`). The projection is recorded in
 `errorFlowTrace` as a `nilProduced` event with a full diagnosis, and the NIL
 value itself carries `semantics.absence.reason` on the stack.
 
-- Provide a fallback with `^`: `[ 1 ] [ 0 ] DIV ^ [ 99 ]` → stack `[ 99/1 ]`.
+- Provide a fallback with `OR-NIL`: `[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]` → stack `[ 99/1 ]`.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field
@@ -455,7 +455,7 @@ no module system and nothing to import.
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
-| `OR-NIL` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
+| `OR-NIL` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL OR-NIL [ 0 ]` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
@@ -473,8 +473,6 @@ no module system and nothing to import.
 | `>=` | symbol alias | shorthand for `GTE` |
 | `!=` | symbol alias | shorthand for `NEQ` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
-| `^` | syntax sugar | shorthand for `OR-NIL` |
-| `VENT` | syntax sugar | shorthand for `OR-NIL` |
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
 | `\|` | control directive | COND-CLAUSE — only inside the construct that defines it |
 | `IDLE` | control directive | COND-ELSE-GUARD — only inside the construct that defines it |

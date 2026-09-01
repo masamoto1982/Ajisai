@@ -257,7 +257,7 @@ impl CostSim {
 
     pub(crate) fn feed_structural(&mut self, token: &Token) {
         match token {
-            // `^` and `|` branch along a path this linear walk cannot
+            // `OR-NIL` and `|` branch along a path this linear walk cannot
             // follow, exactly as `SpaceSim::feed_structural` treats them.
             Token::NilCoalesce | Token::CondClauseSep => {
                 self.bound.join(CostBound::CONSERVATIVE);

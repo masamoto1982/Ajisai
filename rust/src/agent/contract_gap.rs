@@ -22,7 +22,7 @@
 //! constructs it cannot model (`word_contract_flow.rs`):
 //!
 //!  * the body reaches a control directive whose paths differ in stack height
-//!    (`^`, `|`), or an unbalanced `[`/`{` delimiter, so no fixed arity
+//!    (`OR-NIL`, `|`), or an unbalanced `[`/`{` delimiter, so no fixed arity
 //!    describes it (`UnmodelledControlFlow`).
 //!
 //! It earns an id of its own rather than being folded into `ConservativeSeed`

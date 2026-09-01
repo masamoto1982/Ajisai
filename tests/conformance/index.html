@@ -293,7 +293,7 @@
 
 <section class="ajisai-case" id="core-or-nil-fallback" data-category="core">
   <h3>OR-NIL turns a division-by-zero Bubble into a fallback</h3>
-  <pre class="ajisai-source">1 0 / ^ 99</pre>
+  <pre class="ajisai-source">1 0 / OR-NIL 99</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -516,60 +516,36 @@
      here. Categorized hosted: the Core-only reference interpreter does not
      implement the (Quarantined) child-runtime words. -->
 
-<!-- OR-NIL (^, legacy spelling VENT) is a lazy control directive (Section 6.4):
-     a non-NIL top is kept and the following source unit is skipped unevaluated;
-     a NIL top is discarded and the following unit is evaluated as the fallback. -->
+<!-- OR-NIL is a lazy control directive (Section 6.4): a non-NIL top is kept
+     and the following source unit is skipped unevaluated; a NIL top is discarded
+     and the following unit is evaluated as the fallback. It has no symbol or
+     legacy-name sugar: OR-NIL is the sole spelling. -->
 
 <section class="ajisai-case" id="core-or-nil-nonnil-keeps-top" data-category="core">
   <h3>OR-NIL keeps a non-NIL top and skips the fallback token</h3>
-  <pre class="ajisai-source">5 ^ 99</pre>
+  <pre class="ajisai-source">5 OR-NIL 99</pre>
   <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-or-nil-nonnil-fallback-unevaluated" data-category="core">
   <h3>OR-NIL does not evaluate the fallback when the top is non-NIL</h3>
-  <pre class="ajisai-source">5 ^ UNDEFINED-FALLBACK</pre>
+  <pre class="ajisai-source">5 OR-NIL UNDEFINED-FALLBACK</pre>
   <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-or-nil-one-token-skip-trap" data-category="core">
   <h3>OR-NIL skips exactly one source token (multi-token fallback trap)</h3>
-  <pre class="ajisai-source">1 ^ 2 3 ADD</pre>
+  <pre class="ajisai-source">1 OR-NIL 2 3 ADD</pre>
   <pre class="ajisai-expect-result">4/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- The spelled-out canonical name `OR-NIL`, and its legacy `VENT` spelling,
-     are the same lazy control directive as the `^` sugar (Section 6.4): same
-     token, same result. -->
-
-<section class="ajisai-case" id="core-or-nil-spelled-out-keeps-top" data-category="core">
-  <h3>Spelled-out OR-NIL keeps a non-NIL top, identical to the ^ sugar</h3>
-  <pre class="ajisai-source">5 OR-NIL 99</pre>
-  <pre class="ajisai-expect-result">5/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-or-nil-spelled-out-fallback-unevaluated" data-category="core">
-  <h3>Spelled-out OR-NIL does not evaluate the fallback when the top is non-NIL</h3>
-  <pre class="ajisai-source">5 OR-NIL UNDEFINED-FALLBACK</pre>
-  <pre class="ajisai-expect-result">5/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-or-nil-spelled-out-nil-fallback" data-category="core">
-  <h3>Spelled-out OR-NIL evaluates the fallback on a NIL top</h3>
+<section class="ajisai-case" id="core-or-nil-nil-fallback" data-category="core">
+  <h3>OR-NIL evaluates the fallback on a NIL top</h3>
   <pre class="ajisai-source">NIL OR-NIL 99</pre>
   <pre class="ajisai-expect-result">99/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-or-nil-legacy-vent-spelling-keeps-top" data-category="core">
-  <h3>Legacy spelled-out VENT keeps a non-NIL top, identical to OR-NIL</h3>
-  <pre class="ajisai-source">5 VENT 99</pre>
-  <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -933,7 +909,7 @@
 
 <section class="ajisai-case" id="core-logic-unknown-is-or-niled" data-category="core">
   <h3>OR-NIL recovers an UNKNOWN, like any other absence</h3>
-  <pre class="ajisai-source">TRUE NIL AND ^ 99</pre>
+  <pre class="ajisai-source">TRUE NIL AND OR-NIL 99</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1447,7 +1423,7 @@
 
 <section class="ajisai-case" id="core-or-nil-group-skip-atomic" data-category="core">
   <h3>OR-NIL skips one balanced [ ] group atomically on a non-NIL top (§6.4 example)</h3>
-  <pre class="ajisai-source">1 ^ [ 2 3 ADD ]</pre>
+  <pre class="ajisai-source">1 OR-NIL [ 2 3 ADD ]</pre>
   <pre class="ajisai-expect-result">1/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>

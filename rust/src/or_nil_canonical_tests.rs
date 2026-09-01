@@ -1,15 +1,14 @@
-//! CS2: `OR-NIL` canonical-name ↔ sugar unification.
+//! CS2: `OR-NIL` behavior pinning.
 //!
-//! SPEC §6.4: `OR-NIL` (sugar `^`, legacy spelling `VENT`) is a *lazy*
-//! NIL-coalescing control directive — if the stack top is non-NIL it is kept
-//! and the following source unit is skipped unevaluated; if it is NIL the top
-//! is discarded and the following unit is evaluated as the fallback.
+//! SPEC §6.4: `OR-NIL` is a *lazy* NIL-coalescing control directive — if the
+//! stack top is non-NIL it is kept and the following source unit is skipped
+//! unevaluated; if it is NIL the top is discarded and the following unit is
+//! evaluated as the fallback. It has no symbol or legacy-name sugar: `^` and
+//! `VENT` (the former canonical spelling) are ordinary, unrecognized names.
 //!
-//! The canonical spelled-out name, its sugar, and its legacy `VENT` spelling
-//! must produce the *same* token and therefore the *same* execution result.
-//! These tests lock the spellings together across the non-NIL keep/skip, the
-//! lazy (unevaluated) fallback, the NIL fallback, balanced vector/block group
-//! skips, nesting, and stack underflow.
+//! These tests lock the canonical spelling's behavior across the non-NIL
+//! keep/skip, the lazy (unevaluated) fallback, the NIL fallback, balanced
+//! vector/block group skips, nesting, stack underflow, and case folding.
 
 use crate::builtins::lookup_builtin_spec;
 use crate::coreword_registry::ExecutionForm;
@@ -39,77 +38,65 @@ fn display(stack: &[Value]) -> String {
 // --- non-NIL top: keep it, skip the following unit ------------------------
 
 #[tokio::test]
-async fn or_nil_canonical_matches_sugar_non_nil_keep() {
-    // Mirrors conformance `core-or-nil-nonnil-keeps-top`: 5 ^ 99 -> 5/1.
-    assert_eq!(display(&run_ok("5 ^ 99").await), "5/1");
+async fn or_nil_keeps_a_non_nil_top() {
+    // Mirrors conformance `core-or-nil-nonnil-keeps-top`: 5 OR-NIL 99 -> 5/1.
     assert_eq!(display(&run_ok("5 OR-NIL 99").await), "5/1");
-    assert_eq!(display(&run_ok("5 VENT 99").await), "5/1");
-    assert_eq!(run_ok("5 ^ 99").await, run_ok("5 OR-NIL 99").await);
-    assert_eq!(run_ok("5 ^ 99").await, run_ok("5 VENT 99").await);
     // Case folding: the canonical name is not case-sensitive.
     assert_eq!(run_ok("5 or-nil 99").await, run_ok("5 OR-NIL 99").await);
-    assert_eq!(run_ok("5 vent 99").await, run_ok("5 VENT 99").await);
 }
 
 #[tokio::test]
-async fn or_nil_canonical_matches_sugar_fallback_unevaluated() {
+async fn or_nil_does_not_evaluate_the_fallback_when_the_top_is_non_nil() {
     // Mirrors `core-or-nil-nonnil-fallback-unevaluated`: the fallback is skipped
     // *unevaluated*, so an undefined word there must not raise. This is the
-    // proof that the spelled-out name takes the lazy path, not a strict
-    // stack-consuming word (which would try to resolve UNDEFINED-FALLBACK).
-    assert_eq!(display(&run_ok("5 ^ UNDEFINED-FALLBACK").await), "5/1");
+    // proof that OR-NIL takes the lazy path, not a strict stack-consuming
+    // word (which would try to resolve UNDEFINED-FALLBACK).
     assert_eq!(display(&run_ok("5 OR-NIL UNDEFINED-FALLBACK").await), "5/1");
-    assert_eq!(display(&run_ok("5 VENT UNDEFINED-FALLBACK").await), "5/1");
 }
 
 #[tokio::test]
-async fn or_nil_canonical_matches_sugar_one_token_skip() {
-    // Mirrors `core-or-nil-one-token-skip-trap`: 1 ^ 2 3 ADD -> 4/1 (only the
-    // single token `2` is skipped, then `3 ADD` runs on the kept `1`).
-    assert_eq!(display(&run_ok("1 ^ 2 3 ADD").await), "4/1");
+async fn or_nil_skips_exactly_one_source_token() {
+    // Mirrors `core-or-nil-one-token-skip-trap`: 1 OR-NIL 2 3 ADD -> 4/1 (only
+    // the single token `2` is skipped, then `3 ADD` runs on the kept `1`).
     assert_eq!(display(&run_ok("1 OR-NIL 2 3 ADD").await), "4/1");
-    assert_eq!(display(&run_ok("1 VENT 2 3 ADD").await), "4/1");
 }
 
 // --- NIL top: discard it, evaluate the following unit as the fallback -----
 
 #[tokio::test]
-async fn or_nil_canonical_matches_sugar_nil_fallback() {
-    assert_eq!(display(&run_ok("NIL ^ 99").await), "99/1");
+async fn or_nil_evaluates_the_fallback_on_a_nil_top() {
     assert_eq!(display(&run_ok("NIL OR-NIL 99").await), "99/1");
-    assert_eq!(display(&run_ok("NIL VENT 99").await), "99/1");
-    assert_eq!(run_ok("NIL ^ 99").await, run_ok("NIL OR-NIL 99").await);
-    assert_eq!(run_ok("NIL ^ 99").await, run_ok("NIL VENT 99").await);
 }
 
 // --- balanced group skip (vector, block, nested) --------------------------
 
 #[tokio::test]
-async fn or_nil_canonical_skips_balanced_vector_group() {
+async fn or_nil_skips_balanced_vector_group() {
     // Mirrors `core-or-nil-group-skip-atomic`: the whole `[ ... ]` is one unit.
-    assert_eq!(display(&run_ok("1 ^ [ 2 3 ADD ]").await), "1/1");
     assert_eq!(display(&run_ok("1 OR-NIL [ 2 3 ADD ]").await), "1/1");
-    assert_eq!(display(&run_ok("1 VENT [ 2 3 ADD ]").await), "1/1");
     // A trailing unit after the skipped group still runs.
-    assert_eq!(display(&run_ok("1 ^ [ 2 3 ] 4").await), "1/1 4/1");
     assert_eq!(display(&run_ok("1 OR-NIL [ 2 3 ] 4").await), "1/1 4/1");
-    assert_eq!(display(&run_ok("1 VENT [ 2 3 ] 4").await), "1/1 4/1");
 }
 
 #[tokio::test]
-async fn or_nil_canonical_skips_nested_group_atomically() {
-    assert_eq!(display(&run_ok("1 ^ [ [ 2 ] 3 ]").await), "1/1");
+async fn or_nil_skips_nested_group_atomically() {
     assert_eq!(display(&run_ok("1 OR-NIL [ [ 2 ] 3 ]").await), "1/1");
-    assert_eq!(display(&run_ok("1 VENT [ [ 2 ] 3 ]").await), "1/1");
 }
 
-// --- stack underflow: all spellings error identically ----------------------
+// --- stack underflow --------------------------------------------------------
 
 #[tokio::test]
-async fn or_nil_canonical_matches_sugar_stack_underflow() {
-    assert!(run("^ 99").await.is_err());
+async fn or_nil_errors_on_stack_underflow() {
     assert!(run("OR-NIL 99").await.is_err());
-    assert!(run("VENT 99").await.is_err());
+}
+
+// --- ^ and VENT are ordinary, unrecognized names now -----------------------
+
+#[tokio::test]
+async fn caret_and_legacy_vent_no_longer_coalesce_nil() {
+    // Neither spelling resolves any more: both are unknown-word errors.
+    assert!(run("5 ^ 99").await.is_err());
+    assert!(run("5 VENT 99").await.is_err());
 }
 
 // --- machine-readable contract (§7.14 metadata) ---------------------------

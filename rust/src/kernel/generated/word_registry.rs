@@ -2404,7 +2404,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
     GeneratedWord {
         id: WordId::LazyNextUnitFallback,
         name: "OR-NIL",
-        aliases: &["^", "VENT"],
+        aliases: &[],
         family: Family::Absence,
         stack_inputs: Arity::Control,
         stack_outputs: Arity::Control,
