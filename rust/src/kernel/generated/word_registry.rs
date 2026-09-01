@@ -106,8 +106,6 @@ pub enum Family {
     Dictionary,
     /// `output`
     Output,
-    /// `reflection`
-    Reflection,
 }
 
 impl Family {
@@ -125,7 +123,6 @@ impl Family {
             Family::StackModifier => "stackModifier",
             Family::Dictionary => "dictionary",
             Family::Output => "output",
-            Family::Reflection => "reflection",
         }
     }
 }

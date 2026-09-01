@@ -59,7 +59,7 @@
       ]
     },
     "costAxis": {
-      "description": "One axis of a Word's charged-cost bound. `class` is a sound upper bound on how the charge grows with the Word's input; `exact` records that some contribution provably attains that class, which is what licenses a `#:contract` mismatch to be an error rather than a note.",
+      "description": "One axis of a Word's charged-cost bound. `class` is a sound upper bound on how the charge grows with the Word's input; `exact` records that some contribution provably attains that class, distinguishing a bound known to be tight from one that is merely safe.",
       "type": "object",
       "required": [
         "class",
@@ -219,8 +219,7 @@
             "absence",
             "stackModifier",
             "dictionary",
-            "output",
-            "reflection"
+            "output"
           ]
         },
         "category": {
