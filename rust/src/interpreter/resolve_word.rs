@@ -6,7 +6,7 @@ use super::Interpreter;
 
 impl Interpreter {
     /// Resolve a name against the dictionary LANG.DICTIONARY.RESOLUTION
-    /// describes: "The dictionary has two tiers. **Core** holds the 69
+    /// describes: "The dictionary has two tiers. **Core** holds the 66
     /// canonical Words and is sealed ... **User** holds definitions made by
     /// `DEF`. Resolution is a deterministic function of the normalized name and
     /// the current dictionary, and User never shadows Core." And: "Those two
