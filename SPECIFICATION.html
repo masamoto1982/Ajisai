@@ -262,7 +262,7 @@ Superseded designs, migration history, and the reasoning behind a change are rec
 Ajisai identity is the correspondence from normalized source to the ordered observation of stack, output, dictionary state, and structured diagnosis. Two implementations are semantically equivalent when that correspondence agrees for every conforming program.
 </p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>66</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>13</td><td>Alias spellings — the 12 symbolic surface forms of those Words plus <code>VENT</code>, none counted as vocabulary</td></tr><tr><td>37</td><td>Semantic Kernel Words, within the 66 — carry the language's semantic identity</td></tr><tr><td>29</td><td>Standard Words, within the 66 — carry its practical surface</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>66</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>11</td><td>Alias spellings — the 11 symbolic surface forms of those Words, none counted as vocabulary</td></tr><tr><td>37</td><td>Semantic Kernel Words, within the 66 — carry the language's semantic identity</td></tr><tr><td>29</td><td>Standard Words, within the 66 — carry its practical surface</td></tr></tbody></table></div>
 
 <p>
 Kernel and Standard are both ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
@@ -477,7 +477,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-failure-recovery">LANG.FAILURE.RECOVERY — Recovery</h3>
 
-<p><code>OR-NIL</code> is the single recovery form: a non-NIL top passes through and the following source unit is skipped; a NIL top is discarded and the following source unit is evaluated as the fallback. <code>VENT</code> is a backward-compatible spelling of the same directive.</p>
+<p><code>OR-NIL</code> is the single recovery form: a non-NIL top passes through and the following source unit is skipped; a NIL top is discarded and the following source unit is evaluated as the fallback.</p>
 
 <p>Recovery does not erase absence from already emitted output.</p>
 

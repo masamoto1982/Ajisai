@@ -322,7 +322,7 @@
       "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "NIL",
-        "VENT",
+        "OR-NIL",
         "GET",
         "REMOVE",
         "NUM",
@@ -336,7 +336,7 @@
       ],
       "can_derive": [
         "NIL",
-        "VENT",
+        "OR-NIL",
         "GET",
         "REMOVE",
         "NUM",
@@ -398,10 +398,10 @@
       "description": "Bubble/NIL handler that replaces operational absence with a fallback while preserving present values.",
       "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
-        "VENT"
+        "OR-NIL"
       ],
       "can_derive": [
-        "VENT"
+        "OR-NIL"
       ],
       "status": "accepted"
     },
@@ -3468,57 +3468,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "STRING-QUOTE"
-    },
-    {
-      "id": "alias.caret",
-      "kind": "syntax_sugar",
-      "surface": "^",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/or_nil_canonical_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for OR-NIL; the tokenizer emits the same control token for every spelling, so the three are one directive.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "OR-NIL"
-    },
-    {
-      "id": "alias.vent",
-      "kind": "syntax_sugar",
-      "surface": "VENT",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §6.4"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/src/or_nil_canonical_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-or-nil-legacy-vent-spelling-keeps-top"
-      ],
-      "status": "Formalized",
-      "notes": "Legacy spelled-out name for OR-NIL, kept as a backward-compatible alias after the water-metaphor decoupling; the tokenizer emits the same control token as OR-NIL and ^.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "OR-NIL"
     },
     {
       "id": "core.pi",

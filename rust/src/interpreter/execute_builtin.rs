@@ -362,7 +362,7 @@ impl Interpreter {
             Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::NilCoalesce => "^".to_string(),
+            Token::NilCoalesce => "OR-NIL".to_string(),
             Token::CondClauseSep => "|".to_string(),
             Token::LineBreak => "\n".to_string(),
         }

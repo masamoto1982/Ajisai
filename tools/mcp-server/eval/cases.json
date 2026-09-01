@@ -90,7 +90,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "1 0 / ^ 42"
+    "source": "1 0 / OR-NIL 42"
    },
    "expect": {
     "/status": "ok",

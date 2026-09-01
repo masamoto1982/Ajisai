@@ -59,7 +59,7 @@ pub(crate) fn suggest_words<'a>(name: &str, extra: impl Iterator<Item = &'a str>
             // different diagnosis than a spelling hint.
             continue;
         }
-        // A symbolic alias (`+`, `^`) is never a typo of an alphabetic name;
+        // A symbol (`+`, `^`) is never a typo of an alphabetic name;
         // its edit distance is small only because it is short.
         if !upper.chars().any(|c| c.is_alphanumeric()) {
             continue;

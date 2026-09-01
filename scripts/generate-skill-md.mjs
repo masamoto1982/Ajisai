@@ -325,8 +325,8 @@ function verifiedNilSection() {
   if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
   const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk('[ 1 ] [ 0 ] DIV ^ [ 99 ]');
-  if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('^ fallback must replace NIL');
+  const fallback = expectOk('[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]');
+  if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('OR-NIL fallback must replace NIL');
   return { reason: event.absence.reason, fallbackStack: fallback.stackDisplay[0] };
 }
 
@@ -402,7 +402,7 @@ pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`^\`: \`[ 1 ] [ 0 ] DIV ^ [ 99 ]\` → stack \`${nil.fallbackStack}\`.
+- Provide a fallback with \`OR-NIL\`: \`[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]\` → stack \`${nil.fallbackStack}\`.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field

@@ -240,7 +240,7 @@ Unlike LOOKUP and Reference (which always show both forms when sugar exists), ho
 | `FORC` | `! 'WORD' DEL` |
 | `LOOKUP` | `'ADD' ?` |
 | `FLOW` | `xs ~ { ... } MAP` |
-| `OR-NIL` | `NIL ^ [ 0 ]` |
+| `OR-NIL` | `NIL OR-NIL [ 0 ]` |
 | `DEF` | `{ 2 * } 'DOUBLE' DEF` |
 | `IMPORT` | `'IO' IMPORT` |
 

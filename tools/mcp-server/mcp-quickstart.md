@@ -28,7 +28,7 @@ reaching for it exactly where it would have helped. The 65 Words are:
 | collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `ANY` `ALL` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
-| absence | `NIL` `NIL?` `NIL-REASON` `OR-NIL` (`^`) |
+| absence | `NIL` `NIL?` `NIL-REASON` `OR-NIL` |
 | naming, control, output | `DEF` `BIND` `DEL` · `COND` `EXEC` · `PRINT` `KEEP` |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
@@ -94,10 +94,10 @@ call still succeeds:
 ```
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
-and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with `^`:
+and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with `OR-NIL`:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-[ 1 ] [ 0 ] / ^ [ 99 ]
+[ 1 ] [ 0 ] / OR-NIL [ 99 ]
 ```
 
 ## 4. Exact arithmetic: what to read, and what not to

@@ -286,7 +286,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             // whose element product exceeds the space water level (or overflows
             // `usize`) is a well-formed operation that cannot materialize within
             // budget. The NIL Projection Rule projects it onto a diagnosable NIL
-            // (reason `spaceExhausted`), recoverable with `^` (OR-NIL), instead of
+            // (reason `spaceExhausted`), recoverable with `OR-NIL`, instead of
             // a channel error. Under KEEP the operands are retained as on the
             // success path.
             if interp.consumption_mode == ConsumptionMode::Keep {

@@ -185,29 +185,32 @@ mod comment_newline_absorption {
 }
 
 // AQ-VER-002-D
-// DUT: rust/src/tokenizer.rs `parse_token_from_single_char`
+// DUT: rust/src/tokenizer.rs `parse_control_directive_word`
 //
-//     '^' => Some((Token::NilCoalesce, 1)),
-//
-// `^` (OR-NIL) is the one single-character alias with its own token, and `=` is an
-// unconditional single-char `EQ` Symbol with no lookahead. We cover the
-// single-char branch plus the bare `=` Symbol.
+// `OR-NIL` has no symbol sugar: it is a spelled-out control directive
+// recognized only by its bare word, case-folded (SPEC §6.4). `^` and `~`
+// carry no meaning of their own, so both are ordinary Symbols the dictionary
+// does not have. `=` is an unconditional single-char `EQ` Symbol with no
+// lookahead. We cover that boundary plus the bare `=` Symbol.
 mod single_char_aliases {
     use super::*;
 
+    /// `^` used to be `OR-NIL`'s sugar; it now carries no meaning of its own,
+    /// so it is an ordinary Symbol the dictionary does not have — not a token
+    /// of its own, and not a word that silently does nothing.
     #[test]
-    fn aq_ver_002_d_caret_is_nilcoalesce() {
+    fn aq_ver_002_d_caret_is_an_ordinary_symbol() {
         let tokens = tokenize("a ^ b").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::NilCoalesce, sym("b")]);
+        assert_eq!(tokens, vec![sym("a"), sym("^"), sym("b")]);
     }
 
     /// A symbol obeys the same boundary rule as a word: only whitespace, a
     /// structural delimiter or a comment start ends a token, so `^` glued to a
-    /// name is part of that name rather than a directive of its own.
+    /// name is part of that name rather than a symbol of its own.
     #[test]
     fn aq_ver_002_d_caret_needs_surrounding_whitespace() {
         assert_eq!(tokenize("a^b").unwrap(), vec![sym("a^b")]);
-        assert_eq!(tokenize("[ a ]^").unwrap()[3], Token::NilCoalesce);
+        assert_eq!(tokenize("[ a ]^").unwrap()[3], sym("^"));
     }
 
     /// `~` carries no meaning, so it is an ordinary Symbol the dictionary does

@@ -15,10 +15,10 @@
     "semanticKernelWords": 37,
     "standardWords": 29,
     "corewords": 66,
-    "aliases": 13,
+    "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 10,
-    "manifestEntries": 90
+    "manifestEntries": 88
   },
   "entries": [
     {
@@ -1383,34 +1383,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "STRING-QUOTE",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.caret",
-      "kind": "syntax_sugar",
-      "surface": "^",
-      "canonical": "OR-NIL",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.caret",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "OR-NIL",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.vent",
-      "kind": "syntax_sugar",
-      "surface": "VENT",
-      "canonical": "OR-NIL",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.vent",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "OR-NIL",
       "classification": "Surface"
     },
     {
