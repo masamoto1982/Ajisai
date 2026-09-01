@@ -8,7 +8,9 @@
 //
 // Deliberately the same ranking rules as the engine's: distance ceiling by
 // name length, at most three suggestions, ties broken alphabetically so the
-// same misspelling always produces the same list.
+// same misspelling always produces the same list. word-candidates.test.js
+// runs both this and the real engine over the same inputs and asserts they
+// agree, so this is not just a claim of agreement — it is checked.
 
 const MAX_CANDIDATES = 3;
 

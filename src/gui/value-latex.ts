@@ -17,8 +17,7 @@ const MAX_MATH_LANES = 64;
 const INTEGER_PATTERN = /^-?\d+$/;
 
 // Digit count at which a numerator or denominator stops being readable as
-// a digit string and the math view switches to scientific notation. Same
-// threshold as the text renderer's `formatFractionScientific`.
+// a digit string and the math view switches to scientific notation.
 const SCIENTIFIC_DIGIT_THRESHOLD = 10;
 const MANTISSA_DIGITS = 6;
 
