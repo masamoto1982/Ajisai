@@ -29,11 +29,7 @@ fn aq_ver_contract_a_every_word_has_contract_metadata() {
         assert!(
             matches!(
                 word.safety_level,
-                SafetyLevel::A
-                    | SafetyLevel::B
-                    | SafetyLevel::C
-                    | SafetyLevel::D
-                    | SafetyLevel::Quarantined
+                SafetyLevel::A | SafetyLevel::B | SafetyLevel::D
             ),
             "{} must declare safety_level",
             word.name
@@ -193,12 +189,12 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
 }
 
 #[test]
-fn aq_ver_contract_c_effectful_words_have_d_or_quarantined_safety() {
+fn aq_ver_contract_c_effectful_words_have_d_safety() {
     let registry = get_builtin_word_registry();
     for word in registry.iter().filter(|w| w.purity == Purity::Effectful) {
         assert!(
-            matches!(word.safety_level, SafetyLevel::D | SafetyLevel::Quarantined),
-            "{} effectful words must have safety_level D or Quarantined, got {:?}",
+            matches!(word.safety_level, SafetyLevel::D),
+            "{} effectful words must have safety_level D, got {:?}",
             word.name,
             word.safety_level
         );
@@ -211,8 +207,7 @@ fn aq_ver_contract_e_builtin_spec_stability_matches_safety_level() {
     // with the §7.14 contract metadata declared on each `BuiltinSpec`.
     // The mapping is:
     //   safety_level A or B          -> "stable"
-    //   safety_level C, D, or
-    //   Quarantined                  -> "experimental"
+    //   safety_level D                -> "experimental"
     // This test catches drift between BuiltinSpec.stability and the
     // registry contract.
     for spec in crate::builtins::builtin_specs() {
@@ -220,7 +215,7 @@ fn aq_ver_contract_e_builtin_spec_stability_matches_safety_level() {
             .unwrap_or_else(|| panic!("{} must be in registry", spec.name));
         let expected = match meta.safety_level {
             SafetyLevel::A | SafetyLevel::B => "stable",
-            SafetyLevel::C | SafetyLevel::D | SafetyLevel::Quarantined => "experimental",
+            SafetyLevel::D => "experimental",
         };
         assert_eq!(
             spec.stability, expected,

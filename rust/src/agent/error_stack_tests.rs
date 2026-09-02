@@ -80,7 +80,6 @@ mod error_stack_tests {
         // Dropping the slot outright would renumber everything above it and
         // silently move whatever a diagnosis points at.
         assert_eq!(stack[0]["type"], "vector", "the domain is still named");
-        assert_eq!(stack[0]["semantics"]["shape"], "vector");
         assert!(stack[0]["value"].is_null(), "the value is what goes");
         assert_eq!(stack[0]["elided"]["reason"], "errorStackBudget");
         // The block that was applied is small, so it is still there in full:
@@ -173,7 +172,7 @@ mod error_stack_tests {
              missing silently"
         );
         assert_eq!(
-            elided["semantics"]["semanticKind"], "number",
+            elided["type"], "number",
             "what kind of value it was still survives"
         );
     }

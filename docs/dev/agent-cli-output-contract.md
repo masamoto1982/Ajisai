@@ -309,7 +309,7 @@ dropped.
   "type": "vector",
   "value": null,
   "displayHint": "unassigned",
-  "semantics": { "shape": "vector", "semanticKind": "collection" },
+  "semantics": {},
   "elided": { "reason": "errorStackBudget", "approxBytes": 27178011, "elements": 100000 }
 }
 ```

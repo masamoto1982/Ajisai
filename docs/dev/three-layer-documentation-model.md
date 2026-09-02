@@ -309,7 +309,7 @@ The current codebase already passes `BuiltinSpec` through the WASM boundary (see
 `stability` must mirror the contract entry from SPECIFICATION.html §7.14 (`partiality`, `nil_policy`, `safety_level`). The recommended display rule:
 
 - `stable` ⇔ §7.14 says `safety_level: A` or `B` and the word is not deprecated.
-- `experimental` ⇔ `safety_level: C` or `D`.
+- `experimental` ⇔ `safety_level: D`.
 - `deprecated` ⇔ explicit deprecation flag.
 
 A consistency test in `rust/src/interpreter/` should fail if `BuiltinSpec.stability` and the registry contract disagree.

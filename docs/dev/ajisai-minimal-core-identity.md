@@ -1,10 +1,11 @@
 # Ajisai Minimal Core — 幹を定める、亜種を生む前に
 
-> Status: **Non-canonical / 設計メモ（§2.2）.** 本書は言語意味論を一切定義しない。
+> Status: **Non-canonical / 設計メモ.** 本書は言語意味論を一切定義しない。
 > 正典は `SPECIFICATION.html` のみ。本書は「Ajisai の *同一性* をどの語・どの法則が
 > 担うのか」を切り分け、`Ajisai Minimal Core` を宣言するための手続き文書である。
-> 関連正典: `SPECIFICATION.html` §2.1（正典順位）・§7（Core Words）・§9.3（辞書語彙階層）・
-> "Conformance and Identity"。
+> 関連正典: `spec/language-semantics.md`（正典順位は LANG.AUTHORITY.SOURCES）。
+> Core Words の契約定義・辞書語彙階層（core/module/alias/surface）は
+> `SPECIFICATION.html` と `docs/word-manifest.json` に委ねる。
 > 関連データ: `docs/formalization-coverage.json`（30 代数プリミティブ・213 エントリ）・
 > `docs/primitive-test-map.json`・`docs/word-manifest.json`。
 > 関連設計メモ: `docs/dev/ajisai-mathematical-formalization.md`（denotational/algebraic

@@ -266,35 +266,15 @@ pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
     Json::Object(obj)
 }
 
-/// JSON rendering of the per-value `semantics` block — mirrors
-/// `value_semantics_to_js` at the WASM boundary.
+/// JSON rendering of the per-value `semantics` block — the native mirror of
+/// `value_semantics_to_js` at the WASM boundary; the two now emit the exact
+/// same field set.
 pub(super) fn semantics_json(value: &Value, effective: Interpretation) -> Json {
     let mut obj = Map::new();
-    obj.insert(
-        "semanticKind".into(),
-        json!(value.semantic_kind().as_protocol_str()),
-    );
-    obj.insert("shape".into(), json!(value.shape_kind().as_protocol_str()));
     let truth = value.truth_value_for_role(effective);
     if let Some(truth) = truth {
         obj.insert("truthValue".into(), json!(truth));
     }
-    let mut capabilities: Vec<&'static str> = Vec::new();
-    let mut has_truth_valued = false;
-    for capability in value.capabilities() {
-        if capability == crate::semantic::Capability::TruthValued {
-            has_truth_valued = true;
-        }
-        capabilities.push(capability.as_protocol_str());
-    }
-    // A value rendered under the TruthValue role advertises `truthValued`
-    // even when the role lives in the semantic plane (comparison/logic
-    // booleans), not on the value's own hint.
-    if truth.is_some() && !has_truth_valued {
-        capabilities.push(crate::semantic::Capability::TruthValued.as_protocol_str());
-    }
-    obj.insert("capabilities".into(), json!(capabilities));
-    obj.insert("origin".into(), json!(value.origin().as_protocol_str()));
     if let Some(absence) = value.normalized_absence_metadata() {
         obj.insert("absence".into(), absence_json(&absence));
     }
