@@ -17,7 +17,9 @@ defines Ajisai semantics — not `docs/dev/`, not `CLAUDE.md`.
 
 Work one phase to a clean, tested, committed state before starting the
 next. Each phase's fixes get their own PR (small, verifiable diffs beat
-one large one — see PRs #1604-#1608 for the shape this takes in practice).
+one large one — see PRs #1604-#1611 for the shape this takes in
+practice). The same reasoning applies *inside* a phase, between one
+finding and the next: see "Scope discipline" under Phase 4.
 
 ## Phase 1 — spec-internal consistency
 
@@ -62,7 +64,46 @@ again.
 
 Verify: `npm run check` (tsc), `npm run lint`, `npm run deadcode`, full
 `npm test` (vitest), `cargo fmt --check`, `cargo clippy --all-targets --
--D warnings`, `cargo test --all-targets`.
+-D warnings`, `cargo test --all-targets` — and, whenever the finding was
+"the same fact in two copies", the suite that actually runs both copies
+and compares them (`npm run test:mcp-backends`, i.e.
+`tools/mcp-server/backend/parity-test.js`, native CLI vs. WASM worker).
+The rest of the matrix only proves each copy self-consistent.
+
+### Regenerate every checked-in artifact your change is upstream of
+
+Most generated artifacts here are hard-gated by a `--check` mode on their
+own generator — `word-registry:check` covers `rust/src/kernel/generated/`,
+and `word:manifest:check`, `word:reference:check`, `core-word-docs:check`,
+`semantics:table:check`, `semantic-kernel:check` cover the rest — so
+running the `*:check` matrix is enough for those. The dangerous class is
+any checked-in artifact whose freshness gate is **advisory or missing**:
+nothing in the normal matrix rebuilds it, so its staleness is invisible
+by construction, and no amount of green output rules it out.
+
+In this repo that class is exactly the two committed wasm-pack bundles,
+`src/wasm/generated/` and `tools/mcp-server/wasm/generated/` (built by
+`npm run build:wasm` / `npm run build:mcp-wasm`). CI's two "Detect stale
+committed wasm bundle (advisory)" steps in `.github/workflows/test.yml`
+are `continue-on-error: true` on purpose.
+
+So before calling a phase done: list every checked-in artifact that is a
+deterministic build product of a file in your diff — compiled binary,
+generated bundle, lockfile, golden snapshot — and if its gate is
+advisory, regenerate it yourself and commit whatever the diff shows.
+
+Two independently stale copies agree with each other, which is why the
+suite stays green until one of them is fixed. PR #1611 trimmed four dead
+JSON fields (`semanticKind`/`shape`/`capabilities`/`origin`) out of the
+CLI's `rust/src/agent/report.rs::semantics_json` to match the WASM
+boundary, whose own source comment already called them "the retired
+HostProtocolV1... no reader ever consulted them". Every command above
+passed locally. The committed `.wasm` binaries had been stale since
+*before* that PR, and the parity test had been passing only because the
+untrimmed CLI emitted the same dead fields as the untrimmed binary.
+Fixing the live side is what exposed the binary's own drift — in CI, not
+locally. `npm run build:wasm && npm run build:mcp-wasm`, commit the
+regenerated bundles.
 
 ## Phase 3 — spec vs. implementation
 
@@ -92,6 +133,11 @@ something no consumer reads yet (see host-protocol-v2's postmortem in
 a real build first (`grep -rl` for the module's own name/type across the
 whole repo; a serializer nothing calls is not "the protocol" no matter
 how complete its schema is).
+
+Verify: Phase 1's and Phase 2's matrices both, since a Phase 3 fix moves
+one side toward the other and can break either — including Phase 2's
+artifact regeneration, because a reconciliation that edits Rust source
+leaves the committed `.wasm` bundles behind until they are rebuilt.
 
 ## Phase 4 — delete what turns out to be one-sided
 
@@ -129,6 +175,40 @@ Once Phase 3's reconciliation lands and every remaining gate is green:
      though it looks like a one-off report at a glance. Check references
      before assuming a memo is safe to delete.
 
+### Scope discipline — a finding is not a license to keep pulling
+
+Tracing one dead thing reliably surfaces another. When it does, judge
+whether the second finding is the *same* finding seen from another angle
+or a structurally different one — a different subsystem, a different file
+class (a CI-gated data file, a `spec/` source, a formalization section),
+or something that would need its own multi-file sweep beyond the one
+you're in. If it's structurally different: **stop, leave it untouched,
+and name it explicitly as a follow-up** in the PR description, for a
+separate decision and its own round. That is the same escalation Phase 3
+already prescribes for a spec-disagrees-with-itself finding with no
+conformance pin — hand it to human judgment rather than settle it
+mid-pass.
+
+This is scope discipline, not caution. Small, single-purpose diffs are
+the entire reason for working in phases and per-finding PRs; a deletion
+that grows while you write it can no longer be reviewed against a stated
+scope, and the "while I was in there" edits are the ones that read as
+unexplained later.
+
+PR #1611 hit this: while confirming `rust/src/agent/contract_linearity.rs`
+was vestigial (keyed on `SPAWN`/`AWAIT`/`STATUS`/`KILL`/`MONITOR`/
+`SUPERVISE`, none of which are in the current 66-word vocabulary), it
+became clear the same surface is also the subject of an entire section
+(§9-septies) of `docs/dev/ajisai-mathematical-formalization.md`, marked
+`HOLDS` and citing `rust/tests/child_runtime_laws.rs` — a file that does
+not exist — while the CI-gated `docs/formalization-coverage.json`
+correctly classifies that surface as `"Exploratory"`. A real Phase 1
+contradiction and a Phase 4 candidate, but a much larger and differently
+shaped one. It was left untouched and named as a follow-up finding in the
+PR description; the module deletion shipped without it.
+
 Verify the full matrix again after deleting: every `npm run *:check`
 script, `cargo fmt`/`clippy`/`test --all-targets`, `npm run check`/`lint`,
-full `npm test`.
+full `npm test`, plus the artifact regeneration and cross-copy parity
+suite described under Phase 2 if the deletion touched anything a
+committed bundle is built from.
