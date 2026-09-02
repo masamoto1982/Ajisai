@@ -38,7 +38,7 @@
           "enum": ["unassigned", "rawNumber", "interval", "truthValue", "timestamp", "nil", "continuedFraction"]
         },
         "semantics": {
-          "description": "Present on every node except a continuedFraction-role scalar leaf and an interior (rank >= 2) tensor node. Every field below is optional within it, and which ones a given host surface populates differs: the WASM/GUI boundary (rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs::value_semantics_to_js) emits only truthValue/absence/approximate/exactDisplay/exactTerms. The CLI/agent surface (rust/src/agent/report.rs::semantics_json) additionally emits semanticKind/shape/capabilities/origin; the WASM side's own source comment calls that quartet 'the retired HostProtocolV1' and notes the six value domains already discriminate themselves through `type`, so no reader ever needs a second axis for it — the CLI surface has not (yet) been brought in line with that trim.",
+          "description": "Present on every node except a continuedFraction-role scalar leaf and an interior (rank >= 2) tensor node. Every field below is optional within it. Both host surfaces emit the same set (rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs::value_semantics_to_js for WASM/GUI, rust/src/agent/report.rs::semantics_json for CLI/agent) — the retired HostProtocolV1 additionally spelled semanticKind/shape/capabilities/origin here, but the six value domains already discriminate themselves through `type`, so no reader ever needed a second axis for it.",
           "type": "object",
           "properties": {
             "truthValue": {
@@ -75,23 +75,6 @@
                   "radicand": { "type": "string" }
                 }
               }
-            },
-            "semanticKind": {
-              "description": "CLI/agent surface only (see above). One of the Rust SemanticKind values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
-              "type": "string"
-            },
-            "shape": {
-              "description": "CLI/agent surface only (see above). One of the Rust ValueShape values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
-              "type": "string"
-            },
-            "capabilities": {
-              "description": "CLI/agent surface only (see above). Rust Capability values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
-              "type": "array",
-              "items": { "type": "string" }
-            },
-            "origin": {
-              "description": "CLI/agent surface only (see above). One of the Rust ValueOrigin values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
-              "type": "string"
             }
           }
         }

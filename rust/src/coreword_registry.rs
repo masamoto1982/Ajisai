@@ -34,9 +34,7 @@ pub use crate::kernel::generated::{Determinism, NilPolicy, Partiality, Purity};
 pub enum SafetyLevel {
     A,
     B,
-    C,
     D,
-    Quarantined,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]

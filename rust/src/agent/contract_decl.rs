@@ -17,9 +17,8 @@
 //! ```
 //!
 //! Grammar: `#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [purity] [nil]
-//! [linearity] [cost]`, where `purity` is `pure`/`observable`/`effectful`,
-//! `nil` is `nil-free`/`may-nil`, `linearity` is `linear`/`affine`/
-//! `droppable` (`docs/dev/structural-memory-safety-roadmap.md` Phase 1), and
+//! [cost]`, where `purity` is `pure`/`observable`/`effectful`,
+//! `nil` is `nil-free`/`may-nil`, and
 //! `cost` is one or more `steps=`/`numeric=`/`collection=` terms each
 //! `const`/`linear`/`superlinear`/`unbounded`
 //! (`docs/dev/cost-contract-design.md`). Each part is optional; fields left
@@ -29,7 +28,6 @@
 use super::contract_cost::{check_cost_decl, parse_cost_terms, CostDecl};
 use super::contract_gap::GapCode;
 use super::contract_gap::{declaration_json, fold_outcomes, gap_summary_json, CheckOutcome};
-use super::contract_linearity::{check_linearity, linearity_from_word, Linearity};
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractFlow, ContractPurity, NilBehavior,
 };
@@ -45,8 +43,6 @@ pub(crate) struct ContractDecl {
     pub purity: Option<ContractPurity>,
     /// `Some(true)` = declared `nil-free`; `Some(false)` = declared `may-nil`.
     pub nil_free: Option<bool>,
-    /// Declared resource linearity, or `None` when the directive omits it.
-    pub linearity: Option<Linearity>,
     /// Declared cost-class bounds, one per axis; each `None` axis is not
     /// checked (Phase 5).
     pub cost: CostDecl,
@@ -172,7 +168,6 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
             arity: None,
             purity: None,
             nil_free: None,
-            linearity: None,
             cost: CostDecl::default(),
             raw: raw.clone(),
         };
@@ -217,11 +212,9 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
                 other => {
                     if let Some(p) = purity_from_word(other) {
                         decl.purity = Some(p);
-                    } else if let Some(l) = linearity_from_word(other) {
-                        decl.linearity = Some(l);
                     } else {
                         malformed = Some(format!(
-                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, `nil-free`/`may-nil`, or `linear`/`affine`/`droppable`)"
+                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, or `nil-free`/`may-nil`)"
                         ));
                         break;
                     }
@@ -489,10 +482,6 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
     }
 
     check_cost_decl(&decl.name, decl.cost, contract.cost, code, findings);
-
-    if let Some(linearity) = decl.linearity {
-        check_linearity(interp, decl, linearity, findings);
-    }
 }
 
 fn arity_msg(name: &str, dc: u16, dp: u16, ic: u16, ip: u16) -> String {

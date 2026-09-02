@@ -237,11 +237,7 @@ fn every_coreword_declares_a_reachable_contract() {
         );
         assert!(matches!(
             m.safety_level,
-            SafetyLevel::A
-                | SafetyLevel::B
-                | SafetyLevel::C
-                | SafetyLevel::D
-                | SafetyLevel::Quarantined
+            SafetyLevel::A | SafetyLevel::B | SafetyLevel::D
         ));
     }
 }
@@ -288,10 +284,7 @@ fn safety_lattice_is_monotone() {
         }
         if !m.effects.is_empty() {
             assert!(
-                matches!(
-                    m.safety_level,
-                    SafetyLevel::C | SafetyLevel::D | SafetyLevel::Quarantined
-                ),
+                m.safety_level == SafetyLevel::D,
                 "{} has effects but safety {:?}",
                 m.name,
                 m.safety_level
@@ -299,10 +292,7 @@ fn safety_lattice_is_monotone() {
         }
         if m.purity == Purity::Effectful {
             assert!(
-                matches!(
-                    m.safety_level,
-                    SafetyLevel::C | SafetyLevel::D | SafetyLevel::Quarantined
-                ),
+                m.safety_level == SafetyLevel::D,
                 "{} effectful but safety {:?}",
                 m.name,
                 m.safety_level

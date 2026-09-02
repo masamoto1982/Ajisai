@@ -69,7 +69,7 @@ async fn nil_check_is_false_for_present_value() {
 /// The logical Unknown (U) is a NIL read in truth position
 /// (LANG.VALUES.TRUTH), so it is an absence and `NIL?` answers TRUE — the
 /// same answer `OR-NIL` acts on, and the same story the host protocol
-/// tells about it (`semanticKind: absence`, a published `absence.reason`).
+/// tells about it (`type: "nil"`, a published `absence.reason`).
 ///
 /// `TRUE NIL AND` is the strong-Kleene UNKNOWN row (neither operand absorbs
 /// the other), so it produces a genuine U — `AND`/`OR`/`NOT` are what makes

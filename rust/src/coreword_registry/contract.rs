@@ -108,9 +108,7 @@ pub(crate) const fn safe_preview_from_contract(word: &GeneratedWord) -> bool {
 pub(crate) const fn stability_from_contract(word: &GeneratedWord) -> &'static str {
     match safety_from_contract(word) {
         super::SafetyLevel::A | super::SafetyLevel::B => "stable",
-        super::SafetyLevel::C | super::SafetyLevel::D | super::SafetyLevel::Quarantined => {
-            "experimental"
-        }
+        super::SafetyLevel::D => "experimental",
     }
 }
 
