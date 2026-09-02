@@ -5,10 +5,8 @@
 > 本書は「Ajisai の中心概念を一つに定める」ための提案であり、**未承認**である。
 > 正典側の変更は一切含まない。実装への反映は仕様所有者の承認を前提とする。
 >
-> 関連: `docs/dev/concept-reduction-2026-07.md`（十概念への削減）・
-> `docs/dev/trichotomy-unification.md`（三分法統一と案(b)の保留理由）・
+> 関連: `docs/dev/trichotomy-unification.md`（三分法統一と案(b)の保留理由）・
 > `docs/dev/vector-nesting-role-redefinition.md`（Lisp 的動機の廃止）・
-> `docs/dev/language-coherence-review-2026-08.md`（外部改修案の棄却）・
 > `docs/dev/ajisai-minimal-core-identity.md`（同一性の幹）。
 
 ## 0. 本書が答えようとしている問い
@@ -26,7 +24,7 @@
 
 ## 1. 診断 — 「十概念」は削減の結果であって、導出ではない
 
-`concept-reduction-2026-07.md` は約60の設計コンセプトを十に削った。これは
+仕様は約60の設計コンセプトを十に削った。これは
 大きな成果であり、本書はその判断を一切覆さない。しかし残った十は、
 
 > 1. 厳密有理数と `SQRT` 閉包 / 2. 三分法 / 3. スタックと Vector / 4. コードブロック /
@@ -184,7 +182,7 @@ Vessel / Water / Flow / Ripple / Bubble / Breach は**命名としては優れ�
 
 その上で事実確認が要る。同文書 §2「存続の根拠」が挙げたネストの依存先——
 テンソル語（`SHAPE` `RANK` `RESHAPE` `TRANSPOSE`）、`JSON` モジュール、`SPLIT`、
-音楽 DSL のマルチトラック——は、**`concept-reduction-2026-07.md` により全て削除済み**である
+音楽 DSL のマルチトラック——は、**十概念への削減により全て削除済み**である
 （65語に一つも残っていない。生存は `FILL` と要素単位持ち上げのみ）。
 つまり当時「動機の差し替え」を選んだ理由の側が、いま存在しない。
 **判断そのものは有効だが、記録された根拠は失効している。**
@@ -391,7 +389,7 @@ README はこのディレクトリを「More examples」としてリンクして
 
 | 案 | 採らない理由 |
 | --- | --- |
-| 「Ajisai 2」として意味論を再確定し、変換器で移行する | `language-coherence-review-2026-08.md` §1 が既に棄却済み。conformance corpus と契約レジストリを同時に捨てることになり、`spec-impl-drift-tactic.md` の第一不変条件（第二権威の禁止）に正面から反する。**本書は正典を作り直さない。** |
+| 「Ajisai 2」として意味論を再確定し、変換器で移行する | 既に棄却済み。conformance corpus と契約レジストリを同時に捨てることになり、`LANG.AUTHORITY.SOURCES`（第二権威の禁止）に正面から反する。**本書は正典を作り直さない。** |
 | `UNKNOWN` / 三値 Kleene 論理の復活 | 軸はこれを**必要としない**。絞り込みの途中状態は検査時にのみ存在し、実行時の値には決してならない。改修Ⅱが `PROBE` を「データ入力・データ出力」に限定しているのはこのためである。実行時の結果カテゴリは 3 のまま動かない。**改修Ⅱを「UNKNOWN の復活」と読んではならない。** |
 | 水のメタファーの拡張・体系化 | 命名としては良いが、そこから何も導出されない（§1.2）。中心の位置に置くと、中心が二つになる。 |
 | 現行 GUI・Reference 様式の変更 | `concept-reduction` が維持対象として明示。本書は触れない。 |
@@ -448,7 +446,7 @@ README はこのディレクトリを「More examples」としてリンクして
 - `scripts/generate-word-reference.mjs` が `entry.capability` / `entry.hostedEffect` を読み、`docs/word-reference.md` に `Capability / hosted effect: `none` / `none`` の行として出力していた。
 - `tools/mcp-server/index.js` の `word_contract` ツールと `ajisai://words/{name}` リソースは `spec/words.json` のエントリを**そのまま**返す。したがってこの3フィールドは、MCP 経由で接続する外部の AI エージェントから観測可能だった。
 
-`interpretationRole` については訂正なし——上記のいずれからも読まれておらず、`docs/dev/reduction-consistency-audit-2026-07.md` の **D14**（2026年7月・本書執筆前に既に記録されていた判定）が同じ結論に達している。
+`interpretationRole` については訂正なし——上記のいずれからも読まれていない。
 
 `capability`/`hostedEffect` は「参照されていない」のではなく、**`effects` フィールド（正典 `LANG.CONTRACT.REGISTRY` が挙げる契約構成要素の一つ）と Rust 側の独立した `WordProfile` 列挙型の両方に完全に重複していた**。`PRINT` の `effects: ["consoleWrite"]` と `hostedEffect: "consoleWrite"` は同じ事実の二重表現であり、`WordProfile::Hosted` の判定は `words.json` を経由せず `name == "PRINT"` から独立に導かれている。除去は「未到達だから」ではなく「正典が既に持つ `effects` と重複するから」を理由に行った。`generate-word-reference.mjs` は `effects` から `**Effects:**` 行を出すよう書き換えた。
 

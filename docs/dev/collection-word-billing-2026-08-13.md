@@ -1,7 +1,7 @@
 # コレクション系 Word の課金設計
 
 作成日: 2026-08-13
-対象: `148a9cc`（`docs/dev/mcp-reevaluation-2026-08-12.md` が残した最後の 1 件）
+対象: `148a9cc`
 実測: `rust/examples/collection_word_calibration.rs`（release、本文の数値はすべてこの
 出力）
 

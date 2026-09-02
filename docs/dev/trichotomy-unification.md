@@ -90,8 +90,8 @@ of that vocabulary (the Reference, the reason-listing tooling, any host that
 enumerates reasons) would need to know some of its entries are check-time
 only. Paying that now, for a benefit that only exists once self-hosting
 exists, is exactly the debt this repository's own discipline
-(`docs/dev/spec-impl-drift-tactic.md`'s spirit: do not pay for a benefit that
-has not arrived) argues against.
+(Phase 4 of `docs/dev/spec-impl-alignment-methodology.md`: an unimplemented
+spec is noise, not a placeholder worth keeping) argues against.
 
 **Revisit condition:** when any part of the checker is itself written in
 Ajisai — the point at which self-hosting stops being hypothetical — (b) is
@@ -101,7 +101,7 @@ self-hosting design looks like by then.
 ## An honest count
 
 This is **not** a change from ten concepts to nine
-(`docs/dev/concept-reduction-2026-07.md`'s enumeration). Concept #2 (three
+(spec/language-semantics.md's own ten-concept list). Concept #2 (three
 outcomes: value, reasoned absence, error) and concept #8 (a pre-execution
 check of user declarations) both remain, unmerged, exactly as listed. What
 changed is that concept #8 no longer carries an *implicit second definition*

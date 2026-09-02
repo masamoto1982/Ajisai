@@ -234,8 +234,8 @@ Phase 1 の成果物一式を人間に提示し、Phase 2 に進めという明�
 
 ## 5. 採らない案（原提案からの引き継ぎ、再確認）
 
-- 「Ajisai 2」として作り直す、変換器で移行する：`language-coherence-review-2026-08.md` が
-  既に却下済み。本書の統合作業も、既存の正典・conformance corpus・契約レジストリという
+- 「Ajisai 2」として作り直す、変換器で移行する：既に却下済み。
+  本書の統合作業も、既存の正典・conformance corpus・契約レジストリという
   **同じ資産の上で**行う。第二の権威を作らない。
 - `UNKNOWN`・三値論理の復活：この統合作業と無関係。混同しないこと。
 - Lisp への憧れを設計根拠にする：`vector-nesting-role-redefinition.md` の裁定は覆さない。

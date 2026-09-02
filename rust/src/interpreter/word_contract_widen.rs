@@ -20,8 +20,7 @@
 //! inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]`, PRINT never
 //! resolves or runs, so widening the accumulator with it would be a false
 //! `error` — a body that never prints inferred `effectful` against a correct
-//! `pure` declaration, the same character of bug §1 of `docs/dev/
-//! competitive-advantage-round2-2026-08.md` found on the *flow* axis.
+//! `pure` declaration.
 //!
 //! # Classification is top-down, not per-bracket
 //!

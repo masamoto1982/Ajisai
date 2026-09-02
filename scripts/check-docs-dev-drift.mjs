@@ -8,11 +8,11 @@
 // callable (`snake_case_fn(`) still exists in the implementation it claims to
 // describe.
 //
-// This is exactly the failure docs/dev/zero-based-implementation-reading-2026-08.md
-// §3.1 found by hand: eight Rust-side comments asserted a `ValueData::Unknown`
-// variant and an `is_unknown()` predicate that had never landed, or had
-// landed and been reverted, leaving only the prose behind (fixed in the PR
-// that added this gate). This check runs the same question the other
+// This is exactly the failure a since-removed docs/dev/ audit note found by
+// hand: eight Rust-side comments asserted a `ValueData::Unknown` variant and
+// an `is_unknown()` predicate that had never landed, or had landed and been
+// reverted, leaving only the prose behind (fixed in the PR that added this
+// gate). This check runs the same question the other
 // direction — docs/dev/ prose making claims about rust/src, rust/tests, and
 // src — the way spec/words.schema.json's fields are already checked against
 // the implementation (scripts/check-unreachable-contract.mjs).
