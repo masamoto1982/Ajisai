@@ -9,7 +9,7 @@ it defines Ajisai semantics.
 | `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
 | `semantic-families.json` | The shared laws Words select |
 | `gui-semantics.md` | Presentation |
-| `host-protocol-v2.schema.json` | The host protocol boundary between them |
+| `host-protocol.schema.json` | The host protocol boundary between them |
 
 The two `.md` sources retain raw HTML blocks so the generated specification
 preserves the existing typography, anchors, tables, and mathematical channels
