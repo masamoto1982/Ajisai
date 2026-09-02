@@ -8,10 +8,10 @@
 > 関連データ: `docs/formalization-coverage.json`（30 代数プリミティブ・213 エントリ）・
 > `docs/primitive-test-map.json`・`docs/word-manifest.json`。
 > 関連設計メモ: `docs/dev/ajisai-mathematical-formalization.md`（denotational/algebraic
-> semantics; 本書の層分けは同書 §1〜§8 の構造に一対一で対応する）・
-> `docs/dev/ajisai-self-hosting-design.md`（セルフホストの位置づけ。本書はその
-> 「実装言語が一つ増えるだけ」という結論を前提とし、capability-gated kernel profile を
-> 採らない立場を引き継ぐ）。
+> semantics; 本書の層分けは同書 §1〜§8 の構造に一対一で対応する）。
+> 本書はセルフホスティングを「実装言語の選択が一つ増えるだけ」と位置づけ、
+> capability-gated kernel profile（公式ビルドだけが実行できる語という特権階層）を
+> 採らない立場に立つ（§7）。
 
 ## 0. なぜ幹を定めるのか
 
@@ -146,10 +146,10 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
   数値エンジンの規模と性能モデルは、本書とは別課題（利用者向けコストモデルの明文化）
   として扱う。Minimal Core の縮小効果を過大に主張しないこと。
 
-## 7. 非目標との整合（self-hosting memo の引き継ぎ）
+## 7. 非目標との整合
 
-`ajisai-self-hosting-design.md` が却下した **capability-gated kernel profile /
-「公式ビルドだけが実行できる語」** は本書でも採らない。Minimal Core は
+**capability-gated kernel profile /「公式ビルドだけが実行できる語」**という
+特権階層は本書でも採らない。Minimal Core は
 **文書上の同一性宣言**であって、実行特権の層ではない。移植性目標（§2.4）と
 `PORTABILITY.md` 原則 2（実装は参照実装の一つにすぎない）を保つ。Core の後方互換
 保証は「仕様が定義する同一性を破らない」という規律であり、特定ビルドの特権ではない。
