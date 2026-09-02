@@ -1,15 +1,20 @@
 # セルフホスティングの位置づけ — 亜種を生まない自己記述の批判的再構成
 
-> Status: **Non-canonical / 設計メモ（§2.2）.** 本書は言語意味論を一切定義しない。
-> 正典は `SPECIFICATION.html` のみ。本書は「セルフホスティングをどう位置づけるか」という
-> 運用・アーキテクチャ方針を論じる手続き文書である。
-> 関連正典: `SPECIFICATION.html` §2.1（正典順位）・§2.4/§2.5（四層・権威順位）・
-> §7.14（Coreword contract metadata、`safety_level`）・§9.3（辞書語彙階層）・
-> Portability Profiles・"Conformance and Identity"。
-> 関連設計メモ: `docs/dev/spec-impl-drift-tactic.md`（タイムスタンプ裁定の却下と
-> 追跡可能性ゲート）・`docs/dev/wasm-style-reference-interpreter-design.md`（参照実装の
-> 権威上の位置づけ）・`PORTABILITY.md`（原則1・2・10・11）・`python/README.md` ・
-> `tools/ajisai-repro/README.md`（既存の「移植による仕様洗練」の実例）。
+> Status: **Non-canonical / 設計メモ.** 本書は言語意味論を一切定義しない。
+> 正典は `spec/` 配下の各ソースと、そこから生成される `SPECIFICATION.html` のみ。
+> 本書は「セルフホスティングをどう位置づけるか」という運用・アーキテクチャ方針を
+> 論じる手続き文書である。
+> 関連正典: `LANG.AUTHORITY.SOURCES`（正典順位・第二権威の禁止）・
+> `LANG.CONTRACT.REGISTRY`（Coreword contract metadata）・
+> `LANG.DICTIONARY.RESOLUTION`（辞書語彙階層）・
+> Portability Profiles・`LANG.CONFORMANCE.CORPUS`。
+> 関連設計メモ: `docs/dev/spec-impl-alignment-methodology.md`（タイムスタンプ裁定の却下と
+> 追跡可能性ゲート）・`PORTABILITY.md`（原則1・2・10・11）。
+>
+> **検証追記（2026-09）**: 執筆時点で挙げていた `docs/dev/wasm-style-reference-
+> interpreter-design.md`・`python/README.md`・`tools/ajisai-repro/README.md` は
+> 現行リポジトリに存在しない——執筆後に整理された、または最初から存在しなかった。
+> 本文中でこれらに依存する記述があれば、参照先が無いものとして読むこと。
 
 ## 0. 本書の立場
 
@@ -33,9 +38,9 @@ ChatGPT との議論（"Ajisai はメタプログラミング性の追求を避�
    がその適合性を判定し、spec と食い違えば spec が勝つ。新しい正典機構は要らない。
 4. 唯一の実務的ギャップは、`safety_level: Quarantined` の意味として既に本文に登場している
    **"self-host execution" という用語が定義されないまま使われていた**ことである
-   （SPECIFICATION.html §7.14、`safety_level` 表の `Quarantined` 行）。これは
-   `spec-impl-drift-tactic.md` の分類でいう A 類（仕様の穴）そのものであり、本書はその定義を
-   §7.14 に追記する提案を行う（本 PR で反映）。
+   （`safety_level` 表の `Quarantined` 行）。これは
+   `docs/dev/spec-impl-alignment-methodology.md` の分類でいう仕様の穴そのものであり、
+   本書はその定義を LANG.CONTRACT.REGISTRY に追記する提案を行う（本 PR で反映）。
 
 ## 1. ChatGPT 提案の要約
 
@@ -59,7 +64,7 @@ ChatGPT との議論（"Ajisai はメタプログラミング性の追求を避�
 
 ## 2. 何が既に Ajisai に存在するか（新規性のない部分）
 
-`spec-impl-drift-tactic.md` §1 が数式の権威付けに対して行ったのと同じ検査をここでも行う:
+正典の権威順位（`LANG.AUTHORITY.SOURCES`）に照らした同じ検査をここでも行う:
 ChatGPT 案の要素を一つずつ、既存の正典条文と照合する。
 
 ### 2.1 「Surface Ajisai はメタプログラミングできない」は既に真
@@ -163,10 +168,11 @@ Python の実行モデルではなく独自の AST/dictionary/evaluator デー�
 
 ## 5. 実際に見つかった仕様の穴 — "self-host execution" の未定義
 
-本書を書く過程で、`spec-impl-drift-tactic.md` の方法論（既存本文の用語がどこまで定義されて
-いるかを機械的に確認する）を適用した結果、実際に A 類の穴を発見した:
+本書を書く過程で、`docs/dev/spec-impl-alignment-methodology.md` の方法論（既存本文の
+用語がどこまで定義されているかを機械的に確認する、Phase 1）を適用した結果、実際に
+仕様の穴を発見した:
 
-`SPECIFICATION.html` §7.14 の `safety_level` 表は次のように書いている:
+`rust/src/coreword_registry.rs` の `SafetyLevel` 表は次のように書いている:
 
 > `Quarantined`: not eligible for self-host execution.
 
@@ -211,8 +217,8 @@ Python の実行モデルではなく独自の AST/dictionary/evaluator デー�
    および `Quarantined` 語を対象外とする——`ajisai-repro` と同じスコープ規律。
 4. 差分テストを追加する場合は `tools/ajisai-repro/compare.py` の方式を流用し、production
    Rust・`ajisai-repro`・セルフホスト実装の三者比較に拡張する（advisory から開始）。
-5. 亜種防止の運用規律は新設せず、`spec-impl-drift-tactic.md` §3.3 のスイート裁定規則と
-   `PORTABILITY.md` 原則10 をそのまま適用する。
+5. 亜種防止の運用規律は新設せず、`docs/dev/spec-impl-alignment-methodology.md` の
+   スイート裁定規則と `PORTABILITY.md` 原則10 をそのまま適用する。
 
 ## 8. 一行サマリ
 

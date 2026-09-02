@@ -51,7 +51,7 @@ Status: **非正典（`[設計根拠]`）**。この文書は Ajisai の意味�
 - 本書の「落とし穴」に書かれていない形で、既存テストが落ちた
 - ホワイトリスト外のファイルを編集する必要が生じた
 - 正典（`SPECIFICATION.html` / `spec/`）の記述と実装が食い違っていることを発見した
-  （→ `docs/dev/spec-impl-drift-tactic.md` の裁定手順に載せる案件）
+  （→ `docs/dev/spec-impl-alignment-methodology.md` の裁定手順に載せる案件）
 - Phase の受け入れ条件が、指定どおり実装しても満たせない
 
 ### 0.4 よく使う検証コマンド

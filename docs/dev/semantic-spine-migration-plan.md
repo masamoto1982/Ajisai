@@ -6,8 +6,8 @@
 > 記述し、その収束点（Semantic Spine）を作る移行手続きを定める。既存コードの一括削除を
 > 先に行わないこと、まず構造上の収束点を作ることを原則とする。
 >
-> 前提文書: `concept-reduction-2026-07.md`（十概念への削減）、
-> `reduction-consistency-audit-2026-07.md`（削減後整合監査）。本書はその実装側続編である。
+> 前提: 仕様は約60の設計コンセプトを spec/language-semantics.md の十概念へ削減済み。
+> 本書はその実装側続編である。
 >
 > **検証追記（2026-08-26, `check:docs-dev-drift` 導入時）**: §3.3 の UNKNOWN 系識別子
 > （`SemanticKind::Unknown` / `ValueShape::Unknown` 等）と、§3.5・§10 の module 系識別子
@@ -584,7 +584,7 @@ conformance corpus の `core-concat-rejects-non-vector` / `core-concat-arity-is-
 
 §10.5 の「残った疑問」。`NIL-REASON` は `projection.reason: "notAvailable"` を宣言
 しながら理由のない素の NIL を返しており、13 語ある projection 宣言のうち**唯一
-観測できない reason** だった（`reduction-consistency-audit-2026-07.md` の D15）。
+観測できない reason** だった。
 
 正典が方向を一意に決めている:
 

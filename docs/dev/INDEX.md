@@ -26,21 +26,13 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 
 | 文書 | 説明 | 状態 |
 | --- | --- | --- |
-| `concept-reduction-2026-07.md` | 十概念への削減。何を捨て、何を残し、実装削減がどの順で進むか | `[設計根拠]` |
+| `spec-impl-alignment-methodology.md` | 仕様・実装整合化の4フェーズ手順とスイート裁定規則。`spec-impl-drift-tactic.md` の後継 | `[設計根拠]` |
 | `semantic-spine-migration-plan.md` | 整理後正典と整理前実装の乖離を収束させる Semantic Spine 移行計画（9 Phase） | `[方針記録]` |
 | `ajisai-minimal-core-identity.md` | 何が変われば Ajisai でなくなるか——同一性の幹の切り分け | `[方針記録]` |
 | `ajisai-self-hosting-design.md` | セルフホスティングの位置づけ（新しい権威層を作らない） | `[方針記録]` |
 | `vector-nesting-role-redefinition.md` | Vector ネストの役割（Lisp 的動機の廃止） | `[方針記録]` |
-| `spec-impl-drift-tactic.md` | 仕様と実装が食い違ったときの裁定戦術 | `[設計根拠]` |
-| `language-coherence-review-2026-08.md` | 外部「整合化改修案」の検証と、正典収束計画への差し替え | `[方針記録]` |
-| `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察 | `[観察ノート]` |
 | `ajisai-single-axis-proposal-2026-08.md` | 中心概念を「絞り込み（narrowing）」一本に定める提案。到達不能契約の実測と、七つの改修案。うちⅡ・Ⅲ・Ⅴ・Ⅵ・Ⅶは実施済み（PR #1563/#1564/#1567）、Ⅰは指示書のみ | `[観察ノート]` |
 | `type-unification-work-order-2026-08.md` | 改修Ⅰ（CodeBlock/Vector 統合）の指示書。読み取り専用の前提再検証（Phase 0）→ 使い捨てブランチでの測定スパイク（Phase 1）→ 実装（Phase 2）の三段階。破壊的変更であり、Phase 2 はユーザー承認を得て実施済み | `[設計根拠]` |
-| `type-unification-phase0-report-2026-08.md` | 改修Ⅰの Phase 0 実測報告。`Value::Symbol` 追加で壊れる 48/49 箇所、非交差性に依存する conformance 22 件、書き換えが要る正典 6 節の確定一覧。指示書の停止条件が発火しており Phase 1 は未着手 | `[観察ノート]` |
-| `type-unification-phase1-report-2026-08.md` | 改修Ⅰの Phase 1 スパイク報告。使い捨てブランチ（main 非マージ）で (A) 案を実装し conformance 279 件中 23 件の非通過を実測（Phase 0 の見積もり 22 件とほぼ一致）。`COND` の節ブロック発見が統合と構造的に相容れないという新しい壁を発見 | `[観察ノート]` |
-| `type-unification-phase2-report-2026-08.md` | 改修Ⅰの Phase 2 実装報告。`COND` を固定2オペランド規約（`value { { guard \| body } ... } COND`）へ再設計し、`DEF` の契約推論忠実性問題を新たに発見・対処。REFLECT を削除し§5.1の表示非単射性を解消。正典・生成ドキュメント・適合性コーパスを更新、全ゲート緑 | `[観察ノート]` |
-| `spec-impl-readme-reference-consistency-audit-2026-08.md` | 正典・実装・README・Reference 日本語版の四面整合性監査。全 gate 緑・`cargo test --lib` 986 件緑の下で残る乖離 10 件を実機実行で確定。最重要は `spec/host-protocol-v2.schema.json` が統合前の 6 定義域（`codeBlock`）を宣言し `SPECIFICATION.html` の `Symbol` と矛盾する点 | `[観察ノート]` |
-| `zero-based-implementation-reading-2026-08.md` | 正典を参照せず `rust/src` だけから骨格を再構成し、事後に突き合わせた記録。骨格（一つの状態・一つの値木・一つの分配）は正典と一致。数値タワーの三層と Tier 2 先行足場が「比較は全域」の構造的な理由であること、三分法の中辺（未決）が設計として実行時から排除されていることを記述。食い違うのは非正典側——`ValueData::Unknown` を前提にした Rust コメント 8 箇所と `ajisai-minimal-core-identity.md` §2.1 の K3 の柱 | `[観察ノート]` |
 
 ## エージェント/CLI・GUI
 
@@ -58,5 +50,4 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `trichotomy-unification.md` | 実行時三分法と静的検査三値の対応を統一した理由と、reason レジストリ統合（案(b)）を今やらない技術的理由・再検討条件 | `[方針記録]` |
 | `cost-contract-design.md` | `#:contract` のコスト軸（steps/numeric/collection）の設計根拠。クラス格子・join規則・多項式を今やらない理由・機械非依存性の正確な意味 | `[設計根拠]` |
 | `cost-discoverability-work-order-2026-08.md` | 推論されたコストを `ajisai contract` に出す改修指示書。付録 A に SHA-256→BLAKE3 置換を採用しない根拠と再検討条件 | `[設計根拠]` |
-| `competitive-advantage-round2-2026-08.md` | 競争優位の研磨・第二巡の提案（層0: アリティ推論の不健全性の確認、層1: ブロック契約値化・再帰の不動点・Assume-Guarantee、層2: 制約付きデコード面・観測スペクトル・意味論差分、層3: 検証済み修復・反例最小化、層4: 計算証明書）。実装指示書ではない | `[観察ノート]` |
 | `reference-ja-restructure-handoff.md` | Reference 日本語版の再編（水のメタファー導入・制御構造の集約）の引き継ぎ。着手前に §8 の確認事項を利用者へ | `[方針記録]` |
