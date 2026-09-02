@@ -1,4 +1,4 @@
-# 仕様・実装整合化の方法論 — 3フェーズ手順とスイート裁定規則
+# 仕様・実装整合化の方法論 — 4フェーズ手順とスイート裁定規則
 
 > Status: **Non-canonical / 設計メモ（`[設計根拠]`）.** 本書は Ajisai の意味論を
 > 一切定義しない。正典は `spec/` 配下の各ソースと、そこから生成される
@@ -12,7 +12,11 @@
 > 安定アンカー（`LANG.*` クラウズ ID）に置き換えて引き継ぐ。方法論そのもの
 > （スイート裁定規則）に変更はない。2026-09、3フェーズ手順の実地適用
 > （host protocol V1/V2 の整理、PR #1604-#1608）を経て、フェーズ4（削除規律）
-> を追加した。
+> を追加した。以降、本書を根拠として参照する運用チェックリスト
+> `.claude/skills/spec-impl-alignment/SKILL.md` が併設されている（PR #1609
+> で新設、PR #1610 が初回の実行）。PR #1611 の実地適用で得た二つの教訓
+> ——コミット済みビルド生成物の陳腐化（Phase 2）と、発見間の適用範囲の
+> 規律（Phase 4）——は本書とチェックリストの両方へ反映してある。
 
 ## 0. なぜタイムスタンプではなくスイートか
 
@@ -62,6 +66,34 @@ provenance（いつ・なぜ変わったか）が要る場面では、手書き�
 確認してから、誤っている方を実装で修正し、再発防止のクロスチェックテストを
 追加する。
 
+#### 検証の盲点 — コミット済みビルド生成物
+
+この repo の生成物の大半は、生成スクリプト自身の `--check` モードで CI が
+ハードにゲートしている（`rust/src/kernel/generated/` は `word-registry:check`、
+ほかに `word:manifest:check`、`word:reference:check`、`core-word-docs:check`、
+`semantics:table:check`、`semantic-kernel:check`）。危険なのは
+**鮮度チェックが advisory（best-effort）にとどまる、または存在しない生成物**
+である——通常のテスト行列の中でそれを再生成する工程が一つも無い以上、
+陳腐化は原理的に検出されない。緑の出力は反証にならない。
+
+本 repo でこの分類に当たるのは、コミットされた wasm-pack バンドル2つ
+——`src/wasm/generated/` と `tools/mcp-server/wasm/generated/`
+（`npm run build:wasm` / `npm run build:mcp-wasm`）——だけである。
+`.github/workflows/test.yml` の "Detect stale committed wasm bundle
+(advisory)" は意図的に `continue-on-error: true` である。
+
+したがって、Phase 2（および Phase 3・Phase 4）の変更を完了とする前に、
+**diff に含まれるソースから決定論的に生成されるコミット済み成果物**
+——コンパイル済みバイナリ、生成バンドル、lockfile、golden snapshot——を
+列挙し、ゲートが advisory なものは自分で再生成して差分ごとコミットする。
+既存の `*:check` 群とテスト行列を通しただけでは、構造上ここは見えない。
+
+さらに、同じ事実の二重実装を直したときは、両者を**実際に走らせて
+突き合わせる**スイート（`npm run test:mcp-backends` =
+`tools/mcp-server/backend/parity-test.js`、native CLI 対 WASM ワーカー）
+まで含めて確認する。陳腐化した二者は互いに一致するため、片方を直すまで
+このスイートも緑のままである（§2 の PR #1611 を参照）。
+
 ### Phase 3 — 仕様と実装の突き合わせ
 
 Phase 1・Phase 2 をそれぞれ個別に終えた後、初めて両者を比較する。
@@ -107,9 +139,27 @@ Phase 3 の是正が完了し、仕様と実装が一致した時点で、**も�
   引用を残したまま参照先だけ消すと、今回まさに直している「仕様にない
   実装／実装にない仕様」と同型の乖離を `docs/dev/` の中に作ってしまう。
 
-## 2. 実地適用の記録（2026-09、PR #1604-#1608）
+#### 適用範囲の規律 — 一つの発見は芋づるの許可証ではない
 
-このセッションで実際にこの手順を通しで走らせた:
+死んだものを辿ると、必ず別の死んだものが見える。そのとき、二つ目の発見が
+「同じ発見の別断面」なのか、**構造的に別物**なのか——別サブシステム、
+別のファイル種別（CI がゲートするデータファイル、`spec/` ソース、定式化の
+一節）、あるいは今の掃討範囲を超える独自の多ファイル走査を要するもの——を
+先に判定する。構造的に別物であれば、**手を止め、触らず、PR 説明に後続課題
+として明示的に名指しする**。Phase 3 が「本文内が食い違い、かつ conformance
+の pin が無い」場合に人間の判断へ差し戻すのと同じ扱いであり、独立した
+1ラウンドとして改めて着手する。
+
+これは慎重さのためではなく、範囲の規律である。フェーズに分け、発見ごとに
+PR を切ること自体が、小さく検証可能な単一目的の diff を得るための手段で
+あって、書いている途中で膨らんだ削除は、宣言した範囲に照らしてレビュー
+できない。「ついでに直した」部分は、後から読むと理由の書かれていない変更
+としてしか残らない。
+
+## 2. 実地適用の記録（2026-09、PR #1604-#1611）
+
+この手順を実際に通しで走らせた記録（PR #1604-#1609 が初回セッション、
+#1610 以降はチェックリスト経由の別ラウンド）:
 
 - Phase 1: `spec/language-semantics.md` のプローズが `host-protocol.schema.json`
   の前身が定義していない範囲を主張していた等、5件の矛盾を修正（PR #1604）。
@@ -123,6 +173,34 @@ Phase 3 の是正が完了し、仕様と実装が一致した時点で、**も�
   17パターンで検証した上で、実際に出荷されている形を正典として
   記述し直した（PR #1607）。
 - Phase 4: V2 一式（schema・golden fixture・Rust モジュール・TS デコーダ・
-  対応テスト）を削除。次いで `docs/dev/` の一過性の調査・監査レポート
-  11件、および本書の前身 `spec-impl-drift-tactic.md` を削除し、参照して
-  いた文書を本書へ向け直した（PR #1608 および本書）。
+  対応テスト）を削除（PR #1608）。次いで `docs/dev/` の一過性の調査・監査
+  レポート11件、および本書の前身 `spec-impl-drift-tactic.md` を削除し、
+  参照していた文書を本書へ向け直した（PR #1609、本書の新設を含む）。
+- Phase 4（続き）: PR #1609 が header 引用だけ直して残した
+  `ajisai-self-hosting-design.md` を、本文まで含めて監査。節番号・比較対象の
+  ディレクトリ・語彙・自称成果物のすべてが失効していると確認して全文削除
+  （PR #1610）。この回は本手順を `.claude/skills/spec-impl-alignment/SKILL.md`
+  として起こしたうえで、スキル経由で初めて走らせた回でもある。
+- Phase 2/4（PR #1611）: 到達不能だった `SafetyLevel` の C / Quarantined
+  変種、CLI 側だけが出力し誰も読んでいなかった4フィールド
+  （`semanticKind`/`shape`/`capabilities`/`origin`、
+  `rust/src/agent/report.rs::semantics_json`。WASM 境界の
+  `value_semantics_to_js` では既に削除済みで、コメント自身が
+  "the retired HostProtocolV1" と書いていた）、`docs/dev/` に残っていた
+  失効した §番号引用、および現行66語のどこにも存在しない
+  `SPAWN`/`AWAIT` 系を前提にした `rust/src/agent/contract_linearity.rs` を
+  削除。この回から二つの教訓が出た:
+  - コミット済み `.wasm` バンドルが**本 PR 以前から**自身のソースに対して
+    陳腐化していた。ローカル検証（cargo fmt/clippy/test、npm check/lint/test、
+    全 `*:check`）はすべて緑だったが、CLI 側を WASM ソースへ合わせた瞬間に
+    `backend/parity-test.js` が CI（Quality Gate）で落ちた。陳腐化した二者が
+    偶然一致していたため、それまで見えなかったのである。
+    `npm run build:wasm` / `build:mcp-wasm` で再生成してコミットし解消
+    （Phase 2「検証の盲点」の由来）。
+  - `contract_linearity.rs` の調査中に、同じ `SPAWN`/`AWAIT` 面が
+    `docs/dev/ajisai-mathematical-formalization.md` §9-septies では実在しない
+    `rust/tests/child_runtime_laws.rs` を根拠に `HOLDS` と記載される一方、
+    CI がゲートする `docs/formalization-coverage.json` では正しく
+    `"Exploratory"` に分類されている、という Phase 1 型の矛盾が判明した。
+    承認済みの範囲を大きく超えるため着手せず、後続課題として PR 説明に
+    明記するにとどめた（Phase 4「適用範囲の規律」の由来）。
