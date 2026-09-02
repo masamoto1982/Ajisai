@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ajisai.dev/spec/host-protocol.schema.json",
+  "title": "Ajisai Host Protocol",
+  "description": "The value wire format shared by every host surface, rendered by the single serializer rust/src/types/value_protocol.rs::value_to_protocol (its own doc comment: 'the single source of truth for the value wire format (WASM and CLI)'). Both the CLI/MCP agent surface (the `stack` array inside `ajisai agent compute|check|infer-contracts --json`; the enclosing envelope is documented informally in docs/dev/agent-cli-output-contract.md, non-canonical) and the WASM/GUI boundary (each of AjisaiInterpreter's collect_stack/execute/... methods, with no enclosing envelope of its own) emit arrays of the observedValue node this schema defines. There is no protocol-version field on this shape today: the CLI envelope around it carries a plain integer `schemaVersion`; the WASM boundary carries no version signal at all. `additionalProperties: false` is used only where every field has been confirmed exhaustively against the current Rust source (the node's own four keys); `semantics`, and every string-valued field it carries, is deliberately left open (no enum, no additionalProperties restriction) because those vocabularies are large, still evolving, and owned by the Rust source below, not duplicated here as a second, narrower list (the cause of a previous, now-corrected drift: see spec/language-semantics.md LANG.OBSERVATION.PROTOCOL).",
+  "$ref": "#/$defs/observedValue",
+  "$defs": {
+    "observedValue": {
+      "type": "object",
+      "required": ["type", "value", "displayHint"],
+      "additionalProperties": false,
+      "description": "One stack value as observed at the host boundary. A vector's own elements are observedValue nodes in turn (see `value` below), so this definition is recursive.",
+      "properties": {
+        "type": {
+          "description": "The wire type, discriminating `value`'s shape. Not the same seven-way split as LANG.VALUES.DISJOINT's six value domains: a Scalar under the Timestamp role reports `datetime` instead of `number` (same {numerator, denominator} shape, a presentation distinction only), and a Scalar under the ContinuedFraction role reports `string` (rust/src/types/value_protocol.rs::value_to_protocol, the ContinuedFraction branch) instead of `number`.",
+          "enum": ["nil", "boolean", "number", "datetime", "string", "vector", "symbol"]
+        },
+        "value": {
+          "description": "Shape depends on `type`: nil -> null; boolean -> boolean; number or datetime -> {numerator, denominator} (arbitrary-precision decimal strings); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue.",
+          "oneOf": [
+            { "type": "null" },
+            { "type": "boolean" },
+            { "type": "string" },
+            {
+              "type": "object",
+              "required": ["numerator", "denominator"],
+              "additionalProperties": false,
+              "properties": {
+                "numerator": { "type": "string" },
+                "denominator": { "type": "string" }
+              }
+            },
+            { "type": "array", "items": { "$ref": "#/$defs/observedValue" } }
+          ]
+        },
+        "displayHint": {
+          "description": "Presentation intent; never changes execution semantics (LANG.OBSERVATION.FIREWALL). `truthValue` is the axis a consumer reads to tell TRUE/FALSE/UNKNOWN apart from an ordinary boolean or NIL (LANG.VALUES.TRUTH); `continuedFraction` is the one role that changes `type` itself, to `string` (see `type` above).",
+          "enum": ["unassigned", "rawNumber", "interval", "truthValue", "timestamp", "nil", "continuedFraction"]
+        },
+        "semantics": {
+          "description": "Present on every node except a continuedFraction-role scalar leaf and an interior (rank >= 2) tensor node. Every field below is optional within it, and which ones a given host surface populates differs: the WASM/GUI boundary (rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs::value_semantics_to_js) emits only truthValue/absence/approximate/exactDisplay/exactTerms. The CLI/agent surface (rust/src/agent/report.rs::semantics_json) additionally emits semanticKind/shape/capabilities/origin; the WASM side's own source comment calls that quartet 'the retired HostProtocolV1' and notes the six value domains already discriminate themselves through `type`, so no reader ever needs a second axis for it — the CLI surface has not (yet) been brought in line with that trim.",
+          "type": "object",
+          "properties": {
+            "truthValue": {
+              "description": "Present when the value carries a definite truth position: a Boolean always, or any value read under the truthValue role (rust/src/types/value_absence.rs::truth_value_for_role). The three-valued LANG.VALUES.TRUTH axis: 'unknown' only ever appears on a NIL node.",
+              "type": "string"
+            },
+            "absence": {
+              "description": "Present only on a nil-type node. `reason` is the stable, machine-readable identifier LANG.VALUES.NIL calls the entire observable content of a NIL (LANG.CONTRACT.REGISTRY's projection.reason values, plus the wider AbsenceOrigin/NilReason vocabulary an error path can also produce); it is absent only for a NIL an implementation could not yet label. `origin` and `recoverability` are diagnostic state beyond the reason, informational only. `diagnosis`, present only on the CLI/agent surface, nests the fuller structured diagnosis object docs/dev/agent-cli-output-contract.md describes.",
+              "type": "object",
+              "properties": {
+                "reason": { "type": "string" },
+                "origin": { "type": "string" },
+                "recoverability": { "type": "string" },
+                "diagnosis": { "type": "object" }
+              }
+            },
+            "approximate": {
+              "description": "true when an ExactScalar (an algebraic irrational, LANG.VALUES.EXACT) is shown as a best rational approximation rather than under the ContinuedFraction role that would render it exactly. Never present otherwise.",
+              "const": true
+            },
+            "exactDisplay": {
+              "description": "A short human-readable string for an ExactScalar's exact multiquadratic normal form (e.g. a square-root expression), alongside the approximated `value`.",
+              "type": "string"
+            },
+            "exactTerms": {
+              "description": "The same normal form as exactDisplay, structured for computation: one term per {numerator, denominator, radicand}.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["numerator", "denominator", "radicand"],
+                "properties": {
+                  "numerator": { "type": "string" },
+                  "denominator": { "type": "string" },
+                  "radicand": { "type": "string" }
+                }
+              }
+            },
+            "semanticKind": {
+              "description": "CLI/agent surface only (see above). One of the Rust SemanticKind values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
+              "type": "string"
+            },
+            "shape": {
+              "description": "CLI/agent surface only (see above). One of the Rust ValueShape values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
+              "type": "string"
+            },
+            "capabilities": {
+              "description": "CLI/agent surface only (see above). Rust Capability values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "origin": {
+              "description": "CLI/agent surface only (see above). One of the Rust ValueOrigin values (rust/src/semantic/protocol.rs); not duplicated here as a closed list.",
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
