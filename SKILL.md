@@ -135,19 +135,19 @@ produce a value produces NIL (§4); a malformed one raises an error.
   Fix: Grep §9 for the word you meant (here: `+` / `ADD`). Word names are upper-cased automatically.
 - **Stack underflow: operands must be pushed first** — `+`
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkArity`.
+  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: Push both operands before the operator: `[ 1 ] [ 2 ] +`. Ajisai is postfix; there is no infix form.
 - **FOLD without an initial value** — `[ 1 2 3 ] [ + ] FOLD`
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkArity`.
+  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.
 - **COND clauses must be wrapped in a single [ ]** — `5 [ 3 > ] [ 'big' PRINT ] COND`
   → exit 1, `message: "COND: each clause must itself be a [ guard | body ] block"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
 - **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
   → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] [ [ predicate ] [ body ] ... ] COND`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
   → exit 1, `message: "Cannot broadcast shapes [2] and [3]: axis 0 is 2 on the left and 3 on the right, and neither is 1"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
@@ -155,15 +155,15 @@ produce a value produces NIL (§4); a malformed one raises an error.
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
   → exit 1, `message: "NUM: expected String, got Boolean"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: NUM accepts strings: `'42' NUM`. There is no boolean→number cast.
 - **Old two-vector RANGE form** — `[ 0 ] [ 5 ] RANGE`
   → exit 1, `message: "RANGE requires [start end] or [start end step]"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).
 - **Vector-wrapped string passed to a cast** — `[ '42' ] NUM`
   → exit 1, `message: "NUM: expected String input"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: String casts take the bare string: `'42' NUM`.
 
 ## 8. Forbidden patterns (each verified to fail)

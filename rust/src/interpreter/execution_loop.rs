@@ -166,7 +166,7 @@ fn projected_nil_reason(value: &Value) -> Option<NilReason> {
     if value.is_nil() {
         return match value.nil_reason() {
             Some(NilReason::Literal) | None => None,
-            Some(reason) => Some(reason.clone()),
+            Some(reason) => Some(*reason),
         };
     }
     let lanes = value.as_vector_view()?;
@@ -194,7 +194,7 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
 
     let category = error_category_for_nil_reason(&reason);
     let stack_len_after = interp.stack.len();
-    let diagnosis = DebugDiagnosis::from_error_category(
+    let mut diagnosis = DebugDiagnosis::from_error_category(
         ErrorPhase::ExecuteWord,
         Some(word),
         category.as_ref(),
@@ -209,10 +209,15 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
     );
     // The absence envelope belongs to the value that actually carries the
     // projection, which for a lifted Word is a lane rather than the result.
-    let absence = interp
-        .stack
-        .last()
-        .and_then(projected_absence_metadata);
+    let absence = interp.stack.last().and_then(projected_absence_metadata);
+    // The ceiling facts behind a resource projection are decided at the
+    // projection site — the only place that knows which limit fired and at what
+    // size — so they are carried over rather than rebuilt from the category
+    // here, which could only say that *a* limit was crossed.
+    diagnosis.resource_limit = absence
+        .as_ref()
+        .and_then(|metadata| metadata.diagnosis.as_ref())
+        .and_then(|d| d.resource_limit.clone());
     interp.push_error_flow_trace(ErrorFlowEvent {
         kind: ErrorFlowEventKind::NilProduced,
         word: Some(word.to_string()),

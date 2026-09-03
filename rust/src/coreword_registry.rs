@@ -15,7 +15,7 @@
 //! now come from the generated enums, where a value the canon admits is a
 //! variant by construction.
 
-use crate::kernel::generated::{GeneratedWord, GENERATED_WORDS};
+use crate::kernel::generated::GENERATED_WORDS;
 mod contract;
 
 use contract::mass_from_arity;
@@ -28,7 +28,7 @@ use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
 
-pub use crate::kernel::generated::{Determinism, NilPolicy, Partiality, Purity};
+pub use crate::kernel::generated::{Determinism, GeneratedWord, NilPolicy, Partiality, Purity};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum SafetyLevel {
@@ -116,6 +116,19 @@ pub fn get_coreword_metadata(name: &str) -> Option<CorewordMetadata> {
 /// Alias of `get_coreword_metadata`. Use this in new code.
 pub fn get_builtin_word_metadata(name: &str) -> Option<CorewordMetadata> {
     get_coreword_metadata(name)
+}
+
+/// The declared contract row for a Word, by bare name.
+///
+/// [`CorewordMetadata`] is the runtime's *joined* view — the declaration plus
+/// the runtime-local classifications — and it is serialized to several
+/// surfaces. A caller that wants the declaration itself, in the
+/// specification's own spelling (the conditions the Word names for projecting
+/// and for raising, its declared arity, how one line of it is written), reads
+/// the generated row instead of widening that view.
+pub fn get_declared_word(name: &str) -> Option<&'static GeneratedWord> {
+    let upper = name.to_uppercase();
+    GENERATED_WORDS.iter().find(|word| word.name == upper)
 }
 
 pub fn get_words_by_profile(profile: WordProfile) -> Vec<CorewordMetadata> {

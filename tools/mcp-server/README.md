@@ -186,6 +186,16 @@ A resource-limit failure carries `diagnosis.resourceLimit`
 (`{ resource, limit, observed }`), where `resource` is the name of the very
 entry in `mcp.limits` that fired.
 
+A ceiling can refuse a call without failing it. A well-formed generative Word
+whose result will not fit — `[ 0 100001 ] RANGE` against
+`materializedElements` — *projects* to NIL under the NIL Projection Rule, so
+the call is `status: ok` and there is no top-level `diagnosis` to carry
+anything. The same facts are on the value that came back instead:
+`stack[i].semantics.absence.diagnosis.resourceLimit`, and on the
+`nilProduced` entry of `errorFlowTrace`. Read them there when
+`absence.reason` is `spaceExhausted`; `reason` says a ceiling fired, and only
+these say which one, what it is set to, and what size crossed it.
+
 ### Backends and provenance
 
 All execution tools call the same host-neutral Rust agent boundary

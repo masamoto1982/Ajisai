@@ -475,6 +475,21 @@ pub struct GeneratedWord {
     /// it as free strings), so this is projected as declared rather than
     /// narrowed into a Rust enum.
     pub effects: &'static [&'static str],
+    /// The conditions under which the Word *raises*, in the specification's
+    /// own spelling — the ERROR counterpart of `projection`, which names the
+    /// condition under which it answers NIL instead.
+    ///
+    /// Projected so a diagnosis can be derived from the declaration rather
+    /// than from a hand-written table: a Word that raises for a condition it
+    /// declares used to reach the caller as `why: "unknown"` with "read the
+    /// message" as its only next check.
+    pub error_when: &'static [&'static str],
+    /// One line of the Word written correctly, as the specification writes it.
+    ///
+    /// Read by the stack-underflow diagnosis, where "how many operands and in
+    /// what shape" is exactly the question and `Stack underflow` alone
+    /// answers none of it.
+    pub syntax: Option<&'static str>,
 }
 
 pub const GENERATED_WORDS: &[GeneratedWord] = &[
@@ -509,6 +524,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("TRUE"),
     },
     GeneratedWord {
         id: WordId::False,
@@ -541,6 +558,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("FALSE"),
     },
     GeneratedWord {
         id: WordId::And,
@@ -573,6 +592,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonTruthValue"],
+        syntax: Some("TRUE TRUE &"),
     },
     GeneratedWord {
         id: WordId::Or,
@@ -605,6 +626,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
+        error_when: &["nonTruthValue"],
+        syntax: Some("TRUE FALSE OR"),
     },
     GeneratedWord {
         id: WordId::Not,
@@ -637,6 +660,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonTruthValue"],
+        syntax: Some("TRUE NOT"),
     },
     GeneratedWord {
         id: WordId::Eq,
@@ -669,6 +694,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["unsupportedComparison", "shapeMismatch"],
+        syntax: Some("1 1 ="),
     },
     GeneratedWord {
         id: WordId::Neq,
@@ -701,6 +728,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
+        error_when: &["unsupportedComparison", "shapeMismatch"],
+        syntax: Some("1 2 NEQ"),
     },
     GeneratedWord {
         id: WordId::Lt,
@@ -733,6 +762,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["unsupportedComparison", "shapeMismatch"],
+        syntax: Some("1 2 <"),
     },
     GeneratedWord {
         id: WordId::Le,
@@ -765,6 +796,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
+        error_when: &["unsupportedComparison", "shapeMismatch"],
+        syntax: Some("1 1 LTE"),
     },
     GeneratedWord {
         id: WordId::Gt,
@@ -797,6 +830,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["unsupportedComparison", "shapeMismatch"],
+        syntax: Some("2 1 >"),
     },
     GeneratedWord {
         id: WordId::Gte,
@@ -829,6 +864,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
+        error_when: &["unsupportedComparison", "shapeMismatch"],
+        syntax: Some("1 1 GTE"),
     },
     GeneratedWord {
         id: WordId::Add,
@@ -861,6 +898,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("1 2 +"),
     },
     GeneratedWord {
         id: WordId::Sub,
@@ -893,6 +932,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("5 3 -"),
     },
     GeneratedWord {
         id: WordId::Mul,
@@ -925,6 +966,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("2 4 *"),
     },
     GeneratedWord {
         id: WordId::Div,
@@ -957,6 +1000,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("10 2 /"),
     },
     GeneratedWord {
         id: WordId::Mod,
@@ -989,6 +1034,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch", "divisorEqualsZero"],
+        syntax: Some("7 3 %"),
     },
     GeneratedWord {
         id: WordId::Floor,
@@ -1021,6 +1068,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("[ 7/3 ] FLOOR"),
     },
     GeneratedWord {
         id: WordId::Round,
@@ -1053,6 +1102,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("[ 5/2 ] ROUND"),
     },
     GeneratedWord {
         id: WordId::Quantize,
@@ -1085,6 +1136,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("[ 119/125 32/125 ] 10 QUANTIZE"),
     },
     GeneratedWord {
         id: WordId::Abs,
@@ -1117,6 +1170,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
+        error_when: &["nonNumeric"],
+        syntax: Some("-2 ABS"),
     },
     GeneratedWord {
         id: WordId::Neg,
@@ -1149,6 +1204,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonNumeric"],
+        syntax: Some("2 NEG"),
     },
     GeneratedWord {
         id: WordId::Min,
@@ -1181,6 +1238,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("1 2 MIN"),
     },
     GeneratedWord {
         id: WordId::Max,
@@ -1213,6 +1272,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
+        error_when: &["nonNumeric", "shapeMismatch"],
+        syntax: Some("1 2 MAX"),
     },
     GeneratedWord {
         id: WordId::Sqrt,
@@ -1245,6 +1306,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("2 SQRT"),
     },
     GeneratedWord {
         id: WordId::Pi,
@@ -1277,6 +1340,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("PI"),
     },
     GeneratedWord {
         id: WordId::Random,
@@ -1309,6 +1374,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonInteger", "negativeCount"],
+        syntax: Some("7 3 RANDOM"),
     },
     GeneratedWord {
         id: WordId::Get,
@@ -1341,6 +1408,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonVector", "invalidIndex"],
+        syntax: Some("[ 10 20 30 ] [ 0 2 ] GET"),
     },
     GeneratedWord {
         id: WordId::Length,
@@ -1373,6 +1442,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonVector"],
+        syntax: Some("[ 1 2 3 ] LENGTH"),
     },
     GeneratedWord {
         id: WordId::Take,
@@ -1405,6 +1476,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
+        error_when: &["nonVector", "invalidCount"],
+        syntax: Some("[ 1 2 3 4 5 ] [ 3 ] TAKE"),
     },
     GeneratedWord {
         id: WordId::Concat,
@@ -1437,6 +1510,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonVector"],
+        syntax: Some("[ 1 2 ] [ 3 4 ] CONCAT"),
     },
     GeneratedWord {
         id: WordId::Reverse,
@@ -1469,6 +1544,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
+        error_when: &["nonVector"],
+        syntax: Some("[ 1 2 3 ] REVERSE"),
     },
     GeneratedWord {
         id: WordId::Collect,
@@ -1501,6 +1578,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["invalidCount", "stackUnderflow"],
+        syntax: Some("1 2 3 3 COLLECT"),
     },
     GeneratedWord {
         id: WordId::Range,
@@ -1533,6 +1612,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["invalidRange"],
+        syntax: Some("[ 0 5 ] RANGE"),
     },
     GeneratedWord {
         id: WordId::Fill,
@@ -1565,6 +1646,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["invalidShape"],
+        syntax: Some("[ 2 2 0 ] FILL"),
     },
     GeneratedWord {
         id: WordId::Sort,
@@ -1597,6 +1680,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "nonComparableElement"],
+        syntax: Some("[ 3 1 2 ] SORT"),
     },
     GeneratedWord {
         id: WordId::Order,
@@ -1629,6 +1714,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "nonComparableElement"],
+        syntax: Some("[ 30 10 20 ] ORDER"),
     },
     GeneratedWord {
         id: WordId::Unique,
@@ -1661,6 +1748,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector"],
+        syntax: Some("[ 'a' 'b' 'a' ] UNIQUE"),
     },
     GeneratedWord {
         id: WordId::Tally,
@@ -1693,6 +1782,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector"],
+        syntax: Some("[ 'a' 'b' 'a' ] TALLY"),
     },
     GeneratedWord {
         id: WordId::Zip,
@@ -1725,6 +1816,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "vectorLengthMismatch"],
+        syntax: Some("[ [ 1 2 ] [ 3 4 ] ] ZIP"),
     },
     GeneratedWord {
         id: WordId::Sum,
@@ -1757,6 +1850,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
+        error_when: &["nonVector", "nonNumeric"],
+        syntax: Some("[ 1 2 3 ] SUM"),
     },
     GeneratedWord {
         id: WordId::Put,
@@ -1789,6 +1884,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "nonInteger", "indexOutOfBounds"],
+        syntax: Some("[ 1 2 3 ] 1 9 PUT"),
     },
     GeneratedWord {
         id: WordId::Group,
@@ -1821,6 +1918,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "vectorLengthMismatch"],
+        syntax: Some("[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP"),
     },
     GeneratedWord {
         id: WordId::IndexOf,
@@ -1853,6 +1952,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
+        error_when: &["nonVector"],
+        syntax: Some("[ 1 2 ] 2 INDEX-OF"),
     },
     GeneratedWord {
         id: WordId::Map,
@@ -1885,6 +1986,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        syntax: Some("[ 1 2 3 ] [ 2 MUL ] MAP"),
     },
     GeneratedWord {
         id: WordId::Filter,
@@ -1917,6 +2020,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        syntax: Some("[ 1 2 3 ] [ 2 = ] FILTER"),
     },
     GeneratedWord {
         id: WordId::Fold,
@@ -1949,6 +2054,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        syntax: Some("[ 1 2 3 ] [ 0 ] [ + ] FOLD"),
     },
     GeneratedWord {
         id: WordId::Any,
@@ -1981,6 +2088,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        syntax: Some("[ 1 2 3 ] [ 2 = ] ANY"),
     },
     GeneratedWord {
         id: WordId::All,
@@ -2013,6 +2122,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
+        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        syntax: Some("[ 2 4 ] [ 2 MOD 0 = ] ALL"),
     },
     GeneratedWord {
         id: WordId::Chars,
@@ -2045,6 +2156,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonText"],
+        syntax: Some("'hi' CHARS"),
     },
     GeneratedWord {
         id: WordId::Join,
@@ -2077,6 +2190,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonTextVector", "nonTextElement"],
+        syntax: Some("[ 'h' 'i' ] JOIN"),
     },
     GeneratedWord {
         id: WordId::Trim,
@@ -2109,6 +2224,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
+        error_when: &["nonText"],
+        syntax: Some("'  hi  ' TRIM"),
     },
     GeneratedWord {
         id: WordId::Tokenize,
@@ -2141,6 +2258,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("algorithm"),
         effects: &[],
+        error_when: &["nonText", "nonTextSeparator"],
+        syntax: Some("'a,b,c' ',' TOKENIZE"),
     },
     GeneratedWord {
         id: WordId::Num,
@@ -2173,6 +2292,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonText"],
+        syntax: Some("'42' NUM"),
     },
     GeneratedWord {
         id: WordId::Str,
@@ -2205,6 +2326,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("42 STR"),
     },
     GeneratedWord {
         id: WordId::Cond,
@@ -2237,6 +2360,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["invalidClauseShape", "nonTruthGuard"],
+        syntax: Some("1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND"),
     },
     GeneratedWord {
         id: WordId::Exec,
@@ -2269,6 +2394,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["notExecutable", "nestedExecutionError"],
+        syntax: Some("[ 1 2 ADD ] EXEC"),
     },
     GeneratedWord {
         id: WordId::Probe,
@@ -2301,6 +2428,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["notExecutable"],
+        syntax: Some("[ 1 2 ADD ] PROBE"),
     },
     GeneratedWord {
         id: WordId::Nil,
@@ -2333,6 +2462,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("NIL"),
     },
     GeneratedWord {
         id: WordId::NilCheck,
@@ -2365,6 +2496,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("1 0 / NIL?"),
     },
     GeneratedWord {
         id: WordId::NilReason,
@@ -2397,6 +2530,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("1 0 / NIL-REASON"),
     },
     GeneratedWord {
         id: WordId::LazyNextUnitFallback,
@@ -2429,6 +2564,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["missingFollowingSourceUnit"],
+        syntax: Some("NIL OR-NIL [ 0 ]"),
     },
     GeneratedWord {
         id: WordId::SetConsumptionKeep,
@@ -2461,6 +2598,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &[],
+        syntax: Some("KEEP +"),
     },
     GeneratedWord {
         id: WordId::Bind,
@@ -2493,6 +2632,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
+        error_when: &["nonText", "nameIsAWord", "shapeMismatch"],
+        syntax: Some("[ 1 2 3 ] 'XS' BIND"),
     },
     GeneratedWord {
         id: WordId::Def,
@@ -2525,6 +2666,13 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["dictionaryWrite"],
+        error_when: &[
+            "invalidName",
+            "protectedWord",
+            "definitionConflict",
+            "selfReferentialDefinition",
+        ],
+        syntax: Some("[ 2 * ] 'DOUBLE' DEF"),
     },
     GeneratedWord {
         id: WordId::Del,
@@ -2557,6 +2705,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["dictionaryDelete"],
+        error_when: &["invalidName", "wordNotFound", "protectedWord"],
+        syntax: Some("[ [ 1 ] ] 'W' DEF 'W' DEL"),
     },
     GeneratedWord {
         id: WordId::Print,
@@ -2589,5 +2739,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["consoleWrite"],
+        error_when: &[],
+        syntax: Some("42 PRINT"),
     },
 ];

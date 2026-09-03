@@ -108,6 +108,17 @@ pub enum ResourceLimit {
     /// same vocabulary even though it lives outside `RuntimeLimits`, because a
     /// host publishes it as one more entry in the same limit table.
     ExecutionSteps,
+    /// Materialized element count of one generated collection
+    /// (`max_materialized_elements`).
+    ///
+    /// The only ceiling in this vocabulary that is never *raised*: crossing it
+    /// is a well-formed operation that cannot produce a value within budget, so
+    /// the NIL Projection Rule projects it (SPEC §11.2). It is named here all
+    /// the same, because a projection and a raise refuse for the same kind of
+    /// reason and a caller plans against the same published entry — and
+    /// without a name the projection could only say *that* a ceiling fired,
+    /// never which one or how much would have fitted.
+    MaterializedElements,
 }
 
 /// How far an incrementally charged operation had got when its budget ran out.
@@ -149,6 +160,7 @@ impl ResourceLimit {
             ResourceLimit::BigintBits => "bigintBits",
             ResourceLimit::AlgebraicTerms => "algebraicTerms",
             ResourceLimit::ExecutionSteps => "executionSteps",
+            ResourceLimit::MaterializedElements => "materializedElements",
         }
     }
 }
@@ -206,6 +218,9 @@ impl ErrorCategory {
             AjisaiError::StructureError { .. } => ErrorCategory::StructureError,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
             AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
+            AjisaiError::DeclaredCondition { condition, .. } => {
+                category_for_declared_condition(condition)
+            }
             AjisaiError::IndexOutOfBounds { .. } => ErrorCategory::IndexOutOfBounds,
             AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
             AjisaiError::CountExceedsLength { .. } => ErrorCategory::IndexOutOfBounds,
@@ -374,7 +389,41 @@ pub enum AjisaiError {
     },
     Custom(String),
 
+    /// A failure the Word's registry entry declares by name, carrying the
+    /// message the Word writes for it.
+    ///
+    /// `Custom(String)` is where a Word that raised for a *declared* reason
+    /// landed, and `Custom` classifies as `why: "unknown"` with "read the
+    /// message" as its only next check — so `MOD`'s zero divisor, which
+    /// `spec/words.json` declares as `divisorEqualsZero`, arrived at the
+    /// caller unclassified while the declaration had named it all along.
+    ///
+    /// Naming the condition lets the category, and so the cause class and the
+    /// checks, be derived from the declaration rather than from a hand-written
+    /// table — and without changing the message, which the conformance suite
+    /// pins as part of the language.
+    DeclaredCondition {
+        /// One of the Word's declared `errorWhen` conditions, in the
+        /// specification's own spelling.
+        condition: &'static str,
+        message: String,
+    },
+
     CondExhausted,
+}
+
+/// The category a declared `errorWhen` condition names.
+///
+/// Only the conditions actually raised through
+/// [`AjisaiError::DeclaredCondition`] are mapped; everything else keeps the
+/// `Custom` classification it has today, so this grows one arm at a time as
+/// raise sites are migrated rather than asserting a classification for a
+/// condition nothing raises yet.
+fn category_for_declared_condition(condition: &str) -> ErrorCategory {
+    match condition {
+        "divisorEqualsZero" => ErrorCategory::DivisionByZero,
+        _ => ErrorCategory::Custom,
+    }
 }
 
 impl AjisaiError {
@@ -395,6 +444,7 @@ impl fmt::Display for AjisaiError {
             }
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
+            AjisaiError::DeclaredCondition { message, .. } => write!(f, "{}", message),
             AjisaiError::IndexOutOfBounds { index, length } => {
                 write!(
                     f,

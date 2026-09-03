@@ -1,6 +1,6 @@
 use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_no_arg;
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_bigint_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
@@ -187,7 +187,11 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         // above (zero step, infinite direction) remain ordinary errors.
         interp
             .stack
-            .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
+            .push(crate::interpreter::space_projection::space_exhausted_nil(
+                "RANGE",
+                max_materialized,
+                Some(element_count),
+            ));
         return Ok(());
     }
 
