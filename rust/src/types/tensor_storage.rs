@@ -97,9 +97,13 @@ impl DenseTensor {
     }
 
     /// `true` when every lane (`0..len`) is valid — i.e. there are no `nil`
-    /// holes. Checks the bitmask word-at-a-time instead of per lane, so the
-    /// integer borrow fast-path can confirm density in O(len/64).
+    /// holes. Screens the bitmask word-at-a-time first (O(len/64)), then
+    /// confirms no lane carries the denominator-0 absence sentinel; see
+    /// [`Self::is_valid`] for why both records have to agree.
     pub fn all_lanes_valid(&self) -> bool {
+        if self.denominators.iter().any(|denominator| *denominator == 0) {
+            return false;
+        }
         let len = self.len();
         let full_words = len / 64;
         for word in self.valid_mask.iter().take(full_words) {
@@ -122,6 +126,13 @@ impl DenseTensor {
         (0..self.len()).map(|index| self.fraction_or_nil(index))
     }
 
+    /// The present value at `index`, or `None` when the lane is absent.
+    ///
+    /// Never hands a 0 denominator to [`Fraction::new`]: an absent lane is
+    /// screened out by [`Self::is_valid`] first. `Fraction::new` keeps its
+    /// panic on purpose — constructing a 0-denominator rational anywhere else
+    /// is a bug, and silencing it here would turn an absent lane into a
+    /// plausible-looking number instead.
     pub fn get_small_fraction(&self, index: usize) -> Option<Fraction> {
         if !self.is_valid(index) {
             return None;
@@ -146,8 +157,20 @@ impl DenseTensor {
         }
     }
 
+    /// `true` when lane `index` holds a present value.
+    ///
+    /// Absence is recorded twice in this struct: as the denominator-0 sentinel
+    /// that [`Fraction::nil`] stores, and as a cleared `valid_mask` bit. Every
+    /// production write path (`ValueData::Nil => buf.push(Fraction::nil())` in
+    /// `value_children.rs`) uses the sentinel and leaves the mask fully set, so
+    /// a reader that trusts the mask alone reads an absent lane as a present
+    /// `n/0`. Both records are consulted here, and a lane counts as present
+    /// only when they agree.
     pub fn is_valid(&self, index: usize) -> bool {
         if index >= self.len() {
+            return false;
+        }
+        if self.denominators.get(index).copied() == Some(0) {
             return false;
         }
         let Some(word) = self.valid_mask.get(index / 64) else {
@@ -264,6 +287,11 @@ impl SparseTensor {
             return None;
         }
         let entry = self.indices.binary_search(&index).ok()?;
+        // Same sentinel screen as `DenseTensor::get_small_fraction`: a stored
+        // entry with a 0 denominator is an absent lane, not a rational.
+        if self.denominators[entry] == 0 {
+            return None;
+        }
         Some(Fraction::new(
             self.numerators[entry].into(),
             self.denominators[entry].into(),

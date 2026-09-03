@@ -11,7 +11,20 @@ use std::sync::Arc;
 
 impl Value {
     #[inline]
+    /// A numeric leaf from a rational.
+    ///
+    /// A `Fraction` whose denominator is 0 is [`Fraction::nil`] — the absence
+    /// sentinel the dense tensor lanes store, not a rational. It becomes
+    /// `ValueData::Nil` here rather than a `Scalar` wrapping an unreadable
+    /// number: this is the one place fraction-level absence is translated into
+    /// value-level absence, so a lane rehydrated out of a tensor answers
+    /// [`Value::is_nil`] like any other NIL. Lanes carry presence, not a
+    /// reason, so the absence reads back as `literal` — the reason a lane was
+    /// stored under does not survive densification.
     pub fn from_fraction(f: Fraction) -> Self {
+        if f.is_nil() {
+            return Self::nil_literal();
+        }
         Self {
             data: ValueData::Scalar(f),
             hint: Interpretation::RawNumber,
