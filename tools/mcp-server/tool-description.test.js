@@ -20,7 +20,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { TOOLS } from "./index.js";
+import { createBackend, TOOLS } from "./index.js";
 
 const registry = JSON.parse(
   readFileSync(new URL("./assets/words.json", import.meta.url), "utf8"),
@@ -99,7 +99,49 @@ function escapeRegExp(text) {
   return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// ── and every literal Ajisai fragment in them actually parses ──────────────
+//
+// A description that shows example source is teaching syntax by
+// demonstration — a caller trusts it as literally correct without running it
+// first. "A block passed to MAP/FILTER/FOLD/ANY/ALL is in braces
+// (`[ 1 2 3 4 ] { 2 MOD 0 = } FILTER`)" shipped for a time describing a
+// bracket the tokenizer had already retired (`{`/`}` are not valid Ajisai
+// source characters), because nothing here ever executed the sample the
+// prose showed — only the Word *names* mentioned above were checked, not the
+// code around them. Any backtick span shaped like source (it contains `[`,
+// `'`, or is a bare postfix expression of digits/uppercase Words/operators)
+// is run against the live backend the server itself answers with, the same
+// guarantee mcp-quickstart.md's fenced examples get from `selftest.js` and
+// SKILL.md's §6 examples get from `generate-skill-md.mjs`.
+const looksLikeAjisaiSource = (span) =>
+  /['[\]]/.test(span) || /^[0-9A-Z][0-9A-Z+\-*/<>=%!?. ]*$/.test(span);
+
+const codeSpans = [
+  ...new Set(
+    [...descriptions.matchAll(/`([^`]+)`/g)]
+      .map(([, span]) => span)
+      .filter(looksLikeAjisaiSource),
+  ),
+];
+assert.ok(
+  codeSpans.length >= 5,
+  "expected several source-shaped backtick spans across the tool descriptions to verify",
+);
+
+const liveBackend = createBackend();
+assert.ok(liveBackend, "no execution backend available to verify tool-description code spans against");
+for (const span of codeSpans) {
+  const result = await liveBackend.check(span);
+  assert.equal(
+    result.status,
+    "ok",
+    `a tool description shows \`${span}\` as valid Ajisai, but check answered status=${result.status}` +
+      (result.message ? ` (${result.message})` : ""),
+  );
+}
+
 console.log(
   `tool descriptions announce ${MUST_ANNOUNCE.length} Word families and name ` +
-    `${new Set(mentioned).size} Words, all of which exist`,
+    `${new Set(mentioned).size} Words, all of which exist; ${codeSpans.length} source-shaped ` +
+    "examples all verified against the live backend",
 );

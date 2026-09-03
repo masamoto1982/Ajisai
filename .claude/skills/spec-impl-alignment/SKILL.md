@@ -105,6 +105,35 @@ Fixing the live side is what exposed the binary's own drift — in CI, not
 locally. `npm run build:wasm && npm run build:mcp-wasm`, commit the
 regenerated bundles.
 
+### Verification blind spot — MCP-facing generated prose
+
+`SKILL.md`, `tools/mcp-server/mcp-quickstart.md` → `assets/quickstart.md`,
+and the tool `description`/`inputSchema` strings in
+`tools/mcp-server/index.js` are implementation (`tools/mcp-server/` is
+explicitly in Phase 2's scope) that an MCP client reads *before* its first
+tool call. Two of the three had example code that drifted from the
+tokenizer independently of each other and went undetected, because only
+`mcp-quickstart.md`'s fenced blocks (`selftest.js`'s `prefaceExamples`) and
+`SKILL.md` §6's `canonicalExamples` array were actually executed — the
+hand-typed connective prose around them (`SKILL.md` §2/§3,
+`index.js`'s `source` description) was not, despite both files claiming it
+was. `{ body } 'NAME' DEF` and `{ 2 MOD 0 = } FILTER` both shipped this
+way; full incident and fix in
+`docs/dev/spec-impl-alignment-methodology.md`'s "検証の盲点 その2".
+
+Before closing Phase 2: any backtick-quoted span in these files that reads
+as literal Ajisai source (contains `[`, `'`, or is a bare postfix
+expression) must either come from an already-executed example (reference
+`canonicalExamples` by `id` in `generate-skill-md.mjs`, or be one of
+`mcp-quickstart.md`'s fenced ```ajisai blocks) or be run against the live
+backend directly (`tool-description.test.js` does this for `index.js` via
+`createBackend()`). A syntax *shape* that needs a placeholder (`body`,
+`guard`, `NAME`) to explain is prose, not backtick code — backticks assert
+"this is verified Ajisai," and a placeholder can't be. `{`/`}` specifically
+have recurred three times independently; `generate-skill-md.mjs` now fails
+generation if either appears in §2/§3 outside a line documenting them as
+retired.
+
 ## Phase 3 — spec vs. implementation
 
 Only now compare the two. For each observed disagreement between what
@@ -112,6 +141,13 @@ Only now compare the two. For each observed disagreement between what
 program run — `ajisai agent compute - --json`, or the WASM/GUI
 equivalent — never trust a doc comment's claim about behavior),
 apply the suite-arbitration rule:
+
+(The MCP-served guide, `ajisai://guide/quickstart`, is not one of the 5
+canonical `spec/` sources and so sits outside this comparison — but it's
+what an AI caller actually reads and acts on, ahead of `spec/`. Its
+agreement with the real backend is guaranteed separately, by the
+executable-verification mechanisms named in the "Verification blind spot —
+MCP-facing generated prose" note above, not by this phase.)
 
 - The behavior is **pinned by `tests/conformance/index.html`**
   (`LANG.CONFORMANCE.CORPUS`) → intentional design. Amend `spec/` to

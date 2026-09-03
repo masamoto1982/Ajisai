@@ -16,7 +16,10 @@
 > `.claude/skills/spec-impl-alignment/SKILL.md` が併設されている（PR #1609
 > で新設、PR #1610 が初回の実行）。PR #1611 の実地適用で得た二つの教訓
 > ——コミット済みビルド生成物の陳腐化（Phase 2）と、発見間の適用範囲の
-> 規律（Phase 4）——は本書とチェックリストの両方へ反映してある。
+> 規律（Phase 4）——は本書とチェックリストの両方へ反映してある。同じ
+> Phase 2 の枠組みに、2026-09、MCP サーバーへの実接続で見つかった第三の
+> 盲点——AI エージェント向け生成プローズ（`SKILL.md`、`tools/mcp-server/`
+> のツール説明文）の例示コードが実装から独立に陳腐化しうること——を追加した。
 
 ## 0. なぜタイムスタンプではなくスイートか
 
@@ -94,9 +97,81 @@ provenance（いつ・なぜ変わったか）が要る場面では、手書き�
 まで含めて確認する。陳腐化した二者は互いに一致するため、片方を直すまで
 このスイートも緑のままである（§2 の PR #1611 を参照）。
 
+#### 検証の盲点 その2 — MCP 向け生成プローズ
+
+`tools/mcp-server/` は Phase 2 の対象実装（`rust/src`、`src/`、
+`tools/mcp-server/`）に含まれるが、その中の「AI エージェント向け生成
+ドキュメント」——`SKILL.md`、`mcp-quickstart.md` → `assets/quickstart.md`、
+`index.js` のツール説明文——は、MCP クライアント（AI）がツール呼び出しの
+*前に*読む一次資料であるにもかかわらず、中の例示コードが実装と一致するかを
+機械的に確認する仕組みが、部分的にしか存在しなかった。
+
+2026-09、実際に Ajisai の MCP サーバーへ接続して手動でツールを叩いた際に
+発覚した実例（本節の PR）:
+
+1. `SKILL.md` §2/§3 の地の文（`generate-skill-md.mjs` の手書きプローズ）が
+   `{ body } 'NAME' DEF` という、CodeBlock/Vector unification で廃止済みの
+   `{ }` 構文を教えていた。同ファイルの冒頭は「Every code line below was
+   executed by the generator against the real interpreter」と自己申告して
+   いたが、実際に検証されるのは §6 の `canonicalExamples` 配列（`runSnippet`
+   経由で実行）だけで、§2/§3 の地の文は独立した手書き文字列としてこの網の
+   外にあった。
+2. 同じ `{ }` バグが `tools/mcp-server/index.js` の
+   `sourceSchema.properties.source.description`——`compute`/`check`/
+   `infer_contracts` 全ツールが共有する、MCP クライアントが最初に読む
+   ツール説明文——にも独立に存在していた。この行の直前のコメントは
+   「Each rule was executed against the engine before being written here」
+   と主張していたが、これも一度も実行検証されていなかった。
+3. 対照的に `assets/quickstart.md`（`ajisai://guide/quickstart` として配信）
+   の ```` ```ajisai ```` フェンス付きブロックは `selftest.js` の
+   `prefaceExamples` が実際にライブ実行して検証しており、無事だった。同じ
+   「MCP 向け生成文書」という括りの中に検証済みの部分と未検証の部分が
+   混在しており、後者は前者の存在によって「このファイルは検証済みだ」と
+   いう誤った安心感を生んでいた。
+
+これは Phase 2 が既に定義しているパターンそのもの——「クロスチェックされて
+いると信じられているが実際にはされていない箇所」——の一例であり、対象が
+Rust/TS の実装コードではなく AI エージェント向けの生成プローズだった、と
+いう違いしかない。
+
+対処（本節の PR で実施したこと。今後この種の生成プローズを追加・変更する
+際の指針でもある）:
+
+- 具体的な構文の断片を地の文で裏付けなしに手書きしない。`generate-skill-md.mjs`
+  は `canonicalExamples` の該当エントリに `id` を振り、§2/§3 の記述を
+  `canonicalExampleCode(id)` 経由の参照に直した——手書きコピーは残らず、
+  §2/§3 に出る具体例は必ず §6 で実行検証済みの文字列そのものになる。
+- プレースホルダ（`body`/`guard`/`NAME` 等の疑似変数）でしか説明できない
+  構文の「形」は、バッククォートで囲んだコード片としては書かない。
+  バッククォートは「これは検証済みの Ajisai ソースである」という主張に
+  なるため、プレースホルダをそこに置くと同じ主張を裏切る——地の文の平文で
+  説明する。
+- `tools/mcp-server/index.js` のツール説明文にも `tool-description.test.js`
+  へ実行検証を追加した。説明文中のバッククォート片のうち「Ajisai ソース
+  らしい形」（`[` か `'` を含む、または数字/大文字 Word/演算子だけの裸の式）
+  をしたものを、サーバー自身が使う実バックエンド（`createBackend()`）の
+  `check()` に実際に通し、`status: "ok"` を要求する。
+- `{`/`}` は独立した3箇所（`SKILL.md`、`index.js`、そして偶然だが
+  `assets/quickstart.md` はセーフだった）で再発した具体的な前科があるため、
+  `generate-skill-md.mjs` に生成後アサーションを追加した: §2/§3 に
+  `{`/`}` が現れたら、それが「廃止された」と明記する行の上でない限り
+  生成を失敗させる。
+
 ### Phase 3 — 仕様と実装の突き合わせ
 
 Phase 1・Phase 2 をそれぞれ個別に終えた後、初めて両者を比較する。
+
+本フェーズは本来「`spec/` 対 実機」の2項比較だが、`SKILL.md`／
+`assets/quickstart.md`（MCP が `ajisai://guide/quickstart` として配信する
+ガイド）は `spec/` の5ソースに含まれない非正典ドキュメントであり、この
+比較の外側にいる。しかし実際に行動するのは `spec/` を読む人間ではなく
+このガイドを読む AI であり、上の「検証の盲点 その2」が示す通り、ここに
+`spec/` とは独立した第3の食い違いが生じうる。`spec/` との不一致は
+Phase 1-3 の通常経路で扱うが、ガイド自身の記述と実機の一致は、Phase 2 の
+「MCP 向け生成プローズ」節が定める実行検証（`generate-skill-md.mjs` の
+`canonicalExamples` 参照、`selftest.js` の `prefaceExamples`、
+`tool-description.test.js` の `check()` 呼び出し）が担う、別系統の保証
+であると明示しておく。
 
 **スイート裁定規則**（旧 `spec-impl-drift-tactic.md` §3.3 を引き継ぐ）:
 観測される実装の挙動と本文が食い違ったとき、
@@ -204,3 +279,10 @@ PR を切ること自体が、小さく検証可能な単一目的の diff を�
     `"Exploratory"` に分類されている、という Phase 1 型の矛盾が判明した。
     承認済みの範囲を大きく超えるため着手せず、後続課題として PR 説明に
     明記するにとどめた（Phase 4「適用範囲の規律」の由来）。
+- Phase 2（MCP 向け生成プローズ、2026-09）: Ajisai の MCP サーバーへ実際に
+  接続してツールを手動で叩く中で、`SKILL.md` §2/§3 と
+  `tools/mcp-server/index.js` のツール説明文それぞれに独立に残っていた、
+  廃止済み `{ }` ブロック構文を発見・修正。`generate-skill-md.mjs` を
+  `canonicalExamples` 参照方式に直し、`tool-description.test.js` に
+  ライブバックエンドでの実行検証を追加し、生成後アサーションで `{`/`}`
+  の再発を構造的に防いだ（本節「検証の盲点 その2」の由来）。
