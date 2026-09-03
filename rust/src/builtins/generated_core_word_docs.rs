@@ -248,7 +248,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "GET",
         category: "vector",
-        summary: "Select elements of a vector by index.",
+        summary: "Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and \"nothing\" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. Contrast `PUT`, which raises on the same condition.",
         role: "Random access into vectors and tensors, one position or many.",
         stack_effect: "[ vec ] [ idx.. ] -> [ elem | elems ]",
         hover_summary: "GET — select elements at indices",
@@ -374,7 +374,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "PUT",
         category: "vector",
-        summary: "A copy of a vector with the element at one index replaced.",
+        summary: "A copy of a vector with the element at one index replaced. An out-of-range index is an error here, where `GET` projects it to NIL on the same condition, because the two answer with different things. `GET` returns the element asked for, so a missing one empties its own slot and nothing else; `PUT` returns the whole vector, so it has no slot to empty — projecting would have to answer NIL for the entire collection because one index was wrong, discarding data the Word was asked to preserve. There is nothing to write and nothing partial to hand back, so it raises.",
         role: "Single-position update, without rebuilding the vector by hand.",
         stack_effect: "[ vec ] [ idx ] [ x ] -> [ vec ]",
         hover_summary: "A copy of a vector with the element at one index replaced.",

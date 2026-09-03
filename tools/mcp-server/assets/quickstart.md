@@ -462,7 +462,7 @@ no module system and nothing to import.
 | `SQRT` | math | Exact square root of a non-negative rational, element-wise over a vector. — e.g. `2 SQRT` |
 | `PI` | constant | The Tier 2 computable real π. — e.g. `PI` |
 | `RANDOM` | math | Count exact rationals in [0,1), determined entirely by the seed. — e.g. `7 3 RANDOM` |
-| `GET` | vector | Select elements of a vector by index. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
+| `GET` | vector | Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. Contrast `PUT`, which raises on the same condition. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
 | `TAKE` | vector | Take the first N or last -N elements of a vector. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
 | `CONCAT` | vector | Flatten and concatenate two vectors. — e.g. `[ 1 2 ] [ 3 4 ] CONCAT` |
@@ -476,7 +476,7 @@ no module system and nothing to import.
 | `TALLY` | vector | How many times each distinct element occurs, in UNIQUE order. — e.g. `[ 'a' 'b' 'a' ] TALLY` |
 | `ZIP` | vector | Bundle equal-length vectors position by position; a matrix transposes. — e.g. `[ [ 1 2 ] [ 3 4 ] ] ZIP` |
 | `SUM` | arithmetic | Fold the outermost axis with ADD; the empty vector sums to zero. — e.g. `[ 1 2 3 ] SUM` |
-| `PUT` | vector | A copy of a vector with the element at one index replaced. — e.g. `[ 1 2 3 ] 1 9 PUT` |
+| `PUT` | vector | A copy of a vector with the element at one index replaced. An out-of-range index is an error here, where `GET` projects it to NIL on the same condition, because the two answer with different things. `GET` returns the element asked for, so a missing one empties its own slot and nothing else; `PUT` returns the whole vector, so it has no slot to empty — projecting would have to answer NIL for the entire collection because one index was wrong, discarding data the Word was asked to preserve. There is nothing to write and nothing partial to hand back, so it raises. — e.g. `[ 1 2 3 ] 1 9 PUT` |
 | `GROUP` | vector | Bundle values by the key at the same position, in UNIQUE key order. — e.g. `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] [ 2 MUL ] MAP` |

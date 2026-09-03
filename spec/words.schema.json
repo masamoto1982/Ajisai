@@ -147,7 +147,7 @@
     }
    },
    "additionalProperties": false,
-   "description": "The conditions under which a well-formed operand yields a reasoned NIL. `when` accepts a list because a Word can project for more than one reason: `MOD` answers NIL both for a zero divisor and for an integer projection it cannot decide. `reason` already accepted a list; a single condition may still be written as a bare string."
+   "description": "The conditions under which a well-formed operand yields a reasoned NIL. `when` accepts a list because a Word can project for more than one reason: `MOD` answers NIL both for a zero divisor and for an integer projection it cannot decide. `reason` already accepted a list; a single condition may still be written as a bare string. As with `errorWhen`, a condition here names a state of the input rather than an outcome; this field is what says the outcome is a projection."
   },
   "documentation": {
    "type": "object",
@@ -285,7 +285,8 @@
       "type": "string",
       "minLength": 1
      },
-     "uniqueItems": true
+     "uniqueItems": true,
+     "description": "The conditions under which the Word raises. A condition names a state of the *input* — \"the divisor is zero\", \"the index is outside the vector\" — and not an outcome, so the same name may appear in one Word's `errorWhen` and another's `projection.when`. Which field it appears in is what decides the outcome, per Word, and the two are never both declared for one condition on one Word. `indexOutOfBounds` is the standing example: `GET` projects it and `PUT` raises it, and both are right — see those entries."
     },
     "partiality": {
      "type": "string",
