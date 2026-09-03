@@ -1,10 +1,16 @@
-//! `DIV`'s projection law: what a zero divisor does to the value around it.
+//! The zero-divisor projection law: what a zero divisor does to the value
+//! around it, for the two Words that meet one.
 //!
-//! Split out of `arithmetic.rs` because `DIV` is the one exact-arithmetic
-//! schema whose scalar law can *project* — answer NIL for a well-formed
-//! operand (`LANG.FAILURE.TRICHOTOMY`) — and lifting a projecting law over a
-//! collection is a different problem from lifting a total one. Every other
-//! schema either answers with a number in every lane or raises.
+//! Split out of `arithmetic.rs` because these are the exact-arithmetic laws
+//! that can *project* — answer NIL for a well-formed operand
+//! (`LANG.FAILURE.TRICHOTOMY`) — and lifting a projecting law over a
+//! collection is a different problem from lifting a total one. `ADD`, `SUB`
+//! and `MUL` either answer with a number in every lane or raise.
+//!
+//! `DIV` and `MOD` share the law because they share the division: `a MOD b`
+//! is `a - b * floor(a/b)`, so a zero divisor is the same undefined operation
+//! underneath, and answering it two ways would make the same condition mean
+//! two things depending on which Word wrapped it.
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::arithmetic::{ExactArithmeticSchema, ScalarFastWrap};
@@ -59,6 +65,22 @@ pub(crate) fn build_scalar_fast_projection(wrap: &ScalarFastWrap) -> Value {
             value
         }
     }
+}
+
+/// The scalar law of `MOD` as a whole `Value`, for the lane-wise lift.
+///
+/// Identical in shape to [`divide_lane`], and for the reason in this module's
+/// header: the zero divisor is the same one. A NIL operand is ordinary
+/// passthrough; the NIL test comes first because `Fraction::nil` has
+/// numerator 0, so an absent divisor answers `is_zero` as well.
+pub(crate) fn modulo_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
+    if a.is_nil() || b.is_nil() {
+        return Ok(Value::nil());
+    }
+    if b.is_zero() {
+        return Ok(division_by_zero_projection());
+    }
+    Ok(Value::from_fraction(a.modulo(b)))
 }
 
 /// The `DIV` arm of [`apply_exact_arithmetic_schema`], after the fast paths

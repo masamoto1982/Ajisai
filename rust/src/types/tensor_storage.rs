@@ -5,23 +5,21 @@
 
 use super::fraction::Fraction;
 
-#[derive(Debug, Clone, Eq)]
+/// A dense numeric tensor in struct-of-arrays form.
+///
+/// Absence is recorded once, as the denominator-0 sentinel [`Fraction::nil`]
+/// stores. There used to be a second record beside it — a `valid_mask` bitmap
+/// with one bit per lane — and the two were never cross-checked: every
+/// production write path stored the sentinel and left the mask fully set,
+/// while every read trusted the mask alone and handed the 0 denominator
+/// straight to `Fraction::new`, which panicked. Nothing ever cleared a mask
+/// bit outside the tests. One fact, one place.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DenseTensor {
     pub numerators: Vec<i64>,
     pub denominators: Vec<i64>,
-    pub valid_mask: Vec<u64>,
     pub shape: Vec<usize>,
     pub is_pure_integer: bool,
-}
-
-impl PartialEq for DenseTensor {
-    fn eq(&self, other: &Self) -> bool {
-        self.numerators == other.numerators
-            && self.denominators == other.denominators
-            && self.valid_mask == other.valid_mask
-            && self.shape == other.shape
-            && self.is_pure_integer == other.is_pure_integer
-    }
 }
 
 impl DenseTensor {
@@ -45,19 +43,9 @@ impl DenseTensor {
             is_pure_integer &= denominator == 1;
         }
 
-        let valid_mask_len = numerators.len().div_ceil(64);
-        let mut valid_mask = vec![u64::MAX; valid_mask_len];
-        if let Some(last) = valid_mask.last_mut() {
-            let live_bits = numerators.len() % 64;
-            if live_bits != 0 {
-                *last = (1u64 << live_bits) - 1;
-            }
-        }
-
         Some(Self {
             numerators,
             denominators,
-            valid_mask,
             shape,
             is_pure_integer,
         })
@@ -71,18 +59,9 @@ impl DenseTensor {
     pub fn from_integers(numerators: Vec<i64>) -> Self {
         let len = numerators.len();
         let denominators = vec![1; len];
-        let valid_mask_len = len.div_ceil(64);
-        let mut valid_mask = vec![u64::MAX; valid_mask_len];
-        if let Some(last) = valid_mask.last_mut() {
-            let live_bits = len % 64;
-            if live_bits != 0 {
-                *last = (1u64 << live_bits) - 1;
-            }
-        }
         Self {
             numerators,
             denominators,
-            valid_mask,
             shape: vec![len],
             is_pure_integer: true,
         }
@@ -96,34 +75,11 @@ impl DenseTensor {
         self.numerators.is_empty()
     }
 
-    /// `true` when every lane (`0..len`) is valid — i.e. there are no `nil`
-    /// holes. Reads the bitmask word-at-a-time (O(len/64)) and then confirms
-    /// no lane carries the denominator-0 absence sentinel; see
-    /// [`Self::is_valid`] for why both records have to agree.
+    /// `true` when every lane holds a present value — i.e. there are no `nil`
+    /// holes. One linear scan for the absence sentinel; the integer SIMD fast
+    /// path uses it to confirm density before borrowing the buffers.
     pub fn all_lanes_valid(&self) -> bool {
-        if !self.mask_marks_every_lane_valid() {
-            return false;
-        }
         !self.denominators.contains(&0)
-    }
-
-    fn mask_marks_every_lane_valid(&self) -> bool {
-        let len = self.len();
-        let full_words = len / 64;
-        for word in self.valid_mask.iter().take(full_words) {
-            if *word != u64::MAX {
-                return false;
-            }
-        }
-        let remainder = len % 64;
-        if remainder != 0 {
-            let expected = (1u64 << remainder) - 1;
-            match self.valid_mask.get(full_words) {
-                Some(word) => return *word == expected,
-                None => return false,
-            }
-        }
-        true
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Fraction> + '_ {
@@ -155,32 +111,12 @@ impl DenseTensor {
         self.iter().collect()
     }
 
-    pub fn clear_valid(&mut self, index: usize) {
-        if index < self.len() {
-            self.valid_mask[index / 64] &= !(1u64 << (index % 64));
-        }
-    }
-
     /// `true` when lane `index` holds a present value.
     ///
-    /// Absence is recorded twice in this struct: as the denominator-0 sentinel
-    /// that [`Fraction::nil`] stores, and as a cleared `valid_mask` bit. Every
-    /// production write path (`ValueData::Nil => buf.push(Fraction::nil())` in
-    /// `value_children.rs`) uses the sentinel and leaves the mask fully set, so
-    /// a reader that trusts the mask alone reads an absent lane as a present
-    /// `n/0`. Both records are consulted here, and a lane counts as present
-    /// only when they agree.
+    /// A denominator of 0 is [`Fraction::nil`] — the absence sentinel every
+    /// write path stores — not a rational, so the lane is absent.
     pub fn is_valid(&self, index: usize) -> bool {
-        if index >= self.len() {
-            return false;
-        }
-        if self.denominators.get(index).copied() == Some(0) {
-            return false;
-        }
-        let Some(word) = self.valid_mask.get(index / 64) else {
-            return false;
-        };
-        ((word >> (index % 64)) & 1) == 1
+        matches!(self.denominators.get(index), Some(denominator) if *denominator != 0)
     }
 
     pub fn zero_count(&self) -> usize {
@@ -211,11 +147,18 @@ impl DenseTensor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// The sparse form of a dense tensor: only the non-zero lanes are stored, and
+/// every unstored lane is the number zero.
+///
+/// It carries no absence record at all, and needs none: [`Self::from_dense`]
+/// refuses a tensor with any absent lane, so "not stored" here means zero and
+/// never means NIL. Conflating the two is what the dropped `valid_mask` made
+/// possible — a NIL lane has numerator 0, so it looked exactly like a zero to
+/// the densifier.
 pub struct SparseTensor {
     pub indices: Vec<usize>,
     pub numerators: Vec<i64>,
     pub denominators: Vec<i64>,
-    pub valid_mask: Vec<u64>,
     pub shape: Vec<usize>,
     pub len: usize,
     pub is_pure_integer: bool,
@@ -248,20 +191,10 @@ impl SparseTensor {
             }
         }
 
-        let valid_mask_len = dense.len().div_ceil(64);
-        let mut valid_mask = vec![u64::MAX; valid_mask_len];
-        if let Some(last) = valid_mask.last_mut() {
-            let live_bits = dense.len() % 64;
-            if live_bits != 0 {
-                *last = (1u64 << live_bits) - 1;
-            }
-        }
-
         Some(Self {
             indices,
             numerators,
             denominators,
-            valid_mask,
             shape: dense.shape.clone(),
             len: dense.len(),
             is_pure_integer: dense.is_pure_integer,
@@ -280,7 +213,6 @@ impl SparseTensor {
         DenseTensor {
             numerators,
             denominators,
-            valid_mask: self.valid_mask.clone(),
             shape: self.shape.clone(),
             is_pure_integer: self.is_pure_integer,
         }
@@ -291,8 +223,10 @@ impl SparseTensor {
             return None;
         }
         let entry = self.indices.binary_search(&index).ok()?;
-        // Same sentinel screen as `DenseTensor::get_small_fraction`: a stored
-        // entry with a 0 denominator is an absent lane, not a rational.
+        // `from_dense` refuses a tensor with an absent lane, so no stored entry
+        // can carry the 0-denominator sentinel. Screened anyway: this is the
+        // one call that could hand a 0 denominator to `Fraction::new`, and its
+        // panic is deliberate.
         if self.denominators[entry] == 0 {
             return None;
         }
@@ -318,14 +252,10 @@ impl SparseTensor {
         self.nonzero_count() as f64 / self.len as f64
     }
 
+    /// `true` for every lane in range: a sparse tensor holds no absent lanes
+    /// (see the type's own note), so being addressable is being present.
     pub fn is_valid(&self, index: usize) -> bool {
-        if index >= self.len {
-            return false;
-        }
-        let Some(word) = self.valid_mask.get(index / 64) else {
-            return false;
-        };
-        ((word >> (index % 64)) & 1) == 1
+        index < self.len
     }
 }
 
@@ -361,10 +291,23 @@ mod sparse_tensor_tests {
     }
 
     #[test]
-    fn dense_tensor_sparse_density_does_not_count_invalid_lanes_as_zero() {
-        let mut dense = dense_from_i64(&[0, 5, 0, 9], vec![4]);
-        dense.clear_valid(0);
-        dense.clear_valid(1);
+    fn dense_tensor_sparse_density_does_not_count_absent_lanes_as_zero() {
+        // An absent lane has numerator 0, exactly like a zero lane, so it is
+        // the denominator that tells them apart. A density that counted the
+        // two alike would offer a NIL-holding tensor to the sparse form, which
+        // stores no absence and would silently read those lanes back as 0.
+        let dense = DenseTensor::from_fractions(
+            vec![
+                Fraction::nil(),
+                Fraction::nil(),
+                Fraction::from(0_i64),
+                Fraction::from(9_i64),
+            ],
+            vec![4],
+        )
+        .expect("small fractions admit dense representation");
+        assert!(!dense.is_valid(0));
+        assert!(dense.is_valid(2), "a zero lane is present, not absent");
         assert_eq!(dense.zero_count(), 1);
         assert_eq!(dense.nonzero_count(), 1);
         assert_eq!(dense.density(), 0.25);

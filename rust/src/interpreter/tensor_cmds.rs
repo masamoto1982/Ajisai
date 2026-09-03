@@ -1,4 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::arithmetic_division::{division_by_zero_projection, modulo_lane};
+use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, nil_passthrough_binary, nil_passthrough_unary,
 };
@@ -147,10 +149,18 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                 // form: a Tier 1 algebraic is never zero, and a rational
                 // shows it structurally.
                 if b.is_structurally_zero() {
-                    return Err(AjisaiError::DeclaredCondition {
-                        condition: "divisorEqualsZero",
-                        message: "Modulo by zero".to_string(),
-                    });
+                    // A zero divisor is a projection, not a failure: the
+                    // operands are well formed and the operation simply has no
+                    // answer (`LANG.FAILURE.TRICHOTOMY`). `DIV` has always read
+                    // it that way; `MOD` raised, which made one condition mean
+                    // two things depending on which Word wrapped the same
+                    // division.
+                    if interp.consumption_mode != ConsumptionMode::Keep {
+                        interp.stack.pop();
+                        interp.stack.pop();
+                    }
+                    interp.stack.push(division_by_zero_projection());
+                    return Ok(());
                 }
                 // a mod b = a - b * floor(a/b). A `None` here (after the
                 // zero check) means an absent operand slipped through:
@@ -199,16 +209,24 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         &b_val,
         |x, y| {
             if y.is_zero() {
-                Err(AjisaiError::DeclaredCondition {
-                    condition: "divisorEqualsZero",
-                    message: "Modulo by zero".to_string(),
-                })
+                Err(AjisaiError::DivisionByZero)
             } else {
                 Ok(x.modulo(y))
             }
         },
         Some(&mut interp.runtime_metrics),
     );
+
+    // `LANG.COLLECTIONS.LIFT`: a zero divisor empties its own lane, it does not
+    // empty the vector. The flat broadcast's leaf answers with a `Fraction`, so
+    // a projection can only surface there as one error for the whole operation;
+    // re-run lane-wise, where the leaf answers with a value and each projection
+    // carries its reason. The same fallback `DIV` uses, and it costs a second
+    // pass only when a zero divisor was actually met.
+    let result = match result {
+        Err(AjisaiError::DivisionByZero) => apply_lane_wise_broadcast(&a_val, &b_val, modulo_lane),
+        other => other,
+    };
 
     match result {
         Ok(r) => {

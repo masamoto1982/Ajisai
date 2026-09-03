@@ -93,9 +93,13 @@ pub(super) fn declared_checks(
         }
     }
 
-    // A NIL the Word produced: the registry names the condition it projects
-    // under, so the diagnosis can say which one rather than "unknown".
-    if let (Some(reason), Some(when)) = (nil_reason, declared.projection) {
+    // A NIL the Word produced: the registry names the conditions it projects
+    // under, so the diagnosis can say which rather than "unknown". A Word may
+    // declare several — `MOD` projects for a zero divisor and for an integer
+    // projection it cannot decide — and the reason the run actually reported
+    // is what tells them apart, so both are put in front of the reader.
+    if let (Some(reason), false) = (nil_reason, declared.projection.is_empty()) {
+        let when = declared.projection.join(", ");
         out.push(check(
             "checkDeclaredProjection",
             (
@@ -104,13 +108,13 @@ pub(super) fn declared_checks(
             ),
             (
                 &format!(
-                    "{} declares that it answers NIL when {}; this one reports reason `{}`.",
+                    "{} declares that it answers NIL when: {}. This one reports reason `{}`.",
                     declared.name,
                     when,
                     reason.as_protocol_str()
                 ),
                 &format!(
-                    "{} は {} のとき NIL を返すと宣言している。今回の reason は `{}`。",
+                    "{} が NIL を返すと宣言している条件: {}。今回の reason は `{}`。",
                     declared.name,
                     when,
                     reason.as_protocol_str()

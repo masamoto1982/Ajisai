@@ -500,11 +500,24 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-mod-by-zero-error" data-category="core">
-  <h3>MOD by zero raises an error rather than producing NIL</h3>
+<section class="ajisai-case" id="core-mod-by-zero-projects" data-category="core">
+  <h3>MOD by zero projects to NIL, as division by zero does</h3>
   <pre class="ajisai-source">5 0 MOD</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Modulo by zero</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-mod-projects-the-zero-divisor-lane-only" data-category="core">
+  <h3>A zero divisor empties its own MOD lane, not the vector around it</h3>
+  <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] %</pre>
+  <pre class="ajisai-expect-result">[ 0/1 0/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-mod-passes-a-nil-lane-through" data-category="core">
+  <h3>MOD passes a NIL lane through like every other arithmetic Word</h3>
+  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] %</pre>
+  <pre class="ajisai-expect-result">[ 1/1 NIL 1/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1390,6 +1403,20 @@
   <h3>A broadcast dividend keeps the lanes whose divisor was not zero</h3>
   <pre class="ajisai-source">[ 6 ] [ 1 2 0 ] /</pre>
   <pre class="ajisai-expect-result">[ 6/1 3/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-nil-target-is-unknown" data-category="core">
+  <h3>An absent COND target is Unknown: guards that read it do not fire, and the else-clause takes it</h3>
+  <pre class="ajisai-source">NIL [ [ [ 3 ] &gt; ] [ 'big' ] [ TRUE ] [ 'small' ] ] COND</pre>
+  <pre class="ajisai-expect-result">'small'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-nil-target-does-not-suppress-a-guard-that-ignores-it" data-category="core">
+  <h3>An absent COND target does not silence a guard that never reads it</h3>
+  <pre class="ajisai-source">NIL [ [ TRUE ] [ 'yes' ] ] COND</pre>
+  <pre class="ajisai-expect-result">'yes'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

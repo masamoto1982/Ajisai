@@ -8,7 +8,13 @@ import { Result, ok, err } from './functional-result-helpers';
 // The persisted session document. `stateVersion` identifies the format; a
 // document that does not carry the current version is not migrated — the beta
 // reads one format only (SPEC §2.3).
-export const STATE_FORMAT_VERSION = 3;
+//
+// 4: the dense-tensor node dropped its `mask` field. A tensor's absence is the
+// 0 denominator its `dens` array already carries, and the bitmap beside it was
+// a second record of that fact which nothing ever wrote to. A version-3
+// document therefore starts a fresh session rather than being migrated, as any
+// other format change does.
+export const STATE_FORMAT_VERSION = 4;
 
 export interface InterpreterState {
     readonly stateVersion: number;
