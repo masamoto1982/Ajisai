@@ -109,7 +109,19 @@ self.onmessage = async (event: MessageEvent) => {
         // ExactScalar) survive instead of the lossy observation `stack`. The
         // interpreter still holds the post-execute state here, so this captures
         // the result stack exactly.
-        result.stackSnapshot = interpreter!.snapshot_stack();
+        //
+        // Its own failure is reported as its own: the snapshot codec refuses a
+        // value it cannot encode without loss (`PI`, and anything built from
+        // it, is a Tier-2 computable real), and this runs *after* the program
+        // has already succeeded. Letting that throw out of the shared `try`
+        // blamed the program for it — `PI` alone answered "cannot persist a
+        // Tier-2 computable exact real" and read as a Word that does not work,
+        // while the run had in fact produced π.
+        try {
+            result.stackSnapshot = interpreter!.snapshot_stack();
+        } catch (snapshotError: any) {
+            result.stackSnapshotError = String(snapshotError?.message ?? snapshotError);
+        }
 
         if (isAborted) throw new Error('aborted');
 

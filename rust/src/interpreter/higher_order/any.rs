@@ -78,7 +78,8 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
                 let condition_result = match interp.stack.pop() {
                     Some(v) => v,
                     None => {
-                        error = Some(AjisaiError::from(
+                        error = Some(AjisaiError::declared(
+                            "blockContractViolation",
                             "ANY: expected boolean value, got empty stack",
                         ));
                         break;

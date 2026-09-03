@@ -89,7 +89,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     results.push(result_val);
                 }
                 None => {
-                    error = Some(AjisaiError::from(
+                    error = Some(AjisaiError::declared(
+                        "blockContractViolation",
                         "MAP: expected return value, got empty stack",
                     ));
                     break;

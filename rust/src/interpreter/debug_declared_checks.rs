@@ -19,6 +19,70 @@ use crate::coreword_registry::get_declared_word;
 use crate::error::NilReason;
 use crate::kernel::generated::{Arity, GeneratedWord};
 
+/// The cause class a *declared condition* names on its own.
+///
+/// The conditions are `spec/words.json`'s own vocabulary — the names
+/// `errorWhen` is written in — so this is a mapping over that vocabulary rather
+/// than a per-Word table: a Word earns the classification by declaring a
+/// condition, and a new Word that declares `notExecutable` is classified the
+/// day it is written. `declared_condition_vocabulary_is_classified` fails if
+/// the spec grows a condition this does not answer for.
+pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass {
+    match condition {
+        // The operand is not of the kind the Word takes. Whatever the kind
+        // named, the repair is the same one: pass the kind it asked for.
+        "nonVector"
+        | "nonNumeric"
+        | "nonText"
+        | "nonTextVector"
+        | "nonTextElement"
+        | "nonTextSeparator"
+        | "nonTruthValue"
+        | "nonTruthGuard"
+        | "nonInteger"
+        | "nonComparableElement"
+        | "notExecutable"
+        | "unsupportedComparison"
+        | "invalidShape"
+        | "invalidClauseShape"
+        | "invalidCount"
+        | "negativeCount"
+        | "invalidRange"
+        | "invalidName" => CauseClass::ValueShape,
+        // A position outside the operand.
+        "indexOutOfBounds" | "invalidIndex" => CauseClass::Index,
+        "shapeMismatch" => CauseClass::ShapeMismatch,
+        "vectorLengthMismatch" => CauseClass::VectorLength,
+        "stackUnderflow" => CauseClass::StackShape,
+        // A rule about names, definitions, or what a block promised to leave
+        // behind — broken by the program rather than by any one value.
+        "blockContractViolation"
+        | "protectedWord"
+        | "definitionConflict"
+        | "selfReferentialDefinition"
+        | "nameIsAWord" => CauseClass::ContractViolation,
+        "wordNotFound" => CauseClass::TypoOrUnknownName,
+        // The block ran and raised. The fault is inside it, not in the Word
+        // that applied it.
+        "nestedExecutionError" => CauseClass::UserLogic,
+        "missingFollowingSourceUnit" => CauseClass::SourceForm,
+        _ => CauseClass::Unknown,
+    }
+}
+
+/// Where a declared condition is repaired: in the operand it names, or in the
+/// program that broke the rule it names.
+pub(crate) fn repair_for_declared_condition(why: &CauseClass) -> &'static str {
+    match why {
+        CauseClass::ValueShape
+        | CauseClass::Index
+        | CauseClass::ShapeMismatch
+        | CauseClass::VectorLength
+        | CauseClass::Domain => "fixInput",
+        _ => "fixProgram",
+    }
+}
+
 fn check(code: &'static str, title: (&str, &str), detail: (&str, &str)) -> DebugCheck {
     DebugCheck {
         code,
@@ -59,6 +123,7 @@ pub(super) fn declared_checks(
     why: &CauseClass,
     word: Option<&str>,
     nil_reason: Option<&NilReason>,
+    fired_condition: Option<&str>,
 ) -> Vec<DebugCheck> {
     let Some(name) = word else {
         return Vec::new();
@@ -108,16 +173,43 @@ pub(super) fn declared_checks(
             ),
             (
                 &format!(
-                    "{} declares that it answers NIL when: {}. This one reports reason `{}`.",
+                    "{} declares the condition it answers NIL under: `{}`. \
+                     The NIL it answered carries the outcome reason `{}`. \
+                     A condition and a reason are a declared pair, not a disagreement.",
                     declared.name,
                     when,
                     reason.as_protocol_str()
                 ),
                 &format!(
-                    "{} が NIL を返すと宣言している条件: {}。今回の reason は `{}`。",
+                    "{} が NIL を返す条件（when）の宣言: `{}`。\
+                     返された NIL が持つ結果側の理由（reason）: `{}`。\
+                     when と reason は対で宣言された別々の項目であり、食い違いではない。",
                     declared.name,
                     when,
                     reason.as_protocol_str()
+                ),
+            ),
+        ));
+    }
+
+    // The raise named its own declared condition, so the reader is told which
+    // one fired rather than handed the Word's whole shortlist to guess from.
+    if let (None, Some(condition)) = (nil_reason, fired_condition) {
+        out.push(check(
+            "checkFiredCondition",
+            ("Check the condition that fired", "発火した条件を確認する"),
+            (
+                &format!(
+                    "{} raised the condition `{}`, one of the conditions its contract declares: {}.",
+                    declared.name,
+                    condition,
+                    declared.error_when.join(", ")
+                ),
+                &format!(
+                    "{} が raise した条件（errorWhen）は `{}`。契約が宣言している条件は: {}。",
+                    declared.name,
+                    condition,
+                    declared.error_when.join(", ")
                 ),
             ),
         ));

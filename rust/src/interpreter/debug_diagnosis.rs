@@ -286,6 +286,11 @@ impl CauseClass {
             // the same kind of fault as `NameConflict`, not a runtime resource
             // question.
             ErrorCategory::SelfReferentialDefinition => CauseClass::ContractViolation,
+            // The registry named the condition at the raise site, so the class
+            // follows from the spec's own vocabulary rather than from `Custom`.
+            ErrorCategory::Declared(condition) => {
+                super::debug_declared_checks::cause_class_for_declared_condition(condition)
+            }
             ErrorCategory::Custom => CauseClass::Unknown,
         }
     }
@@ -504,6 +509,11 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         // work itself has to get smaller, or the host has to declare a larger
         // ceiling.
         Some(ErrorCategory::ResourceLimitExceeded) => "reduceWorkOrRaiseLimit",
+        // A declared condition answers by what it names: a wrong operand is
+        // repaired in the input, a broken rule in the program.
+        Some(ErrorCategory::Declared(_)) => {
+            super::debug_declared_checks::repair_for_declared_condition(why)
+        }
         Some(ErrorCategory::Custom) | None => match why {
             CauseClass::Environment | CauseClass::Effect => "fixHost",
             CauseClass::NilFlow => "handleUnknownOrNil",

@@ -8,6 +8,7 @@ import {
     createExecutionSnapshot,
     collectUserWords,
     describeFailedRunOutput,
+    describeSnapshotRefusal,
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
@@ -157,8 +158,14 @@ export const createExecutionController = (
             `Q3 why: ${diagnosis.why}`,
             ...candidates,
             ...limit,
+            // One locale per line. Each check carries both, and this used to
+            // print the English heading in front of the Japanese sentence, so
+            // every next-step read as half a message in each language. The
+            // playground's own text is English (`<html lang="en">`), so English
+            // is the side that matches its surroundings; the `ja` half stays in
+            // the protocol for a host that renders in Japanese.
             ...diagnosis.nextChecks.map(
-                (check) => `next: ${check.title.en} - ${check.detail.ja}`
+                (check) => `next: ${check.title.en} - ${check.detail.en}`
             )
         ].join('\n');
     };
@@ -172,7 +179,15 @@ export const createExecutionController = (
             updateView('input');
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
-            clearEditor(false);
+            // A run whose result cannot be snapshotted leaves the session as it
+            // was, so the editor keeps its program: the reader has something to
+            // change and re-run, exactly as after a failure.
+            const refusal = describeSnapshotRefusal(result);
+            if (refusal) {
+                showInfo(refusal, true);
+            } else {
+                clearEditor(false);
+            }
         } else {
             // Keep whatever the run printed before it failed: the host reports
             // it on the error path, and the error is written below it.
