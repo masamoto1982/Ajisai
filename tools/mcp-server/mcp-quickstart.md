@@ -94,10 +94,21 @@ call still succeeds:
 ```
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
-and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with `OR-NIL`:
+and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with
+`OR-NIL`, whose fallback is the source unit written after it:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-[ 1 ] [ 0 ] / OR-NIL [ 99 ]
+1 0 / OR-NIL [ 99 ]
+```
+
+`OR-NIL` inspects the stack top, and a vector holding an absent lane is not
+itself absent. Lifted over a vector the same division projects lane by lane
+(`LANG.COLLECTIONS.LIFT`) — the zero divisor empties its own lane and leaves
+the others — so the top is still a vector and `OR-NIL` would keep it as-is.
+Recover such a result per lane (`MAP`), not around it:
+
+```ajisai tool=compute status=ok stack="[ 6/1 NIL ]"
+[ 6 6 ] [ 1 0 ] /
 ```
 
 ## 4. Exact arithmetic: what to read, and what not to
@@ -189,7 +200,27 @@ may beat.
 
 The three axes are the same counters a result reports back in
 `runtimeMetrics`, so a bound and a measurement are answers about one quantity.
-Two practical rules:
+
+**A class is how the charge grows, not how large it is.** Two programs of the
+same class can differ by orders of magnitude, because the class says nothing
+about what one operation costs — and an operation on an algebraic value
+(anything `SQRT` produced) rebuilds a multiquadratic normal form each time.
+Measured through `resourceUsage.numericWork`, all three of these are `const`:
+
+| program | `numericWork` |
+| --- | --- |
+| `[ 1 2 3 4 5 ] [ 0 ] [ + ] FOLD` | 5 |
+| `2 SQRT 3 SQRT +` | 2048 |
+| `2 SQRT 3 SQRT + 'S' BIND S S *` | 6144 |
+
+The `numericWork` ceiling is 10,000,000, so an algebraic chain meets it after a
+few thousand additions while a rational one of the same class runs
+indefinitely. Budget an algebraic value at 10^2–10^3 times a rational one, and
+when the size matters, measure it: run the small case and read
+`resourceUsage`, rather than inferring a size from a class that does not carry
+one.
+
+Two further rules:
 
 - An `unbounded` axis means the charge is not a function of input *size* —
   `MAP`/`FILTER`/`FOLD` run a block you supply, and `RANGE`/`FILL` are sized by

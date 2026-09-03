@@ -26,7 +26,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Postfix, stack-based. Operands first, word last: `[ 1 ] [ 2 ] +`.
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
-- Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar.
+- Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar — **except where a Word takes an *element*** (`PUT`, `GET`, `INDEX-OF`): there `[ 9 ]` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / COND / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and `{` / `}` are not valid Ajisai source characters.
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
@@ -43,12 +43,14 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 4. NIL — absence is a value, not an exception
 
-Failed partial operations *bubble*: `[ 1 ] [ 0 ] DIV` succeeds (exit 0) and
+Failed partial operations *bubble*: `1 0 DIV` succeeds (exit 0) and
 pushes `NIL` (reason: `divisionByZero`). The projection is recorded in
 `errorFlowTrace` as a `nilProduced` event with a full diagnosis, and the NIL
 value itself carries `semantics.absence.reason` on the stack.
 
-- Provide a fallback with `OR-NIL`: `[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]` → stack `[ 99/1 ]`.
+- Provide a fallback with `OR-NIL`: `1 0 DIV OR-NIL [ 99 ]` → stack `[ 99/1 ]`.
+- Over a vector the projection is **per lane, not per value**: `[ 6 6 ] [ 1 0 ] DIV` → stack `[ 6/1 NIL ]`. The lane that could not divide is the only one emptied.
+- That makes the top a vector, not a NIL, so `OR-NIL` — which inspects the stack top — keeps it as-is. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field
@@ -133,19 +135,19 @@ produce a value produces NIL (§4); a malformed one raises an error.
   Fix: Grep §9 for the word you meant (here: `+` / `ADD`). Word names are upper-cased automatically.
 - **Stack underflow: operands must be pushed first** — `+`
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkArity`.
+  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: Push both operands before the operator: `[ 1 ] [ 2 ] +`. Ajisai is postfix; there is no infix form.
 - **FOLD without an initial value** — `[ 1 2 3 ] [ + ] FOLD`
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
-  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkArity`.
+  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.
 - **COND clauses must be wrapped in a single [ ]** — `5 [ 3 > ] [ 'big' PRINT ] COND`
   → exit 1, `message: "COND: each clause must itself be a [ guard | body ] block"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
 - **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
   → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] [ [ predicate ] [ body ] ... ] COND`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
   → exit 1, `message: "Cannot broadcast shapes [2] and [3]: axis 0 is 2 on the left and 3 on the right, and neither is 1"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
@@ -153,16 +155,24 @@ produce a value produces NIL (§4); a malformed one raises an error.
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
   → exit 1, `message: "NUM: expected String, got Boolean"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: NUM accepts strings: `'42' NUM`. There is no boolean→number cast.
 - **Old two-vector RANGE form** — `[ 0 ] [ 5 ] RANGE`
   → exit 1, `message: "RANGE requires [start end] or [start end step]"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).
 - **Vector-wrapped string passed to a cast** — `[ '42' ] NUM`
   → exit 1, `message: "NUM: expected String input"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkErrorMessage`.
+  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: String casts take the bare string: `'42' NUM`.
+
+These raise. The next one does not — it succeeds and answers something other
+than it looks like it answers, which is the harder kind to notice:
+
+- **A one-element vector where a Word wants an element** — both of these succeed (exit 0):
+  `[ 1 2 3 ] [ 1 ] [ 9 ] PUT` → stack `[ 1/1 [ 9/1 ] 3/1 ]`
+  `[ 1 2 3 ] 1 9 PUT` → stack `[ 1/1 9/1 3/1 ]`
+  Fix: PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. The `[ 42 ]` idiom of §2 is for operands a Word reads as a value; it does not carry here, and no error says so.
 
 ## 8. Forbidden patterns (each verified to fail)
 

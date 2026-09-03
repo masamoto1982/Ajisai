@@ -147,7 +147,10 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                 // form: a Tier 1 algebraic is never zero, and a rational
                 // shows it structurally.
                 if b.is_structurally_zero() {
-                    return Err(AjisaiError::from("Modulo by zero"));
+                    return Err(AjisaiError::DeclaredCondition {
+                        condition: "divisorEqualsZero",
+                        message: "Modulo by zero".to_string(),
+                    });
                 }
                 // a mod b = a - b * floor(a/b). A `None` here (after the
                 // zero check) means an absent operand slipped through:
@@ -196,7 +199,10 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         &b_val,
         |x, y| {
             if y.is_zero() {
-                Err(AjisaiError::from("Modulo by zero"))
+                Err(AjisaiError::DeclaredCondition {
+                    condition: "divisorEqualsZero",
+                    message: "Modulo by zero".to_string(),
+                })
             } else {
                 Ok(x.modulo(y))
             }
@@ -294,7 +300,11 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             }
             interp
                 .stack
-                .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
+                .push(crate::interpreter::space_projection::space_exhausted_nil(
+                    "FILL",
+                    max_materialized,
+                    checked_shape_product(&shape).map(|size| size as u128),
+                ));
             return Ok(());
         }
     };

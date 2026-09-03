@@ -5,7 +5,7 @@
 //! costs asymptotically more, or (for `RANDOM`) is not expressible at all
 //! because the language has no bit mixing to build a generator out of.
 
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
@@ -309,7 +309,11 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
         }
         interp
             .stack
-            .push(Value::nil_with_reason_unknown(NilReason::SpaceExhausted));
+            .push(crate::interpreter::space_projection::space_exhausted_nil(
+                "RANDOM",
+                interp.runtime_limits.max_materialized_elements,
+                Some(count as u128),
+            ));
         return Ok(());
     }
 

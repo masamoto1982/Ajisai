@@ -108,9 +108,19 @@
   "contracts": {
    "type": "array",
    "items": {
-    "type": "object"
+    "type": "object",
+    "properties": {
+     "nil": {
+      "type": "string",
+      "description": "How the Word behaves around absence, as *observed*: `nil-free` never yields NIL at all, `nil-propagating` yields one exactly when an operand is one, `may-nil` can produce one of its own. This is a finer vocabulary than the one a declaration is written in — see `suggested` — which is why the two can differ inside one object without either being wrong."
+     },
+     "suggested": {
+      "type": "string",
+      "description": "A paste-ready `#:contract` line for this Word, written in the *declaration* vocabulary, which has only two NIL values: `nil-free` and `may-nil`. There `nil-free` means the Word does not *manufacture* an absence; it does not mean the Word never passes one through. So a `nil-propagating` Word is declared `nil-free`, and this line reading `nil-free` beside `nil: \"nil-propagating\"` is the two vocabularies agreeing rather than contradicting: paste the line as it stands, and read `nil` for what the Word does with a NIL it is handed."
+     }
+    }
    },
-   "description": "Inferred contracts for the user-defined Words in the submitted source (`infer_contracts` only). Reports each cost axis as its class alone; unlike a registry entry's `cost`, exactness is observable through `suggested`, which names only the axes the declaration checker can verify."
+   "description": "Inferred contracts for the user-defined Words in the submitted source (`infer_contracts` only). Reports each cost axis as its class alone; unlike a registry entry's `cost`, exactness is observable through `suggested`, which names only the axes the declaration checker can verify. `nil` and `suggested` are written in two different NIL vocabularies — read each field's own description before taking one as a contradiction of the other."
   },
   "diagnosis": {
    "oneOf": [

@@ -111,6 +111,26 @@
       ]
     },
     {
+      "name": "a NIL lane survives arithmetic applied to the whole vector",
+      "source": "[ 1 NIL 3 ] [ 2 ] *",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "[ 2/1 NIL 6/1 ]",
+        "/stack/0/value/1/type": "nil",
+        "/stack/0/value/2/value/numerator": "6"
+      }
+    },
+    {
+      "name": "a zero divisor projects its own lane and says why",
+      "source": "[ 6 6 6 ] [ 1 2 0 ] /",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "[ 6/1 3/1 NIL ]",
+        "/stack/0/value/2/type": "nil",
+        "/stack/0/value/2/semantics/absence/reason": "divisionByZero"
+      }
+    },
+    {
       "name": "execution budget exhaustion is a language ERROR",
       "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD",
       "expect": {
@@ -129,11 +149,49 @@
         "/status": "ok",
         "/stackDisplay/0": "NIL",
         "/stack/0/semantics/absence/reason": "spaceExhausted",
-        "/errorFlowTrace/0/absence/reason": "spaceExhausted"
+        "/errorFlowTrace/0/absence/reason": "spaceExhausted",
+        "/stack/0/semantics/absence/diagnosis/resourceLimit/resource": "materializedElements",
+        "/stack/0/semantics/absence/diagnosis/resourceLimit/limit": 100000,
+        "/stack/0/semantics/absence/diagnosis/resourceLimit/observed": 100002,
+        "/errorFlowTrace/0/diagnosis/why": "resourceLimit",
+        "/errorFlowTrace/0/diagnosis/resourceLimit/resource": "materializedElements"
       },
       "hostDivergence": {
         "playground": "succeeds, materializing 100002 elements",
         "why": "The browser playground applies the interpreter's default RuntimeLimits (max_materialized_elements = 1,000,000); this profile applies LOCAL_AGENT_RUNTIME_LIMITS (100,000). Both are correct for their host: SPEC 2.5 makes limits a safety control rather than value semantics, so a conforming host chooses its own. Recorded here so the divergence is a documented decision rather than a surprise for anyone who prototypes in the playground and runs through MCP. See docs/dev/mcp-host-profiles.md."
+      }
+    },
+    {
+      "name": "a declared projection condition reaches the caller as its own cause class",
+      "source": "4 NEG SQRT",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "NIL",
+        "/stack/0/semantics/absence/reason": "domainMiss",
+        "/errorFlowTrace/0/diagnosis/why": "domain",
+        "/errorFlowTrace/0/diagnosis/nextChecks/0/code": "checkDeclaredProjection"
+      }
+    },
+    {
+      "name": "a stack underflow names the Word's declared arity and a correct call",
+      "source": "'hello world' TOKENIZE",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "stackShape",
+        "/diagnosis/nextChecks/0/code": "checkDeclaredArity",
+        "/diagnosis/nextChecks/0/detail/en": "TOKENIZE declares ( 2 -- 1 ).",
+        "/diagnosis/nextChecks/1/code": "checkDeclaredSyntax",
+        "/diagnosis/nextChecks/1/detail/en": "One correct call is `'a,b,c' ',' TOKENIZE`."
+      }
+    },
+    {
+      "name": "a raise the category cannot classify lists the Word's declared conditions",
+      "source": "TRUE NUM",
+      "expect": {
+        "/status": "error",
+        "/diagnosis/why": "unknown",
+        "/diagnosis/nextChecks/0/code": "checkDeclaredErrorConditions",
+        "/diagnosis/nextChecks/0/detail/en": "NUM declares that it raises when: nonText."
       }
     },
     {
@@ -159,7 +217,7 @@
         "/resourceUsage/numericWork": 20,
         "/runtimeMetrics/executionSteps": 22
       },
-      "comment": "RANGE and FOLD are one step each and the block's `*` runs twenty times: 22. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
+      "comment": "RANGE and FOLD are one step each and the block's `*` runs twenty times: 22. Pinned as an exact number because the defect was a constant \u2014 every program reported 0 \u2014 so only an exact expectation catches a regression to one."
     }
   ]
 }

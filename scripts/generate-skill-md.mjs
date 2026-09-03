@@ -227,6 +227,20 @@ const commonErrors = [
   },
 ];
 
+// Programs that succeed while meaning something other than they look like they
+// mean. `commonErrors` cannot hold these: nothing raises, so a reader — and an
+// AI in particular — has no signal that anything went wrong, which is exactly
+// what makes them worth writing down. Both the wrong and the right form are
+// executed, and the two stacks are printed side by side.
+const silentMistakes = [
+  {
+    title: 'A one-element vector where a Word wants an element',
+    wrong: '[ 1 2 3 ] [ 1 ] [ 9 ] PUT',
+    right: '[ 1 2 3 ] 1 9 PUT',
+    fix: 'PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. The `[ 42 ]` idiom of §2 is for operands a Word reads as a value; it does not carry here, and no error says so.',
+  },
+];
+
 const forbiddenPatterns = [
   {
     pattern: 'DUP / SWAP / DROP / OVER / ROT',
@@ -330,6 +344,24 @@ function renderCommonErrors() {
     .join('\n');
 }
 
+function renderSilentMistakes() {
+  return silentMistakes
+    .map((entry) => {
+      const wrong = expectOk(entry.wrong);
+      const right = expectOk(entry.right);
+      if (wrong.stackDisplay.join(' ') === right.stackDisplay.join(' ')) {
+        fail(`silent mistake ${JSON.stringify(entry.wrong)} no longer differs from the correct form`);
+      }
+      return [
+        `- **${entry.title}** — both of these succeed (exit 0):`,
+        `  \`${entry.wrong}\` → stack \`${wrong.stackDisplay.join(' ')}\``,
+        `  \`${entry.right}\` → stack \`${right.stackDisplay.join(' ')}\``,
+        `  Fix: ${entry.fix}`,
+      ].join('\n');
+    })
+    .join('\n');
+}
+
 function renderForbiddenPatterns() {
   return forbiddenPatterns
     .map((entry) => {
@@ -341,13 +373,24 @@ function renderForbiddenPatterns() {
 
 function verifiedNilSection() {
   // Verify the documented NIL behavior against the real CLI before writing it.
-  const bubble = expectOk('[ 1 ] [ 0 ] DIV');
+  const bubble = expectOk('1 0 DIV');
   if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
   const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk('[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]');
+  const fallback = expectOk('1 0 DIV OR-NIL [ 99 ]');
   if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('OR-NIL fallback must replace NIL');
-  return { reason: event.absence.reason, fallbackStack: fallback.stackDisplay[0] };
+  // Lifted over a vector the same law projects lane by lane, so the top stays
+  // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
+  // taught the collapse rather than the lane law.
+  const lifted = expectOk('[ 6 6 ] [ 1 0 ] DIV');
+  if (lifted.stackDisplay.join(' ') !== '[ 6/1 NIL ]') {
+    fail('a zero divisor must empty only its own lane');
+  }
+  return {
+    reason: event.absence.reason,
+    fallbackStack: fallback.stackDisplay[0],
+    liftedStack: lifted.stackDisplay[0],
+  };
 }
 
 function verifiedExactnessSection() {
@@ -400,7 +443,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Postfix, stack-based. Operands first, word last: \`[ 1 ] [ 2 ] +\`.
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
-- Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar.
+- Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar — **except where a Word takes an *element*** (\`PUT\`, \`GET\`, \`INDEX-OF\`): there \`[ 9 ]\` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / COND / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and \`{\` / \`}\` are not valid Ajisai source characters.
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
@@ -417,12 +460,14 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 4. NIL — absence is a value, not an exception
 
-Failed partial operations *bubble*: \`[ 1 ] [ 0 ] DIV\` succeeds (exit 0) and
+Failed partial operations *bubble*: \`1 0 DIV\` succeeds (exit 0) and
 pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`OR-NIL\`: \`[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]\` → stack \`${nil.fallbackStack}\`.
+- Provide a fallback with \`OR-NIL\`: \`1 0 DIV OR-NIL [ 99 ]\` → stack \`${nil.fallbackStack}\`.
+- Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
+- That makes the top a vector, not a NIL, so \`OR-NIL\` — which inspects the stack top — keeps it as-is. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field
@@ -459,6 +504,11 @@ ${renderCanonicalExamples()}
 ## 7. Common errors — actual CLI output, and the fix
 
 ${renderCommonErrors()}
+
+These raise. The next one does not — it succeeds and answers something other
+than it looks like it answers, which is the harder kind to notice:
+
+${renderSilentMistakes()}
 
 ## 8. Forbidden patterns (each verified to fail)
 

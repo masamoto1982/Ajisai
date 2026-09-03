@@ -120,7 +120,9 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
         return None;
     }
     if shape.len() == 1 {
-        return data.get_small_fraction(index).map(Value::from_fraction);
+        // An absent lane is still a child — it materializes as NIL through
+        // `from_fraction`, not as "no such index".
+        return Some(Value::from_fraction(data.fraction_or_nil(index)));
     }
     let rest: Vec<usize> = shape[1..].to_vec();
     let stride: usize = rest.iter().product();

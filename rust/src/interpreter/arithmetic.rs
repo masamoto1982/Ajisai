@@ -1,4 +1,7 @@
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::arithmetic_division::{
+    apply_division_schema, build_scalar_fast_projection, division_by_zero_projection,
+};
 use crate::interpreter::arithmetic_meter::{
     charge_binary_schema, check_result_size, measure_operand,
 };
@@ -10,7 +13,6 @@ use crate::interpreter::value_extraction_helpers::{
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::kernel::arithmetic as kernel_arithmetic;
 use crate::kernel::{KernelValue, Scalar as KernelScalar};
-use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Interpretation, SparseTensor, Value, ValueData};
@@ -25,7 +27,7 @@ pub(crate) enum ExactArithmeticSchema {
 }
 
 impl ExactArithmeticSchema {
-    fn fraction(self, a: &Fraction, b: &Fraction) -> Result<Fraction> {
+    pub(crate) fn fraction(self, a: &Fraction, b: &Fraction) -> Result<Fraction> {
         match self {
             ExactArithmeticSchema::Add => Ok(a.add(b)),
             ExactArithmeticSchema::Sub => Ok(a.sub(b)),
@@ -55,10 +57,6 @@ fn consume_stacktop_binary(interp: &mut Interpreter) {
         interp.stack.pop();
         interp.stack.pop();
     }
-}
-
-fn division_by_zero_projection() -> Value {
-    Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
 }
 
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
@@ -141,7 +139,7 @@ fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
     ))
 }
 
-enum ScalarFastWrap {
+pub(crate) enum ScalarFastWrap {
     Scalar,
     Tensor(Vec<usize>),
 }
@@ -253,7 +251,7 @@ fn push_scalar_fastpath_result(
     // route was chosen — see `charge_binary_schema`.
     let result = match schema_via_kernel(schema, &a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
-        Err(AjisaiError::DivisionByZero) => division_by_zero_projection(),
+        Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.wrap),
         Err(error) => return Err(error),
     };
     // Bound accumulation, so the operand feeding the next multiply is still a
@@ -324,50 +322,7 @@ fn apply_exact_arithmetic_schema(
     }
 
     if matches!(schema, ExactArithmeticSchema::Div) {
-        let stack_len = interp.stack.len();
-        if stack_len >= 2 {
-            let slots = interp.stack.as_slice();
-            let left_is_text = slots[stack_len - 2].is_text();
-            let right_is_text = slots[stack_len - 1].is_text();
-            if left_is_text || right_is_text {
-                return Err(AjisaiError::create_structure_error("number", "string"));
-            }
-        }
-        let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-        let operands = extract_operands(interp, 2)?;
-        let a_val = &operands[0];
-        let b_val = &operands[1];
-
-        let computed = apply_binary_broadcast_with_metrics(
-            a_val,
-            b_val,
-            |a, b| schema.fraction(a, b),
-            Some(&mut interp.runtime_metrics),
-        );
-        // Bound accumulation before the result is pushed; on a refusal the
-        // operands go back, exactly as for any other failure of this arm.
-        let computed = computed.and_then(|result| {
-            check_result_size(interp, &result)?;
-            Ok(result)
-        });
-        match computed {
-            Ok(result) => {
-                push_result(interp, result);
-                return Ok(());
-            }
-            Err(AjisaiError::DivisionByZero) => {
-                interp.stack.push(division_by_zero_projection());
-                return Ok(());
-            }
-            Err(error) => {
-                if !is_keep_mode {
-                    for val in operands {
-                        interp.stack.push(val);
-                    }
-                }
-                return Err(error);
-            }
-        }
+        return apply_division_schema(interp, schema);
     }
 
     apply_binary_arithmetic(interp, |a, b| schema.fraction(a, b))

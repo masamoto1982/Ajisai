@@ -1365,6 +1365,34 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-arithmetic-preserves-nil-lanes" data-category="core">
+  <h3>Arithmetic applied directly to a vector preserves each NIL lane</h3>
+  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] *</pre>
+  <pre class="ajisai-expect-result">[ 2/1 NIL 6/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-arithmetic-consumes-projected-nil-lane" data-category="core">
+  <h3>A lane a previous Word projected to NIL stays NIL through the next arithmetic Word</h3>
+  <pre class="ajisai-source">[ 4 -1 ] SQRT [ 2 ] *</pre>
+  <pre class="ajisai-expect-result">[ 4/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-division-projects-the-zero-divisor-lane-only" data-category="core">
+  <h3>A zero divisor empties its own lane, not the vector around it</h3>
+  <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] /</pre>
+  <pre class="ajisai-expect-result">[ 6/1 3/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-division-projects-lane-after-broadcast" data-category="core">
+  <h3>A broadcast dividend keeps the lanes whose divisor was not zero</h3>
+  <pre class="ajisai-source">[ 6 ] [ 1 2 0 ] /</pre>
+  <pre class="ajisai-expect-result">[ 6/1 3/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-take-exceeds-length-error" data-category="core">
   <h3>TAKE beyond the vector length is an error, not a shorter vector</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] TAKE</pre>

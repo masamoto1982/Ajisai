@@ -169,8 +169,22 @@ const projection = (when) => (when === 'never' ? 'None' : `Some(${JSON.stringify
 // spec/words.json values are ASCII, so a JSON string literal is also a valid
 // Rust string literal.
 const rustStr = (value) => JSON.stringify(value);
-const rustStrSlice = (values) =>
-  values.length > 0 ? `&[${values.map(rustStr).join(', ')}]` : '&[]';
+// Emit the wrapped form ourselves when the one-line form would pass rustfmt's
+// default 100-column width. The generated file is committed and CI runs both
+// `cargo fmt --check` and `word-registry:check`, so a line rustfmt would break
+// makes the two gates contradict each other: whichever ran last would be the
+// one that failed. `field` is the field name the slice is assigned to, since
+// it is part of the line being measured.
+const RUST_MAX_WIDTH = 100;
+const FIELD_INDENT = 8;
+const rustStrSlice = (values, field) => {
+  if (values.length === 0) return '&[]';
+  const inline = `&[${values.map(rustStr).join(', ')}]`;
+  const lineWidth = FIELD_INDENT + `${field}: `.length + inline.length + 1;
+  if (lineWidth <= RUST_MAX_WIDTH) return inline;
+  const items = values.map((value) => `${' '.repeat(FIELD_INDENT + 4)}${rustStr(value)},`);
+  return `&[\n${items.join('\n')}\n${' '.repeat(FIELD_INDENT)}]`;
+};
 
 const variants = entries.map((word) => `    ${word.executorKey},`).join('\n');
 
@@ -179,7 +193,7 @@ const rows = entries
     (word) => `    GeneratedWord {
         id: WordId::${word.executorKey},
         name: ${rustStr(word.name)},
-        aliases: ${rustStrSlice(word.aliases)},
+        aliases: ${rustStrSlice(word.aliases, 'aliases')},
         family: ${enumRef('Family', word.family)},
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
@@ -193,7 +207,9 @@ const rows = entries
         cost: ${cost(word.cost)},
         vocabulary_tier: ${enumRef('VocabularyTier', word.vocabularyTier)},
         standard_kind: ${word.standardKind ? `Some(${rustStr(word.standardKind)})` : 'None'},
-        effects: ${rustStrSlice(word.effects)},
+        effects: ${rustStrSlice(word.effects, 'effects')},
+        error_when: ${rustStrSlice(word.errorWhen, 'error_when')},
+        syntax: ${word.documentation.syntax ? `Some(${rustStr(word.documentation.syntax)})` : 'None'},
     },`,
   )
   .join('\n');
@@ -309,6 +325,21 @@ pub struct GeneratedWord {
     /// it as free strings), so this is projected as declared rather than
     /// narrowed into a Rust enum.
     pub effects: &'static [&'static str],
+    /// The conditions under which the Word *raises*, in the specification's
+    /// own spelling — the ERROR counterpart of \`projection\`, which names the
+    /// condition under which it answers NIL instead.
+    ///
+    /// Projected so a diagnosis can be derived from the declaration rather
+    /// than from a hand-written table: a Word that raises for a condition it
+    /// declares used to reach the caller as \`why: "unknown"\` with "read the
+    /// message" as its only next check.
+    pub error_when: &'static [&'static str],
+    /// One line of the Word written correctly, as the specification writes it.
+    ///
+    /// Read by the stack-underflow diagnosis, where "how many operands and in
+    /// what shape" is exactly the question and \`Stack underflow\` alone
+    /// answers none of it.
+    pub syntax: Option<&'static str>,
 }
 
 pub const GENERATED_WORDS: &[GeneratedWord] = &[

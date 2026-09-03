@@ -137,7 +137,21 @@ impl Interpreter {
     ) -> Option<Result<()>> {
         match self.declared_nil_contract(word) {
             NilContract::Run => None,
-            NilContract::Reject => Some(Err(AjisaiError::create_structure_error("a value", "NIL"))),
+            // "expected a value, got NIL" said the opposite of what the
+            // language says about NIL: `LANG.VALUES.NIL` makes absence a value,
+            // and the three-valued logic beside it reads a NIL operand as
+            // UNKNOWN rather than rejecting it. What is true here is narrower
+            // — this *Word* declares `nilPolicy: rejectNil`, so it does not
+            // admit one — and the message now says that instead, naming the
+            // Word that refused.
+            //
+            // Whether a NIL subject should instead be read as UNKNOWN (and so
+            // fall to the else branch) is a semantic question the work order
+            // marks owner-judgment; this changes only what the refusal says.
+            NilContract::Reject => Some(Err(AjisaiError::create_structure_error(
+                &format!("a non-NIL operand for {}", word.name),
+                "NIL",
+            ))),
             NilContract::PassThrough {
                 operands,
                 nil_index,

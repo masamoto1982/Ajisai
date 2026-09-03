@@ -137,17 +137,54 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
 }
 
 fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
-    let top = interp.stack.last()?;
+    projected_nil_reason(interp.stack.last()?)
+}
+
+/// The reason a Word's result records for an absence *it produced*, or `None`.
+///
+/// Looking only at the value itself missed every lifted projection. A Word
+/// lifted over a collection projects per lane (`LANG.COLLECTIONS.LIFT`), so
+/// the absence it produced sits inside the result rather than being the
+/// result: `6 0 /` was traced and `[ 6 ] [ 0 ] /` was not, and `[ 4 -1 ] SQRT`
+/// never was, though all three project for a reason the Word can name.
+///
+/// `Literal` is excluded because it is the absence a Word *received*, not one
+/// it made: a `NIL` written in source, and — since a dense lane carries
+/// presence but no reason — any absence that has passed through a tensor. So
+/// `[ 1 NIL 3 ] [ 2 ] *` records nothing, which is right: `*` propagated that
+/// NIL, it did not produce it.
+///
+/// The first reasoned absence in reading order names the event, keeping one
+/// event per Word call as the trace's shape requires.
+fn projected_nil_reason(value: &Value) -> Option<NilReason> {
     // Only operational NIL is meant to participate in error-flow tracing
     // (SPEC §4.5.2 / §7.5); the logical Unknown (U) — `Nil` data carrying
     // the `TruthValue` hint, not a dedicated variant — should not. `is_nil`
     // does not look at `hint`, so it does not currently distinguish the
     // two; this has no observable effect today because U is unreachable
     // from the current vocabulary (see `types/exact/computable.rs`).
-    if !top.is_nil() {
-        return None;
+    if value.is_nil() {
+        return match value.nil_reason() {
+            Some(NilReason::Literal) | None => None,
+            Some(reason) => Some(*reason),
+        };
     }
-    top.nil_reason().cloned()
+    let lanes = value.as_vector_view()?;
+    lanes.iter().find_map(projected_nil_reason)
+}
+
+/// The absence envelope of the same value [`projected_nil_reason`] answered
+/// for, so the traced `absence` and the traced reason always describe one
+/// value rather than two.
+fn projected_absence_metadata(value: &Value) -> Option<crate::semantic::AbsenceMetadata> {
+    if value.is_nil() {
+        return match value.nil_reason() {
+            Some(NilReason::Literal) | None => None,
+            Some(_) => value.normalized_absence_metadata(),
+        };
+    }
+    let lanes = value.as_vector_view()?;
+    lanes.iter().find_map(projected_absence_metadata)
 }
 
 fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_before: usize) {
@@ -157,7 +194,7 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
 
     let category = error_category_for_nil_reason(&reason);
     let stack_len_after = interp.stack.len();
-    let diagnosis = DebugDiagnosis::from_error_category(
+    let mut diagnosis = DebugDiagnosis::from_error_category(
         ErrorPhase::ExecuteWord,
         Some(word),
         category.as_ref(),
@@ -170,10 +207,17 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
             reason.as_protocol_str()
         )),
     );
-    let absence = interp
-        .stack
-        .last()
-        .and_then(|value| value.normalized_absence_metadata());
+    // The absence envelope belongs to the value that actually carries the
+    // projection, which for a lifted Word is a lane rather than the result.
+    let absence = interp.stack.last().and_then(projected_absence_metadata);
+    // The ceiling facts behind a resource projection are decided at the
+    // projection site — the only place that knows which limit fired and at what
+    // size — so they are carried over rather than rebuilt from the category
+    // here, which could only say that *a* limit was crossed.
+    diagnosis.resource_limit = absence
+        .as_ref()
+        .and_then(|metadata| metadata.diagnosis.as_ref())
+        .and_then(|d| d.resource_limit.clone());
     interp.push_error_flow_trace(ErrorFlowEvent {
         kind: ErrorFlowEventKind::NilProduced,
         word: Some(word.to_string()),

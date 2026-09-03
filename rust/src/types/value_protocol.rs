@@ -197,7 +197,22 @@ fn tensor_to_protocol(
     if shape.is_empty() || shape.len() == 1 {
         data.iter()
             .map(|f| {
-                let (type_str, value, hint) = if leaves_are_bool {
+                // `from_fraction` turns the denominator-0 absence sentinel a
+                // lane stores into `ValueData::Nil`, so an absent lane is
+                // decided once, here, and reported as `nil` rather than as the
+                // unreadable number `0/0`. Under the truth role the absent
+                // lane is the logical Unknown, which keeps the `truthValue`
+                // display hint — the axis LANG.OBSERVATION.FIREWALL says to
+                // read — while still reporting `type: "nil"`.
+                let leaf = Value::from_fraction(f.clone());
+                let (type_str, value, hint) = if leaf.is_nil() {
+                    let hint = if leaves_are_bool {
+                        Interpretation::TruthValue
+                    } else {
+                        Interpretation::Nil
+                    };
+                    ("nil", ProtocolValue::Null, hint)
+                } else if leaves_are_bool {
                     (
                         "boolean",
                         ProtocolValue::Bool(!f.is_zero()),
@@ -214,7 +229,7 @@ fn tensor_to_protocol(
                     type_str,
                     value,
                     display_hint: hint,
-                    semantics: Some(Value::from_fraction(f.clone())),
+                    semantics: Some(leaf),
                 }
             })
             .collect()

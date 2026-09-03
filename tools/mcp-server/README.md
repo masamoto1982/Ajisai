@@ -89,6 +89,14 @@ nothing else there.
 Execution tools accept source text only. Deliberately omitting file-path input
 prevents an AI tool call from becoming an arbitrary local-file reader.
 
+`check` answers about the *form* of a program, never about running it: it
+tokenizes, parses, resolves names and verifies declared contracts, all without
+execution. So a `check` that returns `status: ok` says the program is
+well-formed and its names resolve — it does not say the program will succeed,
+stay inside a ceiling, or produce a value rather than a NIL. Nothing that only
+a run can decide is decided here. Read it as "this will get as far as
+executing", and read `compute` for what executing it does.
+
 ### Three outcomes, kept distinct
 
 | Ajisai outcome | `status` | `isError` |
@@ -185,6 +193,16 @@ Match on `code`; the display text is localized and free to be reworded.
 A resource-limit failure carries `diagnosis.resourceLimit`
 (`{ resource, limit, observed }`), where `resource` is the name of the very
 entry in `mcp.limits` that fired.
+
+A ceiling can refuse a call without failing it. A well-formed generative Word
+whose result will not fit — `[ 0 100001 ] RANGE` against
+`materializedElements` — *projects* to NIL under the NIL Projection Rule, so
+the call is `status: ok` and there is no top-level `diagnosis` to carry
+anything. The same facts are on the value that came back instead:
+`stack[i].semantics.absence.diagnosis.resourceLimit`, and on the
+`nilProduced` entry of `errorFlowTrace`. Read them there when
+`absence.reason` is `spaceExhausted`; `reason` says a ceiling fired, and only
+these say which one, what it is set to, and what size crossed it.
 
 ### Backends and provenance
 

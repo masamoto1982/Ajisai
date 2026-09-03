@@ -25,6 +25,6 @@
     "rust/src/types/display.rs": 522,
     "rust/src/interpreter/execution_loop.rs": 519,
     "rust/src/interpreter/compiled_plan.rs": 514,
-    "rust/src/error.rs": 507
+    "rust/src/error.rs": 558
   }
 }

@@ -1,5 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::interpreter_core::RuntimeMetrics;
+use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 use std::sync::Arc;
@@ -113,7 +114,7 @@ pub(crate) fn compute_strides(shape: &[usize]) -> Vec<usize> {
     strides
 }
 
-fn unravel_index(mut linear: usize, shape: &[usize], strides: &[usize]) -> Vec<usize> {
+pub(crate) fn unravel_index(mut linear: usize, shape: &[usize], strides: &[usize]) -> Vec<usize> {
     if shape.is_empty() {
         return Vec::new();
     }
@@ -125,11 +126,11 @@ fn unravel_index(mut linear: usize, shape: &[usize], strides: &[usize]) -> Vec<u
     out
 }
 
-fn ravel_index(index: &[usize], strides: &[usize]) -> usize {
+pub(crate) fn ravel_index(index: &[usize], strides: &[usize]) -> usize {
     index.iter().zip(strides.iter()).map(|(i, s)| i * s).sum()
 }
 
-fn project_broadcast_index(
+pub(crate) fn project_broadcast_index(
     output_index: &[usize],
     output_shape: &[usize],
     input_shape: &[usize],
@@ -239,7 +240,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 /// structurally (see [`apply_recursive_broadcast`]) rather than flattened,
 /// because `shape()` collapses them to a top-level count that disagrees with
 /// the recursively flattened element count.
-fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
+pub(crate) fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
         ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
         ValueData::Text(_) => None,
@@ -285,7 +286,7 @@ pub(crate) fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
 
 /// The numeric leaf fraction of a value (scalar or NIL lane), or `None` when
 /// the value is not a numeric leaf.
-fn broadcast_leaf(value: &Value) -> Option<Fraction> {
+pub(crate) fn broadcast_leaf(value: &Value) -> Option<Fraction> {
     match &value.data {
         ValueData::Scalar(f) => Some(f.clone()),
         ValueData::Nil => Some(Fraction::nil()),
@@ -306,45 +307,7 @@ fn apply_recursive_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
-    match (broadcast_children(a), broadcast_children(b)) {
-        (None, None) => {
-            let (Some(fa), Some(fb)) = (broadcast_leaf(a), broadcast_leaf(b)) else {
-                return Err(AjisaiError::create_structure_error(
-                    "number or vector",
-                    "non-numeric value",
-                ));
-            };
-            Ok(Value::from_fraction(op(&fa, &fb)?))
-        }
-        (Some(children), None) => {
-            let out: Vec<Value> = children
-                .iter()
-                .map(|child| apply_recursive_broadcast(child, b, op))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-        (None, Some(children)) => {
-            let out: Vec<Value> = children
-                .iter()
-                .map(|child| apply_recursive_broadcast(a, child, op))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-        (Some(a_children), Some(b_children)) => {
-            if a_children.len() != b_children.len() {
-                return Err(AjisaiError::VectorLengthMismatch {
-                    len1: a_children.len(),
-                    len2: b_children.len(),
-                });
-            }
-            let out: Vec<Value> = a_children
-                .iter()
-                .zip(b_children.iter())
-                .map(|(x, y)| apply_recursive_broadcast(x, y, op))
-                .collect::<Result<Vec<Value>>>()?;
-            Ok(Value::from_children(out))
-        }
-    }
+    apply_lane_wise_broadcast(a, b, |x, y| op(x, y).map(Value::from_fraction))
 }
 
 /// Metrics-aware tensor broadcast.

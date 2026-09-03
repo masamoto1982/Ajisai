@@ -291,6 +291,38 @@ impl CauseClass {
     }
 }
 
+/// The cause class a *reasoned absence* names on its own.
+///
+/// [`ErrorCategory`] cannot answer this. Every `NilReason` without a matching
+/// `AjisaiError` variant behind it lands on `ErrorCategory::Custom`, which
+/// maps to `Unknown`, so a projection the registry declares — `SQRT`'s
+/// negative radicand, `RANGE`'s materialization ceiling — reached the caller
+/// as `why: "unknown"` with "read the message" as its only next check. The
+/// reason had named the condition all along; this reads it.
+fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
+    match reason {
+        // A well-formed operand outside the operation's domain: a negative
+        // radicand, a zero divisor.
+        NilReason::DomainMiss | NilReason::DivisionByZero => CauseClass::Domain,
+        // Both are budgets rather than mistakes: the materialization ceiling
+        // and the comparison budget answer to "the request is too big", not
+        // "the program is wrong" — the distinction `ResourceLimit` exists for.
+        NilReason::SpaceExhausted | NilReason::Undecidable => CauseClass::ResourceLimit,
+        NilReason::IndexOutOfBounds => CauseClass::Index,
+        NilReason::MissingField | NilReason::InvalidEncoding | NilReason::InvalidLens => {
+            CauseClass::ValueShape
+        }
+        NilReason::StackUnderflow => CauseClass::StackShape,
+        NilReason::UnknownWord => CauseClass::TypoOrUnknownName,
+        NilReason::NotAvailable => CauseClass::Environment,
+        NilReason::ExecutionFailure => CauseClass::UserLogic,
+        // Absence that no operation produced — a `NIL` in source, or one that
+        // has passed through a dense lane, which carries presence but no
+        // reason. Nothing is wrong; a NIL is simply flowing.
+        NilReason::EmptySequence | NilReason::Literal => CauseClass::NilFlow,
+    }
+}
+
 fn classify_locus(word: Option<&str>) -> ErrorLocus {
     let (kind, dictionary) = match word {
         None => (ErrorLocusKind::Unknown, None),
@@ -353,9 +385,15 @@ impl DebugDiagnosis {
         message: Option<String>,
     ) -> Self {
         let when = adjust_phase_for_category(when, category);
-        let why = category
-            .map(CauseClass::from_error_category)
-            .unwrap_or(CauseClass::Unknown);
+        // A reasoned absence classifies itself; `ErrorCategory` is consulted
+        // only where there is no reason to read, because `Custom` absorbs
+        // every reason without an `AjisaiError` variant behind it and would
+        // answer `Unknown` for a condition the registry declares.
+        let why = match (nil_reason, category) {
+            (Some(reason), _) => cause_class_for_nil_reason(reason),
+            (None, Some(category)) => CauseClass::from_error_category(category),
+            (None, None) => CauseClass::Unknown,
+        };
         let where_ = classify_locus(word);
 
         let summary = build_summary(
@@ -367,7 +405,7 @@ impl DebugDiagnosis {
             message.as_deref(),
         );
         let evidence = build_evidence(category, nil_reason, stack_len_before, stack_len_after);
-        let next_checks = build_next_checks(&why, word, category);
+        let next_checks = build_next_checks(&why, word, category, nil_reason);
         let candidates = match (&why, word) {
             (CauseClass::TypoOrUnknownName, Some(name)) => suggest_words(name, std::iter::empty()),
             _ => Vec::new(),
