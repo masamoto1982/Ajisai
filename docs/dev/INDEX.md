@@ -44,6 +44,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `mcp-host-profiles.md` | ホストごとの資源上限プロファイル対照表と、意図された差分 | `[設計根拠]` |
 | `mcp-readiness.md` | MCP 製品化の実装トラッカー（達成した exit criteria のみを記録する） | `[方針記録]` |
 | `mcp-claude-code-handoff.md` | MCP 開発の次担当への引き継ぎ（現行方針・禁止事項） | `[方針記録]` |
+| `mcp-hard-use-findings-work-order-2026-09.md` | MCP を実際に使い込んで出た欠陥 9 件の改修指示書。F-1（NIL レーンを含む Vector への算術がプロセスを落とす）が最優先。所有者判断待ちの 2 件を明示 | `[設計根拠]` |
 | `host-profile-derivation-handoff.md` | ホスト間で上限の値ではなく導出を統一する作業の引き継ぎ。走査系の非二次化の後に着手 | `[方針記録]` |
 | `competitive-advantage-work-order-2026-08.md` | 競争優位の研磨（観測ダイジェスト・全数意味論表・gap ID・三分法統一・コスト契約）の改修指示書。Phase 単位で実装する。設計判断は本書で確定済み | `[設計根拠]` |
 | `trichotomy-unification.md` | 実行時三分法と静的検査三値の対応を統一した理由と、reason レジストリ統合（案(b)）を今やらない技術的理由・再検討条件 | `[方針記録]` |
