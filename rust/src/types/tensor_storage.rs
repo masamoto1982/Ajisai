@@ -97,13 +97,17 @@ impl DenseTensor {
     }
 
     /// `true` when every lane (`0..len`) is valid — i.e. there are no `nil`
-    /// holes. Screens the bitmask word-at-a-time first (O(len/64)), then
-    /// confirms no lane carries the denominator-0 absence sentinel; see
+    /// holes. Reads the bitmask word-at-a-time (O(len/64)) and then confirms
+    /// no lane carries the denominator-0 absence sentinel; see
     /// [`Self::is_valid`] for why both records have to agree.
     pub fn all_lanes_valid(&self) -> bool {
-        if self.denominators.iter().any(|denominator| *denominator == 0) {
+        if !self.mask_marks_every_lane_valid() {
             return false;
         }
+        !self.denominators.contains(&0)
+    }
+
+    fn mask_marks_every_lane_valid(&self) -> bool {
         let len = self.len();
         let full_words = len / 64;
         for word in self.valid_mask.iter().take(full_words) {

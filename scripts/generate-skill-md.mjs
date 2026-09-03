@@ -341,13 +341,24 @@ function renderForbiddenPatterns() {
 
 function verifiedNilSection() {
   // Verify the documented NIL behavior against the real CLI before writing it.
-  const bubble = expectOk('[ 1 ] [ 0 ] DIV');
+  const bubble = expectOk('1 0 DIV');
   if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
   const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk('[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]');
+  const fallback = expectOk('1 0 DIV OR-NIL [ 99 ]');
   if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('OR-NIL fallback must replace NIL');
-  return { reason: event.absence.reason, fallbackStack: fallback.stackDisplay[0] };
+  // Lifted over a vector the same law projects lane by lane, so the top stays
+  // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
+  // taught the collapse rather than the lane law.
+  const lifted = expectOk('[ 6 6 ] [ 1 0 ] DIV');
+  if (lifted.stackDisplay.join(' ') !== '[ 6/1 NIL ]') {
+    fail('a zero divisor must empty only its own lane');
+  }
+  return {
+    reason: event.absence.reason,
+    fallbackStack: fallback.stackDisplay[0],
+    liftedStack: lifted.stackDisplay[0],
+  };
 }
 
 function verifiedExactnessSection() {
@@ -417,12 +428,14 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 4. NIL — absence is a value, not an exception
 
-Failed partial operations *bubble*: \`[ 1 ] [ 0 ] DIV\` succeeds (exit 0) and
+Failed partial operations *bubble*: \`1 0 DIV\` succeeds (exit 0) and
 pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`OR-NIL\`: \`[ 1 ] [ 0 ] DIV OR-NIL [ 99 ]\` → stack \`${nil.fallbackStack}\`.
+- Provide a fallback with \`OR-NIL\`: \`1 0 DIV OR-NIL [ 99 ]\` → stack \`${nil.fallbackStack}\`.
+- Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
+- That makes the top a vector, not a NIL, so \`OR-NIL\` — which inspects the stack top — keeps it as-is. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field

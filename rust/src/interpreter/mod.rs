@@ -1,5 +1,6 @@
 pub mod algo_ops;
 pub mod arithmetic;
+pub(crate) mod arithmetic_division;
 pub(crate) mod arithmetic_meter;
 pub(crate) mod bindings;
 pub mod cast;
@@ -35,6 +36,7 @@ mod shape_ops;
 pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_cmds;
+pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;
