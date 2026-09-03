@@ -227,6 +227,20 @@ const commonErrors = [
   },
 ];
 
+// Programs that succeed while meaning something other than they look like they
+// mean. `commonErrors` cannot hold these: nothing raises, so a reader — and an
+// AI in particular — has no signal that anything went wrong, which is exactly
+// what makes them worth writing down. Both the wrong and the right form are
+// executed, and the two stacks are printed side by side.
+const silentMistakes = [
+  {
+    title: 'A one-element vector where a Word wants an element',
+    wrong: '[ 1 2 3 ] [ 1 ] [ 9 ] PUT',
+    right: '[ 1 2 3 ] 1 9 PUT',
+    fix: 'PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. The `[ 42 ]` idiom of §2 is for operands a Word reads as a value; it does not carry here, and no error says so.',
+  },
+];
+
 const forbiddenPatterns = [
   {
     pattern: 'DUP / SWAP / DROP / OVER / ROT',
@@ -330,6 +344,24 @@ function renderCommonErrors() {
     .join('\n');
 }
 
+function renderSilentMistakes() {
+  return silentMistakes
+    .map((entry) => {
+      const wrong = expectOk(entry.wrong);
+      const right = expectOk(entry.right);
+      if (wrong.stackDisplay.join(' ') === right.stackDisplay.join(' ')) {
+        fail(`silent mistake ${JSON.stringify(entry.wrong)} no longer differs from the correct form`);
+      }
+      return [
+        `- **${entry.title}** — both of these succeed (exit 0):`,
+        `  \`${entry.wrong}\` → stack \`${wrong.stackDisplay.join(' ')}\``,
+        `  \`${entry.right}\` → stack \`${right.stackDisplay.join(' ')}\``,
+        `  Fix: ${entry.fix}`,
+      ].join('\n');
+    })
+    .join('\n');
+}
+
 function renderForbiddenPatterns() {
   return forbiddenPatterns
     .map((entry) => {
@@ -411,7 +443,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Postfix, stack-based. Operands first, word last: \`[ 1 ] [ 2 ] +\`.
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
-- Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar.
+- Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar — **except where a Word takes an *element*** (\`PUT\`, \`GET\`, \`INDEX-OF\`): there \`[ 9 ]\` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / COND / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and \`{\` / \`}\` are not valid Ajisai source characters.
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
@@ -472,6 +504,11 @@ ${renderCanonicalExamples()}
 ## 7. Common errors — actual CLI output, and the fix
 
 ${renderCommonErrors()}
+
+These raise. The next one does not — it succeeds and answers something other
+than it looks like it answers, which is the harder kind to notice:
+
+${renderSilentMistakes()}
 
 ## 8. Forbidden patterns (each verified to fail)
 

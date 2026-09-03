@@ -89,6 +89,14 @@ nothing else there.
 Execution tools accept source text only. Deliberately omitting file-path input
 prevents an AI tool call from becoming an arbitrary local-file reader.
 
+`check` answers about the *form* of a program, never about running it: it
+tokenizes, parses, resolves names and verifies declared contracts, all without
+execution. So a `check` that returns `status: ok` says the program is
+well-formed and its names resolve — it does not say the program will succeed,
+stay inside a ceiling, or produce a value rather than a NIL. Nothing that only
+a run can decide is decided here. Read it as "this will get as far as
+executing", and read `compute` for what executing it does.
+
 ### Three outcomes, kept distinct
 
 | Ajisai outcome | `status` | `isError` |

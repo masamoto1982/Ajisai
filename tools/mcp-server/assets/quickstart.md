@@ -200,7 +200,27 @@ may beat.
 
 The three axes are the same counters a result reports back in
 `runtimeMetrics`, so a bound and a measurement are answers about one quantity.
-Two practical rules:
+
+**A class is how the charge grows, not how large it is.** Two programs of the
+same class can differ by orders of magnitude, because the class says nothing
+about what one operation costs — and an operation on an algebraic value
+(anything `SQRT` produced) rebuilds a multiquadratic normal form each time.
+Measured through `resourceUsage.numericWork`, all three of these are `const`:
+
+| program | `numericWork` |
+| --- | --- |
+| `[ 1 2 3 4 5 ] [ 0 ] [ + ] FOLD` | 5 |
+| `2 SQRT 3 SQRT +` | 2048 |
+| `2 SQRT 3 SQRT + 'S' BIND S S *` | 6144 |
+
+The `numericWork` ceiling is 10,000,000, so an algebraic chain meets it after a
+few thousand additions while a rational one of the same class runs
+indefinitely. Budget an algebraic value at 10^2–10^3 times a rational one, and
+when the size matters, measure it: run the small case and read
+`resourceUsage`, rather than inferring a size from a class that does not carry
+one.
+
+Two further rules:
 
 - An `unbounded` axis means the charge is not a function of input *size* —
   `MAP`/`FILTER`/`FOLD` run a block you supply, and `RANGE`/`FILL` are sized by
@@ -248,7 +268,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Postfix, stack-based. Operands first, word last: `[ 1 ] [ 2 ] +`.
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
-- Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar.
+- Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar — **except where a Word takes an *element*** (`PUT`, `GET`, `INDEX-OF`): there `[ 9 ]` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / COND / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and `{` / `}` are not valid Ajisai source characters.
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
@@ -387,6 +407,14 @@ produce a value produces NIL (§4); a malformed one raises an error.
   → exit 1, `message: "NUM: expected String input"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
   Fix: String casts take the bare string: `'42' NUM`.
+
+These raise. The next one does not — it succeeds and answers something other
+than it looks like it answers, which is the harder kind to notice:
+
+- **A one-element vector where a Word wants an element** — both of these succeed (exit 0):
+  `[ 1 2 3 ] [ 1 ] [ 9 ] PUT` → stack `[ 1/1 [ 9/1 ] 3/1 ]`
+  `[ 1 2 3 ] 1 9 PUT` → stack `[ 1/1 9/1 3/1 ]`
+  Fix: PUT, GET and INDEX-OF take an *element*, not a one-element vector holding it: `[ 9 ]` is that vector, so it is stored as one. The `[ 42 ]` idiom of §2 is for operands a Word reads as a value; it does not carry here, and no error says so.
 
 ## 8. Forbidden patterns (each verified to fail)
 
