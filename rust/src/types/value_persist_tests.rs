@@ -11,7 +11,6 @@ use crate::types::{Interpretation, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::One;
 use std::str::FromStr;
-use std::sync::Arc;
 
 /// Round-trip one value as a single stack slot and return the decoded value.
 fn roundtrip(value: &Value, role: Interpretation) -> (Value, Interpretation) {
@@ -99,13 +98,19 @@ fn nested_vector_round_trips() {
 
 #[test]
 fn tensor_with_nil_lane_round_trips() {
-    let mut tensor = Value::from_int_tensor(vec![1, 2, 3, 4]);
-    if let ValueData::Tensor { data, .. } = &mut tensor.data {
-        let dense = Arc::make_mut(data);
-        dense.clear_valid(1);
-    } else {
-        panic!("expected tensor");
-    }
+    let tensor = Value::from_tensor(
+        vec![
+            Fraction::from(1),
+            Fraction::nil(),
+            Fraction::from(3),
+            Fraction::from(4),
+        ],
+        vec![4],
+    );
+    assert!(
+        matches!(&tensor.data, ValueData::Tensor { data, .. } if !data.is_valid(1)),
+        "the fixture must actually carry an absent lane"
+    );
     assert_value_roundtrip(tensor);
 }
 #[test]

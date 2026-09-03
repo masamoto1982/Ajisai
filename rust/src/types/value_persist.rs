@@ -112,10 +112,13 @@ enum PersistData {
     Text {
         s: String,
     },
+    /// A dense tensor. `dens` carries absence as well as scale: a 0
+    /// denominator is the [`Fraction::nil`] sentinel, which is why no separate
+    /// validity bitmap is written. One was, until the bitmap turned out to be
+    /// a second record of the same fact that nothing ever wrote to.
     Tensor {
         nums: Vec<i64>,
         dens: Vec<i64>,
-        mask: Vec<u64>,
         dshape: Vec<usize>,
         pure_int: bool,
         shape: Vec<usize>,
@@ -195,7 +198,6 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
         ValueData::Tensor { data, shape } => PersistData::Tensor {
             nums: data.numerators.clone(),
             dens: data.denominators.clone(),
-            mask: data.valid_mask.clone(),
             dshape: data.shape.clone(),
             pure_int: data.is_pure_integer,
             shape: (**shape).clone(),
@@ -239,7 +241,6 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
         PersistData::Tensor {
             nums,
             dens,
-            mask,
             dshape,
             pure_int,
             shape,
@@ -251,7 +252,6 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
                 data: Arc::new(DenseTensor {
                     numerators: nums.clone(),
                     denominators: dens.clone(),
-                    valid_mask: mask.clone(),
                     shape: dshape.clone(),
                     is_pure_integer: *pure_int,
                 }),

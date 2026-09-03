@@ -267,7 +267,7 @@ mod tensor_boundary_tests {
     }
 
     #[test]
-    fn dense_tensor_uses_soa_buffers_and_full_valid_mask() {
+    fn dense_tensor_uses_soa_buffers() {
         let dense = Value::from_tensor(
             vec![Fraction::from(1), Fraction::new(3.into(), 2.into())],
             vec![2],
@@ -278,20 +278,20 @@ mod tensor_boundary_tests {
         assert_eq!(&*shape, &[2]);
         assert_eq!(data.numerators, vec![1, 3]);
         assert_eq!(data.denominators, vec![1, 2]);
-        assert_eq!(data.valid_mask, vec![0b11]);
         assert!(!data.is_pure_integer);
     }
 
     #[test]
-    fn dense_tensor_invalid_lane_uses_mask_without_fraction_cache() {
-        let mut tensor = DenseTensor::from_fractions(
-            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3)],
+    fn dense_tensor_reads_an_absent_lane_from_the_denominator_sentinel() {
+        let tensor = DenseTensor::from_fractions(
+            vec![Fraction::from(1), Fraction::nil(), Fraction::from(3)],
             vec![3],
         )
         .expect("small fractions should admit dense representation");
-        tensor.clear_valid(1);
 
-        assert_eq!(tensor.valid_mask, vec![0b101]);
+        assert_eq!(tensor.denominators, vec![1, 0, 1]);
+        assert!(!tensor.is_valid(1));
+        assert!(!tensor.all_lanes_valid());
         assert_eq!(tensor.get_small_fraction(0), Some(Fraction::from(1)));
         assert_eq!(tensor.get_small_fraction(1), None);
         assert!(tensor.fraction_or_nil(1).is_nil());
