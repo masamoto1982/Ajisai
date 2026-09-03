@@ -161,8 +161,13 @@ const canonicalExamples = [
   { title: 'FILTER keeps matching elements', code: '[ 0 10 ] RANGE [ 5 > ] FILTER' },
   { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ + ] FOLD' },
   { title: 'ANY / ALL take predicate blocks', code: '[ 1 2 3 ] [ 1 > ] ANY' },
-  { title: 'Define a user word: [ body ] then name, then DEF', code: "[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM" },
   {
+    id: 'def-basic',
+    title: 'Define a user word: [ body ] then name, then DEF',
+    code: "[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
+  },
+  {
+    id: 'cond-basic',
     title: 'COND: value, then one [ ] of [ guard ] [ body ] pairs (use [ TRUE ] as else-guard)',
     code: "4 [ [ 0 GTE ] [ 'non-negative' PRINT ] [ TRUE ] [ 'negative' PRINT ] ] COND",
   },
@@ -280,6 +285,21 @@ function renderResult(json) {
   return parts.join('; ');
 }
 
+// §2/§3 used to restate a runnable-looking syntax shape (`[ body ] 'NAME'
+// DEF`, `value [ [ guard ] [ body ] ... ] COND`) as its own hand-typed
+// backtick span, independent of the identical, generator-executed example a
+// few sections later in §6 — exactly the "same fact in two places, only one
+// of them cross-checked" pattern this repo's Phase-2 alignment pass looks
+// for. `{ body } 'NAME' DEF` drifted from real syntax there and went
+// undetected because nothing ran it. Pulling the literal code from the §6
+// entry by id closes that gap structurally: there is only one hand-typed
+// copy of the fact, and it is the one the generator already executes.
+function canonicalExampleCode(id) {
+  const found = canonicalExamples.find((entry) => entry.id === id);
+  if (!found) fail(`no canonicalExamples entry with id ${JSON.stringify(id)}`);
+  return found.code;
+}
+
 function renderCanonicalExamples() {
   return canonicalExamples
     .map((example) => {
@@ -382,17 +402,17 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
 - Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar.
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
-- Code blocks: \`[ ... ]\` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF. There is no separate block bracket: a code block is a Vector (§6), and \`{\` / \`}\` are not valid Ajisai source characters.
-- User word: \`[ body ] 'NAME' DEF\` then call \`NAME\`. Words are case-insensitive (canonicalized to upper case).
+- Code blocks are quoted programs passed to MAP / FILTER / FOLD / COND / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and \`{\` / \`}\` are not valid Ajisai source characters.
+- Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
 - One modifier, prefixing the *next word only*: \`KEEP\` (do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration
 
-- Branch: \`value [ [ guard ] [ body ] [ guard ] [ body ] ... ] COND\` — the clauses are one \`[ ]\` of guard/body pairs. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use \`[ TRUE ]\` as the final else-guard. The value remains on the stack after COND.
-- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with \`[ ]\` blocks (examples in §6). \`FOLD\` requires an explicit \`[ init ]\`.
-- Predicates: \`ANY\` / \`ALL\` with a \`[ predicate ]\` block.
+- Branch: a value, then one Vector of guard/body pairs, then \`COND\`: \`${canonicalExampleCode('cond-basic')}\` (§6). Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use \`[ TRUE ]\` as the final else-guard. The value remains on the stack after COND.
+- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial-value Vector.
+- Predicates: \`ANY\` / \`ALL\` take a predicate block (examples in §6).
 - No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
 
 ## 4. NIL — absence is a value, not an exception
@@ -464,6 +484,21 @@ ${wordRows.join('\n')}
 // ---------------------------------------------------------------------------
 
 const content = buildSkillMd();
+
+// `{`/`}` were retired from Ajisai source (docs/dev/type-unification-work-
+// order-2026-08.md) and the tokenizer now rejects them outright — but the
+// hand-typed prose in §2/§3 (syntax explained in *prose*, not run through
+// `runSnippet` the way §6/§7/§8's curated examples are) had drifted back
+// into showing `{ }` as a live block bracket without anything here
+// noticing. Scoped to §2/§3, not the whole file: §7's "Common errors"
+// section legitimately embeds JSON diagnostic output (`{ when: ..., why:
+// ... }`), which is not Ajisai source and has no reason to avoid braces.
+const syntaxSections = content.slice(content.indexOf('## 2. Minimal syntax'), content.indexOf('## 4. NIL'));
+for (const [index, line] of syntaxSections.split('\n').entries()) {
+  if (!/[{}]/.test(line)) continue;
+  if (/retired|not valid Ajisai source character/.test(line)) continue;
+  fail(`SKILL.md §2/§3 (relative line ${index + 1}) contains '{' or '}' outside a line documenting them as retired: ${line}`);
+}
 
 if (process.argv.includes('--check')) {
   const committed = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : null;

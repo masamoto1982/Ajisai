@@ -140,7 +140,7 @@ const sourceSchema = {
         `Ajisai source text (file paths are not accepted). The effective limit is ${LIMITS.sourceBytes} UTF-8 bytes, so non-ASCII text reaches it at fewer characters than maxLength suggests. ` +
         "Syntax is postfix: operands first, then the Word — `1 2 ADD`, `[ 1 2 3 ] LENGTH`. " +
         "A string is single-quoted (`'hi'`, never \"hi\"). " +
-        "A block passed to MAP/FILTER/FOLD/ANY/ALL is in braces (`[ 1 2 3 4 ] { 2 MOD 0 = } FILTER`), not brackets. " +
+        "A block passed to MAP/FILTER/FOLD/ANY/ALL is a Vector like any other, written with `[ ]` — there is no separate block bracket (`[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER`). " +
         "A Word's operand shape is part of its contract and is worth checking with word_contract when unsure — several take a vector where one number looks natural, e.g. `[ 0 4 ] RANGE` and `[ [ 1 2 ] [ 3 4 ] ] ZIP`.",
     },
   },
