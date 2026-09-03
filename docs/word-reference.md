@@ -378,7 +378,7 @@ Count exact rationals in [0,1), determined entirely by the seed.
 
 ## `GET`
 
-Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed.
+Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. Contrast `PUT`, which raises on the same condition.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -574,7 +574,7 @@ Fold the outermost axis with ADD; the empty vector sums to zero.
 
 ## `PUT`
 
-A copy of a vector with the element at one index replaced.
+A copy of a vector with the element at one index replaced. An out-of-range index is an error here, where `GET` projects it to NIL on the same condition, because the two answer with different things. `GET` returns the element asked for, so a missing one empties its own slot and nothing else; `PUT` returns the whole vector, so it has no slot to empty — projecting would have to answer NIL for the entire collection because one index was wrong, discarding data the Word was asked to preserve. There is nothing to write and nothing partial to hand back, so it raises.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
