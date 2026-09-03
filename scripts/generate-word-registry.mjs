@@ -162,10 +162,6 @@ const cost = (value) => {
   return `WordCost {\n${axes.join('\n')}\n        }`;
 };
 
-// A projection condition of "never" is the absence of one, so it is projected
-// as `None` rather than as a string every reader would have to compare against.
-const projection = (when) => (when === 'never' ? 'None' : `Some(${JSON.stringify(when)})`);
-
 // spec/words.json values are ASCII, so a JSON string literal is also a valid
 // Rust string literal.
 const rustStr = (value) => JSON.stringify(value);
@@ -184,6 +180,17 @@ const rustStrSlice = (values, field) => {
   if (lineWidth <= RUST_MAX_WIDTH) return inline;
   const items = values.map((value) => `${' '.repeat(FIELD_INDENT + 4)}${rustStr(value)},`);
   return `&[\n${items.join('\n')}\n${' '.repeat(FIELD_INDENT)}]`;
+};
+
+// A projection condition of "never" is the absence of one, so it is projected
+// as an empty slice rather than as a string every reader would have to compare
+// against. A Word may declare several conditions (`MOD` projects for a zero
+// divisor and for an undecidable integer projection), so the slice is the
+// shape even where only one is declared.
+const projection = (when) => {
+  if (when === 'never') return '&[]';
+  const conditions = Array.isArray(when) ? when : [when];
+  return rustStrSlice(conditions, 'projection');
 };
 
 const variants = entries.map((word) => `    ${word.executorKey},`).join('\n');
@@ -292,12 +299,16 @@ pub struct GeneratedWord {
     pub stack_outputs: Arity,
     pub consumption: Consumption,
     pub nil_policy: NilPolicy,
-    /// The condition under which a *well-formed* operand yields a reasoned
-    /// NIL, or \`None\` for the Words that declare \`never\`. Distinct from
+    /// The conditions under which a *well-formed* operand yields a reasoned
+    /// NIL; empty for the Words that declare \`never\`. Distinct from
     /// \`nil_policy\`, which is about NIL *operands*: a Word can pass a NIL
     /// through and still project one of its own (\`passthroughThenProject\`),
     /// or project without any NIL-operand rule engaging at all.
-    pub projection: Option<&'static str>,
+    ///
+    /// A slice rather than a single condition because a Word can project for
+    /// more than one reason: \`MOD\` answers NIL both for a zero divisor and
+    /// for an integer projection it cannot decide.
+    pub projection: &'static [&'static str],
     pub partiality: Partiality,
     /// The operand shape the Word accepts, where the specification narrows it,
     /// and \`None\` where the Word takes whatever its family takes.

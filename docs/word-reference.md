@@ -225,18 +225,18 @@ Divide two numeric values exactly (fractional result).
 
 ## `MOD`
 
-Modulo (remainder) of two numeric values.
+Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
+- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable,divisorEqualsZero → undecidable, divisionByZero
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `7 3 %`
 - **Aliases:** `%`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`, `divisorEqualsZero`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `FLOOR`
 

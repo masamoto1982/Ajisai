@@ -820,13 +820,18 @@
       "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "integerProjectionUndecidable",
-        "reason": "undecidable"
+        "when": [
+          "integerProjectionUndecidable",
+          "divisorEqualsZero"
+        ],
+        "reason": [
+          "undecidable",
+          "divisionByZero"
+        ]
       },
       "errorWhen": [
         "nonNumeric",
-        "shapeMismatch",
-        "divisorEqualsZero"
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -850,9 +855,9 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Modulo (remainder) of two numeric values.",
+        "summary": "Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.",
         "hover": "MOD — modulo",
-        "lookup": "Modulo (remainder) of two numeric values.",
+        "lookup": "Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.",
         "syntax": "7 3 %",
         "role": "Arithmetic primitive: Modulo (remainder) of two numeric values.",
         "stackEffect": "[ a ] [ b ] -> [ a mod b ]"

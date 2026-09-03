@@ -380,6 +380,15 @@ impl Fraction {
     }
 
     pub fn modulo(&self, other: &Fraction) -> Fraction {
+        // Absence propagates, exactly as it does through `add`, `sub`, `mul`
+        // and `div`. `modulo` was the one arithmetic law without this guard,
+        // and it had to come first: `Fraction::nil` is `0/0`, so an absent
+        // operand reached the `i128` reduction below with a zero denominator
+        // and divided by it — `[ 1 NIL 3 ] [ 2 ] %` aborted the process, the
+        // same defect F-1 fixed one layer up.
+        if self.is_nil() || other.is_nil() {
+            return Self::nil();
+        }
         if other.is_zero() {
             panic!("Modulo by zero");
         }

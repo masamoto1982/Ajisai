@@ -149,7 +149,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "MOD",
         category: "arithmetic",
-        summary: "Modulo (remainder) of two numeric values.",
+        summary: "Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.",
         role: "Arithmetic primitive: Modulo (remainder) of two numeric values.",
         stack_effect: "[ a ] [ b ] -> [ a mod b ]",
         hover_summary: "MOD — modulo",

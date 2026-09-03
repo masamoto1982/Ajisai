@@ -131,6 +131,18 @@
       }
     },
     {
+      "name": "MOD answers a zero divisor exactly as DIV does",
+      "source": "[ 6 6 6 ] [ 1 2 0 ] %",
+      "expect": {
+        "/status": "ok",
+        "/stackDisplay/0": "[ 0/1 0/1 NIL ]",
+        "/stack/0/value/2/type": "nil",
+        "/stack/0/value/2/semantics/absence/reason": "divisionByZero",
+        "/errorFlowTrace/0/word": "MOD",
+        "/errorFlowTrace/0/absence/reason": "divisionByZero"
+      }
+    },
+    {
       "name": "execution budget exhaustion is a language ERROR",
       "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD",
       "expect": {

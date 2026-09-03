@@ -1,393 +1,407 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ajisai-lang.org/spec/words.schema.json",
-  "title": "Ajisai canonical Word contracts",
-  "type": "object",
-  "required": [
-    "schemaVersion",
-    "migration",
-    "entries"
-  ],
-  "properties": {
-    "schemaVersion": {
-      "const": 1
-    },
-    "migration": {
-      "type": "object",
-      "required": [
-        "phase",
-        "completeInventory"
-      ],
-      "properties": {
-        "phase": {
-          "type": "integer",
-          "minimum": 3
-        },
-        "completeInventory": {
-          "type": "boolean"
-        },
-        "betaFreezePhase": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 5
-        }
-      },
-      "additionalProperties": false
-    },
-    "entries": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/word"
-      },
-      "minItems": 1
-    }
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://ajisai-lang.org/spec/words.schema.json",
+ "title": "Ajisai canonical Word contracts",
+ "type": "object",
+ "required": [
+  "schemaVersion",
+  "migration",
+  "entries"
+ ],
+ "properties": {
+  "schemaVersion": {
+   "const": 1
   },
-  "additionalProperties": false,
-  "$defs": {
-    "arity": {
-      "oneOf": [
-        {
-          "type": "integer",
-          "minimum": 0
-        },
-        {
-          "enum": [
-            "control",
-            "variable"
-          ]
-        }
-      ]
+  "migration": {
+   "type": "object",
+   "required": [
+    "phase",
+    "completeInventory"
+   ],
+   "properties": {
+    "phase": {
+     "type": "integer",
+     "minimum": 3
     },
-    "costAxis": {
-      "description": "One axis of a Word's charged-cost bound. `class` is a sound upper bound on how the charge grows with the Word's input; `exact` records that some contribution provably attains that class, distinguishing a bound known to be tight from one that is merely safe.",
-      "type": "object",
-      "required": [
-        "class",
-        "exact"
-      ],
-      "properties": {
-        "class": {
-          "enum": [
-            "const",
-            "linear",
-            "superlinear",
-            "unbounded"
-          ]
-        },
-        "exact": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false
+    "completeInventory": {
+     "type": "boolean"
     },
-    "cost": {
-      "description": "The Word's charged cost on the three metered resources the runtime counts (`executionSteps` / `numericWork` / `collectionWork`). Declared per axis so a caller can bound a phrase before running it: the axes join pointwise under concatenation, so a phrase's bound is the join of its Words' bounds.",
-      "type": "object",
-      "required": [
-        "steps",
-        "numeric",
-        "collection"
-      ],
-      "properties": {
-        "steps": {
-          "$ref": "#/$defs/costAxis"
-        },
-        "numeric": {
-          "$ref": "#/$defs/costAxis"
-        },
-        "collection": {
-          "$ref": "#/$defs/costAxis"
-        }
+    "betaFreezePhase": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 5
+    }
+   },
+   "additionalProperties": false
+  },
+  "entries": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/word"
+   },
+   "minItems": 1
+  }
+ },
+ "additionalProperties": false,
+ "$defs": {
+  "arity": {
+   "oneOf": [
+    {
+     "type": "integer",
+     "minimum": 0
+    },
+    {
+     "enum": [
+      "control",
+      "variable"
+     ]
+    }
+   ]
+  },
+  "costAxis": {
+   "description": "One axis of a Word's charged-cost bound. `class` is a sound upper bound on how the charge grows with the Word's input; `exact` records that some contribution provably attains that class, distinguishing a bound known to be tight from one that is merely safe.",
+   "type": "object",
+   "required": [
+    "class",
+    "exact"
+   ],
+   "properties": {
+    "class": {
+     "enum": [
+      "const",
+      "linear",
+      "superlinear",
+      "unbounded"
+     ]
+    },
+    "exact": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": false
+  },
+  "cost": {
+   "description": "The Word's charged cost on the three metered resources the runtime counts (`executionSteps` / `numericWork` / `collectionWork`). Declared per axis so a caller can bound a phrase before running it: the axes join pointwise under concatenation, so a phrase's bound is the join of its Words' bounds.",
+   "type": "object",
+   "required": [
+    "steps",
+    "numeric",
+    "collection"
+   ],
+   "properties": {
+    "steps": {
+     "$ref": "#/$defs/costAxis"
+    },
+    "numeric": {
+     "$ref": "#/$defs/costAxis"
+    },
+    "collection": {
+     "$ref": "#/$defs/costAxis"
+    }
+   },
+   "additionalProperties": false
+  },
+  "projection": {
+   "type": "object",
+   "required": [
+    "when",
+    "reason"
+   ],
+   "properties": {
+    "when": {
+     "oneOf": [
+      {
+       "type": "string",
+       "minLength": 1
       },
-      "additionalProperties": false
+      {
+       "type": "array",
+       "items": {
+        "type": "string",
+        "minLength": 1
+       },
+       "minItems": 1,
+       "uniqueItems": true
+      }
+     ]
+    },
+    "reason": {
+     "oneOf": [
+      {
+       "type": "string",
+       "minLength": 1
+      },
+      {
+       "type": "array",
+       "items": {
+        "type": "string",
+        "minLength": 1
+       },
+       "minItems": 1,
+       "uniqueItems": true
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "additionalProperties": false,
+   "description": "The conditions under which a well-formed operand yields a reasoned NIL. `when` accepts a list because a Word can project for more than one reason: `MOD` answers NIL both for a zero divisor and for an integer projection it cannot decide. `reason` already accepted a list; a single condition may still be written as a bare string."
+  },
+  "documentation": {
+   "type": "object",
+   "required": [
+    "summary",
+    "hover",
+    "lookup",
+    "syntax",
+    "role",
+    "stackEffect"
+   ],
+   "properties": {
+    "summary": {
+     "type": "string",
+     "minLength": 1
+    },
+    "hover": {
+     "type": "string",
+     "minLength": 1
+    },
+    "lookup": {
+     "type": "string",
+     "minLength": 1
+    },
+    "syntax": {
+     "type": "string",
+     "minLength": 1
+    },
+    "role": {
+     "type": "string",
+     "minLength": 1
+    },
+    "stackEffect": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "additionalProperties": false
+  },
+  "word": {
+   "type": "object",
+   "required": [
+    "name",
+    "aliases",
+    "family",
+    "category",
+    "stack",
+    "consumption",
+    "nilPolicy",
+    "projection",
+    "errorWhen",
+    "partiality",
+    "purity",
+    "determinism",
+    "cost",
+    "effects",
+    "clauses",
+    "documentation",
+    "executorKey"
+   ],
+   "properties": {
+    "name": {
+     "type": "string",
+     "pattern": "^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$"
+    },
+    "aliases": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "uniqueItems": true
+    },
+    "family": {
+     "enum": [
+      "booleanLogic",
+      "comparison",
+      "exactArithmetic",
+      "collection",
+      "higherOrder",
+      "text",
+      "control",
+      "absence",
+      "stackModifier",
+      "dictionary",
+      "output"
+     ]
+    },
+    "category": {
+     "type": "string",
+     "minLength": 1
+    },
+    "stack": {
+     "type": "object",
+     "required": [
+      "inputs",
+      "outputs"
+     ],
+     "properties": {
+      "inputs": {
+       "$ref": "#/$defs/arity"
+      },
+      "outputs": {
+       "$ref": "#/$defs/arity"
+      }
+     },
+     "additionalProperties": false
+    },
+    "consumption": {
+     "enum": [
+      "none",
+      "eat",
+      "retain",
+      "conditional"
+     ]
+    },
+    "nilPolicy": {
+     "enum": [
+      "preserveReason",
+      "consumeNil",
+      "rejectNil",
+      "passthrough",
+      "inspectNil",
+      "createsNil",
+      "passthroughThenProject",
+      "kleeneAbsorbing"
+     ]
     },
     "projection": {
-      "type": "object",
-      "required": [
-        "when",
-        "reason"
-      ],
-      "properties": {
-        "when": {
-          "type": "string",
-          "minLength": 1
-        },
-        "reason": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "minItems": 1,
-              "uniqueItems": true
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
+     "$ref": "#/$defs/projection"
+    },
+    "errorWhen": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "uniqueItems": true
+    },
+    "partiality": {
+     "type": "string",
+     "enum": [
+      "total",
+      "partial",
+      "projecting"
+     ]
+    },
+    "acceptedDomain": {
+     "description": "The shape of operand the Word accepts. `partiality` says what happens to an operand the Word accepts; this says which operands those are, and the two together are what a reader needs before calling it. Omitted where the Word takes whatever its family takes.",
+     "type": "string",
+     "enum": [
+      "scalar",
+      "numeric",
+      "flatNumericVector",
+      "vector",
+      "text"
+     ]
+    },
+    "purity": {
+     "enum": [
+      "pure",
+      "conditional",
+      "observational",
+      "effectful"
+     ]
+    },
+    "determinism": {
+     "enum": [
+      "deterministic",
+      "stateRelative",
+      "hostRelative"
+     ]
+    },
+    "cost": {
+     "$ref": "#/$defs/cost"
+    },
+    "effects": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "uniqueItems": true
+    },
+    "clauses": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "pattern": "^LANG\\."
+     },
+     "minItems": 1,
+     "uniqueItems": true
     },
     "documentation": {
-      "type": "object",
-      "required": [
-        "summary",
-        "hover",
-        "lookup",
-        "syntax",
-        "role",
-        "stackEffect"
-      ],
-      "properties": {
-        "summary": {
-          "type": "string",
-          "minLength": 1
-        },
-        "hover": {
-          "type": "string",
-          "minLength": 1
-        },
-        "lookup": {
-          "type": "string",
-          "minLength": 1
-        },
-        "syntax": {
-          "type": "string",
-          "minLength": 1
-        },
-        "role": {
-          "type": "string",
-          "minLength": 1
-        },
-        "stackEffect": {
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "additionalProperties": false
+     "$ref": "#/$defs/documentation"
     },
-    "word": {
-      "type": "object",
-      "required": [
-        "name",
-        "aliases",
-        "family",
-        "category",
-        "stack",
-        "consumption",
-        "nilPolicy",
-        "projection",
-        "errorWhen",
-        "partiality",
-        "purity",
-        "determinism",
-        "cost",
-        "effects",
-        "clauses",
-        "documentation",
-        "executorKey"
-      ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "pattern": "^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$"
-        },
-        "aliases": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true
-        },
-        "family": {
-          "enum": [
-            "booleanLogic",
-            "comparison",
-            "exactArithmetic",
-            "collection",
-            "higherOrder",
-            "text",
-            "control",
-            "absence",
-            "stackModifier",
-            "dictionary",
-            "output"
-          ]
-        },
-        "category": {
-          "type": "string",
-          "minLength": 1
-        },
-        "stack": {
-          "type": "object",
-          "required": [
-            "inputs",
-            "outputs"
-          ],
-          "properties": {
-            "inputs": {
-              "$ref": "#/$defs/arity"
-            },
-            "outputs": {
-              "$ref": "#/$defs/arity"
-            }
-          },
-          "additionalProperties": false
-        },
-        "consumption": {
-          "enum": [
-            "none",
-            "eat",
-            "retain",
-            "conditional"
-          ]
-        },
-        "nilPolicy": {
-          "enum": [
-            "preserveReason",
-            "consumeNil",
-            "rejectNil",
-            "passthrough",
-            "inspectNil",
-            "createsNil",
-            "passthroughThenProject",
-            "kleeneAbsorbing"
-          ]
-        },
-        "projection": {
-          "$ref": "#/$defs/projection"
-        },
-        "errorWhen": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true
-        },
-        "partiality": {
-          "type": "string",
-          "enum": [
-            "total",
-            "partial",
-            "projecting"
-          ]
-        },
-        "acceptedDomain": {
-          "description": "The shape of operand the Word accepts. `partiality` says what happens to an operand the Word accepts; this says which operands those are, and the two together are what a reader needs before calling it. Omitted where the Word takes whatever its family takes.",
-          "type": "string",
-          "enum": [
-            "scalar",
-            "numeric",
-            "flatNumericVector",
-            "vector",
-            "text"
-          ]
-        },
-        "purity": {
-          "enum": [
-            "pure",
-            "conditional",
-            "observational",
-            "effectful"
-          ]
-        },
-        "determinism": {
-          "enum": [
-            "deterministic",
-            "stateRelative",
-            "hostRelative"
-          ]
-        },
-        "cost": {
-          "$ref": "#/$defs/cost"
-        },
-        "effects": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true
-        },
-        "clauses": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^LANG\\."
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "documentation": {
-          "$ref": "#/$defs/documentation"
-        },
-        "executorKey": {
-          "type": "string",
-          "pattern": "^(?:[A-Z][A-Za-z0-9]*|[a-z][a-z0-9_]*::[a-z][a-z0-9_]*)$"
-        },
-        "vocabularyTier": {
-          "enum": [
-            "kernel",
-            "standard"
-          ]
-        },
-        "standardKind": {
-          "enum": [
-            "shorthand",
-            "namedPattern",
-            "algorithm",
-            "operational"
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "vocabularyTier": {
-                "const": "standard"
-              }
-            },
-            "required": [
-              "vocabularyTier"
-            ]
-          },
-          "then": {
-            "required": [
-              "standardKind"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "vocabularyTier": {
-                "const": "kernel"
-              }
-            },
-            "required": [
-              "vocabularyTier"
-            ]
-          },
-          "then": {
-            "not": {
-              "required": [
-                "standardKind"
-              ]
-            }
-          }
-        }
-      ]
+    "executorKey": {
+     "type": "string",
+     "pattern": "^(?:[A-Z][A-Za-z0-9]*|[a-z][a-z0-9_]*::[a-z][a-z0-9_]*)$"
+    },
+    "vocabularyTier": {
+     "enum": [
+      "kernel",
+      "standard"
+     ]
+    },
+    "standardKind": {
+     "enum": [
+      "shorthand",
+      "namedPattern",
+      "algorithm",
+      "operational"
+     ]
     }
+   },
+   "additionalProperties": false,
+   "allOf": [
+    {
+     "if": {
+      "properties": {
+       "vocabularyTier": {
+        "const": "standard"
+       }
+      },
+      "required": [
+       "vocabularyTier"
+      ]
+     },
+     "then": {
+      "required": [
+       "standardKind"
+      ]
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "vocabularyTier": {
+        "const": "kernel"
+       }
+      },
+      "required": [
+       "vocabularyTier"
+      ]
+     },
+     "then": {
+      "not": {
+       "required": [
+        "standardKind"
+       ]
+      }
+     }
+    }
+   ]
   }
+ }
 }

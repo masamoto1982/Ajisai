@@ -181,7 +181,7 @@ const PROJECTING_WORDS: &[&str] = &[
 fn projecting_word_set_matches_registry() {
     let mut registry: Vec<&str> = crate::kernel::generated::GENERATED_WORDS
         .iter()
-        .filter(|word| word.projection.is_some())
+        .filter(|word| !word.projection.is_empty())
         .map(|word| word.name)
         .collect();
     registry.sort_unstable();
