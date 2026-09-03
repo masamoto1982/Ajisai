@@ -94,10 +94,21 @@ call still succeeds:
 ```
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
-and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with `OR-NIL`:
+and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with
+`OR-NIL`, whose fallback is the source unit written after it:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-[ 1 ] [ 0 ] / OR-NIL [ 99 ]
+1 0 / OR-NIL [ 99 ]
+```
+
+`OR-NIL` inspects the stack top, and a vector holding an absent lane is not
+itself absent. Lifted over a vector the same division projects lane by lane
+(`LANG.COLLECTIONS.LIFT`) — the zero divisor empties its own lane and leaves
+the others — so the top is still a vector and `OR-NIL` would keep it as-is.
+Recover such a result per lane (`MAP`), not around it:
+
+```ajisai tool=compute status=ok stack="[ 6/1 NIL ]"
+[ 6 6 ] [ 1 0 ] /
 ```
 
 ## 4. Exact arithmetic: what to read, and what not to

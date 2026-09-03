@@ -270,12 +270,32 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn divide_then_add_propagates_nil_through_pipeline() {
-        let interp = run("[ 10 ] [ 0 ] / 1 +").await;
+        // The scalar law: `10 0 /` projects to NIL, and the NIL survives the
+        // `+` that follows it.
+        let interp = run("10 0 / 1 +").await;
         let stack = interp.get_stack();
         assert!(
             stack.last().unwrap().is_nil(),
             "expected NIL on top of stack after divide and add; got {}",
             stack.last().unwrap()
+        );
+
+        // Lifted over a vector, that law applies per lane
+        // (LANG.COLLECTIONS.LIFT): the zero divisor empties its own lane, and
+        // the lane -- not the vector around it -- is what carries the NIL
+        // onward. This case used to assert the whole value went NIL, which is
+        // the collapse the lane law forbids: `[ 10 ] [ 2 ] /` answers
+        // `[ 5/1 ]`, so `[ 10 ] [ 0 ] /` answers `[ NIL ]`.
+        let interp = run("[ 10 ] [ 0 ] / 1 +").await;
+        let stack = interp.get_stack();
+        let result = stack.last().unwrap();
+        let lanes = result
+            .as_vector_view()
+            .expect("a lifted divide answers with a vector");
+        assert_eq!(lanes.len(), 1, "expected one lane; got {result}");
+        assert!(
+            lanes[0].is_nil(),
+            "expected the lane to stay NIL after divide and add; got {result}"
         );
     }
 

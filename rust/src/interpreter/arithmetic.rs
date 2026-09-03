@@ -3,7 +3,7 @@ use crate::interpreter::arithmetic_meter::{
     charge_binary_schema, check_result_size, measure_operand,
 };
 use crate::interpreter::simd_ops;
-use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
+use crate::interpreter::tensor_ops::{apply_binary_broadcast_with_metrics, apply_lane_wise_broadcast};
 use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, push_result,
 };
@@ -59,6 +59,24 @@ fn consume_stacktop_binary(interp: &mut Interpreter) {
 
 fn division_by_zero_projection() -> Value {
     Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
+}
+
+/// The scalar law of `DIV` as a whole `Value`, for the lane-wise lift.
+///
+/// A zero divisor is a projection, not a failure (`LANG.FAILURE.TRICHOTOMY`),
+/// so it answers with the reasoned NIL the scalar `6 0 /` answers with. A NIL
+/// operand is ordinary passthrough and carries no reason of its own — the
+/// operand was already absent before `DIV` saw it. The NIL test comes first
+/// because `Fraction::nil` has numerator 0, so an absent divisor answers
+/// `is_zero` as well.
+fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
+    if a.is_nil() || b.is_nil() {
+        return Ok(Value::nil());
+    }
+    if b.is_zero() {
+        return Ok(division_by_zero_projection());
+    }
+    Ok(Value::from_fraction(a.div(b)))
 }
 
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
@@ -186,6 +204,28 @@ fn same_scalar_fast_wrap(a: &ScalarFastWrap, b: &ScalarFastWrap) -> bool {
     }
 }
 
+/// A zero divisor on the one-lane fast path projects *inside* the operand's
+/// wrap, for the same reason it projects per lane in the broadcast: the shape
+/// of `[ 6 ] [ 0 ] /` is the shape of `[ 6 ] [ 2 ] /`. Answering with a bare
+/// NIL here made `DIV` the one Word whose result shape depended on whether it
+/// projected — `[ 6 ] [ 2 ] /` gave `[ 3/1 ]` while `[ 6 ] [ 0 ] /` gave a
+/// scalar `NIL`.
+///
+/// The projection is a reasoned NIL, so the wrap is rebuilt as a nested
+/// `Vector`: a dense lane could hold the absence but not the reason for it.
+fn build_scalar_fast_projection(wrap: &ScalarFastWrap) -> Value {
+    match wrap {
+        ScalarFastWrap::Scalar => division_by_zero_projection(),
+        ScalarFastWrap::Tensor(shape) => {
+            let mut value = division_by_zero_projection();
+            for _ in shape {
+                value = Value::from_children(vec![value]);
+            }
+            value
+        }
+    }
+}
+
 fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
     match wrap {
         ScalarFastWrap::Scalar => Value::from_fraction(result),
@@ -253,7 +293,7 @@ fn push_scalar_fastpath_result(
     // route was chosen — see `charge_binary_schema`.
     let result = match schema_via_kernel(schema, &a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
-        Err(AjisaiError::DivisionByZero) => division_by_zero_projection(),
+        Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.wrap),
         Err(error) => return Err(error),
     };
     // Bound accumulation, so the operand feeding the next multiply is still a
@@ -356,8 +396,42 @@ fn apply_exact_arithmetic_schema(
                 return Ok(());
             }
             Err(AjisaiError::DivisionByZero) => {
-                interp.stack.push(division_by_zero_projection());
-                return Ok(());
+                // `LANG.COLLECTIONS.LIFT`: "Each lane preserves the exactness,
+                // truth, NIL, and ERROR distinctions of the scalar law." A zero
+                // divisor empties its own lane; it does not empty the vector.
+                //
+                // The flat rational broadcast above cannot say that: its leaf
+                // law answers with a `Fraction`, so a projection can only leave
+                // it as one error for the whole operation, and the lanes that
+                // had already divided were discarded with it —
+                // `[ 6 6 6 ] [ 1 2 0 ] /` answered `NIL` where the same
+                // division through `MAP` answered `[ 6/1 3/1 NIL ]`, and the
+                // same `DIV` meant two different things depending on the route.
+                //
+                // Re-run it lane-wise, where the leaf law answers with a value
+                // and each projection carries its own reason — the shape `SQRT`
+                // already produces for a negative lane. The re-run costs a
+                // second pass only when a zero divisor was actually met; every
+                // division that projects nothing keeps the flat path.
+                let projected = apply_lane_wise_broadcast(a_val, b_val, divide_lane);
+                let projected = projected.and_then(|result| {
+                    check_result_size(interp, &result)?;
+                    Ok(result)
+                });
+                match projected {
+                    Ok(result) => {
+                        push_result(interp, result);
+                        return Ok(());
+                    }
+                    Err(error) => {
+                        if !is_keep_mode {
+                            for val in operands {
+                                interp.stack.push(val);
+                            }
+                        }
+                        return Err(error);
+                    }
+                }
             }
             Err(error) => {
                 if !is_keep_mode {
