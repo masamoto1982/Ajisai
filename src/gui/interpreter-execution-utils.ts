@@ -5,6 +5,7 @@ import {
     type InterpreterSnapshot
 } from '../workers/interpreter-snapshot';
 import { getPlatform } from '../platform';
+import { ExecutionTimeoutError } from '../workers/execution-timeout';
 import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
 
 // A word is addressed by its bare name. The dictionary has two tiers and User
@@ -57,11 +58,60 @@ export const describeFailedRunOutput = (result: ExecuteResult): string => {
     return output ? `${output.replace(/\n*$/, '')}\n${correction}` : correction;
 };
 
+// What a run that succeeded but cannot be carried into the session has to say,
+// or null when there is nothing to explain.
+//
+// The snapshot is taken after the program has already run, so its refusal is
+// not the program's failure — reporting it as one is how `PI` came to look like
+// a Word that does not work. The session keeps its pre-run stack (see
+// `syncInterpreterState`), which is the same answer a failed run gets, so this
+// says both halves: the run worked, and its result stops here.
+export const describeSnapshotRefusal = (result: ExecuteResult): string | null => {
+    if (!result?.stackSnapshotError) return null;
+    return [
+        'The program ran and produced its result, but the session cannot keep it: ',
+        result.stackSnapshotError,
+        '. The stack is unchanged from before the run.'
+    ].join('');
+};
+
+// The diagnosis a wall-clock stop can answer with.
+//
+// Every other refusal is built by the interpreter, which knows the Word, the
+// position and the ceiling. This one is not: the playground terminates the
+// worker where it stands, so nothing of the run survives to be diagnosed and
+// the bare sentence was all the reader got. What is knowable here is knowable
+// without the run — which guard fired, that it is the host's and not the
+// language's, and what makes a program fit inside it.
+export const describeTimeoutDiagnosis = (limitMs: number): string =>
+    [
+        '[DIAGNOSIS] hostGuard / playground (hostEnvironment) / resourceLimit (executionTimeout)',
+        'Q1 when: hostGuard',
+        'Q2 where: playground (hostEnvironment)',
+        'Q3 why: resourceLimit',
+        `limit executionTimeoutMs: ${limitMs} (wall clock, this host only)`,
+        'next: Check which guard stopped it - The playground stops a run on wall-clock time. '
+            + "The interpreter's own budgets (execution steps, materialized elements, numeric work) "
+            + 'did not refuse this program; it was still running when the time ran out.',
+        'next: Rewrite the loop as a bulk operation - A whole-vector Word does in one step what a '
+            + 'per-element loop does in as many, and only the loop is charged per step.',
+        'next: Trim what the run carries - Exact values grow as they are combined; QUANTIZE bounds a '
+            + 'denominator that is otherwise free to grow every iteration.',
+        'next: Check the host profile - This guard is not part of the language. Another host '
+            + '(the MCP server) applies different limits; the profile badge beside the build version '
+            + 'lists the ones in force here.'
+    ].join('\n');
+
 export const syncInterpreterState = (
     interpreter: AjisaiInterpreter,
     result: ExecuteResult
 ): void => {
     if (!result || result.error) return;
+    // A result that could not be snapshotted is not applied at all: the
+    // observation format is never restored from (SPEC §2.3), so applying a
+    // snapshot-less state would replace the session's stack with an empty one
+    // — losing what the user had, on top of the value the run just made.
+    if (result.stackSnapshotError) return;
     applyInterpreterSnapshot(interpreter, {
         stack: result.stack,
         // The worker's lossless snapshot is what restores the post-run stack
@@ -84,4 +134,11 @@ export const resolveExecutionException = (
         return;
     }
     showError(error as Error);
+    // The one refusal the interpreter never gets to explain: it is stopped from
+    // outside, so the diagnosis is written here instead of arriving with the
+    // result. Without it the wall-clock stop was the only error in the
+    // playground that answered with a bare sentence.
+    if (error instanceof ExecutionTimeoutError) {
+        showInfo(describeTimeoutDiagnosis(error.limitMs), true);
+    }
 };

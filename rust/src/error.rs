@@ -186,6 +186,11 @@ pub enum ErrorCategory {
     BuiltinProtection,
     CondExhausted,
     SelfReferentialDefinition,
+    /// The condition the failing Word's `errorWhen` declares for this state.
+    /// Its protocol spelling *is* the declared condition name, so a reader who
+    /// asked `word_contract` for the Word gets back the same vocabulary the
+    /// failure answers in, instead of the catch-all `custom`.
+    Declared(&'static str),
     Custom,
 }
 
@@ -208,6 +213,7 @@ impl ErrorCategory {
             ErrorCategory::BuiltinProtection => "builtinProtection",
             ErrorCategory::CondExhausted => "condExhausted",
             ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
+            ErrorCategory::Declared(condition) => condition,
             ErrorCategory::Custom => "custom",
         }
     }
@@ -233,6 +239,7 @@ impl ErrorCategory {
             AjisaiError::SelfReferentialDefinition { .. } => {
                 ErrorCategory::SelfReferentialDefinition
             }
+            AjisaiError::DeclaredCondition { condition, .. } => ErrorCategory::Declared(condition),
             AjisaiError::Custom(_) => ErrorCategory::Custom,
         }
     }
@@ -384,6 +391,21 @@ pub enum AjisaiError {
         word: String,
         operation: String,
     },
+    /// A raise the failing Word's own registry entry already names: `condition`
+    /// is one of the conditions its `errorWhen` declares, spelled the way
+    /// `spec/words.json` spells it.
+    ///
+    /// `Custom` carries an English sentence and nothing else, so a raise written
+    /// as `AjisaiError::from("MAP: expected return value, got empty stack")`
+    /// reached the caller as `custom` / `unknown` — while the registry had
+    /// declared `blockContractViolation` for exactly that state all along, and
+    /// the diagnosis could only offer "read the message", which is what the
+    /// caller had already read. Naming the condition at the raise site is what
+    /// lets the classification be derived rather than guessed.
+    DeclaredCondition {
+        condition: &'static str,
+        message: String,
+    },
     Custom(String),
 
     CondExhausted,
@@ -394,6 +416,19 @@ impl AjisaiError {
         AjisaiError::StructureError {
             expected: expected.to_string(),
             got: got.to_string(),
+        }
+    }
+
+    /// Raise the named condition from the failing Word's `errorWhen`.
+    ///
+    /// `condition` has to be a condition that Word declares — the diagnosis
+    /// reads the declaration back and says which of them fired, and
+    /// `declared_condition_is_declared_by_its_raising_word` pins every call
+    /// site here against `spec/words.json`.
+    pub fn declared(condition: &'static str, message: impl Into<String>) -> Self {
+        AjisaiError::DeclaredCondition {
+            condition,
+            message: message.into(),
         }
     }
 }
@@ -497,6 +532,7 @@ impl fmt::Display for AjisaiError {
             AjisaiError::BuiltinProtection { word, operation } => {
                 write!(f, "Cannot {} built-in word: {}", operation, word)
             }
+            AjisaiError::DeclaredCondition { message, .. } => write!(f, "{}", message),
             AjisaiError::Custom(msg) => write!(f, "{}", msg),
             AjisaiError::CondExhausted => {
                 write!(f, "COND: all guards failed and no else clause")

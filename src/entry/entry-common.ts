@@ -1,6 +1,7 @@
 import { getPlatform } from '../platform';
 import { GUI_INSTANCE } from '../gui/gui-application';
 import { initWasm } from '../wasm-module-loader';
+import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
 import type { WasmModule, AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
 
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
@@ -69,6 +70,11 @@ export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
     element.title = [
         'Resource limits enforced by this host:',
         ...Object.entries(profile.limits).map(([name, value]) => `${name}: ${value.toLocaleString()}`),
+        // The wall-clock guard is this host's alone and is not one of the
+        // interpreter's ceilings, so `host_profile()` cannot report it — and a
+        // list that omits the guard most likely to stop a long run reads as a
+        // complete list that is wrong.
+        `executionTimeoutMs: ${EXECUTION_TIMEOUT_MS.toLocaleString()} (wall clock, this host only)`,
     ].join('\n');
 }
 

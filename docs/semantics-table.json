@@ -8997,7 +8997,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9005,7 +9005,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9029,7 +9029,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9045,7 +9045,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9053,7 +9053,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9077,7 +9077,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9093,7 +9093,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9101,7 +9101,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9125,7 +9125,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9141,7 +9141,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9149,7 +9149,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9173,7 +9173,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9189,7 +9189,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9197,7 +9197,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9221,7 +9221,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "MAP",
@@ -9285,7 +9285,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9293,7 +9293,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9317,7 +9317,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9333,7 +9333,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9341,7 +9341,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9365,7 +9365,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9381,7 +9381,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9389,7 +9389,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9413,7 +9413,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9429,7 +9429,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9437,7 +9437,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9461,7 +9461,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9477,7 +9477,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9485,7 +9485,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9509,7 +9509,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FILTER",
@@ -9574,7 +9574,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9583,7 +9583,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9610,7 +9610,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9628,7 +9628,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9637,7 +9637,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9664,7 +9664,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9682,7 +9682,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9691,7 +9691,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9718,7 +9718,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9736,7 +9736,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9745,7 +9745,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9772,7 +9772,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9790,7 +9790,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9799,7 +9799,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9826,7 +9826,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9898,7 +9898,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9907,7 +9907,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9934,7 +9934,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9952,7 +9952,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9961,7 +9961,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -9988,7 +9988,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10006,7 +10006,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10015,7 +10015,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10042,7 +10042,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10060,7 +10060,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10069,7 +10069,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10096,7 +10096,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10114,7 +10114,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10123,7 +10123,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10150,7 +10150,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10222,7 +10222,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10231,7 +10231,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10258,7 +10258,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10276,7 +10276,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10285,7 +10285,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10312,7 +10312,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10330,7 +10330,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10339,7 +10339,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10366,7 +10366,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10384,7 +10384,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10393,7 +10393,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10420,7 +10420,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10438,7 +10438,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10447,7 +10447,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10474,7 +10474,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10546,7 +10546,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10555,7 +10555,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10582,7 +10582,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10600,7 +10600,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10609,7 +10609,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10636,7 +10636,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10654,7 +10654,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10663,7 +10663,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10690,7 +10690,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10708,7 +10708,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10717,7 +10717,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10744,7 +10744,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10762,7 +10762,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10771,7 +10771,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10798,7 +10798,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10870,7 +10870,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10879,7 +10879,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10906,7 +10906,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10924,7 +10924,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10933,7 +10933,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10960,7 +10960,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10978,7 +10978,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -10987,7 +10987,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11014,7 +11014,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11032,7 +11032,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11041,7 +11041,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11068,7 +11068,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11086,7 +11086,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11095,7 +11095,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11122,7 +11122,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FOLD",
@@ -11517,7 +11517,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11525,7 +11525,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11549,7 +11549,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11565,7 +11565,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11573,7 +11573,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11597,7 +11597,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11613,7 +11613,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11621,7 +11621,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11645,7 +11645,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11661,7 +11661,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11669,7 +11669,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11693,7 +11693,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11709,7 +11709,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11717,7 +11717,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11741,7 +11741,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ANY",
@@ -11805,7 +11805,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11813,7 +11813,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11837,7 +11837,7 @@
         "scalar",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11853,7 +11853,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11861,7 +11861,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11885,7 +11885,7 @@
         "boolean",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11901,7 +11901,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11909,7 +11909,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11933,7 +11933,7 @@
         "string",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11949,7 +11949,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11957,7 +11957,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11981,7 +11981,7 @@
         "vector",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -11997,7 +11997,7 @@
         "nil",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -12005,7 +12005,7 @@
         "nil",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -12029,7 +12029,7 @@
         "nil",
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ALL",
@@ -12920,21 +12920,21 @@
       "inputs": [
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "PROBE",
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "PROBE",
       "inputs": [
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "PROBE",

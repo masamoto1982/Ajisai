@@ -21,8 +21,12 @@ import {
     collectUserWords,
     createExecutionSnapshot,
     describeFailedRunOutput,
+    describeSnapshotRefusal,
+    describeTimeoutDiagnosis,
+    resolveExecutionException,
     syncInterpreterState
 } from './interpreter-execution-utils';
+import { ExecutionTimeoutError } from '../workers/execution-timeout';
 import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 
 const num = (n: number): Value =>
@@ -210,5 +214,105 @@ describe('describeFailedRunOutput', () => {
         } as ExecuteResult);
 
         expect(reported.startsWith('Rolled back 1 dictionary change: GY.')).toBe(true);
+    });
+});
+
+// A value the snapshot codec refuses (`PI`, and anything built from it, is a
+// Tier-2 computable real) fails *after* the program has already produced it.
+// Reported as the program's own failure, `PI` read as a Word that does not
+// work: the answer the run had computed never reached the reader, and the
+// message named a persistence concept the language never mentions.
+describe('a run whose result cannot be snapshotted', () => {
+    it('keeps the pre-run stack instead of restoring an empty one', () => {
+        const main = createFakeInterpreter();
+        main.setStack([num(1), num(2)]);
+
+        syncInterpreterState(main, {
+            status: 'OK',
+            stack: [num(3)],
+            stackSnapshotError: 'cannot persist a Tier-2 computable exact real'
+        } as ExecuteResult);
+
+        // Not the run's stack, and not an empty one either: the session is
+        // exactly as it was, which is the answer a failed run also gets.
+        expect(main.collect_stack()).toEqual([num(1), num(2)]);
+    });
+
+    it('says the run succeeded and only its result stops here', () => {
+        const explained = describeSnapshotRefusal({
+            status: 'OK',
+            stackSnapshotError: 'cannot persist a Tier-2 computable exact real'
+        } as ExecuteResult);
+
+        expect(explained).toContain('The program ran and produced its result');
+        expect(explained).toContain('cannot persist a Tier-2 computable exact real');
+        expect(explained).toContain('The stack is unchanged from before the run.');
+    });
+
+    it('explains nothing for an ordinary successful run', () => {
+        expect(describeSnapshotRefusal({ status: 'OK' } as ExecuteResult)).toBeNull();
+    });
+});
+
+// The wall-clock guard is the one refusal the interpreter never diagnoses: the
+// worker is terminated where it stands, so a diagnosis has to be written on
+// this side or the reader gets a bare sentence where every other failure
+// answers with when / where / why and what to do next.
+describe('describeTimeoutDiagnosis', () => {
+    it('answers in the same shape as an interpreter diagnosis', () => {
+        const diagnosis = describeTimeoutDiagnosis(5_000);
+
+        expect(diagnosis).toContain('[DIAGNOSIS]');
+        expect(diagnosis).toContain('Q1 when:');
+        expect(diagnosis).toContain('Q2 where:');
+        expect(diagnosis).toContain('Q3 why: resourceLimit');
+        expect(diagnosis).toContain('executionTimeoutMs: 5000');
+        expect(diagnosis.split('\n').filter((line) => line.startsWith('next: ')).length)
+            .toBeGreaterThanOrEqual(3);
+    });
+
+    it('says the guard is the host’s and not the language’s', () => {
+        const diagnosis = describeTimeoutDiagnosis(5_000);
+
+        expect(diagnosis).toContain('not part of the language');
+        expect(diagnosis).toContain('did not refuse this program');
+    });
+});
+
+describe('resolveExecutionException', () => {
+    const collect = () => {
+        const info: string[] = [];
+        const errors: string[] = [];
+        return {
+            info,
+            errors,
+            showInfo: (text: string) => { info.push(text); },
+            showError: (error: Error | string) => {
+                errors.push(error instanceof Error ? error.message : error);
+            }
+        };
+    };
+
+    it('writes a diagnosis under a wall-clock stop', () => {
+        const sink = collect();
+
+        resolveExecutionException(
+            'test',
+            new ExecutionTimeoutError(5_000),
+            sink.showInfo,
+            sink.showError
+        );
+
+        expect(sink.errors[0]).toBe('Execution timed out after 5000 ms');
+        expect(sink.info.join('\n')).toContain('[DIAGNOSIS]');
+    });
+
+    it('leaves an ordinary failure to the diagnosis the interpreter already built', () => {
+        const sink = collect();
+
+        resolveExecutionException('test', new Error('Stack underflow'), sink.showInfo, sink.showError);
+
+        expect(sink.errors[0]).toBe('Stack underflow');
+        expect(sink.info).toEqual([]);
     });
 });

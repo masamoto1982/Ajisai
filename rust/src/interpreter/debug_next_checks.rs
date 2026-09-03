@@ -29,7 +29,11 @@ pub(crate) fn build_next_checks(
     category: Option<&ErrorCategory>,
     nil_reason: Option<&NilReason>,
 ) -> Vec<DebugCheck> {
-    let mut out = declared_checks(why, word, nil_reason);
+    let fired_condition = match category {
+        Some(ErrorCategory::Declared(condition)) => Some(*condition),
+        _ => None,
+    };
+    let mut out = declared_checks(why, word, nil_reason, fired_condition);
 
     match why {
         CauseClass::Domain => {

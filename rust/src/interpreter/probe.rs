@@ -33,7 +33,10 @@ pub(crate) fn op_probe(interp: &mut Interpreter) -> Result<()> {
         if !is_keep_mode {
             interp.stack.push(value);
         }
-        return Err(AjisaiError::from("PROBE requires a CodeBlock"));
+        return Err(AjisaiError::declared(
+            "notExecutable",
+            "PROBE requires a CodeBlock",
+        ));
     };
     let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements) {
         Ok(t) => t,

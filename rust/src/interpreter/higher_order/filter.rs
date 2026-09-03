@@ -78,7 +78,8 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 let condition_result: Value = match interp.stack.pop() {
                     Some(r) => r,
                     None => {
-                        error = Some(AjisaiError::from(
+                        error = Some(AjisaiError::declared(
+                            "blockContractViolation",
                             "FILTER: expected boolean value, got empty stack",
                         ));
                         break;

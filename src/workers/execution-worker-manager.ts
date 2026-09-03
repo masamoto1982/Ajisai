@@ -3,6 +3,7 @@
 import type { ExecuteResult } from '../wasm-interpreter-types';
 import type { InterpreterSnapshot } from './interpreter-snapshot';
 import { extractCompiledWasmModule } from '../wasm-module-loader';
+import { EXECUTION_TIMEOUT_MS, ExecutionTimeoutError } from './execution-timeout';
 import {
     detectParallelCapability,
     describeParallelCapability,
@@ -26,13 +27,6 @@ interface WorkerInstance {
 
 const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
-
-// Per-task wall-clock cap on worker execution. The recursion guard returns an
-// AjisaiError immediately for blown-stack programs; this is the second line of
-// defence for "still running" non-recursive loops that neither hit the
-// execution-step cap fast enough nor produce a recursion error. Set well above
-// the longest legitimate run so a legal program never trips it.
-const EXECUTION_TIMEOUT_MS = 5_000;
 
 export class WorkerManager {
     private workers: WorkerInstance[] = [];
@@ -153,7 +147,7 @@ export class WorkerManager {
 
         this.activeTasks.delete(taskId);
 
-        task.reject(new Error(`Execution timed out after ${EXECUTION_TIMEOUT_MS} ms`));
+        task.reject(new ExecutionTimeoutError(EXECUTION_TIMEOUT_MS));
 
         this.createWorker();
         this.processQueue();

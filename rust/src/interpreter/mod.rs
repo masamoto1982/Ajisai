@@ -100,6 +100,8 @@ mod control_or_else_tests;
 #[cfg(test)]
 mod debug_next_checks_tests;
 #[cfg(test)]
+mod declared_condition_tests;
+#[cfg(test)]
 mod dependents_index_tests;
 #[cfg(test)]
 mod dictionary_operation_tests;

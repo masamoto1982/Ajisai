@@ -83,7 +83,8 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                     accumulator = result;
                 }
                 None => {
-                    error = Some(AjisaiError::from(
+                    error = Some(AjisaiError::declared(
+                        "blockContractViolation",
                         "FOLD: expected return value, got empty stack",
                     ));
                     break;

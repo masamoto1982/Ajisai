@@ -30,8 +30,9 @@ pub(crate) fn extract_executable_code(
         return extract_word_name_from_value(val).map(ExecutableCode::WordName);
     }
 
-    Err(AjisaiError::from(
-        "EXTRACT_EXECUTABLE_CODE: expected a Vector ([ ... ]) or word name, got other value",
+    Err(AjisaiError::declared(
+        "notExecutable",
+        "expected a Vector ([ ... ]) or a word name as the code operand, got another value",
     ))
 }
 

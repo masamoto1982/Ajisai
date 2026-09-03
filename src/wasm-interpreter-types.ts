@@ -241,6 +241,18 @@ export interface ExecuteResult {
     // ExactScalar) survive the round-trip instead of being flattened to nil or
     // a rational approximation. See SPEC §2.3.
     stackSnapshot?: string;
+    /**
+     * Why the lossless snapshot could not be taken, when the run itself
+     * succeeded. Some values the interpreter computes cannot be persisted —
+     * `PI` and anything built from it is a Tier-2 computable real, which the
+     * snapshot codec refuses rather than encode lossily — and taking the
+     * snapshot happens *after* the run, so its failure used to be reported as
+     * if the program had failed: `PI` answered "cannot persist a Tier-2
+     * computable exact real" and looked like a Word that does not work.
+     * The run's own outcome is `status` above; this says only that its result
+     * cannot be carried into the session.
+     */
+    stackSnapshotError?: string;
     userWords?: UserWord[];
     /**
      * On an ERROR result, the Words the failed run defined or deleted before it
