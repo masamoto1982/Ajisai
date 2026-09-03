@@ -62,15 +62,37 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
 /// the same `value_as_code.rs` bridge `EXEC`/`PROBE`/`DEF` use.
 fn extract_clause_blocks(clauses_val: &Value) -> Result<Vec<Vec<Token>>> {
     let elements = clauses_val.as_vector_view().ok_or_else(|| {
-        AjisaiError::from(
-            "COND: expected a Vector of [ guard | body ] clauses as the second operand",
+        // A structure error rather than a bare string. `COND` declares
+        // `inspectNil` so that a NIL *target* can be read as Unknown, and that
+        // declaration is per Word, not per operand — so a NIL in the *clauses*
+        // slot, which is simply malformed, is no longer pre-rejected and
+        // arrives here. This arm answered `why: "unknown"` for every wrong
+        // shape, NIL included; naming what arrived classifies it as
+        // `valueShape`, which is what it always was.
+        AjisaiError::create_structure_error(
+            "a Vector of [ guard | body ] clauses as COND's second operand",
+            if clauses_val.is_nil() {
+                "NIL"
+            } else {
+                "a non-Vector value"
+            },
         )
     })?;
     elements
         .iter()
         .map(|clause| {
             let inner = clause.as_vector_view().ok_or_else(|| {
-                AjisaiError::from("COND: each clause must itself be a [ guard | body ] block")
+                // Same reasoning as the operand above: a clause of the wrong
+                // shape is a value-shape fault, and saying so classifies it
+                // instead of leaving the reader with "read the message".
+                AjisaiError::create_structure_error(
+                    "each COND clause to be a [ guard | body ] block",
+                    if clause.is_nil() {
+                        "NIL"
+                    } else {
+                        "a non-Vector element"
+                    },
+                )
             })?;
             crate::interpreter::value_as_code::value_elements_to_tokens(&inner)
         })
@@ -265,10 +287,25 @@ fn evaluate_guard_isolated(
     let result_value: Value = guard_result_value.ok_or_else(|| {
         AjisaiError::from("COND: guard must return TRUE or FALSE, got empty stack")
     })?;
-    // SPEC §7.4.3: a guard that reduces to the logical `Unknown` (U) — e.g.
-    // an undecidable continued-fraction comparison — is not a definite
-    // `true`, so its clause does not fire. Fall through to the next clause
-    // exactly as for a `false` guard. U is neither an error nor a match.
+    // SPEC §7.4.3: a guard that reduces to the logical `Unknown` (U) — an
+    // undecidable continued-fraction comparison, or any comparison against an
+    // absent subject — is not a definite `true`, so its clause does not fire.
+    // Fall through to the next clause exactly as for a `false` guard. U is
+    // neither an error nor a match.
+    //
+    // This paragraph described the intent before it described the code: an
+    // Unknown guard fell past every arm below and came out of the last one as
+    // "guard must return TRUE or FALSE, got non-scalar". It is the rule that
+    // lets a NIL subject reach a COND at all — every guard that reads the
+    // subject answers U, and the clauses that do not read it decide as they
+    // always did — so it is enforced here rather than assumed.
+    //
+    // Both shapes count: a bare NIL, and the one-element vector element
+    // lifting produces (`[ NIL ] [ 5 ] >` answers `[ NIL ]`, exactly as
+    // `[ 7 ] [ 5 ] >` answers `[ TRUE ]`).
+    if is_unknown_guard_result(&result_value) {
+        return Ok(false);
+    }
     // A definite Boolean guard fires iff it is TRUE (SPEC §7.7). Accept a
     // bare Boolean or one wrapped in a single-element vector; fall back to the
     // legacy numeric-guard handling (0 = false, 1 = true) below otherwise.
@@ -322,6 +359,15 @@ fn evaluate_guard_isolated(
         "COND: guard must return TRUE or FALSE, got {}",
         result_value
     )))
+}
+
+/// `true` when a guard reduced to the logical Unknown (U) rather than to a
+/// definite truth value. See the call site for why U is a fall-through.
+fn is_unknown_guard_result(result: &Value) -> bool {
+    if result.is_nil() {
+        return true;
+    }
+    result.len() == 1 && result.get_child(0).is_some_and(Value::is_nil)
 }
 
 fn evaluate_guard_greedy(

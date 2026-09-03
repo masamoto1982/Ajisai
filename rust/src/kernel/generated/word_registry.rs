@@ -2337,7 +2337,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_inputs: Arity::Fixed(2),
         stack_outputs: Arity::Fixed(1),
         consumption: Consumption::Conditional,
-        nil_policy: NilPolicy::RejectNil,
+        nil_policy: NilPolicy::InspectNil,
         projection: None,
         partiality: Partiality::Partial,
         accepted_domain: None,

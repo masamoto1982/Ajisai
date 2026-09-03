@@ -142,8 +142,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.
 - **COND clauses must be wrapped in a single [ ]** — `5 [ 3 > ] [ 'big' PRINT ] COND`
-  → exit 1, `message: "COND: each clause must itself be a [ guard | body ] block"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
+  → exit 1, `message: "Structure error: expected each COND clause to be a [ guard | body ] block, got a non-Vector element"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkExpectedShape`.
   Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
 - **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
   → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
@@ -248,7 +248,7 @@ no module system and nothing to import.
 | `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `COND` | control | Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. — e.g. `1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND` |
+| `COND` | control | Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value. — e.g. `1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND` |
 | `EXEC` | control | Evaluate a code block. — e.g. `[ 1 2 ADD ] EXEC` |
 | `PROBE` | control | Infer a code block's contract against the current dictionary, without evaluating it. — e.g. `[ 1 2 ADD ] PROBE` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |

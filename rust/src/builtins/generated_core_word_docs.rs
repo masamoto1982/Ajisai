@@ -500,7 +500,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "COND",
         category: "control",
-        summary: "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.",
+        summary: "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value.",
         role: "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
         stack_effect: "value [ [ guard | body ] ... ] -> [ result ]",
         hover_summary: "COND — evaluate guard/body clauses",

@@ -12591,7 +12591,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12599,7 +12599,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12607,7 +12607,7 @@
         "scalar",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12615,7 +12615,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12639,7 +12639,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12647,7 +12647,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12655,7 +12655,7 @@
         "boolean",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12663,7 +12663,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12687,7 +12687,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12695,7 +12695,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12703,7 +12703,7 @@
         "string",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12711,7 +12711,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12735,7 +12735,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12743,7 +12743,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12751,7 +12751,7 @@
         "vector",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",
@@ -12759,7 +12759,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "COND",

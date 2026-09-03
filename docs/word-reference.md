@@ -769,12 +769,12 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 
 ## `COND`
 
-Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame.
+Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
 - **Stack:** 2 input(s) → 1 output(s); `conditional` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **NIL policy:** `inspectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
