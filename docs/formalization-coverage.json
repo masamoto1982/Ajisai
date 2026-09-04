@@ -13,10 +13,10 @@
       "flow"
     ],
     "entry_counts": {
-      "flow": 20,
-      "identity": 27,
-      "material": 138,
-      "sugar": 27
+      "flow": 10,
+      "identity": 18,
+      "material": 48,
+      "sugar": 22
     }
   },
   "algebra_primitives": [

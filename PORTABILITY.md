@@ -45,8 +45,8 @@ Ajisai の移植性は conformance suite が定義する現象の再現そのも
 ## Portability Layers
 | Layer | Description | Examples |
 | --- | --- | --- |
-| Core | ホスト非依存の意味論的核 | vector evaluation, arithmetic, blocks, map/form/fold, NIL/UNKNOWN |
-| Hosted | 外部能力を要求する語彙 | NOW, CSPRNG, AUDIO, JSONEXPORT |
+| Core | ホスト非依存の意味論的核 | vector evaluation, arithmetic, map/fold/filter, NIL/UNKNOWN |
+| Hosted | 外部能力を要求する語彙 | PRINT |
 | Platform | 具体的な宿主 | Web, WASM, Tauri, CLI, WASI, Native |
 
 ## Conformance
