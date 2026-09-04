@@ -412,26 +412,6 @@ const formatValue = (item: Value, depth: number): string => {
 };
 
 
-interface ParsedOutput {
-    readonly jsonExport: readonly string[];
-    /** Output lines with all special command lines removed, joined by newlines. */
-    readonly program: string;
-}
-
-// Single pass over the output: previously each command category re-split the
-// same string, costing 5-6 full scans per render.
-const parseOutputCommands = (output: string): ParsedOutput => {
-    const jsonExport: string[] = [];
-    const programLines: string[] = [];
-
-    for (const line of output.split('\n')) {
-        if (line.startsWith('JSONEXPORT:')) jsonExport.push(line.substring(11));
-        else programLines.push(line);
-    }
-
-    return { jsonExport, program: programLines.join('\n') };
-};
-
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
     typeof error === 'string'
         ? `Error: ${error}`
@@ -450,28 +430,6 @@ const clearElement = (element: HTMLElement): void => {
 
 const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
-};
-
-const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement => {
-    let prettyJson: string;
-    try {
-        prettyJson = JSON.stringify(JSON.parse(jsonCompact), null, 2);
-    } catch {
-        prettyJson = jsonCompact;
-    }
-
-    const blob = new Blob([prettyJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `ajisai_export_${timestamp}.json`;
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.className = 'btn';
-    a.textContent = `Download: ${filename}`;
-    return a;
 };
 
 // ── Cost summary (Reference: Cost Model) ──────────────────────────────────
@@ -554,14 +512,6 @@ const renderCostSummary = (result: ExecuteResult, outputDisplay: HTMLElement): v
     appendToElement(outputDisplay, details);
 };
 
-const renderJsonExportLinks = (jsonExportCommands: readonly string[], outputDisplay: HTMLElement): void => {
-    jsonExportCommands.forEach(jsonCompact => {
-        const link = createJsonDownloadLinkElement(jsonCompact);
-        appendToElement(outputDisplay, document.createElement('br'));
-        appendToElement(outputDisplay, link);
-    });
-};
-
 export const createDisplay = (elements: DisplayElements): Display => {
     let mainOutput = '';
     let mathViewEnabled = readMathViewPreference();
@@ -606,10 +556,8 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderExecutionResult = (result: ExecuteResult): void => {
-        const parsed = parseOutputCommands(result.output || '');
-
         const debug = (result.debugOutput || '').trim();
-        const program = parsed.program.trim();
+        const program = (result.output || '').trim();
 
         mainOutput = `${debug}\n${program}`;
         clearElement(elements.outputDisplay);
@@ -626,9 +574,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
             appendSpan(program, '#4DC4FF');
         }
 
-        renderJsonExportLinks(parsed.jsonExport, elements.outputDisplay);
-
-        if (!debug && !program && parsed.jsonExport.length === 0 && result.status === 'OK') {
+        if (!debug && !program && result.status === 'OK') {
             appendSpan('OK', '#333');
         }
 
@@ -636,8 +582,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const appendExecutionResult = (result: ExecuteResult): void => {
-        const parsed = parseOutputCommands(result.output || '');
-        const filteredOutput = parsed.program.trim();
+        const filteredOutput = (result.output || '').trim();
 
         if (filteredOutput) {
             appendSpan(filteredOutput, '#4DC4FF');
@@ -645,11 +590,9 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderOutput = (text: string): void => {
-        const parsed = parseOutputCommands(text);
-
-        mainOutput = parsed.program;
+        mainOutput = text;
         clearElement(elements.outputDisplay);
-        appendSpan(parsed.program, '#4DC4FF');
+        appendSpan(text, '#4DC4FF');
     };
 
     /// An error is written *below* whatever the run already printed, never in
@@ -663,8 +606,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         precedingOutput = ''
     ): void => {
         const errorMessage = formatErrorMessage(error);
-        const parsed = parseOutputCommands(precedingOutput);
-        const printed = parsed.program.trim();
+        const printed = precedingOutput.trim();
 
         clearElement(elements.outputDisplay);
         if (printed) {
