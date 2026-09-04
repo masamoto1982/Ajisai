@@ -3,10 +3,10 @@
 // *cross-origin isolated* — which requires the COOP/COEP response headers
 // (`Cross-Origin-Opener-Policy: same-origin` +
 // `Cross-Origin-Embedder-Policy: require-corp`) and a browser that exposes
-// `SharedArrayBuffer`. GitHub Pages cannot set those headers, so production
-// relies on the `coi-serviceworker` fallback; environments where neither path
-// applies must degrade silently to single-threaded execution (Never Slower:
-// the sequential lane is always correct).
+// `SharedArrayBuffer`. GitHub Pages cannot set those headers and there is
+// currently no service-worker fallback registered, so production always
+// degrades silently to single-threaded execution (Never Slower: the
+// sequential lane is always correct).
 //
 // This module is the single source of truth for "can we thread in this
 // browser?" It is intentionally a pure function over an injectable scope so it

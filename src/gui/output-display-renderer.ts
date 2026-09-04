@@ -1,7 +1,6 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import type { Value, ExecuteResult, RuntimeMetricsSnapshot } from '../wasm-interpreter-types';
-import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { valueToLatex } from './value-latex';
 import {
     createRenderBudget,
@@ -414,9 +413,6 @@ const formatValue = (item: Value, depth: number): string => {
 
 
 interface ParsedOutput {
-    readonly audio: readonly string[];
-    readonly config: readonly string[];
-    readonly effect: readonly string[];
     readonly jsonExport: readonly string[];
     /** Output lines with all special command lines removed, joined by newlines. */
     readonly program: string;
@@ -425,21 +421,15 @@ interface ParsedOutput {
 // Single pass over the output: previously each command category re-split the
 // same string, costing 5-6 full scans per render.
 const parseOutputCommands = (output: string): ParsedOutput => {
-    const audio: string[] = [];
-    const config: string[] = [];
-    const effect: string[] = [];
     const jsonExport: string[] = [];
     const programLines: string[] = [];
 
     for (const line of output.split('\n')) {
-        if (line.startsWith('AUDIO:')) audio.push(line.substring(6));
-        else if (line.startsWith('CONFIG:')) config.push(line.substring(7));
-        else if (line.startsWith('EFFECT:')) effect.push(line.substring(7));
-        else if (line.startsWith('JSONEXPORT:')) jsonExport.push(line.substring(11));
+        if (line.startsWith('JSONEXPORT:')) jsonExport.push(line.substring(11));
         else programLines.push(line);
     }
 
-    return { audio, config, effect, jsonExport, program: programLines.join('\n') };
+    return { jsonExport, program: programLines.join('\n') };
 };
 
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
@@ -460,50 +450,6 @@ const clearElement = (element: HTMLElement): void => {
 
 const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
-};
-
-const applyEffectCommands = (commands: readonly string[]): void => {
-    commands.forEach(commandStr => {
-        try {
-            const effect = JSON.parse(commandStr);
-            if (effect.gain !== undefined) {
-                AUDIO_ENGINE.updateGain(effect.gain);
-            }
-            if (effect.pan !== undefined) {
-                AUDIO_ENGINE.updatePan(effect.pan);
-            }
-        } catch {
-            console.error('Failed to parse EFFECT command:', commandStr);
-        }
-    });
-};
-
-const applyConfigCommands = (commands: readonly string[]): void => {
-    commands.forEach(commandStr => {
-        try {
-            const config = JSON.parse(commandStr);
-            if (config.slot_duration !== undefined) {
-                AUDIO_ENGINE.updateSlotDuration(config.slot_duration);
-                console.log(`Slot duration set to ${config.slot_duration}s`);
-            }
-        } catch {
-            console.error('Failed to parse CONFIG command');
-        }
-    });
-};
-
-const executeHostCommands = (parsed: ParsedOutput): void => {
-    applyEffectCommands(parsed.effect);
-    applyConfigCommands(parsed.config);
-
-    parsed.audio.forEach(commandStr => {
-        try {
-            const audioCommand = JSON.parse(commandStr);
-            AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
-        } catch {
-            console.error('Failed to parse audio command');
-        }
-    });
 };
 
 const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement => {
@@ -651,7 +597,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
         createLatexToggle();
-        AUDIO_ENGINE.init().catch(console.error);
     };
 
     const appendSpan = (text: string, color: string): HTMLSpanElement => {
@@ -662,7 +607,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const renderExecutionResult = (result: ExecuteResult): void => {
         const parsed = parseOutputCommands(result.output || '');
-        executeHostCommands(parsed);
 
         const debug = (result.debugOutput || '').trim();
         const program = parsed.program.trim();
@@ -693,7 +637,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const appendExecutionResult = (result: ExecuteResult): void => {
         const parsed = parseOutputCommands(result.output || '');
-        executeHostCommands(parsed);
         const filteredOutput = parsed.program.trim();
 
         if (filteredOutput) {
@@ -703,7 +646,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const renderOutput = (text: string): void => {
         const parsed = parseOutputCommands(text);
-        executeHostCommands(parsed);
 
         mainOutput = parsed.program;
         clearElement(elements.outputDisplay);
@@ -722,7 +664,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
     ): void => {
         const errorMessage = formatErrorMessage(error);
         const parsed = parseOutputCommands(precedingOutput);
-        executeHostCommands(parsed);
         const printed = parsed.program.trim();
 
         clearElement(elements.outputDisplay);
