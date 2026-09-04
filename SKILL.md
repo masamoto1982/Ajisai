@@ -146,24 +146,24 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkExpectedShape`.
   Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
 - **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
-  → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
+  → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] [ [ predicate ] [ body ] ... ] COND`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
   → exit 1, `message: "Cannot broadcast shapes [2] and [3]: axis 0 is 2 on the left and 3 on the right, and neither is 1"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkDisagreeingAxis`.
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
-  → exit 1, `message: "NUM: expected String, got Boolean"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
+  → exit 1, `message: "NUM: expected String, got Boolean"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: NUM accepts strings: `'42' NUM`. There is no boolean→number cast.
 - **Old two-vector RANGE form** — `[ 0 ] [ 5 ] RANGE`
-  → exit 1, `message: "RANGE requires [start end] or [start end step]"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
+  → exit 1, `message: "RANGE requires [start end] or [start end step]"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).
 - **Vector-wrapped string passed to a cast** — `[ '42' ] NUM`
-  → exit 1, `message: "NUM: expected String input"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
-  `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck code: `checkDeclaredErrorConditions`.
+  → exit 1, `message: "NUM: expected String input"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: String casts take the bare string: `'42' NUM`.
 
 These raise. The next one does not — it succeeds and answers something other
