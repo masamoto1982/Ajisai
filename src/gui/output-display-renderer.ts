@@ -1,7 +1,6 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import type { Value, ExecuteResult, RuntimeMetricsSnapshot } from '../wasm-interpreter-types';
-import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { valueToLatex } from './value-latex';
 import {
     createRenderBudget,
@@ -413,35 +412,6 @@ const formatValue = (item: Value, depth: number): string => {
 };
 
 
-interface ParsedOutput {
-    readonly audio: readonly string[];
-    readonly config: readonly string[];
-    readonly effect: readonly string[];
-    readonly jsonExport: readonly string[];
-    /** Output lines with all special command lines removed, joined by newlines. */
-    readonly program: string;
-}
-
-// Single pass over the output: previously each command category re-split the
-// same string, costing 5-6 full scans per render.
-const parseOutputCommands = (output: string): ParsedOutput => {
-    const audio: string[] = [];
-    const config: string[] = [];
-    const effect: string[] = [];
-    const jsonExport: string[] = [];
-    const programLines: string[] = [];
-
-    for (const line of output.split('\n')) {
-        if (line.startsWith('AUDIO:')) audio.push(line.substring(6));
-        else if (line.startsWith('CONFIG:')) config.push(line.substring(7));
-        else if (line.startsWith('EFFECT:')) effect.push(line.substring(7));
-        else if (line.startsWith('JSONEXPORT:')) jsonExport.push(line.substring(11));
-        else programLines.push(line);
-    }
-
-    return { audio, config, effect, jsonExport, program: programLines.join('\n') };
-};
-
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
     typeof error === 'string'
         ? `Error: ${error}`
@@ -460,72 +430,6 @@ const clearElement = (element: HTMLElement): void => {
 
 const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
-};
-
-const applyEffectCommands = (commands: readonly string[]): void => {
-    commands.forEach(commandStr => {
-        try {
-            const effect = JSON.parse(commandStr);
-            if (effect.gain !== undefined) {
-                AUDIO_ENGINE.updateGain(effect.gain);
-            }
-            if (effect.pan !== undefined) {
-                AUDIO_ENGINE.updatePan(effect.pan);
-            }
-        } catch {
-            console.error('Failed to parse EFFECT command:', commandStr);
-        }
-    });
-};
-
-const applyConfigCommands = (commands: readonly string[]): void => {
-    commands.forEach(commandStr => {
-        try {
-            const config = JSON.parse(commandStr);
-            if (config.slot_duration !== undefined) {
-                AUDIO_ENGINE.updateSlotDuration(config.slot_duration);
-                console.log(`Slot duration set to ${config.slot_duration}s`);
-            }
-        } catch {
-            console.error('Failed to parse CONFIG command');
-        }
-    });
-};
-
-const executeHostCommands = (parsed: ParsedOutput): void => {
-    applyEffectCommands(parsed.effect);
-    applyConfigCommands(parsed.config);
-
-    parsed.audio.forEach(commandStr => {
-        try {
-            const audioCommand = JSON.parse(commandStr);
-            AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
-        } catch {
-            console.error('Failed to parse audio command');
-        }
-    });
-};
-
-const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement => {
-    let prettyJson: string;
-    try {
-        prettyJson = JSON.stringify(JSON.parse(jsonCompact), null, 2);
-    } catch {
-        prettyJson = jsonCompact;
-    }
-
-    const blob = new Blob([prettyJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `ajisai_export_${timestamp}.json`;
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.className = 'btn';
-    a.textContent = `Download: ${filename}`;
-    return a;
 };
 
 // ── Cost summary (Reference: Cost Model) ──────────────────────────────────
@@ -608,14 +512,6 @@ const renderCostSummary = (result: ExecuteResult, outputDisplay: HTMLElement): v
     appendToElement(outputDisplay, details);
 };
 
-const renderJsonExportLinks = (jsonExportCommands: readonly string[], outputDisplay: HTMLElement): void => {
-    jsonExportCommands.forEach(jsonCompact => {
-        const link = createJsonDownloadLinkElement(jsonCompact);
-        appendToElement(outputDisplay, document.createElement('br'));
-        appendToElement(outputDisplay, link);
-    });
-};
-
 export const createDisplay = (elements: DisplayElements): Display => {
     let mainOutput = '';
     let mathViewEnabled = readMathViewPreference();
@@ -651,7 +547,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
         createLatexToggle();
-        AUDIO_ENGINE.init().catch(console.error);
     };
 
     const appendSpan = (text: string, color: string): HTMLSpanElement => {
@@ -661,11 +556,8 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderExecutionResult = (result: ExecuteResult): void => {
-        const parsed = parseOutputCommands(result.output || '');
-        executeHostCommands(parsed);
-
         const debug = (result.debugOutput || '').trim();
-        const program = parsed.program.trim();
+        const program = (result.output || '').trim();
 
         mainOutput = `${debug}\n${program}`;
         clearElement(elements.outputDisplay);
@@ -682,9 +574,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
             appendSpan(program, '#4DC4FF');
         }
 
-        renderJsonExportLinks(parsed.jsonExport, elements.outputDisplay);
-
-        if (!debug && !program && parsed.jsonExport.length === 0 && result.status === 'OK') {
+        if (!debug && !program && result.status === 'OK') {
             appendSpan('OK', '#333');
         }
 
@@ -692,9 +582,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const appendExecutionResult = (result: ExecuteResult): void => {
-        const parsed = parseOutputCommands(result.output || '');
-        executeHostCommands(parsed);
-        const filteredOutput = parsed.program.trim();
+        const filteredOutput = (result.output || '').trim();
 
         if (filteredOutput) {
             appendSpan(filteredOutput, '#4DC4FF');
@@ -702,12 +590,9 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderOutput = (text: string): void => {
-        const parsed = parseOutputCommands(text);
-        executeHostCommands(parsed);
-
-        mainOutput = parsed.program;
+        mainOutput = text;
         clearElement(elements.outputDisplay);
-        appendSpan(parsed.program, '#4DC4FF');
+        appendSpan(text, '#4DC4FF');
     };
 
     /// An error is written *below* whatever the run already printed, never in
@@ -721,9 +606,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         precedingOutput = ''
     ): void => {
         const errorMessage = formatErrorMessage(error);
-        const parsed = parseOutputCommands(precedingOutput);
-        executeHostCommands(parsed);
-        const printed = parsed.program.trim();
+        const printed = precedingOutput.trim();
 
         clearElement(elements.outputDisplay);
         if (printed) {

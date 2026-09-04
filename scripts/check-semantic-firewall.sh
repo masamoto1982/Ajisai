@@ -44,12 +44,11 @@ check_absent \
   src rust/src/wasm_interpreter_bindings/wasm_interpreter_state.rs
 
 # ── Internal-vocabulary firewall over user-visible strings ────────────────
-# Two-tier disclosure (docs/dev/user-surface-information-hiding.md, S2):
-# language users see optimizations only as speed, so error text, NIL
-# diagnostics, LOOKUP/hover content, and GUI labels must never name a
-# routing or optimization mechanism. Builder/AI channels are exempt:
+# Two-tier disclosure: language users see optimizations only as speed, so
+# error text, NIL diagnostics, LOOKUP/hover content, and GUI labels must
+# never name a routing or optimization mechanism. Builder/AI channels are
+# exempt:
 #   - tests and benches (globs below)
-#   - rust/src/elastic/            trace + hedged engine (feature-gated)
 #   - rust/src/cli/                agent-facing --json contract / explain
 #   - rust/src/agent/              host-neutral agent boundary (same --json
 #                                   contract as cli/, shared with the WASM

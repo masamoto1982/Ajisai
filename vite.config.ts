@@ -34,10 +34,10 @@ export default defineConfig({
   // `crossOriginIsolated` true under `npm run dev` / `vite preview`, so a
   // threaded wasm build can be exercised locally. They apply to the dev and
   // preview servers only; `vite build` emits static files and does not bake
-  // headers in, so the GitHub Pages deployment is unaffected until the
-  // `coi-serviceworker` fallback is registered (see
-  // docs/dev/browser-parallelism-phase5-rollout.md). Tauri runs in a native
-  // WebView that does not need them.
+  // headers in, so the GitHub Pages deployment stays cross-origin unisolated
+  // (no service-worker fallback is registered) and always runs
+  // single-threaded there. Tauri runs in a native WebView that does not need
+  // them.
   server: {
     host: '0.0.0.0',
     port: 3000,
