@@ -1,7 +1,6 @@
 //! Property-based algebraic-law conformance.
 //!
-//! These tests encode the algebraic laws of
-//! `docs/dev/ajisai-mathematical-formalization.md` §9.2 as executable
+//! These tests encode the language's core algebraic laws as executable
 //! properties: instead of enumerating finitely many input/output pairs (as the
 //! HTML conformance suite does), each law asserts an equation that must hold for
 //! *all* inputs in a generated sample. A law is the compressed form of

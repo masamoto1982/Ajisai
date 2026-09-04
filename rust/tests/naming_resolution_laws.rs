@@ -1,7 +1,6 @@
 //! Property-based name-resolution / dictionary laws (Phase 6).
 //!
-//! Encodes the algebraic content of
-//! `docs/dev/ajisai-mathematical-formalization.md` §9-quinquies F (Phase 6):
+//! Encodes the algebraic content of dictionary resolution (Phase 6):
 //! the dictionary `Dict = Name ⇀ Blk`, the deterministic resolver
 //! `resolve : Name × Vis ⇀ Blk + Unknown` with order **Core → user**, and
 //! `DEF`/`DEL` as state transducers with a dependency guard (SPEC §8.2).

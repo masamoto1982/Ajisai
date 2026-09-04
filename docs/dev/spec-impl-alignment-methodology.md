@@ -180,9 +180,8 @@ Phase 1-3 の通常経路で扱うが、ガイド自身の記述と実機の一�
   `LANG.CONFORMANCE.CORPUS`) が pin している** → 意図的な設計判断とみなし、
   **spec → impl**（本文を加筆・修正して挙動を正典化する）。
 - **スイートが沈黙している** → 実装バグの候補とみなし、`LANG.CONFORMANCE.FAMILIES`
-  の law test や `docs/dev/ajisai-mathematical-formalization.md` のオラクルに
-  照らして本文への明文違反を確認できたら、**impl → spec**（実装を本文へ
-  合わせて直す）。
+  の law test に照らして本文への明文違反を確認できたら、**impl → spec**
+  （実装を本文へ合わせて直す）。
 - **本文内が複数箇所で食い違う**（Phase 1 の対象と重なる場合）→
   `LANG.AUTHORITY.SOURCES` の権威順位と git provenance を補助に、人間の承認を
   得て決定する。
@@ -279,6 +278,16 @@ PR を切ること自体が、小さく検証可能な単一目的の diff を�
     `"Exploratory"` に分類されている、という Phase 1 型の矛盾が判明した。
     承認済みの範囲を大きく超えるため着手せず、後続課題として PR 説明に
     明記するにとどめた（Phase 4「適用範囲の規律」の由来）。
+    **後続対応（2026-09）**: 監査を再開したところ、同じ非ゲート散文が
+    §9-septies 以外にも実在しないテスト（`record_laws.rs`・
+    `effect_observation_laws.rs`）を根拠にした `HOLDS` 主張、実装から
+    退役済みの値域（Record/CodeBlock/子ランタイムハンドル）を前提にした
+    §1.1 の値空間定義、文書内でも食い違う conformance 件数（53 / 45、
+    実数 293）など、広範囲に陳腐化していることが判明した。CI 非ゲートで
+    検証の当てがなかったため、`docs/dev/ajisai-mathematical-formalization.md`
+    を全文削除し、これを引用していた `rust/tests/*.rs` のコメント・
+    `docs/formalization-coverage.json` の `formalization_sections` フィールド
+    （CIの必須要件ごと）・関連 `docs/dev/` メモの参照を除去した。
 - Phase 2（MCP 向け生成プローズ、2026-09、PR #1615）: Ajisai の MCP サーバーへ実際に
   接続してツールを手動で叩く中で、`SKILL.md` §2/§3 と
   `tools/mcp-server/index.js` のツール説明文それぞれに独立に残っていた、

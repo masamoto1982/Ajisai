@@ -1,7 +1,6 @@
 //! Property-based string / text laws (Phase 9, SPEC §7.6).
 //!
-//! Encodes the algebraic content of
-//! `docs/dev/ajisai-mathematical-formalization.md` §9-octies I.2 (Phase 9):
+//! Encodes the algebraic content of string values (Phase 9):
 //! a string literal `'abc'` is a **String**, one of the six disjoint domains of
 //! LANG.VALUES.DISJOINT, and the empty String is one of its values. The text
 //! words (`STR`/`NUM`/`CHARS`/`JOIN`/`TRIM`/`TOKENIZE`) are Core Words.

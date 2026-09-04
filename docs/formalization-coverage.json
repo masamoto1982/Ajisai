@@ -705,9 +705,6 @@
         "SPECIFICATION.html §7.5",
         "SPECIFICATION.html §12"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §4"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
         "rust/tests/observation_laws.rs"
@@ -733,9 +730,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.5",
         "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §4"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -763,9 +757,6 @@
         "SPECIFICATION.html §4.5",
         "SPECIFICATION.html §7.12",
         "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §5"
       ],
       "law_tests": [
         "rust/tests/observation_laws.rs",
@@ -796,9 +787,6 @@
         "SPECIFICATION.html §7.12",
         "SPECIFICATION.html §7.15"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §5"
-      ],
       "law_tests": [
         "rust/src/interpreter/nil_diagnostics_tests.rs"
       ],
@@ -826,9 +814,6 @@
         "SPECIFICATION.html §4.5.0",
         "SPECIFICATION.html §7.15"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §5"
-      ],
       "law_tests": [
         "rust/src/interpreter/nil_diagnostics_tests.rs"
       ],
@@ -854,9 +839,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.5"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §4"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
@@ -881,9 +863,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.5"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §4"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -912,9 +891,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.5"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §4"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
@@ -940,9 +916,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -972,9 +945,6 @@
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
@@ -1001,9 +971,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1034,9 +1001,6 @@
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
@@ -1063,9 +1027,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -1094,9 +1055,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1128,9 +1086,6 @@
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
@@ -1154,9 +1109,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1186,9 +1138,6 @@
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §7.3"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
-      ],
       "law_tests": [
         "rust/tests/standard_derivation_laws.rs"
       ],
@@ -1214,9 +1163,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.4"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1246,9 +1192,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.4",
         "SPECIFICATION.html §7.4.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1281,9 +1224,6 @@
         "SPECIFICATION.html §7.4",
         "SPECIFICATION.html §7.4.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
         "rust/src/arithmetic_operation_tests.rs",
@@ -1315,9 +1255,6 @@
         "SPECIFICATION.html §7.4",
         "SPECIFICATION.html §7.4.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
         "rust/src/arithmetic_operation_tests.rs"
@@ -1344,9 +1281,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.4",
         "SPECIFICATION.html §7.4.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1379,9 +1313,6 @@
         "SPECIFICATION.html §7.4",
         "SPECIFICATION.html §7.4.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
         "rust/src/arithmetic_operation_tests.rs"
@@ -1408,9 +1339,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.4",
         "SPECIFICATION.html §7.4.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1443,10 +1371,6 @@
         "SPECIFICATION.html §4.2.3",
         "SPECIFICATION.html §7.3"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
-      ],
       "law_tests": [
         "rust/src/types/exact/algebraic_tests.rs"
       ],
@@ -1470,9 +1394,6 @@
       "spec_sections": [
         "SPECIFICATION.html §6",
         "SPECIFICATION.html §13"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §6"
       ],
       "law_tests": [
         "rust/tests/contract_modifier_laws.rs"
@@ -1500,9 +1421,6 @@
         "SPECIFICATION.html §6.4",
         "SPECIFICATION.html §7.12"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
@@ -1528,9 +1446,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.7"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
       ],
@@ -1554,9 +1469,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.7"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
       ],
@@ -1578,9 +1490,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §9.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/trichotomy-unification.md"
       ],
       "law_tests": [
         "rust/src/interpreter/probe.rs"
@@ -1610,9 +1519,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.7"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
         "rust/tests/standard_operational_laws.rs"
@@ -1641,9 +1547,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
@@ -1675,9 +1578,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.7"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
       ],
@@ -1704,9 +1604,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
@@ -1736,9 +1633,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
@@ -1770,9 +1664,6 @@
         "SPECIFICATION.html §7.9",
         "SPECIFICATION.html §11"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
-      ],
       "law_tests": [],
       "conformance_cases": [],
       "status": "HostedEffect",
@@ -1793,9 +1684,6 @@
       "classification": "HostedEffect",
       "spec_sections": [
         "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
       "law_tests": [],
       "conformance_cases": [],
@@ -1820,9 +1708,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
@@ -1853,9 +1738,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
         "rust/tests/contract_modifier_laws.rs"
@@ -1884,9 +1766,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
       ],
@@ -1911,9 +1790,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -1942,9 +1818,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
       ],
@@ -1969,9 +1842,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -2000,9 +1870,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
       ],
@@ -2028,9 +1895,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/structural_laws.rs"
       ],
@@ -2053,9 +1917,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
@@ -2085,9 +1946,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.4"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
       "law_tests": [],
       "conformance_cases": [],
       "status": "Sketched",
@@ -2107,9 +1965,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.6"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs"
@@ -2134,9 +1989,6 @@
         "SPECIFICATION.html §7.6",
         "SPECIFICATION.html §12"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
@@ -2160,9 +2012,6 @@
         "SPECIFICATION.html §7.6",
         "SPECIFICATION.html §12"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
@@ -2185,9 +2034,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.6",
         "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs",
@@ -2216,9 +2062,6 @@
         "SPECIFICATION.html §7.6",
         "SPECIFICATION.html §12"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
       "law_tests": [
         "rust/tests/string_laws.rs",
         "rust/tests/standard_derivation_laws.rs"
@@ -2246,9 +2089,6 @@
         "SPECIFICATION.html §7.6",
         "SPECIFICATION.html §12"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
@@ -2274,9 +2114,6 @@
         "SPECIFICATION.html §7.6",
         "SPECIFICATION.html §12"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
@@ -2301,9 +2138,6 @@
         "SPECIFICATION.html §7.10",
         "SPECIFICATION.html §8",
         "SPECIFICATION.html §9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -2331,9 +2165,6 @@
         "SPECIFICATION.html §8",
         "SPECIFICATION.html §13"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
       ],
@@ -2358,9 +2189,6 @@
         "SPECIFICATION.html §5.2",
         "SPECIFICATION.html §7.11",
         "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
       "law_tests": [
         "rust/src/interpreter/io.rs"
@@ -2387,9 +2215,6 @@
       "spec_sections": [
         "SPECIFICATION.html §8.2",
         "SPECIFICATION.html §9.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
       ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
@@ -2418,9 +2243,6 @@
         "SPECIFICATION.html §8.2",
         "SPECIFICATION.html §9.2"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
       ],
@@ -2447,9 +2269,6 @@
         "SPECIFICATION.html §8.3",
         "SPECIFICATION.html §9.2"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
       "law_tests": [
         "rust/tests/naming_resolution_laws.rs"
       ],
@@ -2473,9 +2292,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.11",
         "SPECIFICATION.html §10"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
       ],
       "law_tests": [],
       "conformance_cases": [],
@@ -2505,10 +2321,6 @@
       "spec_sections": [
         "SPECIFICATION.html §7.4.3",
         "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-ter",
-        "docs/dev/ajisai-mathematical-formalization.md §9-quater"
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
@@ -2541,9 +2353,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
       ],
@@ -2573,9 +2382,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
       ],
@@ -2603,9 +2409,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
       ],
@@ -2632,9 +2435,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2664,9 +2464,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/standard_derivation_laws.rs"
       ],
@@ -2694,9 +2491,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
       ],
@@ -2723,9 +2517,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
@@ -2755,9 +2546,6 @@
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
       "law_tests": [
         "rust/tests/standard_operational_laws.rs"
       ],
@@ -2782,9 +2570,6 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quater"
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
@@ -2815,10 +2600,6 @@
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/tests/algebraic_laws.rs",
@@ -2848,10 +2629,6 @@
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/tests/algebraic_laws.rs"
@@ -2875,10 +2652,6 @@
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
@@ -2909,10 +2682,6 @@
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/tests/algebraic_laws.rs",
@@ -2941,9 +2710,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
         "rust/src/surface_forms.rs"
@@ -2965,9 +2731,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -2991,9 +2754,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
         "rust/src/surface_forms.rs"
@@ -3015,9 +2775,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -3041,9 +2798,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
         "rust/src/surface_forms.rs"
@@ -3065,9 +2819,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -3091,9 +2842,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
         "rust/src/surface_forms.rs"
@@ -3115,9 +2863,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -3141,9 +2886,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
         "rust/src/surface_forms.rs"
@@ -3165,9 +2907,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs",
@@ -3191,9 +2930,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
       ],
@@ -3214,9 +2950,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
@@ -3239,9 +2972,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
       ],
@@ -3262,9 +2992,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
@@ -3287,9 +3014,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
       ],
@@ -3310,9 +3034,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
@@ -3335,9 +3056,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
       ],
@@ -3358,9 +3076,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
@@ -3383,9 +3098,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
       ],
@@ -3406,9 +3118,6 @@
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
       ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
@@ -3431,9 +3140,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [
         "rust/tests/desugar_laws.rs"
       ],
@@ -3455,9 +3161,6 @@
       "spec_sections": [
         "SPECIFICATION.html §3.9"
       ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
       "law_tests": [],
       "conformance_cases": [],
       "status": "Sketched",
@@ -3477,10 +3180,6 @@
       "spec_sections": [
         "SPECIFICATION.html LANG.VALUES.EXACT",
         "SPECIFICATION.html LANG.VALUES.TRUTH"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
         "rust/src/interpreter/tier2_undecidable_conformance_tests.rs"

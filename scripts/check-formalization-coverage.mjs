@@ -281,18 +281,12 @@ for (const [index, entry] of coverage.entries.entries()) {
   }
   if (!allowedStatuses.has(entry.status)) fail(`${where}: invalid status ${entry.status}`);
 
-  const formalizationSections = Array.isArray(entry.formalization_sections)
-    ? entry.formalization_sections.filter(Boolean)
-    : [];
   const conformanceCases = Array.isArray(entry.conformance_cases)
     ? entry.conformance_cases.filter(Boolean)
     : [];
   const lawTests = Array.isArray(entry.law_tests) ? entry.law_tests.filter(Boolean) : [];
 
   if (entry.status === 'Formalized') {
-    if (formalizationSections.length === 0) {
-      fail(`${where}: Formalized entries need formalization_sections`);
-    }
     if (conformanceCases.length === 0 && lawTests.length === 0) {
       fail(`${where}: Formalized entries need conformance_cases or law_tests`);
     }
