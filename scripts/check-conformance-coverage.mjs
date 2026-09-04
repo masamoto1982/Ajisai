@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-// Machine-readable conformance-suite coverage of the built-in vocabulary:
-// the share of Core-classified surface words AND of Module-classified words
-// (docs/word-manifest.json) that appear in at least one `ajisai-source`
-// program of tests/conformance/index.html.
+// CI gate: every Core-classified surface word AND every Module-classified
+// word (docs/word-manifest.json) must appear in at least one `ajisai-source`
+// program of tests/conformance/index.html. Exits non-zero if any is missing.
 //
 // Usage:
 //   node scripts/check-conformance-coverage.mjs            # human summary
@@ -126,7 +125,10 @@ moduleMissing.sort();
 const covered = [...coreWords].filter((w) => seen.has(w)).sort();
 const missing = [...coreWords].filter((w) => !seen.has(w)).sort();
 const pct = (100 * covered.length) / coreWords.size;
-const modulePct = (100 * moduleCovered.length) / moduleEntries.length;
+// 0/0 (no module words registered yet) is vacuously fully covered, not NaN.
+const modulePct = moduleEntries.length === 0
+  ? 100
+  : (100 * moduleCovered.length) / moduleEntries.length;
 
 if (asJson) {
   process.stdout.write(`${JSON.stringify({
@@ -158,4 +160,13 @@ if (asJson) {
   } else {
     console.log('module missing: none');
   }
+}
+
+if (missing.length > 0 || moduleMissing.length > 0) {
+  console.error(
+    `[conformance-coverage] ${missing.length} Core word(s) and ${moduleMissing.length} module word(s) `
+    + 'have no conformance case. Add an `ajisai-source` case that uses each, '
+    + 'or run with --json to see the full lists.',
+  );
+  process.exitCode = 1;
 }
