@@ -42,6 +42,7 @@
     "semantic-kernel:check": "node scripts/check-semantic-kernel.mjs",
     "word-schema:check": "node scripts/check-word-schema-migration.mjs",
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
+    "check:conformance-coverage": "node scripts/check-conformance-coverage.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
     "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",
     "word-registry:generate": "node scripts/generate-word-registry.mjs",

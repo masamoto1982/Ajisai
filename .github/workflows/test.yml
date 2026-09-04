@@ -112,6 +112,12 @@ jobs:
         # regenerating) is what catches a missing word like SUPERVISE.
         run: npm run word:manifest:check
 
+      - name: Conformance suite covers the vocabulary
+        # Every Core and Module word in docs/word-manifest.json must appear in
+        # at least one conformance case, so a word can't go untested silently.
+        # See scripts/check-conformance-coverage.mjs.
+        run: npm run check:conformance-coverage
+
       - name: Verify committed SKILL.md is in sync
         # SKILL.md is generated (never hand-written): the generator executes
         # every embedded snippet through the ajisai CLI, so this step both
