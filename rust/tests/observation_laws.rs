@@ -1,8 +1,7 @@
 //! Property-based observation-foundation laws (Phase 1).
 //!
 //! These encode the algebraic content of the observation function and the
-//! renderer from `docs/dev/ajisai-mathematical-formalization.md` §9-ter D
-//! (Phase 1): `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff)` with
+//! renderer (Phase 1): `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff)` with
 //! `render : (data, role) → display` a **pure** function over **all** SPEC
 //! §12.2 roles, observed through the SPEC §2.3 semantic axes only.
 //!

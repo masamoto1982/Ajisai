@@ -1,7 +1,7 @@
 //! Property-based contract / modifier / mass-conservation laws (Phase 3 ⭐).
 //!
-//! Encodes the algebraic content of
-//! `docs/dev/ajisai-mathematical-formalization.md` §9-quater E (Phase 3):
+//! Encodes the algebraic content of the modifier / contract / mass-conservation
+//! model (Phase 3):
 //!
 //! 1. **Modifier combinators** (`SPEC §6`): `⟦μ·w⟧ = κ_consume ∘ δ_region ∘
 //!    base(w)`. default consumption is the identity and `KEEP` is bifurcation.

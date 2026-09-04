@@ -6,10 +6,8 @@
 > 関連正典: `spec/language-semantics.md`（正典順位は LANG.AUTHORITY.SOURCES）。
 > Core Words の契約定義・辞書語彙階層（core/module/alias/surface）は
 > `SPECIFICATION.html` と `docs/word-manifest.json` に委ねる。
-> 関連データ: `docs/formalization-coverage.json`（30 代数プリミティブ・213 エントリ）・
+> 関連データ: `docs/formalization-coverage.json`・
 > `docs/primitive-test-map.json`・`docs/word-manifest.json`。
-> 関連設計メモ: `docs/dev/ajisai-mathematical-formalization.md`（denotational/algebraic
-> semantics; 本書の層分けは同書 §1〜§8 の構造に一対一で対応する）。
 > 本書はセルフホスティングを「実装言語の選択が一つ増えるだけ」と位置づけ、
 > capability-gated kernel profile（公式ビルドだけが実行できる語という特権階層）を
 > 採らない立場に立つ（§7）。
@@ -46,9 +44,8 @@ Ajisai の最大の成果は、継続分数やベクトル演算**そのもの�
 
 ## 2. 30 代数プリミティブは同一性の観点で等価ではない
 
-`docs/formalization-coverage.json` の 30 `algebra_primitives` を `algebraic_family` で
-束ねると、本質的価値に照らして三層に自然分離する。数式的裏付けは
-`ajisai-mathematical-formalization.md` の対応節を併記する。
+`docs/formalization-coverage.json` の `algebra_primitives` を `algebraic_family` で
+束ねると、本質的価値に照らして三層に自然分離する。
 
 ### 2.1 同一性の層（identity）— 「在る／無い／未決／不正」を分けて隠さず流す
 

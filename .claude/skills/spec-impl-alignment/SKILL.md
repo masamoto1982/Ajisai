@@ -153,8 +153,7 @@ MCP-facing generated prose" note above, not by this phase.)
   (`LANG.CONFORMANCE.CORPUS`) → intentional design. Amend `spec/` to
   document it (spec catches up to impl).
 - **The suite is silent** on it, and it demonstrably violates spec
-  prose (checked against `LANG.CONFORMANCE.FAMILIES` law tests or
-  `docs/dev/ajisai-mathematical-formalization.md`'s formal oracle) →
+  prose (checked against `LANG.CONFORMANCE.FAMILIES` law tests) →
   implementation bug candidate. Fix the implementation to match spec
   (impl catches up to spec), and add a conformance case pinning the
   corrected behavior.
@@ -242,6 +241,17 @@ correctly classifies that surface as `"Exploratory"`. A real Phase 1
 contradiction and a Phase 4 candidate, but a much larger and differently
 shaped one. It was left untouched and named as a follow-up finding in the
 PR description; the module deletion shipped without it.
+
+**Follow-up (2026-09)**: a later pass found the rot wasn't limited to
+§9-septies — the same ungated document also cited nonexistent test files
+for records and effect observation, built on a value-space definition
+(§1.1) that assumed domains (Record, a separate code-block domain, a
+child-runtime handle) the implementation had since retired, and disagreed
+with itself on the conformance-suite size (53 vs. 45 vs. the real 293).
+Being outside CI's reach, none of it was self-correcting. The document was
+deleted outright, along with the dangling citations to it in `rust/tests/*.rs`
+comments, the `formalization_sections` field (and its CI requirement) in
+`docs/formalization-coverage.json`, and related `docs/dev/` cross-references.
 
 Verify the full matrix again after deleting: every `npm run *:check`
 script, `cargo fmt`/`clippy`/`test --all-targets`, `npm run check`/`lint`,
