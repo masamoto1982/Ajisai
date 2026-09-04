@@ -423,8 +423,12 @@ impl AjisaiError {
     ///
     /// `condition` has to be a condition that Word declares — the diagnosis
     /// reads the declaration back and says which of them fired, and
-    /// `declared_condition_is_declared_by_its_raising_word` pins every call
-    /// site here against `spec/words.json`.
+    /// `a_named_condition_is_one_the_word_declares`
+    /// (`interpreter::declared_condition_tests`) pins a sample of call sites
+    /// here against `spec/words.json`. That test enumerates call sites by
+    /// hand rather than scanning the source, so it only catches a condition
+    /// this file names for a program its own list exercises — not every call
+    /// site automatically.
     pub fn declared(condition: &'static str, message: impl Into<String>) -> Self {
         AjisaiError::DeclaredCondition {
             condition,

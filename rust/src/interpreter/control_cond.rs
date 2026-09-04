@@ -167,7 +167,8 @@ fn run_clause_body(interp: &mut Interpreter, clause: &CondClause, value: &Value)
 /// style. Pure over the blocks, so the compiler can precompute the result.
 pub(crate) fn split_clause_blocks(blocks: Vec<Vec<Token>>) -> Result<Vec<CondClause>> {
     if blocks.is_empty() {
-        return Err(AjisaiError::from(
+        return Err(AjisaiError::declared(
+            "invalidClauseShape",
             "COND: expected guard/body clauses, got 0 code blocks",
         ));
     }
@@ -180,7 +181,8 @@ pub(crate) fn split_clause_blocks(blocks: Vec<Vec<Token>>) -> Result<Vec<CondCla
     let none_with_sep: bool = has_sep_flags.iter().all(|f| !*f);
 
     if !all_with_sep && !none_with_sep {
-        return Err(AjisaiError::from(
+        return Err(AjisaiError::declared(
+            "invalidClauseShape",
             "COND: mixed clause styles are not allowed; use either [guard][body] pairs or [guard | body] clauses consistently",
         ));
     }
@@ -200,10 +202,13 @@ pub(crate) fn split_clause_blocks(blocks: Vec<Vec<Token>>) -> Result<Vec<CondCla
     }
 
     if !blocks.len().is_multiple_of(2) {
-        return Err(AjisaiError::from(format!(
-            "COND: expected even number of code blocks (guard/body pairs), got {}",
-            blocks.len()
-        )));
+        return Err(AjisaiError::declared(
+            "invalidClauseShape",
+            format!(
+                "COND: expected even number of code blocks (guard/body pairs), got {}",
+                blocks.len()
+            ),
+        ));
     }
 
     let mut blocks = blocks.into_iter();
@@ -227,14 +232,16 @@ fn split_cond_clause_block(tokens: &[Token]) -> Result<(Vec<Token>, Vec<Token>)>
         .collect();
 
     if separator_indexes.len() != 1 {
-        return Err(AjisaiError::from(
+        return Err(AjisaiError::declared(
+            "invalidClauseShape",
             "COND: a | clause must contain exactly one '|' separator",
         ));
     }
 
     let separator_index: usize = separator_indexes[0];
     if separator_index == 0 || separator_index + 1 >= tokens.len() {
-        return Err(AjisaiError::from(
+        return Err(AjisaiError::declared(
+            "invalidClauseShape",
             "COND: both guard and body are required around '|'",
         ));
     }
@@ -285,7 +292,10 @@ fn evaluate_guard_isolated(
     execution_result?;
 
     let result_value: Value = guard_result_value.ok_or_else(|| {
-        AjisaiError::from("COND: guard must return TRUE or FALSE, got empty stack")
+        AjisaiError::declared(
+            "nonTruthGuard",
+            "COND: guard must return TRUE or FALSE, got empty stack",
+        )
     })?;
     // SPEC §7.4.3: a guard that reduces to the logical `Unknown` (U) — an
     // undecidable continued-fraction comparison, or any comparison against an
@@ -335,10 +345,14 @@ fn evaluate_guard_isolated(
     let unwrapped: &Value = if result_value.as_scalar().is_none() {
         if result_value.len() == 1 {
             result_value.get_child(0).ok_or_else(|| {
-                AjisaiError::from("COND: guard must return TRUE or FALSE, got non-scalar")
+                AjisaiError::declared(
+                    "nonTruthGuard",
+                    "COND: guard must return TRUE or FALSE, got non-scalar",
+                )
             })?
         } else {
-            return Err(AjisaiError::from(
+            return Err(AjisaiError::declared(
+                "nonTruthGuard",
                 "COND: guard must return TRUE or FALSE, got non-scalar",
             ));
         }
@@ -346,7 +360,10 @@ fn evaluate_guard_isolated(
         &result_value
     };
     let scalar = unwrapped.as_scalar().ok_or_else(|| {
-        AjisaiError::from("COND: guard must return TRUE or FALSE, got non-scalar")
+        AjisaiError::declared(
+            "nonTruthGuard",
+            "COND: guard must return TRUE or FALSE, got non-scalar",
+        )
     })?;
     if scalar.is_zero() {
         return Ok(false);
@@ -355,10 +372,13 @@ fn evaluate_guard_isolated(
         return Ok(true);
     }
 
-    Err(AjisaiError::from(format!(
-        "COND: guard must return TRUE or FALSE, got {}",
-        result_value
-    )))
+    Err(AjisaiError::declared(
+        "nonTruthGuard",
+        format!(
+            "COND: guard must return TRUE or FALSE, got {}",
+            result_value
+        ),
+    ))
 }
 
 /// `true` when a guard reduced to the logical Unknown (U) rather than to a

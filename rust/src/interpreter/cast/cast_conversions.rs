@@ -104,12 +104,21 @@ fn convert_value_to_number(val: &Value) -> Result<Value> {
         return Ok(val.clone());
     }
     if is_boolean_value(val) {
-        return Err(AjisaiError::from("NUM: expected String, got Boolean"));
+        return Err(AjisaiError::declared(
+            "nonText",
+            "NUM: expected String, got Boolean",
+        ));
     }
     if val.is_nil() {
-        return Err(AjisaiError::from("NUM: expected String, got Nil"));
+        return Err(AjisaiError::declared(
+            "nonText",
+            "NUM: expected String, got Nil",
+        ));
     }
-    Err(AjisaiError::from("NUM: expected String input"))
+    Err(AjisaiError::declared(
+        "nonText",
+        "NUM: expected String input",
+    ))
 }
 
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
