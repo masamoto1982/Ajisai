@@ -103,6 +103,41 @@ terminate する Playground 固有のガードである。Rust 側は診断を�
 
 英語版（`public/docs/index.html`）の再生成は保留。所有者の指示による。
 
+### 2.6 `NUM` / `COND` / `RANGE` の raise site を宣言条件に置き換え（§2.3 の続き）
+
+§2.3 で見送った「残り」のうち、§3 が名指ししていた3ワードを `AjisaiError::declared`
+に置き換えた。
+
+- `NUM`（`cast/cast_conversions.rs`）: `convert_value_to_number` の3箇所すべてを
+  `nonText`（`errorWhen` の唯一の宣言）に。
+- `RANGE`（`vector_ops/structure.rs`）: `parse_range_bound` / `parse_range_args` /
+  `op_range` の7箇所すべてを `invalidRange`（同じく唯一の宣言）に。ステップ0と
+  無限方向はどちらも「整形式でない」入力なので通常のエラーのまま
+  （§2.3 のコード注釈が既に述べていた区別どおり）。
+- `COND`（`control_cond.rs`）: 節の形の不備（block 数が0・奇数・混在スタイル・
+  `|` の数や位置）を `invalidClauseShape` に、ガードが TRUE/FALSE を返さない
+  5箇所を `nonTruthGuard` に。ただし「body must return a value」は
+  `spec/words.json` の `COND.errorWhen`（`invalidClauseShape`, `nonTruthGuard`
+  の2つのみ）に対応する条件が無いため `custom` のまま残した——宣言されて
+  いない条件を名指しすることは `AjisaiError::declared` の契約自体が想定して
+  いない。
+- `declared_condition_tests.rs::a_named_condition_is_one_the_word_declares` に
+  この3ワード×6ケースを追加し、`why` が `Unknown` に落ちないこと、
+  診断が宣言語彙のまま返ることを固定した。
+- `error.rs` の `AjisaiError::declared` の doc comment が指していた
+  `declared_condition_is_declared_by_its_raising_word` というテストは実在しな
+  かった（存在しないテスト名を指す誤記）。コメントを実在するテスト名に直し、
+  そのテストが「呼び出し箇所を全数走査するのではなく手で列挙したコード例だけ
+  を pin している」ことも明記した。
+
+**まだ残っている**: `BOOL` と `cast_conversions.rs` の文字列版 `NIL`（`op_nil`）
+は現行の `spec/words.json` にエントリが無く（`NIL` という名前の別エントリは
+定数プッシュ側で別物）、宣言する条件そのものが無いので `custom` のままで
+正しい。それ以外にも `AjisaiError::from` の raise site は
+`execute_builtin.rs` / `tensor_ops.rs` / `io.rs` など複数ファイルにまだ残って
+おり、§2.3 が最初に書いたとおり「仕組みは入ったので、残りは順次置き換えれば
+よい」の状態が続く。
+
 ## 3. 未着手（レポートで妥当と確認したが今回やらないもの）
 
 | 項目 | 理由 |
@@ -111,4 +146,4 @@ terminate する Playground 固有のガードである。Rust 側は診断を�
 | Reset のネイティブ `confirm()` のモーダル化 | UI 実装の追加。今回の主題（誤帰属・分類・文言）とは別 |
 | 省略マーカーの locale 対応 | 文書側を実態に合わせたので不整合は解消済み。GUI の i18n 化は別課題 |
 | MCP の npm 公開と Playground 内の接続導線 | リリース判断 |
-| `NUM` / `COND` / `RANGE` などの残り raise site の条件名指し | §2.3 の適用範囲を参照 |
+| `NUM` / `COND` / `RANGE` 以外の残り raise site の条件名指し | §2.6 参照。`BOOL` / 文字列版 `NIL` は宣言語彙が無いため対象外 |

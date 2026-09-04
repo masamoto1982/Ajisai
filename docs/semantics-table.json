@@ -6140,21 +6140,21 @@
       "inputs": [
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "RANGE",
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "RANGE",
       "inputs": [
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "RANGE",
@@ -6168,7 +6168,7 @@
       "inputs": [
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "RANGE",
@@ -12513,7 +12513,7 @@
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "NUM",
@@ -12527,14 +12527,14 @@
       "inputs": [
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "NUM",
       "inputs": [
         "nil"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "NUM",

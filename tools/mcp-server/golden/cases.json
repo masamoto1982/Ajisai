@@ -198,12 +198,12 @@
     },
     {
       "name": "a raise the category cannot classify lists the Word's declared conditions",
-      "source": "TRUE NUM",
+      "source": "5 [ [ TRUE | PRINT ] ] COND",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "unknown",
         "/diagnosis/nextChecks/0/code": "checkDeclaredErrorConditions",
-        "/diagnosis/nextChecks/0/detail/en": "NUM declares that it raises when: nonText."
+        "/diagnosis/nextChecks/0/detail/en": "COND declares that it raises when: invalidClauseShape, nonTruthGuard."
       }
     },
     {

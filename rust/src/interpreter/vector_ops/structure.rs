@@ -28,24 +28,30 @@ fn concat_values(left: &Value, right: &Value) -> Value {
 fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
     let child = args_val
         .child(index)
-        .ok_or_else(|| AjisaiError::from(format!("RANGE missing {}", label)))?;
-    let bigint = extract_bigint_from_value(&child)
-        .map_err(|_| AjisaiError::from(format!("RANGE {} must be an integer", label)))?;
-    bigint
-        .to_i64()
-        .ok_or_else(|| AjisaiError::from(format!("RANGE {} is too large", label)))
+        .ok_or_else(|| AjisaiError::declared("invalidRange", format!("RANGE missing {}", label)))?;
+    let bigint = extract_bigint_from_value(&child).map_err(|_| {
+        AjisaiError::declared(
+            "invalidRange",
+            format!("RANGE {} must be an integer", label),
+        )
+    })?;
+    bigint.to_i64().ok_or_else(|| {
+        AjisaiError::declared("invalidRange", format!("RANGE {} is too large", label))
+    })
 }
 
 fn parse_range_args(args_val: &Value) -> Result<(i64, i64, i64)> {
     if !args_val.is_vector() {
-        return Err(AjisaiError::from(
+        return Err(AjisaiError::declared(
+            "invalidRange",
             "RANGE requires [start end] or [start end step]",
         ));
     }
 
     let n = args_val.len();
     if !(2..=3).contains(&n) {
-        return Err(AjisaiError::from(
+        return Err(AjisaiError::declared(
+            "invalidRange",
             "RANGE requires [start end] or [start end step]",
         ));
     }
@@ -154,12 +160,16 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
     if step == 0 {
         interp.stack.push(args_val);
-        return Err(AjisaiError::from("RANGE step cannot be 0"));
+        return Err(AjisaiError::declared(
+            "invalidRange",
+            "RANGE step cannot be 0",
+        ));
     }
 
     if (start < end && step < 0) || (start > end && step > 0) {
         interp.stack.push(args_val);
-        return Err(AjisaiError::from(
+        return Err(AjisaiError::declared(
+            "invalidRange",
             "RANGE would create an infinite sequence (check start, end, and step values)",
         ));
     }
