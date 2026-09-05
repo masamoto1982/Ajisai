@@ -1811,13 +1811,13 @@
         "hover": "FILL — fill shape with value",
         "lookup": "Fill a target shape with a constant value.",
         "syntax": "[ 2 2 0 ] FILL",
-        "role": "Tensor primitive: Fill a target shape with a constant value.",
+        "role": "Fill a target shape with a constant value.",
         "stackEffect": "[ shape... value ] -> [ filled ]"
       },
       "executorKey": "Fill",
       "effects": [],
       "partiality": "projecting",
-      "category": "tensor",
+      "category": "vector",
       "vocabularyTier": "standard",
       "standardKind": "operational"
     },

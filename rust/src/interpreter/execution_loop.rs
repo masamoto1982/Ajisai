@@ -89,8 +89,9 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         // `'ab' 'c' CONCAT` render as `[ 97/1 98/1 99/1 ]` — the join was
         // right, the role was thrown away.
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "SORT" | "TAKE"
-        | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" | "TOKENIZE"
-        | "CONSERVE" | "REFLECT" => Some(Interpretation::Unassigned),
+        | "REORDER" | "SPLIT" | "COLLECT" | "FILL" | "TOKENIZE" | "CONSERVE" | "REFLECT" => {
+            Some(Interpretation::Unassigned)
+        }
         _ => None,
     };
     if let Some(h) = hint {
