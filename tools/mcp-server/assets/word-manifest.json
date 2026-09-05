@@ -626,7 +626,7 @@
       "id": "core.fill",
       "kind": "coreword",
       "surface": "FILL",
-      "category": "tensor",
+      "category": "vector",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "FILL",
