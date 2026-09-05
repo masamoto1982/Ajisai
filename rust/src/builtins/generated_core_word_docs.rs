@@ -310,9 +310,9 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     },
     GeneratedCoreWordDoc {
         name: "FILL",
-        category: "tensor",
+        category: "vector",
         summary: "Fill a target shape with a constant value.",
-        role: "Tensor primitive: Fill a target shape with a constant value.",
+        role: "Fill a target shape with a constant value.",
         stack_effect: "[ shape... value ] -> [ filled ]",
         hover_summary: "FILL — fill shape with value",
         hover_syntax: "[ 2 2 0 ] FILL",
