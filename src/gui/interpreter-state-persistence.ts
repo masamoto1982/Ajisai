@@ -208,6 +208,33 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
     return err(new Error('Invalid file format. Expected a versioned export document with a `words` array.'));
 };
 
+const EXAMPLE_WORDS_BY_NAME = new Map(
+    EXAMPLE_USER_WORDS.map(word => [word.name.toUpperCase(), word])
+);
+
+// A description added to an Example Word in the shipped seed data
+// (`example-words.ts`) never reaches a session that already saved that word
+// before the change: `loadDatabaseData` only calls `loadExampleWords` when
+// the saved state has no User Words at all, so a returning session's own
+// untouched copy — same name, same body, saved with no `description` — keeps
+// reading as it always did. Backfilling it here, only where the body still
+// matches the current seed exactly (a customized FIZZBUZZ is left alone), is
+// what makes a hover added to the seed reach a session that predates it
+// without discarding anything the person defined themselves. Mutates in
+// place and reports whether anything changed, so the caller knows whether the
+// result is worth persisting.
+export const backfillExampleDescriptions = (words: readonly UserWord[]): boolean => {
+    let changed = false;
+    for (const word of words) {
+        if (word.description) continue;
+        const example = EXAMPLE_WORDS_BY_NAME.get(word.name.toUpperCase());
+        if (!example?.description || example.definition !== word.definition) continue;
+        word.description = example.description;
+        changed = true;
+    }
+    return changed;
+};
+
 export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
     const { showError, updateDisplays, showInfo } = callbacks;
     let dbInitialized = false;
@@ -331,6 +358,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
                 if (state.userWords && state.userWords.length > 0) {
                     const wordsToRestore = state.userWords;
+                    const backfilled = backfillExampleDescriptions(wordsToRestore);
 
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
@@ -345,6 +373,9 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     }
 
                     console.log('Interpreter state restored.');
+                    // Persist the backfilled description so this scan does not
+                    // repeat on every future load once it has caught up.
+                    if (backfilled) await saveCurrentState();
                 } else {
                     await loadExampleWords();
                 }
