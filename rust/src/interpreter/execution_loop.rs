@@ -455,6 +455,15 @@ impl Interpreter {
         self.collection_work_used = 0;
         self.dictionary_changes_this_run.clear();
         self.reset_binding_scopes();
+        // Merge rather than replace: a `#:contract` line and the `DEF` it
+        // documents can arrive in separate `execute()` calls (the Playground
+        // runs one submission at a time), so an entry here must survive until
+        // `op_def` actually consumes it for the Word it names.
+        for (name, description) in
+            crate::interpreter::execute_def::extract_pending_word_descriptions(code)
+        {
+            self.pending_word_descriptions.insert(name, description);
+        }
         // Source entry is the one place a token has a position, so it is the
         // one place the positions are recorded. They are index-aligned with
         // `tokens` and consumed by the depth-1 cursor in `execute_section_core`.

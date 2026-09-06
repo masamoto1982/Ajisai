@@ -605,4 +605,53 @@ mod tests {
         interp.execute("7 SIZE").await.unwrap();
         assert_eq!(format!("{}", interp.stack.last().unwrap()), "'big'");
     }
+
+    #[tokio::test]
+    async fn a_contract_directive_becomes_the_defined_words_description() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ [ 1 ] + ] 'INC' DEF")
+            .await
+            .unwrap();
+        assert_eq!(
+            interp.lookup_word_description("INC").as_deref(),
+            Some("( 1 -- 1 ) pure nil-free")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_contract_directive_survives_to_a_def_in_a_later_execute_call() {
+        // The Playground runs one submission at a time, so a `#:contract`
+        // line typed before the `DEF` it documents can arrive as its own
+        // `execute()` call rather than sharing one with the `DEF`.
+        let mut interp = Interpreter::new();
+        interp
+            .execute("#:contract INC ( 1 -- 1 ) pure nil-free")
+            .await
+            .unwrap();
+        assert_eq!(interp.lookup_word_description("INC"), None);
+        interp.execute("[ [ 1 ] + ] 'INC' DEF").await.unwrap();
+        assert_eq!(
+            interp.lookup_word_description("INC").as_deref(),
+            Some("( 1 -- 1 ) pure nil-free")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_word_defined_without_a_contract_directive_has_no_description() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 ] + ] 'INC' DEF").await.unwrap();
+        assert_eq!(interp.lookup_word_description("INC"), None);
+    }
+
+    #[tokio::test]
+    async fn redefining_without_a_new_directive_drops_the_old_description() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ [ 1 ] + ] 'INC' DEF")
+            .await
+            .unwrap();
+        interp.execute("[ [ 2 ] + ] 'INC' DEF").await.unwrap();
+        assert_eq!(interp.lookup_word_description("INC"), None);
+    }
 }

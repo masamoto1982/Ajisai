@@ -18,6 +18,11 @@ pub(crate) struct UserWordData {
     pub(crate) dictionary: Option<String>,
     pub(crate) name: String,
     pub(crate) definition: Option<String>,
+    /// The `#:contract`-derived hover text (see `execute_def::set_word_
+    /// description`), round-tripped through save/export so it survives a
+    /// restore rather than existing only for the session that typed it.
+    #[serde(default)]
+    pub(crate) description: Option<String>,
 }
 
 #[cfg(test)]

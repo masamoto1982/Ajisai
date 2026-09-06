@@ -35,5 +35,13 @@ export const EXAMPLE_USER_WORDS: UserWord[] = [
         name: 'FIZZBUZZ',
         definition:
             "[ [ [ 15 ] MOD [ 0 ] = ] [ 'FizzBuzz' PRINT ] [ [ 3 ] MOD [ 0 ] = ] [ 'Fizz' PRINT ] [ [ 5 ] MOD [ 0 ] = ] [ 'Buzz' PRINT ] [ TRUE ] [ KEEP PRINT ] ] COND",
+        // Unlike GREET and the SAY-* words above, FIZZBUZZ is not runnable on
+        // its own: COND dispatches over one value already on the stack, so
+        // running it with an empty stack is a Stack underflow, not a bug.
+        // This is the same `#:contract` directive text a user could write
+        // above their own `DEF` to get this same hover (see `execute_def::
+        // extract_pending_word_descriptions`), pre-filled here since a
+        // restored Example Word never passes through source `execute()`.
+        description: '( 1 -- 1 ) observable may-nil — push the number to test first, e.g. [ 9 ] FIZZBUZZ',
     },
 ];

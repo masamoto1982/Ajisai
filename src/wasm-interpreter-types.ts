@@ -7,6 +7,11 @@ export interface UserWord {
     dictionary?: string | null;
     name: string;
     definition: string | null;
+    // The `#:contract NAME ...` directive text `DEF` captured for this word
+    // (a host affordance — the Dictionary panel's hover — never a checked
+    // contract; see `execute_def::extract_pending_word_descriptions` on the
+    // Rust side). `undefined`/absent for a word that was never given one.
+    description?: string | null;
 }
 
 export interface AjisaiInterpreter {
@@ -38,6 +43,8 @@ export interface AjisaiInterpreter {
     collect_core_word_aliases_info(): Array<[string, string, string, string]>;
     collect_input_helper_words_info(): Array<[string, string]>;
     lookup_word_definition(name: string): string | null;
+    // See `UserWord.description`.
+    lookup_word_description(name: string): string | null;
     /**
      * Answer the host's lookup of `name` against the current dictionary.
      *

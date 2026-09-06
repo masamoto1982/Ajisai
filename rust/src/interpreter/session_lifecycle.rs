@@ -32,6 +32,7 @@ impl Interpreter {
         self.reset_execution_modes();
         self.pending_tokens = None;
         self.pending_token_index = 0;
+        self.pending_word_descriptions.clear();
         self.runtime_scratch.clear();
         self.call_stack.clear();
         self.call_depth = 0;

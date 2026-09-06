@@ -21,7 +21,8 @@ export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => 
     return userWordsInfo.map(wordData => ({
         dictionary: wordData[0],
         name: wordData[1],
-        definition: interpreter.lookup_word_definition(wordData[1])
+        definition: interpreter.lookup_word_definition(wordData[1]),
+        description: interpreter.lookup_word_description(wordData[1])
     }));
 };
 
