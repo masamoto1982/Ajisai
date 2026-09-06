@@ -12,7 +12,6 @@ function fail(message) {
   process.exit(1);
 }
 
-if (words.migration?.completeInventory !== true) fail('canonical Word inventory is incomplete');
 const names = new Set();
 for (const entry of words.entries) {
   if (names.has(entry.name)) fail(`duplicate canonical Word ${entry.name}`);

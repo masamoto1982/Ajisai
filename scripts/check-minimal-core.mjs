@@ -48,16 +48,8 @@ for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}:
 if (kernelWords.size !== 37) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 37`);
 if (standardWords.size !== 29) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 29`);
 
-const isPhaseOne = contracts.migration?.betaFreezePhase === 1;
-if (isPhaseOne) {
-  if (words.length !== 70) errors.push(`phase 1 transitional inventory has ${words.length} Words; expected 70`);
-  const pendingRemoval = new Set(words.filter((word) => !word.vocabularyTier).map((word) => word.name));
-  for (const name of setDifference(REMOVED, pendingRemoval)) errors.push(`${name}: missing from phase 1 removal set`);
-  for (const name of setDifference(pendingRemoval, REMOVED)) errors.push(`${name}: unclassified Word is not in the removal set`);
-} else {
-  if (words.length !== 66) errors.push(`canonical inventory has ${words.length} Words; expected 66`);
-  for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
-}
+if (words.length !== 66) errors.push(`canonical inventory has ${words.length} Words; expected 66`);
+for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 
 for (const word of words) {
   const witness = bySurface.get(word.name);
@@ -137,6 +129,3 @@ console.log(
   `[minimal-core] ${DERIVABLE.size}/${DERIVABLE.size} derivable Standards carry a Kernel-only witness; ` +
     `${OPERATIONAL.size}/${OPERATIONAL.size} operational Standards state a native retention reason.`,
 );
-if (isPhaseOne) {
-  console.log(`[minimal-core] phase 1: ${REMOVED.size} alpha Words remain explicitly pending removal.`);
-}
