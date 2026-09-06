@@ -240,9 +240,6 @@ const entries = [
 ];
 
 const contracts = JSON.parse(readFileSync(contractsPath, 'utf8'));
-if (contracts.migration?.completeInventory !== true) {
-  fail('spec/words.json does not declare a complete canonical inventory');
-}
 const contractNames = new Set(contracts.entries.map((entry) => entry.name));
 if (contractNames.size !== contracts.entries.length) fail('duplicate canonical name in spec/words.json');
 const generatedCanonicalNames = new Set(entries

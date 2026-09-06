@@ -5,34 +5,11 @@
  "type": "object",
  "required": [
   "schemaVersion",
-  "migration",
   "entries"
  ],
  "properties": {
   "schemaVersion": {
    "const": 1
-  },
-  "migration": {
-   "type": "object",
-   "required": [
-    "phase",
-    "completeInventory"
-   ],
-   "properties": {
-    "phase": {
-     "type": "integer",
-     "minimum": 3
-    },
-    "completeInventory": {
-     "type": "boolean"
-    },
-    "betaFreezePhase": {
-     "type": "integer",
-     "minimum": 1,
-     "maximum": 5
-    }
-   },
-   "additionalProperties": false
   },
   "entries": {
    "type": "array",

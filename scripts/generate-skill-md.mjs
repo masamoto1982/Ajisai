@@ -112,7 +112,6 @@ function readVocabularyCounts() {
 function buildWordTable() {
   const manifest = JSON.parse(readRepo('docs/word-manifest.json'));
   const words = JSON.parse(readRepo('spec/words.json'));
-  if (words.migration?.completeInventory !== true) fail('spec/words.json inventory is incomplete');
   const contracts = new Map(words.entries.map((entry) => [entry.name, entry]));
   if (contracts.size !== words.entries.length) fail('spec/words.json contains duplicate canonical names');
   const rows = [];

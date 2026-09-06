@@ -1,4 +1,4 @@
-//! # Semantic Spine (Phase 1 skeleton)
+//! # Semantic Spine
 //!
 //! The Semantic Spine is the single place where Ajisai's *meaning* is allowed
 //! to exist. Its public API names only concepts that the language
@@ -6,7 +6,7 @@
 //! reason-centric absence model, and the outward-observable projection of the
 //! runtime.
 //!
-//! Governing invariant (migration plan §11, SPEC §20):
+//! Governing invariant (migration plan §11, LANG.VALUES.DISJOINT):
 //!
 //! > Concepts that are absent from the language specification must be
 //! > inexpressible in the Semantic Spine's public API. Below the spine, private
@@ -18,10 +18,12 @@
 //! vector representation). They are a storage detail of a value domain, never a
 //! domain of their own.
 //!
-//! This module is deliberately unwired in Phase 1: nothing in the existing
-//! runtime references it yet. Phase 2 adds the `From`/`Into` adapters that let
-//! the two models coexist while consumers migrate onto the spine one at a time.
-//! See `docs/dev/semantic-spine-migration-plan.md`.
+//! The spine and the legacy value model coexist through the `From`/`Into`
+//! adapters in [`legacy_adapter`] while consumers migrate onto it one at a
+//! time. Wiring has begun: `interpreter::arithmetic` routes the scalar-scalar
+//! `ADD`/`SUB`/`MUL`/`DIV` path through [`arithmetic`] (see that module's own
+//! doc comment for the current scope). See
+//! `docs/dev/semantic-spine-migration-plan.md` for the full migration record.
 
 pub mod arithmetic;
 pub mod execute;

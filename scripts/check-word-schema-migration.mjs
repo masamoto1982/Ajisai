@@ -16,9 +16,6 @@ const familyIds = new Set(families.families.map((family) => family.id));
 const manifestNames = new Set(manifest.entries.map((entry) => entry.canonical));
 const names = new Set();
 
-if (words.migration.completeInventory !== true) fail('the canonical Word inventory must be marked complete');
-if (words.migration.betaFreezePhase !== 2) fail('the beta vocabulary migration must be in phase 2');
-
 for (const word of words.entries) {
   if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
   names.add(word.name);
