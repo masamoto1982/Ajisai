@@ -95,7 +95,7 @@ check_absent \
   '\b([Nn]o longer|[Uu]sed to be|[Ff]ormerly|[Pp]reviously|[Dd]eprecated|[Ll]egacy|[Ee]arlier versions?|[Oo]nce (had|carried|supported)|has been removed|was removed|reserved for future)\b' \
   "${READING_SURFACES[@]}"
 
-# ── Semantic Spine public-API closure (migration plan §11, SPEC §20) ───────
+# ── Semantic Spine public-API closure (migration plan §11, LANG.VALUES.DISJOINT) ──
 # The Spine (rust/src/kernel/) may name only concepts the language exposes. The
 # optimization representations demoted below it (dense-tensor storage, exact
 # scalars) and the legacy/removed concepts (interpretation roles, the logical
