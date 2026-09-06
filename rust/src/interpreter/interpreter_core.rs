@@ -271,6 +271,16 @@ pub struct Interpreter {
     /// A `DEF` body's own written tokens, captured lexically when a literal
     /// precedes `<name> [KEEP] DEF` (`execution_loop.rs`, `execute_def.rs`).
     pub(crate) pending_def_body_tokens: Option<Vec<crate::types::Token>>,
+
+    /// `#:contract NAME ...` directive text scanned out of the raw source at
+    /// `execute()` time, keyed by the upper-cased word name. `#:contract` is
+    /// tooling-only — an ordinary comment to the interpreter (SPEC), stripped
+    /// by the tokenizer before any Word ever sees it — so this is the one
+    /// place its text still exists once the Word it names actually runs
+    /// `DEF`. `op_def` consumes an entry here as that Word's `description`, a
+    /// host affordance (the Dictionary panel's hover) rather than a language
+    /// effect: it changes nothing about what the program computes.
+    pub(crate) pending_word_descriptions: std::collections::HashMap<String, String>,
     // ── Source positions ──────────────────────────────────────────────────
     /// Where each token of the program currently running was written,
     /// index-aligned with its token stream. Empty for any entry point that did
@@ -358,6 +368,7 @@ impl Interpreter {
             body_store: HashMap::new(),
             defer_identity_recompute: false,
             pending_def_body_tokens: None,
+            pending_word_descriptions: HashMap::new(),
             source_spans: Vec::new(),
             section_depth: 0,
             current_source_span: None,

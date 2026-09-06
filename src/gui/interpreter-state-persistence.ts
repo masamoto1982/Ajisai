@@ -108,6 +108,7 @@ const EXPORT_FORMAT_VERSION = 3;
 interface ExportWord {
     readonly name: string;
     readonly definition: string | null;
+    readonly description?: string | null;
     readonly id?: string;
 }
 
@@ -136,6 +137,7 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
             return {
                 name,
                 definition: interpreter.lookup_word_definition(name),
+                description: interpreter.lookup_word_description(name),
                 ...(id ? { id } : {})
             };
         });
@@ -164,13 +166,14 @@ const filenameToDictionaryName = (filename: string): string => filename.replace(
 // instead of being parsed or cleanly rejected.
 const normalizeImportWord = (
     raw: unknown
-): { name: string; definition: string | null; id?: string } | null => {
+): { name: string; definition: string | null; description?: string | null; id?: string } | null => {
     if (!raw || typeof raw !== 'object') return null;
     const word = raw as Record<string, unknown>;
     if (typeof word.name !== 'string') return null;
     const definition = typeof word.definition === 'string' ? word.definition : null;
+    const description = typeof word.description === 'string' ? word.description : undefined;
     const id = typeof word.id === 'string' ? word.id : undefined;
-    return id ? { name: word.name, definition, id } : { name: word.name, definition };
+    return id ? { name: word.name, definition, description, id } : { name: word.name, definition, description };
 };
 
 export const parseImportDocument = (jsonString: string): Result<ParsedImport, Error> => {
@@ -191,7 +194,7 @@ export const parseImportDocument = (jsonString: string): Result<ParsedImport, Er
             const word = normalizeImportWord(raw);
             if (!word) continue;
             if (word.id) embeddedIds.set(word.name.toUpperCase(), word.id);
-            words.push({ name: word.name, definition: word.definition });
+            words.push({ name: word.name, definition: word.definition, description: word.description });
         }
         return { words, embeddedIds: embeddedIds.size > 0 ? embeddedIds : null };
     };

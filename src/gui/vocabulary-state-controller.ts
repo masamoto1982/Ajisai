@@ -303,11 +303,20 @@ export const createVocabularyManager = (
                 // it showed no definition.
                 () => onWordClick(wordInfo.name),
                 () => {
+                    // A `#:contract` description is what the word's author
+                    // wrote for a reader (SPEC: host affordance, not language
+                    // semantics) — prefer it over echoing the body back, the
+                    // way a Core Word's hover shows a summary rather than its
+                    // own source. Fall back to the raw definition when there
+                    // is none, so a word with no description reads as it
+                    // always has.
+                    const description = window.ajisaiInterpreter?.lookup_word_description(wordInfo.name) ?? '';
                     const definition = window.ajisaiInterpreter?.lookup_word_definition(wordInfo.name) ?? '';
+                    const text = description || definition;
                     renderWordInfo(
                         elements.userWordInfo,
-                        definition || DEFAULT_WORD_INFO_MESSAGE,
-                        !definition
+                        text || DEFAULT_WORD_INFO_MESSAGE,
+                        !text
                     );
                 },
                 () => { resetWordInfoDisplay(elements.userWordInfo); },

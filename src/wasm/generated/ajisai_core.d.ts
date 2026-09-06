@@ -61,6 +61,12 @@ export class AjisaiInterpreter {
     host_profile(): string;
     is_safe_preview_word(name: string): boolean;
     lookup_word_definition(name: string): any;
+    /**
+     * A User Word's `#:contract`-derived description, for a host affordance
+     * like the Dictionary panel's hover — never checked against the Word's
+     * actual behavior (that stays a CLI-only, opt-in `check --contract`).
+     */
+    lookup_word_description(name: string): any;
     constructor();
     push_json_string(json_string: string): any;
     remove_word(name: string): void;
@@ -167,6 +173,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_host_profile: (a: number) => [number, number];
     readonly ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: number) => number;
     readonly ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
+    readonly ajisaiinterpreter_lookup_word_description: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_new: () => number;
     readonly ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;

@@ -23,6 +23,7 @@ export const ajisaiinterpreter_extract_io_output_buffer: (a: number) => [number,
 export const ajisaiinterpreter_host_profile: (a: number) => [number, number];
 export const ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: number) => number;
 export const ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
+export const ajisaiinterpreter_lookup_word_description: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_new: () => number;
 export const ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
 export const ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;

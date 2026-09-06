@@ -386,4 +386,16 @@ impl Interpreter {
         }
         Some(result.trim().to_string())
     }
+
+    /// A User Word's `description` (SPEC: host affordance only, not a
+    /// language effect) — the `#:contract` line text `DEF` captured for it,
+    /// or a restored word's saved description. `None` for a builtin, or a
+    /// user word that was never given one.
+    pub fn lookup_word_description(&self, name: &str) -> Option<String> {
+        let (_, def) = self.resolve_word_entry_readonly(name)?;
+        if def.is_builtin {
+            return None;
+        }
+        def.description.clone()
+    }
 }

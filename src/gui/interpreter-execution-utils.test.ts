@@ -51,6 +51,7 @@ const createFakeInterpreter = (): FakeInterpreter => {
             [...words.keys()].sort().map(name => ['USER', name, false] as [string, string, boolean]),
         // Resolves a bare name only: `USER@FOO` is not a name the dictionary has.
         lookup_word_definition: (name: string) => words.get(name.toUpperCase()) ?? null,
+        lookup_word_description: () => null,
         snapshot_stack: () => JSON.stringify(stack),
         restore_stack_snapshot: (snapshot: string) => { stack = JSON.parse(snapshot) as Value[]; },
         restore_user_words: (restored: UserWord[]) => {
@@ -101,7 +102,7 @@ describe('collectUserWords', () => {
         interpreter.words.set('ADD10', '10 ADD');
 
         expect(collectUserWords(interpreter)).toEqual([
-            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD' }
+            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD', description: null }
         ]);
     });
 });
@@ -122,7 +123,7 @@ describe('execution round trip with user words present', () => {
         expect(changes.dictionarySheetId).toBeUndefined();
         // The words survived the worker round trip rather than being wiped.
         expect(collectUserWords(main)).toEqual([
-            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD' }
+            { dictionary: 'USER', name: 'ADD10', definition: '10 ADD', description: null }
         ]);
     });
 

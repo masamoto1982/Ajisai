@@ -4,8 +4,60 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+/// Scan raw source for `#:contract NAME ...` lines, keyed by the upper-cased
+/// name. `#:contract` is a tooling-only directive (an ordinary comment to the
+/// interpreter, stripped before tokenization — `docs/dev/cost-contract-
+/// design.md`); this does not parse or check its fields the way the CLI's
+/// `agent::contract_decl` does (that module is `std`-only and unavailable to
+/// the browser build). It only recovers the line's text, verbatim, so `DEF`
+/// can attach it to the Word it names as a `description` for the host to
+/// show — e.g. the Dictionary panel's hover — never as a checked contract.
+pub(crate) fn extract_pending_word_descriptions(source: &str) -> HashMap<String, String> {
+    let mut descriptions = HashMap::new();
+    for line in source.lines() {
+        let Some(rest) = line.trim_start().strip_prefix("#:contract") else {
+            continue;
+        };
+        let rest = rest.trim();
+        let Some(name_end) = rest.find(char::is_whitespace) else {
+            continue;
+        };
+        let name = &rest[..name_end];
+        let detail = rest[name_end..].trim();
+        if name.is_empty() || detail.is_empty() {
+            continue;
+        }
+        descriptions.insert(name.to_uppercase(), detail.to_string());
+    }
+    descriptions
+}
+
+/// Overwrite an existing Word's `description` in place. Used both when `DEF`
+/// consumes a pending `#:contract` line for the Word it just defined, and
+/// when a restored Word (`restore_user_words`) carries a saved description
+/// alongside its body. The Word was just inserted with a fresh `Arc` in
+/// every caller, so `Arc::get_mut` succeeds; the clone-and-replace fallback
+/// only guards a future caller that might not hold sole ownership.
+pub(crate) fn set_word_description(
+    interp: &mut Interpreter,
+    name: &str,
+    description: Option<String>,
+) {
+    let upper_name = name.to_uppercase();
+    let Some(arc_def) = interp.user_words.get_mut(&upper_name) else {
+        return;
+    };
+    if let Some(def) = Arc::get_mut(arc_def) {
+        def.description = description;
+    } else {
+        let mut cloned = (**arc_def).clone();
+        cloned.description = description;
+        *arc_def = Arc::new(cloned);
+    }
+}
 
 /// DEF is strictly two positional arguments: `{ body } 'NAME' DEF`.
 ///
@@ -58,6 +110,12 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     };
 
     op_def_inner(interp, &name_str, &tokens)?;
+    if let Some(description) = interp
+        .pending_word_descriptions
+        .remove(&name_str.to_uppercase())
+    {
+        set_word_description(interp, &name_str, Some(description));
+    }
     restore_keep_mode_operands(interp, kept);
     Ok(())
 }

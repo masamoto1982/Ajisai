@@ -133,6 +133,7 @@ impl AjisaiInterpreter {
                 // against; there is one User tier, so it no longer selects.
                 dictionary: None,
                 definition: self.interpreter.lookup_word_definition_tokens(&name),
+                description: self.interpreter.lookup_word_description(&name),
                 name,
             })
             .collect();
@@ -185,6 +186,18 @@ impl AjisaiInterpreter {
         self.interpreter
             .lookup_word_definition_tokens(&upper_name)
             .map(|def| JsValue::from_str(&def))
+            .unwrap_or(JsValue::NULL)
+    }
+
+    /// A User Word's `#:contract`-derived description, for a host affordance
+    /// like the Dictionary panel's hover — never checked against the Word's
+    /// actual behavior (that stays a CLI-only, opt-in `check --contract`).
+    #[wasm_bindgen]
+    pub fn lookup_word_description(&self, name: &str) -> JsValue {
+        let upper_name = name.to_uppercase();
+        self.interpreter
+            .lookup_word_description(&upper_name)
+            .map(|desc| JsValue::from_str(&desc))
             .unwrap_or(JsValue::NULL)
     }
 
@@ -401,6 +414,13 @@ impl AjisaiInterpreter {
 
             interpreter::execute_def::op_def_inner(&mut self.interpreter, &word.name, &tokens)
                 .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
+            if word.description.is_some() {
+                interpreter::execute_def::set_word_description(
+                    &mut self.interpreter,
+                    &word.name,
+                    word.description,
+                );
+            }
         }
         Ok(())
     }
