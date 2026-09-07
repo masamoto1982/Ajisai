@@ -120,7 +120,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
                     "RESERVED-END"
                 };
                 return Err(format!(
-                    "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). '[' and ']' are the sole bracket in Ajisai, for code blocks and for the continued-fraction display form alike.",
+                    "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (LANG.SOURCE.TEXT). '[' and ']' are the sole bracket in Ajisai, for code blocks and for the continued-fraction display form alike.",
                     chars[i], concept
                 ));
             }
@@ -152,7 +152,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         }
         if token_str.contains('[') || token_str.contains(']') {
             return Err(format!(
-                "'{}' is not a valid token: '[' and ']' must stand alone, separated by whitespace, like every other Ajisai word (Section 3.4 / LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
+                "'{}' is not a valid token: '[' and ']' must stand alone, separated by whitespace, like every other Ajisai word (LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
                 token_str
             ));
         }
