@@ -1,9 +1,7 @@
 use super::wasm_value_conversion::{value_to_js, UserWordData};
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
-use crate::interpreter;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
-use crate::tokenizer;
 use crate::types::arena::{arena_to_value, json_to_arena_node, ValueArena};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
@@ -381,47 +379,31 @@ impl AjisaiInterpreter {
         let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
-        // Defer per-word identity recomputation during the bulk restore and
-        // recompute once below via rebuild_dependencies. This turns O(N^2)
-        // identity hashing on import into O(N). The flag is always cleared,
-        // even on error, so later interactive definitions recompute normally.
-        self.interpreter.defer_identity_recompute = true;
-        let restore_result = self.define_restored_words(words);
-        self.interpreter.defer_identity_recompute = false;
-        restore_result?;
+        // A restored word's saved `dictionary` label is legacy state: the
+        // dictionary has two tiers and User is one of them, so every restored
+        // definition lands in the same place.
+        let entries = words.into_iter().map(|word| {
+            (
+                word.name,
+                word.definition.unwrap_or_default(),
+                word.description,
+            )
+        });
 
-        self.interpreter
-            .rebuild_dependencies()
+        // Skipping an unreadable entry rather than raising is what keeps the
+        // rest of a dictionary: see `restore_user_word_definitions`. The
+        // skipped names are not raised here either — throwing would abort the
+        // host's own post-restore reconciliation and leave the session holding
+        // a half-restored dictionary, which is the outcome this avoids. The
+        // host reports them by comparing what it asked for against
+        // `collect_user_words_info`.
+        let _skipped = self
+            .interpreter
+            .restore_user_word_definitions(entries)
             .map_err(|e| e.to_string())?;
 
         let _ = self.interpreter.collect_output();
 
-        Ok(())
-    }
-
-    fn define_restored_words(&mut self, words: Vec<UserWordData>) -> Result<(), String> {
-        for word in words {
-            // A restored word's saved `dictionary` label is legacy state: the
-            // dictionary has two tiers and User is one of them, so every
-            // restored definition lands in the same place.
-            let definition = match &word.definition {
-                Some(def) if !def.is_empty() => def.clone(),
-                _ => continue,
-            };
-
-            let tokens = tokenizer::tokenize(&definition)
-                .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
-
-            interpreter::execute_def::op_def_inner(&mut self.interpreter, &word.name, &tokens)
-                .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
-            if word.description.is_some() {
-                interpreter::execute_def::set_word_description(
-                    &mut self.interpreter,
-                    &word.name,
-                    word.description,
-                );
-            }
-        }
         Ok(())
     }
 }

@@ -129,6 +129,24 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         return Err(AjisaiError::from(message));
     }
 
+    // A Word is reached by writing its name as one token, so a name that
+    // cannot be written is not a name: `DEF` took one anyway, and the entry it
+    // made could be listed, hovered and exported but never called. That splits
+    // exactly what LANG.DICTIONARY.RESOLUTION joins — "the host's lookup,
+    // hover, the Reference, and execution must identify the same canonical
+    // entry" — so refuse it at the one moment the name is chosen. `BIND`
+    // already refuses the same names, and says a binding is named like a Word;
+    // this is the Word half of that sentence.
+    //
+    // `DEL` deliberately keeps no such check: a name saved before this rule, or
+    // before a lexical rule changed under it, must stay removable.
+    if !crate::tokenizer::is_symbol_token_lexeme(name) {
+        return Err(AjisaiError::from(format!(
+            "Cannot define '{}': it is not a name. A Word is called by writing its name as one token, and this cannot be written — the definition could never be reached (LANG.DICTIONARY.RESOLUTION).",
+            name
+        )));
+    }
+
     let upper_name = name.to_uppercase();
 
     if interp.core_vocabulary.contains_key(&upper_name) {

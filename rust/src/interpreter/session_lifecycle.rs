@@ -14,10 +14,82 @@ use super::compiled_plan::{arc_plan, compile_word_definition, plan_is_all_fallba
 use super::interpreter_core::RuntimeMetrics;
 use super::Interpreter;
 
+/// One saved definition that could not be restored, and why.
+///
+/// A restore reports these rather than raising: see
+/// [`Interpreter::restore_user_word_definitions`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkippedRestore {
+    pub name: String,
+    pub reason: String,
+}
+
 impl Interpreter {
     /// Full reset: clears every trace of the previous program.
     pub fn execute_reset(&mut self) -> Result<()> {
         self.reset_session_state();
+        Ok(())
+    }
+
+    /// Restore saved User Word definitions, skipping the ones that cannot be
+    /// restored instead of abandoning the ones that can.
+    ///
+    /// Each entry is `(name, definition source, description)`. A saved
+    /// definition is source text, so restoring it re-runs the lexer and `DEF`
+    /// against *today's* rules — and those rules are not frozen. A dictionary
+    /// saved before a lexical or naming rule changed can therefore contain an
+    /// entry this build no longer accepts, which is not a reason to lose the
+    /// rest of it: one unreadable definition used to abort the whole restore
+    /// and leave the session holding whichever words happened to precede it.
+    ///
+    /// The skipped entries are returned instead, so the host can say which
+    /// words did not come back. This is the same contract the host already
+    /// states for a partially corrupt import — "valid words in a
+    /// partially-corrupt file still import" (`interpreter-state-persistence.ts`)
+    /// — which it could only honour for entries malformed structurally enough
+    /// to spot without the lexer.
+    ///
+    /// The `Err` case is reserved for a failure of the restore itself rather
+    /// than of one entry: the dependency rebuild below sees the whole
+    /// dictionary, so nothing partial can be salvaged from it.
+    pub fn restore_user_word_definitions<I>(&mut self, words: I) -> Result<Vec<SkippedRestore>>
+    where
+        I: IntoIterator<Item = (String, String, Option<String>)>,
+    {
+        let mut skipped = Vec::new();
+
+        // Defer per-word identity recomputation during the bulk restore and
+        // recompute once below via rebuild_dependencies. This turns O(N^2)
+        // identity hashing on import into O(N). The flag is always cleared,
+        // even on error, so later interactive definitions recompute normally.
+        self.defer_identity_recompute = true;
+        for (name, definition, description) in words {
+            if definition.is_empty() {
+                continue;
+            }
+            match self.restore_one_word(&name, &definition, description) {
+                Ok(()) => {}
+                Err(reason) => skipped.push(SkippedRestore { name, reason }),
+            }
+        }
+        self.defer_identity_recompute = false;
+
+        self.rebuild_dependencies()?;
+        Ok(skipped)
+    }
+
+    /// Restore one saved definition, reporting why it could not be as a string.
+    fn restore_one_word(
+        &mut self,
+        name: &str,
+        definition: &str,
+        description: Option<String>,
+    ) -> std::result::Result<(), String> {
+        let tokens = crate::tokenizer::tokenize(definition)?;
+        super::execute_def::op_def_inner(self, name, &tokens).map_err(|e| e.to_string())?;
+        if description.is_some() {
+            super::execute_def::set_word_description(self, name, description);
+        }
         Ok(())
     }
 

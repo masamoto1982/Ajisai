@@ -154,6 +154,33 @@ export interface ParsedImport {
 const buildExportFilename = (name: string): string => `${name}.json`;
 // The whole key of a User-tier word: its normalized name.
 const buildWordKey = (name: string): string => name.toUpperCase();
+
+// Names that were handed to `restore_user_words` with a body but are not in the
+// dictionary afterwards.
+//
+// A saved definition is source text, so a restore re-runs the lexer and `DEF`
+// against today's rules: a dictionary saved before a lexical or naming rule
+// changed can hold an entry this build no longer accepts. The interpreter skips
+// such an entry rather than abandoning the rest of the dictionary with it —
+// which is what keeps `parseImportDocument`'s promise (valid words in a
+// partially corrupt file still import) true for corruption only the lexer can
+// see. Nothing is lost silently, so ask which names did not arrive.
+//
+// This sees an entry that is simply absent. It does not see a *redefinition*
+// that was skipped — the previous definition of that name is still there, and
+// keeping it is the right outcome — but on the import path the identity check
+// against the exported `id` already reports that as a mismatch.
+export const namesThatDidNotRestore = (
+    interpreter: AjisaiInterpreter,
+    requested: readonly UserWord[]
+): string[] => {
+    const present = new Set(
+        interpreter.collect_user_words_info().map(([, name]) => buildWordKey(name))
+    );
+    return requested
+        .filter(word => word.definition && !present.has(buildWordKey(word.name)))
+        .map(word => word.name);
+};
 const filenameToDictionaryName = (filename: string): string => filename.replace(/\.json$/i, '').toUpperCase();
 
 // Validate a single raw word entry from an (untrusted) import file. Returns a
@@ -362,6 +389,16 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
+                    const notRestored = namesThatDidNotRestore(
+                        window.ajisaiInterpreter,
+                        wordsToRestore
+                    );
+                    if (notRestored.length > 0) {
+                        showError?.(new Error(
+                            `${notRestored.length} saved word(s) could not be restored and were left out: ${notRestored.join(', ')}. The rest of the dictionary was restored.`
+                        ));
+                    }
+
                     const savedWordKeys = new Set(
                         wordsToRestore.map((w: UserWord) => buildWordKey(w.name))
                     );
@@ -444,11 +481,21 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 await window.ajisaiInterpreter.restore_user_words(importedWords);
                 const after = collectWordIdentityMap(window.ajisaiInterpreter);
 
+                const notImported = namesThatDidNotRestore(
+                    window.ajisaiInterpreter,
+                    importedWords
+                );
+                const notImportedKeys = new Set(notImported.map(buildWordKey));
+
                 let added = 0;
                 let deduplicated = 0;
                 const idMismatches: string[] = [];
                 for (const word of importedWords) {
                     const fqName = buildWordKey(word.name);
+                    // A word the interpreter could not take is neither added nor
+                    // deduplicated; counting it as imported would report an
+                    // arrival that did not happen.
+                    if (notImportedKeys.has(fqName)) continue;
                     if (before.has(fqName) && before.get(fqName) === after.get(fqName)) {
                         deduplicated++;
                     } else {
@@ -470,6 +517,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     ? `${added} user words imported, ${deduplicated} unchanged (deduplicated by content identity)`
                     : `${added} user words imported and saved`;
                 showInfo?.(summary, true);
+                if (notImported.length > 0) {
+                    showError?.(new Error(
+                        `${notImported.length} word(s) in the file could not be read by this build and were not imported: ${notImported.join(', ')}.`
+                    ));
+                }
                 if (idMismatches.length > 0) {
                     showInfo?.(
                         `Content identity mismatch (definition edited without re-export): ${idMismatches.join(', ')}`,

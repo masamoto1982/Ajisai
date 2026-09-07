@@ -102,6 +102,8 @@ mod debug_next_checks_tests;
 #[cfg(test)]
 mod declared_condition_tests;
 #[cfg(test)]
+mod definable_name_tests;
+#[cfg(test)]
 mod dependents_index_tests;
 #[cfg(test)]
 mod dictionary_operation_tests;
@@ -161,5 +163,7 @@ mod cond_dispatch_tests;
 mod core_word_canonicalization_tests;
 #[cfg(test)]
 mod scalar_fastpath_tests;
+#[cfg(test)]
+mod session_restore_tests;
 #[cfg(test)]
 mod vector_literal_tests;
