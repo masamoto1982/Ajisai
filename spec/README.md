@@ -7,6 +7,7 @@ it defines Ajisai semantics.
 | --- | --- |
 | `language-semantics.md` | Program meaning — the semantic kernel |
 | `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
+| `outcomes.json` (`outcomes.schema.json`) | The complete outcome space — every NIL reason and every error category a Word's contract can name |
 | `semantic-families.json` | The shared laws Words select |
 | `gui-semantics.md` | Presentation |
 | `host-protocol.schema.json` | The host protocol boundary between them |

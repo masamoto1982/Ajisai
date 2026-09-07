@@ -17,14 +17,9 @@ use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 /// gets its origin by adding one arm, and gets it everywhere at once.
 fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
     match reason {
-        NilReason::EmptySequence => AbsenceOrigin::EmptySequence,
         NilReason::MissingField => AbsenceOrigin::MissingField,
         NilReason::InvalidEncoding => AbsenceOrigin::InvalidEncoding,
-        NilReason::InvalidLens => AbsenceOrigin::InvalidLens,
-        NilReason::StackUnderflow => AbsenceOrigin::StackUnderflow,
         NilReason::IndexOutOfBounds => AbsenceOrigin::IndexOutOfBounds,
-        NilReason::UnknownWord => AbsenceOrigin::UnknownWord,
-        NilReason::ExecutionFailure => AbsenceOrigin::ExecutionFailure,
         NilReason::Undecidable => AbsenceOrigin::ComparisonBudget,
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
         NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,

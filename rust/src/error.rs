@@ -5,26 +5,9 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NilReason {
     DivisionByZero,
-    /// No longer produced. It existed so NIL could stand in for an empty
-    /// collection — the empty Vector and the empty String were both
-    /// inexpressible, so `FILTER` with no survivors, `TAKE 0`, an emptying
-    /// `REMOVE`, a zero-sized `SPLIT` chunk and `''` all answered
-    /// `NIL(EmptySequence)`. Both are ordinary values now, so nothing is left
-    /// for this reason to describe, and the `projection: never` those Words
-    /// register is finally true of them.
-    ///
-    /// Retained, unlike the retired `LogicallyUnknown`, because it *is*
-    /// reverse-decoded: `value_persist::decode_value` hard-errors on a reason
-    /// string it does not know, so dropping the variant would make a session
-    /// snapshot taken before this change fail to restore rather than degrade.
-    EmptySequence,
     MissingField,
     InvalidEncoding,
-    InvalidLens,
-    StackUnderflow,
     IndexOutOfBounds,
-    UnknownWord,
-    ExecutionFailure,
     /// Comparison-budget exhaustion per SPEC §7.4.1: two lazy CFs
     /// agreed on every emitted partial quotient up to the budget
     /// without diverging, or one of the operands' CF streams reported
@@ -249,14 +232,9 @@ impl NilReason {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             NilReason::DivisionByZero => "divisionByZero",
-            NilReason::EmptySequence => "emptySequence",
             NilReason::MissingField => "missingField",
             NilReason::InvalidEncoding => "invalidEncoding",
-            NilReason::InvalidLens => "invalidLens",
-            NilReason::StackUnderflow => "stackUnderflow",
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
-            NilReason::UnknownWord => "unknownWord",
-            NilReason::ExecutionFailure => "executionFailure",
             NilReason::Undecidable => "undecidable",
 
             NilReason::SpaceExhausted => "spaceExhausted",
@@ -272,14 +250,9 @@ impl NilReason {
     /// and `from_protocol_str` follows without another table to update.
     pub const ALL: &'static [NilReason] = &[
         NilReason::DivisionByZero,
-        NilReason::EmptySequence,
         NilReason::MissingField,
         NilReason::InvalidEncoding,
-        NilReason::InvalidLens,
-        NilReason::StackUnderflow,
         NilReason::IndexOutOfBounds,
-        NilReason::UnknownWord,
-        NilReason::ExecutionFailure,
         NilReason::Undecidable,
         NilReason::SpaceExhausted,
         NilReason::DomainMiss,

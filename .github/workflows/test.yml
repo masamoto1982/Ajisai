@@ -128,6 +128,13 @@ jobs:
           cargo build --bin ajisai --manifest-path rust/Cargo.toml
           npm run check:skill
 
+      - name: Outcome registry matches the Rust enums and spec/words.json
+        # spec/outcomes.json is the single declaration of every NIL reason and
+        # error category; this projects NilReason/ErrorCategory from it and
+        # checks every words.json projection.reason/errorWhen resolves into it.
+        # See docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 1.
+        run: npm run outcome-registry:check
+
       - name: Exhaustive semantics table is in sync
         # 65語 × 入力ドメイン組の全数表。契約（spec/words.json）と実装の乖離を
         # 総当たりで検出し、同時に AI 向けの完全な意味論資産になる。

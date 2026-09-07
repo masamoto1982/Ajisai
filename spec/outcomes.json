@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "nilReasons": [
+    {
+      "id": "divisionByZero",
+      "projectable": true,
+      "documentation": "A divisor equal to zero, or indistinguishable from zero within the comparison budget."
+    },
+    {
+      "id": "domainMiss",
+      "projectable": true,
+      "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational."
+    },
+    {
+      "id": "indexOutOfBounds",
+      "projectable": true,
+      "documentation": "A well-formed index or count outside the addressed collection's bounds, answered as a projection rather than a raise."
+    },
+    {
+      "id": "invalidEncoding",
+      "projectable": true,
+      "documentation": "Text that does not denote a value in the operation's target encoding — NUM applied to text outside the sealed numeric grammar, or STR applied to a value with no exact lexeme."
+    },
+    {
+      "id": "literal",
+      "projectable": false,
+      "documentation": "A NIL the program wrote rather than computed: the NIL Word, or NIL inside a vector literal. Not produced by any Word's projection."
+    },
+    {
+      "id": "missingField",
+      "projectable": true,
+      "documentation": "A diagnostic or structural accessor found no field to report at the position it was asked about."
+    },
+    {
+      "id": "notAvailable",
+      "projectable": true,
+      "documentation": "A diagnostic accessor was asked for something the value does not carry — NIL-REASON applied to a value that carries no reason."
+    },
+    {
+      "id": "spaceExhausted",
+      "projectable": true,
+      "documentation": "A well-formed generative operation (RANGE, FILL) whose materialized result would exceed the space water level. The only reason that projects rather than raises even for a request that could never fit."
+    },
+    {
+      "id": "undecidable",
+      "projectable": true,
+      "documentation": "Comparison-budget exhaustion: two lazy continued-fraction streams agreed on every emitted partial quotient up to the budget without resolving the order of the two operands."
+    }
+  ],
+  "errorCategories": [
+    {
+      "id": "blockContractViolation",
+      "kind": "declared",
+      "documentation": "A higher-order Word's block operand did not return the shape its contract requires — MAP/FILTER/FOLD/ANY's block returned other than one value per contract."
+    },
+    {
+      "id": "builtinProtection",
+      "kind": "structural",
+      "documentation": "An operation tried to redefine or delete a Core Word."
+    },
+    {
+      "id": "condExhausted",
+      "kind": "structural",
+      "documentation": "COND: every guard failed and no else clause was given."
+    },
+    {
+      "id": "definitionConflict",
+      "kind": "declared",
+      "documentation": "DEF named a word the dictionary already binds in a way this definition cannot resolve."
+    },
+    {
+      "id": "divisionByZero",
+      "kind": "structural",
+      "documentation": "The fixed ErrorCategory variant paired with AjisaiError::DivisionByZero. In the current implementation this is raised only as an internal fast-path control-flow signal inside the DIV/MOD scalar arithmetic paths and is always caught and re-projected to NIL(divisionByZero) before a Report is built; whether it is ever externally observable as status:error is a question for the non-vacuity gate (outcome-space-bijection-work-order-2026-09.md Phase 4), not settled here."
+    },
+    {
+      "id": "executionLimitExceeded",
+      "kind": "structural",
+      "documentation": "The total execution-step budget was exhausted before the program finished."
+    },
+    {
+      "id": "indexOutOfBounds",
+      "kind": "structural",
+      "documentation": "A well-formed index or count outside the addressed collection's bounds, raised rather than projected — TAKE asking for more elements than the vector holds."
+    },
+    {
+      "id": "invalidClauseShape",
+      "kind": "declared",
+      "documentation": "COND received a clause that is not a [ guard block ] or [ else-block ] pair."
+    },
+    {
+      "id": "invalidCount",
+      "kind": "declared",
+      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that cannot be honored structurally (distinct from negativeCount and from the indexOutOfBounds projection)."
+    },
+    {
+      "id": "invalidIndex",
+      "kind": "declared",
+      "documentation": "GET received an index operand that is not itself a well-formed index (non-integer, wrong shape) — distinct from indexOutOfBounds, which is a well-formed index outside bounds."
+    },
+    {
+      "id": "invalidName",
+      "kind": "declared",
+      "documentation": "DEF or DEL was given a name that cannot be a Word name at all (empty, wrong lexical shape)."
+    },
+    {
+      "id": "invalidRange",
+      "kind": "declared",
+      "documentation": "RANGE's bounds do not describe a well-formed range (e.g. a non-finite span)."
+    },
+    {
+      "id": "invalidShape",
+      "kind": "declared",
+      "documentation": "FILL's shape operand is not a well-formed shape vector."
+    },
+    {
+      "id": "malformedSource",
+      "kind": "structural",
+      "documentation": "Program text that does not parse — an unclosed block, a | outside a clause, a mismatched delimiter."
+    },
+    {
+      "id": "missingFollowingSourceUnit",
+      "kind": "declared",
+      "documentation": "OR-NIL was not followed by the source unit its contract requires."
+    },
+    {
+      "id": "modeUnsupported",
+      "kind": "structural",
+      "documentation": "A Word was invoked with a modifier mode it does not support."
+    },
+    {
+      "id": "nameConflict",
+      "kind": "structural",
+      "documentation": "A name was asked to mean two things at once — BIND to a name a Word already holds, or DEF to a name a live binding holds."
+    },
+    {
+      "id": "nameIsAWord",
+      "kind": "declared",
+      "documentation": "BIND was asked to bind a name that is already a Word name."
+    },
+    {
+      "id": "negativeCount",
+      "kind": "declared",
+      "documentation": "RANDOM (or another count-taking Word) received a negative count."
+    },
+    {
+      "id": "nestedExecutionError",
+      "kind": "declared",
+      "documentation": "EXEC's block raised while executing, and the raise is attributed to the block rather than to EXEC itself."
+    },
+    {
+      "id": "nonComparableElement",
+      "kind": "declared",
+      "documentation": "SORT or ORDER met an element its comparison law cannot order."
+    },
+    {
+      "id": "nonInteger",
+      "kind": "declared",
+      "documentation": "An operand that must be a whole number carried a non-integer scalar — RANDOM's bound, PUT's index."
+    },
+    {
+      "id": "nonNumeric",
+      "kind": "declared",
+      "documentation": "An arithmetic Word (ADD/SUB/MUL/DIV) met an operand that is not a number."
+    },
+    {
+      "id": "nonText",
+      "kind": "declared",
+      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/NUM) met an operand that is not Text."
+    },
+    {
+      "id": "nonTextElement",
+      "kind": "declared",
+      "documentation": "JOIN met a vector element that is not Text."
+    },
+    {
+      "id": "nonTextSeparator",
+      "kind": "declared",
+      "documentation": "TOKENIZE's separator operand is not Text."
+    },
+    {
+      "id": "nonTextVector",
+      "kind": "declared",
+      "documentation": "JOIN's vector operand contains a non-Text element at the top level (distinct from nonTextElement's per-element framing)."
+    },
+    {
+      "id": "nonTruthGuard",
+      "kind": "declared",
+      "documentation": "COND met a guard clause that did not answer with a truth value."
+    },
+    {
+      "id": "nonTruthValue",
+      "kind": "declared",
+      "documentation": "AND, OR or NOT met an operand that is not a truth value or Unknown."
+    },
+    {
+      "id": "nonVector",
+      "kind": "declared",
+      "documentation": "A collection Word (GET/LENGTH/TAKE/CONCAT) met an operand that is not a Vector."
+    },
+    {
+      "id": "notExecutable",
+      "kind": "declared",
+      "documentation": "A higher-order Word's block operand is not a CodeBlock."
+    },
+    {
+      "id": "protectedWord",
+      "kind": "declared",
+      "documentation": "DEF or DEL targeted a Core Word name, which the dictionary protects."
+    },
+    {
+      "id": "recursionLimitExceeded",
+      "kind": "structural",
+      "documentation": "The native call-depth guard fired: a pathologically long acyclic call chain reached its nesting limit."
+    },
+    {
+      "id": "resourceLimitExceeded",
+      "kind": "structural",
+      "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, a numeric literal's digit count, or a program's byte length."
+    },
+    {
+      "id": "selfReferentialDefinition",
+      "kind": "structural",
+      "documentation": "DEF was refused because the body names itself, directly or through other User words — the DEF-time acyclicity check."
+    },
+    {
+      "id": "shapeMismatch",
+      "kind": "structural",
+      "documentation": "Two operands of an element-wise Word have shapes that do not broadcast on some axis."
+    },
+    {
+      "id": "stackUnderflow",
+      "kind": "structural",
+      "documentation": "A Word was applied with fewer operands than its declared arity."
+    },
+    {
+      "id": "structureError",
+      "kind": "structural",
+      "documentation": "A value's structure did not match what the operation expected, outside the more specific shape/vector-length categories."
+    },
+    {
+      "id": "unknownWord",
+      "kind": "structural",
+      "documentation": "A name in program text did not resolve to any Word in the compiled-in vocabulary or the live dictionary."
+    },
+    {
+      "id": "unsupportedComparison",
+      "kind": "declared",
+      "documentation": "EQ/NEQ/LT/LTE met a pair of operands whose types have no defined comparison law."
+    },
+    {
+      "id": "vectorLengthMismatch",
+      "kind": "structural",
+      "documentation": "Two one-dimensional operands have different lengths where the operation requires them equal — the one-dimensional case of shapeMismatch."
+    },
+    {
+      "id": "wordNotFound",
+      "kind": "declared",
+      "documentation": "DEL (or another dictionary Word) was asked to act on a name that names no Word."
+    }
+  ]
+}

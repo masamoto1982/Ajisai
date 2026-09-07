@@ -71,24 +71,8 @@ fn domain_miss_protocol_strings() {
 /// than in whichever serializer happened to hit it first.
 #[test]
 fn every_nil_reason_has_a_distinct_lower_camel_protocol_string() {
-    let all = [
-        NilReason::DivisionByZero,
-        NilReason::EmptySequence,
-        NilReason::MissingField,
-        NilReason::InvalidEncoding,
-        NilReason::InvalidLens,
-        NilReason::StackUnderflow,
-        NilReason::IndexOutOfBounds,
-        NilReason::UnknownWord,
-        NilReason::ExecutionFailure,
-        NilReason::Undecidable,
-        NilReason::SpaceExhausted,
-        NilReason::DomainMiss,
-        NilReason::NotAvailable,
-        NilReason::Literal,
-    ];
     let mut seen: Vec<&str> = Vec::new();
-    for reason in &all {
+    for reason in NilReason::ALL {
         let s = reason.as_protocol_str();
         assert!(
             s.starts_with(|c: char| c.is_ascii_lowercase())

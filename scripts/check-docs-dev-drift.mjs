@@ -108,6 +108,16 @@ const KNOWN_FALSE_POSITIVES = new Set([
   'semantic-spine-migration-plan.md::BuiltinExecutorKey::Force',
   'semantic-spine-migration-plan.md::canonical_module',
   'semantic-spine-migration-plan.md::module_word_call',
+
+  // outcome-space-bijection-work-order-2026-09.md Phase 1 §1.4 pitfall B
+  // instructs deleting `AbsenceOrigin::EmptySequence` alongside
+  // `NilReason::EmptySequence`, and Phase 1 has since done exactly that
+  // (rust/src/semantic/absence.rs). `NilReason::EmptySequence` itself is not
+  // listed here because its literal text still survives in two rust/src
+  // comments explaining why `''`/`[ ]` are ordinary values now, which keeps
+  // it findable in the haystack even though the variant is gone — a
+  // heuristic accident, not evidence this one needs the same treatment.
+  'outcome-space-bijection-work-order-2026-09.md::AbsenceOrigin::EmptySequence',
 ]);
 
 function parseIndexScope() {
