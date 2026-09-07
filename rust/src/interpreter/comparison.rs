@@ -196,16 +196,26 @@ fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand> {
     }
 }
 
-fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -> bool {
+/// The top two stack operands, if the fast path applies to both: enabled,
+/// two-deep, and both plain Scalars. Shared by the ordering and equality
+/// fast paths so their eligibility check has one definition.
+fn scalar_fastpath_pair(interp: &Interpreter) -> Option<(ScalarFastOperand, ScalarFastOperand)> {
     if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
-        return false;
+        return None;
     }
-
     let stack_len = interp.stack.len();
-    let Some(a) = scalar_fast_operand(&interp.stack[stack_len - 2]) else {
-        return false;
-    };
-    let Some(b) = scalar_fast_operand(&interp.stack[stack_len - 1]) else {
+    let a = scalar_fast_operand(&interp.stack[stack_len - 2])?;
+    let b = scalar_fast_operand(&interp.stack[stack_len - 1])?;
+    Some((a, b))
+}
+
+fn record_fastpath_hit(interp: &mut Interpreter) {
+    let count = &mut interp.runtime_metrics.scalar_fastpath_count;
+    *count = count.saturating_add(1);
+}
+
+fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -> bool {
+    let Some((a, b)) = scalar_fastpath_pair(interp) else {
         return false;
     };
     let decided = kind.apply_to_fraction(&a.fraction, &b.fraction);
@@ -214,23 +224,12 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
         interp.stack.pop();
     }
     push_boolean_result(interp, decided);
-    interp.runtime_metrics.scalar_fastpath_count = interp
-        .runtime_metrics
-        .scalar_fastpath_count
-        .saturating_add(1);
+    record_fastpath_hit(interp);
     true
 }
 
 fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool {
-    if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
-        return false;
-    }
-
-    let stack_len = interp.stack.len();
-    let Some(a) = scalar_fast_operand(&interp.stack[stack_len - 2]) else {
-        return false;
-    };
-    let Some(b) = scalar_fast_operand(&interp.stack[stack_len - 1]) else {
+    let Some((a, b)) = scalar_fastpath_pair(interp) else {
         return false;
     };
     let eq = a.fraction == b.fraction;
@@ -239,10 +238,7 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
         interp.stack.pop();
     }
     push_boolean_result(interp, if invert { !eq } else { eq });
-    interp.runtime_metrics.scalar_fastpath_count = interp
-        .runtime_metrics
-        .scalar_fastpath_count
-        .saturating_add(1);
+    record_fastpath_hit(interp);
     true
 }
 
@@ -274,11 +270,8 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
                         .unwrap_or(NilReason::Literal),
                 ));
             }
-            // A structurally non-comparable operand is `unsupportedComparison`
-            // here — every caller of `lift_comparison` (EQ/NEQ/LT/LTE/GT/GTE)
-            // declares it uniformly, unlike `three_way_compare`'s callers
-            // (SORT/ORDER vs. MIN/MAX/ABS), which need different remaps in
-            // their own files.
+            // `unsupportedComparison`: every `lift_comparison` caller
+            // (EQ/NEQ/LT/LTE/GT/GTE) declares it uniformly.
             match compare_scalar_pair(a_val, b_val, kind).map_err(|e| match e {
                 AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
                     AjisaiError::declared("unsupportedComparison", "expected comparable operands")
@@ -357,10 +350,8 @@ fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result
     if nil_passthrough_binary(interp) {
         return Ok(());
     }
-    {
-        if push_ordering_scalar_fastpath(interp, kind) {
-            return Ok(());
-        }
+    if push_ordering_scalar_fastpath(interp, kind) {
+        return Ok(());
     }
     apply_binary_comparison(interp, kind)
 }
