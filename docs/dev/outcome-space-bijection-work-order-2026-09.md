@@ -586,8 +586,23 @@ Phase 1〜3 の成果を、両方向の CI ゲートに変える。
 | 結末 | 必要なもの |
 | --- | --- |
 | `undecidable` | 比較予算を尽くす 2 つの近接した代数的数 |
-| `executionFailure` | 失敗するブロックを含む実行 |
 | `selfReferentialDefinition` | `[ REC ] 'REC' DEF` |
+
+（`executionFailure` は Phase 1 で `NilReason` から削除済み——本番コードに
+構築点が一つも無い、真に死んだ reason だった。多段でも目撃しようがない。）
+
+Phase 3 で実測した限り、**もう一種類の「目撃者なし」がある**: 多段が要るのではなく、
+実装が宣言と食い違っていて**単に届かない**もの。`nonInteger` を宣言するのは
+`RANDOM` / `PUT` の 2 語だけだが、両方とも非整数オペランドで
+`structureError`（`AjisaiError::create_structure_error`）を返し、`nonInteger` は
+一度も生成しない（実測: `1 2 / 1 RANDOM`、`[ 1 2 3 ] 1 2 / 9 PUT`、
+`docs/dev/outcome-space-bijection-work-order-2026-09.md` の
+`scripts/generate-semantics-table.mjs` コメント参照）。この種は
+`spec/outcome-witnesses.json` に書いても目撃者にならない——実行しても
+`nonInteger` は出ないのだから。**落とし穴 C の二択（ID を消すか目撃者を書くか）が
+そのまま両方とも塞がっている**ケースで、実際に選べるのは ID を消す方だけである
+（`rust/` を直すのは Phase 3・Phase 4 のどちらのホワイトリストにも無い）。
+着手前にこの ID の扱いを最初に決めること。
 
 したがって目撃者は **2 つの源**を持つ: 全数表と、手書きの
 `spec/outcome-witnesses.json`。ゲートは「**いずれかに目撃者があること**」を要求する。
@@ -624,8 +639,17 @@ camelCase の識別子と一致しないため grep では区別できない）�
 2. `scripts/check-outcome-bijection.mjs`:
    - **健全性**: `docs/semantics-table.json` の全 `outcome` を分解し、
      `nil:<reason>` の `reason` と `error:<why>` の `why` がすべて
-     `spec/outcomes.json` の ID に解決することを検査する（`why` → ID の対応は
-     Phase 2 落とし穴 D で 1 か所に置いたものを使う）
+     `spec/outcomes.json` の ID に解決することを検査する。`why` は
+     Phase 3 で `aiDiagnostic.kind`（細粒度の `ErrorCategory` プロトコル文字列）
+     に切り替え済みなので、`spec/outcomes.json` の ID とそのまま比較でよい——
+     対応表は要らない。`diagnosis.why`（粗い `CauseClass`）へのフォールバックが
+     `scripts/generate-semantics-table.mjs` の `classifyOutcome` に残っているが、
+     Phase 3 完了時点でどのセルも踏んでいない（実測: `aiDiagnostic.kind` が
+     `null` になる経路は生トークナイズ失敗のみで、ドメイン組のプログラムは
+     単語もリテラルも整形式なのでそこに落ちない）。踏むセルが出た場合、
+     その `why` は `spec/outcomes.json` の ID と型が違う（`CauseClass` の綴り）
+     ので健全性チェックは正しく落ちる——それ自体は正しい検出であり、
+     `classifyOutcome` 側の不具合ではない。
    - **非空虚性**: `spec/outcomes.json` の全 ID について、全数表または
      目撃者ファイルに少なくとも 1 件の目撃があることを検査する。
      目撃者ファイル側は実際に CLI で実行して結末を確認する（落とし穴 B）
