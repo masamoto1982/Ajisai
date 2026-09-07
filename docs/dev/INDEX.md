@@ -47,6 +47,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `playground-report-validation-2026-09.md` | 外部セッションによる Playground 検証レポート 8 件の妥当性確認と、そこから実施した改修（PI の失敗原因の誤帰属、宣言済み条件の診断分類、実時間タイムアウトの診断、ja Reference の同期）。未着手項目も明示 | `[方針記録]` |
 | `host-profile-derivation-handoff.md` | ホスト間で上限の値ではなく導出を統一する作業の引き継ぎ。走査系の非二次化の後に着手 | `[方針記録]` |
 | `competitive-advantage-work-order-2026-08.md` | 競争優位の研磨（観測ダイジェスト・全数意味論表・gap ID・三分法統一・コスト契約）の改修指示書。Phase 単位で実装する。設計判断は本書で確定済み | `[設計根拠]` |
+| `outcome-space-bijection-work-order-2026-09.md` | 結末空間の全単射（結末レジストリの単一化・未宣言結末の表現不可能化・ドメイン拡張・両方向ゲート）の改修指示書。全域言語であることを検証可能性に変換する。設計判断は本書で確定済み | `[設計根拠]` |
 | `trichotomy-unification.md` | 実行時三分法と静的検査三値の対応を統一した理由と、reason レジストリ統合（案(b)）を今やらない技術的理由・再検討条件 | `[方針記録]` |
 | `cost-contract-design.md` | `#:contract` のコスト軸（steps/numeric/collection）の設計根拠。クラス格子・join規則・多項式を今やらない理由・機械非依存性の正確な意味 | `[設計根拠]` |
 | `cost-discoverability-work-order-2026-08.md` | 推論されたコストを `ajisai contract` に出す改修指示書。付録 A に SHA-256→BLAKE3 置換を採用しない根拠と再検討条件 | `[設計根拠]` |
