@@ -31,10 +31,10 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // two tiers the name is the whole address, so the question is simply
     // whether the User tier holds it.
     if !interp.user_words.contains_key(&word_name) {
-        return Err(AjisaiError::from(format!(
-            "Word '{}' is not defined",
-            word_name
-        )));
+        return Err(AjisaiError::declared(
+            "wordNotFound",
+            format!("Word '{}' is not defined", word_name),
+        ));
     }
 
     // DEL used to also delete a whole named dictionary when the name matched
@@ -47,11 +47,19 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // vocabulary has no Word that overrides this, so the refusal is final and
     // the caller's only route is to delete the dependents first.
     if !dependents.is_empty() {
+        // Not in DEL's own `errorWhen` (`invalidName`/`wordNotFound`/
+        // `protectedWord`) even though DEF's identical check under the same
+        // dependency-graph rule is declared `definitionConflict` — a
+        // spec/words.json gap, not a new condition; `StructureError` is the
+        // honest fallback until DEL's contract is corrected to match.
         let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
-        return Err(AjisaiError::from(format!(
-            "Cannot delete '{}': referenced by {}. Delete those words first.",
-            word_name, dep_list
-        )));
+        return Err(AjisaiError::create_structure_error(
+            "a Word with no remaining dependents",
+            &format!(
+                "Cannot delete '{}': referenced by {}. Delete those words first.",
+                word_name, dep_list
+            ),
+        ));
     }
 
     let removed_def = interp.user_words.remove(&word_name);

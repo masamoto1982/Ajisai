@@ -34,8 +34,9 @@ pub(crate) struct FlatTensor {
 impl FlatTensor {
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
-            ValueData::Nil => Err(AjisaiError::from(
-                "Tensor conversion requires non-NIL value",
+            ValueData::Nil => Err(AjisaiError::create_structure_error(
+                "a non-NIL value",
+                "NIL",
             )),
             ValueData::Text(_) => Err(AjisaiError::create_structure_error("vector", "string")),
             ValueData::Scalar(f) => Ok(Self {
@@ -64,12 +65,13 @@ impl FlatTensor {
                     strides,
                 })
             }
-            ValueData::ExactScalar(_) => Err(AjisaiError::from(
-                "Tensor conversion does not support exact irrational values",
+            ValueData::ExactScalar(_) => Err(AjisaiError::create_structure_error(
+                "a rational scalar or vector",
+                "an exact irrational value",
             )),
-            ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::from(
-                "Tensor conversion requires scalar or vector",
-            )),
+            ValueData::Boolean(_) | ValueData::Symbol(_) => Err(
+                AjisaiError::create_structure_error("a scalar or vector", "boolean or symbol"),
+            ),
         }
     }
 
@@ -80,12 +82,10 @@ impl FlatTensor {
             shape.iter().product()
         };
         if data.len() != expected {
-            return Err(AjisaiError::from(format!(
-                "Tensor shape/data mismatch: data_len={}, required={}, shape={:?}",
-                data.len(),
-                expected,
-                shape
-            )));
+            return Err(AjisaiError::create_structure_error(
+                &format!("{} element(s) for shape {:?}", expected, shape),
+                &format!("{} element(s)", data.len()),
+            ));
         }
         let strides: Vec<usize> = compute_strides(&shape);
         Ok(Self {
@@ -326,7 +326,13 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy + Sync,
 {
     if a.is_nil() || b.is_nil() {
-        return Err(AjisaiError::from("Cannot broadcast NIL values"));
+        // Defensive: callers pass through a NIL operand before reaching here
+        // (LANG.FAILURE.PASSTHROUGH), so this is an invariant guard rather
+        // than a condition any Word's contract names.
+        return Err(AjisaiError::create_structure_error(
+            "two non-NIL operands to broadcast",
+            "a NIL operand",
+        ));
     }
 
     // Ragged or nested-mixed structures (e.g. `[ 10 [ 1 2 3 ] 10 ]`) cannot be

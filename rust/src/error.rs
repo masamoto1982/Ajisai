@@ -172,9 +172,8 @@ pub enum ErrorCategory {
     /// The condition the failing Word's `errorWhen` declares for this state.
     /// Its protocol spelling *is* the declared condition name, so a reader who
     /// asked `word_contract` for the Word gets back the same vocabulary the
-    /// failure answers in, instead of the catch-all `custom`.
+    /// failure answers in.
     Declared(&'static str),
-    Custom,
 }
 
 impl ErrorCategory {
@@ -197,7 +196,6 @@ impl ErrorCategory {
             ErrorCategory::CondExhausted => "condExhausted",
             ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
             ErrorCategory::Declared(condition) => condition,
-            ErrorCategory::Custom => "custom",
         }
     }
 
@@ -223,7 +221,6 @@ impl ErrorCategory {
                 ErrorCategory::SelfReferentialDefinition
             }
             AjisaiError::DeclaredCondition { condition, .. } => ErrorCategory::Declared(condition),
-            AjisaiError::Custom(_) => ErrorCategory::Custom,
         }
     }
 }
@@ -368,18 +365,16 @@ pub enum AjisaiError {
     /// is one of the conditions its `errorWhen` declares, spelled the way
     /// `spec/words.json` spells it.
     ///
-    /// `Custom` carries an English sentence and nothing else, so a raise written
-    /// as `AjisaiError::from("MAP: expected return value, got empty stack")`
-    /// reached the caller as `custom` / `unknown` — while the registry had
-    /// declared `blockContractViolation` for exactly that state all along, and
-    /// the diagnosis could only offer "read the message", which is what the
-    /// caller had already read. Naming the condition at the raise site is what
-    /// lets the classification be derived rather than guessed.
+    /// Naming the condition at the raise site is what lets the classification
+    /// be derived rather than guessed. Every raise site names one — there is
+    /// no catch-all variant left to fall back on
+    /// (docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 2): an
+    /// undeclared outcome is a compile error, not a `custom`/`unknown` at
+    /// runtime.
     DeclaredCondition {
         condition: &'static str,
         message: String,
     },
-    Custom(String),
 
     CondExhausted,
 }
@@ -510,7 +505,6 @@ impl fmt::Display for AjisaiError {
                 write!(f, "Cannot {} built-in word: {}", operation, word)
             }
             AjisaiError::DeclaredCondition { message, .. } => write!(f, "{}", message),
-            AjisaiError::Custom(msg) => write!(f, "{}", msg),
             AjisaiError::CondExhausted => {
                 write!(f, "COND: all guards failed and no else clause")
             }
@@ -519,15 +513,3 @@ impl fmt::Display for AjisaiError {
 }
 
 impl std::error::Error for AjisaiError {}
-
-impl From<String> for AjisaiError {
-    fn from(s: String) -> Self {
-        AjisaiError::Custom(s)
-    }
-}
-
-impl From<&str> for AjisaiError {
-    fn from(s: &str) -> Self {
-        AjisaiError::Custom(s.to_string())
-    }
-}

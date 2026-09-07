@@ -197,13 +197,13 @@
       }
     },
     {
-      "name": "a raise the category cannot classify lists the Word's declared conditions",
+      "name": "COND's body-shape failure names the declared condition it fired",
       "source": "5 [ [ TRUE | PRINT ] ] COND",
       "expect": {
         "/status": "error",
-        "/diagnosis/why": "unknown",
-        "/diagnosis/nextChecks/0/code": "checkDeclaredErrorConditions",
-        "/diagnosis/nextChecks/0/detail/en": "COND declares that it raises when: invalidClauseShape, nonTruthGuard."
+        "/diagnosis/why": "valueShape",
+        "/diagnosis/nextChecks/0/code": "checkFiredCondition",
+        "/diagnosis/nextChecks/0/detail/en": "COND raised the condition `invalidClauseShape`, one of the conditions its contract declares: invalidClauseShape, nonTruthGuard."
       }
     },
     {

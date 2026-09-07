@@ -38,7 +38,7 @@ pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
             return Err(e);
         }
     };
-    crate::tokenizer::validate_code_tokens(&tokens).map_err(AjisaiError::from)?;
+    crate::tokenizer::validate_code_tokens(&tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(&tokens)?;
     // The block `EXEC` runs is its own token stream and is never the enclosing
     // word's tail position — see `Interpreter::execute_nested_block`.

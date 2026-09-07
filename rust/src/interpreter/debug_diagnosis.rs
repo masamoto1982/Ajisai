@@ -287,11 +287,10 @@ impl CauseClass {
             // question.
             ErrorCategory::SelfReferentialDefinition => CauseClass::ContractViolation,
             // The registry named the condition at the raise site, so the class
-            // follows from the spec's own vocabulary rather than from `Custom`.
+            // follows from the spec's own vocabulary.
             ErrorCategory::Declared(condition) => {
                 super::debug_declared_checks::cause_class_for_declared_condition(condition)
             }
-            ErrorCategory::Custom => CauseClass::Unknown,
         }
     }
 }
@@ -509,7 +508,7 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         Some(ErrorCategory::Declared(_)) => {
             super::debug_declared_checks::repair_for_declared_condition(why)
         }
-        Some(ErrorCategory::Custom) | None => match why {
+        None => match why {
             CauseClass::Environment | CauseClass::Effect => "fixHost",
             CauseClass::NilFlow => "handleUnknownOrNil",
             _ => "inspectContext",

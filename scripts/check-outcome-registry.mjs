@@ -12,13 +12,15 @@
 // compiling anything, the same tradeoff check-runtime-metadata-source.mjs
 // makes for BuiltinSpec.
 //
-// `ErrorCategory::Declared(condition) => condition` and
-// `ErrorCategory::Custom => "custom"` are deliberately excluded from the
-// extracted "structural" set: `Declared` carries no literal string of its own
-// (its whole point is to forward a words.json errorWhen string verbatim), and
-// `Custom` is the escape hatch outcome-space-bijection-work-order-2026-09.md
-// Phase 2 removes — a registry describing the *closed* outcome space has no
-// room for either.
+// `ErrorCategory::Declared(condition) => condition` is deliberately excluded
+// from the extracted "structural" set: it carries no literal string of its
+// own (its whole point is to forward a words.json errorWhen string verbatim),
+// so `extractProtocolStrings`'s regex never matches its arm in the first
+// place. `ErrorCategory::Custom` — the escape hatch a registry describing the
+// *closed* outcome space had no room for — is gone as of Phase 2
+// (outcome-space-bijection-work-order-2026-09.md): `AjisaiError::Custom` and
+// the `From<String>`/`From<&str>` conversions that fed it no longer exist, so
+// every raise site names a declared condition or a fixed structural variant.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -87,17 +89,10 @@ const errorCategoryArms = extractProtocolStrings(errorRs, 'ErrorCategory');
 if (errorCategoryArms.size === 0) {
   fail('extracted zero ErrorCategory::as_protocol_str arms — the extractor is broken, not the enum');
 }
-// `Custom` is excluded: it is not a structural category the registry
-// declares, it is the escape hatch Phase 2 removes.
-const rustStructuralErrorCategories = new Set(
-  [...errorCategoryArms.entries()].filter(([variant]) => variant !== 'Custom').map(([, str]) => str),
-);
-if (!errorCategoryArms.has('Custom')) {
-  fail(
-    'ErrorCategory::Custom no longer exists in rust/src/error.rs — ' +
-      'if Phase 2 removed it, delete this exclusion from check-outcome-registry.mjs too',
-  );
-}
+// `Declared`'s arm never matches the extractor's regex (it forwards a string
+// rather than spelling one literally), so every arm this extraction finds is
+// already a fixed structural variant — no filtering needed post-Phase 2.
+const rustStructuralErrorCategories = new Set(errorCategoryArms.values());
 
 // ---------------------------------------------------------------------------
 // spec/outcomes.json

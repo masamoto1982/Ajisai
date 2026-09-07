@@ -102,8 +102,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 crate::interpreter::value_as_code::value_elements_to_tokens(&elements)?
             }
             None => {
-                return Err(AjisaiError::from(
-                    "DEF requires a Vector [ ... ] as the definition body",
+                return Err(AjisaiError::create_structure_error(
+                    "a Vector [ ... ] definition body",
+                    "a non-vector value",
                 ));
             }
         },
@@ -121,12 +122,12 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {
-    crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::from)?;
+    crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(tokens)?;
     if let Some(message) =
         crate::interpreter::naming_convention_checker::check_reserved_word_name(name)
     {
-        return Err(AjisaiError::from(message));
+        return Err(AjisaiError::declared("protectedWord", message));
     }
 
     // A Word is reached by writing its name as one token, so a name that
@@ -141,10 +142,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // `DEL` deliberately keeps no such check: a name saved before this rule, or
     // before a lexical rule changed under it, must stay removable.
     if !crate::tokenizer::is_symbol_token_lexeme(name) {
-        return Err(AjisaiError::from(format!(
-            "Cannot define '{}': it is not a name. A Word is called by writing its name as one token, and this cannot be written — the definition could never be reached (LANG.DICTIONARY.RESOLUTION).",
-            name
-        )));
+        return Err(AjisaiError::declared(
+            "invalidName",
+            format!(
+                "Cannot define '{}': it is not a name. A Word is called by writing its name as one token, and this cannot be written — the definition could never be reached (LANG.DICTIONARY.RESOLUTION).",
+                name
+            ),
+        ));
     }
 
     let upper_name = name.to_uppercase();
@@ -184,10 +188,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         // and the caller's only route is to delete the dependents first.
         if !dependents.is_empty() {
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
-            return Err(AjisaiError::from(format!(
-                "Cannot redefine '{}': referenced by {}. Delete those words first.",
-                upper_name, dep_list
-            )));
+            return Err(AjisaiError::declared(
+                "definitionConflict",
+                format!(
+                    "Cannot redefine '{}': referenced by {}. Delete those words first.",
+                    upper_name, dep_list
+                ),
+            ));
         }
 
         for dep_name in &existing.dependencies {
@@ -340,7 +347,10 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
     }
 
     if lines.is_empty() {
-        return Err(AjisaiError::from("Word definition cannot be empty"));
+        return Err(AjisaiError::create_structure_error(
+            "a non-empty definition body",
+            "an empty body",
+        ));
     }
 
     Ok(lines)

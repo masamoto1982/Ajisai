@@ -99,8 +99,9 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
 
 pub(crate) fn extract_integer_from_value(value: &Value) -> Result<i64> {
     let n = extract_integer_bigint(value)?;
-    n.to_i64()
-        .ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
+    n.to_i64().ok_or_else(|| {
+        AjisaiError::create_structure_error("an integer within i64 range", "a larger integer")
+    })
 }
 
 pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
@@ -116,7 +117,7 @@ pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
 /// closes that, and `nonText` is the honest error for everything else.
 pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
-        return Err(AjisaiError::from("Cannot get word name from NIL"));
+        return Err(AjisaiError::create_structure_error("string", "NIL"));
     }
 
     match value.as_text() {

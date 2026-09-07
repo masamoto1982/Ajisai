@@ -132,7 +132,9 @@ fn a_projection_names_the_condition_the_registry_declares_for_it() {
     let checks = build_next_checks(
         &CauseClass::Domain,
         Some("SQRT"),
-        Some(&ErrorCategory::Custom),
+        // No `ErrorCategory` names a domain miss (`error_category_for_nil_reason`
+        // answers `None` for it), matching the real call site.
+        None,
         Some(&crate::error::NilReason::DomainMiss),
     );
     let projection = checks

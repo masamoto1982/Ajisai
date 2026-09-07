@@ -60,10 +60,10 @@ where
         if !is_keep_mode {
             interp.stack.push(val);
         }
-        return Err(AjisaiError::from(format!(
-            "{} requires number or vector",
-            op_name
-        )));
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            format!("{} requires number or vector", op_name),
+        ));
     }
 
     if val.is_scalar() {
@@ -96,10 +96,10 @@ where
                 if !is_keep_mode {
                     interp.stack.push(val);
                 }
-                return Err(AjisaiError::from(format!(
-                    "{} requires number or vector",
-                    op_name
-                )));
+                return Err(AjisaiError::declared(
+                    "nonNumeric",
+                    format!("{} requires number or vector", op_name),
+                ));
             }
         }
     }
@@ -107,10 +107,10 @@ where
     if !is_keep_mode {
         interp.stack.push(val);
     }
-    Err(AjisaiError::from(format!(
-        "{} requires number or vector",
-        op_name
-    )))
+    Err(AjisaiError::declared(
+        "nonNumeric",
+        format!("{} requires number or vector", op_name),
+    ))
 }
 
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
@@ -286,8 +286,9 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             Some(d) if d > 0 => d,
             Some(_) | None => {
                 interp.stack.push(args_val);
-                return Err(AjisaiError::from(
-                    "RESHAPE: expected positive integer dimensions, got invalid dimension",
+                return Err(AjisaiError::declared(
+                    "invalidShape",
+                    "FILL: expected positive integer dimensions, got invalid dimension",
                 ));
             }
         };
