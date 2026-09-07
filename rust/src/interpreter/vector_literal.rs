@@ -26,7 +26,9 @@ impl Interpreter {
         depth: usize,
     ) -> Result<(Vec<Value>, usize, Interpretation)> {
         if !matches!(tokens.get(start_index), Some(Token::VectorStart)) {
-            return Err(AjisaiError::from("Expected a bracketed literal start"));
+            return Err(AjisaiError::MalformedSource(
+                "Expected a bracketed literal start".to_string(),
+            ));
         }
 
         // Guard against unbounded nesting before recursing. Without this, a few
@@ -36,7 +38,7 @@ impl Interpreter {
         // keeps the value — and every later traversal of it — within a depth the
         // stack can handle, surfaced as a recoverable error.
         if depth > crate::interpreter::MAX_VECTOR_NESTING_DEPTH {
-            return Err(AjisaiError::from(format!(
+            return Err(AjisaiError::MalformedSource(format!(
                 "Vector nesting too deep (limit {})",
                 crate::interpreter::MAX_VECTOR_NESTING_DEPTH
             )));
@@ -69,7 +71,7 @@ impl Interpreter {
                 }
                 Token::Number(n) => {
                     values.push(Value::from_number(
-                        Fraction::from_str(n).map_err(AjisaiError::from)?,
+                        Fraction::from_str(n).map_err(AjisaiError::MalformedSource)?,
                     ));
                     has_number = true;
                     i += 1;
@@ -122,7 +124,9 @@ impl Interpreter {
                 }
             }
         }
-        Err(AjisaiError::from("Unclosed bracketed literal"))
+        Err(AjisaiError::MalformedSource(
+            "Unclosed bracketed literal".to_string(),
+        ))
     }
 
     fn element_hint(has_other: bool, has_bool: bool, has_number: bool) -> Interpretation {

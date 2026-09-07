@@ -445,8 +445,9 @@ fn execute_cond_body(
     interp.consumption_mode = saved_consumption_mode;
 
     execution_result?;
-    let result_value: Value =
-        body_result_value.ok_or_else(|| AjisaiError::from("COND: body must return a value"))?;
+    let result_value: Value = body_result_value.ok_or_else(|| {
+        AjisaiError::declared("invalidClauseShape", "COND: body must return a value")
+    })?;
     interp.stack.push_with_role(result_value, body_result_hint);
     Ok(())
 }

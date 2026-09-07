@@ -45,8 +45,14 @@ impl Interpreter {
 
         let (resolved_name, def) = self.resolve_word_entry(name).ok_or_else(|| {
             let ambiguous = self.check_ambiguity(name);
+            // All three arms are the same resolution failure — the name did
+            // not resolve to a usable Word — with progressively more specific
+            // messages about why. `UnknownWord` is the one structural
+            // category LANG.DICTIONARY.RESOLUTION's failure has; ambiguity
+            // and out-of-scope binding are refinements of it, not conditions
+            // any Word's own contract could declare.
             if !ambiguous.is_empty() {
-                AjisaiError::from(format!(
+                AjisaiError::UnknownWord(format!(
                     "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
                     name.to_uppercase(),
                     ambiguous.join(", ")
@@ -56,7 +62,7 @@ impl Interpreter {
                 // "unknown word" is the least useful true thing to say. What
                 // went wrong is the scope, and naming it is the difference
                 // between reading the rule and rediscovering it.
-                AjisaiError::from(format!(
+                AjisaiError::UnknownWord(format!(
                     "'{}' is bound in another frame. A binding is reachable in the frame that made it \
                      and in the blocks written there, never inside a Word it calls — pass the value \
                      as an operand instead.",

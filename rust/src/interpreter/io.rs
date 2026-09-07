@@ -32,8 +32,17 @@ pub fn op_print(interp: &mut Interpreter) -> Result<()> {
         // all to produce multi-line output. The native CLI has always rendered
         // one payload per line; this brings the buffer that the browser host
         // reads in line with it.
-        writeln!(&mut interp.output_buffer, "{}", payload)
-            .map_err(|e| AjisaiError::from(format!("PRINT failed: {}", e)))?;
+        // Writing to an in-memory String buffer only fails on allocation
+        // failure, which nothing in this codebase's error vocabulary names
+        // (PRINT's own errorWhen is empty — it is the one hosted-effect Word).
+        // `StructureError` is the closest existing bucket for a failure this
+        // unreachable in practice.
+        writeln!(&mut interp.output_buffer, "{}", payload).map_err(|e| {
+            AjisaiError::create_structure_error(
+                "the output buffer to accept the write",
+                &e.to_string(),
+            )
+        })?;
         Ok(HostEffect::Print(payload))
     })
 }

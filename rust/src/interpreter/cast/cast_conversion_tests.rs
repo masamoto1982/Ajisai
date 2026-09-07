@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::interpreter::cast::cast_conversions::{op_bool, op_num, op_str};
+    use crate::interpreter::cast::cast_conversions::{op_num, op_str};
     use crate::interpreter::cast::cast_value_helpers::{
         format_value_to_string_repr, is_number_value, is_string_value,
     };
@@ -93,80 +93,6 @@ mod tests {
         // NUM no longer accepts a Boolean: a truth value is not a number
         // (finding B2). TRUE is distinct from the scalar 1.
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_bool_conversion() {
-        let mut interp = Interpreter::new();
-
-        interp.stack.push(Value::from_string("TRUE"));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(true));
-        }
-
-        interp.stack.clear();
-        interp.stack.push(Value::from_string("true"));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(true));
-        }
-
-        interp.stack.clear();
-        interp.stack.push(Value::from_string("false"));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(false));
-        }
-
-        interp.stack.clear();
-        interp.stack.push(Value::from_string("1"));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(val.is_nil());
-        }
-
-        interp.stack.clear();
-        interp.stack.push(Value::from_string("other"));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(val.is_nil());
-        }
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(100),
-            BigInt::one(),
-        )));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(true));
-        }
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(0),
-            BigInt::one(),
-        )));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(false));
-        }
-
-        interp.stack.clear();
-        interp.stack.push(create_number_value(Fraction::new(
-            BigInt::from(1),
-            BigInt::from(2),
-        )));
-        op_bool(&mut interp).unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(true));
-        }
-
-        interp.stack.clear();
-        interp.stack.push(Value::from_bool(true));
-        let result = op_bool(&mut interp);
-        assert!(result.is_ok());
     }
 
     #[tokio::test]

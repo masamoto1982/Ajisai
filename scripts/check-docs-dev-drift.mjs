@@ -118,6 +118,12 @@ const KNOWN_FALSE_POSITIVES = new Set([
   // it findable in the haystack even though the variant is gone — a
   // heuristic accident, not evidence this one needs the same treatment.
   'outcome-space-bijection-work-order-2026-09.md::AbsenceOrigin::EmptySequence',
+
+  // Phase 2 §2.1 instructs deleting `AjisaiError::Custom` and the two
+  // `From<String>`/`From<&str>` conversions that fed it, and Phase 2 has
+  // since done exactly that (rust/src/error.rs). Same shape as the
+  // EmptySequence entry above: a work-order instruction, now fulfilled.
+  'outcome-space-bijection-work-order-2026-09.md::AjisaiError::Custom',
 ]);
 
 function parseIndexScope() {

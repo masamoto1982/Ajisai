@@ -3832,14 +3832,14 @@
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FLOOR",
       "inputs": [
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "FLOOR",
@@ -3874,14 +3874,14 @@
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ROUND",
       "inputs": [
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "ROUND",
@@ -4246,14 +4246,14 @@
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "NEG",
       "inputs": [
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "NEG",
@@ -12092,14 +12092,14 @@
       "inputs": [
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "CHARS",
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "CHARS",
@@ -12113,7 +12113,7 @@
       "inputs": [
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "CHARS",
@@ -12134,21 +12134,21 @@
       "inputs": [
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "JOIN",
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "JOIN",
       "inputs": [
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "JOIN",
@@ -12176,14 +12176,14 @@
       "inputs": [
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TRIM",
       "inputs": [
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TRIM",
@@ -12197,7 +12197,7 @@
       "inputs": [
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TRIM",
@@ -12219,7 +12219,7 @@
         "scalar",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12227,7 +12227,7 @@
         "scalar",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12235,7 +12235,7 @@
         "scalar",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12243,7 +12243,7 @@
         "scalar",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12267,7 +12267,7 @@
         "boolean",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12275,7 +12275,7 @@
         "boolean",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12283,7 +12283,7 @@
         "boolean",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12291,7 +12291,7 @@
         "boolean",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12315,7 +12315,7 @@
         "string",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12323,7 +12323,7 @@
         "string",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12339,7 +12339,7 @@
         "string",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12363,7 +12363,7 @@
         "vector",
         "scalar"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12371,7 +12371,7 @@
         "vector",
         "boolean"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12379,7 +12379,7 @@
         "vector",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -12387,7 +12387,7 @@
         "vector",
         "vector"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "TOKENIZE",
@@ -13356,7 +13356,7 @@
         "scalar",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "DEF",
@@ -13404,7 +13404,7 @@
         "boolean",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "DEF",
@@ -13452,7 +13452,7 @@
         "string",
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:valueShape"
     },
     {
       "word": "DEF",
@@ -13641,7 +13641,7 @@
       "inputs": [
         "string"
       ],
-      "outcome": "error:unknown"
+      "outcome": "error:typoOrUnknownName"
     },
     {
       "word": "DEL",

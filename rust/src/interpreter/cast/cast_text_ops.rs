@@ -25,7 +25,7 @@ fn type_name_of(val: &Value) -> &'static str {
 fn pop_string(interp: &mut Interpreter, word: &str) -> Result<String> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     if val.is_nil() {
-        let err = AjisaiError::from(format!("{}: expected String, got Nil", word));
+        let err = AjisaiError::declared("nonText", format!("{}: expected String, got Nil", word));
         interp.stack.push(val);
         return Err(err);
     }
@@ -34,44 +34,16 @@ fn pop_string(interp: &mut Interpreter, word: &str) -> Result<String> {
     }
     let tn = type_name_of(&val);
     interp.stack.push(val);
-    Err(AjisaiError::from(format!(
-        "{}: expected String, got {}",
-        word, tn
-    )))
-}
-
-enum TrimSide {
-    Both,
-    Left,
-    Right,
-}
-
-fn apply_trim(side: &TrimSide, s: &str) -> String {
-    match side {
-        TrimSide::Both => s.trim().to_string(),
-        TrimSide::Left => s.trim_start().to_string(),
-        TrimSide::Right => s.trim_end().to_string(),
-    }
-}
-
-fn op_trim_generic(interp: &mut Interpreter, word: &str, side: TrimSide) -> Result<()> {
-    let s = pop_string(interp, word)?;
-    interp
-        .stack
-        .push(Value::from_string(&apply_trim(&side, &s)));
-    Ok(())
+    Err(AjisaiError::declared(
+        "nonText",
+        format!("{}: expected String, got {}", word, tn),
+    ))
 }
 
 pub fn op_trim(interp: &mut Interpreter) -> Result<()> {
-    op_trim_generic(interp, "TRIM", TrimSide::Both)
-}
-
-pub fn op_trim_left(interp: &mut Interpreter) -> Result<()> {
-    op_trim_generic(interp, "TRIM-LEFT", TrimSide::Left)
-}
-
-pub fn op_trim_right(interp: &mut Interpreter) -> Result<()> {
-    op_trim_generic(interp, "TRIM-RIGHT", TrimSide::Right)
+    let s = pop_string(interp, "TRIM")?;
+    interp.stack.push(Value::from_string(s.trim()));
+    Ok(())
 }
 
 pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
@@ -91,24 +63,31 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     };
 
     if src_val.is_nil() {
-        let err = AjisaiError::from("TOKENIZE: expected String, got Nil");
+        let err = AjisaiError::declared("nonText", "TOKENIZE: expected String, got Nil");
         restore(interp, src_val, sep_val);
         return Err(err);
     }
     if sep_val.is_nil() {
-        let err = AjisaiError::from("TOKENIZE: expected separator String, got Nil");
+        let err = AjisaiError::declared(
+            "nonTextSeparator",
+            "TOKENIZE: expected separator String, got Nil",
+        );
         restore(interp, src_val, sep_val);
         return Err(err);
     }
     if !is_string_value(&src_val) {
         let tn = type_name_of(&src_val);
-        let err = AjisaiError::from(format!("TOKENIZE: expected String, got {}", tn));
+        let err =
+            AjisaiError::declared("nonText", format!("TOKENIZE: expected String, got {}", tn));
         restore(interp, src_val, sep_val);
         return Err(err);
     }
     if !is_string_value(&sep_val) {
         let tn = type_name_of(&sep_val);
-        let err = AjisaiError::from(format!("TOKENIZE: expected separator String, got {}", tn));
+        let err = AjisaiError::declared(
+            "nonTextSeparator",
+            format!("TOKENIZE: expected separator String, got {}", tn),
+        );
         restore(interp, src_val, sep_val);
         return Err(err);
     }
@@ -117,7 +96,11 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     let sep = value_as_string(&sep_val).unwrap_or_default();
 
     if sep.is_empty() {
-        let err = AjisaiError::from("TOKENIZE: separator must be non-empty");
+        // Not `nonTextSeparator`: the separator *is* Text, it just carries no
+        // content to split on. TOKENIZE's contract does not name this
+        // condition, so `StructureError` is the honest fallback rather than
+        // reusing a type-mismatch category for a value-domain one.
+        let err = AjisaiError::create_structure_error("a non-empty separator", "the empty string");
         restore(interp, src_val, sep_val);
         return Err(err);
     }

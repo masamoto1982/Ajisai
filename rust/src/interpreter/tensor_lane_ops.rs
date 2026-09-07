@@ -93,7 +93,13 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
 {
     if a.is_nil() || b.is_nil() {
-        return Err(AjisaiError::from("Cannot broadcast NIL values"));
+        // Defensive: callers pass through a NIL operand before reaching here
+        // (LANG.FAILURE.PASSTHROUGH), so this is an invariant guard rather
+        // than a condition any Word's contract names.
+        return Err(AjisaiError::create_structure_error(
+            "two non-NIL operands to broadcast",
+            "a NIL operand",
+        ));
     }
 
     if rectangular_shape(a).is_none() || rectangular_shape(b).is_none() {

@@ -188,6 +188,19 @@ class AjisaiInterpreter {
         const ret = wasm.ajisaiinterpreter_lookup_word_definition(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
+    /**
+     * A User Word's `#:contract`-derived description, for a host affordance
+     * like the Dictionary panel's hover — never checked against the Word's
+     * actual behavior (that stays a CLI-only, opt-in `check --contract`).
+     * @param {string} name
+     * @returns {any}
+     */
+    lookup_word_description(name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ajisaiinterpreter_lookup_word_description(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
     constructor() {
         const ret = wasm.ajisaiinterpreter_new();
         this.__wbg_ptr = ret;
@@ -638,7 +651,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 164, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 163, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014);
             return ret;
         },

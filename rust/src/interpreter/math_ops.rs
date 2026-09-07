@@ -37,7 +37,10 @@ fn lift_unary_numeric(value: &Value, scalar_op: &dyn Fn(&Value) -> Result<Value>
 fn neg_scalar(value: &Value) -> Result<Value> {
     match exact_real_of(value) {
         Some(er) => Ok(Value::from_exact_real(er.neg())),
-        None => Err(AjisaiError::from("NEG: expected a number")),
+        None => Err(AjisaiError::declared(
+            "nonNumeric",
+            "NEG: expected a number",
+        )),
     }
 }
 

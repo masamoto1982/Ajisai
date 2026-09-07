@@ -11,9 +11,10 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     let Some(text) = val.as_text() else {
         let got = describe_domain(&val);
         interp.stack.push(val);
-        return Err(AjisaiError::from(format!(
-            "CHARS: expected String, got {got}"
-        )));
+        return Err(AjisaiError::declared(
+            "nonText",
+            format!("CHARS: expected String, got {got}"),
+        ));
     };
 
     let chars: Vec<Value> = text
@@ -30,9 +31,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     let Some(children) = val.as_vector_view().map(|v| v.into_owned()) else {
         let got = describe_domain(&val);
         interp.stack.push(val);
-        return Err(AjisaiError::from(format!(
-            "JOIN: expected Vector, got {got}"
-        )));
+        return Err(AjisaiError::declared(
+            "nonTextVector",
+            format!("JOIN: expected Vector, got {got}"),
+        ));
     };
 
     let mut result = String::new();
@@ -54,10 +56,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 }
                 None => {
                     interp.stack.push(val);
-                    return Err(AjisaiError::from(format!(
-                        "JOIN: invalid character code at index {}",
-                        i
-                    )));
+                    return Err(AjisaiError::declared(
+                        "nonTextElement",
+                        format!("JOIN: invalid character code at index {}", i),
+                    ));
                 }
             }
         }
@@ -70,10 +72,13 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             "other format"
         };
         interp.stack.push(val);
-        return Err(AjisaiError::from(format!(
-            "JOIN: all elements must be strings, found {} at index {}",
-            type_name, i
-        )));
+        return Err(AjisaiError::declared(
+            "nonTextElement",
+            format!(
+                "JOIN: all elements must be strings, found {} at index {}",
+                type_name, i
+            ),
+        ));
     }
 
     interp.stack.push(Value::from_string(&result));

@@ -118,17 +118,17 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
     match reason {
         NilReason::DivisionByZero => Some(ErrorCategory::DivisionByZero),
         NilReason::IndexOutOfBounds => Some(ErrorCategory::IndexOutOfBounds),
+        // No `ErrorCategory` names a domain miss or an unavailable diagnostic,
+        // and inventing one would add a category with no `AjisaiError` behind
+        // it — `None` here means the trace's `category` evidence is simply
+        // absent, not a catch-all category standing in for it.
         NilReason::MissingField
         | NilReason::InvalidEncoding
         | NilReason::Undecidable
         | NilReason::SpaceExhausted
-        // No `ErrorCategory` names a domain miss or an unavailable diagnostic,
-        // and inventing one would add a category with no `AjisaiError` behind
-        // it. `Custom` is where every reason without a matching error variant
-        // already lands.
         | NilReason::DomainMiss
         | NilReason::NotAvailable
-        | NilReason::Literal => Some(ErrorCategory::Custom),
+        | NilReason::Literal => None,
     }
 }
 
@@ -274,7 +274,7 @@ impl Interpreter {
             }
             match &execute_tokens[i] {
                 Token::Number(n) => {
-                    let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
+                    let frac = Fraction::from_str(n).map_err(AjisaiError::MalformedSource)?;
                     self.stack
                         .push_with_role(create_number_value(frac), Interpretation::RawNumber);
                 }
@@ -393,15 +393,18 @@ impl Interpreter {
                 }
                 Token::CondClauseSep => {
                     // ControlDirective: '|' -> COND-CLAUSE (see surface_forms.rs).
-                    return Err(AjisaiError::from(
+                    return Err(AjisaiError::MalformedSource(
                         "Unexpected '|' separator outside COND clause parsing. \
-                         '|' is control directive sugar for COND-CLAUSE and is meaningful only inside a COND expression.",
+                         '|' is control directive sugar for COND-CLAUSE and is meaningful only inside a COND expression."
+                            .to_string(),
                     ));
                 }
 
                 Token::LineBreak => {}
                 Token::VectorEnd => {
-                    return Err(AjisaiError::from("Unexpected vector end"));
+                    return Err(AjisaiError::MalformedSource(
+                        "Unexpected vector end".to_string(),
+                    ));
                 }
             }
             i += 1;

@@ -254,7 +254,8 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         Some(c) if c > 0 => c,
         _ => {
             interp.stack.push(count_val);
-            return Err(AjisaiError::from(
+            return Err(AjisaiError::declared(
+                "invalidCount",
                 "COLLECT count must be a positive integer",
             ));
         }

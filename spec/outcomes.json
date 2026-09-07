@@ -171,7 +171,7 @@
     {
       "id": "nonTextElement",
       "kind": "declared",
-      "documentation": "JOIN met a vector element that is not Text."
+      "documentation": "JOIN met a vector element that cannot serve as text content — not Text, and not a number that decodes to a character code."
     },
     {
       "id": "nonTextSeparator",
@@ -181,7 +181,7 @@
     {
       "id": "nonTextVector",
       "kind": "declared",
-      "documentation": "JOIN's vector operand contains a non-Text element at the top level (distinct from nonTextElement's per-element framing)."
+      "documentation": "JOIN's operand is not a Vector at all (the top-level shape check, despite the name — distinct from nonTextElement's per-element check)."
     },
     {
       "id": "nonTruthGuard",
