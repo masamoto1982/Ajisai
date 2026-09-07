@@ -86,7 +86,7 @@ async fn nil_passthrough_preserves_reason_through_arithmetic_pipeline() {
 async fn nil_passthrough_preserves_full_absence_metadata() {
     let mut interp = Interpreter::new();
     let nil = Value::nil_with_absence(AbsenceMetadata::with_reason(
-        NilReason::ExecutionFailure,
+        NilReason::NotAvailable,
         AbsenceOrigin::HostEnvironment,
         Recoverability::Retryable,
     ));
@@ -97,7 +97,7 @@ async fn nil_passthrough_preserves_full_absence_metadata() {
     let absence = interp.get_stack()[0]
         .absence_metadata()
         .expect("passthrough NIL keeps absence metadata");
-    assert_eq!(absence.reason, Some(NilReason::ExecutionFailure));
+    assert_eq!(absence.reason, Some(NilReason::NotAvailable));
     assert_eq!(absence.origin, AbsenceOrigin::HostEnvironment);
     assert_eq!(absence.recoverability, Recoverability::Retryable);
 }

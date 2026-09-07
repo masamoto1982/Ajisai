@@ -118,13 +118,8 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
     match reason {
         NilReason::DivisionByZero => Some(ErrorCategory::DivisionByZero),
         NilReason::IndexOutOfBounds => Some(ErrorCategory::IndexOutOfBounds),
-        NilReason::StackUnderflow => Some(ErrorCategory::StackUnderflow),
-        NilReason::UnknownWord => Some(ErrorCategory::UnknownWord),
-        NilReason::EmptySequence
-        | NilReason::MissingField
+        NilReason::MissingField
         | NilReason::InvalidEncoding
-        | NilReason::InvalidLens
-        | NilReason::ExecutionFailure
         | NilReason::Undecidable
         | NilReason::SpaceExhausted
         // No `ErrorCategory` names a domain miss or an unavailable diagnostic,

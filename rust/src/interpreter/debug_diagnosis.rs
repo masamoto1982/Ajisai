@@ -314,17 +314,12 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         // "the program is wrong" — the distinction `ResourceLimit` exists for.
         NilReason::SpaceExhausted | NilReason::Undecidable => CauseClass::ResourceLimit,
         NilReason::IndexOutOfBounds => CauseClass::Index,
-        NilReason::MissingField | NilReason::InvalidEncoding | NilReason::InvalidLens => {
-            CauseClass::ValueShape
-        }
-        NilReason::StackUnderflow => CauseClass::StackShape,
-        NilReason::UnknownWord => CauseClass::TypoOrUnknownName,
+        NilReason::MissingField | NilReason::InvalidEncoding => CauseClass::ValueShape,
         NilReason::NotAvailable => CauseClass::Environment,
-        NilReason::ExecutionFailure => CauseClass::UserLogic,
         // Absence that no operation produced — a `NIL` in source, or one that
         // has passed through a dense lane, which carries presence but no
         // reason. Nothing is wrong; a NIL is simply flowing.
-        NilReason::EmptySequence | NilReason::Literal => CauseClass::NilFlow,
+        NilReason::Literal => CauseClass::NilFlow,
     }
 }
 
