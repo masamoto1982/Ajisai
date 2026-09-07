@@ -65,9 +65,9 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
             if !is_keep_mode {
                 interp.stack.push(target_val);
             }
-            return Err(AjisaiError::create_structure_error(
-                "vector",
-                "other format",
+            return Err(AjisaiError::declared(
+                "nonVector",
+                "LENGTH: expected a Vector, got a non-vector value",
             ));
         }
     };

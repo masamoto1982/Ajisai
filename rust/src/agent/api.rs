@@ -108,7 +108,7 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
             report: error_report(
                 &interp,
                 &diagnosis,
-                None,
+                Some(&ErrorCategory::MalformedSource),
                 message,
                 Vec::new(),
                 Vec::new(),
@@ -156,7 +156,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
                 report: error_report(
                     &interp,
                     &diagnosis,
-                    None,
+                    Some(&ErrorCategory::MalformedSource),
                     message,
                     Vec::new(),
                     Vec::new(),

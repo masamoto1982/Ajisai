@@ -233,17 +233,18 @@ mod attribution_tests {
         assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
     }
 
-    /// Each half of `expected _, got _` is a noun phrase. `SORT` used to pass a
-    /// whole sentence as the first half, so the rendering read "expected SORT:
-    /// expected vector, got non-vector value, got other format".
-    #[tokio::test]
-    async fn a_structure_error_renders_as_one_sentence() {
-        let mut interp = Interpreter::new();
-        let message = interp
-            .execute("5 SORT")
-            .await
-            .expect_err("SORT on a scalar fails")
-            .to_string();
+    /// Each half of `expected _, got _` is a noun phrase, never a whole
+    /// sentence — a raise site that passed a sentence as the first half used
+    /// to render "expected SORT: expected vector, got non-vector value, got
+    /// other format". `SORT` itself no longer reaches this path (its
+    /// non-vector operand now names the declared condition `nonVector`
+    /// directly), so this exercises `create_structure_error`'s own rendering
+    /// discipline instead of routing through a specific Word.
+    #[test]
+    fn a_structure_error_renders_as_one_sentence() {
+        let message =
+            crate::error::AjisaiError::create_structure_error("vector", "non-vector value")
+                .to_string();
         assert_eq!(
             message,
             "Structure error: expected vector, got non-vector value"

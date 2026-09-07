@@ -604,6 +604,31 @@ Phase 3 で実測した限り、**もう一種類の「目撃者なし」があ�
 （`rust/` を直すのは Phase 3・Phase 4 のどちらのホワイトリストにも無い）。
 着手前にこの ID の扱いを最初に決めること。
 
+**追記（Phase 4 実施中の判断）**: 上記は Phase 3 執筆時点の分析だが、Phase 4 の
+非空虚性調査で `nonInteger` を含む同型のバグが `nonVector` 系 19 語をはじめ
+広範囲（`nonTruthValue`・`negativeCount`・`malformedSource`・`invalidIndex`・
+`protectedWord`・`nameIsAWord`・`notExecutable` 等）に及ぶことが判明した。
+ユーザーの承認（「全部直す」）を得て、ホワイトリストの制約を Phase 4 自身への
+承認として解除し、`rust/` の該当する raise site を宣言どおりに修正した
+（各語の raise site が生成する `AjisaiError::create_structure_error` を、
+その語自身が宣言する `AjisaiError::declared(条件, …)` に置き換える、または
+共有ヘルパーの場合は呼び出し側にローカルなラッパーを追加する方式。共有ヘルパーが
+複数の異なる語彙を持つ呼び出し元に使われている場合は、ヘルパー自体を直さず
+ラッパーで対応する——Phase 2/4 の `nonInteger` 修正で確立した方式を踏襲）。
+結果、`nonInteger` はこの追記時点で `PUT`/`RANDOM` 双方から正しく目撃可能になっている。
+
+一方で、同じ Phase 4 の調査で見つかった `missingFollowingSourceUnit`（`OR-NIL`）と
+`nestedExecutionError`（`EXEC`）の 2 件は、性質が異なると判断し**削除**した:
+実装コード自身のコメントが「後続 source unit がない場合は no-op スキップとする」
+（`OR-NIL`）・「ブロック内の例外は元のカテゴリのまま透過させ attribution だけ
+ブロック側に付ける」（`EXEC`）という設計を明言しており、`SPECIFICATION.html` も
+どちらの場合にもエラーを要求していない。前者を宣言どおりに直すとプログラムの
+実行結果が変わり（no-op → ERROR）、後者を直すと診断精度が低下する
+（具体的な原因カテゴリを失って `nestedExecutionError` に潰れる）。単純な配線
+ミスではなく言語仕様側の選択が必要と判断し、ユーザーに確認のうえ
+`spec/words.json` の該当 `errorWhen` と `spec/outcomes.json` の該当エントリを
+削除する側を選んだ（実装は変更していない）。
+
 したがって目撃者は **2 つの源**を持つ: 全数表と、手書きの
 `spec/outcome-witnesses.json`。ゲートは「**いずれかに目撃者があること**」を要求する。
 **片方だけを見るゲートを書かないこと。**

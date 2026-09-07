@@ -274,7 +274,17 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
                         .unwrap_or(NilReason::Literal),
                 ));
             }
-            match compare_scalar_pair(a_val, b_val, kind)? {
+            // A structurally non-comparable operand is `unsupportedComparison`
+            // here — every caller of `lift_comparison` (EQ/NEQ/LT/LTE/GT/GTE)
+            // declares it uniformly, unlike `three_way_compare`'s callers
+            // (SORT/ORDER vs. MIN/MAX/ABS), which need different remaps in
+            // their own files.
+            match compare_scalar_pair(a_val, b_val, kind).map_err(|e| match e {
+                AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
+                    AjisaiError::declared("unsupportedComparison", "expected comparable operands")
+                }
+                other => other,
+            })? {
                 ScalarCmp::Decided(b) => Ok(Value::from_bool(b)),
                 ScalarCmp::Undecided => Ok(undecidable_truth_value()),
             }

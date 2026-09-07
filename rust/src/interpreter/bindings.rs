@@ -144,25 +144,31 @@ impl Interpreter {
             ));
         }
         if let Some(message) =
-            crate::interpreter::naming_convention_checker::check_reserved_word_name(name)
+            crate::interpreter::naming_convention_checker::check_reserved_word_name(name, "bind")
         {
             return Err(AjisaiError::create_structure_error(
                 "a name not reserved as a Core alias or syntax",
-                &message.replace("define", "bind"),
+                &message,
             ));
         }
         let upper = name.to_uppercase();
         if self.core_vocabulary.contains_key(&upper) {
-            return Err(AjisaiError::NameConflict(format!(
-                "Cannot bind '{}': it is a Core Word, and a binding may not shadow one.",
-                upper
-            )));
+            return Err(AjisaiError::declared(
+                "nameIsAWord",
+                format!(
+                    "Cannot bind '{}': it is a Core Word, and a binding may not shadow one.",
+                    upper
+                ),
+            ));
         }
         if self.user_words.contains_key(&upper) {
-            return Err(AjisaiError::NameConflict(format!(
-                "Cannot bind '{}': it is a User Word. Delete it first, or bind another name.",
-                upper
-            )));
+            return Err(AjisaiError::declared(
+                "nameIsAWord",
+                format!(
+                    "Cannot bind '{}': it is a User Word. Delete it first, or bind another name.",
+                    upper
+                ),
+            ));
         }
         Ok(())
     }

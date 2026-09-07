@@ -46,9 +46,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(target_val);
         }
         interp.stack.push(code_val);
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
+        return Err(AjisaiError::declared(
+            "nonVector",
+            "MAP: expected a Vector, got a non-vector value",
         ));
     }
 

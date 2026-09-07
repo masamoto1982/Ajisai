@@ -52,9 +52,9 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(target_val);
         }
         interp.stack.push(code_val);
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
+        return Err(AjisaiError::declared(
+            "nonVector",
+            "ANY: expected a Vector, got a non-vector value",
         ));
     }
 

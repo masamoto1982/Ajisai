@@ -12,6 +12,24 @@ fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
 }
 
+/// `three_way_compare`, with a non-numeric operand reclassified as
+/// `nonNumeric` — ABS and MIN/MAX are the only callers of `three_way_compare`
+/// in this file, and both declare `nonNumeric`; SORT/ORDER's own wrapper in
+/// `sort.rs` remaps the same shared function's error to `nonComparableElement`
+/// instead, since a shared function cannot know which caller it is (Phase 2's
+/// lesson, repeated by Phase 4's `nonInteger`/`nonComparableElement` fixes).
+fn compare_for_numeric(
+    a: &Value,
+    b: &Value,
+) -> Result<crate::interpreter::comparison::OrderOutcome> {
+    match crate::interpreter::comparison::three_way_compare(a, b) {
+        Err(AjisaiError::StructureError { expected, .. }) if expected == "scalar value" => {
+            Err(AjisaiError::declared("nonNumeric", "expected a number"))
+        }
+        other => other,
+    }
+}
+
 /// Apply a unary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
 ///
 /// The clause makes element-wise application the rule for an arithmetic Word
@@ -52,7 +70,7 @@ fn neg_scalar(value: &Value) -> Result<Value> {
 /// perfectly well-formed, ABS's output domain is numeric, not truth.
 fn abs_scalar(value: &Value) -> Result<Value> {
     let zero = Value::from_fraction(Fraction::from(0));
-    match crate::interpreter::comparison::three_way_compare(value, &zero)? {
+    match compare_for_numeric(value, &zero)? {
         crate::interpreter::comparison::OrderOutcome::Decided(std::cmp::Ordering::Less) => {
             let er = exact_real_of(value).expect("comparable operand is numeric");
             Ok(Value::from_exact_real(er.neg()))
@@ -248,7 +266,7 @@ where
     }
     let operands = extract_operands(interp, 2)?;
     let select = |a: &Value, b: &Value| -> Result<Value> {
-        match crate::interpreter::comparison::three_way_compare(a, b)? {
+        match compare_for_numeric(a, b)? {
             crate::interpreter::comparison::OrderOutcome::Decided(ord) => {
                 Ok(if pick_left(ord) { a.clone() } else { b.clone() })
             }

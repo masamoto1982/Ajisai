@@ -51,9 +51,9 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         }
         interp.stack.push(init_val);
         interp.stack.push(code_val);
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
+        return Err(AjisaiError::declared(
+            "nonVector",
+            "FOLD: expected a Vector, got a non-vector value",
         ));
     }
 

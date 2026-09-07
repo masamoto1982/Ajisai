@@ -28,9 +28,9 @@ where
             interp.stack.push(target_val);
         }
         interp.stack.push(arg_to_restore.clone());
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
+        return Err(AjisaiError::declared(
+            "nonVector",
+            "expected a Vector, got a non-vector value",
         ));
     }
 
@@ -68,9 +68,9 @@ where
         if !preserve_source {
             interp.stack.push(target_val);
         }
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
+        return Err(AjisaiError::declared(
+            "nonVector",
+            "expected a Vector, got a non-vector value",
         ));
     }
 

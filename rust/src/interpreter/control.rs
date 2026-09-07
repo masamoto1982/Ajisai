@@ -26,9 +26,9 @@ pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
 
     let Some(elements) = target.as_vector_view() else {
         interp.stack.push(target);
-        return Err(AjisaiError::create_structure_error(
-            "code block",
-            "non-code value",
+        return Err(AjisaiError::declared(
+            "notExecutable",
+            "EXEC: expected a Vector ([ ... ]) as the code operand, got another value",
         ));
     };
     let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements) {

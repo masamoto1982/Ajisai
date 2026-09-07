@@ -793,7 +793,7 @@ Evaluate a code block.
 - **Effects:** none
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
 - **Syntax:** `[ 1 2 ADD ] EXEC`
-- **ERROR conditions:** `notExecutable`, `nestedExecutionError`
+- **ERROR conditions:** `notExecutable`
 
 ## `PROBE`
 
@@ -860,7 +860,6 @@ Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
 - **Syntax:** `NIL OR-NIL [ 0 ]`
-- **ERROR conditions:** `missingFollowingSourceUnit`
 
 ## `KEEP`
 

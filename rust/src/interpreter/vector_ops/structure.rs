@@ -105,9 +105,9 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(operand);
             }
         }
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
+        return Err(AjisaiError::declared(
+            "nonVector",
+            "CONCAT: expected two Vectors, got a non-vector operand",
         ));
     }
 
@@ -243,9 +243,9 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         Ok(bi) => bi,
         Err(_) => {
             interp.stack.push(count_val);
-            return Err(AjisaiError::create_structure_error(
-                "integer",
-                "other format",
+            return Err(AjisaiError::declared(
+                "invalidCount",
+                "COLLECT: expected an integer count, got another format",
             ));
         }
     };

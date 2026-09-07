@@ -62,10 +62,6 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "selfReferentialDefinition"
         | "nameIsAWord" => CauseClass::ContractViolation,
         "wordNotFound" => CauseClass::TypoOrUnknownName,
-        // The block ran and raised. The fault is inside it, not in the Word
-        // that applied it.
-        "nestedExecutionError" => CauseClass::UserLogic,
-        "missingFollowingSourceUnit" => CauseClass::SourceForm,
         _ => CauseClass::Unknown,
     }
 }

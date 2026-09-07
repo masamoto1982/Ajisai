@@ -4,6 +4,25 @@ use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::Value;
 
+/// `extract_integer_from_value`, with a structurally malformed index operand
+/// reclassified as the declared `invalidIndex` — GET's own condition for "not
+/// itself a well-formed index (non-integer, wrong shape)", distinct from
+/// `indexOutOfBounds` (a well-formed index outside bounds, which is a NIL
+/// projection, not this ERROR). The shared helper also serves TAKE, COLLECT,
+/// and (via local wrappers of their own) PUT/RANDOM, none of which declare
+/// `invalidIndex`, so the remap belongs here rather than in the helper
+/// itself (the same shared-helper lesson as `nonInteger`'s `PUT`/`RANDOM`
+/// fix).
+fn require_index_operand(value: &Value) -> Result<i64> {
+    match extract_integer_from_value(value) {
+        Err(AjisaiError::StructureError { got, .. }) => Err(AjisaiError::declared(
+            "invalidIndex",
+            format!("GET: expected a well-formed index, got {}", got),
+        )),
+        other => other,
+    }
+}
+
 /// Every index the operand names, in the order it names them.
 ///
 /// The index operand is written as a Vector (`[ 0 ]`), so a Vector of several
@@ -22,17 +41,20 @@ fn index_list(value: &Value) -> Result<Vec<i64>> {
     let count = match &value.data {
         crate::types::ValueData::Vector(children) => children.len(),
         crate::types::ValueData::Tensor { data, .. } => data.len(),
-        _ => return Ok(vec![extract_integer_from_value(value)?]),
+        _ => return Ok(vec![require_index_operand(value)?]),
     };
     if count <= 1 {
-        return Ok(vec![extract_integer_from_value(value)?]);
+        return Ok(vec![require_index_operand(value)?]);
     }
     (0..count)
         .map(|position| {
-            let child = value
-                .child(position)
-                .ok_or_else(|| AjisaiError::create_structure_error("integer", "absent element"))?;
-            extract_integer_from_value(&child)
+            let child = value.child(position).ok_or_else(|| {
+                AjisaiError::declared(
+                    "invalidIndex",
+                    "GET: expected a well-formed index, got an absent element",
+                )
+            })?;
+            require_index_operand(&child)
         })
         .collect()
 }
@@ -72,9 +94,9 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(target_val);
         }
         interp.stack.push(index_val);
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
+        return Err(AjisaiError::declared(
+            "nonVector",
+            "GET: expected a Vector, got a non-vector value",
         ));
     }
 
