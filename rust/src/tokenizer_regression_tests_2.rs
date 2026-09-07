@@ -161,9 +161,25 @@ mod tokenizer_regression_tests_2 {
         );
     }
 
+    /// `[` and `]` are reserved structural words: like every other Ajisai
+    /// word — and like Forth's own `[` and `]` — they must stand alone,
+    /// separated by whitespace. Whitespace is the sole token delimiter
+    /// (LANG.SOURCE.TEXT), so a bracket glued to anything else is a source
+    /// error asking for the missing space, not an implicit split.
     #[test]
-    fn test_bracket_without_space() {
-        let result = tokenize("[1]").unwrap();
+    fn test_bracket_without_space_is_rejected() {
+        for glued in ["[1]", "[1 2 3]", "[[1][2]]", "[1 2]+[3 4]"] {
+            let err = tokenize(glued).unwrap_err();
+            assert!(
+                err.contains("must stand alone"),
+                "`{glued}` should be rejected for missing whitespace, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_bracket_with_space_still_works() {
+        let result = tokenize("[ 1 ]").unwrap();
         assert_eq!(
             result,
             vec![
@@ -173,7 +189,7 @@ mod tokenizer_regression_tests_2 {
             ]
         );
 
-        let result2 = tokenize("[1 2 3]").unwrap();
+        let result2 = tokenize("[ 1 2 3 ]").unwrap();
         assert_eq!(
             result2,
             vec![
@@ -185,7 +201,7 @@ mod tokenizer_regression_tests_2 {
             ]
         );
 
-        let result3 = tokenize("[[1][2]]").unwrap();
+        let result3 = tokenize("[ [ 1 ] [ 2 ] ]").unwrap();
         assert_eq!(
             result3,
             vec![
@@ -200,7 +216,7 @@ mod tokenizer_regression_tests_2 {
             ]
         );
 
-        let result4 = tokenize("[1 2]+[3 4]").unwrap();
+        let result4 = tokenize("[ 1 2 ] + [ 3 4 ]").unwrap();
         assert_eq!(
             result4,
             vec![

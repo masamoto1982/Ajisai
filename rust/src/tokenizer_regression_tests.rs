@@ -35,16 +35,20 @@ mod tokenizer_regression_tests {
         assert_eq!(result, vec![Token::Number("1".into()),]);
     }
 
+    /// `#` starts a comment only at a fresh word boundary — whitespace is the
+    /// sole token delimiter, so `#` glued to a preceding lexeme is just part
+    /// of that one word, not a comment start. Matches Forth's own comment
+    /// word, which likewise needs a space before it.
     #[test]
-    fn test_comment_adjacent_to_number() {
+    fn test_comment_glued_to_number_is_one_symbol() {
         let result = tokenize("123#comment").unwrap();
-        assert_eq!(result, vec![Token::Number("123".into()),]);
+        assert_eq!(result, vec![Token::Symbol("123#comment".into()),]);
     }
 
     #[test]
-    fn test_comment_adjacent_to_fraction() {
+    fn test_comment_glued_to_fraction_is_one_symbol() {
         let result = tokenize("1/3#これはコメント").unwrap();
-        assert_eq!(result, vec![Token::Number("1/3".into()),]);
+        assert_eq!(result, vec![Token::Symbol("1/3#これはコメント".into()),]);
     }
 
     #[test]
@@ -113,9 +117,18 @@ mod tokenizer_regression_tests {
         );
     }
 
+    /// `[` and `]` must stand alone, whitespace-delimited like every other
+    /// word — a bracket glued to a string literal is a source error, not an
+    /// implicit split.
+    #[test]
+    fn test_bracket_glued_to_quote_is_rejected() {
+        let err = tokenize("['test']").unwrap_err();
+        assert!(err.contains("must stand alone"), "got: {err}");
+    }
+
     #[test]
     fn test_flexible_quotes_with_bracket_delimiter() {
-        let result = tokenize("['test']").unwrap();
+        let result = tokenize("[ 'test' ]").unwrap();
         assert_eq!(
             result,
             vec![

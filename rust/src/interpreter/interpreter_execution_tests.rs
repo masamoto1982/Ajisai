@@ -8,7 +8,7 @@ mod tests {
     async fn test_simple_addition() {
         let mut interp = Interpreter::new();
 
-        let code = "[2] [3] +";
+        let code = "[ 2 ] [ 3 ] +";
 
         let result = interp.execute(code).await;
         assert!(
@@ -25,7 +25,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let code = r#"
-[ [2] [3] + ] 'ADDTEST' DEF
+[ [ 2 ] [ 3 ] + ] 'ADDTEST' DEF
 ADDTEST
 "#;
 
@@ -41,7 +41,7 @@ ADDTEST
     async fn test_default_line_without_colon() {
         let mut interp = Interpreter::new();
 
-        let code = "[5] [3] +";
+        let code = "[ 5 ] [ 3 ] +";
 
         let result = interp.execute(code).await;
         assert!(
@@ -96,8 +96,8 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         let code = r#"
-[1] [2] +
-[3] *
+[ 1 ] [ 2 ] +
+[ 3 ] *
 "#;
 
         let result = interp.execute(code).await;
@@ -130,8 +130,8 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         let code = r#"
-[10] [20] +
-[5] *
+[ 10 ] [ 20 ] +
+[ 5 ] *
 "#;
 
         let result = interp.execute(code).await;

@@ -230,7 +230,15 @@ export const createGUI = (): GUI => {
         });
 
         executionController = createExecutionController(INTERPRETER_CLIENT.getRequired(), {
-            extractEditorValue: () => editor.extractValue(),
+            // Step mode (the sole consumer of this callback) splits the
+            // extracted source on whitespace and feeds each piece to the
+            // interpreter on its own — the same whitespace-only split the
+            // tokenizer itself now requires around `[` and `]` (SPEC
+            // LANG.SOURCE.TEXT). Formatting first, exactly like `runEditorCode`
+            // already does for a normal run, guarantees every piece is one the
+            // tokenizer accepts even when the author wrote brackets glued to
+            // other text.
+            extractEditorValue: () => { editor.format(); return editor.extractValue(); },
             clearEditor: (switchView) => { editor.clear(switchView); },
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),

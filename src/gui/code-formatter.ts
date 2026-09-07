@@ -23,37 +23,37 @@
 
 const INDENT_UNIT = '  ';
 
-// Characters that are always their own token in Ajisai source and can never be
-// part of a word or number. This is tokenizer.rs::is_structural_char: only the
-// bracket family. Every other punctuation character — including `|` (the COND
-// clause separator) and `^` — obeys the ordinary word-boundary rule instead:
-// it ends a token only where whitespace, a bracket, or a comment already would,
-// so it is glued into the surrounding word when written without a space (SPEC
-// AQ-VER-002-D/E). Forcing any of them apart here would turn one Symbol token
-// into several, which is exactly the meaning change this formatter must not
-// make. `{`/`}` were retired as source characters entirely (docs/dev/type-
-// unification-work-order-2026-08.md): `[ ]` is the sole bracket, for both
-// data and code, so they are no longer structural here either.
+// Whitespace is the sole token delimiter in Ajisai source (SPECIFICATION.html
+// LANG.SOURCE.TEXT) — the same rule Forth applies to its own words, brackets
+// and comment word included. `[` and `]` must therefore stand alone, glued to
+// nothing, exactly like every other word; the tokenizer (rust/src/tokenizer.rs)
+// rejects a bracket that touches adjacent text rather than splitting it off.
+// This formatter's job is to supply that missing whitespace proactively, so
+// messy input like `[1 2 3]` becomes valid, canonical source (`[ 1 2 3 ]`)
+// instead of a tokenizer error. Every other punctuation character — including
+// `|` (the COND clause separator) and `^` — obeys the ordinary word-boundary
+// rule instead: it ends a token only at whitespace, so it stays glued to the
+// surrounding word when written without a space (SPEC AQ-VER-002-D/E). Forcing
+// any of them apart here would turn one Symbol token into several, which is
+// exactly the meaning change this formatter must not make. `{`/`}` are not
+// valid Ajisai source characters at all (docs/dev/type-unification-work-order-
+// 2026-08.md): `[ ]` is the sole bracket, for both data and code.
 const STANDALONE_DELIMITERS = new Set(['[', ']']);
 const OPENING_BRACKETS = new Set(['[']);
 const CLOSING_BRACKETS = new Set([']']);
 
-// Mirrors tokenizer.rs::is_string_close_delimiter, which is exactly
-// tokenizer.rs::ends_token: a `'` closes a string when the next character is
-// whitespace, a structural delimiter, or `#`. `{`/`}` are included even though
-// they are no longer valid source: tokenizer.rs's `is_structural_char` still
-// treats them as token-enders (so a name or string ends cleanly at one instead
-// of a misplaced `{` being swallowed into it), which is what lets the
-// tokenizer raise its "not a valid Ajisai source character" error precisely
-// there. `>`, `=`, `|`, and `^` do NOT end a token in the real tokenizer (they
-// are ordinary word characters, resolved to a Word only after the whole token
-// is scanned), so a `'` immediately followed by one of them does not close the
-// string either — the real tokenizer keeps scanning and eventually reports an
-// unclosed literal for such input, which this formatter mirrors by refusing to
-// reformat it (see the `closed` check in scanLines).
-const STRING_CLOSE_SPECIALS = new Set(['[', ']', '{', '}', '(', ')', '#']);
+// Mirrors tokenizer.rs::is_string_close_delimiter: a `'` closes a string when
+// the next character is whitespace (or end of input, checked separately
+// below) — whitespace is the sole token delimiter, so it is the sole string
+// terminator too. Nothing else closes a string any more: `[`, `]`, `#`, `{`,
+// `}`, `(`, `)`, `>`, `=`, `|`, and `^` are all ordinary content when they
+// follow a quote without a space, so `'foo'[1]` never finds a real close and
+// the real tokenizer reports an unclosed literal for it — which this
+// formatter mirrors by refusing to reformat it (see the `closed` check in
+// scanLines) rather than confidently splitting off a `[` that was never a
+// token boundary there.
 const isStringCloseDelimiter = (ch: string | undefined): boolean =>
-    ch === undefined || /\s/.test(ch) || STRING_CLOSE_SPECIALS.has(ch);
+    ch === undefined || /\s/.test(ch);
 
 // Tokenize the whole source into lines of token strings. Strings and comments
 // are captured verbatim as single tokens; structural delimiters and words each

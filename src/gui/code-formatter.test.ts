@@ -70,6 +70,14 @@ describe('formatAjisaiSource', () => {
         expect(formatAjisaiSource("'foo'=bar")).toBe("'foo'=bar");
     });
 
+    test('leaves a string glued to a following bracket untouched', () => {
+        // Whitespace is the sole token delimiter now, so `[` no longer closes
+        // a string that runs right into it either — the real tokenizer finds
+        // no real close and reports an unclosed literal, and the formatter
+        // must refuse to reformat rather than confidently splitting off `[1]`.
+        expect(formatAjisaiSource("'foo'[1]")).toBe("'foo'[1]");
+    });
+
     test('is idempotent on already-canonical input', () => {
         const canonical = '[ [ 1 ] [ 2 ] + ] \'ADD12\' DEF';
         expect(formatAjisaiSource(canonical)).toBe(canonical);
