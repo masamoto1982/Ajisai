@@ -107,6 +107,10 @@ Whitespace separates tokens and is otherwise insignificant, with one exception, 
 </p>
 
 <p>
+Whitespace is the <em>sole</em> token delimiter — no other character splits one token from the next. This holds even for <code>[</code> and <code>]</code>: like every other Ajisai word, a bracket must stand alone, separated by whitespace on both sides, so <code>[ 1 2 3 ]</code> is well-formed source and <code>[1 2 3]</code> is not — a bracket glued to adjacent text is a source error asking for the missing space, never an implicit split. The comment marker <code>#</code> is likewise recognized only where a fresh token begins: glued to a preceding lexeme (<code>123#not-a-comment</code>) it is simply part of that one name, not a comment start. A quoted string literal is the one exception with a delimiter of its own — its closing <code>'</code> is found by the quote's own grammar, and a string may contain whitespace internally (<code>'hello world'</code>) — but the quote itself must still be reached at a whitespace boundary to open, and closes only where it is itself followed by whitespace or the end of input.
+</p>
+
+<p>
 Malformed delimiters, malformed literals, invalid names, and invalid definition forms are source errors. They do not denote NIL.
 </p>
 

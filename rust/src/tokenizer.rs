@@ -69,6 +69,10 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
 
         // SourceDirective: `#` -> COMMENT-LINE (see surface_forms.rs). Not a
         // runtime word; consumed here at the lexical level to end of line.
+        // Recognized only at a fresh word position (we only ever reach this
+        // branch right after whitespace or a completed token), exactly like
+        // Forth's own comment word — `#` glued to a preceding name is just
+        // part of that name, not a comment start.
         if chars[i] == '#' {
             let had_token_before = !tokens.is_empty() && tokens.last() != Some(&Token::LineBreak);
 
@@ -82,41 +86,10 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
             continue;
         }
 
-        // ReservedMarker: `(` -> RESERVED-BEGIN, `)` -> RESERVED-END (see
-        // surface_forms.rs). These are never runtime tokens.
-        if chars[i] == '(' || chars[i] == ')' {
-            let concept = if chars[i] == '(' {
-                "RESERVED-BEGIN"
-            } else {
-                "RESERVED-END"
-            };
-            return Err(format!(
-                "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). '[' and ']' are the sole bracket in Ajisai, for code blocks and for the continued-fraction display form alike.",
-                chars[i], concept
-            ));
-        }
-
-        // `{` and `}` are not valid Ajisai source characters: the CodeBlock/
-        // Vector unification (docs/dev/type-unification-work-order-2026-08.md)
-        // made `{ }` and `[ ]` build the identical value, and this later pass
-        // retired the second spelling rather than keep two ways to write one
-        // thing. `[` and `]` are the only bracket now, for both data and code.
-        if chars[i] == '{' || chars[i] == '}' {
-            return Err(format!(
-                "'{}' is not a valid Ajisai source character: '{{' and '}}' were retired when code blocks and vectors were unified — use '[' and ']' for both data and code.",
-                chars[i]
-            ));
-        }
-        // A structural delimiter is the only kind of character that is a token
-        // on its own. Every other character can appear inside a name, so no
-        // symbol needs lookahead and none of them splits a word.
-        if let Some(token) = structural_token(chars[i]) {
-            tokens.push(token);
-            spans.push(span_at(i));
-            i += 1;
-            continue;
-        }
-
+        // LiteralSugar: `'` -> STRING-QUOTE (see surface_forms.rs). A string
+        // can hold whitespace of its own (`'hello world'`), so it is not
+        // bounded by the ordinary word-delimiter rule below — it is its own
+        // sub-grammar, delimited by the closing quote rather than by space.
         match parse_string_from_quote(&chars[i..]) {
             QuoteParseResult::StringSuccess(token, consumed) => {
                 tokens.push(token);
@@ -131,15 +104,58 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
             QuoteParseResult::NotQuote => {}
         }
 
-        // A token runs to the next boundary. `chars[i]` is not one (whitespace,
-        // `#`, the reserved parens, the structural delimiters and the quote are
-        // all handled above), so this always consumes at least one character.
+        // Whitespace is the sole word delimiter (LANG.SOURCE.TEXT): a token
+        // runs to the next whitespace or end of input, full stop — nothing
+        // else splits it, the same rule Forth applies to its own words
+        // (including its bracket and comment words). `(` `)` `{` `}` are
+        // never valid Ajisai source characters at all, so they are rejected
+        // the moment one turns up, wherever in the word it sits — that is a
+        // character-validity rule, not a delimiter.
         let start = i;
-        while i < chars.len() && !ends_token(chars[i]) {
+        while i < chars.len() && !chars[i].is_whitespace() {
+            if chars[i] == '(' || chars[i] == ')' {
+                let concept = if chars[i] == '(' {
+                    "RESERVED-BEGIN"
+                } else {
+                    "RESERVED-END"
+                };
+                return Err(format!(
+                    "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). '[' and ']' are the sole bracket in Ajisai, for code blocks and for the continued-fraction display form alike.",
+                    chars[i], concept
+                ));
+            }
+            if chars[i] == '{' || chars[i] == '}' {
+                return Err(format!(
+                    "'{}' is not a valid Ajisai source character: '{{' and '}}' were retired when code blocks and vectors were unified — use '[' and ']' for both data and code.",
+                    chars[i]
+                ));
+            }
             i += 1;
         }
 
         let token_str: String = chars[start..i].iter().collect();
+
+        // `[` and `]` are reserved structural words: like every other Ajisai
+        // word (and like Forth's own `[` and `]`), they must stand alone,
+        // separated by whitespace. A bracket glued to anything else — `[1`,
+        // `2]`, `[[1]]` — is a source error asking for the space, rather than
+        // a silently accepted (and meaningless) name containing a bracket.
+        if token_str == "[" {
+            tokens.push(Token::VectorStart);
+            spans.push(span_at(start));
+            continue;
+        }
+        if token_str == "]" {
+            tokens.push(Token::VectorEnd);
+            spans.push(span_at(start));
+            continue;
+        }
+        if token_str.contains('[') || token_str.contains(']') {
+            return Err(format!(
+                "'{}' is not a valid token: '[' and ']' must stand alone, separated by whitespace, like every other Ajisai word (Section 3.4 / LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
+                token_str
+            ));
+        }
 
         // The token is interpreted as a whole: a number when the numeric
         // grammar accepts the entire lexeme, otherwise a name. This is why no
@@ -211,37 +227,6 @@ pub(crate) fn is_number_token_lexeme(lexeme: &str) -> bool {
 /// their canonical code-data representation uses their dedicated token tag.
 pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
-}
-
-/// The characters that build nesting rather than names: they can never be part
-/// of a word, so they delimit tokens without any whitespace around them.
-fn is_structural_char(c: char) -> bool {
-    // `{` and `}` are not valid source (see the check in `tokenize_with_spans`)
-    // but must still end a token here so a name like `ABC{` splits into a
-    // Symbol and a `{` rather than swallowing the brace into the name.
-    matches!(c, '[' | ']' | '{' | '}' | '(' | ')')
-}
-
-/// A token ends at exactly three things: whitespace, a structural delimiter, or
-/// a comment start. Nothing else can end one — every other character,
-/// punctuation included, is an ordinary name character, which is why no symbol
-/// needs lookahead and no symbol splits a word.
-///
-/// This is also the rule that closes a string literal (see
-/// [`is_string_close_delimiter`]), so source has one notion of "the token stops
-/// here" rather than one per construct.
-fn ends_token(c: char) -> bool {
-    c.is_whitespace() || is_structural_char(c) || c == '#'
-}
-
-/// The structural delimiters that are valid source. `(` and `)` are structural
-/// too but are reserved markers, rejected earlier with their own diagnostic.
-fn structural_token(c: char) -> Option<Token> {
-    match c {
-        '[' => Some(Token::VectorStart),
-        ']' => Some(Token::VectorEnd),
-        _ => None,
-    }
 }
 
 fn check_bracket_matching(input: &str) -> Result<(), String> {
@@ -357,13 +342,16 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
     QuoteParseResult::Unclosed
 }
 
-/// A quote closes the string when the next character would end a token anyway;
-/// end of input closes it too, which the callers check. A quote followed by
+/// A quote closes the string when the next character is whitespace (or end of
+/// input, which the callers check separately) — whitespace is the sole token
+/// delimiter, so it is the sole string terminator too. A quote followed by
 /// anything else is content, which is what lets a string carry an apostrophe
 /// (`'It's fine'`) in a language with no escape character and no second quote
-/// spelling.
+/// spelling; it is also why a string glued to what follows it (`'foo'[1]`,
+/// `'foo'BAR`) never closes there — the closing quote needs a space after it
+/// like every other token boundary.
 fn is_string_close_delimiter(c: char) -> bool {
-    ends_token(c)
+    c.is_whitespace()
 }
 
 /// `OR-NIL` (SPEC §6.4, core_word_aliases.rs) has no symbol or legacy-name

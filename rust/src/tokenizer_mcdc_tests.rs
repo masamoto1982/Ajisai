@@ -204,13 +204,17 @@ mod single_char_aliases {
         assert_eq!(tokens, vec![sym("a"), sym("^"), sym("b")]);
     }
 
-    /// A symbol obeys the same boundary rule as a word: only whitespace, a
-    /// structural delimiter or a comment start ends a token, so `^` glued to a
-    /// name is part of that name rather than a symbol of its own.
+    /// A symbol obeys the same boundary rule as every other word: only
+    /// whitespace ends a token, so `^` glued to a name is part of that name
+    /// rather than a symbol of its own. `[` and `]` are no exception — they
+    /// must stand alone too, so `^` glued to a closing bracket does not split
+    /// off either; it makes the whole `]^` an invalid token (SPEC 3.4).
     #[test]
     fn aq_ver_002_d_caret_needs_surrounding_whitespace() {
         assert_eq!(tokenize("a^b").unwrap(), vec![sym("a^b")]);
-        assert_eq!(tokenize("[ a ]^").unwrap()[3], sym("^"));
+        let err = tokenize("[ a ]^").unwrap_err();
+        assert!(err.contains("must stand alone"), "got: {err}");
+        assert_eq!(tokenize("[ a ] ^").unwrap()[3], sym("^"));
     }
 
     /// `~` carries no meaning, so it is an ordinary Symbol the dictionary does
@@ -245,25 +249,26 @@ mod single_char_aliases {
 }
 
 // AQ-VER-002-E
-// DUT: rust/src/tokenizer.rs:410 in `is_string_close_delimiter`
+// DUT: rust/src/tokenizer.rs in `is_string_close_delimiter`
 //
 //     fn is_string_close_delimiter(c: char) -> bool {
-//         c.is_whitespace() || (is_special_char(c) && c != '\'')
+//         c.is_whitespace()
 //     }
 //
-// Conditions:
-//   A = c.is_whitespace()
-//   B = is_special_char(c)
-//   C = c != '\''
+// Whitespace is the sole token delimiter in Ajisai (LANG.SOURCE.TEXT), so
+// this decision has collapsed to the one atomic condition it always should
+// have been: A = c.is_whitespace(). `[`, `]`, `#`, `(`, `)`, `{`, `}` no
+// longer get a lookahead exemption of their own — a string glued to any of
+// them (`'foo'[1]`, `'foo'#c`) does not close there either; it needs the
+// same surrounding space every other token boundary does.
 //
-// MC/DC pairs (see analysis below):
-//   row 1 (T, F, T): whitespace -> close. Together with row 4 proves A.
-//   row 2 (F, T, T): special non-quote -> close. Together with row 3
-//                     proves C, together with row 4 proves B.
-//   row 3 (F, T, F): a literal quote in lookahead position -> not close
-//                     (treated as escaped quote, pushed as literal).
-//   row 4 (F, F, T): regular alpha char -> not close, parser keeps
-//                     scanning until it hits an actual close or EOF.
+// Reachable rows:
+//   row 1: A=T (whitespace or EOF, checked by the caller) -> close.
+//   row 2: A=F, and the lookahead char is itself `'` -> not a close (the
+//          current quote is content; SPEC's "no escape character" rule).
+//   row 3: A=F, ordinary character -> not a close; the parser keeps
+//          scanning for a real close, surfacing "Unclosed literal" if none
+//          exists before EOF.
 //
 // Observed via `tokenize()` of `'foo'<X>` strings.
 mod string_close_delimiter {
@@ -271,15 +276,20 @@ mod string_close_delimiter {
 
     #[test]
     fn aq_ver_002_e_row1_whitespace_after_quote_closes_string() {
-        // (A=T, B=F, C=T)
+        // A=T
         let tokens = tokenize("'foo' BAR").unwrap();
         assert_eq!(tokens, vec![string_tok("foo"), sym("BAR")]);
     }
 
+    /// A bracket (or any other formerly-"special" character) no longer gets
+    /// its own lookahead exemption: with whitespace as the sole delimiter,
+    /// a string glued directly to `[1]` never finds a real close before EOF.
     #[test]
-    fn aq_ver_002_e_row2_special_nonquote_after_quote_closes_string() {
-        // (A=F, B=T, C=T): `[` is a special char and not a quote.
-        let tokens = tokenize("'foo'[1]").unwrap();
+    fn aq_ver_002_e_row1b_bracket_after_quote_no_longer_closes_string() {
+        let err = tokenize("'foo'[1]").unwrap_err();
+        assert!(err.contains("Unclosed literal"), "got: {err}");
+        // The space every other token boundary needs works here too.
+        let tokens = tokenize("'foo' [ 1 ]").unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -292,23 +302,21 @@ mod string_close_delimiter {
     }
 
     #[test]
-    fn aq_ver_002_e_row3_quote_after_quote_is_literal() {
-        // (A=F, B=T, C=F): when a `'` is followed by another `'`, the
-        // close-delimiter check returns false (special, but C=F), so the
-        // current quote is pushed as a literal and the scan continues.
-        // The next `'` likewise sees a non-close delimiter ahead ('b')
-        // and is pushed too, so the resulting string contains BOTH
-        // literal quotes — there is no escape collapsing.
+    fn aq_ver_002_e_row2_quote_after_quote_is_literal() {
+        // A=F, lookahead is `'`: the close-delimiter check is false, so the
+        // current quote is pushed as a literal and the scan continues. The
+        // next `'` likewise sees a non-close delimiter ahead ('b') and is
+        // pushed too, so the resulting string contains BOTH literal quotes —
+        // there is no escape collapsing.
         let tokens = tokenize("'foo''bar' END").unwrap();
         assert_eq!(tokens, vec![string_tok("foo''bar"), sym("END")]);
     }
 
     #[test]
-    fn aq_ver_002_e_row4_regular_alpha_after_quote_does_not_close() {
-        // (A=F, B=F, C=T): alphabetic char is neither whitespace nor
-        // special. The parser treats the quote as a literal and keeps
-        // scanning for a real close; with no close available it surfaces
-        // as an Unclosed-literal error.
+    fn aq_ver_002_e_row3_regular_alpha_after_quote_does_not_close() {
+        // A=F, ordinary character. The parser treats the quote as a literal
+        // and keeps scanning for a real close; with no close available it
+        // surfaces as an Unclosed-literal error.
         let err = tokenize("'foo'bar").unwrap_err();
         assert!(
             err.contains("Unclosed literal"),
