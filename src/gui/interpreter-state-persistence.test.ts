@@ -5,9 +5,9 @@
 // name) threw a TypeError out of the parser.
 
 import { describe, expect, test } from 'vitest';
-import { backfillExampleDescriptions, parseImportDocument } from './interpreter-state-persistence';
+import { backfillExampleDescriptions, namesThatDidNotRestore, parseImportDocument } from './interpreter-state-persistence';
 import { EXAMPLE_USER_WORDS } from './example-words';
-import type { UserWord } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
 
 describe('parseImportDocument robustness', () => {
     const malformed = [
@@ -87,5 +87,49 @@ describe('backfillExampleDescriptions', () => {
         const word: UserWord = { name: 'GREET', definition: greet.definition };
         expect(backfillExampleDescriptions([word])).toBe(false);
         expect(word.description).toBeUndefined();
+    });
+});
+
+// A restore skips a saved definition this build can no longer read rather than
+// abandoning the rest of the dictionary with it, so the words that did not
+// arrive have to be found by asking what is there afterwards.
+describe('namesThatDidNotRestore', () => {
+    // Only `collect_user_words_info` is consulted, so the rest of the
+    // interpreter surface is not modelled.
+    const withWords = (present: string[]): AjisaiInterpreter => ({
+        collect_user_words_info: () =>
+            present.map(name => ['USER', name, false] as [string, string, boolean]),
+    } as unknown as AjisaiInterpreter);
+
+    test('names a requested word that is not in the dictionary afterwards', () => {
+        const requested: UserWord[] = [
+            { name: 'KEPT', definition: '[ 1 ]' },
+            { name: 'LEGACY', definition: '[1]' },
+        ];
+        expect(namesThatDidNotRestore(withWords(['KEPT']), requested)).toEqual(['LEGACY']);
+    });
+
+    test('reports nothing when every requested word arrived', () => {
+        const requested: UserWord[] = [
+            { name: 'ONE', definition: '[ 1 ]' },
+            { name: 'TWO', definition: '[ 2 ]' },
+        ];
+        expect(namesThatDidNotRestore(withWords(['ONE', 'TWO']), requested)).toEqual([]);
+    });
+
+    // An entry with no body asked for nothing, so its absence is not a loss.
+    test('does not report a definition-less entry', () => {
+        const requested: UserWord[] = [
+            { name: 'NO-BODY', definition: null },
+            { name: 'REAL', definition: '[ 1 ]' },
+        ];
+        expect(namesThatDidNotRestore(withWords(['REAL']), requested)).toEqual([]);
+    });
+
+    // A word answers to either spelling, so matching is through the same
+    // normalization the dictionary uses.
+    test('matches the dictionary through the normalized name', () => {
+        const requested: UserWord[] = [{ name: 'lower', definition: '[ 1 ]' }];
+        expect(namesThatDidNotRestore(withWords(['LOWER']), requested)).toEqual([]);
     });
 });
