@@ -629,6 +629,69 @@ Phase 3 で実測した限り、**もう一種類の「目撃者なし」があ�
 `spec/words.json` の該当 `errorWhen` と `spec/outcomes.json` の該当エントリを
 削除する側を選んだ（実装は変更していない）。
 
+**追記2（Opus モデルによる精度レビューを受けての訂正）**: マージ後、
+「Opus モデルで改修の精度を見直す」という求めに応じて別セッションで独立
+レビューを実施したところ、上記の判断のうち `OR-NIL` 側が誤りだったことが
+判明した。`execute_section_core` の `Token::NilCoalesce` 処理を精査すると、
+「no-op スキップ」というコメントは非 NIL 分岐（値を保持したまま後続
+source unit を読み飛ばす経路）にしか当てはまらず、NIL 分岐（値を破棄して
+後続 source unit をフォールバックとして評価する経路）には別の問題がある:
+後続 source unit が存在しない場合、値は破棄されるが代わりを何も積まない
+まま処理系のループが終わる。`OR-NIL` の `( x -- x )` という stack effect を
+文字どおり破る動作であり、これは「no-op」ではなく「暗黙のデータ消失」
+である。よって `missingFollowingSourceUnit` を `spec/words.json`
+（`OR-NIL` の `errorWhen`）・`spec/outcomes.json` に**復元**し、
+`execution_loop.rs` に NIL かつ後続 source unit が（`LineBreak` を除いて）
+存在しない場合の ERROR 化を実装した。`EXEC` 側の判断（`nestedExecutionError`
+を削除したまま維持する）は独立レビューでも支持されたため変更していない。
+
+同じレビューでは以下も見つかり、修正済みである:
+- `comparison.rs` の `lift_comparison` に付けたコメントが誤り
+  （`EQ`/`NEQ` も `lift_comparison` を呼ぶと書いていたが、実際は
+  `apply_equality` → `pairwise_eq` という別経路で、そもそもエラーを
+  一切返さない設計）だった。調査の結果、`EQ`/`NEQ` の `errorWhen`
+  （`unsupportedComparison`・`shapeMismatch`）は `spec/words.json` 側の
+  誤りと判断し削除した——`pairwise_eq` 自身のドキュメントコメントが
+  「構造的に無関係などうしは単に FALSE、決して ERROR にしない」
+  （LANG.VALUES.DISJOINT）と明言しており、`EQ`/`NEQ` の `clauses` にも
+  `LANG.COLLECTIONS.LIFT`（`LT`/`LTE`/`GT`/`GTE` は持つ）が含まれて
+  いないことからも、この設計は意図的と判断できる。
+- 同じ関数の二 Vector 長不一致チェックが `AjisaiError::declared("shapeMismatch", …)`
+  で組んであったが、`shapeMismatch` は `spec/outcomes.schema.json` の言う
+  「structural」（固定の `ErrorCategory` variant を持つ）側であり、`declared`
+  経由で作るべきではなかった。専用の `AjisaiError::ShapeMismatch { left, right, axis }`
+  に差し替えた（`ADD` 等の broadcast 失敗と同じ variant）。
+- Phase 4 の raise-site 修正には同型の見落としが複数残っていた:
+  `PUT`/`RANDOM` の `nonInteger` remap が `expected=="integer" && got=="fraction"`
+  にしか一致せず他の非整数形状（文字列・Vector・Boolean 等）を取りこぼして
+  いた／`ZIP` の行要素チェックが `nonVector` に配線されていなかった／
+  `ADD`/`SUB`/`MUL`/`DIV`/`MOD`/`QUANTIZE` が宣言する `nonNumeric` が
+  三箇所（`tensor_ops.rs::FlatTensor::from_value`・
+  `tensor_lane_ops.rs::apply_lane_wise_recursive`・
+  `arithmetic.rs::apply_exact_real_recursive_broadcast`）ともに未配線
+  だった（8 語中もっとも影響範囲が広かった）／`TAKE` の `invalidCount`
+  が未配線だった／`COND` の `invalidClauseShape` が未配線だった。
+  いずれも該当語のみが呼ぶ経路であることを確認したうえで直接修正、
+  または既存の共有ヘルパー方式にならって修正した。
+- `FILTER`/`ANY`/`ALL` の述語ブロックが真偽値以外を返した場合の raise site
+  も、コメントは「契約が登録する ERROR」を上げると主張していたが実際には
+  `blockContractViolation`（アリティ違反専用、契約の documentation にも
+  明記）しか登録されておらず、この条件自体が未宣言だった。`AND`/`OR`/`NOT`
+  と全く同じ「真偽値でない」という条件であることから、`nonTruthValue` を
+  三語の `errorWhen` に追加して転用した（`spec/outcomes.json` の
+  documentation も三語を含む表現に更新）。
+- `BIND` の名前検証の前段二箇所（`is_symbol_token_lexeme` 失敗・予約語
+  チェック失敗）も、コード自身のコメントが「`DEF` の同一チェックは
+  `invalidName`/`protectedWord` を宣言しているが `BIND` の契約にはこの
+  2 条件が無い」という `spec/words.json` 側のギャップとして明記して
+  いたので、`BIND` の `errorWhen` に両方追加し配線した。
+
+これらは全て `git log` 上の追加コミットとして記録されている（本追記の
+時点のコミットは検証済みで、`cargo test --all-targets`・`clippy`・`fmt`・
+`outcome-registry:check`・`semantics:table:check`・両 WASM バンドルの
+再ビルドと `test:mcp-backends`・MCP `selftest`/`test:pack`・`npm run check`/
+`npm test` が全てクリーン）。
+
 したがって目撃者は **2 つの源**を持つ: 全数表と、手書きの
 `spec/outcome-witnesses.json`。ゲートは「**いずれかに目撃者があること**」を要求する。
 **片方だけを見るゲートを書かないこと。**

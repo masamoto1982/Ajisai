@@ -44,17 +44,17 @@ pub(crate) fn extract_executable_code(
 /// Vector is not its element, and NIL is absence rather than falsity. Each of
 /// those used to be accepted here, which gave `FILTER` a truthiness rule no
 /// other Word shared — `[ 1 2 3 ] [ 1 ] FILTER` silently kept every element
-/// instead of raising the nonconforming-type ERROR its contract registers.
-/// A caller that wants a numeric condition writes the comparison it means,
-/// e.g. `0 NEQ`.
+/// instead of raising `nonTruthValue`, the same declared condition
+/// `AND`/`OR`/`NOT` raise for the identical fault. A caller that wants a
+/// numeric condition writes the comparison it means, e.g. `0 NEQ`.
 pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
     if let Some(b) = condition_result.as_truth() {
         return Ok(b);
     }
 
-    Err(AjisaiError::create_structure_error(
-        "boolean result from predicate block",
-        "non-boolean value",
+    Err(AjisaiError::declared(
+        "nonTruthValue",
+        "expected a truth value from the predicate block, got a non-truth value",
     ))
 }
 

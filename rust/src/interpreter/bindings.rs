@@ -128,28 +128,22 @@ impl Interpreter {
     /// the question of which one they got: within a program, a name is a Word
     /// or a binding and never both.
     pub(crate) fn check_bindable_name(&self, name: &str) -> Result<()> {
-        // Neither of these two checks is in BIND's own `errorWhen`
-        // (`nonText` / `nameIsAWord` / `shapeMismatch`) even though
-        // `op_def_inner` below runs the identical two checks under `invalidName`
-        // / `protectedWord` — BIND's registry entry never grew those two
-        // conditions when the shared naming rule was added. Filed as a
-        // spec/words.json gap rather than worked around here: `StructureError`
-        // is the honest structural category for "this text is not shaped like
-        // a name" until BIND's contract is corrected to match what it actually
-        // checks.
+        // Both checks mirror `op_def_inner`'s identical two, which declares
+        // them `invalidName` / `protectedWord` — BIND's contract now
+        // declares the same pair, closing the gap the two used to sit in.
         if !crate::tokenizer::is_symbol_token_lexeme(name) {
-            return Err(AjisaiError::create_structure_error(
-                "a name (a single Word-shaped token)",
-                &format!("'{}'", name),
+            return Err(AjisaiError::declared(
+                "invalidName",
+                format!(
+                    "Cannot bind '{}': it is not a name. A binding is looked up by writing its name as one token, and this cannot be written.",
+                    name
+                ),
             ));
         }
         if let Some(message) =
             crate::interpreter::naming_convention_checker::check_reserved_word_name(name, "bind")
         {
-            return Err(AjisaiError::create_structure_error(
-                "a name not reserved as a Core alias or syntax",
-                &message,
-            ));
+            return Err(AjisaiError::declared("protectedWord", message));
         }
         let upper = name.to_uppercase();
         if self.core_vocabulary.contains_key(&upper) {

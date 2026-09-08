@@ -698,7 +698,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
-        error_when: &["unsupportedComparison", "shapeMismatch"],
+        error_when: &[],
         syntax: Some("1 1 ="),
     },
     GeneratedWord {
@@ -732,7 +732,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("shorthand"),
         effects: &[],
-        error_when: &["unsupportedComparison", "shapeMismatch"],
+        error_when: &[],
         syntax: Some("1 2 NEQ"),
     },
     GeneratedWord {
@@ -2024,7 +2024,12 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
-        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        error_when: &[
+            "nonVector",
+            "notExecutable",
+            "blockContractViolation",
+            "nonTruthValue",
+        ],
         syntax: Some("[ 1 2 3 ] [ 2 = ] FILTER"),
     },
     GeneratedWord {
@@ -2092,7 +2097,12 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
-        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        error_when: &[
+            "nonVector",
+            "notExecutable",
+            "blockContractViolation",
+            "nonTruthValue",
+        ],
         syntax: Some("[ 1 2 3 ] [ 2 = ] ANY"),
     },
     GeneratedWord {
@@ -2126,7 +2136,12 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("operational"),
         effects: &[],
-        error_when: &["nonVector", "notExecutable", "blockContractViolation"],
+        error_when: &[
+            "nonVector",
+            "notExecutable",
+            "blockContractViolation",
+            "nonTruthValue",
+        ],
         syntax: Some("[ 2 4 ] [ 2 MOD 0 = ] ALL"),
     },
     GeneratedWord {
@@ -2568,7 +2583,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
-        error_when: &[],
+        error_when: &["missingFollowingSourceUnit"],
         syntax: Some("NIL OR-NIL [ 0 ]"),
     },
     GeneratedWord {
@@ -2636,7 +2651,13 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
-        error_when: &["nonText", "nameIsAWord", "shapeMismatch"],
+        error_when: &[
+            "nonText",
+            "nameIsAWord",
+            "shapeMismatch",
+            "invalidName",
+            "protectedWord",
+        ],
         syntax: Some("[ 1 2 3 ] 'XS' BIND"),
     },
     GeneratedWord {

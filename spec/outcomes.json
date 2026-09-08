@@ -119,6 +119,11 @@
       "documentation": "Program text that does not parse — an unclosed block, a | outside a clause, a mismatched delimiter."
     },
     {
+      "id": "missingFollowingSourceUnit",
+      "kind": "declared",
+      "documentation": "OR-NIL's top was NIL and no source unit follows it to evaluate as the fallback."
+    },
+    {
       "id": "modeUnsupported",
       "kind": "structural",
       "documentation": "A Word was invoked with a modifier mode it does not support."
@@ -181,7 +186,7 @@
     {
       "id": "nonTruthValue",
       "kind": "declared",
-      "documentation": "AND, OR or NOT met an operand that is not a truth value or Unknown."
+      "documentation": "AND, OR, NOT, or a FILTER/ANY/ALL predicate block, met a value that is not a truth value or Unknown."
     },
     {
       "id": "nonVector",

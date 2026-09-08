@@ -623,18 +623,18 @@
      Scalar is not truth, and a singleton Vector is not its element. -->
 
 <section class="ajisai-case" id="core-filter-rejects-scalar-predicate" data-category="core">
-  <h3>A FILTER predicate that yields a Scalar is a nonconforming type</h3>
+  <h3>A FILTER predicate that yields a Scalar names the declared condition nonTruthValue</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 1 ] FILTER</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected boolean result from predicate block</pre>
+  <pre class="ajisai-expect-error">expected a truth value from the predicate block, got a non-truth value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-all-rejects-singleton-vector-predicate" data-category="core">
-  <h3>An ALL predicate that yields a singleton Vector is a nonconforming type</h3>
+  <h3>An ALL predicate that yields a singleton Vector names the declared condition nonTruthValue</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ [ TRUE ] ] ALL</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected boolean result from predicate block</pre>
+  <pre class="ajisai-expect-error">expected a truth value from the predicate block, got a non-truth value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2027,7 +2027,7 @@ W</pre>
   <h3>Any other pairing is ERROR — this is the shapeMismatch each ordering Word registers</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 1 2 ] LT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected vectors of equal length</pre>
+  <pre class="ajisai-expect-error">Cannot broadcast shapes</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2112,7 +2112,7 @@ W</pre>
   <h3>Arithmetic rejects a String rather than operating on its code points</h3>
   <pre class="ajisai-source">'A' 1 ADD</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected number or vector</pre>
+  <pre class="ajisai-expect-error">expected a number or vector</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
