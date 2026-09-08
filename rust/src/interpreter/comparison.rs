@@ -6,11 +6,10 @@ use crate::types::exact::{ExactCmp, ExactReal};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 
-/// One of the four ordering comparisons. Carries the dispatch
-/// decision through the SCALAR-comparison helper so the helper can
-/// keep the Fraction fast path for both-Rational operands while
-/// routing any non-Rational ExactReal pair through the total Tier 1
-/// comparison `ExactReal::cmp_exact` (SPEC §7.4.1).
+/// One of the four ordering comparisons. Carries the dispatch decision
+/// through the scalar-comparison helper, which keeps the Fraction fast path
+/// for both-Rational operands and routes any other pair through the total
+/// Tier 1 `ExactReal::cmp_exact` (SPEC §7.4.1).
 #[derive(Debug, Clone, Copy)]
 enum OrderingKind {
     Lt,
@@ -42,11 +41,9 @@ impl OrderingKind {
 }
 
 /// Result of a three-valued scalar comparison (LANG.VALUES.TRUTH): a decided
-/// boolean, or the logical `Unknown` (U). Tier ≤ 1 operands (rational,
-/// algebraic) always decide; `Undecided` is reached only when a Tier 2
-/// operand's (`PI`'s) comparison-refinement budget exhausts without
-/// separating the pair — and, as a defensive fallback, an absent operand
-/// that slipped past the NIL passthrough.
+/// boolean, or the logical `Unknown` (U). Tier ≤ 1 operands always decide;
+/// `Undecided` is reached only when a Tier 2 operand's (`PI`'s)
+/// refinement budget exhausts without separating the pair.
 enum ScalarCmp {
     Decided(bool),
     Undecided,
@@ -84,10 +81,8 @@ fn push_undecidable_result(interp: &mut Interpreter) {
 /// Compare two scalar values under an ordering kind. Returns `Err(_)` for
 /// structurally-non-comparable operands. Both-rational operands take the
 /// Fraction fast path; an algebraic pair decides through the total
-/// `ExactReal::cmp_exact`. A pair involving a Tier 2 operand (`PI`) may
-/// exhaust its refinement budget without separating — `Undecided`, not an
-/// error: the operands are perfectly well-formed, the comparison just could
-/// not decide within its water.
+/// `ExactReal::cmp_exact`. A Tier 2 operand (`PI`) may exhaust its
+/// refinement budget without separating — `Undecided`, not an error.
 fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<ScalarCmp> {
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
@@ -270,8 +265,9 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
                         .unwrap_or(NilReason::Literal),
                 ));
             }
-            // `unsupportedComparison`: every `lift_comparison` caller
-            // (EQ/NEQ/LT/LTE/GT/GTE) declares it uniformly.
+            // `unsupportedComparison`: LT/LTE/GT/GTE, the only callers of
+            // `lift_comparison`, declare it uniformly. EQ/NEQ never reach
+            // here — `pairwise_eq` is total and raises nothing.
             match compare_scalar_pair(a_val, b_val, kind).map_err(|e| match e {
                 AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
                     AjisaiError::declared("unsupportedComparison", "expected comparable operands")
@@ -297,11 +293,14 @@ fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<V
             Ok(Value::from_vector(lanes))
         }
         (Some(a_items), Some(b_items)) => {
+            // `shapeMismatch` (LANG.COLLECTIONS.LIFT): unequal-length
+            // vectors don't combine, same as `ADD`'s broadcast failure.
             if a_items.len() != b_items.len() {
-                return Err(AjisaiError::create_structure_error(
-                    "vectors of equal length",
-                    "vectors of differing length",
-                ));
+                return Err(AjisaiError::ShapeMismatch {
+                    left: vec![a_items.len()],
+                    right: vec![b_items.len()],
+                    axis: 0,
+                });
             }
             let lanes = a_items
                 .iter()

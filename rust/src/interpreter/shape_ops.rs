@@ -19,21 +19,17 @@ use super::ordering_ops::{elements_of, restore, take_operand};
 /// `spec/words.json`'s `errorWhen`, and the shared helper serves callers
 /// (GET, TAKE, COLLECT, ...) that declare no such condition, so it cannot
 /// make this remap itself (the same shared-helper lesson as Phase 2's
-/// tensor-conversion helpers). Confirmed live before this fix:
-/// `1 2 / 1 RANDOM` and `[ 1 2 3 ] 1 2 / 9 PUT` both answered `structureError`
-/// despite `nonInteger` being declared — the reason
-/// `docs/dev/outcome-space-bijection-work-order-2026-09.md` Phase 3 found
-/// `nonInteger` unwitnessable by any input.
+/// tensor-conversion helpers). Catches every `StructureError` the helper can
+/// produce, not just the fraction case: a fix that only caught
+/// `expected == "integer" && got == "fraction"` left every other non-integer
+/// shape (a string, a Vector, a Boolean, an ExactReal, ...) still falling
+/// back to generic `structureError`.
 fn require_integer_operand(value: &Value) -> Result<i64> {
     match extract_integer_from_value(value) {
-        Err(AjisaiError::StructureError { expected, got })
-            if expected == "integer" && got == "fraction" =>
-        {
-            Err(AjisaiError::declared(
-                "nonInteger",
-                "expected an integer, got a fraction",
-            ))
-        }
+        Err(AjisaiError::StructureError { got, .. }) => Err(AjisaiError::declared(
+            "nonInteger",
+            format!("expected an integer, got {}", got),
+        )),
         other => other,
     }
 }
@@ -74,9 +70,9 @@ pub fn op_zip(interp: &mut Interpreter) -> Result<()> {
             Some(view) => columns.push(view.into_owned()),
             None => {
                 restore(interp, value);
-                return Err(AjisaiError::create_structure_error(
-                    "vector of vectors",
-                    "vector holding a non-vector element",
+                return Err(AjisaiError::declared(
+                    "nonVector",
+                    "ZIP: expected a vector of vectors, got a row that is not itself a Vector",
                 ));
             }
         }

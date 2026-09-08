@@ -62,6 +62,9 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "selfReferentialDefinition"
         | "nameIsAWord" => CauseClass::ContractViolation,
         "wordNotFound" => CauseClass::TypoOrUnknownName,
+        // The source is missing a required following unit, not a value the
+        // wrong shape — same family as a malformed delimiter.
+        "missingFollowingSourceUnit" => CauseClass::SourceForm,
         _ => CauseClass::Unknown,
     }
 }

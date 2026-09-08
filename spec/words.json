@@ -264,10 +264,7 @@
         "when": "budgetExhausted",
         "reason": "undecidable"
       },
-      "errorWhen": [
-        "unsupportedComparison",
-        "shapeMismatch"
-      ],
+      "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
       "cost": {
@@ -319,10 +316,7 @@
         "when": "budgetExhausted",
         "reason": "undecidable"
       },
-      "errorWhen": [
-        "unsupportedComparison",
-        "shapeMismatch"
-      ],
+      "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
       "cost": {
@@ -2378,7 +2372,8 @@
       "errorWhen": [
         "nonVector",
         "notExecutable",
-        "blockContractViolation"
+        "blockContractViolation",
+        "nonTruthValue"
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
@@ -2483,7 +2478,8 @@
       "errorWhen": [
         "nonVector",
         "notExecutable",
-        "blockContractViolation"
+        "blockContractViolation",
+        "nonTruthValue"
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
@@ -2536,7 +2532,8 @@
       "errorWhen": [
         "nonVector",
         "notExecutable",
-        "blockContractViolation"
+        "blockContractViolation",
+        "nonTruthValue"
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
@@ -3196,7 +3193,9 @@
         "when": "never",
         "reason": null
       },
-      "errorWhen": [],
+      "errorWhen": [
+        "missingFollowingSourceUnit"
+      ],
       "purity": "conditional",
       "determinism": "stateRelative",
       "cost": {
@@ -3296,7 +3295,9 @@
       "errorWhen": [
         "nonText",
         "nameIsAWord",
-        "shapeMismatch"
+        "shapeMismatch",
+        "invalidName",
+        "protectedWord"
       ],
       "purity": "pure",
       "determinism": "stateRelative",

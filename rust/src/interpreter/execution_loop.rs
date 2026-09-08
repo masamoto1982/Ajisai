@@ -383,13 +383,30 @@ impl Interpreter {
 
                     if !value.is_nil() {
                         // Non-NIL: keep it and skip the following source unit
-                        // unevaluated (one token or one balanced group).
+                        // unevaluated (one token or one balanced group). Nothing
+                        // following is a no-op skip here — the kept value already
+                        // satisfies OR-NIL's `(x -- x)` contract on its own.
                         self.stack.push_with_role(value, hint);
                         i = end_of_source_unit(execute_tokens, i + 1);
                         continue;
                     }
-                    // NIL: discard it and let the trailing `i += 1` fall through
-                    // so the following source unit is evaluated as the fallback.
+                    // NIL: a fallback must follow for `(x -- x)` to hold — nothing
+                    // left to evaluate here would mean discarding the operand and
+                    // producing no replacement. `LineBreak` tokens don't count as
+                    // a fallback (see the `LineBreak => {}` arm below), so the
+                    // check looks past them, not just at the very next token.
+                    if execute_tokens[i + 1..]
+                        .iter()
+                        .all(|t| matches!(t, Token::LineBreak))
+                    {
+                        self.stack.push_with_role(value, hint);
+                        return Err(AjisaiError::declared(
+                            "missingFollowingSourceUnit",
+                            "OR-NIL: a NIL top has no following source unit to evaluate as the fallback",
+                        ));
+                    }
+                    // Discard it and let the trailing `i += 1` fall through so the
+                    // following source unit is evaluated as the fallback.
                 }
                 Token::CondClauseSep => {
                     // ControlDirective: '|' -> COND-CLAUSE (see surface_forms.rs).

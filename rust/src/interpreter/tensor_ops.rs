@@ -32,13 +32,21 @@ pub(crate) struct FlatTensor {
 }
 
 impl FlatTensor {
+    /// Every caller reaches this only through the arithmetic-broadcast
+    /// machinery (`apply_lane_wise_broadcast`, `apply_binary_broadcast_with_metrics`)
+    /// on behalf of ADD/SUB/MUL/DIV/MOD/QUANTIZE, which all declare
+    /// `nonNumeric` uniformly — so a non-numeric operand's `StructureError`
+    /// is remapped directly here, not at each caller.
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
             ValueData::Nil => Err(AjisaiError::create_structure_error(
                 "a non-NIL value",
                 "NIL",
             )),
-            ValueData::Text(_) => Err(AjisaiError::create_structure_error("vector", "string")),
+            ValueData::Text(_) => Err(AjisaiError::declared(
+                "nonNumeric",
+                "expected a number or vector, got a string",
+            )),
             ValueData::Scalar(f) => Ok(Self {
                 data: vec![f.clone()],
                 shape: Vec::new(),
@@ -65,13 +73,14 @@ impl FlatTensor {
                     strides,
                 })
             }
-            ValueData::ExactScalar(_) => Err(AjisaiError::create_structure_error(
-                "a rational scalar or vector",
-                "an exact irrational value",
+            ValueData::ExactScalar(_) => Err(AjisaiError::declared(
+                "nonNumeric",
+                "expected a number or vector, got an exact irrational value",
             )),
-            ValueData::Boolean(_) | ValueData::Symbol(_) => Err(
-                AjisaiError::create_structure_error("a scalar or vector", "boolean or symbol"),
-            ),
+            ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::declared(
+                "nonNumeric",
+                "expected a number or vector, got a boolean or symbol",
+            )),
         }
     }
 

@@ -23,7 +23,9 @@ use crate::types::Value;
 
 /// The tree-walking half of [`apply_lane_wise_broadcast`], for ragged or
 /// nested-mixed operands. Mirrors [`apply_recursive_broadcast`] exactly; only
-/// the leaf's return type differs.
+/// the leaf's return type differs. Every caller (ADD/SUB/MUL/DIV/MOD/
+/// QUANTIZE, directly or through DIV/MOD's own division-by-zero fallback)
+/// declares `nonNumeric` uniformly, same as `FlatTensor::from_value`.
 fn apply_lane_wise_recursive<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
@@ -31,9 +33,9 @@ where
     match (broadcast_children(a), broadcast_children(b)) {
         (None, None) => {
             let (Some(fa), Some(fb)) = (broadcast_leaf(a), broadcast_leaf(b)) else {
-                return Err(AjisaiError::create_structure_error(
-                    "number or vector",
-                    "non-numeric value",
+                return Err(AjisaiError::declared(
+                    "nonNumeric",
+                    "expected a number or vector, got a non-numeric value",
                 ));
             };
             op(&fa, &fb)

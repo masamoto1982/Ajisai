@@ -81,6 +81,15 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let count = match extract_integer_from_value(&count_val) {
         Ok(v) => v,
+        // `invalidCount`: TAKE's own declared condition for a count operand
+        // that isn't a well-formed integer.
+        Err(AjisaiError::StructureError { got, .. }) => {
+            interp.stack.push(count_val);
+            return Err(AjisaiError::declared(
+                "invalidCount",
+                format!("TAKE: expected an integer count, got {}", got),
+            ));
+        }
         Err(e) => {
             interp.stack.push(count_val);
             return Err(e);

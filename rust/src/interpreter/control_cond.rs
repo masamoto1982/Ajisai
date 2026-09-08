@@ -62,36 +62,39 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
 /// the same `value_as_code.rs` bridge `EXEC`/`PROBE`/`DEF` use.
 fn extract_clause_blocks(clauses_val: &Value) -> Result<Vec<Vec<Token>>> {
     let elements = clauses_val.as_vector_view().ok_or_else(|| {
-        // A structure error rather than a bare string. `COND` declares
-        // `inspectNil` so that a NIL *target* can be read as Unknown, and that
-        // declaration is per Word, not per operand — so a NIL in the *clauses*
-        // slot, which is simply malformed, is no longer pre-rejected and
-        // arrives here. This arm answered `why: "unknown"` for every wrong
-        // shape, NIL included; naming what arrived classifies it as
-        // `valueShape`, which is what it always was.
-        AjisaiError::create_structure_error(
-            "a Vector of [ guard | body ] clauses as COND's second operand",
-            if clauses_val.is_nil() {
-                "NIL"
-            } else {
-                "a non-Vector value"
-            },
+        // `invalidClauseShape` rather than a bare structure error. `COND`
+        // declares `inspectNil` so that a NIL *target* can be read as
+        // Unknown, and that declaration is per Word, not per operand — so a
+        // NIL in the *clauses* slot, which is simply malformed, is no longer
+        // pre-rejected and arrives here.
+        AjisaiError::declared(
+            "invalidClauseShape",
+            format!(
+                "COND: expected a Vector of [ guard | body ] clauses, got {}",
+                if clauses_val.is_nil() {
+                    "NIL"
+                } else {
+                    "a non-Vector value"
+                }
+            ),
         )
     })?;
     elements
         .iter()
         .map(|clause| {
             let inner = clause.as_vector_view().ok_or_else(|| {
-                // Same reasoning as the operand above: a clause of the wrong
-                // shape is a value-shape fault, and saying so classifies it
-                // instead of leaving the reader with "read the message".
-                AjisaiError::create_structure_error(
-                    "each COND clause to be a [ guard | body ] block",
-                    if clause.is_nil() {
-                        "NIL"
-                    } else {
-                        "a non-Vector element"
-                    },
+                // Same condition as the operand above: a clause of the wrong
+                // shape.
+                AjisaiError::declared(
+                    "invalidClauseShape",
+                    format!(
+                        "COND: expected each clause to be a [ guard | body ] block, got {}",
+                        if clause.is_nil() {
+                            "NIL"
+                        } else {
+                            "a non-Vector element"
+                        }
+                    ),
                 )
             })?;
             crate::interpreter::value_as_code::value_elements_to_tokens(&inner)

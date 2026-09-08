@@ -86,7 +86,6 @@ Test equality of two values.
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
 - **Syntax:** `1 1 =`
 - **Aliases:** `=`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `NEQ`
 
@@ -101,7 +100,6 @@ Test inequality of two values.
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
 - **Syntax:** `1 2 NEQ`
 - **Aliases:** `!=`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `LT`
 
@@ -640,7 +638,7 @@ Keep only the elements for which a predicate block returns TRUE.
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 ] [ 2 = ] FILTER`
-- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
 
 ## `FOLD`
 
@@ -668,7 +666,7 @@ TRUE if at least one element satisfies the predicate.
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 ] [ 2 = ] ANY`
-- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
 
 ## `ALL`
 
@@ -682,7 +680,7 @@ TRUE if every element satisfies the predicate.
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 2 4 ] [ 2 MOD 0 = ] ALL`
-- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
 
 ## `CHARS`
 
@@ -860,6 +858,7 @@ Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
 - **Syntax:** `NIL OR-NIL [ 0 ]`
+- **ERROR conditions:** `missingFollowingSourceUnit`
 
 ## `KEEP`
 
@@ -886,7 +885,7 @@ Name a value for the rest of the frame that made it. One name takes the whole va
 - **Effects:** none
 - **Clauses:** `LANG.SOURCE.FRAME`, `LANG.DICTIONARY.RESOLUTION`
 - **Syntax:** `[ 1 2 3 ] 'XS' BIND`
-- **ERROR conditions:** `nonText`, `nameIsAWord`, `shapeMismatch`
+- **ERROR conditions:** `nonText`, `nameIsAWord`, `shapeMismatch`, `invalidName`, `protectedWord`
 
 ## `DEF`
 

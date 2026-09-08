@@ -390,9 +390,11 @@ fn apply_exact_real_recursive_broadcast(
     match (broadcast_children(a), broadcast_children(b)) {
         (None, None) => {
             let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
-                return Err(AjisaiError::create_structure_error(
-                    "number or vector",
-                    "non-numeric value",
+                // Reached only through ADD/SUB/MUL/DIV/MOD/QUANTIZE's own
+                // binary dispatch, which all declare `nonNumeric` uniformly.
+                return Err(AjisaiError::declared(
+                    "nonNumeric",
+                    "expected a number or vector, got a non-numeric value",
                 ));
             };
             Ok(match schema.exact_real(&ea, &eb) {
