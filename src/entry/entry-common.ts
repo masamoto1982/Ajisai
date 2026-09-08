@@ -24,25 +24,16 @@ function formatTimestamp(date: Date): string {
 }
 
 /**
- * Label the header badge with *which build this is*, and disclose the release
- * version it carries on hover.
- *
- * These are two different facts and the badge used to conflate them. The
- * timestamp answers "when was this built" — it moves on every build, including
- * one with no source change, and it is recorded nowhere but the artifact, so
- * no build can be recovered from it. The release version answers "what does
- * this promise" — it moves only when a human decides the compatibility story
- * changed, and `check:version-sync` holds four manifests to it. Spelling the
- * timestamp `ver.` invited reading it as the version, which is the one thing it
- * is not; `build.` says what it is, and the tooltip supplies the version the
- * badge no longer pretends to be.
+ * Label the header badge `playground`, matching the Reference header's own
+ * `リファレンス` badge, and disclose the release version and build timestamp
+ * on hover.
  */
 export function setBuildVersionLabel(): void {
     const versionElement = document.querySelector<HTMLElement>('.version');
     if (!versionElement) return;
 
     const timestamp = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
-    versionElement.textContent = `build.${timestamp}`;
+    versionElement.textContent = 'playground';
     versionElement.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}\nBuild ${timestamp}`;
 }
 
