@@ -65,9 +65,9 @@ fn push_value_as_tokens(value: &Value, out: &mut Vec<Token>) -> Result<()> {
         }
         ValueData::ExactScalar(_) => {
             // Shared by EXEC and DEF's body construction, which declare
-            // different errorWhen vocabularies (`notExecutable` /
-            // `nestedExecutionError` vs none) — neither fits both callers, so
-            // this stays the Word-independent structural category.
+            // different errorWhen vocabularies (`notExecutable` vs none) —
+            // neither fits both callers, so this stays the Word-independent
+            // structural category.
             return Err(AjisaiError::create_structure_error(
                 "a value with a number-literal lexeme",
                 "an ExactScalar (LANG.VALUES.EXACT — a literal denotes a rational only)",

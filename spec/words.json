@@ -2947,8 +2947,7 @@
         "reason": null
       },
       "errorWhen": [
-        "notExecutable",
-        "nestedExecutionError"
+        "notExecutable"
       ],
       "purity": "conditional",
       "determinism": "stateRelative",
@@ -3197,9 +3196,7 @@
         "when": "never",
         "reason": null
       },
-      "errorWhen": [
-        "missingFollowingSourceUnit"
-      ],
+      "errorWhen": [],
       "purity": "conditional",
       "determinism": "stateRelative",
       "cost": {

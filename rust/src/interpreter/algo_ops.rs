@@ -26,9 +26,9 @@ fn pop_vector_and_target(interp: &mut Interpreter, _word: &str) -> Result<(Vec<V
             // A noun phrase, not a sentence: the template around it already
             // says "expected _, got _", and the failing Word's name is the
             // diagnosis locus rather than part of the message.
-            Err(AjisaiError::create_structure_error(
-                "vector as first operand",
-                "non-vector value",
+            Err(AjisaiError::declared(
+                "nonVector",
+                "INDEX-OF: expected a Vector, got a non-vector value",
             ))
         }
     }

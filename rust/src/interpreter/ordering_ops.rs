@@ -43,9 +43,12 @@ pub(super) fn restore(interp: &mut Interpreter, value: Value) {
 pub(super) fn elements_of(value: &Value, expected: &str) -> Result<Vec<Value>> {
     match value.as_vector_view() {
         Some(view) => Ok(view.into_owned()),
-        None => Err(AjisaiError::create_structure_error(
-            expected,
-            "non-vector value",
+        // Every caller (ZIP, SUM, ORDER, UNIQUE, TALLY, GROUP) declares
+        // `nonVector` in its own `errorWhen` — confirmed uniform across all
+        // six, unlike Phase 2's shared-helper cases, so the remap is safe here.
+        None => Err(AjisaiError::declared(
+            "nonVector",
+            format!("expected {}, got a non-vector value", expected),
         )),
     }
 }

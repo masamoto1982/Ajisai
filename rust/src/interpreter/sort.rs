@@ -39,6 +39,24 @@ enum SortAttempt {
 /// first such pair's agreed-prefix — and `SORT` then yields the logical
 /// `Unknown` rather than a partially-sorted vector. A non-comparable element
 /// is reported as `Malformed`.
+/// `three_way_compare`, with a structurally non-comparable operand
+/// reclassified as `nonComparableElement` — SORT and ORDER are the only two
+/// Words that declare it; `three_way_compare`'s other callers (MIN/MAX, ABS's
+/// zero-check in `math_ops.rs`) declare `nonNumeric` instead, so the shared
+/// function cannot make this remap itself (the same shared-helper lesson as
+/// Phase 2's tensor-conversion helpers and Phase 4's `nonInteger` fix).
+fn compare_for_sort(a: &Value, b: &Value) -> Result<OrderOutcome> {
+    match three_way_compare(a, b) {
+        Err(AjisaiError::StructureError { expected, .. }) if expected == "scalar value" => {
+            Err(AjisaiError::declared(
+                "nonComparableElement",
+                "expected a comparable scalar element",
+            ))
+        }
+        other => other,
+    }
+}
+
 fn try_sort_indices(items: &[Value]) -> SortAttempt {
     // Captured by the comparator: the first malformed error and the first
     // undecidable agreed-prefix. When either is set the produced permutation
@@ -48,7 +66,7 @@ fn try_sort_indices(items: &[Value]) -> SortAttempt {
     let undecided: RefCell<Option<usize>> = RefCell::new(None);
 
     let mut perm: Vec<usize> = (0..items.len()).collect();
-    perm.sort_by(|&i, &j| match three_way_compare(&items[i], &items[j]) {
+    perm.sort_by(|&i, &j| match compare_for_sort(&items[i], &items[j]) {
         Ok(OrderOutcome::Decided(ord)) => ord,
         Ok(OrderOutcome::Undecided(prefix)) => {
             let mut slot = undecided.borrow_mut();
@@ -120,9 +138,9 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             // expected vector, got non-vector value, got other format" — the
             // Word's name belongs to the diagnosis locus, which already
             // carries it.
-            return Err(AjisaiError::create_structure_error(
-                "vector",
-                "non-vector value",
+            return Err(AjisaiError::declared(
+                "nonVector",
+                "SORT: expected a Vector, got a non-vector value",
             ));
         }
     };

@@ -21,9 +21,12 @@ use crate::types::{Interpretation, Value};
 /// `TRUE` while `1 1 AND TRUE EQ` decided FALSE. A caller who means a numeric
 /// test writes it: `0 NEQ`.
 fn operand_truth(value: &Value) -> Result<bool> {
-    value
-        .as_truth()
-        .ok_or_else(|| AjisaiError::create_structure_error("truth value", "non-truth value"))
+    value.as_truth().ok_or_else(|| {
+        AjisaiError::declared(
+            "nonTruthValue",
+            "expected a truth value, got a non-truth value",
+        )
+    })
 }
 
 /// The definite truth of a `booleanLogic` operand, or `None` for UNKNOWN.

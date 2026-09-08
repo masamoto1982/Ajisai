@@ -125,7 +125,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(tokens)?;
     if let Some(message) =
-        crate::interpreter::naming_convention_checker::check_reserved_word_name(name)
+        crate::interpreter::naming_convention_checker::check_reserved_word_name(name, "define")
     {
         return Err(AjisaiError::declared("protectedWord", message));
     }

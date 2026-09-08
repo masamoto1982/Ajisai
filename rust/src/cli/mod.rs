@@ -205,7 +205,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
                 &error_report(
                     &interp,
                     &diagnosis,
-                    None,
+                    Some(&ErrorCategory::MalformedSource),
                     message,
                     Vec::new(),
                     Vec::new(),

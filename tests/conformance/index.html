@@ -421,7 +421,7 @@
   <h3>CONCAT rejects a String: it is a Vector Word, and String is not a Vector</h3>
   <pre class="ajisai-source">'ab' 'cd' CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -443,7 +443,7 @@
   <h3>A one-character String is not a one-element Vector either</h3>
   <pre class="ajisai-source">'ab' 'c' CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -451,7 +451,7 @@
   <h3>LENGTH rejects a String: character count is reached through CHARS</h3>
   <pre class="ajisai-source">'abc' LENGTH</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <pre class="ajisai-expect-error">LENGTH: expected a Vector, got a non-vector value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -459,7 +459,7 @@
   <h3>GET rejects a String rather than answering a bare code point</h3>
   <pre class="ajisai-source">'abc' 1 GET</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <pre class="ajisai-expect-error">GET: expected a Vector, got a non-vector value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -474,7 +474,7 @@
   <h3>CONCAT refuses a non-vector operand (errorWhen: nonVector)</h3>
   <pre class="ajisai-source">[ 1 2 ] TRUE CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected vector</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -482,7 +482,7 @@
   <h3>CONCAT takes exactly two operands; a trailing scalar is not a count</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 3 4 ] 2 CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected vector</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -646,7 +646,7 @@
   <h3>AND rejects a Scalar operand: 1 is not TRUE</h3>
   <pre class="ajisai-source">1 1 AND</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected truth value</pre>
+  <pre class="ajisai-expect-error">expected a truth value, got a non-truth value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -654,7 +654,7 @@
   <h3>NOT rejects a Scalar operand: 0 is not FALSE</h3>
   <pre class="ajisai-source">0 NOT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected truth value</pre>
+  <pre class="ajisai-expect-error">expected a truth value, got a non-truth value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1625,10 +1625,10 @@ W</pre>
 </section>
 
 <section class="ajisai-case" id="core-map-non-vector-error" data-category="core">
-  <h3>MAP of a non-vector, non-NIL target is a StructureError</h3>
+  <h3>MAP of a non-vector, non-NIL target names the declared condition nonVector</h3>
   <pre class="ajisai-source">5 [ 2 MUL ] MAP</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Structure error: expected vector</pre>
+  <pre class="ajisai-expect-error">MAP: expected a Vector, got a non-vector value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1670,10 +1670,10 @@ W</pre>
 </section>
 
 <section class="ajisai-case" id="core-exec-rejects-scalar" data-category="core">
-  <h3>EXEC rejects a Scalar: data is never code</h3>
+  <h3>EXEC rejects a Scalar: data is never code (errorWhen: notExecutable)</h3>
   <pre class="ajisai-source">5 EXEC</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected code block</pre>
+  <pre class="ajisai-expect-error">EXEC: expected a Vector ([ ... ]) as the code operand, got another value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

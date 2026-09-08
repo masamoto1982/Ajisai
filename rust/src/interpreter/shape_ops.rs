@@ -14,6 +14,30 @@ use num_bigint::BigInt;
 
 use super::ordering_ops::{elements_of, restore, take_operand};
 
+/// `extract_integer_from_value`, with a non-integer operand reclassified as
+/// `nonInteger` — PUT and RANDOM are the only two Words that declare it in
+/// `spec/words.json`'s `errorWhen`, and the shared helper serves callers
+/// (GET, TAKE, COLLECT, ...) that declare no such condition, so it cannot
+/// make this remap itself (the same shared-helper lesson as Phase 2's
+/// tensor-conversion helpers). Confirmed live before this fix:
+/// `1 2 / 1 RANDOM` and `[ 1 2 3 ] 1 2 / 9 PUT` both answered `structureError`
+/// despite `nonInteger` being declared — the reason
+/// `docs/dev/outcome-space-bijection-work-order-2026-09.md` Phase 3 found
+/// `nonInteger` unwitnessable by any input.
+fn require_integer_operand(value: &Value) -> Result<i64> {
+    match extract_integer_from_value(value) {
+        Err(AjisaiError::StructureError { expected, got })
+            if expected == "integer" && got == "fraction" =>
+        {
+            Err(AjisaiError::declared(
+                "nonInteger",
+                "expected an integer, got a fraction",
+            ))
+        }
+        other => other,
+    }
+}
+
 /// `ZIP ( [ [ vec... ] ] -> [ [ tuple... ] ] )`: bundle equal-length vectors
 /// position by position.
 ///
@@ -186,14 +210,14 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(index_value);
                 interp.stack.push(replacement);
             }
-            return Err(AjisaiError::create_structure_error(
-                "vector",
-                "non-vector value",
+            return Err(AjisaiError::declared(
+                "nonVector",
+                "PUT: expected a Vector, got a non-vector value",
             ));
         }
     };
 
-    let raw_index = match extract_integer_from_value(&index_value) {
+    let raw_index = match require_integer_operand(&index_value) {
         Ok(index) => index,
         Err(e) => {
             if !keep {
@@ -276,14 +300,14 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let seed = match extract_integer_from_value(&seed_value) {
+    let seed = match require_integer_operand(&seed_value) {
         Ok(seed) => seed,
         Err(e) => {
             put_back(interp, &seed_value, &count_value);
             return Err(e);
         }
     };
-    let count = match extract_integer_from_value(&count_value) {
+    let count = match require_integer_operand(&count_value) {
         Ok(count) => count,
         Err(e) => {
             put_back(interp, &seed_value, &count_value);
@@ -292,9 +316,9 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
     };
     if count < 0 {
         put_back(interp, &seed_value, &count_value);
-        return Err(AjisaiError::create_structure_error(
-            "a count of zero or more",
-            "a negative count",
+        return Err(AjisaiError::declared(
+            "negativeCount",
+            "RANDOM: expected a count of zero or more, got a negative count",
         ));
     }
 

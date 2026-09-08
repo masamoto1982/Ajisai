@@ -150,8 +150,8 @@ fn finding_i2_concat_joins_a_singleton_top_operand() {
 /// into a single string".
 #[test]
 fn concat_is_a_vector_word_and_join_concatenates_strings() {
-    assert!(obs1_err("'ab' 'c' CONCAT").contains("expected vector"));
-    assert!(obs1_err("'Hello, ' 'world' CONCAT").contains("expected vector"));
+    assert!(obs1_err("'ab' 'c' CONCAT").contains("expected two Vectors"));
+    assert!(obs1_err("'Hello, ' 'world' CONCAT").contains("expected two Vectors"));
 
     assert_eq!(obs1("[ 'Hello, ' 'world' ] JOIN"), "'Hello, world'");
 
@@ -182,7 +182,7 @@ fn concat_refuses_a_non_vector_operand() {
     ] {
         assert_eq!(
             observe_program(src).error_category,
-            Some("structureError"),
+            Some("nonVector"),
             "{src:?} must raise the declared nonVector error"
         );
     }

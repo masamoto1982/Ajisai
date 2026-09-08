@@ -119,11 +119,6 @@
       "documentation": "Program text that does not parse — an unclosed block, a | outside a clause, a mismatched delimiter."
     },
     {
-      "id": "missingFollowingSourceUnit",
-      "kind": "declared",
-      "documentation": "OR-NIL was not followed by the source unit its contract requires."
-    },
-    {
       "id": "modeUnsupported",
       "kind": "structural",
       "documentation": "A Word was invoked with a modifier mode it does not support."
@@ -131,7 +126,7 @@
     {
       "id": "nameConflict",
       "kind": "structural",
-      "documentation": "A name was asked to mean two things at once — BIND to a name a Word already holds, or DEF to a name a live binding holds."
+      "documentation": "DEF was asked to define a name a live binding already holds — a name was asked to mean two things at once."
     },
     {
       "id": "nameIsAWord",
@@ -142,11 +137,6 @@
       "id": "negativeCount",
       "kind": "declared",
       "documentation": "RANDOM (or another count-taking Word) received a negative count."
-    },
-    {
-      "id": "nestedExecutionError",
-      "kind": "declared",
-      "documentation": "EXEC's block raised while executing, and the raise is attributed to the block rather than to EXEC itself."
     },
     {
       "id": "nonComparableElement",

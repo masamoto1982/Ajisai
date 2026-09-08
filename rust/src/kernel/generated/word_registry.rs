@@ -2398,7 +2398,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
-        error_when: &["notExecutable", "nestedExecutionError"],
+        error_when: &["notExecutable"],
         syntax: Some("[ 1 2 ADD ] EXEC"),
     },
     GeneratedWord {
@@ -2568,7 +2568,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
-        error_when: &["missingFollowingSourceUnit"],
+        error_when: &[],
         syntax: Some("NIL OR-NIL [ 0 ]"),
     },
     GeneratedWord {

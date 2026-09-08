@@ -1,27 +1,36 @@
-pub(crate) fn check_reserved_word_name(name: &str) -> Option<String> {
+/// `verb` is the caller's own action ("define"/"delete"), so the message
+/// names what actually failed — `DEF` and `DEL` share this reserved-name
+/// gate, and a message borrowed verbatim from one to report the other's
+/// refusal would misname the operation.
+pub(crate) fn check_reserved_word_name(name: &str, verb: &str) -> Option<String> {
     if let Some(alias) = crate::core_word_aliases::lookup_core_word_alias(name) {
         return match alias.kind {
             crate::core_word_aliases::CoreWordAliasKind::SymbolAlias => Some(format!(
-                "Cannot define '{}': '{}' is reserved as an alias of {}.",
+                "Cannot {} '{}': '{}' is reserved as an alias of {}.",
+                verb,
                 name,
                 name,
                 alias.canonical.unwrap_or("")
             )),
             crate::core_word_aliases::CoreWordAliasKind::SyntaxSugar => Some(format!(
-                "Cannot define '{}': '{}' is reserved as syntax sugar for {}.",
+                "Cannot {} '{}': '{}' is reserved as syntax sugar for {}.",
+                verb,
                 name,
                 name,
                 alias.canonical.unwrap_or("")
             )),
             crate::core_word_aliases::CoreWordAliasKind::InputHelper => Some(format!(
-                "Cannot define '{}': '{}' is an input helper, not a user word name.",
-                name, name
+                "Cannot {} '{}': '{}' is an input helper, not a user word name.",
+                verb, name, name
             )),
         };
     }
 
     if name == "|" {
-        return Some("Cannot define '|': '|' is tokenizer-level syntax.".to_string());
+        return Some(format!(
+            "Cannot {} '|': '|' is tokenizer-level syntax.",
+            verb
+        ));
     }
 
     None

@@ -13,7 +13,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let name = extract_word_name_from_value(&val)?;
 
     // Canonicalize first, so a surface alias reaches the same entry the
-    // Core seal protects (`'+' DEL` is a delete of `ADD`).
+    // Core seal protects (`'+' DEL` is a delete of `ADD`, reported by name).
     let upper_name =
         crate::core_word_aliases::canonicalize_core_word_name(&name.to_uppercase()).into_owned();
 
@@ -24,6 +24,19 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             word: word_name,
             operation: "delete".into(),
         });
+    }
+
+    // A reserved alias or syntax token that names no Core Word entry at all —
+    // canonicalization above leaves it unchanged, so it reached here rather
+    // than the `BuiltinProtection` branch — is still not a name `DEL` may
+    // target: the input helper `'` and the tokenizer-level `|` have no
+    // dictionary entry to delete, but they are not undefined either. Checked
+    // against the un-canonicalized `name`, the same gap `DEF`'s identical
+    // check closes (`op_def_inner`).
+    if let Some(message) =
+        crate::interpreter::naming_convention_checker::check_reserved_word_name(&name, "delete")
+    {
+        return Err(AjisaiError::declared("protectedWord", message));
     }
 
     // A name that no User Word holds is `wordNotFound`. DEL used to reach this
