@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 // Project spec/words.json into a checked-in Rust Word registry — the single
 // source of truth for the Word inventory, aliases, executor keys, and static
@@ -165,21 +166,18 @@ const cost = (value) => {
 // spec/words.json values are ASCII, so a JSON string literal is also a valid
 // Rust string literal.
 const rustStr = (value) => JSON.stringify(value);
-// Emit the wrapped form ourselves when the one-line form would pass rustfmt's
-// default 100-column width. The generated file is committed and CI runs both
-// `cargo fmt --check` and `word-registry:check`, so a line rustfmt would break
-// makes the two gates contradict each other: whichever ran last would be the
-// one that failed. `field` is the field name the slice is assigned to, since
-// it is part of the line being measured.
-const RUST_MAX_WIDTH = 100;
-const FIELD_INDENT = 8;
-const rustStrSlice = (values, field) => {
+// Always inline; the final `rustfmt` pass below (not a hand-rolled width
+// guess) decides whether a slice literal wraps. An earlier version of this
+// function tried to predict rustfmt's own `array_width` heuristic by hand —
+// which depends on more than raw character count (rustfmt's short-element
+// special-casing among other things) — and got it wrong the moment an
+// `errorWhen` slice crossed a length it hadn't been tested against, silently
+// committing a file `cargo fmt --check` and `word-registry:check` disagreed
+// on. Piping through the real tool is the only way this stays correct as
+// slice contents change.
+const rustStrSlice = (values) => {
   if (values.length === 0) return '&[]';
-  const inline = `&[${values.map(rustStr).join(', ')}]`;
-  const lineWidth = FIELD_INDENT + `${field}: `.length + inline.length + 1;
-  if (lineWidth <= RUST_MAX_WIDTH) return inline;
-  const items = values.map((value) => `${' '.repeat(FIELD_INDENT + 4)}${rustStr(value)},`);
-  return `&[\n${items.join('\n')}\n${' '.repeat(FIELD_INDENT)}]`;
+  return `&[${values.map(rustStr).join(', ')}]`;
 };
 
 // A projection condition of "never" is the absence of one, so it is projected
@@ -190,7 +188,7 @@ const rustStrSlice = (values, field) => {
 const projection = (when) => {
   if (when === 'never') return '&[]';
   const conditions = Array.isArray(when) ? when : [when];
-  return rustStrSlice(conditions, 'projection');
+  return rustStrSlice(conditions);
 };
 
 const variants = entries.map((word) => `    ${word.executorKey},`).join('\n');
@@ -200,7 +198,7 @@ const rows = entries
     (word) => `    GeneratedWord {
         id: WordId::${word.executorKey},
         name: ${rustStr(word.name)},
-        aliases: ${rustStrSlice(word.aliases, 'aliases')},
+        aliases: ${rustStrSlice(word.aliases)},
         family: ${enumRef('Family', word.family)},
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
@@ -214,8 +212,8 @@ const rows = entries
         cost: ${cost(word.cost)},
         vocabulary_tier: ${enumRef('VocabularyTier', word.vocabularyTier)},
         standard_kind: ${word.standardKind ? `Some(${rustStr(word.standardKind)})` : 'None'},
-        effects: ${rustStrSlice(word.effects, 'effects')},
-        error_when: ${rustStrSlice(word.errorWhen, 'error_when')},
+        effects: ${rustStrSlice(word.effects)},
+        error_when: ${rustStrSlice(word.errorWhen)},
         syntax: ${word.documentation.syntax ? `Some(${rustStr(word.documentation.syntax)})` : 'None'},
     },`,
   )
@@ -358,9 +356,25 @@ ${rows}
 ];
 `;
 
+// The committed file must satisfy `cargo fmt --check` as well as this
+// script's own `--check`, so `rustfmt` — the tool that check actually runs —
+// is the one that decides final formatting, not a hand-rolled approximation
+// of its wrapping rules.
+const formatted = (() => {
+  const result = spawnSync('rustfmt', ['--edition', '2021'], {
+    input: output,
+    encoding: 'utf8',
+  });
+  if (result.error || result.status !== 0) {
+    const detail = result.error ? result.error.message : result.stderr;
+    throw new Error(`rustfmt failed to format the generated word registry: ${detail}`);
+  }
+  return result.stdout;
+})();
+
 if (check) {
   const current = readFileSync(outputPath, 'utf8');
-  if (current !== output) {
+  if (current !== formatted) {
     console.error(`[word-registry] ${outputPath} is stale. Run npm run word-registry:generate.`);
     process.exitCode = 1;
   } else {
@@ -368,6 +382,6 @@ if (check) {
   }
 } else {
   mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, output);
+  writeFileSync(outputPath, formatted);
   console.log(`[word-registry] wrote ${entries.length} Words to ${outputPath}.`);
 }
