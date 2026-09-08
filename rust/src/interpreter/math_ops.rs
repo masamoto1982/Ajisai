@@ -352,9 +352,12 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 /// The scalar law of `SQRT`, lifted by [`lift_unary_numeric`].
 fn sqrt_scalar(value: &Value) -> Result<Value> {
     let Some(f) = value.as_scalar() else {
-        return Err(AjisaiError::create_structure_error(
-            "number",
-            "other format",
+        // `nonNumeric` is the same declared condition `DIV`/`QUANTIZE` use for
+        // an operand outside the numeric domain; SQRT did not declare it
+        // before this fix even though the failure is the identical shape.
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            "SQRT: expected a number, got a non-numeric value",
         ));
     };
     // `from_exact_real` collapses a rational result back to Scalar.

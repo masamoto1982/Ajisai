@@ -102,9 +102,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 crate::interpreter::value_as_code::value_elements_to_tokens(&elements)?
             }
             None => {
-                return Err(AjisaiError::create_structure_error(
-                    "a Vector [ ... ] definition body",
-                    "a non-vector value",
+                return Err(AjisaiError::declared(
+                    "invalidDefinitionBody",
+                    "DEF: expected a Vector [ ... ] definition body, got a non-vector value",
                 ));
             }
         },
@@ -347,9 +347,9 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
     }
 
     if lines.is_empty() {
-        return Err(AjisaiError::create_structure_error(
-            "a non-empty definition body",
-            "an empty body",
+        return Err(AjisaiError::declared(
+            "invalidDefinitionBody",
+            "DEF: expected a non-empty definition body, got an empty body",
         ));
     }
 

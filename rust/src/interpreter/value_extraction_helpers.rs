@@ -114,17 +114,21 @@ pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
 /// This used to flatten the value to a list of fractions and decode each as a
 /// codepoint, which accepted `[ 73 78 67 ]` as the name `INC` just as readily
 /// as `'INC'` — a Vector of numbers naming a Word. Reading the String domain
-/// closes that, and `nonText` is the honest error for everything else.
+/// closes that, and `nonText` is the honest error for everything else — DEF
+/// and DEL both declare it (`spec/words.json`) for exactly this call.
 pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
-        return Err(AjisaiError::create_structure_error("string", "NIL"));
+        return Err(AjisaiError::declared(
+            "nonText",
+            "expected a name (String), got Nil",
+        ));
     }
 
     match value.as_text() {
         Some(name) => Ok(name.to_uppercase()),
-        None => Err(AjisaiError::create_structure_error(
-            "string",
-            "other format",
+        None => Err(AjisaiError::declared(
+            "nonText",
+            "expected a name (String), got a non-text value",
         )),
     }
 }

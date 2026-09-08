@@ -94,6 +94,11 @@
       "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that cannot be honored structurally (distinct from negativeCount and from the indexOutOfBounds projection)."
     },
     {
+      "id": "invalidDefinitionBody",
+      "kind": "declared",
+      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or a Vector with no statements."
+    },
+    {
       "id": "invalidIndex",
       "kind": "declared",
       "documentation": "GET received an index operand that is not itself a well-formed index (non-integer, wrong shape) — distinct from indexOutOfBounds, which is a well-formed index outside bounds."
@@ -161,7 +166,7 @@
     {
       "id": "nonText",
       "kind": "declared",
-      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/NUM) met an operand that is not Text."
+      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/NUM), or a name operand (DEF/DEL/BIND), met an operand that is not Text."
     },
     {
       "id": "nonTextElement",

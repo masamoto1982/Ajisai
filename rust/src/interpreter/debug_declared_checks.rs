@@ -48,7 +48,8 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "invalidCount"
         | "negativeCount"
         | "invalidRange"
-        | "invalidName" => CauseClass::ValueShape,
+        | "invalidName"
+        | "invalidDefinitionBody" => CauseClass::ValueShape,
         // A position outside the operand.
         "indexOutOfBounds" | "invalidIndex" => CauseClass::Index,
         "shapeMismatch" => CauseClass::ShapeMismatch,

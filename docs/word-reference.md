@@ -346,6 +346,7 @@ Exact square root of a non-negative rational, element-wise over a vector. The re
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `2 SQRT`
+- **ERROR conditions:** `nonNumeric`
 
 ## `PI`
 
@@ -899,7 +900,7 @@ Define a user word from a body and a name.
 - **Effects:** `dictionaryWrite`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.ACYCLIC`
 - **Syntax:** `[ 2 * ] 'DOUBLE' DEF`
-- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`, `selfReferentialDefinition`
+- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
 
 ## `DEL`
 
@@ -913,7 +914,7 @@ Delete a user word from the dictionary.
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
 - **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
-- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`
+- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`
 
 ## `PRINT`
 
