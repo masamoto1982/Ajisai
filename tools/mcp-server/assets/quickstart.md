@@ -384,8 +384,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.
 - **COND clauses must be wrapped in a single [ ]** — `5 [ 3 > ] [ 'big' PRINT ] COND`
-  → exit 1, `message: "Structure error: expected each COND clause to be a [ guard | body ] block, got a non-Vector element"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
-  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkExpectedShape`.
+  → exit 1, `message: "COND: expected each clause to be a [ guard | body ] block, got a non-Vector element"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
 - **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
   → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
