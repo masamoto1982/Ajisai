@@ -1310,7 +1310,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &[],
-        error_when: &[],
+        error_when: &["nonNumeric"],
         syntax: Some("2 SQRT"),
     },
     GeneratedWord {
@@ -2696,6 +2696,8 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
             "protectedWord",
             "definitionConflict",
             "selfReferentialDefinition",
+            "nonText",
+            "invalidDefinitionBody",
         ],
         syntax: Some("[ 2 * ] 'DOUBLE' DEF"),
     },
@@ -2730,7 +2732,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["dictionaryDelete"],
-        error_when: &["invalidName", "wordNotFound", "protectedWord"],
+        error_when: &["invalidName", "wordNotFound", "protectedWord", "nonText"],
         syntax: Some("[ [ 1 ] ] 'W' DEF 'W' DEL"),
     },
     GeneratedWord {

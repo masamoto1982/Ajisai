@@ -2127,7 +2127,7 @@ W</pre>
   <h3>A Word name is a String, not a Vector of its code points</h3>
   <pre class="ajisai-source">[ 1 ADD ] [ 73 78 67 ] DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected string, got other format</pre>
+  <pre class="ajisai-expect-error">expected a name (String), got a non-text value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2243,7 +2243,7 @@ W</pre>
   <h3>SQRT of a non-rational radicand is malformed use</h3>
   <pre class="ajisai-source">2 SQRT SQRT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected number, got other format</pre>
+  <pre class="ajisai-expect-error">SQRT: expected a number, got a non-numeric value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

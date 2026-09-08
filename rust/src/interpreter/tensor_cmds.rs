@@ -248,9 +248,9 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
     if args_val.is_nil() {
         interp.stack.push(args_val);
-        return Err(AjisaiError::create_structure_error(
-            "[ shape... value ] vector",
-            "NIL",
+        return Err(AjisaiError::declared(
+            "invalidShape",
+            "FILL: expected a [ shape... value ] vector, got NIL",
         ));
     }
 
@@ -258,9 +258,12 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
     if n < 2 {
         interp.stack.push(args_val);
-        return Err(AjisaiError::create_structure_error(
-            "[ shape... value ] vector of at least 2 elements",
-            &format!("vector of {} element(s)", n),
+        return Err(AjisaiError::declared(
+            "invalidShape",
+            format!(
+                "FILL: expected a [ shape... value ] vector of at least 2 elements, got a vector of {} element(s)",
+                n
+            ),
         ));
     }
 
@@ -268,9 +271,9 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         Some(f) => f,
         None => {
             interp.stack.push(args_val);
-            return Err(AjisaiError::create_structure_error(
-                "a scalar as the last element of [ shape... value ]",
-                "non-scalar value",
+            return Err(AjisaiError::declared(
+                "invalidShape",
+                "FILL: expected a scalar as the last element of [ shape... value ], got a non-scalar value",
             ));
         }
     };
@@ -358,24 +361,25 @@ fn single_rational_operand(value: &Value) -> Result<Option<Fraction>> {
         ValueData::ExactScalar(er) => Ok(er.to_fraction()),
         ValueData::Vector(children) if children.len() == 1 => single_rational_operand(&children[0]),
         ValueData::Tensor { data, .. } if data.len() == 1 => Ok(data.get_small_fraction(0)),
-        ValueData::Vector(_) | ValueData::Tensor { .. } => Err(
-            AjisaiError::create_structure_error("single-element number", "multi-element vector"),
-        ),
-        ValueData::Text(_) => Err(AjisaiError::create_structure_error(
-            "single-element number",
-            "string",
+        ValueData::Vector(_) | ValueData::Tensor { .. } => Err(AjisaiError::declared(
+            "nonNumeric",
+            "QUANTIZE: expected a single-element number, got a multi-element vector",
         )),
-        ValueData::Boolean(_) => Err(AjisaiError::create_structure_error(
-            "single-element number",
-            "boolean",
+        ValueData::Text(_) => Err(AjisaiError::declared(
+            "nonNumeric",
+            "QUANTIZE: expected a number, got a string",
         )),
-        ValueData::Symbol(_) => Err(AjisaiError::create_structure_error(
-            "single-element number",
-            "symbol",
+        ValueData::Boolean(_) => Err(AjisaiError::declared(
+            "nonNumeric",
+            "QUANTIZE: expected a number, got a boolean",
         )),
-        ValueData::Nil => Err(AjisaiError::create_structure_error(
-            "single-element number",
-            "NIL",
+        ValueData::Symbol(_) => Err(AjisaiError::declared(
+            "nonNumeric",
+            "QUANTIZE: expected a number, got a symbol",
+        )),
+        ValueData::Nil => Err(AjisaiError::declared(
+            "nonNumeric",
+            "QUANTIZE: expected a number, got NIL",
         )),
     }
 }

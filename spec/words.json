@@ -1250,7 +1250,9 @@
         "when": "negativeScalar",
         "reason": "domainMiss"
       },
-      "errorWhen": [],
+      "errorWhen": [
+        "nonNumeric"
+      ],
       "purity": "pure",
       "determinism": "deterministic",
       "cost": {
@@ -3351,7 +3353,9 @@
         "invalidName",
         "protectedWord",
         "definitionConflict",
-        "selfReferentialDefinition"
+        "selfReferentialDefinition",
+        "nonText",
+        "invalidDefinitionBody"
       ],
       "purity": "effectful",
       "determinism": "stateRelative",
@@ -3407,7 +3411,8 @@
       "errorWhen": [
         "invalidName",
         "wordNotFound",
-        "protectedWord"
+        "protectedWord",
+        "nonText"
       ],
       "purity": "effectful",
       "determinism": "stateRelative",

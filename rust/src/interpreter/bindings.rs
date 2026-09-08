@@ -221,10 +221,15 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
             if width != several.len() {
                 interp.stack.push_with_role(subject, role);
                 interp.stack.push_with_role(name_value, name_role);
-                return Err(AjisaiError::create_structure_error(
-                    &format!("vector of {} elements", several.len()),
-                    &format!("{} of them", width),
-                ));
+                // Structural, not `declared()` (see `error.rs`'s `kind`
+                // note): BIND's destructuring length mismatch is the same
+                // one-dimensional `shapeMismatch` a broadcast failure is,
+                // even though the message here isn't about broadcasting.
+                return Err(AjisaiError::ShapeMismatch {
+                    left: vec![several.len()],
+                    right: vec![width],
+                    axis: 0,
+                });
             }
             for (position, name) in several.iter().enumerate() {
                 let part = subject
@@ -248,9 +253,9 @@ fn binding_names(value: &Value) -> Result<Vec<String>> {
         return Ok(vec![value_as_string(value).unwrap_or_default()]);
     }
     let Some(children) = value.as_vector() else {
-        return Err(AjisaiError::create_structure_error(
-            "name or vector of names",
-            "other value",
+        return Err(AjisaiError::declared(
+            "nonText",
+            "BIND: expected a name (String) or a Vector of names, got a non-text, non-vector value",
         ));
     };
     children
@@ -259,7 +264,10 @@ fn binding_names(value: &Value) -> Result<Vec<String>> {
             if child.is_text() {
                 Ok(value_as_string(child).unwrap_or_default())
             } else {
-                Err(AjisaiError::create_structure_error("name", "other value"))
+                Err(AjisaiError::declared(
+                    "nonText",
+                    "BIND: expected each name to be a String, got a non-text value",
+                ))
             }
         })
         .collect()

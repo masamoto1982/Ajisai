@@ -97,7 +97,10 @@ pub(crate) fn apply_division_schema(
         let left_is_text = slots[stack_len - 2].is_text();
         let right_is_text = slots[stack_len - 1].is_text();
         if left_is_text || right_is_text {
-            return Err(AjisaiError::create_structure_error("number", "string"));
+            return Err(AjisaiError::declared(
+                "nonNumeric",
+                "DIV: expected a number, got a string",
+            ));
         }
     }
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
