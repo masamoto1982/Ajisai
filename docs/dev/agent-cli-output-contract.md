@@ -534,9 +534,9 @@ the legacy bare array emitted by the compatibility `contract --json` command.
 
 Predicts, without executing it, the finite set of outcome ids a program
 could produce (Phase 5,
-`docs/dev/auditable-kernel-work-order-2026-09.md`). Never fails: even a
-program that cannot itself run (a tokenize failure, an unbalanced vector, an
-unknown word) has exactly one predicted outcome.
+`docs/dev/auditable-kernel-work-order-2026-09.md`). Never fails: a program
+that cannot even be read (a tokenize failure, an unbalanced vector) is
+settled before a single Word runs, so it has exactly one predicted outcome.
 
 ```json
 {
@@ -548,16 +548,25 @@ unknown word) has exactly one predicted outcome.
 }
 ```
 
-`outcomes` is the union, over every Word reachable from the program
-(including inside called `DEF`'d words and `[ ... ]` code operands), of that
-Word's own declared vocabulary (`spec/words.json`'s `errorWhen` +
-`projection.reason` — sound by construction, per the outcome-bijection gate),
-plus `error:stackUnderflow` unless a flow-sensitive arity check proves the
-program never underflows its own starting stack, plus every cross-cutting
-*structural* category (`executionLimitExceeded`, `resourceLimitExceeded`,
-`recursionLimitExceeded`, `condExhausted`, `nameConflict`,
-`builtinProtection`, and the rest — none of which is any specific Word's own
-declared condition) once the program does anything at all.
+`outcomes` is the union, over every Word named anywhere in the program
+(including inside `DEF`'d bodies and inside `[ ... ]` literals — a block can
+be pushed by one Word and executed by another arbitrarily far away, so a
+literal that is inert where it is written may still run), of that Word's own
+declared vocabulary (`spec/words.json`'s `errorWhen` + `projection.reason` —
+sound by construction, per the outcome-bijection gate), plus
+`error:stackUnderflow` unless a flow-sensitive arity check proves the program
+never underflows its own starting stack, plus `error:unknownWord` when any
+name fails to resolve, plus every cross-cutting *structural* category
+(`executionLimitExceeded`, `resourceLimitExceeded`, `recursionLimitExceeded`,
+`condExhausted`, `nameConflict`, `builtinProtection`, and the rest — none of
+which is any specific Word's own declared condition) once the program does
+anything at all.
+
+Note that an unresolvable name joins the set rather than deciding it. Word
+resolution happens *during* execution, so an unknown word is the outcome only
+if execution reaches it: `ADD FROBNICATE` answers `stackUnderflow` and
+`'a' 1 ADD FROBNICATE` answers `nonNumeric`, both before `FROBNICATE` is ever
+looked up.
 
 `exact` is `true` only when the predicted set narrows to the single outcome
 id — which, since Ajisai is deterministic and total, is what the program
@@ -567,10 +576,19 @@ since the structural floor above is added unconditionally rather than proven
 reachable or unreachable for that specific profile. `exact: false` never
 means the prediction is wrong — the true outcome is somewhere in the
 returned set, just not narrowed further. This is a deliberately coarse V1: it
-never under-approximates (verified against every witness in
-`spec/outcome-witnesses.json` by `scripts/check-outcome-prediction.mjs`), but
-does not yet prove a specific declared condition unreachable for the
-operands that actually reach a call.
+never under-approximates, but does not yet prove a specific declared
+condition unreachable for the operands that actually reach a call.
+
+That "never under-approximates" is a checked claim, not an aspiration.
+`scripts/check-outcome-prediction.mjs` verifies it two ways: against every
+witness in `spec/outcome-witnesses.json` (one per registry id), and against a
+list of adversarial *compositions* the script runs for real and compares —
+programs whose shape, rather than whose outcome id, is what threatens the
+property. The second list exists because the first could not see either of
+the two holes an Opus review pass found: every witness is a short program
+that fails at its first Word, so neither "an unknown word that execution
+never reaches" nor "a block executed somewhere other than where it is
+written" was represented.
 
 `limitProfile` (the same shape `receipt.limitProfile` reports) names the
 resource ceilings this prediction assumed; `outcomes` does not currently

@@ -11,14 +11,34 @@ fn malformed_source_predicts_exactly_that() {
     );
 }
 
+/// An unknown word is reachable, not inevitable: word resolution happens
+/// during execution, so anything that fails earlier decides the outcome
+/// instead. `error:unknownWord` therefore joins the set rather than
+/// replacing it, and the prediction is not exact.
 #[test]
-fn an_unknown_word_predicts_exactly_that() {
+fn an_unknown_word_joins_the_set_without_claiming_to_be_the_whole_answer() {
     let response = predict_outcomes("FROBNICATE").to_json();
-    assert_eq!(response["exact"], true);
-    assert_eq!(
-        response["outcomes"],
-        serde_json::json!(["error:unknownWord"])
-    );
+    let outcomes = response["outcomes"].as_array().unwrap();
+    assert!(outcomes.iter().any(|v| v == "error:unknownWord"));
+
+    // These two really answer `stackUnderflow` and `nonNumeric` — measured,
+    // and the reason claiming `unknownWord` exactly was an under-approximation.
+    for (source, actual) in [
+        ("ADD FROBNICATE", "error:stackUnderflow"),
+        ("'a' 1 ADD FROBNICATE", "error:nonNumeric"),
+    ] {
+        let response = predict_outcomes(source).to_json();
+        assert_eq!(response["exact"], false, "{source}");
+        let outcomes = response["outcomes"].as_array().unwrap();
+        assert!(
+            outcomes.iter().any(|v| v == actual),
+            "{source}: predicted {outcomes:?}, which omits the outcome it really produces ({actual})"
+        );
+        assert!(
+            outcomes.iter().any(|v| v == "error:unknownWord"),
+            "{source}"
+        );
+    }
 }
 
 #[test]
