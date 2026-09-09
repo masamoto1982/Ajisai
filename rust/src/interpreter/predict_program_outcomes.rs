@@ -35,21 +35,25 @@ use crate::types::Token;
 
 use super::word_contract::ContractFlow;
 use super::word_contract_flow::FlowSim;
-use super::word_contract_widen::{classify_vector_positions, LiteralContext};
+use super::word_contract_widen::classify_vector_positions;
 use super::word_outcome_vocabulary::{
     builtin_outcomes_for, resolve_and_collect, structural_ceiling_ids,
 };
 use super::Interpreter;
 
 /// The outcome of a static prediction: every outcome id the program could
-/// produce, and whether that set could be narrowed all the way to a single
-/// outcome. `exact` is derived, not tracked incrementally: predicting more
-/// than one outcome id is itself proof the prediction over-approximates a
-/// program that (being deterministic and total) produces exactly one
-/// outcome when actually run.
+/// produce.
+///
+/// Deliberately carries no `exact` flag. Exactness is a property of the
+/// *final* set — one outcome id means the prediction narrowed to the single
+/// outcome a deterministic, total program actually produces — and this walk
+/// does not always build the final set: `agent::outcome_report` may still
+/// add `error:unknownWord` afterwards. Deriving it in both places is how
+/// two fields that describe one fact start disagreeing (the same defect
+/// Phase 2 fixed between `nil` and `suggested` in `contract_report`), so
+/// the one caller that owns the final set owns the derivation.
 pub struct OutcomePrediction {
     pub outcomes: Vec<String>,
-    pub exact: bool,
 }
 
 impl Interpreter {
@@ -70,42 +74,34 @@ impl Interpreter {
             match token {
                 Token::Number(_) | Token::String(_) => flow.feed_literal(),
                 Token::Symbol(symbol) => {
-                    if contexts[idx].in_vector_literal() && contexts[idx] != LiteralContext::Code {
-                        // Inert data (e.g. the body literal of
-                        // `[ ... ] 'NAME' DEF`): never runs here. `NAME`'s
-                        // own body is still walked, via
-                        // `word_outcome_vocabulary`, if and when a later
-                        // call actually resolves to it.
-                        flow.feed_literal();
-                        continue;
-                    }
+                    // Arity and vocabulary read this Symbol differently, and
+                    // both readings are right. Inside a `[ ... ]` it is one
+                    // opaque push and never applies its own arity, whatever
+                    // it turns out to mean — so `flow` sees a literal.
                     if contexts[idx].in_vector_literal() {
-                        // A `Code` operand still contributes its own
-                        // vocabulary (it will really run), but not to the
-                        // top level's own arity: the enclosing `[ ... ]`
-                        // already counted as one opaque push.
                         flow.feed_literal();
-                        outcomes.extend(resolve_and_collect(self, symbol, &mut visiting));
-                        continue;
+                    } else {
+                        let canonical =
+                            crate::core_word_aliases::canonicalize_core_word_name(symbol);
+                        match self.infer_word_contract(&canonical) {
+                            Some(contract) => flow.feed_word(&canonical, &contract.flow),
+                            None => flow.go_dynamic(),
+                        }
                     }
-                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
-                    match self.infer_word_contract(&canonical) {
-                        Some(contract) => flow.feed_word(&canonical, &contract.flow),
-                        None => flow.go_dynamic(),
-                    }
+                    // Its *outcomes* count either way: a block written here
+                    // may be executed anywhere later. See
+                    // `word_outcome_vocabulary`'s module doc.
                     outcomes.extend(resolve_and_collect(self, symbol, &mut visiting));
                 }
                 // `OR-NIL` desugars to this token rather than a Symbol; see
                 // `word_outcome_vocabulary::structural_ceiling_ids`'s doc.
-                Token::NilCoalesce if !contexts[idx].in_vector_literal() => {
+                Token::NilCoalesce => {
                     flow.feed_structural(token);
                     outcomes.extend(builtin_outcomes_for("OR-NIL"));
                 }
-                Token::VectorStart
-                | Token::VectorEnd
-                | Token::NilCoalesce
-                | Token::CondClauseSep
-                | Token::LineBreak => flow.feed_structural(token),
+                Token::VectorStart | Token::VectorEnd | Token::CondClauseSep | Token::LineBreak => {
+                    flow.feed_structural(token)
+                }
             }
         }
 
@@ -120,10 +116,8 @@ impl Interpreter {
         }
         outcomes.insert("value".to_string());
 
-        let exact = outcomes.len() == 1;
         OutcomePrediction {
             outcomes: outcomes.into_iter().collect(),
-            exact,
         }
     }
 }

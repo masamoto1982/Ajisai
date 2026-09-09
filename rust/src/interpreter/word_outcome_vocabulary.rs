@@ -19,6 +19,25 @@
 //! to prove that a *specific* declared condition on a *specific* call is
 //! actually unreachable given the operands that reach it. That is a known,
 //! deliberate V1 limitation, not an oversight.
+//!
+//! # Why every Symbol counts, including one inside a data literal
+//!
+//! This walk deliberately does *not* consult
+//! `word_contract_widen::classify_vector_positions`, though an earlier
+//! version did. That classifier answers a different question — "does this
+//! `[ ... ]` run *here*, at the point it is written" — which is exactly
+//! right for arity/space/cost, where an unexecuted literal is one opaque
+//! push. It is the wrong question for reachability: a block can be pushed
+//! by one Word and executed by another, arbitrarily far away.
+//! `[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC` runs that `ADD` and answers
+//! `nonNumeric`, but the classifier calls the inner block `Data` at every
+//! point this walk sees it, so skipping `Data` dropped `nonNumeric` from
+//! the prediction — an under-approximation, measured, not hypothetical.
+//!
+//! Counting every Symbol over-approximates instead: a Word name written in
+//! a genuinely inert vector contributes a vocabulary nothing will ever
+//! reach. That is the allowed direction (pitfall A), and `exact` reports
+//! it.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
@@ -27,7 +46,6 @@ use crate::error::{ErrorCategory, NilReason};
 use crate::kernel::generated::GENERATED_WORDS;
 use crate::types::{Token, WordDefinition};
 
-use super::word_contract_widen::{classify_vector_positions, LiteralContext};
 use super::Interpreter;
 
 const WORDS_JSON: &str = include_str!("../../../spec/words.json");
@@ -200,15 +218,7 @@ pub(crate) fn outcome_vocabulary_for_word(
     }
     let mut outcomes = BTreeSet::new();
     for line in def.lines.iter() {
-        let contexts = classify_vector_positions(&line.body_tokens);
-        for (idx, token) in line.body_tokens.iter().enumerate() {
-            let in_data =
-                contexts[idx].in_vector_literal() && contexts[idx] != LiteralContext::Code;
-            if in_data {
-                // Inert data: nothing written inside a plain data literal
-                // ever runs, so it contributes nothing here.
-                continue;
-            }
+        for token in line.body_tokens.iter() {
             match token {
                 Token::Symbol(symbol) => {
                     outcomes.extend(resolve_and_collect(interp, symbol, visiting));
