@@ -582,6 +582,37 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- LANG.COLLECTIONS.HIGHER: a block's result is what it leaves on *top*.
+     Leaving more than that is ordinary, not a contract violation — the three
+     cases below are each a program that depends on it, and only an empty
+     stack raises blockContractViolation. Pinned here because the rule is easy
+     to misread as "exactly one result" and the corpus previously showed it
+     only incidentally, inside cases about other conditions. -->
+
+<section class="ajisai-case" id="core-map-block-may-leave-more-than-the-result" data-category="core">
+  <h3>MAP takes the block's top and discards what it left beneath</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 ADD 99 ] MAP</pre>
+  <pre class="ajisai-expect-result">[ 99/1 99/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-fold-block-may-leave-more-than-the-result" data-category="core">
+  <h3>FOLD takes the block's top as the next accumulator</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 0 [ ADD 99 ] FOLD</pre>
+  <pre class="ajisai-expect-result">99/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-map-block-empty-stack-violates" data-category="core">
+  <h3>A block that leaves nothing is the one block-arity violation</h3>
+  <!-- PRINT consumes its operand and pushes nothing (LANG.EFFECTS.OUTPUT), so
+       the block finishes with an empty stack. -->
+  <pre class="ajisai-source">[ 1 2 ] [ PRINT ] MAP</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MAP: expected return value, got empty stack</pre>
+  <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span></div>
+</section>
+
 <section class="ajisai-case" id="core-map-block-preserves-nesting" data-category="core">
   <h3>MAP does not unwrap a nested one-element Vector result</h3>
   <pre class="ajisai-source">[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP</pre>
