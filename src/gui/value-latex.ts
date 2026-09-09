@@ -133,7 +133,7 @@ export const fractionToLatex = (frac: Fraction): string => {
 
 const laneToLatex = (lane: unknown): string => {
     const frac = checkFractionShape(lane);
-    // An invalid dense lane is NIL occupancy (SPEC §4.3.1).
+    // An invalid dense lane is NIL occupancy (LANG.VALUES.VECTOR).
     return frac === null ? '\\mathrm{NIL}' : fractionToLatex(frac);
 };
 
@@ -250,7 +250,7 @@ export const valueToLatex = (item: Value): string | null => {
             if (frac === null) return null;
             const tex = fractionToLatex(frac);
             // Best rational approximation of an exact irrational under a
-            // lossy role (SPEC §2.3): make the approximation visible. The
+            // lossy role (LANG.OBSERVATION.FIREWALL): make the approximation visible. The
             // scientific form may already carry its own \approx.
             const approximate = semantics?.approximate === true;
             return approximate && !tex.startsWith('\\approx') ? `\\approx ${tex}` : tex;

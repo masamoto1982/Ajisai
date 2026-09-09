@@ -4,7 +4,7 @@
 //! (every word has a contract, fields are internally consistent). This
 //! suite closes the complementary gap: it drives the interpreter and
 //! asserts the *runtime* honors each word's declared `nil_policy` and the
-//! NIL Projection Rule (SPEC §4.5.1, §7.12, §11.2).
+//! NIL Projection Rule (LANG.FAILURE.PROJECT, §7.12, §11.2).
 //!
 //! The completeness tests are registry-driven: a newly added Core
 //! passthrough / projecting word without a behavioral probe here fails.
@@ -35,7 +35,7 @@ fn reason_of(v: &Value) -> Option<NilReason> {
     v.nil_reason().cloned()
 }
 
-// --- Core passthrough classification (SPEC §7.12) -------------------------
+// --- Core passthrough classification (LANG.FAILURE.PASSTHROUGH) -------------------------
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum NilClass {
@@ -143,7 +143,7 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
     }
 }
 
-// --- NIL projection: Projecting / CreatesNil words (SPEC §11.2) ----------
+// --- NIL projection: Projecting / CreatesNil words (LANG.FAILURE.ERROR) ----------
 
 /// Projecting words: a well-formed domain miss yields a reasoned NIL with a
 /// reason; malformed use raises an ordinary error.
@@ -344,9 +344,9 @@ async fn nil_check_answers_rather_than_projecting() {
 
 #[tokio::test]
 async fn nil_projection_comparison_nil_input() {
-    // Comparison words are Projecting/PassthroughThenProject (SPEC §7.14). A
+    // Comparison words are Projecting/PassthroughThenProject (LANG.CONTRACT.REGISTRY). A
     // NIL operand propagates as NIL output via the passthrough rule
-    // (SPEC §4.5.1, §7.12). (Budget exhaustion instead yields Unknown, a NIL
+    // (LANG.FAILURE.PROJECT, §7.12). (Budget exhaustion instead yields Unknown, a NIL
     // tagged TruthValue — covered by `tier2_undecidable_conformance_tests`.)
     for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
         for code in [
@@ -368,7 +368,7 @@ async fn nil_projection_comparison_nil_input() {
 #[tokio::test]
 async fn projecting_arithmetic_nil_input_passes_through() {
     // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil, but a NIL operand
-    // still propagates as NIL via the universal NIL Projection Rule (SPEC §4.5.1)
+    // still propagates as NIL via the universal NIL Projection Rule (LANG.FAILURE.PROJECT)
     // — the CreatesNil policy is about CF-budget exhaustion on irrational
     // operands, not about rejecting NIL inputs.
     for name in &["FLOOR", "ROUND"] {
@@ -386,7 +386,7 @@ async fn projecting_arithmetic_nil_input_passes_through() {
 
 #[tokio::test]
 async fn malformed_use_raises_error_not_a_projected_nil() {
-    // SPEC §11.2: "そもそも使い方が違う -> エラー". A non-numeric DIV operand
+    // LANG.FAILURE.ERROR: "そもそも使い方が違う -> エラー". A non-numeric DIV operand
     // and a malformed GET index are structural misuse, not domain misses.
     assert!(
         run("'x' 1 DIV").await.is_err(),
@@ -398,7 +398,7 @@ async fn malformed_use_raises_error_not_a_projected_nil() {
     );
 }
 
-// --- OR-NIL replaces a reasoned NIL with a fallback (SPEC §11.2) ---
+// --- OR-NIL replaces a reasoned NIL with a fallback (LANG.FAILURE.ERROR) ---
 
 #[tokio::test]
 async fn or_nil_supplies_fallback_and_clears_reason() {

@@ -300,7 +300,7 @@ fn evaluate_guard_isolated(
             "COND: guard must return TRUE or FALSE, got empty stack",
         )
     })?;
-    // SPEC §7.4.3: a guard that reduces to the logical `Unknown` (U) — an
+    // LANG.VALUES.TRUTH: a guard that reduces to the logical `Unknown` (U) — an
     // undecidable continued-fraction comparison, or any comparison against an
     // absent subject — is not a definite `true`, so its clause does not fire.
     // Fall through to the next clause exactly as for a `false` guard. U is
@@ -319,7 +319,7 @@ fn evaluate_guard_isolated(
     if is_unknown_guard_result(&result_value) {
         return Ok(false);
     }
-    // A definite Boolean guard fires iff it is TRUE (SPEC §7.7) — a bare
+    // A definite Boolean guard fires iff it is TRUE (LANG.COLLECTIONS.HIGHER) — a bare
     // Boolean, nothing else. A scalar 0/1 and a Boolean wrapped in a
     // single-element Vector used to be accepted here too, both the
     // truthiness coercion LANG.VALUES.TRUTH rules out, and the second one

@@ -1,8 +1,8 @@
-//! The exact-real scalar value behind `ValueData::ExactScalar` (SPEC §4.2).
+//! The exact-real scalar value behind `ValueData::ExactScalar` (LANG.VALUES.EXACT).
 //!
 //! An enum over the numeric cost tiers: Tier 0 rationals (`Fraction`,
 //! including the nil sentinel) and Tier 1 algebraic numbers. The variant
-//! is a cost class, never an observable property (SPEC §4.8): values
+//! is a cost class, never an observable property (LANG.AUTHORITY.FREEDOM): values
 //! demote to the cheapest tier that holds them exactly, so an
 //! `Algebraic` payload is always irrational. A Tier 2 variant (general
 //! computable reals) slots in here when a word that needs it exists.
@@ -22,7 +22,7 @@ use num_integer::Integer;
 use num_traits::One;
 use std::cmp::Ordering;
 
-/// Default comparison water for the bare relations (SPEC §7.4.1). Not
+/// Default comparison water for the bare relations (LANG.VALUES.EXACT). Not
 /// observable over Tier ≤ 1 — those comparisons are decidable and spend
 /// nothing; it bounds refinement only when a Tier 2 observation is
 /// involved.
@@ -345,7 +345,7 @@ impl ExactReal {
 
     // ---- Observations ----
 
-    /// Three-way comparison under a water budget (SPEC §7.4.1 / §7.4.2).
+    /// Three-way comparison under a water budget (LANG.VALUES.EXACT / §7.4.2).
     /// Tier ≤ 1 pairs decide exactly without consuming any water; the
     /// budget bounds refinement only when a Tier 2 observation is
     /// involved, where exhaustion yields `Starved` — the source of the
@@ -374,7 +374,7 @@ impl ExactReal {
     }
 
     /// Water-explicit rational enclosure of this value after spending `budget`
-    /// refinement steps (the `MATH@ENCLOSE` observation, SPEC §4.2 / §14.3).
+    /// refinement steps (the `MATH@ENCLOSE` observation, LANG.VALUES.EXACT / §14.3).
     /// `None` for nil (the empty observation). Tier ≤ 1 values return a point
     /// (or tight algebraic bounds); a Tier 2 value returns its generator's
     /// enclosure — the only tier whose width the budget actually governs.

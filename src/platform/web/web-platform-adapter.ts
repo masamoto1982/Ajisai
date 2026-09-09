@@ -8,7 +8,7 @@ declare const __AJISAI_BUILD_TIMESTAMP__: string;
 export const WEB_PLATFORM_ADAPTER: PlatformAdapter = {
     persistence: webPersistence,
     fileIO: new WebFileIO(),
-    // Host execution settings seam (SPEC §5.3 water levels). Empty = all
+    // Host execution settings seam (LANG.MACHINE.LIMITS water levels). Empty = all
     // interpreter defaults; an embedding host fills in e.g. stepLimit here.
     executionConfig: {},
     runtime: {

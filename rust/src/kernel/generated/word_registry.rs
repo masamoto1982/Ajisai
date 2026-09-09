@@ -127,7 +127,7 @@ impl Family {
     }
 }
 
-/// How the Word treats its operands under the default mode (SPEC §13.2).
+/// How the Word treats its operands under the default mode (LANG.MODIFIERS.CONSUMPTION).
 ///
 /// Generated from the `consumption` enum in spec/words.schema.json: every value the
 /// specification admits is a variant, so the implementation vocabulary cannot be
@@ -156,7 +156,7 @@ impl Consumption {
     }
 }
 
-/// How the Word behaves when an operand is NIL (SPEC §7.12).
+/// How the Word behaves when an operand is NIL (LANG.FAILURE.PASSTHROUGH).
 ///
 /// Generated from the `nilPolicy` enum in spec/words.schema.json: every value the
 /// specification admits is a variant, so the implementation vocabulary cannot be
@@ -223,7 +223,7 @@ impl Partiality {
     }
 }
 
-/// Observational purity class (SPEC §7.14).
+/// Observational purity class (LANG.CONTRACT.REGISTRY).
 ///
 /// Generated from the `purity` enum in spec/words.schema.json: every value the
 /// specification admits is a variant, so the implementation vocabulary cannot be

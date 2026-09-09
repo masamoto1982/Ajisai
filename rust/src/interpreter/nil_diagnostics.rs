@@ -1,7 +1,7 @@
-//! Diagnostic absence accessors (SPEC §4.5.0 / §7.15).
+//! Diagnostic absence accessors (LANG.VALUES.NIL / §7.15).
 //!
 //! `NIL?` and `NIL-REASON` let a program read what a reasoned NIL carries
-//! (SPEC §11.2, `NilReason`) instead of collapsing every absence with a single
+//! (LANG.FAILURE.ERROR, `NilReason`) instead of collapsing every absence with a single
 //! `OR-NIL` fallback. They are the whole set: `NIL-ORIGIN`,
 //! `NIL-RECOVERABLE?` and `NIL-DIAGNOSIS` named the origin / recoverability /
 //! diagnosis metadata that the canonical minimal-NIL model does not have, and
@@ -12,7 +12,7 @@
 //!
 //!   * **Observation, not consumption.** Each word retains the inspected value
 //!     on the stack and pushes its result above it, mirroring the LENGTH/GET
-//!     inspection-word precedent of SPEC §7.1.1. A diagnosis is an observation.
+//!     inspection-word precedent of LANG.OBSERVATION.DIAGNOSIS. A diagnosis is an observation.
 //!   * **Every absence, U included.** They key off
 //!     [`Value::is_operational_nil`], which is every `Nil` value. The logical
 //!     Unknown (U) is a NIL read in truth position (LANG.VALUES.TRUTH), so it
@@ -24,7 +24,7 @@
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
 //! a predicate answers its question — and `NIL-REASON` projects a NIL whose
 //! reason is `notAvailable`: the "well-formed but cannot produce a value" case
-//! of the NIL Projection Rule (SPEC §11.2), never an error.
+//! of the NIL Projection Rule (LANG.FAILURE.ERROR), never an error.
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::Interpreter;
@@ -86,7 +86,7 @@ fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&'static 
 
 /// `NIL?` — retain the value and push `TRUE` when it is an operational NIL,
 /// `FALSE` otherwise. It checks absence only and never branches on the reason
-/// (SPEC §4.5.0).
+/// (LANG.VALUES.NIL).
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
     let is_absent = match interp.stack.last() {
         Some(value) => value.is_operational_nil(),

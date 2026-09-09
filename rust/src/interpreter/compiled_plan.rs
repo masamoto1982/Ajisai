@@ -388,7 +388,7 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 execute_compiled_call(interp, call)?;
                 // Mirror the interpreted loop: retag the top role from the
                 // word-hint table so the compiled route leaves the same
-                // `(value, role)` observation (SPEC §12).
+                // `(value, role)` observation (LANG.OBSERVATION.PROTOCOL).
                 super::execution_loop::apply_word_hint_override(interp, &call.name);
                 // `post_call_cleanup` with the mode-preservation answer
                 // precomputed at compile time (no per-call uppercase scan).

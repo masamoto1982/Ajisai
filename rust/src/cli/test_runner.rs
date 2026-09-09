@@ -3,7 +3,7 @@
 //! Runs Ajisai test files and checks each program's result against
 //! expectations declared as `#@` **directive comments**. It adds NO language
 //! word (no `ASSERT` in Core): the expectations live in host-read comments that
-//! the interpreter ignores as ordinary `#` comments (SPEC §3.4), so the test
+//! the interpreter ignores as ordinary `#` comments (LANG.SOURCE.CODE), so the test
 //! harness stays strictly separate from language semantics (§15.1). The runner
 //! drives the production Core, the same execution path as `run`.
 //!

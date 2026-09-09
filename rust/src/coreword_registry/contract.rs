@@ -6,10 +6,10 @@
 use crate::kernel::generated::{Arity, GeneratedWord};
 use serde::Serialize;
 
-/// Static mass contract (SPEC §13.1): a word's flow-mass relationship under the
+/// Static mass contract: a word's flow-mass relationship under the
 /// default target/consume mode. `consumes` operands are read and `produces` results
 /// are pushed; under `KEEP` the `consumes` operands are additionally retained
-/// (bifurcation, §13.2). This is the machine-readable form of the §13.1 "arity /
+/// (LANG.MODIFIERS.CONSUMPTION). This is the machine-readable form of the "arity /
 /// consumption / production / bifurcation" declaration; the NIL-projection part
 /// of §13.1 is carried by `nil_policy`.
 ///
@@ -37,7 +37,7 @@ impl MassContract {
 /// human-facing `stack_effect` prose.
 ///
 /// Most words are ordinary `RuntimeWord`s dispatched by name and consuming/
-/// producing stack values. The lazy control directive of SPEC §6.4 is not: the
+/// producing stack values. The lazy control directive of LANG.FAILURE.RECOVERY is not: the
 /// tokenizer emits it as a dedicated token (`OR-NIL` -> `NilCoalesce`) and the
 /// execution loop interprets the *following source unit* positionally rather
 /// than popping operands. This enum lets generators and consistency tests assert

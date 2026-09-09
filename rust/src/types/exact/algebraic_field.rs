@@ -1,6 +1,6 @@
 //! Field operations on the Tier 1 normal form: multiplicative inverse
 //! and division. Split from `algebraic.rs` to respect the file-size
-//! budget (SPEC §14.1).
+//! budget (the file-size budget in docs/dev/specification-implementation-rules.md).
 
 use crate::types::bigint_gcd::balanced_bigint_gcd;
 use crate::types::exact::algebraic::{add_term as merge_term, Algebraic, AlgebraicResult};

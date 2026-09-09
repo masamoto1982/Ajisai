@@ -175,6 +175,12 @@ jobs:
         # rust/src, rust/tests, or src. See scripts/check-docs-dev-drift.mjs.
         run: npm run check:docs-dev-drift
 
+      - name: No citations to the retired numbered specification
+        # SPECIFICATION.md (17 numbered sections) was deleted in 3f21400c;
+        # the current specification publishes stable LANG.* clause IDs so a
+        # citation survives reorganization. See scripts/check-spec-citations.mjs.
+        run: npm run check:spec-citations
+
       - name: Package, crate and Tauri versions agree
         run: npm run check:version-sync
 

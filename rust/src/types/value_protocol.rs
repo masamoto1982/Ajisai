@@ -85,7 +85,7 @@ fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
 ///
 /// A consumer reading an algebraic result top-down meets two renderings of the
 /// number before it meets the number, and neither is it. `stackDisplay` is the
-/// SPEC §4.2.3 continued fraction *truncated at a display budget* — √2 runs to
+/// LANG.VALUES.EXACT continued fraction *truncated at a display budget* — √2 runs to
 /// `[ 1; 2, 2, … ]`, ~101 characters, ending in the truncation marker `…` —
 /// and the node's own `value` is a
 /// rational approximation, flagged `approximate`. Each is correct as what it
@@ -266,7 +266,7 @@ pub(crate) fn value_to_protocol(
 ) -> ProtocolNode {
     let effective = external_hint_opt.unwrap_or(value.hint);
     // The ContinuedFraction role serializes numeric scalars as the canonical
-    // nested-form string (SPEC §12.2), not a lossy rational approximation.
+    // nested-form string (LANG.OBSERVATION.PROTOCOL), not a lossy rational approximation.
     if effective == Interpretation::ContinuedFraction
         && matches!(value.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))
     {
@@ -296,7 +296,7 @@ pub(crate) fn value_to_protocol(
             // Some(value.clone())` (the original exact real) plus an
             // `approximate: true` marker in its semantics block (see the
             // serializers), so the approximation is observable and the
-            // consumer can reference the exact source (SPEC §2.3).
+            // consumer can reference the exact source (LANG.OBSERVATION.FIREWALL).
             use num_bigint::BigInt;
             let approx = er
                 .best_rational_approximation(&BigInt::from(1_000_000_000u64))

@@ -1,4 +1,4 @@
-//! Tier 2: general computable reals — the receptacle (SPEC §4.2).
+//! Tier 2: general computable reals — the receptacle (LANG.VALUES.EXACT).
 //!
 //! A `Computable` is a lazily refined, monotonically shrinking rational
 //! enclosure: a pure, deterministic generator from a refinement step to

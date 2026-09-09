@@ -399,7 +399,7 @@ const formatValue = (item: Value, depth: number): string => {
         case 'boolean':
             return item.value ? 'TRUE' : 'FALSE';
         case 'truthValue':
-            // Three-valued logic Unknown (SPEC §7.5). The wire value is the
+            // Three-valued logic Unknown (LANG.VALUES.TRUTH). The wire value is the
             // protocol string 'unknown'; render it as UNKNOWN (display-only).
             return item.value === 'unknown' ? 'UNKNOWN' : String(item.value).toUpperCase();
         case 'vector':
@@ -437,7 +437,7 @@ const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
 // vocabulary (fast lane, dense/nested vectors, COMPARE-WITHIN depth) — the
 // machine counter names never appear. Collapsed by default and omitted
 // entirely when the run had no cost-model activity, so users who never open
-// it never see it. Diagnostics only (SPEC §4.8): nothing here is a value.
+// it never see it. Diagnostics only (LANG.AUTHORITY.FREEDOM): nothing here is a value.
 const buildCostSummaryLines = (delta: RuntimeMetricsSnapshot): string[] => {
     const lines: string[] = [];
     const plural = (n: number): string => (n === 1 ? '' : 's');

@@ -90,8 +90,8 @@
     --color-stack:          oklch(47.9% 0.220 328.4);   /* #990099 magenta */
 
     /* --- Stack operand-highlight backgrounds ----------------------------- */
-    /* The Stack fills operand nodes (SPEC §6.1 target) with a background whose
-       color carries the consumption axis (SPEC §6.2): EAT a very pale warm red
+    /* The Stack fills operand nodes with a background whose
+       color carries the consumption axis (LANG.MODIFIERS.CONSUMPTION): EAT a very pale warm red
        (operands are removed after the operation), KEEP a very pale teal-green
        (operands are retained). A background fill — rather than a text-color
        change — leaves the bracket depth-colors that show Vector nesting intact.

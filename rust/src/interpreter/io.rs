@@ -20,7 +20,7 @@ pub fn op_print(interp: &mut Interpreter) -> Result<()> {
         let val = extract_value_for_print(interp, is_keep_mode)?;
         // PRINT is an output boundary: a Text-role value is emitted as its raw
         // character content, without the `'...'` quotes the Stack projection
-        // uses to mark it as a string (SPEC §7.9).
+        // uses to mark it as a string (LANG.EFFECTS.OUTPUT).
         let payload = crate::types::display::format_for_output(&val);
         // One PRINT, one line. LANG.EFFECTS.OUTPUT makes the output stream an
         // *ordered sequence of emissions* and leaves rendering to the host, and
@@ -53,7 +53,7 @@ mod tests {
 
     /// A string is shown on the stack as `'TEST'` but printed as its raw
     /// content `TEST`: the surrounding quotes are a Stack affordance only
-    /// (SPEC §7.9).
+    /// (LANG.EFFECTS.OUTPUT).
     #[tokio::test]
     async fn test_print_strips_display_quotes_from_string() {
         let mut interp = Interpreter::new();

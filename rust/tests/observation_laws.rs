@@ -3,7 +3,7 @@
 //! These encode the algebraic content of the observation function and the
 //! renderer (Phase 1): `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff)` with
 //! `render : (data, role) → display` a **pure** function over **all** SPEC
-//! §12.2 roles, observed through the SPEC §2.3 semantic axes only.
+//! §12.2 roles, observed through the LANG.OBSERVATION.FIREWALL semantic axes only.
 //!
 //! Unlike `algebraic_laws.rs` — which observes through whole-stack
 //! `Value::to_string()` (a *display* surface, non-canonical per §2.3) — this
@@ -53,7 +53,7 @@ fn truth_value_is_observably_not_a_number() {
         render(&run_one("1"), Interpretation::Unassigned),
     );
 }
-/// Every observed protocol string is canonical lower-camelCase (SPEC §2.3):
+/// Every observed protocol string is canonical lower-camelCase (LANG.OBSERVATION.FIREWALL):
 /// nonempty, lowercase first letter, ASCII-alphanumeric only (no `_`, no `-`).
 #[test]
 fn protocol_strings_are_lower_camel_case() {
@@ -91,7 +91,7 @@ proptest! {
 
     // ───────────────────────── render is a pure (data, role) function ─────────
 
-    /// **Totality + determinism**: `render` is defined on every SPEC §12.2 role
+    /// **Totality + determinism**: `render` is defined on every LANG.OBSERVATION.PROTOCOL role
     /// for every well-formed value (the role match is exhaustive over the 8
     /// roles) and is a deterministic pure function — two calls agree. (Probe
     /// finding: an empty vector `[ ]` renders to the empty string, so
@@ -104,7 +104,7 @@ proptest! {
         }
     }
 
-    /// **Purity / hint-independence** (SPEC §12.2: "two values are displayed
+    /// **Purity / hint-independence** (LANG.OBSERVATION.PROTOCOL: "two values are displayed
     /// identically whenever their data and role are equal"). `render(v, r)`
     /// depends only on `(data, role)`, never on the value's stored hint, so
     /// re-roling the carrier value leaves every rendering fixed.
@@ -150,7 +150,7 @@ proptest! {
         prop_assert_eq!(a.origin, b.origin);
     }
 
-    /// **Axis coherence** on runtime-produced values (SPEC §2.3: a truth-valued
+    /// **Axis coherence** on runtime-produced values (LANG.OBSERVATION.FIREWALL: a truth-valued
     /// value "also carries the `truthValued` capability"): the `truthValue` axis
     /// is present iff the `truthValued` capability is present.
     #[test]

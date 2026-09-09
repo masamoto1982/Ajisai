@@ -1,4 +1,4 @@
-//! The unified numeric-observation primitive (SPEC §4.2).
+//! The unified numeric-observation primitive (LANG.VALUES.EXACT).
 //!
 //! Every Ajisai number is an *observation process*: feeding it water (the
 //! single refinement budget) narrows a rational enclosure of the value.
@@ -13,7 +13,7 @@
 //!   enclosure. Only this tier may report `Starved`, the sole source of
 //!   the logical `Unknown` (U).
 //!
-//! Which tier a value flows through is never observable (SPEC §4.8): the
+//! Which tier a value flows through is never observable (LANG.AUTHORITY.FREEDOM): the
 //! contract below fixes identity, display, and serialization to the value
 //! itself, not its representation.
 
@@ -21,7 +21,7 @@ use crate::types::fraction::Fraction;
 
 /// Refinement budget for one `Observation::refine` call. Water is the
 /// single resource behind what used to be separate comparison and display
-/// budgets; the execution step budget (SPEC §5.3) stays separate for now
+/// budgets; the execution step budget (LANG.MACHINE.LIMITS) stays separate for now
 /// but shares the naming so a future unification stays open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Water(pub u64);
@@ -95,7 +95,7 @@ pub enum Refine {
     Starved,
 }
 
-/// A numeric value as an observation process (SPEC §4.2). The contract:
+/// A numeric value as an observation process (LANG.VALUES.EXACT). The contract:
 ///
 /// - **Monotone**: after `refine`, `current_interval` is contained in
 ///   every interval reported before.
@@ -103,7 +103,7 @@ pub enum Refine {
 ///   sign, floor, and any comparison; only Tier 2 may starve.
 /// - **Deterministic**: equal values fed equal total water report equal
 ///   interval sequences.
-/// - **Unobservable representation** (SPEC §4.8): no tier or internal
+/// - **Unobservable representation** (LANG.AUTHORITY.FREEDOM): no tier or internal
 ///   form shows through identity, display, or serialization.
 pub trait Observation {
     /// The tightest enclosure currently known, without consuming water.

@@ -165,7 +165,7 @@ LOOKUP のテキスト（`rust/src/builtins/detail-lookup-*.rs`）や
 比喩を足したついでに正典へ持ち込む、ということをしない。
 
 なお "Bubble Rule" という語は Rust 実装のコメントでは広く使われている
-（`rust/src/error.rs` ほか、"SPEC §11.2" として参照）。
+（`rust/src/error.rs` ほか、"LANG.FAILURE.ERROR" として参照）。
 
 ### 3.4 【判断済み】正典の向きが逆転する — (a) 一時的な逆転で確定
 

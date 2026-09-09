@@ -7,7 +7,7 @@ import type {
 } from '../wasm-interpreter-types';
 import { applyInterpreterSnapshot } from './interpreter-snapshot';
 
-// Cost-model counters (SPEC §4.8) are session-cumulative on the interpreter,
+// Cost-model counters (LANG.AUTHORITY.FREEDOM) are session-cumulative on the interpreter,
 // and this worker's interpreter is reused across runs, so the per-run
 // activity is the before/after delta around one execute call. Undefined when
 // the wasm bundle predates collect_runtime_metrics.
@@ -104,7 +104,7 @@ self.onmessage = async (event: MessageEvent) => {
         const result: ExecuteResult = await interpreter!.execute(event.data.code);
         result.runtimeMetricsDelta = diffMetrics(metricsBefore, collectMetrics(interpreter!));
 
-        // Attach the lossless stack snapshot (SPEC §2.3): it is the format the
+        // Attach the lossless stack snapshot (LANG.OBSERVATION.FIREWALL): it is the format the
         // main thread restores from, so exact post-run values (CodeBlock,
         // ExactScalar) survive instead of the lossy observation `stack`. The
         // interpreter still holds the post-execute state here, so this captures

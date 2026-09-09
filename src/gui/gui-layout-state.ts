@@ -87,7 +87,7 @@ const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
     elements.dictionaryArea.hidden = state.currentRightMode !== 'dictionary';
 };
 
-// SPEC §12.3 (Observation surfaces) / Portability Profiles "Presentation Profile".
+// LANG.OBSERVATION.PROJECTIONS (Observation surfaces) / Portability Profiles "Presentation Profile".
 // Pure transition core of the desktop presentation profile: it maps a selection
 // of one observation surface onto the (left, right) column configuration. The two
 // coupling rules below are the spec's Semantic-coupling invariant (Invariant 6),

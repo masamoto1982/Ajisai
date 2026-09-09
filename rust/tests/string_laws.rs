@@ -1,4 +1,4 @@
-//! Property-based string / text laws (Phase 9, SPEC §7.6).
+//! Property-based string / text laws (Phase 9, LANG.VALUES.DISJOINT).
 //!
 //! Encodes the algebraic content of string values (Phase 9):
 //! a string literal `'abc'` is a **String**, one of the six disjoint domains of

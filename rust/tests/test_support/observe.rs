@@ -2,7 +2,7 @@
 //!
 //! The formalization §8 defines the observation function
 //! `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff ⟦p⟧ σ₀)`. This module gives the
-//! data-plane half of that: it reads a value **only** through the SPEC §2.3
+//! data-plane half of that: it reads a value **only** through the LANG.OBSERVATION.FIREWALL
 //! semantic axes (`semanticKind`, `shape`, `capabilities`, `truthValue`,
 //! `origin`, `absence`) and through the pure renderer `render : (data, role) →
 //! display`. It never branches on a Rust enum name, `Debug` string, or display
@@ -23,7 +23,7 @@ use ajisai_core::types::display::format_with_hint;
 use ajisai_core::types::{Interpretation, Value};
 use ajisai_core::ErrorCategory;
 
-/// Every interpretation role of SPEC §12.2, in table order.
+/// Every interpretation role of LANG.OBSERVATION.PROTOCOL, in table order.
 pub const ALL_ROLES: [Interpretation; 7] = [
     Interpretation::Unassigned,
     Interpretation::RawNumber,
@@ -34,14 +34,14 @@ pub const ALL_ROLES: [Interpretation; 7] = [
     Interpretation::Nil,
 ];
 
-/// The pure renderer `render : (data, role) → display` (SPEC §12.1). Exposed as
+/// The pure renderer `render : (data, role) → display` (LANG.OBSERVATION.PROTOCOL). Exposed as
 /// a named function so laws read as equations over `render`, not over the
 /// `Display` impl.
 pub fn render(v: &Value, role: Interpretation) -> String {
     format_with_hint(v, role)
 }
 
-/// The protocol-level observation of one value: the SPEC §2.3 semantic axes as
+/// The protocol-level observation of one value: the LANG.OBSERVATION.FIREWALL semantic axes as
 /// canonical lower-camel-case protocol strings. Capabilities are sorted so the
 /// observation is order-insensitive.
 #[derive(Debug, Clone, PartialEq, Eq)]

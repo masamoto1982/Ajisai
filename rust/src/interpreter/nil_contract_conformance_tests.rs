@@ -95,7 +95,7 @@ async fn observe(program: &str) -> Outcome {
 fn required(policy: NilPolicy) -> Option<Outcome> {
     match policy {
         // A projected NIL flows downstream and stays diagnosable, so the
-        // reason must survive (SPEC §7.12).
+        // reason must survive (LANG.FAILURE.PASSTHROUGH).
         NilPolicy::Passthrough | NilPolicy::PassthroughThenProject | NilPolicy::PreserveReason => {
             Some(Outcome::NilWithReason)
         }
@@ -225,7 +225,7 @@ fn search_words_reject_a_nil_needle() {
 /// Rejection is safe by construction — it runs nothing and touches no stack —
 /// but passing a projected NIL through has to *produce* the result and unwind
 /// the operands itself, so the guard takes over a duty the executors used to
-/// discharge: honoring the consumption mode (SPEC §5.2). `EAT` replaces the
+/// discharge: honoring the consumption mode (LANG.MODIFIERS.CONSUMPTION). `EAT` replaces the
 /// declared operand window with the projected NIL; `KEEP` leaves the window
 /// in place and stacks the projected NIL above it. Both are pinned for a
 /// unary and a binary Word, together with the depth of the stack the guard

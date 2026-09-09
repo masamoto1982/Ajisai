@@ -454,7 +454,7 @@ mod ai_first_comparison_tests {
 #[cfg(test)]
 mod comparison_budget_infrastructure_tests {
     use crate::interpreter::Interpreter;
-    // Phase 6 infrastructure for SPEC §7.4.1's partial-quotient
+    // Phase 6 infrastructure for LANG.VALUES.EXACT's partial-quotient
     // budget. Every Ajisai scalar currently on the stack is still
     // a `Fraction`, so the ordering ops always decide and never
     // project Undecidable. These tests pin the *current* behavior
@@ -554,7 +554,7 @@ mod comparison_budget_infrastructure_tests {
 /// 2. `apply_equality` projects `None` to the §7.4.1 Undecidable
 ///    NIL via the existing `push_undecidable_nil` helper.
 /// 3. A vector-lifted `EQ` / `NEQ` short-circuits on the first
-///    NIL-producing pair (SPEC §7.4).
+///    NIL-producing pair (LANG.VALUES.EXACT).
 ///
 /// We can't yet construct a non-Rational `ExactReal` scalar value
 /// from Ajisai source — `ValueData::Scalar` is still `Fraction`-

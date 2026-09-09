@@ -9,7 +9,7 @@ use crate::types::{Interpretation, Value, ValueData};
 /// One of the four ordering comparisons. Carries the dispatch decision
 /// through the scalar-comparison helper, which keeps the Fraction fast path
 /// for both-Rational operands and routes any other pair through the total
-/// Tier 1 `ExactReal::cmp_exact` (SPEC §7.4.1).
+/// Tier 1 `ExactReal::cmp_exact` (LANG.VALUES.EXACT).
 #[derive(Debug, Clone, Copy)]
 enum OrderingKind {
     Lt,
@@ -96,7 +96,7 @@ fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Resu
 }
 
 /// Outcome of a three-way order comparison shared by the
-/// comparison-dependent words of SPEC §7.4.3 (`MIN`, `MAX`, `SORT`).
+/// comparison-dependent words of LANG.VALUES.TRUTH (`MIN`, `MAX`, `SORT`).
 /// `Decided` carries the exact `a` vs `b` ordering. `Undecided` is
 /// reserved for Tier 2 observations that cannot separate within their
 /// water (and the defensive absent-operand fallback); it carries the
@@ -108,7 +108,7 @@ pub(crate) enum OrderOutcome {
     Undecided(usize),
 }
 
-/// Three-way order of two scalar values (SPEC §7.4.1). Returns `Err(_)`
+/// Three-way order of two scalar values (LANG.VALUES.EXACT). Returns `Err(_)`
 /// for structurally non-comparable operands (the malformed-use path).
 /// Both-`Rational` operands take the exact `Fraction` fast path; any pair
 /// involving a Tier 1 algebraic decides through the total, budget-free

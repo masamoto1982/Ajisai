@@ -17,7 +17,7 @@
 //!
 //! Limits are a safety control, never value semantics: conformance results must
 //! not depend on a specific limit value, and all conformance must pass under
-//! the documented defaults (SPEC §2.5).
+//! the documented defaults (LANG.MACHINE.LIMITS).
 
 use crate::error::{AjisaiError, ResourceLimit, Result};
 use crate::types::exact::ExactReal;

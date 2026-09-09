@@ -23,7 +23,7 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = super::runtime_limits::DEFAULT_MA
 /// guard turns a pathologically long acyclic call chain into a recoverable
 /// `AjisaiError` regardless of that step budget's value — a stack overflow is
 /// a depth problem, not a count problem. Recursion itself cannot reach this
-/// guard: SPEC §8.7's DEF-time acyclicity check makes a self-referential
+/// guard: LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check makes a self-referential
 /// definition impossible to construct.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
@@ -140,7 +140,7 @@ pub struct RuntimeMetrics {
     pub resolve_cache_miss_count: u64,
     pub resolve_cache_invalidation_count: u64,
     /// No longer produced: it counted a guarded tail self-call's backward
-    /// jump, and SPEC §8.7's acyclicity check now makes a self-call
+    /// jump, and LANG.DICTIONARY.ACYCLIC's acyclicity check now makes a self-call
     /// impossible to define. Retained at a constant 0 rather than removed —
     /// removing a field is what a schema version is for
     /// (`runtime_metrics_json`), and `tailCallJumpCount` is a published

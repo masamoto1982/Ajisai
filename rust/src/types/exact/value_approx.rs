@@ -1,9 +1,9 @@
 //! Derived rational views of an exact real: best rational approximation
-//! and canonical continued-fraction terms (SPEC §4.2.3). The CF here is a
+//! and canonical continued-fraction terms (LANG.VALUES.EXACT). The CF here is a
 //! **display-side derivation** from the value — floor-and-reciprocate for
 //! Tier 1, the certain common prefix of a refined enclosure for Tier 2 —
 //! not an internal representation. Split from `value.rs` to respect the
-//! file-size budget (SPEC §14.1).
+//! file-size budget (the file-size budget in docs/dev/specification-implementation-rules.md).
 
 use crate::types::exact::value::{ExactReal, TIER2_INTERNAL_WATER};
 use crate::types::fraction::Fraction;
@@ -70,7 +70,7 @@ impl ExactReal {
     /// Up to `budget` canonical partial quotients, derived exactly: the
     /// full canonical CF (truncated) for rationals, the floor-and-
     /// reciprocate prefix for Tier 1 irrationals. The CF is a display
-    /// form derived from the value, not a representation (SPEC §4.2.3).
+    /// form derived from the value, not a representation (LANG.VALUES.EXACT).
     pub fn partial_quotients_bounded(&self, budget: usize) -> Vec<BigInt> {
         if budget == 0 {
             return Vec::new();

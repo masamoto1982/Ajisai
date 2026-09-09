@@ -6,7 +6,7 @@
 //!
 //! `docs/dev/mcp-host-profiles.md` is the live comparison against the MCP
 //! profile (`LOCAL_AGENT_RUNTIME_LIMITS`, `rust/src/agent/api.rs`); the two
-//! disagree on purpose (SPEC §2.5: limits are a host safety control, not
+//! disagree on purpose (LANG.MACHINE.LIMITS: limits are a host safety control, not
 //! language semantics). `docs/dev/host-profile-derivation-2026-08-14.md` is
 //! the record of how the values below were derived (or, for three of them,
 //! deliberately *not* derived — see each constant's own doc comment).

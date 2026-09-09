@@ -7,7 +7,7 @@ declare const __AJISAI_BUILD_TIMESTAMP__: string;
 export const TAURI_PLATFORM_ADAPTER: PlatformAdapter = {
     persistence: new TauriPersistence(),
     fileIO: new TauriFileIO(),
-    // Host execution settings seam (SPEC §5.3 water levels). Empty = all
+    // Host execution settings seam (LANG.MACHINE.LIMITS water levels). Empty = all
     // interpreter defaults; a future Tauri settings store fills in e.g.
     // stepLimit here.
     executionConfig: {},

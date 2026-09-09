@@ -124,7 +124,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // operand's value sets the length, so it takes the runtime water level
         // rather than a static bound.
         Random => (Unbounded, true),
-        // The positional control directives (SPEC §6.4) never reach a
+        // The positional control directives (LANG.FAILURE.RECOVERY) never reach a
         // primitive: the execution loop interprets them against the source
         // stream, so they materialize nothing.
         LazyNextUnitFallback | SetConsumptionKeep => (Const, false),

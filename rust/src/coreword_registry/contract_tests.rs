@@ -58,7 +58,7 @@ fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
 
 #[test]
 fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
-    // SPEC §7.14: all six comparison primitives are
+    // LANG.CONTRACT.REGISTRY: all six comparison primitives are
     // Projecting/PassthroughThenProject/B. They are Projecting because a
     // Tier 2 (`PI`) pair can exhaust its comparison-refinement budget
     // (§7.4.1) without deciding — that genuine incomparability projects onto
@@ -72,19 +72,19 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
         assert_eq!(
             meta.partiality,
             Partiality::Projecting,
-            "{} must be Projecting (SPEC §7.14)",
+            "{} must be Projecting (LANG.CONTRACT.REGISTRY)",
             name
         );
         assert_eq!(
             meta.nil_policy,
             NilPolicy::PassthroughThenProject,
-            "{} must be PassthroughThenProject (SPEC §7.14)",
+            "{} must be PassthroughThenProject (LANG.CONTRACT.REGISTRY)",
             name
         );
         assert_eq!(
             meta.safety_level,
             SafetyLevel::B,
-            "{} must be SafetyLevel B (SPEC §9.4)",
+            "{} must be SafetyLevel B",
             name
         );
     }
@@ -94,7 +94,7 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
 fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
     // MOD/FLOOR/ROUND operate on ExactScalar (CF) operands whose
     // partial-quotient budget can exhaust, yielding an Undecidable NIL
-    // (SPEC §7.4.1). They are therefore Projecting/CreatesNil/B, matching
+    // (LANG.VALUES.EXACT). They are therefore Projecting/CreatesNil/B, matching
     // DIV and the comparison words. ADD/SUB/MUL stay Total because their
     // CF arithmetic always yields a value (never a budget miss).
     for name in &["MOD", "FLOOR", "ROUND"] {
@@ -103,13 +103,13 @@ fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
         assert_eq!(
             meta.partiality,
             Partiality::Projecting,
-            "{} must be Projecting (SPEC §7.4.1)",
+            "{} must be Projecting (LANG.VALUES.EXACT)",
             name
         );
         assert_eq!(
             meta.nil_policy,
             NilPolicy::PassthroughThenProject,
-            "{} passes a NIL through and projects a budget miss (SPEC §7.4.1)",
+            "{} passes a NIL through and projects a budget miss (LANG.VALUES.EXACT)",
             name
         );
         assert_eq!(
@@ -136,7 +136,7 @@ fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
 
 #[test]
 fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
-    // SPEC §4.5.0 / §7.15: the five diagnostic absence accessors inspect a
+    // LANG.VALUES.NIL / §7.15: the five diagnostic absence accessors inspect a
     // NIL rather than propagate it, so their nil_policy is ConsumesNil (the
     // OR-NIL-family "inspect or branch on NIL" classification). They are pure,
     // total, safety-A observations that retain their inspection target, so
@@ -149,19 +149,19 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
         assert_eq!(
             meta.nil_policy,
             NilPolicy::ConsumeNil,
-            "{} must be consumeNil (SPEC §4.5.0)",
+            "{} must be consumeNil (LANG.VALUES.NIL)",
             name
         );
         assert_eq!(
             meta.purity,
             Purity::Pure,
-            "{} must be Pure (SPEC §7.15)",
+            "{} must be Pure (LANG.OBSERVATION.DIAGNOSIS)",
             name
         );
         assert_eq!(
             meta.partiality,
             Partiality::Total,
-            "{} must be Total — a well-formed observation never raises (SPEC §4.5.0)",
+            "{} must be Total — a well-formed observation never raises (LANG.VALUES.NIL)",
             name
         );
         assert_eq!(

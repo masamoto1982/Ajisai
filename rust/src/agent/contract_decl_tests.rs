@@ -18,7 +18,7 @@ mod contract_decl_tests {
 
     // `gap.recursiveDependency` fired when a word's own contract inference
     // was re-entered while still being inferred — direct or mutual
-    // recursion. SPEC §8.7's DEF-time acyclicity check now refuses a
+    // recursion. LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now refuses a
     // self-referential (or mutually cyclic) definition outright, so no word
     // can ever reach the dictionary in a shape this gap would fire for; the
     // `GapCode::RecursiveDependency` case in `contract_gap.rs` and

@@ -1,4 +1,4 @@
-// Presentation layer for Ajisai's four observation surfaces (SPEC §12.3:
+// Presentation layer for Ajisai's four observation surfaces (LANG.OBSERVATION.PROJECTIONS:
 // Input/π_Input, Output/π_Output, Stack/π_Stack, Dictionary/π_Dict). The
 // concrete way those surfaces are made visible on a device is a "Presentation
 // Profile" (SPEC Portability Profiles): a labeled transition system over

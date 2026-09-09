@@ -354,7 +354,7 @@ fn is_string_close_delimiter(c: char) -> bool {
     c.is_whitespace()
 }
 
-/// `OR-NIL` (SPEC §6.4, core_word_aliases.rs) has no symbol or legacy-name
+/// `OR-NIL` (LANG.FAILURE.RECOVERY, core_word_aliases.rs) has no symbol or legacy-name
 /// sugar: it is emitted as its own dedicated control token directly from the
 /// bare word, because the execution loop reads the *following* source unit
 /// positionally — a spelled-out control directive must not fall through to a

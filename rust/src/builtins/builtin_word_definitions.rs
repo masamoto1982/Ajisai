@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn builtin_specs_stack_effect_grammar() {
         for spec in super::builtin_specs() {
-            // Control directives (SPEC §6.4) act positionally on the source
+            // Control directives (LANG.FAILURE.RECOVERY) act positionally on the source
             // stream, not as a stack `X -> Y` transformation, so the arrow
             // grammar does not apply to them; their contract is carried by
             // `execution_form` and a prose stack-effect note.

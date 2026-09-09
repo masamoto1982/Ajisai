@@ -5,7 +5,7 @@ use crate::semantic::Recoverability;
 use crate::types::Value;
 use std::cell::RefCell;
 
-/// The logical Unknown as a plain NIL (SPEC §7.4.3): `SORT`/`ORDER`'s output
+/// The logical Unknown as a plain NIL (LANG.VALUES.TRUTH): `SORT`/`ORDER`'s output
 /// domain is a vector, not a truth value, so — unlike the comparison words'
 /// `undecidable_truth_value` — this carries no `TruthValue` hint.
 fn undecidable_nil() -> Value {
@@ -18,7 +18,7 @@ fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value>
         .collect::<Vec<Value>>()
 }
 
-/// Outcome of attempting to sort a slice of values under the SPEC §7.4.3
+/// Outcome of attempting to sort a slice of values under the LANG.VALUES.TRUTH
 /// budgeted comparison.
 enum SortAttempt {
     /// Every required comparison decided; `perm` is the ascending permutation
@@ -34,7 +34,7 @@ enum SortAttempt {
 }
 
 /// Sort the indices `0..items.len()` by the values' ascending order under the
-/// budgeted continued-fraction comparison (SPEC §7.4.1). A single undecidable
+/// budgeted continued-fraction comparison (LANG.VALUES.EXACT). A single undecidable
 /// pair makes the whole order unestablished — reported as `Undecided` with the
 /// first such pair's agreed-prefix — and `SORT` then yields the logical
 /// `Unknown` rather than a partially-sorted vector. A non-comparable element

@@ -4,13 +4,13 @@
 //! shrinking rational enclosure (`Computable`). Its base bounds are computed
 //! once by Machin's formula `π = 16·arctan(1/5) − 4·arctan(1/239)`, each
 //! arctangent summed as its alternating Taylor series with exact `Fraction`
-//! arithmetic. **No floating point is used anywhere** (SPEC §14.4): the
+//! arithmetic. **No floating point is used anywhere** (LANG.VALUES.EXACT): the
 //! endpoints are exact rationals and the enclosure is rigorous by the
 //! alternating-series bracketing theorem — the limit of an alternating series
 //! whose terms decrease monotonically to zero lies between any two consecutive
 //! partial sums, so `[min(Sₙ, Sₙ₊₁), max(Sₙ, Sₙ₊₁)]` encloses it.
 //!
-//! Invariants (SPEC §4.2; Phase 7 §14.4):
+//! Invariants (LANG.VALUES.EXACT; Phase 7 §14.4):
 //! - deterministic — the same step yields the same interval;
 //! - rational endpoints;
 //! - nested — `enclosure(k+1) ⊆ enclosure(k)`;

@@ -127,7 +127,7 @@ mod tests {
     }
 
     // `test_recursive_identity_is_stable` pinned that a self-recursive word's
-    // identity hashed its self-cycle reproducibly. SPEC §8.7's DEF-time
+    // identity hashed its self-cycle reproducibly. LANG.DICTIONARY.ACYCLIC's DEF-time
     // acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so no word's
     // dependency graph can contain a cycle for `word_identity`'s cycle-hashing
     // path to see; that path (Section 8.6) is unreachable but kept rather than
@@ -526,7 +526,7 @@ mod tests {
     // a definition fired on the word itself: `DEF` and `DEL` both refused
     // with "referenced by FIB — delete those words first", naming the word
     // being deleted. `collect_external_dependents` (`resolve_word.rs`) still
-    // excludes a word's own self-edge from that guard, but SPEC §8.7's
+    // excludes a word's own self-edge from that guard, but LANG.DICTIONARY.ACYCLIC's
     // DEF-time acyclicity check now refuses a self-referential definition
     // outright, so no word can carry a self-edge for the exclusion to matter
     // to any more; the two tests that pinned it (redefining and deleting a

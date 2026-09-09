@@ -50,7 +50,7 @@ export class AjisaiInterpreter {
      * The resource ceilings this interpreter is actually running under, as
      * JSON, under the same names every other Ajisai host publishes them by.
      *
-     * SPEC §2.5 makes limits a host safety control rather than value
+     * LANG.MACHINE.LIMITS makes limits a host safety control rather than value
      * semantics, so two conforming hosts legitimately disagree about them —
      * and they do: the playground runs the interpreter defaults while the MCP
      * agent profile is an order of magnitude tighter. That is only a trap for
@@ -96,7 +96,7 @@ export class AjisaiInterpreter {
     restore_stack_snapshot(snapshot_json: string): void;
     restore_user_words(words_js: any): void;
     /**
-     * Override the execution step budget (water level, SPEC §5.3) for
+     * Override the execution step budget (water level, LANG.MACHINE.LIMITS) for
      * subsequent executions. A runtime safety control, not a language
      * semantic: the host may raise or lower it; never calling this keeps
      * the default (100,000). A zero or non-positive value is ignored so a
@@ -104,7 +104,7 @@ export class AjisaiInterpreter {
      */
     set_max_execution_steps(steps: number): void;
     /**
-     * The one stack format persistence accepts (SPEC §2.3). Unlike
+     * The one stack format persistence accepts (LANG.OBSERVATION.FIREWALL). Unlike
      * `collect_stack`, which serializes the *observation* wire format (a
      * CodeBlock shows as `nil`, an ExactScalar as a marked rational
      * approximation), this captures the exact value so `restore_stack_snapshot`

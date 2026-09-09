@@ -61,7 +61,7 @@ impl AjisaiInterpreter {
     /// The resource ceilings this interpreter is actually running under, as
     /// JSON, under the same names every other Ajisai host publishes them by.
     ///
-    /// SPEC §2.5 makes limits a host safety control rather than value
+    /// LANG.MACHINE.LIMITS makes limits a host safety control rather than value
     /// semantics, so two conforming hosts legitimately disagree about them —
     /// and they do: the playground runs the interpreter defaults while the MCP
     /// agent profile is an order of magnitude tighter. That is only a trap for

@@ -1,4 +1,4 @@
-// Presentation Profile conformance suite (SPEC §12.3 "Observation surfaces" +
+// Presentation Profile conformance suite (LANG.OBSERVATION.PROJECTIONS "Observation surfaces" +
 // Portability Profiles "Presentation Profile").
 //
 // SPEC formalizes the device-facing programming experience in two layers:
@@ -12,14 +12,14 @@
 // layouts are two models of that one abstract LTS, by exercising the real
 // transition cores (`updateDesktopModes`, `resolveNextViewMode`) rather than a
 // re-encoding. Device tuning (breakpoints, swipe thresholds, tap counts, column
-// geometry) is implementation freedom (SPEC §5.3 standing) and is not asserted.
+// geometry) is implementation freedom (LANG.AUTHORITY.FREEDOM standing) and is not asserted.
 
 import { describe, it, expect } from 'vitest';
 import { updateDesktopModes, type LayoutState } from '../gui-layout-state';
 import { createGuiLayoutState } from './layout-model';
 import { resolveNextViewMode, VIEW_ORDER, type ViewMode } from '../mobile-view-switcher';
 
-// Surface set A (SPEC §12.3). Order is irrelevant here; configurations are sets.
+// Surface set A (LANG.OBSERVATION.PROJECTIONS). Order is irrelevant here; configurations are sets.
 const SURFACES: readonly ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
 
 // A presentation profile as a labeled transition system M = (C, Σ, →, c0).
@@ -127,7 +127,7 @@ const PROFILES: ReadonlyArray<PresentationLTS<unknown>> = [
 ];
 
 describe('Presentation Profile LTS — observation surfaces are device-independent', () => {
-    it('both profiles range over exactly the four SPEC §12.3 surfaces', () => {
+    it('both profiles range over exactly the four LANG.OBSERVATION.PROJECTIONS surfaces', () => {
         expect([...SURFACES].sort()).toEqual(['dictionary', 'input', 'output', 'stack']);
         expect([...VIEW_ORDER].sort()).toEqual([...SURFACES].sort());
     });

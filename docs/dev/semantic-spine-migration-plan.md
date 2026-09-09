@@ -643,7 +643,7 @@ D24 は「`NIL` リテラル語が理由の無い NIL を作る」と書いて�
 | 生産経路 | 旧 | 新 |
 | --- | --- | --- |
 | 書かれた `NIL`（Word / ベクタ内の `NIL` シンボル） | 理由なし | `literal`（新 `NilReason::Literal`） |
-| 空になる計算（`FILTER` が何も残さない、長さ 0 の `TAKE`、空にする `REMOVE`、サイズ 0 の `SPLIT` チャンク、`''`） | 理由なし | `emptySequence`（SPEC §4.5。`Value::from_string` は既にこれを返していた） |
+| 空になる計算（`FILTER` が何も残さない、長さ 0 の `TAKE`、空にする `REMOVE`、サイズ 0 の `SPLIT` チャンク、`''`） | 理由なし | `emptySequence`（LANG.VALUES.NIL。`Value::from_string` は既にこれを返していた） |
 | `MAP` / `FILTER` の NIL 対象 | 理由なし（**入力の理由を捨てていた**） | 入力の absence をそのまま継承 |
 | `STR` の NIL 対象 | 理由なし | 同上 |
 

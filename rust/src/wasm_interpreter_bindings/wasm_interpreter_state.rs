@@ -249,7 +249,7 @@ impl AjisaiInterpreter {
             .update_stack_with_hints(Vec::new(), Vec::new());
     }
 
-    /// The one stack format persistence accepts (SPEC §2.3). Unlike
+    /// The one stack format persistence accepts (LANG.OBSERVATION.FIREWALL). Unlike
     /// `collect_stack`, which serializes the *observation* wire format (a
     /// CodeBlock shows as `nil`, an ExactScalar as a marked rational
     /// approximation), this captures the exact value so `restore_stack_snapshot`
@@ -284,7 +284,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn clear_io_output_buffer(&mut self) {}
 
-    /// Override the execution step budget (water level, SPEC §5.3) for
+    /// Override the execution step budget (water level, LANG.MACHINE.LIMITS) for
     /// subsequent executions. A runtime safety control, not a language
     /// semantic: the host may raise or lower it; never calling this keeps
     /// the default (100,000). A zero or non-positive value is ignored so a
