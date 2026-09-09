@@ -18,6 +18,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `ajisai-authoring-style.md` | 正典 HTML 文書の執筆規約（コード/数式チャネル分離、KaTeX） | `[執筆規約]` |
 | `structured-prose-style.md` | 情報の形の選び方（文 vs label:value vs 表 vs 図）。多言語対応を理由とする | `[執筆規約]` |
 | `reference-writing-style.md` | Reference 表面の執筆規約 | `[執筆規約]` |
+| `specification-implementation-rules.md` | 実装の工学規律（命名、500行予算、制御フロー、コメント）。1件目は `check-file-size-budget.mjs` が強制 | `[執筆規約]` |
 | `three-layer-documentation-model.md` | ワードヘルプの三層モデル（Reference / LOOKUP / hover） | `[執筆規約]` |
 | `devlog-format.md` | Blogger 開発ログ記事の形式（目的/手段/結果/課題の四項目・約500字）と誠実性の規律 | `[執筆規約]` |
 

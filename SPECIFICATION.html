@@ -586,29 +586,6 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A semantic change begins in one authoritative source, regenerates all derived surfaces, updates clause-linked conformance cases, and demonstrates unchanged observations unless the change is explicitly versioned.</p>
 
-<h2 id="12-ai-first-implementation-rules">12. AI-first Implementation Rules</h2>
-
-<p><em>Non-normative.</em> This section is maintained in <code>docs/dev/specification-implementation-rules.html</code> and included here for contributors, not as part of the language: LANG.AUTHORITY.SOURCES places it outside the normative set. Nothing below defines Ajisai semantics or constrains a conforming implementation; it is how this repository is written.</p>
-
-<h3 id="121-mandatory">12.1 Mandatory</h3>
-
-<ul>
-<li>Prefer explicit, structurally searchable function and module names.</li>
-<li>Keep newly created Rust source files, and files that are substantially rewritten, at or under 500 lines. Existing over-budget files are recorded as a baseline (<code>docs/quality/file-size-baseline.json</code>) and, as a goal, must not be changed in ways that further increase their line count.</li>
-<li>Keep control flow shallow and phase-separated.</li>
-<li>Separate semantic changes from structural cleanup in change management.</li>
-<li>Maintain single canonical implementations; do not allow dual-mode drift.</li>
-<li>Source code comments are allowed when they clarify intent, invariants, traceability, or non-obvious behavior. When source code is changed, nearby comments must be reviewed and updated so they remain accurate. Comments that merely restate obvious code should be avoided.</li>
-</ul>
-
-<h3 id="122-advisory">12.2 Advisory</h3>
-
-<ul>
-<li>Prefer small helper extraction for duplicated control scaffolding.</li>
-<li>Prefer deterministic, low-ambiguity error classification.</li>
-<li>Prefer mechanically enforceable tests over narrative documentation.</li>
-</ul>
-
 <h3 id="presentation-profile">Presentation Profile</h3>
 
 <h4 id="gui-current-host-contract">Current GUI contract</h4>
