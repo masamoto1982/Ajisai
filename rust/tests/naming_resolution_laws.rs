@@ -3,7 +3,7 @@
 //! Encodes the algebraic content of dictionary resolution (Phase 6):
 //! the dictionary `Dict = Name ⇀ Blk`, the deterministic resolver
 //! `resolve : Name × Vis ⇀ Blk + Unknown` with order **Core → user**, and
-//! `DEF`/`DEL` as state transducers with a dependency guard (SPEC §8.2).
+//! `DEF`/`DEL` as state transducers with a dependency guard (LANG.DICTIONARY.MUTATION).
 //!
 //! Every law was checked against the reference implementation with a throwaway
 //! probe (`_probe_naming.rs`, deleted) before being written (roadmap §1.2-(T)
@@ -74,7 +74,7 @@ proptest! {
 
     /// **DEF makes a name resolvable; the defined word equals its inlined
     /// body.** `[body] 'W' DEF  x W  ≡  x body` — defining then calling is the
-    /// identity on the body transducer (SPEC §8.1).
+    /// identity on the body transducer (LANG.DICTIONARY.MUTATION).
     #[test]
     fn def_then_call_inlines_body(name in user_word_name(), (body, inline) in user_word_body(), x in small()) {
         let defined = obs(&format!("[ {body} ] '{name}' DEF {x} {name}"));
@@ -84,7 +84,7 @@ proptest! {
 
     /// **DEF then DEL is the identity on resolution.** A name is `Unknown`
     /// before definition and `Unknown` again after deletion — `DEL` is the left
-    /// inverse of `DEF` on the visibility of a fresh name (SPEC §8.3).
+    /// inverse of `DEF` on the visibility of a fresh name (LANG.DICTIONARY.MUTATION).
     #[test]
     fn def_del_round_trip_restores_unknown(name in user_word_name(), (body, _i) in user_word_body(), x in small()) {
         let fresh = format!("{x} {name}");
@@ -229,7 +229,7 @@ fn destructuring_requires_one_name_per_element() {
 
 /// A bound reasoned NIL stays a reasoned NIL, with its reason, however many
 /// times the name is read. Binding is not an observation of the value
-/// (SPEC §7.12).
+/// (LANG.FAILURE.PASSTHROUGH).
 #[test]
 fn binding_preserves_an_absence_and_its_reason() {
     assert_eq!(
@@ -242,7 +242,7 @@ fn binding_preserves_an_absence_and_its_reason() {
 /// A Word call is a barrier frame: its body reads its own bindings and its
 /// operands, never a caller's — a name bound above is unreachable inside a
 /// Word it calls, whether that call sits one level down or several (SPEC
-/// §6.3, LANG.SOURCE.FRAME). SPEC §8.7's DEF-time acyclicity check now rules
+/// §6.3, LANG.SOURCE.FRAME). LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now rules
 /// out testing this through a self-recursive call or a tail-jumped frame
 /// reuse — neither can be defined any more — so both cases below use only
 /// ordinary calls between distinct words.

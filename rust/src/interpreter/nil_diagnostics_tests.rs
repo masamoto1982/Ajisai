@@ -1,4 +1,4 @@
-//! Tests for the diagnostic absence accessors (SPEC §4.5.0 / §7.15):
+//! Tests for the diagnostic absence accessors (LANG.VALUES.NIL / §7.15):
 //! `NIL?`, `NIL-REASON`, `NIL-ORIGIN`, `NIL-RECOVERABLE?`, `NIL-DIAGNOSIS`.
 //!
 //! Coverage follows the §15 discipline: success paths, the non-NIL path, the
@@ -165,7 +165,7 @@ async fn nil_reason_is_nil_for_a_decidable_exact_comparison() {
         "NIL-REASON on a non-NIL value must be NIL, never a reason string"
     );
 }
-// ── Domain miss (SPEC §5: "SQRT of a negative rational is a well-formed
+// ── Domain miss (LANG.FAILURE.PROJECT: "SQRT of a negative rational is a well-formed
 //    domain miss") ────────────────────────────────────────────────────────────
 /// Division by zero keeps its own reason. The domain-miss variant is a new
 /// classification, not a rename of an existing one.

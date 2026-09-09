@@ -105,7 +105,7 @@ fn diagnosis_to_protocol_js(
         set_prop(&obj, "resourceLimit", &limit_obj.into());
     }
 
-    // CF-comparison agreed-prefix (SPEC §4.5.0 / §7.4.1): machine-readable
+    // CF-comparison agreed-prefix (LANG.VALUES.NIL / §7.4.1): machine-readable
     // count of leading partial quotients that matched before an Unknown (U)
     // comparison gave up. Emitted only when present.
     if let Some(prefix) = diagnosis.agreed_prefix {
@@ -157,7 +157,7 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     if let Some(absence) = value.normalized_absence_metadata() {
         set_prop(&obj, "absence", &absence_to_protocol_js(&absence));
     }
-    // Exact-irrational firewall marker (SPEC §2.3): an `ExactScalar` rendered
+    // Exact-irrational firewall marker (LANG.OBSERVATION.FIREWALL): an `ExactScalar` rendered
     // under any role other than the lossless ContinuedFraction form is shown
     // as a *best rational approximation* (see `value_to_protocol`). Without a
     // marker its `number` value is indistinguishable from an exact rational,
@@ -172,7 +172,7 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     }
     // The exact value itself, when there is a short way to write it. An
     // algebraic irrational is *stored* as the multiquadratic normal form
-    // Σ c_m √m (SPEC §4.2), so these pairs are the number rather than a view of
+    // Σ c_m √m (LANG.VALUES.EXACT), so these pairs are the number rather than a view of
     // it, and a host given them can draw `√3` or `1/2 + 1/3√5` instead of
     // choosing between a thirty-line continued fraction and an approximation.
     // Additive and optional: a host that ignores it sees exactly what it saw

@@ -1,5 +1,5 @@
 //! Tier 1: algebraic numbers as a first-class multiquadratic normal form
-//! (SPEC §4.2).
+//! (LANG.VALUES.EXACT).
 //!
 //! An [`Algebraic`] is an element of \(\mathbb{Q}(\sqrt{d_1}, \sqrt{d_2},
 //! \dots)\) in normal form \(\sum_m c_m \sqrt{m}\), where the monomials

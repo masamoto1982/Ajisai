@@ -66,9 +66,9 @@ pub struct CorewordMetadata {
     /// Declared in `spec/words.json`.
     pub nil_policy: NilPolicy,
     pub safety_level: SafetyLevel,
-    /// Static flow-mass contract (SPEC §13.1): arity / production, with
-    /// bifurcation governed by the `KEEP` modifier (§13.2). Derived from the
-    /// declared stack arity.
+    /// Static flow-mass contract: arity / production, with retention
+    /// governed by the `KEEP` modifier (LANG.MODIFIERS.CONSUMPTION). Derived
+    /// from the declared stack arity (LANG.MACHINE.WORD).
     pub mass: MassContract,
     /// Portability profile used by conformance tooling to keep the Core
     /// profile free of host-boundary words.

@@ -3,11 +3,11 @@
 //! Encodes the algebraic content of the modifier / contract / mass-conservation
 //! model (Phase 3):
 //!
-//! 1. **Modifier combinators** (`SPEC §6`): `⟦μ·w⟧ = κ_consume ∘ δ_region ∘
+//! 1. **Modifier combinators** (`LANG.MODIFIERS.CONSUMPTION`): `⟦μ·w⟧ = κ_consume ∘ δ_region ∘
 //!    base(w)`. default consumption is the identity and `KEEP` is bifurcation.
-//! 2. **Coreword contracts** (`SPEC §7.14`): the `partiality` / `nil_policy` /
+//! 2. **Coreword contracts** (`LANG.CONTRACT.REGISTRY`): the `partiality` / `nil_policy` /
 //!    `safety_level` lattices, with contract absence = conformance violation.
-//! 3. **Static mass conservation** (`SPEC §13`): consumption/production as a
+//! 3. **Static mass conservation** (`LANG.MODIFIERS.CONSUMPTION`): consumption/production as a
 //!    resource (linear) discipline, observed here via stack-depth deltas
 //!    (`depth(KEEP w) − depth(w) = arity`).
 //!
@@ -50,7 +50,7 @@ proptest! {
 
     /// `KEEP` is bifurcation (§13.2): operands are retained *and* the result is
     /// pushed. Observationally `a b KEEP w == (a b) ++ (a b w)`. The sugar
-    /// `,,`≡KEEP (SPEC §6.2).
+    /// `,,`≡KEEP (LANG.MODIFIERS.CONSUMPTION).
     #[test]
     fn keep_is_bifurcation(a in small(), b in small(), w in binary_arith()) {
         let mut expected = obs(&format!("{a} {b}"));
@@ -195,7 +195,7 @@ fn a_failed_keep_call_reports_the_failure() {
 // ───────────────── projecting words project onto NIL for domain misses ──────
 
 /// `Projecting`/`CreatesNil` words project a well-formed domain miss onto NIL
-/// rather than raising (SPEC §7.14, NIL Projection Rule §11.2): division by
+/// rather than raising (LANG.CONTRACT.REGISTRY, NIL Projection Rule §11.2): division by
 /// zero and an out-of-range `GET` both yield NIL, not an error.
 #[test]
 fn projecting_words_project_onto_nil_for_domain_misses() {
@@ -210,7 +210,7 @@ fn projecting_words_project_onto_nil_for_domain_misses() {
 
 /// Every built-in carries a contract reachable by its own name, with all three
 /// classification fields in their declared domains. A Coreword without a
-/// contract entry is a conformance violation (SPEC §7.14).
+/// contract entry is a conformance violation (LANG.CONTRACT.REGISTRY).
 #[test]
 fn every_coreword_declares_a_reachable_contract() {
     let reg = get_builtin_word_registry();
@@ -312,7 +312,7 @@ fn safety_a_words_are_total() {
         .collect();
     assert!(
         a_but_partial.is_empty(),
-        "SPEC §7.14: safety A must be total, but these are A+Partial: {a_but_partial:?}"
+        "LANG.CONTRACT.REGISTRY: safety A must be total, but these are A+Partial: {a_but_partial:?}"
     );
 }
 

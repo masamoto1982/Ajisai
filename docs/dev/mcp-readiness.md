@@ -214,7 +214,7 @@ Completed:
 
   What it replaces is not a missing field but a misleading first impression:
   the two renderings a consumer meets before the terms are `stackDisplay` (the
-  SPEC §4.2.3 continued fraction, *truncated at a display budget* — ~194
+  LANG.VALUES.EXACT continued fraction, *truncated at a display budget* — ~194
   characters for √2, ending in `...]`) and the node's own `value` (a rational
   approximation flagged `approximate`). One looks complete and is not; the
   other looks exact and is not. Neither is changed: `stackDisplay` remains the
@@ -339,7 +339,7 @@ no *unbounded* path sat far below the rest, and none does now.
 
 **Writing a value down is budgeted by work now, not by term count.** The
 dominant cost of an algebraic value was never computing it. `stackDisplay` is a
-continued fraction (SPEC §4.2.3), and expanding one needs enclosure refinement
+continued fraction (LANG.VALUES.EXACT), and expanding one needs enclosure refinement
 that grows with the term count; the budget was 32 partial quotients however
 much each cost. Measured at 2 / 4 / 8 / 16 / 32 terms, the run took 0.1 ms
 throughout while the render took 5 ms / 57 ms / 951 ms / 9.1 s / **147 s** —

@@ -52,7 +52,7 @@ mod tests {
     }
 
     /// ABS decides the sign against 0 through the budgeted comparison
-    /// (SPEC §7.4.3) and negates when negative, so it accepts the full numeric
+    /// (LANG.VALUES.TRUTH) and negates when negative, so it accepts the full numeric
     /// domain including lazy continued-fraction operands.
     #[tokio::test]
     async fn abs_handles_lazy_irrationals() {

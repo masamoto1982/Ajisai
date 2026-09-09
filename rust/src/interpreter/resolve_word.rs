@@ -203,7 +203,7 @@ impl Interpreter {
     /// it participates in a dependency cycle. This is the impact set that a
     /// redefinition or deletion of `word_name` can affect, and the scope a later
     /// stage uses to invalidate dependent cached artifacts.
-    /// SPEC §8.7's acyclicity check: would naming `referenced` from the body
+    /// LANG.DICTIONARY.ACYCLIC's acyclicity check: would naming `referenced` from the body
     /// of `defining` (a word not yet in `user_words`, or about to replace its
     /// current entry) close a cycle back onto `defining`?
     ///

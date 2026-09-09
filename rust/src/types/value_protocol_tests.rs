@@ -69,7 +69,7 @@ fn plain_nil_is_still_nil_not_unknown() {
 /// to serialize as `nil` (as part of the pre-unification CodeBlock domain),
 /// so every host drew `NIL` for a value `NIL?` answers FALSE for and `EXEC`
 /// runs — the internal representation observed as the wrong domain, which
-/// SPEC §2.3 rules out.
+/// LANG.OBSERVATION.FIREWALL rules out.
 #[test]
 fn a_symbol_serializes_as_its_own_domain_with_its_bare_name() {
     let node = value_to_protocol(&Value::from_symbol("MUL"), None);
@@ -77,7 +77,7 @@ fn a_symbol_serializes_as_its_own_domain_with_its_bare_name() {
     assert_eq!(node.value, ProtocolValue::Text("MUL".to_string()));
 }
 
-// --- ExactScalar approximation marker (SPEC §2.3) ---
+// --- ExactScalar approximation marker (LANG.OBSERVATION.FIREWALL) ---
 
 /// √2 as an exact irrational (AlgebraicSqrt), the canonical ExactScalar.
 fn sqrt2() -> Value {
@@ -94,7 +94,7 @@ fn sqrt2() -> Value {
 /// Under `RawNumber`, an ExactScalar serializes as a `number` (its best
 /// rational approximation) but its `semantics` block must carry the
 /// original exact value, so the GUI can reference the exact source rather
-/// than a silent truncation (Option 1 / SPEC §2.3 firewall).
+/// than a silent truncation (Option 1 / LANG.OBSERVATION.FIREWALL firewall).
 #[test]
 fn exact_scalar_rawnumber_carries_exact_source_in_semantics() {
     let node = value_to_protocol(&sqrt2(), Some(Interpretation::RawNumber));

@@ -4,7 +4,7 @@ use super::{DenseTensor, Interpretation, Stack, Value, ValueData};
 use num_bigint::BigInt;
 use std::fmt;
 
-/// Render every stack slot as its observable `(value, role)` string (SPEC §12).
+/// Render every stack slot as its observable `(value, role)` string (LANG.OBSERVATION.PROTOCOL).
 ///
 /// This is the single stack rendering shared by all observation surfaces — the
 /// CLI stack display, the REPL, the in-process conformance runner, and the JSON
@@ -34,7 +34,7 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     // hint) already shows `NIL` here, so this keeps hint-driven callers
     // consistent with it. The empty string `''` is itself a NIL with reason
     // `EmptySequence` (see `Value::from_string`), so it likewise renders as
-    // `NIL`, matching its canonical form (SPEC §4.5; §12.2).
+    // `NIL`, matching its canonical form (LANG.VALUES.NIL; §12.2).
     if matches!(value.data, ValueData::Nil) && value.absence_metadata().is_some() {
         return "NIL".to_string();
     }
@@ -58,12 +58,12 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     }
 }
 
-/// Display budget for lazy continued fractions (SPEC §4.2.3:
+/// Display budget for lazy continued fractions (LANG.VALUES.EXACT:
 /// "implementation-defined display budget").
 const CF_DISPLAY_BUDGET: usize = 32;
 
 /// Render a numeric scalar value as the canonical flat continued-fraction
-/// form (SPEC §4.2.3): `[ a0; a1, a2 ]`, matching the classical
+/// form (LANG.VALUES.EXACT): `[ a0; a1, a2 ]`, matching the classical
 /// `[a0; a1, a2, …]` notation directly — `[` `]` is the sole bracket in
 /// Ajisai, so the CF display uses it as-is rather than standing in for it.
 /// Lazy irrationals truncate at CF_DISPLAY_BUDGET terms with a trailing `…`
@@ -98,7 +98,7 @@ pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
 }
 
 /// Build the flat CF string from partial quotients, in the classical
-/// `[a0; a1, a2, …]` convention (SPEC §4.2.3):
+/// `[a0; a1, a2, …]` convention (LANG.VALUES.EXACT):
 /// finite   [a0]         -> "[ a0 ]"          (no tail, no `;`)
 /// finite   [a0,a1,a2]   -> "[ a0; a1, a2 ]"
 /// truncated [a0,a1,a2]  -> "[ a0; a1, a2, … ]"
@@ -279,10 +279,10 @@ fn format_fraction(f: &Fraction) -> String {
 /// Display an `ExactReal`. Rational variants use the canonical
 /// `numerator/denominator` form. Irrational variants (`AlgebraicSqrt`,
 /// `Gosper`) render in the canonical flat continued-fraction form of
-/// SPEC §4.2.3 — `[ a0; a1, a2 ]` — truncated at the display budget with
+/// LANG.VALUES.EXACT — `[ a0; a1, a2 ]` — truncated at the display budget with
 /// a trailing `…` for lazy CFs. This keeps the default numeric surface
 /// exact and AI-readable: arithmetic on irrationals is computed exactly
-/// on the CF representation (Gosper, SPEC §7.3), so the display must not
+/// on the CF representation (Gosper, LANG.VALUES.EXACT), so the display must not
 /// collapse it to an approximate rational.
 fn format_exact_real(er: &ExactReal) -> String {
     match er {
@@ -312,7 +312,7 @@ fn format_exact_real(er: &ExactReal) -> String {
     }
 }
 
-/// Render a value for an **output** boundary (`PRINT`, SPEC §7.9).
+/// Render a value for an **output** boundary (`PRINT`, LANG.EFFECTS.OUTPUT).
 ///
 /// The stack projection shows a Text-role value wrapped in `'...'` so the
 /// reader can see that it is a string and not a bare numeric vector. Those
@@ -473,7 +473,7 @@ mod tests {
         use num_bigint::BigInt;
 
         // √2 = [1; 2, 2, 2, …]. Default display must be the canonical flat
-        // CF form (SPEC §4.2.3), never `sqrt(...)` or a `~`-approximation.
+        // CF form (LANG.VALUES.EXACT), never `sqrt(...)` or a `~`-approximation.
         let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
             .expect("√2 is a valid algebraic sqrt");
         let s = format_exact_real(&sqrt2);

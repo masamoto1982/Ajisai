@@ -31,10 +31,10 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
         stack: interpreter.collect_stack(),
         // Carry the lossless snapshot into the worker so exact values on the
         // stack (CodeBlock, ExactScalar) are not flattened by the observation
-        // format before this run executes (SPEC §2.3).
+        // format before this run executes (LANG.OBSERVATION.FIREWALL).
         stackSnapshot: interpreter.snapshot_stack(),
         userWords: collectUserWords(interpreter),
-        // Host-configured step budget (SPEC §5.3 water level); undefined
+        // Host-configured step budget (LANG.MACHINE.LIMITS water level); undefined
         // keeps the interpreter default of 100,000.
         stepLimit: getPlatform().executionConfig.stepLimit
     });
@@ -109,7 +109,7 @@ export const syncInterpreterState = (
 ): void => {
     if (!result || result.error) return;
     // A result that could not be snapshotted is not applied at all: the
-    // observation format is never restored from (SPEC §2.3), so applying a
+    // observation format is never restored from (LANG.OBSERVATION.FIREWALL), so applying a
     // snapshot-less state would replace the session's stack with an empty one
     // — losing what the user had, on top of the value the run just made.
     if (result.stackSnapshotError) return;
@@ -117,7 +117,7 @@ export const syncInterpreterState = (
         stack: result.stack,
         // The worker's lossless snapshot is what restores the post-run stack
         // into the main-thread interpreter, so it keeps its exact values
-        // (SPEC §2.3).
+        // (LANG.OBSERVATION.FIREWALL).
         stackSnapshot: result.stackSnapshot,
         userWords: result.userWords
     });

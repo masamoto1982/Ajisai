@@ -49,7 +49,7 @@ async fn dependency_chains_widen_monotonically() {
 
 // `recursive_words_are_conservative_without_looping` tested that contract
 // inference went conservative on re-entrant (direct or mutual) recursion.
-// SPEC §8.7's DEF-time acyclicity check now refuses such a definition
+// LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now refuses such a definition
 // outright — `[ REC ] 'REC' DEF` and `[ B ] 'A' DEF [ A ] 'B' DEF` both fail
 // before contract inference ever runs — so there is no longer a program that
 // reaches this path.

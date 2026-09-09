@@ -6,7 +6,7 @@ export interface InterpreterStateSnapshot {
     readonly stateVersion: number;
     // The observation-format stack, persisted for display only.
     readonly stack: Value[];
-    // The lossless stack snapshot (opaque string) restore reads (SPEC §2.3).
+    // The lossless stack snapshot (opaque string) restore reads (LANG.OBSERVATION.FIREWALL).
     readonly stackSnapshot: string;
     readonly userWords: UserWord[];
     readonly activeDictionarySheet?: string;

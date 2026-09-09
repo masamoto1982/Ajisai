@@ -100,7 +100,7 @@ async fn user_word_chain_composes_a_dependency_bound() {
 }
 
 // `recursion_is_conservative_unbounded_on_every_axis` tested that a
-// self-recursive word costed Unbounded on every axis. SPEC §8.7's DEF-time
+// self-recursive word costed Unbounded on every axis. LANG.DICTIONARY.ACYCLIC's DEF-time
 // acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so there is no
 // longer a recursive word for cost inference to see.
 

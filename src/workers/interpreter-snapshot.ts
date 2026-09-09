@@ -8,11 +8,11 @@ export interface InterpreterSnapshot {
     // The lossless snapshot (opaque string from `snapshot_stack`) and the only
     // format the worker round-trip restores from. Reusing the lossy observation
     // format silently changed exact values on every execution — a CodeBlock
-    // came back as nil, √2 as its rational approximation. See SPEC §2.3.
+    // came back as nil, √2 as its rational approximation. See LANG.OBSERVATION.FIREWALL.
     readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
     /**
-     * Host override for the execution step budget (water level, SPEC §5.3).
+     * Host override for the execution step budget (water level, LANG.MACHINE.LIMITS).
      * A positive integer; omitted keeps the interpreter default (100,000).
      * Runtime safety control, not a language semantic.
      */
@@ -43,7 +43,7 @@ export const applyInterpreterSnapshot = (
     if (!snapshot) return;
 
     // The lossless snapshot is the only accepted stack format, so exact values
-    // (CodeBlock, ExactScalar) survive the worker round-trip (SPEC §2.3). A
+    // (CodeBlock, ExactScalar) survive the worker round-trip (LANG.OBSERVATION.FIREWALL). A
     // snapshot without one restores an empty stack rather than silently
     // downgrading through the observation format.
     if (typeof snapshot.stackSnapshot === 'string') {

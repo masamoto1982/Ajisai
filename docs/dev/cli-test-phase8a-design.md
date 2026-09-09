@@ -15,7 +15,7 @@ Phase 8A: CLI とプロジェクト基盤（引き継ぎ指示書 §15.1）の�
 
 - **Core に検証語を追加しない。**
   → 期待値はソース中の `#@` **directive コメント**として書く。`#@` 行はインタープリタにとって
-    ただの `#` コメント（SPEC §3.4）であり、実行時には無視される。`@` マーカーを読むのは host runner だけ。
+    ただの `#` コメント（LANG.SOURCE.CODE）であり、実行時には無視される。`@` マーカーを読むのは host runner だけ。
     したがって同じテストファイルは `ajisai run` でもそのまま走り、directive は素通りする。
 - **本番と同じ実行経路を使う。**
   → runner は `run` と同一の production Core（`Interpreter::with_host(CliHostEnv)` → `execute`）を駆動する。

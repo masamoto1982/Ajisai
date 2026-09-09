@@ -61,7 +61,7 @@ export interface AjisaiInterpreter {
     resolve_host_lookup(
         name: string
     ): { kind: 'documentation' | 'definition'; text: string } | null;
-    // The one stack format persistence accepts (SPEC §2.3). `snapshot_stack`
+    // The one stack format persistence accepts (LANG.OBSERVATION.FIREWALL). `snapshot_stack`
     // captures exact values (CodeBlock, ExactScalar, …) that the observation
     // format used by `collect_stack` cannot round-trip, and
     // `restore_stack_snapshot` reinstates them. The payload is an opaque string.
@@ -112,7 +112,7 @@ export interface RuntimeMetricsSnapshot {
 
 /**
  * The resource ceilings a host actually applies, published under the same
- * names every Ajisai host uses. SPEC §2.5 makes limits a host safety control
+ * names every Ajisai host uses. LANG.MACHINE.LIMITS makes limits a host safety control
  * rather than value semantics, so hosts legitimately differ — which is only
  * safe to rely on when each one says what it applies.
  */
@@ -167,7 +167,7 @@ export interface ProtocolDiagnosis {
         observed?: number;
     };
     /**
-     * CF-comparison agreed-prefix length (SPEC §4.5.0 / §7.4.1): the number
+     * CF-comparison agreed-prefix length (LANG.VALUES.NIL / §7.4.1): the number
      * of leading partial quotients that matched before the partial-quotient
      * budget was exhausted on an `Unknown` (U) comparison result. Present
      * only on diagnoses produced by an undecidable continued-fraction
@@ -188,7 +188,7 @@ export interface ProtocolAbsence {
 
 export interface ProtocolValueSemantics {
     /**
-     * Three-valued logic surface (SPEC §2.3, §7.5). Present only on
+     * Three-valued logic surface (LANG.OBSERVATION.FIREWALL, §7.5). Present only on
      * truth-valued values; `'true'` / `'false'` / `'unknown'`. This is the
      * only observable surface for the third value — do not infer it from
      * the value's `type` or the internal NIL representation.
@@ -199,7 +199,7 @@ export interface ProtocolValueSemantics {
      * Present and `true` only when this node's numeric `value` is a *best
      * rational approximation* of an exact irrational (`ExactScalar`) rendered
      * under a lossy role (e.g. `rawNumber`), rather than an exact rational
-     * (SPEC §2.3). The exact source is available via the node's `semantics`.
+     * (LANG.OBSERVATION.FIREWALL). The exact source is available via the node's `semantics`.
      * Lossless `continuedFraction` rendering carries no `semantics` block and
      * never sets this. The GUI may use it to prefix an `≈`; consumers that
      * ignore it are unaffected (additive, optional).
@@ -207,7 +207,7 @@ export interface ProtocolValueSemantics {
     approximate?: boolean;
     /**
      * The exact value of an algebraic irrational, as the multiquadratic normal
-     * form Σ c·√r it is stored in (SPEC §4.2): one entry per term, ascending by
+     * form Σ c·√r it is stored in (LANG.VALUES.EXACT): one entry per term, ascending by
      * radicand, with radicand `'1'` keying the rational part. These pairs *are*
      * the number, so a host that draws them shows the exact value in a line —
      * `√3`, `1/2 + 1/3√5` — instead of choosing between a thirty-line continued
@@ -246,7 +246,7 @@ export interface ExecuteResult {
     // the execution worker, and the only format used to sync the post-run stack
     // back into the main-thread interpreter, so exact values (CodeBlock,
     // ExactScalar) survive the round-trip instead of being flattened to nil or
-    // a rational approximation. See SPEC §2.3.
+    // a rational approximation. See LANG.OBSERVATION.FIREWALL.
     stackSnapshot?: string;
     /**
      * Why the lossless snapshot could not be taken, when the run itself
@@ -274,7 +274,7 @@ export interface ExecuteResult {
     errorFlowTrace?: ErrorFlowTraceEvent[];
 
     // Per-run cost-model activity: the counter delta across this execution,
-    // attached by the execution worker. Diagnostics only (SPEC §4.8); the
+    // attached by the execution worker. Diagnostics only (LANG.AUTHORITY.FREEDOM); the
     // GUI renders it in cost-model vocabulary, collapsed by default.
     runtimeMetricsDelta?: RuntimeMetricsSnapshot;
 }

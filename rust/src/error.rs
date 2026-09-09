@@ -8,7 +8,7 @@ pub enum NilReason {
     MissingField,
     InvalidEncoding,
     IndexOutOfBounds,
-    /// Comparison-budget exhaustion per SPEC §7.4.1: two lazy CFs
+    /// Comparison-budget exhaustion per LANG.VALUES.EXACT: two lazy CFs
     /// agreed on every emitted partial quotient up to the budget
     /// without diverging, or one of the operands' CF streams reported
     /// `CfStep::Exhausted`. The NIL Projection Rule projects this to NIL with
@@ -24,7 +24,7 @@ pub enum NilReason {
     /// A well-formed generative operation (`RANGE`, `FILL`) whose materialized
     /// result would exceed the space water level (`max_materialized_elements`).
     /// The NIL Projection Rule projects this to NIL with `absence.origin = spaceBudget`
-    /// (SPEC §11.2) rather than aborting the process, so a pipeline can
+    /// (LANG.FAILURE.ERROR) rather than aborting the process, so a pipeline can
     /// recover it with `OR-NIL`. Malformed inputs (an infinite `RANGE`, a
     /// non-conforming `RESHAPE`) remain ordinary errors.
     SpaceExhausted,
@@ -32,7 +32,7 @@ pub enum NilReason {
     /// canonical case being `SQRT` of a negative rational, which
     /// `SPECIFICATION.html` §5 calls a "well-formed domain miss". The NIL
     /// Projection Rule projects it to NIL with `absence.origin = domainMiss`
-    /// (SPEC §11.2).
+    /// (LANG.FAILURE.ERROR).
     ///
     /// Deliberately named for the classification, not for the operation: a
     /// domain miss is recoverable by supplying a different input, which is what
@@ -96,7 +96,7 @@ pub enum ResourceLimit {
     ///
     /// The only ceiling in this vocabulary that is never *raised*: crossing it
     /// is a well-formed operation that cannot produce a value within budget, so
-    /// the NIL Projection Rule projects it (SPEC §11.2). It is named here all
+    /// the NIL Projection Rule projects it (LANG.FAILURE.ERROR). It is named here all
     /// the same, because a projection and a raise refuse for the same kind of
     /// reason and a caller plans against the same published entry — and
     /// without a name the projection could only say *that* a ceiling fired,
@@ -337,7 +337,7 @@ pub enum AjisaiError {
         /// [`ResourceProgress`] for why the distinction is the whole point.
         progress: Option<ResourceProgress>,
     },
-    /// Native call-depth guard (SPEC §8.4): `word` reached `limit` nested
+    /// Native call-depth guard (LANG.DICTIONARY.ACYCLIC): `word` reached `limit` nested
     /// activations — a pathologically long acyclic call chain, since the
     /// DEF-time acyclicity check (§8.7) rules out recursion.
     RecursionLimitExceeded {

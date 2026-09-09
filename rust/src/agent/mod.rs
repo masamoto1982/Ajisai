@@ -155,7 +155,7 @@ pub(crate) fn print_payloads(interp: &Interpreter) -> Vec<String> {
 }
 
 pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
-    // One shared `(value, role)` rendering (SPEC §12) for every observation
+    // One shared `(value, role)` rendering (LANG.OBSERVATION.PROTOCOL) for every observation
     // surface; the `Stack` owns aligned values and roles, so no snapshot/
     // realignment step is needed here.
     crate::types::display::render_stack(interp.get_stack())

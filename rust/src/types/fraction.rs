@@ -433,7 +433,7 @@ impl Fraction {
         if let Some(pos) = s.find('/') {
             let num: BigInt = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
             let den: BigInt = BigInt::from_str(&s[pos + 1..]).map_err(|e| e.to_string())?;
-            // A fraction literal denotes a rational (SPEC §3.2); `n/0` denotes
+            // A fraction literal denotes a rational (LANG.SOURCE.TEXT); `n/0` denotes
             // none, so it is rejected here rather than reaching `Fraction::new`,
             // which panics on a zero denominator. This is distinct from the
             // runtime `DIV`-by-zero totality rule (a NIL `DivisionByZero`):
@@ -679,7 +679,7 @@ mod literal_parsing_tests {
 
     #[test]
     fn zero_denominator_fraction_literal_is_an_error_not_a_panic() {
-        // `n/0` denotes no rational (SPEC §3.2). It must surface as a clean
+        // `n/0` denotes no rational (LANG.SOURCE.TEXT). It must surface as a clean
         // parse error, never a `Fraction::new` "Division by zero" panic.
         for src in ["3/0", "0/0", "-5/0"] {
             assert!(
@@ -704,7 +704,7 @@ mod literal_parsing_tests {
 
     #[test]
     fn documented_surface_variants_are_accepted() {
-        // Forms now documented in SPEC §3.2 beyond the canonical examples:
+        // Forms now documented in LANG.SOURCE.TEXT beyond the canonical examples:
         // leading `+`, uppercase `E`, explicit `e+`, leading zeros, and
         // trailing-dot decimals. All reduce to their canonical value.
         let cases = [

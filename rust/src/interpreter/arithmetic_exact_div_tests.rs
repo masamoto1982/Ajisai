@@ -1,4 +1,4 @@
-//! Behavioral coverage for the ExactScalar path of `op_div` (SPEC §7.4.1).
+//! Behavioral coverage for the ExactScalar path of `op_div` (LANG.VALUES.EXACT).
 //!
 //! Regression guard for the ordering bug where the generic broadcast block
 //! (`apply_binary_broadcast_with_metrics`) ran *before* the ExactScalar

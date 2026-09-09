@@ -120,7 +120,7 @@ pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// `ABS` is the absolute value `|x|`, derived from the sign and exact
-/// arithmetic (SPEC §7.4.3): it decides the order of `x` against `0` through
+/// arithmetic (LANG.VALUES.TRUTH): it decides the order of `x` against `0` through
 /// the same budgeted comparison as the relations and negates when `x < 0`,
 /// otherwise returns `x` unchanged. It therefore accepts the full numeric
 /// domain including lazy continued-fraction operands, and over the admitted
@@ -246,7 +246,7 @@ fn lift_binary_numeric(
 }
 
 /// `MIN` / `MAX` select one of two numeric operands by the order relation
-/// (SPEC §7.4.3). They accept the full numeric domain, including lazy
+/// (LANG.VALUES.TRUTH). They accept the full numeric domain, including lazy
 /// continued-fraction operands, and decide the order through the same
 /// budgeted comparison as the relations. When the comparison decides, the
 /// selected operand is returned unchanged (preserving its exact

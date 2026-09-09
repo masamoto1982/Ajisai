@@ -22,7 +22,7 @@ fn fraction_floor(f: &Fraction) -> BigInt {
 /// Work an observation surface may spend expanding one value's continued
 /// fraction, in the limb-multiply units the runtime work meter counts in.
 ///
-/// SPEC §4.2.3 leaves the display budget implementation-defined. It used to be
+/// LANG.VALUES.EXACT leaves the display budget implementation-defined. It used to be
 /// a *term count* — 32 partial quotients, however much each one cost — and the
 /// cost is not flat: each floor-and-reciprocate step roughly doubles the term
 /// count once and then grows the coefficients without bound, so the price per

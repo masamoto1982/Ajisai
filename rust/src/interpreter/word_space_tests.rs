@@ -86,7 +86,7 @@ async fn higher_order_word_is_unbounded_but_not_exact() {
 }
 
 // `recursion_is_conservative_unbounded_without_a_witness` tested that a
-// self-recursive word's space bound went conservative. SPEC §8.7's DEF-time
+// self-recursive word's space bound went conservative. LANG.DICTIONARY.ACYCLIC's DEF-time
 // acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so there is no
 // longer a recursive word for space inference to see.
 

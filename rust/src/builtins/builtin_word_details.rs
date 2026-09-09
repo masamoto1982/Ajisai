@@ -32,14 +32,14 @@ pub fn lookup_builtin_detail(name: &str) -> String {
         spec.stack_effect,
     );
 
-    // Machine-readable execution form (SPEC §6.4): surface the control-directive
+    // Machine-readable execution form (LANG.FAILURE.RECOVERY): surface the control-directive
     // classification so LOOKUP states it explicitly rather than leaving it to
     // the prose. `RuntimeWord`s add nothing here.
     match spec.execution_form {
         ExecutionForm::LazyNextUnitFallback => {
             out.push('\n');
             out.push_str(
-                "Form:\n  Lazy control directive (SPEC §6.4): inspects the stack top; a\n  \
+                "Form:\n  Lazy control directive (LANG.FAILURE.RECOVERY): inspects the stack top; a\n  \
                  non-NIL top is kept and the following source unit is skipped\n  \
                  unevaluated, a NIL top is discarded and the following unit is\n  \
                  evaluated as the fallback. Not a stack-consuming word.\n",

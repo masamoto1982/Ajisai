@@ -158,7 +158,7 @@ impl Interpreter {
                 }
             }
             // A NIL operand *is* the result: it flows downstream carrying
-            // its reason (SPEC §7.12, LANG.FAILURE.PASSTHROUGH).
+            // its reason (LANG.FAILURE.PASSTHROUGH, LANG.FAILURE.PASSTHROUGH).
             // `passthroughThenProject` differs only in what non-NIL operands
             // may yield, so a NIL input takes the same route — projecting an
             // absence leaves an absence.
@@ -204,7 +204,7 @@ impl Interpreter {
 
     /// Yield the NIL at stack index `nil_index` as the Word's result without
     /// running its primitive, unwinding the declared operand window under the
-    /// active consumption mode (SPEC §5.2): `EAT` removes the operands, `KEEP`
+    /// active consumption mode (LANG.MODIFIERS.CONSUMPTION): `EAT` removes the operands, `KEEP`
     /// leaves them in place. The NIL is copied out before the unwind, since
     /// the unwind is what removes it.
     fn pass_nil_through(&mut self, operands: usize, nil_index: usize) {

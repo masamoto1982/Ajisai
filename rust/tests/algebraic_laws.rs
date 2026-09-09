@@ -150,7 +150,7 @@ proptest! {
     }
 
     /// OR-NIL handler: a projected NIL is replaced by the fallback (verified
-    /// operand order `projected-NIL OR-NIL fallback`, SPEC §6.4), a present
+    /// operand order `projected-NIL OR-NIL fallback`, LANG.FAILURE.RECOVERY), a present
     /// value is kept.
     #[test]
     fn or_nil_handler(a in small()) {
@@ -182,7 +182,7 @@ fn integer_projection_examples() {
 //
 // K3 laws are checked exhaustively over the truth domain {TRUE, FALSE, U}.
 // `U` is produced by an undecidable continued-fraction comparison
-// (SPEC §7.4.1): `2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ` compares the composed
+// (LANG.VALUES.EXACT): `2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ` compares the composed
 // Gosper value (√2+1) − (√2+1) against 0 and exhausts the budget. (Plain
 // √2 − √2 now collapses to an exact 0 in closed form and would decide.)
 // Each law renders both sides through the identical path,

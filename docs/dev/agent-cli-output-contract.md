@@ -262,7 +262,7 @@ themselves.
 It does **not** include `stackDisplay`, `message`, `diagnosis`,
 `aiDiagnostic`, `errorFlowTrace`, `runtimeMetrics`, `resourceUsage`, or
 `contractDecls` — none of those are the observation; several of them
-(`stackDisplay` in particular, SPEC §4.2.3's continued fraction truncated at a
+(`stackDisplay` in particular, LANG.VALUES.EXACT's continued fraction truncated at a
 display budget) are not even faithful to the value they render. A value's
 `hint` (display role) is excluded the same way `PartialEq for Value` excludes
 it; a NIL's reason is included the same way `PartialEq for Value` includes it.
@@ -431,7 +431,7 @@ canonical value.
 `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)` — and is present
 in exactly the cases `exactTerms` is. It exists because the two other
 renderings of an algebraic value on the same report are each misleading as what
-they resemble: `stackDisplay` is the SPEC §4.2.3 continued fraction *truncated
+they resemble: `stackDisplay` is the LANG.VALUES.EXACT continued fraction *truncated
 at a display budget* (√2 runs to ~194 characters and ends in `...]`), and
 `value` is a rational approximation. It is a display: read it, compute with
 `exactTerms`. Because it renders the stored normal form faithfully, two values

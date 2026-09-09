@@ -2,7 +2,7 @@
 //!
 //! Companion to `algebraic_laws.rs`, encoding
 //! `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 2: the surface
-//! desugaring of SPEC §3.9 / §7.0 is *observationally transparent*. Every
+//! desugaring of LANG.SOURCE.DESUGAR / §7.0 is *observationally transparent*. Every
 //! symbolic alias renders identically to its English-word canonical form, and
 //! word names are case-normalized (§3.8). Each law is the compressed form
 //! of infinitely many tokenizer conformance cases: if desugaring were not
@@ -121,7 +121,7 @@ fn arithmetic_alias_preserves_nil_absence_metadata() {
 
 #[test]
 fn comparison_alias_decides_composed_equality_identically() {
-    // The bare relations are total over the admitted domain (SPEC §4.2.7 /
+    // The bare relations are total over the admitted domain (LANG.VALUES.EXACT /
     // §7.4): (√2+1)−(√2+1) EQ 0 decides TRUE, and the `=` alias observes
     // identically. (This law formerly pinned the UNKNOWN diagnosis here;
     // with comparison total over D, UNKNOWN is confined to COMPARE-WITHIN,

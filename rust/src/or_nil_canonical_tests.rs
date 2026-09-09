@@ -1,6 +1,6 @@
 //! CS2: `OR-NIL` behavior pinning.
 //!
-//! SPEC §6.4: `OR-NIL` is a *lazy* NIL-coalescing control directive — if the
+//! LANG.FAILURE.RECOVERY: `OR-NIL` is a *lazy* NIL-coalescing control directive — if the
 //! stack top is non-NIL it is kept and the following source unit is skipped
 //! unevaluated; if it is NIL the top is discarded and the following unit is
 //! evaluated as the fallback. It has no symbol or legacy-name sugar: `^` and

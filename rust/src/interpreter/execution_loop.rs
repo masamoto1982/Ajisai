@@ -11,7 +11,7 @@ use super::{ConsumptionMode, Interpreter};
 /// either one ordinary token, or one balanced `[ ]` group (nesting
 /// respected). This is the one, canonical definition of the unit that a non-NIL
 /// `OR-NIL` (the sole spelling — `Token::NilCoalesce`) skips
-/// unevaluated (SPEC §6.4). `start` at or past the end is returned unchanged, so
+/// unevaluated (LANG.FAILURE.RECOVERY). `start` at or past the end is returned unchanged, so
 /// a directive with no following unit is a no-op skip.
 pub(crate) fn end_of_source_unit(tokens: &[Token], start: usize) -> usize {
     match tokens.get(start) {
@@ -64,7 +64,7 @@ fn def_body_tokens_if_literal_precedes_def(
 }
 
 /// After a core word runs, retag the top-of-stack plane role from a small
-/// name-keyed table (SPEC §12). The interpreted loop applies this after every
+/// name-keyed table (LANG.OBSERVATION.PROTOCOL). The interpreted loop applies this after every
 /// symbol; the compiled plan mirrors it after each call op so the two routes
 /// leave identical `(value, role)` observations. A no-op for words not in the
 /// table (e.g. user words).
@@ -154,7 +154,7 @@ fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
 /// event per Word call as the trace's shape requires.
 fn projected_nil_reason(value: &Value) -> Option<NilReason> {
     // Only operational NIL is meant to participate in error-flow tracing
-    // (SPEC §4.5.2 / §7.5); the logical Unknown (U) — `Nil` data carrying
+    // (LANG.VALUES.TRUTH / §7.5); the logical Unknown (U) — `Nil` data carrying
     // the `TruthValue` hint, not a dedicated variant — should not. `is_nil`
     // does not look at `hint`, so it does not currently distinguish the
     // two; this has no observable effect today because U is unreachable
@@ -378,7 +378,7 @@ impl Interpreter {
                     }
                 }
                 Token::NilCoalesce => {
-                    // OR-NIL (SPEC §6.4): inspect the top.
+                    // OR-NIL (LANG.FAILURE.RECOVERY): inspect the top.
                     let (value, hint) = self.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
 
                     if !value.is_nil() {

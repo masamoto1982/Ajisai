@@ -280,7 +280,7 @@ const forbiddenPatterns = [
 function renderResult(json) {
   const parts = [];
   if (json.output.length > 0) parts.push(`prints \`${json.output.join(' ⏎ ')}\``);
-  // An algebraic slot's stack display is the SPEC §4.2.3 continued fraction,
+  // An algebraic slot's stack display is the LANG.VALUES.EXACT continued fraction,
   // truncated at a display budget: √2 ran to ~194 characters ending in `...]`,
   // which told a reader nothing about the value and left the impression that
   // an exact square root is a complicated object. `semantics.exactDisplay`

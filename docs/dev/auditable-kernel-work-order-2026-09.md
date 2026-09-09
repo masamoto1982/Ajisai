@@ -476,7 +476,7 @@ docs/semantics-table.json（再生成）
 1. `control_cond.rs` のスカラー 0/1 フォールバックと単要素 Vector アンラップを
    削除し、`nonTruthGuard` へ一本化する。
 2. `is_unknown_guard_result(` の枝は**残す**。U ガードが次の節へ落ちる規則
-   （SPEC §7.4.3）は真理値強制ではなく三値論理そのものである。
+   （LANG.VALUES.TRUTH）は真理値強制ではなく三値論理そのものである。
 3. 落ちたテスト・例・Reference を移送する（§3.4 落とし穴 B）。
 4. 再生成一式 + WASM 再ビルド。
 

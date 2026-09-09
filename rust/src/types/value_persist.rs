@@ -5,7 +5,7 @@
 //! **separate** from the observation protocol in
 //! [`crate::types::value_protocol`]. The two have opposite requirements:
 //!
-//! - The observation protocol is intentionally lossy-but-honest (SPEC §2.3):
+//! - The observation protocol is intentionally lossy-but-honest (LANG.OBSERVATION.FIREWALL):
 //!   an `ExactScalar` is observed as a *marked* rational approximation and a
 //!   `CodeBlock` is hidden as `nil`. That is correct for a display/inspection
 //!   surface — it must never present a hidden truncation as exact.

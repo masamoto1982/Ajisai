@@ -17,7 +17,7 @@ export type LayoutControllerDeps = {
 };
 
 // `setArea` realizes a Presentation Profile transition (SPEC Portability
-// Profiles): selecting one observation surface (SPEC §12.3) drives the
+// Profiles): selecting one observation surface (LANG.OBSERVATION.PROJECTIONS) drives the
 // device-appropriate transition core via `applyAreaState`. Invariants 1–6 of
 // the Presentation Profile are verified in `./presentation-profile.test.ts`.
 export const createLayoutController = (deps: LayoutControllerDeps): LayoutController => {

@@ -1,7 +1,7 @@
 //! Phase 4 — higher-order / control words as recursion schemes (executable laws).
 //!
 //! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 4: the
-//! control vocabulary of SPEC §7.7 obeys the algebraic laws of its categorical
+//! control vocabulary of LANG.COLLECTIONS.HIGHER obeys the algebraic laws of its categorical
 //! models — `MAP` is a functor lift, `FOLD` a catamorphism, `FILTER` a
 //! predicate restriction, `ANY`/`ALL` existential/universal quantifiers,
 //! `EXEC`/`EVAL` reflection of `⟦·⟧`, and `COND` a K3-honest guarded case in
@@ -54,7 +54,7 @@ fn vlit(xs: &[i64]) -> String {
     format!("[ {body} ]")
 }
 
-/// A non-empty vector (empty vectors are NIL in Ajisai, SPEC §4.5).
+/// A non-empty vector (empty vectors are NIL in Ajisai, LANG.VALUES.NIL).
 fn vec_ne() -> impl Strategy<Value = Vec<i64>> {
     prop::collection::vec(small(), 1..=5)
 }

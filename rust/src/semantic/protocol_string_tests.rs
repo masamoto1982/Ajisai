@@ -45,7 +45,7 @@ fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
 
 #[test]
 fn comparison_budget_undecidable_protocol_strings() {
-    // SPEC §7.4.1 requires the comparison-budget NIL to be tagged
+    // LANG.VALUES.EXACT requires the comparison-budget NIL to be tagged
     // with `reason = "undecidable"` and `origin =
     // "comparisonBudget"`. The runtime constructs this via
     // `Value::nil_with_reason_unknown(NilReason::Undecidable)` and the
@@ -59,7 +59,7 @@ fn comparison_budget_undecidable_protocol_strings() {
 
 #[test]
 fn domain_miss_protocol_strings() {
-    // SPEC §5 names the classification: "SQRT of a negative rational is a
+    // LANG.FAILURE.PROJECT names the classification: "SQRT of a negative rational is a
     // well-formed domain miss". Reason and origin share the spelling because
     // the origin is derived from the reason.
     assert_eq!(NilReason::DomainMiss.as_protocol_str(), "domainMiss");

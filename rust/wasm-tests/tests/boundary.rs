@@ -97,7 +97,7 @@ async fn projected_nil_serializes_as_nil() {
 /// An ExactScalar (√2) under the default `RawNumber` role crosses the boundary
 /// as a `number` (its best rational approximation) carrying an explicit
 /// `semantics.approximate === true` marker, so the GUI never mistakes the
-/// approximation for an exact rational (SPEC §2.3 firewall; P1).
+/// approximation for an exact rational (LANG.OBSERVATION.FIREWALL firewall; P1).
 #[wasm_bindgen_test]
 async fn exact_scalar_rawnumber_marks_approximate_at_boundary() {
     let stack = stack_of("2 SQRT").await;

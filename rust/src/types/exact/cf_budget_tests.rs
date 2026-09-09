@@ -1,7 +1,7 @@
 //! Writing a value down must not cost more than computing it.
 //!
 //! The continued fraction is a *rendering* of an algebraic value, not the value
-//! (SPEC §4.2.3 calls the display budget implementation-defined, and
+//! (LANG.VALUES.EXACT calls the display budget implementation-defined, and
 //! `exactTerms` is what carries the number). It used to be budgeted by term
 //! count — 32 partial quotients, whatever each cost — and the cost is not flat.
 //! Measured on the reference container, a multiquadratic product of 2 / 4 / 8 /

@@ -1,7 +1,7 @@
 //! Phase 5 — structural data (vector / tensor) algebraic laws (executable).
 //!
 //! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 5: the
-//! vector vocabulary of SPEC §7.1 is a free monoid under `CONCAT` with an
+//! vector vocabulary of LANG.COLLECTIONS.LIFT is a free monoid under `CONCAT` with an
 //! involutive `REVERSE`, and the tensor vocabulary of §7.2 is the reshape group
 //! acting on `Tensor ≅ (data: V*, shape)` — `TRANSPOSE` is an involution on 2-D
 //! tensors, `RESHAPE` round-trips, and `SHAPE`/`RANK` read off the index

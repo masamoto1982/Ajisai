@@ -188,7 +188,7 @@ mod comment_newline_absorption {
 // DUT: rust/src/tokenizer.rs `parse_control_directive_word`
 //
 // `OR-NIL` has no symbol sugar: it is a spelled-out control directive
-// recognized only by its bare word, case-folded (SPEC §6.4). `^` and `~`
+// recognized only by its bare word, case-folded (LANG.FAILURE.RECOVERY). `^` and `~`
 // carry no meaning of their own, so both are ordinary Symbols the dictionary
 // does not have. `=` is an unconditional single-char `EQ` Symbol with no
 // lookahead. We cover that boundary plus the bare `=` Symbol.

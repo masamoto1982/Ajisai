@@ -1,6 +1,6 @@
 //! CS3 (observation): the shared `(value, role)` stack rendering.
 //!
-//! SPEC §12 observes each stack slot as a `(data, role)` pair. Every observation
+//! LANG.OBSERVATION.PROTOCOL observes each stack slot as a `(data, role)` pair. Every observation
 //! surface (CLI stack display, REPL, in-process conformance runner, JSON report)
 //! renders through one function — `crate::types::display::render_stack` — so a
 //! interpretation role such as a timestamp cannot render one way on one

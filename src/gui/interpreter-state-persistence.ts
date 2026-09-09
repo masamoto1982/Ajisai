@@ -7,7 +7,7 @@ import { Result, ok, err } from './functional-result-helpers';
 
 // The persisted session document. `stateVersion` identifies the format; a
 // document that does not carry the current version is not migrated — the beta
-// reads one format only (SPEC §2.3).
+// reads one format only (LANG.OBSERVATION.FIREWALL).
 //
 // 4: the dense-tensor node dropped its `mask` field. A tensor's absence is the
 // 0 denominator its `dens` array already carries, and the bitmap beside it was
@@ -371,7 +371,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 // One accepted format: a document of the current version whose
                 // stack is the lossless snapshot. Anything else — an alpha
                 // document, a hand-edited one — starts a fresh session with the
-                // Example Words rather than being migrated (SPEC §2.3).
+                // Example Words rather than being migrated (LANG.OBSERVATION.FIREWALL).
                 if (state.stateVersion !== STATE_FORMAT_VERSION) {
                     console.warn(
                         `Saved state is format ${String(state.stateVersion)}, not ${STATE_FORMAT_VERSION}; loading Example Words.`

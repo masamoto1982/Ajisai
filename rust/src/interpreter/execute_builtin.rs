@@ -89,7 +89,7 @@ impl Interpreter {
 
         // Call-depth guard: catches blown Rust stack before WASM traps. Guards
         // a pathologically long acyclic call chain, not recursion — the
-        // DEF-time acyclicity check (SPEC §8.7) makes recursion impossible to
+        // DEF-time acyclicity check (LANG.DICTIONARY.ACYCLIC) makes recursion impossible to
         // construct. The matching decrement is just before the return below;
         // there are no `?` early returns between this point and the decrement.
         if self.call_depth + 1 > super::interpreter_core::MAX_USER_WORD_DEPTH {
@@ -108,7 +108,7 @@ impl Interpreter {
         self.call_stack.push(resolved_name.clone());
 
         // `KEEP` modifies the *call*, not the first consuming Word inside the
-        // body (SPEC §5.2). Both readings agree for a Core Word, because a Core
+        // body (LANG.MODIFIERS.CONSUMPTION). Both readings agree for a Core Word, because a Core
         // Word has no inside; they disagree for a User Word, and the body
         // reading is the wrong one — `{ 2 * } 'TWICE' DEF` under `5 KEEP TWICE`
         // let the modifier reach `*`, which then preserved the body's own
@@ -292,7 +292,7 @@ impl Interpreter {
             WordId::Put => shape_ops::op_put(self),
             WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
-            // The positional control directives of SPEC §6.4. The execution
+            // The positional control directives of LANG.FAILURE.RECOVERY. The execution
             // loop interprets these against the source stream — `OR-NIL` decides
             // whether the *following source unit* is evaluated and `KEEP`
             // sets the non-default consumption mode — so they are never dispatched by name

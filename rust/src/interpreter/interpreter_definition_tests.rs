@@ -278,7 +278,7 @@ mod tests {
     }
 
     /// A chain of `depth` distinct, non-cyclic User words, `D0` calling `D1`
-    /// calling `D2` ... down to a base case — SPEC §8.7 rules out a cycle, so
+    /// calling `D2` ... down to a base case — LANG.DICTIONARY.ACYCLIC rules out a cycle, so
     /// this is the only way left to grow `call_depth` past a chosen bound.
     /// Returns the source and the entry word's name.
     fn deep_chain_source(depth: usize) -> (String, &'static str) {

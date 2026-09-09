@@ -1,6 +1,6 @@
 //! The execution stack as the single authority for top-level semantic roles.
 //!
-//! SPEC §12 observes each stack position as a `(data, role)` pair. Phase 4
+//! LANG.OBSERVATION.PROTOCOL observes each stack position as a `(data, role)` pair. Phase 4
 //! collapses the historical two-place ownership (`Vec<Value>` for data plus a
 //! parallel `SemanticRegistry.stack_hints` for roles) into one type that owns
 //! both, so the role of a slot can never drift out of alignment with its value.
@@ -12,7 +12,7 @@
 //! without also placing a role is unrepresentable.
 //!
 //! The default role of a pushed slot is the value's construction-time role
-//! (`Value.hint`, SPEC §12.1). A module word that pops operands and pushes
+//! (`Value.hint`, LANG.OBSERVATION.PROTOCOL). A module word that pops operands and pushes
 //! freshly built results therefore adopts the results' construction roles
 //! automatically, while slots it never touches keep the plane role a prior
 //! interpretation role assigned — the same outcome the retired fingerprint
@@ -46,7 +46,7 @@ impl Stack {
     }
 
     /// Build a stack from bare values, deriving each slot's role from the
-    /// value's construction-time `hint` (SPEC §12.1).
+    /// value's construction-time `hint` (LANG.OBSERVATION.PROTOCOL).
     pub fn from_values(values: Vec<Value>) -> Self {
         let roles = values.iter().map(|value| value.hint).collect();
         let low_water = values.len();
@@ -116,7 +116,7 @@ impl Stack {
     }
 
     /// Iterate the stack bottom-to-top as observable `(value, role)` slots —
-    /// the `(data, role)` pairs of SPEC §12. This is the alignment-guaranteed
+    /// the `(data, role)` pairs of LANG.OBSERVATION.PROTOCOL. This is the alignment-guaranteed
     /// source for every stack-rendering surface.
     pub fn iter_slots(&self) -> impl ExactSizeIterator<Item = (&Value, Interpretation)> + '_ {
         self.values.iter().zip(self.roles.iter().copied())

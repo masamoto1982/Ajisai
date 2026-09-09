@@ -9,7 +9,7 @@
 //! a compiled clause body still trampolined past `MAX_USER_WORD_DEPTH`, one
 //! pinning that bare (unguarded) recursion still hit the native
 //! recursion-depth error — were removed along with the feature and the
-//! boundary they distinguished: SPEC §8.7's DEF-time acyclicity check now
+//! boundary they distinguished: LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now
 //! refuses any self-referential definition outright, so neither a
 //! trampolined nor an unguarded recursive word can be defined any more.
 

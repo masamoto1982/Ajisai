@@ -66,7 +66,7 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
     // `<` and then reaching for `<=` is the natural next keystroke, and it
     // answered "Unknown word: <=" — a gap with no rule behind it, since a
     // symbol resolves to exactly the same contract and executor as its English
-    // name (SPEC §6.2). A token ends only at whitespace or a structural
+    // name (LANG.SOURCE.TEXT). A token ends only at whitespace or a structural
     // delimiter, so these two-character spellings need no lexer change.
     CoreWordAlias {
         alias: "<=",

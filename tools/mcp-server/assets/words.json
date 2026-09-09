@@ -3123,7 +3123,7 @@
         "hover": "NIL? — test whether a value is absent",
         "lookup": "Test whether the top value is an operational NIL (absent).",
         "syntax": "1 0 / NIL?",
-        "role": "Diagnostic predicate: TRUE when the retained value is absent, FALSE otherwise. Never branches on the reason (SPEC §4.5.0).",
+        "role": "Diagnostic predicate: TRUE when the retained value is absent, FALSE otherwise. Never branches on the reason (LANG.VALUES.NIL).",
         "stackEffect": "[ x ] -> [ x ] [ bool ]"
       },
       "executorKey": "NilCheck",
@@ -3172,7 +3172,7 @@
         "hover": "NIL-REASON — read the NIL reason protocol string",
         "lookup": "Read the direct reason of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-REASON",
-        "role": "Diagnostic accessor: the lowerCamelCase reason protocol string (SPEC §4.5.0), or NIL when there is no reason or the value is not an operational NIL.",
+        "role": "Diagnostic accessor: the lowerCamelCase reason protocol string (LANG.VALUES.NIL), or NIL when there is no reason or the value is not an operational NIL.",
         "stackEffect": "[ x ] -> [ x ] [ text|NIL ]"
       },
       "executorKey": "NilReason",

@@ -308,7 +308,7 @@
 <!-- ===================== CORE: TRUTH VALUES ===================== -->
 <!-- A definite Boolean is a distinct value kind (not a number) and renders
      uniformly as TRUE/FALSE through every path: literals, comparisons, and
-     logic words (SPEC §4.1, §7.5, §12.2). -->
+     logic words (LANG.VALUES.DISJOINT, §7.5, §12.2). -->
 
 <section class="ajisai-case" id="core-true-literal" data-category="core">
   <h3>TRUE renders as TRUE</h3>
@@ -1839,7 +1839,7 @@ W</pre>
 
 <!-- JSON module basics (pure words, so `core` per the established contract:
      cf. core-qualified-name-requires-import, which exercises MATH@SQRT).
-     The role assertions pin SPEC §12.1: a role is decided once, at
+     The role assertions pin LANG.OBSERVATION.PROTOCOL: a role is decided once, at
      construction, and the consumed input string's Text role must never leak
      onto the result at the same stack position. -->
 
