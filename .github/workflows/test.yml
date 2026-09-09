@@ -89,19 +89,13 @@ jobs:
         # The Word reference and Core hover contracts are generated from
         # spec/words.json. None of these were gated in CI, which is how a stale
         # generated surface and a broken word-schema checker both went unnoticed.
-        #
-        # `specification:check` is deliberately absent while Ajisai is in alpha.
-        # SPECIFICATION.html has been emptied on purpose: the specification is
-        # being rebuilt from the implementation rather than the other way round,
-        # so there is no specification for the gate to hold the file to. The
-        # generator and every source under spec/ are untouched, so restoring the
-        # gate is this line plus `npm run specification:generate`.
         run: |
           npm run semantic-kernel:check
           npm run word-schema:check
           npm run word:reference:check
           npm run core-word-docs:check
           npm run word-registry:check
+          npm run specification:check
 
       - name: Generate conformance manifest
         run: npm run conformance:manifest
