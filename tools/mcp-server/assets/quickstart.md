@@ -388,7 +388,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
 - **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
-  → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "COND: guard must return TRUE or FALSE, got [ 1/1 ]"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] [ [ predicate ] [ body ] ... ] COND`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`

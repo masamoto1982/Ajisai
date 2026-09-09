@@ -7,9 +7,7 @@ mod tests {
     #[tokio::test]
     async fn test_cond_exhausted_error() {
         let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 5 ] [ [ [ 0 ] < ] [ 'negative' ] ] COND")
-            .await;
+        let result = interp.execute("5 [ [ 0 < ] [ 'negative' ] ] COND").await;
         assert!(
             result.is_err(),
             "COND should fail without else: {:?}",
@@ -20,6 +18,47 @@ mod tests {
             message.contains("COND: all guards failed and no else clause"),
             "unexpected error: {}",
             message
+        );
+    }
+
+    /// Interpreted-path witness (docs/dev/auditable-kernel-work-order-2026-09.md
+    /// Phase 3, §3.5): a guard that reduces to a bare scalar — 0 or 1 — no
+    /// longer coerces to FALSE/TRUE. `LANG.VALUES.DISJOINT` makes a scalar
+    /// disjoint from Boolean, and `LANG.VALUES.TRUTH` admits no coercion; only
+    /// a bare Boolean guard result decides a clause.
+    #[tokio::test]
+    async fn test_cond_scalar_guard_is_not_truthy() {
+        for source in [
+            "5 [ [ 1 ] [ 'x' PRINT ] ] COND",
+            "5 [ [ 0 ] [ 'x' PRINT ] ] COND",
+        ] {
+            let mut interp = Interpreter::new();
+            let result = interp.execute(source).await;
+            assert!(result.is_err(), "{source:?} should refuse a scalar guard");
+            let message = result.err().unwrap().to_string();
+            assert!(
+                message.contains("COND: guard must return TRUE or FALSE"),
+                "{source:?}: unexpected error: {message}"
+            );
+        }
+    }
+
+    /// A guard that reduces to a Boolean wrapped in a single-element Vector
+    /// — the shape element-lifted comparisons return (`[ 7 ] [ 5 ] GT` answers
+    /// `[ TRUE ]`) — is equally refused: a singleton Vector is not its
+    /// element (`LANG.VALUES.DISJOINT`). The idiom moves to comparing scalars
+    /// directly (`7 5 GT`).
+    #[tokio::test]
+    async fn test_cond_wrapped_boolean_guard_is_not_truthy() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("5 [ [ [ 7 ] [ 5 ] GT ] [ 'x' PRINT ] ] COND")
+            .await;
+        assert!(result.is_err(), "a vector-wrapped guard should be refused");
+        let message = result.err().unwrap().to_string();
+        assert!(
+            message.contains("COND: guard must return TRUE or FALSE"),
+            "unexpected error: {message}"
         );
     }
 

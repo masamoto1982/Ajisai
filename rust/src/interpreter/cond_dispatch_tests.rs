@@ -33,11 +33,11 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
 }
 
 const SIZE_DEF: &str =
-    "[\n  [\n  [ [ 5 ] > | [ 'big' ] ]\n  [ IDLE | [ 'small' ] ]\n  ] COND\n] 'SIZE' DEF";
+    "[\n  [\n  [ 5 > | [ 'big' ] ]\n  [ IDLE | [ 'small' ] ]\n  ] COND\n] 'SIZE' DEF";
 
 #[test]
 fn dispatch_fast_path_fires() {
-    let (interp, _) = run(&format!("{SIZE_DEF}\n[ 7 ] SIZE"));
+    let (interp, _) = run(&format!("{SIZE_DEF}\n7 SIZE"));
     assert!(
         interp.runtime_metrics().cond_dispatch_fast_count >= 1,
         "compiled COND dispatch should have taken the precomputed path"
@@ -61,7 +61,7 @@ fn dispatch_preserves_cond_errors() {
 fn dispatch_fast_count_zero_when_disabled() {
     let mut interp = Interpreter::new();
     interp.set_cond_dispatch_enabled(false);
-    block_on(interp.execute(&format!("{SIZE_DEF}\n[ 7 ] SIZE"))).unwrap();
+    block_on(interp.execute(&format!("{SIZE_DEF}\n7 SIZE"))).unwrap();
     assert_eq!(
         interp.runtime_metrics().cond_dispatch_fast_count,
         0,
