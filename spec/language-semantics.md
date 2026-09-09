@@ -48,11 +48,11 @@ Ajisai is built from ten concepts. Everything below is one of them, or a consequ
 
 <h3 id="lang-authority-sources">LANG.AUTHORITY.SOURCES — Normative sources</h3>
 
-<p>Five sources are authoritative, each for a different part of the language:</p>
+<p>Six sources are authoritative, each for a different part of the language:</p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Source</th><th>Authoritative for</th></tr></thead><tbody><tr><td>This Language Semantics</td><td>Program meaning</td></tr><tr><td><code>spec/words.json</code></td><td>The vocabulary</td></tr><tr><td><code>spec/semantic-families.json</code></td><td>The laws Words share</td></tr><tr><td><code>spec/gui-semantics.md</code></td><td>Presentation</td></tr><tr><td><code>spec/host-protocol.schema.json</code></td><td>The boundary between them</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Source</th><th>Authoritative for</th></tr></thead><tbody><tr><td>This Language Semantics</td><td>Program meaning</td></tr><tr><td><code>spec/words.json</code></td><td>The vocabulary</td></tr><tr><td><code>spec/outcomes.json</code></td><td>The outcome space — the closed list of NIL reasons and ERROR categories a contract's names resolve into, including those no contract reaches (<code>literal</code>) and those belonging to no single Word (arity, source, dictionary, resource)</td></tr><tr><td><code>spec/semantic-families.json</code></td><td>The laws Words share</td></tr><tr><td><code>spec/gui-semantics.md</code></td><td>Presentation</td></tr><tr><td><code>spec/host-protocol.schema.json</code></td><td>The boundary between them</td></tr></tbody></table></div>
 
-<p><code>SPECIFICATION.html</code> is generated from those five sources and is not edited directly.</p>
+<p><code>SPECIFICATION.html</code> is generated from these sources and is not edited directly.</p>
 
 <p>
 Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the table above defines nothing; <code>docs/dev/</code> holds design notes and history on those terms.
@@ -239,11 +239,11 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-machine-limits">LANG.MACHINE.LIMITS — Work limits</h3>
 
-<p>Two limits exist and they mean different things:</p>
+<p>A host bounds a run along several axes, and what distinguishes them is not which resource they meter but which of the three outcomes (LANG.FAILURE.TRICHOTOMY) exhausting one produces:</p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Limit</th><th>Bounds</th><th>On exhaustion</th></tr></thead><tbody><tr><td>Execution-step limit</td><td>Total work</td><td>Registered ERROR</td></tr><tr><td>Materialization ceiling</td><td>Size of one generated collection</td><td>NIL, reason <code>spaceExhausted</code>, for an otherwise well-formed request</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Ceiling</th><th>Bounds</th><th>On exhaustion</th></tr></thead><tbody><tr><td>Execution-step limit</td><td>Total work across the run</td><td>ERROR, category <code>executionLimitExceeded</code></td></tr><tr><td>Materialization ceiling</td><td>Size of one generated collection</td><td>NIL, reason <code>spaceExhausted</code>, for an otherwise well-formed request</td></tr><tr><td>Value and work ceilings</td><td>One value or input (source bytes, digits in a numeric literal, integer width, algebraic term count), or the numeric and collection work the run has accumulated</td><td>ERROR, category <code>resourceLimitExceeded</code></td></tr></tbody></table></div>
 
-<p>Both are host safety controls rather than language-semantic constraints: their numeric values are implementation freedom, but the outcome category each produces is normative.</p>
+<p>The middle row differs in kind: a collection too large to build is a well-formed request the host declines, so it projects (LANG.FAILURE.PROJECT), while the other rows are the host refusing to continue at all. That split and each row's category are normative; how many ceilings a host divides the last row into, and every numeric value, is implementation freedom. These are safety controls, not semantic constraints — termination already follows from LANG.DICTIONARY.ACYCLIC, so they bound cost rather than decide it.</p>
 
 <h2 id="lang-modifiers">5. Stack and Modifiers</h2>
 
@@ -273,7 +273,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A projection condition is a semantic predicate over well-formed inputs. When it holds, the Word produces NIL with the reason its contract registers.</p>
 
-<p>Division by zero, domain exclusion, out-of-range indexing, a value not found where one is sought, failed parsing, space exhaustion, and comparison-budget exhaustion (LANG.VALUES.EXACT) are among the reasons a projection condition keeps distinct — the registry (LANG.CONTRACT.REGISTRY) is the exhaustive list, this clause only fixes how the shared ones behave. Comparison-budget exhaustion projects to NIL tagged with the <code>TruthValue</code> role for a comparison — so it reads as UNKNOWN (LANG.VALUES.TRUTH) — and to a plain NIL for a Word whose output domain is not truth, such as an ordering-derived selection.</p>
+<p>Division by zero, domain exclusion, out-of-range indexing, a value not found where one is sought, failed parsing, space exhaustion, and comparison-budget exhaustion (LANG.VALUES.EXACT) are among the reasons a projection condition keeps distinct — <code>spec/outcomes.json</code> (LANG.AUTHORITY.SOURCES) is the exhaustive list, this clause only fixes how the shared ones behave. A Word's own contract names the reasons that Word projects for, which is a subset: a reason exists in the outcome space whether or not any contract currently reaches it. Comparison-budget exhaustion projects to NIL tagged with the <code>TruthValue</code> role for a comparison — so it reads as UNKNOWN (LANG.VALUES.TRUTH) — and to a plain NIL for a Word whose output domain is not truth, such as an ordering-derived selection.</p>
 
 <h3 id="lang-failure-error">LANG.FAILURE.ERROR — Errors</h3>
 
