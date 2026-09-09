@@ -25,6 +25,13 @@
 // knowledge — the way `stackTargetMode` was confirmed dead here by knowing
 // the TOP/STAK modifier axis no longer exists in the language, not by
 // searching for its spelling. That check is not automated by this gate.
+//
+// `scripts/check-outcome-bijection.mjs` now covers exactly this range, by a
+// different method: it executes a witness for every declared NIL reason and
+// error category (from the exhaustive table or spec/outcome-witnesses.json)
+// and fails if any has none, which tells a live condition from a dead one by
+// running it rather than by matching its name
+// (docs/dev/auditable-kernel-work-order-2026-09.md Phase 2).
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 

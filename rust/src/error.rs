@@ -165,7 +165,6 @@ pub enum ErrorCategory {
     /// "one value grew past the declared size ceiling" stop sharing an answer.
     ResourceLimitExceeded,
     RecursionLimitExceeded,
-    ModeUnsupported,
     BuiltinProtection,
     CondExhausted,
     SelfReferentialDefinition,
@@ -191,7 +190,6 @@ impl ErrorCategory {
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
-            ErrorCategory::ModeUnsupported => "modeUnsupported",
             ErrorCategory::BuiltinProtection => "builtinProtection",
             ErrorCategory::CondExhausted => "condExhausted",
             ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
@@ -214,7 +212,6 @@ impl ErrorCategory {
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
-            AjisaiError::ModeUnsupported { .. } => ErrorCategory::ModeUnsupported,
             AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
             AjisaiError::CondExhausted => ErrorCategory::CondExhausted,
             AjisaiError::SelfReferentialDefinition { .. } => {
@@ -352,10 +349,6 @@ pub enum AjisaiError {
     SelfReferentialDefinition {
         word: String,
         cycle: Vec<String>,
-    },
-    ModeUnsupported {
-        word: String,
-        mode: String,
     },
     BuiltinProtection {
         word: String,
@@ -497,9 +490,6 @@ impl fmt::Display for AjisaiError {
                     word,
                     cycle.join(" -> ")
                 )
-            }
-            AjisaiError::ModeUnsupported { word, mode } => {
-                write!(f, "{} does not support {} mode (..)", word, mode)
             }
             AjisaiError::BuiltinProtection { word, operation } => {
                 write!(f, "Cannot {} built-in word: {}", operation, word)

@@ -69,11 +69,6 @@
       "documentation": "DEF named a word the dictionary already binds in a way this definition cannot resolve."
     },
     {
-      "id": "divisionByZero",
-      "kind": "structural",
-      "documentation": "The fixed ErrorCategory variant paired with AjisaiError::DivisionByZero. In the current implementation this is raised only as an internal fast-path control-flow signal inside the DIV/MOD scalar arithmetic paths and is always caught and re-projected to NIL(divisionByZero) before a Report is built; whether it is ever externally observable as status:error is a question for the non-vacuity gate (outcome-space-bijection-work-order-2026-09.md Phase 4), not settled here."
-    },
-    {
       "id": "executionLimitExceeded",
       "kind": "structural",
       "documentation": "The total execution-step budget was exhausted before the program finished."
@@ -127,11 +122,6 @@
       "id": "missingFollowingSourceUnit",
       "kind": "declared",
       "documentation": "OR-NIL's top was NIL and no source unit follows it to evaluate as the fallback."
-    },
-    {
-      "id": "modeUnsupported",
-      "kind": "structural",
-      "documentation": "A Word was invoked with a modifier mode it does not support."
     },
     {
       "id": "nameConflict",

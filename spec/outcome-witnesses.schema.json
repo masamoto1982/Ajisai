@@ -1,0 +1,70 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://ajisai-lang.org/spec/outcome-witnesses.schema.json",
+ "title": "Ajisai hand-written outcome witnesses",
+ "description": "Programs that reach an outcome ID (spec/outcomes.json) docs/semantics-table.json cannot, because it only ever runs one Word against one input-domain tuple (docs/dev/outcome-space-bijection-work-order-2026-09.md Phase 4 pitfall A). Three shapes need this file: an outcome reachable only through a multi-statement program (a name conflict, a self-reference, a dependency lock), one that depends on a runtime resource ceiling rather than an input shape, and one no chosen domain representative happens to trigger. scripts/check-outcome-bijection.mjs is the only reader: it runs every entry's source through the real `ajisai` CLI and fails the ID if the observed outcome does not match `expect` exactly. A witness that is only checked by string-matching its source, never executed, is not a witness (Phase 2 pitfall B) — this file supplies the *inputs* to that execution, nothing more.",
+ "type": "object",
+ "required": [
+ "schemaVersion",
+ "witnesses"
+ ],
+ "properties": {
+ "schemaVersion": {
+ "const": 1
+ },
+ "witnesses": {
+ "type": "array",
+ "minItems": 1,
+ "items": {
+ "$ref": "#/$defs/witness"
+ }
+ }
+ },
+ "additionalProperties": false,
+ "$defs": {
+ "witness": {
+ "type": "object",
+ "required": [
+ "id",
+ "source",
+ "expect",
+ "rationale"
+ ],
+ "properties": {
+ "id": {
+ "type": "string",
+ "pattern": "^[a-z][a-zA-Z0-9]*$",
+ "description": "An id from spec/outcomes.json's nilReasons or errorCategories. Non-vacuity (Phase 4) accepts a witness here in place of a docs/semantics-table.json cell for this same id — an id present in both is not an error, but a witness never substitutes for fixing a table that could reach the id more cheaply."
+ },
+ "source": {
+ "type": "string",
+ "minLength": 1,
+ "description": "Ajisai source text, run verbatim through `ajisai run <file> --json` (with --step-limit appended when profile.stepLimit is set). Must be the actual program that reaches the outcome — the gate re-runs it every time, it does not trust this field's history."
+ },
+ "profile": {
+ "type": "object",
+ "description": "A non-default runtime ceiling this witness needs to reach its outcome (docs/dev/mcp-host-profiles.md). Omit entirely for a witness that reaches its outcome under the native CLI's own built-in defaults — most witnesses in this file do.",
+ "properties": {
+ "stepLimit": {
+ "type": "integer",
+ "exclusiveMinimum": 0,
+ "description": "Passed to `ajisai run` as `--step-limit`, the one ceiling the CLI exposes an override for. A witness for executionLimitExceeded needs this; every other resourceLimitExceeded/materializedElements-family witness in this registry reaches its ceiling by construction instead (an oversized literal, a call chain past the fixed recursion depth) because no other ceiling has a CLI override to shrink it."
+ }
+ },
+ "additionalProperties": false
+ },
+ "expect": {
+ "type": "string",
+ "pattern": "^(value|nil:[a-z][a-zA-Z0-9]*|error:[a-z][a-zA-Z0-9]*)$",
+ "description": "The classification scripts/generate-semantics-table.mjs's classifyOutcome would assign this program's `ajisai run --json` output: `value`, `nil:<reason>`, or `error:<category>`, in the exact same spelling docs/semantics-table.json's own `outcome` field uses. The gate re-derives this from the live CLI run and compares it verbatim — never from message text (LANG-stable identifiers only, per this work order's §0.3)."
+ },
+ "rationale": {
+ "type": "string",
+ "minLength": 1,
+ "description": "Why docs/semantics-table.json cannot reach this id on its own: which of Phase 4 pitfall A's three shapes applies (multi-statement, resource-ceiling-dependent, or no domain representative triggers it) and, briefly, what this program does that a single (Word, domain tuple) cell cannot. Required so a reviewer can tell a genuine gap from a witness that should have been a domain addition instead."
+ }
+ },
+ "additionalProperties": false
+ }
+ }
+}

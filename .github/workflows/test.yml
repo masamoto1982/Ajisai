@@ -140,6 +140,17 @@ jobs:
         # 総当たりで検出し、同時に AI 向けの完全な意味論資産になる。
         run: npm run semantics:table:check
 
+      - name: Outcome registry is a bijection with observed behavior
+        # Soundness (every outcome the table or a witness observes resolves
+        # into spec/outcomes.json) and non-vacuity (every declared id has at
+        # least one witness) — two properties the exhaustive table alone
+        # cannot establish, since it only ever runs one Word against one
+        # input-domain tuple. spec/outcome-witnesses.json supplies the
+        # multi-statement, resource-ceiling-dependent, and no-domain-reaches-
+        # it cases by hand, executed for real, not string-matched.
+        # See docs/dev/auditable-kernel-work-order-2026-09.md Phase 2.
+        run: npm run outcome-bijection:check
+
       - name: Generate primitive test map
         run: npm run primitive:test-map
 
