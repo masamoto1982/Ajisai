@@ -4,8 +4,8 @@
 //! execution and report assembly. It performs no filesystem or terminal I/O.
 
 use super::{
-    check_structure, contract_decl, contract_report, error_report, print_payloads, report::Report,
-    resolve_words, run_render,
+    check_structure, contract_decl, contract_report, error_report, outcome_report, print_payloads,
+    report::Report, resolve_words, run_render,
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
@@ -262,6 +262,27 @@ pub fn infer_contracts(source: &str) -> ContractResponse {
     let reports = contract_report::report_contracts(source);
     ContractResponse {
         contracts: contract_report::reports_json(&reports),
+    }
+}
+
+pub struct OutcomesResponse {
+    report: outcome_report::OutcomeReport,
+}
+
+impl OutcomesResponse {
+    pub fn to_json(&self) -> serde_json::Value {
+        self.report.to_json()
+    }
+}
+
+/// Predict the finite set of outcome ids `source` could produce without
+/// executing it (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 5).
+/// Always succeeds — an unresolvable program still has an exact, single
+/// predicted outcome (`error:malformedSource`, `error:structureError`, or
+/// `error:unknownWord`); see `outcome_report::predict_outcomes`.
+pub fn predict_outcomes(source: &str) -> OutcomesResponse {
+    OutcomesResponse {
+        report: outcome_report::predict_outcomes(source),
     }
 }
 

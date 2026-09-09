@@ -119,4 +119,8 @@ export class NativeCliBackend {
   inferContracts(source) {
     return this.#runAgent(source, "infer-contracts", []);
   }
+
+  outcomes(source) {
+    return this.#runAgent(source, "outcomes", []);
+  }
 }

@@ -24,6 +24,9 @@ mod execution_receipt_tests;
 mod observation_digest;
 #[cfg(test)]
 mod observation_digest_tests;
+pub(crate) mod outcome_report;
+#[cfg(test)]
+mod outcome_report_tests;
 #[cfg(test)]
 mod profile_liveness_tests;
 pub(crate) mod report;

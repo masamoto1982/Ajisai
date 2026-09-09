@@ -145,6 +145,16 @@ jobs:
         # See docs/dev/auditable-kernel-work-order-2026-09.md Phase 2.
         run: npm run outcome-bijection:check
 
+      - name: Static outcome prediction contains what actually runs
+        # `ajisai agent outcomes` predicts a program's outcome set without
+        # executing it (Phase 5 pitfall D: the predictor doesn't run the
+        # program, but verification does). For every witness in
+        # spec/outcome-witnesses.json, checks that the predicted set contains
+        # the outcome that witness's own execution actually observed — an
+        # under-approximating predictor is a predictor that lies.
+        # See docs/dev/auditable-kernel-work-order-2026-09.md Phase 5.
+        run: npm run outcome-prediction:check
+
       - name: Generate primitive test map
         run: npm run primitive:test-map
 

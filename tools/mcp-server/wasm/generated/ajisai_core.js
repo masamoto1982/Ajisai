@@ -401,6 +401,28 @@ function agent_infer_contracts(source) {
 exports.agent_infer_contracts = agent_infer_contracts;
 
 /**
+ * Predict the finite set of outcome ids `source` could produce without
+ * executing it, matching `ajisai agent outcomes`.
+ * @param {string} source
+ * @returns {string}
+ */
+function agent_predict_outcomes(source) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agent_predict_outcomes(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+exports.agent_predict_outcomes = agent_predict_outcomes;
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.
@@ -651,7 +673,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 163, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 164, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014);
             return ret;
         },

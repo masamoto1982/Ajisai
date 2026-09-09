@@ -10,7 +10,7 @@ only commands and fields emitted by the current native CLI.
 ajisai run <file.ajisai> [--json] [--step-limit <N>]
 ajisai check <file.ajisai> [--json] [--contract]
 ajisai contract <file.ajisai> [--json]
-ajisai agent <compute|check|infer-contracts> <file.ajisai|->
+ajisai agent <compute|check|infer-contracts|outcomes> <file.ajisai|->
 ajisai test <file-or-dir> [--json]
 ajisai repl [--json]
 ajisai version [--json]
@@ -525,10 +525,56 @@ Ajisai Words.
 ## `agent`
 
 `agent` is the stable JSON-only host boundary used by the MCP adapter. Its
-`compute`, `check`, and `infer-contracts` operations call the typed Rust agent
-API and always return a schema-versioned object. In particular,
-`infer-contracts` returns the array under `contracts`, avoiding the legacy bare
-array emitted by the compatibility `contract --json` command.
+`compute`, `check`, `infer-contracts`, and `outcomes` operations call the
+typed Rust agent API and always return a schema-versioned object. In
+particular, `infer-contracts` returns the array under `contracts`, avoiding
+the legacy bare array emitted by the compatibility `contract --json` command.
+
+### `outcomes`
+
+Predicts, without executing it, the finite set of outcome ids a program
+could produce (Phase 5,
+`docs/dev/auditable-kernel-work-order-2026-09.md`). Never fails: even a
+program that cannot itself run (a tokenize failure, an unbalanced vector, an
+unknown word) has exactly one predicted outcome.
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "outcomes": ["value", "error:nonNumeric", "error:shapeMismatch"],
+  "exact": false,
+  "limitProfile": { "executionSteps": 12180000, "materializedElements": 1000000, "...": "..." }
+}
+```
+
+`outcomes` is the union, over every Word reachable from the program
+(including inside called `DEF`'d words and `[ ... ]` code operands), of that
+Word's own declared vocabulary (`spec/words.json`'s `errorWhen` +
+`projection.reason` — sound by construction, per the outcome-bijection gate),
+plus `error:stackUnderflow` unless a flow-sensitive arity check proves the
+program never underflows its own starting stack, plus every cross-cutting
+*structural* category (`executionLimitExceeded`, `resourceLimitExceeded`,
+`recursionLimitExceeded`, `condExhausted`, `nameConflict`,
+`builtinProtection`, and the rest — none of which is any specific Word's own
+declared condition) once the program does anything at all.
+
+`exact` is `true` only when the predicted set narrows to the single outcome
+id — which, since Ajisai is deterministic and total, is what the program
+actually produces when run. This holds for a program that calls no Word at
+all (a bare literal, or nothing); calling even one Word makes it `false`,
+since the structural floor above is added unconditionally rather than proven
+reachable or unreachable for that specific profile. `exact: false` never
+means the prediction is wrong — the true outcome is somewhere in the
+returned set, just not narrowed further. This is a deliberately coarse V1: it
+never under-approximates (verified against every witness in
+`spec/outcome-witnesses.json` by `scripts/check-outcome-prediction.mjs`), but
+does not yet prove a specific declared condition unreachable for the
+operands that actually reach a call.
+
+`limitProfile` (the same shape `receipt.limitProfile` reports) names the
+resource ceilings this prediction assumed; `outcomes` does not currently
+accept a caller-supplied profile override.
 
 ## Compatibility
 

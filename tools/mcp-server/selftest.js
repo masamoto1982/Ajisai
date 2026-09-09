@@ -71,9 +71,9 @@ await Promise.all([server.connect(serverTransport), client.connect(clientTranspo
 
 const { tools } = await client.listTools();
 check(
-  "exposes the four focused agent tools",
+  "exposes the five focused agent tools",
   JSON.stringify(tools.map(({ name }) => name).sort()) ===
-    JSON.stringify(["check", "compute", "infer_contracts", "word_contract"]),
+    JSON.stringify(["check", "compute", "infer_contracts", "outcomes", "word_contract"]),
 );
 check(
   "every tool rejects undeclared input",

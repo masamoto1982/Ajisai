@@ -139,6 +139,12 @@ export function agent_compute(source: string, step_limit?: number | null): Promi
 export function agent_infer_contracts(source: string): string;
 
 /**
+ * Predict the finite set of outcome ids `source` could produce without
+ * executing it, matching `ajisai agent outcomes`.
+ */
+export function agent_predict_outcomes(source: string): string;
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.
@@ -155,6 +161,7 @@ export interface InitOutput {
     readonly agent_check: (a: number, b: number) => [number, number];
     readonly agent_compute: (a: number, b: number, c: number) => any;
     readonly agent_infer_contracts: (a: number, b: number) => [number, number];
+    readonly agent_predict_outcomes: (a: number, b: number) => [number, number];
     readonly ajisaiinterpreter_clear_io_output_buffer: (a: number) => void;
     readonly ajisaiinterpreter_clear_stack: (a: number) => void;
     readonly ajisaiinterpreter_collect_builtin_word_registry: (a: number) => any;

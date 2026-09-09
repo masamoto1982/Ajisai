@@ -30,6 +30,9 @@ pub mod logic;
 pub mod math_ops;
 pub(crate) mod naming_convention_checker;
 mod ordering_ops;
+pub(crate) mod predict_program_outcomes;
+#[cfg(test)]
+mod predict_program_outcomes_tests;
 mod probe;
 mod resolve_cache;
 pub mod runtime_limits;
@@ -55,6 +58,9 @@ mod word_contract_widen;
 pub(crate) mod word_cost;
 #[cfg(test)]
 mod word_cost_tests;
+pub(crate) mod word_outcome_vocabulary;
+#[cfg(test)]
+mod word_outcome_vocabulary_tests;
 // `pub(crate)`, not private: `agent::observation_digest` (Phase 1,
 // competitive-advantage-work-order-2026-08.md) calls
 // `word_identity::content_digest` and `word_identity::encode_token` directly,
