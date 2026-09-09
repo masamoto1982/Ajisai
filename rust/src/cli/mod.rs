@@ -9,6 +9,7 @@
 //! ajisai check <file.ajisai> [--json]     # tokenize + parse + resolve, no execution
 //! ajisai contract <file.ajisai> [--json]  # report inferred word contracts, no execution
 //! ajisai agent <operation> <file.ajisai>   # common JSON envelope for host adapters
+//!   operations: compute, check, infer-contracts, outcomes
 //! ajisai test <file-or-dir> [--json]       # execute `#@` host test directives
 //! ajisai repl [--json]                     # persistent interactive session
 //! ajisai version [--json]
@@ -51,9 +52,9 @@ Commands:
                                   paste-ready `#:contract` line (no execution)
   agent <operation> <file.ajisai|->
                                   Stable source-to-JSON host boundary. Operations:
-                                  compute, check, infer-contracts. `-` reads the
-                                  program from standard input, so an embedding
-                                  host needs no temporary file
+                                  compute, check, infer-contracts, outcomes. `-`
+                                  reads the program from standard input, so an
+                                  embedding host needs no temporary file
   test <file-or-dir> [--json]     Run test files, checking each program against
                                   its `#@` directive comments (status/stack/
                                   output/error). Exit 1 if any test fails
@@ -384,6 +385,7 @@ fn cmd_agent(operation: &str, path: &str, opts: &Opts) -> i32 {
             (response.to_json(), response.exit_code())
         }
         "infer-contracts" => (agent_api::infer_contracts(&source).to_json(), 0),
+        "outcomes" => (agent_api::predict_outcomes(&source).to_json(), 0),
         _ => {
             eprintln!("unknown agent operation: {operation}");
             return 2;

@@ -62,7 +62,11 @@ fn write_str(bytes: &mut Vec<u8>, s: &str) {
     bytes.extend_from_slice(s.as_bytes());
 }
 
-fn limit_profile_json(limits: &RuntimeLimits, step_limit: usize) -> Json {
+/// The limit profile as a JSON object, shared with `outcome_report`'s
+/// `outcomes` tool: a static prediction is only meaningful relative to a
+/// named profile (`docs/dev/auditable-kernel-work-order-2026-09.md` §5.2
+/// pitfall C), and this is the same shape a receipt already reports it in.
+pub(crate) fn limit_profile_json(limits: &RuntimeLimits, step_limit: usize) -> Json {
     json!({
         "executionSteps": step_limit,
         "materializedElements": limits.max_materialized_elements,

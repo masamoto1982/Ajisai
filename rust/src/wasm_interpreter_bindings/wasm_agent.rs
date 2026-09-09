@@ -39,3 +39,10 @@ pub fn agent_check(source: &str) -> String {
 pub fn agent_infer_contracts(source: &str) -> String {
     api::infer_contracts(source).to_json().to_string()
 }
+
+/// Predict the finite set of outcome ids `source` could produce without
+/// executing it, matching `ajisai agent outcomes`.
+#[wasm_bindgen]
+pub fn agent_predict_outcomes(source: &str) -> String {
+    api::predict_outcomes(source).to_json().to_string()
+}

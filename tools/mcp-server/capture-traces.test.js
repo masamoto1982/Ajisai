@@ -13,7 +13,7 @@ import { LANGUAGES, callsOf, indexTraces, mayAssertPerfect, validateCorpus } fro
 const tools = await toolDefinitions();
 assert.deepEqual(
   tools.map(({ name }) => name).sort(),
-  ["check", "compute", "infer_contracts", "word_contract"],
+  ["check", "compute", "infer_contracts", "outcomes", "word_contract"],
   "the model is offered exactly the tools the server publishes",
 );
 assert.ok(
@@ -120,7 +120,7 @@ assert.ok(
 // Forcing a tool call would make every irrelevant-intent case an automatic
 // failure of the one metric that measures restraint.
 assert.deepEqual(request.tool_choice, { type: "auto" });
-assert.equal(request.tools.length, 4);
+assert.equal(request.tools.length, 5);
 assert.ok(!("temperature" in request), "sampling parameters are rejected by current models");
 
 // What gets written must be a document the scorers accept — and must be

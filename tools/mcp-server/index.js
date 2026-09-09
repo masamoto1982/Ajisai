@@ -206,6 +206,16 @@ export const TOOLS = [
     annotations: READ_ONLY_ANNOTATIONS,
   },
   {
+    name: "outcomes",
+    description:
+      "Predict, without executing it, the finite set of outcome ids an Ajisai program could produce: `value`, or one or more `nil:<reason>` / `error:<category>` ids. Ajisai is a total language (no loops, no unbounded recursion — DEF rejects every reference cycle), so this question is answerable in principle, unlike for a Turing-complete language. " +
+      "The response's `exact` field says whether the set narrows to the single outcome the program actually produces (true only for a program that calls no Word at all — a bare literal, or nothing) or is a sound but coarser superset (false): the prediction unions each reachable Word's own declared error/NIL vocabulary rather than proving which specific condition applies to the actual operands, and always includes every cross-cutting structural ceiling (`stackUnderflow` narrowed by an arity check; `executionLimitExceeded`, `resourceLimitExceeded`, `recursionLimitExceeded`, `condExhausted`, `nameConflict`, `builtinProtection`, and the rest included unconditionally once the program does anything) since none of those are any specific Word's own declared condition. `exact: false` never means wrong — it means the true single outcome is somewhere in the returned set, not narrowed further. `limitProfile` names the resource ceilings this prediction assumed. " +
+      "Use this to audit an untrusted or generated program's reachable failure modes before running it with compute, not as a substitute for running it to see the actual result.",
+    inputSchema: sourceSchema,
+    outputSchema: envelopeSchema,
+    annotations: READ_ONLY_ANNOTATIONS,
+  },
+  {
     name: "word_contract",
     // The baseline's second failure mode was 46 turns spent here, two guesses
     // at a time, at names no Ajisai vocabulary ever had. Answering a miss with
@@ -462,7 +472,12 @@ async function runAgent(source, command) {
     );
   }
   try {
-    const operation = { run: "compute", check: "check", contract: "inferContracts" }[command];
+    const operation = {
+      run: "compute",
+      check: "check",
+      contract: "inferContracts",
+      outcomes: "outcomes",
+    }[command];
     const result = await selected[operation](source);
     result.mcp = provenance();
     return envelope(result);
@@ -558,6 +573,7 @@ export function createServer() {
     if (params.name === "compute") return runAgent(args.source, "run");
     if (params.name === "check") return runAgent(args.source, "check");
     if (params.name === "infer_contracts") return runAgent(args.source, "contract");
+    if (params.name === "outcomes") return runAgent(args.source, "outcomes");
     if (params.name === "word_contract") return wordContract(args.word);
     return fail(new HostError("unknownTool", `No such tool: ${params.name}`), "tools/call");
   });

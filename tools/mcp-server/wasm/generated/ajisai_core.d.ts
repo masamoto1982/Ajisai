@@ -139,6 +139,12 @@ export function agent_compute(source: string, step_limit?: number | null): Promi
 export function agent_infer_contracts(source: string): string;
 
 /**
+ * Predict the finite set of outcome ids `source` could produce without
+ * executing it, matching `ajisai agent outcomes`.
+ */
+export function agent_predict_outcomes(source: string): string;
+
+/**
  * Install console_error_panic_hook so any panic on the WASM side
  * surfaces in the browser console with a JS-friendly stack trace
  * instead of an opaque `RuntimeError: unreachable executed` trap.

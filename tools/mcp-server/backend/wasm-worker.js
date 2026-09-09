@@ -117,4 +117,8 @@ export class WasmWorkerBackend {
   inferContracts(source) {
     return this.#run("inferContracts", source);
   }
+
+  outcomes(source) {
+    return this.#run("outcomes", source);
+  }
 }
