@@ -398,6 +398,4 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>A semantic change begins in one authoritative source, regenerates all derived surfaces, updates clause-linked conformance cases, and demonstrates unchanged observations unless the change is explicitly versioned.</p>
 
-<!-- INCLUDE:12-ai-first-implementation-rules -->
-
 <!-- INCLUDE:presentation-profile -->
