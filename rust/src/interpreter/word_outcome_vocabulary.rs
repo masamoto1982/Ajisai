@@ -23,13 +23,40 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::error::{ErrorCategory, NilReason};
+use crate::kernel::generated::GENERATED_WORDS;
 use crate::types::{Token, WordDefinition};
 
 use super::word_contract_widen::{classify_vector_positions, LiteralContext};
 use super::Interpreter;
 
-const OUTCOMES_JSON: &str = include_str!("../../../spec/outcomes.json");
 const WORDS_JSON: &str = include_str!("../../../spec/words.json");
+
+/// Every `spec/outcomes.json` error category that is `kind: "structural"`
+/// (not any specific Word's own declared `errorWhen`) — the fixed,
+/// non-`Declared` `ErrorCategory` variants, read through the real
+/// `as_protocol_str()` so this can never drift from the wire spelling.
+/// `DivisionByZero` is excluded: it is not a registered outcome category at
+/// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
+/// diagnostic-trace-only, Phase 2 of this work order).
+fn structural_error_categories() -> [ErrorCategory; 14] {
+    [
+        ErrorCategory::StackUnderflow,
+        ErrorCategory::StructureError,
+        ErrorCategory::UnknownWord,
+        ErrorCategory::IndexOutOfBounds,
+        ErrorCategory::VectorLengthMismatch,
+        ErrorCategory::ShapeMismatch,
+        ErrorCategory::MalformedSource,
+        ErrorCategory::NameConflict,
+        ErrorCategory::ExecutionLimitExceeded,
+        ErrorCategory::ResourceLimitExceeded,
+        ErrorCategory::RecursionLimitExceeded,
+        ErrorCategory::BuiltinProtection,
+        ErrorCategory::CondExhausted,
+        ErrorCategory::SelfReferentialDefinition,
+    ]
+}
 
 /// `strings(value)` reads a schema field that is one string, an array of
 /// strings, or absent/null (`errorWhen` is always an array; `projection.
@@ -96,22 +123,27 @@ pub(crate) fn builtin_outcomes_for(name: &str) -> BTreeSet<String> {
 /// maximally coarse) fallback whenever prediction cannot resolve a
 /// dependency at all — the same "when in doubt, widen to everything" rule
 /// `WordContract::conservative` already applies to the other contract axes.
+/// Built from the Rust registry rather than parsed from `spec/outcomes.json`
+/// text: `NilReason::ALL` plus the structural categories give every
+/// non-`Declared` id, and unioning every generated Word's own `errorWhen`
+/// gives every `Declared` one — exactly `spec/outcomes.json`'s two kinds,
+/// per the bidirectional correspondence `scripts/check-outcome-registry.mjs`
+/// already enforces between them.
 pub(crate) fn conservative_outcomes() -> BTreeSet<String> {
     static UNIVERSE: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
     UNIVERSE
         .get_or_init(|| {
-            let parsed: serde_json::Value =
-                serde_json::from_str(OUTCOMES_JSON).expect("spec/outcomes.json must parse");
             let mut outcomes = BTreeSet::new();
             outcomes.insert("value".to_string());
-            for reason in parsed["nilReasons"].as_array().into_iter().flatten() {
-                if let Some(id) = reason["id"].as_str() {
-                    outcomes.insert(format!("nil:{id}"));
-                }
+            for reason in NilReason::ALL {
+                outcomes.insert(format!("nil:{}", reason.as_protocol_str()));
             }
-            for category in parsed["errorCategories"].as_array().into_iter().flatten() {
-                if let Some(id) = category["id"].as_str() {
-                    outcomes.insert(format!("error:{id}"));
+            for category in structural_error_categories() {
+                outcomes.insert(format!("error:{}", category.as_protocol_str()));
+            }
+            for word in GENERATED_WORDS {
+                for condition in word.error_when {
+                    outcomes.insert(format!("error:{condition}"));
                 }
             }
             outcomes
@@ -119,7 +151,7 @@ pub(crate) fn conservative_outcomes() -> BTreeSet<String> {
         .clone()
 }
 
-/// Every `kind: "structural"` error category from `spec/outcomes.json`,
+/// Every structural error category (see `structural_error_categories`),
 /// except `stackUnderflow` (given a precise, flow-sensitive answer by
 /// `predict_program_outcomes`'s own `FlowSim` run) and `malformedSource`
 /// (impossible past the point prediction's caller already tokenized the
@@ -138,14 +170,9 @@ pub(crate) fn conservative_outcomes() -> BTreeSet<String> {
 pub(crate) fn structural_ceiling_ids() -> &'static BTreeSet<String> {
     static CEILING: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
     CEILING.get_or_init(|| {
-        let parsed: serde_json::Value =
-            serde_json::from_str(OUTCOMES_JSON).expect("spec/outcomes.json must parse");
-        parsed["errorCategories"]
-            .as_array()
+        structural_error_categories()
             .into_iter()
-            .flatten()
-            .filter(|category| category["kind"].as_str() == Some("structural"))
-            .filter_map(|category| category["id"].as_str())
+            .map(|category| category.as_protocol_str())
             .filter(|id| *id != "stackUnderflow" && *id != "malformedSource")
             .map(|id| format!("error:{id}"))
             .collect()
