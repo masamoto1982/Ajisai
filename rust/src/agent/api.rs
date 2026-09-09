@@ -5,7 +5,7 @@
 
 use super::{
     check_structure, contract_decl, contract_report, error_report, print_payloads, report::Report,
-    resolve_words, run_render, Opts,
+    resolve_words, run_render,
 };
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
@@ -88,11 +88,6 @@ impl AgentResponse {
 /// Execute one source document and return the same structured observation the
 /// CLI emits, without creating a file or writing stdout/stderr.
 pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
-    let opts = Opts {
-        json: true,
-        contract: false,
-        step_limit: options.step_limit,
-    };
     if let Err(message) = crate::tokenizer::tokenize(source) {
         let diagnosis = DebugDiagnosis::from_error_category(
             ErrorPhase::Tokenize,
@@ -103,7 +98,16 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
             0,
             Some(message.clone()),
         );
-        let interp = Interpreter::new();
+        // Applied even though tokenization never gets far enough to spend any
+        // of it: the receipt names the profile the caller asked for, not the
+        // interpreter's built-in default, and the two can differ.
+        let mut interp = Interpreter::new();
+        if let Some(limits) = options.runtime_limits {
+            interp.set_runtime_limits(limits);
+        }
+        if let Some(limit) = options.step_limit {
+            interp.set_max_execution_steps(limit);
+        }
         return AgentResponse {
             report: error_report(
                 &interp,
@@ -112,7 +116,7 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
                 message,
                 Vec::new(),
                 Vec::new(),
-                &opts,
+                Some(source),
             ),
         };
     }
@@ -128,17 +132,12 @@ pub async fn compute(source: &str, options: ComputeOptions) -> AgentResponse {
     let trace = interp.drain_error_flow_trace();
     let output = print_payloads(&interp);
     AgentResponse {
-        report: run_render::completed_run_report(&interp, result, trace, output, &opts),
+        report: run_render::completed_run_report(&interp, result, trace, output, source),
     }
 }
 
 /// Validate source without executing it and return the standard report shape.
 pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
-    let opts = Opts {
-        json: true,
-        contract: verify_contracts,
-        step_limit: None,
-    };
     let interp = Interpreter::new();
     let tokens = match crate::tokenizer::tokenize(source) {
         Ok(tokens) => tokens,
@@ -160,7 +159,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
                     message,
                     Vec::new(),
                     Vec::new(),
-                    &opts,
+                    None,
                 ),
             };
         }
@@ -184,7 +183,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
                 message,
                 Vec::new(),
                 Vec::new(),
-                &opts,
+                None,
             ),
         };
     }
@@ -214,7 +213,7 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
                 message,
                 Vec::new(),
                 Vec::new(),
-                &opts,
+                None,
             ),
         };
     }
@@ -251,6 +250,9 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
             contract_decls: contract_decls.as_ref().map(|result| result.to_json()),
             stack_elided: None,
             observation_digest: digest,
+            // `check` never executes, so there is nothing to receipt —
+            // see `Report::receipt`'s doc comment.
+            receipt: None,
         },
     }
 }

@@ -18,6 +18,9 @@ mod contract_report_tests;
 mod error_stack;
 #[cfg(test)]
 mod error_stack_tests;
+pub(crate) mod execution_receipt;
+#[cfg(test)]
+mod execution_receipt_tests;
 mod observation_digest;
 #[cfg(test)]
 mod observation_digest_tests;
@@ -55,7 +58,10 @@ pub(crate) fn error_report(
     message: String,
     output: Vec<String>,
     trace: Vec<crate::interpreter::error_flow_trace::ErrorFlowEvent>,
-    _opts: &Opts,
+    // `Some(source)` builds an execution receipt (`compute`'s callers);
+    // `None` skips it (`check`'s callers, which never execute and so have
+    // nothing to receipt — see `Report::receipt`'s doc comment).
+    source: Option<&str>,
 ) -> Report {
     // Every error gets the position, not only the ones raised by a Word: the
     // execution loop attaches it to the traced diagnosis, and this covers the
@@ -79,6 +85,17 @@ pub(crate) fn error_report(
         user_words: &user_word_identities(interp),
         error_category,
     });
+    let resource_usage = interp.resource_usage();
+    let receipt = source.and_then(|source| {
+        execution_receipt::build_receipt(
+            source,
+            interp.runtime_limits(),
+            interp.max_execution_steps(),
+            "error",
+            &resource_usage,
+            digest.as_deref(),
+        )
+    });
     Report {
         status: "error",
         stack: residue.stack,
@@ -89,10 +106,11 @@ pub(crate) fn error_report(
         ai_diagnostic: Some(ai),
         error_flow_trace: trace,
         runtime_metrics: interp.runtime_metrics(),
-        resource_usage: interp.resource_usage(),
+        resource_usage,
         contract_decls: None,
         stack_elided: residue.elided,
         observation_digest: digest,
+        receipt,
     }
 }
 

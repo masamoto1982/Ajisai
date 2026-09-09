@@ -57,6 +57,17 @@ pub(crate) struct Report {
     /// the observation could not be encoded: a Tier 2 `ExactReal::Computable`
     /// scalar was present somewhere in the stack.
     pub observation_digest: Option<String>,
+    /// The execution receipt (`agent::execution_receipt`, Phase 4 of
+    /// `docs/dev/auditable-kernel-work-order-2026-09.md`): source digest,
+    /// engine version, registry digest, limit profile, outcome status,
+    /// `observation_digest` and `resourceUsage`, bundled and folded into one
+    /// more digest — the material a third party needs to verify "this
+    /// source, on this engine, under these limits, produced this outcome"
+    /// rather than merely being told what the outcome was. `None` exactly
+    /// when `observation_digest` is `None` (Tier 2), and `None` for
+    /// `check`/`infer-contracts`, which never execute and so have nothing to
+    /// receipt.
+    pub receipt: Option<Json>,
 }
 
 impl Report {
@@ -80,6 +91,7 @@ impl Report {
             "contractDecls": self.contract_decls,
             "stackElided": self.stack_elided,
             "observationDigest": self.observation_digest,
+            "receipt": self.receipt,
         })
     }
 }
