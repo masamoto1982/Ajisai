@@ -158,6 +158,16 @@ names or spawn diagnostics into it; that belongs on stderr, and
   rather than instructive, the durable fix is to make the benchmark normalize
   `engineVersion` to a fixed-width placeholder before measuring, so the budget
   tracks the wire format rather than the release stage.
+
+  `2762` then moved to `3828` when `receipt`
+  (auditable-kernel-work-order-2026-09.md Phase 4) became a field every
+  `compute` response carries: it bundles seven inputs (source digest, engine
+  version, registry digest, limit profile, outcome status, observation
+  digest, `resourceUsage`) into one more BLAKE3 digest, so the envelope grew
+  by far more than a version-string character this time. `3828` is again the
+  exact re-measured median with the field present (`check`/`infer_contracts`
+  carry `receipt: null`, so their contribution to the median barely moves),
+  not a rounded-up guess.
 - `number-baseline.js` and `eval/number-baseline.json`: deliberately narrow
   comparison with JavaScript `Number`, including exact controls. Do not present
   it as a general language or CAS benchmark.

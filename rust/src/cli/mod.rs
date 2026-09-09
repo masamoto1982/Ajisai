@@ -209,7 +209,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
                     message,
                     Vec::new(),
                     Vec::new(),
-                    opts,
+                    None,
                 ),
                 opts,
             );
@@ -236,7 +236,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
                 message,
                 Vec::new(),
                 Vec::new(),
-                opts,
+                None,
             ),
             opts,
         );
@@ -269,7 +269,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
                 message,
                 Vec::new(),
                 Vec::new(),
-                opts,
+                None,
             ),
             opts,
         );

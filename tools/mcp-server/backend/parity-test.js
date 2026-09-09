@@ -68,6 +68,7 @@ const STABLE_FIELDS = [
   "aiDiagnostic",
   "errorFlowTrace",
   "contractDecls",
+  "receipt",
 ];
 
 function stableView(envelope) {

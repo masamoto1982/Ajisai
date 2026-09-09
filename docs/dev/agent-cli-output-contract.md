@@ -57,7 +57,8 @@ Both commands emit schema version 1:
   "resourceUsage": {},
   "contractDecls": null,
   "stackElided": null,
-  "observationDigest": null
+  "observationDigest": null,
+  "receipt": null
 }
 ```
 
@@ -290,6 +291,42 @@ Changing the grammar is not a backward-compatible change even though it adds
 no JSON field and does not move `SCHEMA_VERSION`: a value that used to digest
 one way will digest another, so any caller comparing against a previously
 recorded digest breaks. Bump the schema tag when that happens.
+
+### `receipt`
+
+`observationDigest` bundles only what an agent can observe. `receipt` answers
+the broader question a third party asks after the fact: run this exact
+`source`, on this `engineVersion`, against this vocabulary and outcome space
+(`registryDigest`), under this `limitProfile`, and you get exactly this
+`outcomeStatus`, this `observationDigest`, having spent exactly this
+`resourceUsage` — verifiable without re-running anything, by re-deriving the
+same digest from the same seven inputs. `null` under the same conditions
+`observationDigest` is: `check`/`infer-contracts` never execute (nothing to
+receipt) and a Tier 2 result (`observationDigest` itself `null`) carries no
+receipt rather than one built over an unhashed observation.
+
+```json
+{
+  "sourceDigest": "#0123...",
+  "engineVersion": "0.2.0-alpha.1",
+  "registryDigest": "#4567...",
+  "limitProfile": { "executionSteps": 23190000, "materializedElements": 100000, "...": "..." },
+  "outcomeStatus": "ok",
+  "observationDigest": "#89ab...",
+  "resourceUsage": { "executionSteps": 22, "numericWork": 20, "collectionWork": 0 },
+  "digest": "#cdef..."
+}
+```
+
+Two runs of the same `source` under the same profile receipt identically; a
+one-character change to either the source or the profile changes `digest`.
+`runtimeMetrics` is deliberately absent from the bundle for the same reason it
+is absent from `observationDigest`: it is optimizer state, not a fact about
+what the program does (`LANG.AUTHORITY.FREEDOM` — which path ran is
+unobservable). The byte grammar carries its own schema tag (`AJISAI-RECEIPT-1`,
+`rust/src/agent/execution_receipt.rs`), distinct from `observationDigest`'s,
+since a receipt is a superset of a digest and the two must be free to version
+independently.
 
 ### An error report that cannot afford its stack
 
