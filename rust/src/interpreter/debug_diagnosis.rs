@@ -279,7 +279,6 @@ impl CauseClass {
             ErrorCategory::ExecutionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::ResourceLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
-            ErrorCategory::ModeUnsupported => CauseClass::ContractViolation,
             ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
             ErrorCategory::CondExhausted => CauseClass::UserLogic,
             // A cyclic DEF is a static shape rejected before anything runs —
@@ -491,7 +490,6 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
         Some(ErrorCategory::UnknownWord)
         | Some(ErrorCategory::StackUnderflow)
-        | Some(ErrorCategory::ModeUnsupported)
         | Some(ErrorCategory::MalformedSource)
         | Some(ErrorCategory::NameConflict)
         | Some(ErrorCategory::CondExhausted)

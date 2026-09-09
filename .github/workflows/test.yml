@@ -89,19 +89,13 @@ jobs:
         # The Word reference and Core hover contracts are generated from
         # spec/words.json. None of these were gated in CI, which is how a stale
         # generated surface and a broken word-schema checker both went unnoticed.
-        #
-        # `specification:check` is deliberately absent while Ajisai is in alpha.
-        # SPECIFICATION.html has been emptied on purpose: the specification is
-        # being rebuilt from the implementation rather than the other way round,
-        # so there is no specification for the gate to hold the file to. The
-        # generator and every source under spec/ are untouched, so restoring the
-        # gate is this line plus `npm run specification:generate`.
         run: |
           npm run semantic-kernel:check
           npm run word-schema:check
           npm run word:reference:check
           npm run core-word-docs:check
           npm run word-registry:check
+          npm run specification:check
 
       - name: Generate conformance manifest
         run: npm run conformance:manifest
@@ -139,6 +133,17 @@ jobs:
         # 65語 × 入力ドメイン組の全数表。契約（spec/words.json）と実装の乖離を
         # 総当たりで検出し、同時に AI 向けの完全な意味論資産になる。
         run: npm run semantics:table:check
+
+      - name: Outcome registry is a bijection with observed behavior
+        # Soundness (every outcome the table or a witness observes resolves
+        # into spec/outcomes.json) and non-vacuity (every declared id has at
+        # least one witness) — two properties the exhaustive table alone
+        # cannot establish, since it only ever runs one Word against one
+        # input-domain tuple. spec/outcome-witnesses.json supplies the
+        # multi-statement, resource-ceiling-dependent, and no-domain-reaches-
+        # it cases by hand, executed for real, not string-matched.
+        # See docs/dev/auditable-kernel-work-order-2026-09.md Phase 2.
+        run: npm run outcome-bijection:check
 
       - name: Generate primitive test map
         run: npm run primitive:test-map

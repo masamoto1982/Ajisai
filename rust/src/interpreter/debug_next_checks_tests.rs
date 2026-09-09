@@ -38,7 +38,6 @@ fn every_check_carries_a_code_and_both_locales() {
         Some(ErrorCategory::ResourceLimitExceeded),
         Some(ErrorCategory::RecursionLimitExceeded),
         Some(ErrorCategory::CondExhausted),
-        Some(ErrorCategory::ModeUnsupported),
         Some(ErrorCategory::BuiltinProtection),
     ];
     for why in &classes {

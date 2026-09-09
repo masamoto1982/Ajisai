@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "witnesses": [
+    {
+      "id": "stackUnderflow",
+      "source": "ADD",
+      "expect": "error:stackUnderflow",
+      "rationale": "The exhaustive table always supplies a Word's exact declared arity (scripts/generate-semantics-table.mjs builds one operand per domain position), so no cell can ever be short an operand. Running ADD alone is the whole witness."
+    },
+    {
+      "id": "malformedSource",
+      "source": "[ 1 2",
+      "expect": "error:malformedSource",
+      "rationale": "The exhaustive table only ever emits well-formed programs (one literal or Word name per domain position, then the Word); a program that fails to tokenize/parse at all is a different axis the table has no domain for. An unclosed vector literal is the simplest witness."
+    },
+    {
+      "id": "condExhausted",
+      "source": "TRUE [ [ FALSE ] [ 1 ] ] COND",
+      "expect": "error:condExhausted",
+      "rationale": "COND has control arity (excluded from the domain table entirely, per scripts/generate-semantics-table.mjs’s arityExclusionReason). A guard that evaluates FALSE with no matching clause and no else exhausts every clause."
+    },
+    {
+      "id": "invalidName",
+      "source": "[ 1 ] '' DEF",
+      "expect": "error:invalidName",
+      "rationale": "DEF's name-position domain representatives (textShort etc.) all happen to already be well-formed symbol lexemes, so the table never exercises a string that tokenizer::is_symbol_token_lexeme rejects. The empty string is not a name."
+    },
+    {
+      "id": "protectedWord",
+      "source": "[ 1 ] '+' DEF",
+      "expect": "error:protectedWord",
+      "rationale": "No domain representative is a reserved Core Word alias, so the table never reaches naming_convention_checker::check_reserved_word_name's refusal. '+' is reserved as an alias of ADD."
+    },
+    {
+      "id": "nameIsAWord",
+      "source": "1 'ADD' BIND",
+      "expect": "error:nameIsAWord",
+      "rationale": "BIND's name-position domain representatives are never a live Core or User Word name, so the table never reaches check_bindable_name's Core/User-Word refusal. 'ADD' is a Core Word."
+    },
+    {
+      "id": "builtinProtection",
+      "source": "[ 1 ] 'ADD' DEF",
+      "expect": "error:builtinProtection",
+      "rationale": "Same gap as nameIsAWord, on DEF's side: no domain representative names a live Core Word, so op_def_inner's core_vocabulary refusal never fires in the table. Redefining ADD is the witness."
+    },
+    {
+      "id": "nameConflict",
+      "source": "1 'X' BIND\n[ 1 ] 'X' DEF",
+      "expect": "error:nameConflict",
+      "rationale": "Requires two statements sharing state (a live binding, then a DEF of the same name) — the exhaustive table only ever runs one Word against fresh domain literals, so no single cell can set up a binding for a second statement to conflict with."
+    },
+    {
+      "id": "definitionConflict",
+      "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n[ 2 ] 'A' DEF",
+      "expect": "error:definitionConflict",
+      "rationale": "Requires three statements: define A, define B referencing A, then try to redefine A while B still depends on it. Multi-statement dependency state is outside the one-Word-one-tuple table by construction (Phase 4 pitfall A’s own example)."
+    },
+    {
+      "id": "selfReferentialDefinition",
+      "source": "[ REC ] 'REC' DEF",
+      "expect": "error:selfReferentialDefinition",
+      "rationale": "The exact case Phase 4 pitfall A names: a DEF body that names the very word being defined. The table never writes a word body that references anything but core words and domain literals, so it cannot construct this on its own."
+    },
+    {
+      "id": "nonComparableElement",
+      "source": "[ 'a' TRUE ] SORT",
+      "expect": "error:nonComparableElement",
+      "rationale": "SORT/ORDER's declared nonComparableElement fires only on a structurally non-numeric *element inside* a vector; no chosen domain representative is a vector mixing a numeric-incomparable element (a Boolean) with anything else, so the table's single-domain-per-cell shape never constructs a mixed vector at all."
+    },
+    {
+      "id": "nonTextElement",
+      "source": "[ 'a' TRUE ] JOIN",
+      "expect": "error:nonTextElement",
+      "rationale": "Same shape of gap as nonComparableElement: JOIN's nonTextElement fires on one bad element inside an otherwise-fine vector, which no single domain representative constructs (the table's vector-domain representatives are homogeneous)."
+    },
+    {
+      "id": "nonTruthGuard",
+      "source": "1 [ [ 'x' ] [ 1 ] ] COND",
+      "expect": "error:nonTruthGuard",
+      "rationale": "COND has control arity and is excluded from the domain table entirely. A guard clause that evaluates to a non-scalar, non-Boolean value (a String) is neither TRUE/FALSE nor the logical Unknown, so it raises rather than falling through."
+    },
+    {
+      "id": "blockContractViolation",
+      "source": "[ 1 2 ] [ 'X' BIND ] MAP",
+      "expect": "error:blockContractViolation",
+      "rationale": "MAP's element block runs with control arity of its own — the table's domain tuples only ever supply MAP's own two declared operands (a vector and a block), never a block whose *body* violates the ( x -- x ) contract MAP requires of it, since the block bodies the table writes are never anything but its own placeholder-free structure."
+    },
+    {
+      "id": "missingFollowingSourceUnit",
+      "source": "NIL OR-NIL",
+      "expect": "error:missingFollowingSourceUnit",
+      "rationale": "OR-NIL has control arity (it reads the following source unit, not a stack operand) and is excluded from the domain table entirely. A NIL subject with no following unit to fall back on is the declared condition itself."
+    },
+    {
+      "id": "structureError",
+      "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n'A' DEL",
+      "expect": "error:structureError",
+      "rationale": "structureError now means exactly one thing (docs/dev/auditable-kernel-work-order-2026-09.md Phase 1): a failure no Word has declared a condition for yet. DEL's dependents-conflict raise site (execute_del.rs) is exactly that — deliberately left generic in Phase 1 because DEL's contract has no definitionConflict counterpart to DEF's identical check, a words.json gap rather than a wiring bug. It needs two prior statements (define A, define B referencing A) to construct the conflict, so the one-Word table cannot reach it."
+    },
+    {
+      "id": "executionLimitExceeded",
+      "source": "1 1 ADD 1 ADD 1 ADD",
+      "profile": {
+        "stepLimit": 1
+      },
+      "expect": "error:executionLimitExceeded",
+      "rationale": "The table always runs under the native CLI's default step budget (12,180,000 — docs/dev/mcp-host-profiles.md), which no single-Word cell can plausibly exhaust. --step-limit is the one ceiling the CLI lets a caller shrink directly, so a 4-step program under a 1-step budget reaches it cheaply."
+    },
+    {
+      "id": "recursionLimitExceeded",
+      "source": "[ W2 ] 'W1' DEF\n[ W3 ] 'W2' DEF\n[ W4 ] 'W3' DEF\n[ W5 ] 'W4' DEF\n[ W6 ] 'W5' DEF\n[ W7 ] 'W6' DEF\n[ W8 ] 'W7' DEF\n[ W9 ] 'W8' DEF\n[ W10 ] 'W9' DEF\n[ W11 ] 'W10' DEF\n[ W12 ] 'W11' DEF\n[ W13 ] 'W12' DEF\n[ W14 ] 'W13' DEF\n[ W15 ] 'W14' DEF\n[ W16 ] 'W15' DEF\n[ W17 ] 'W16' DEF\n[ W18 ] 'W17' DEF\n[ W19 ] 'W18' DEF\n[ W20 ] 'W19' DEF\n[ W21 ] 'W20' DEF\n[ W22 ] 'W21' DEF\n[ W23 ] 'W22' DEF\n[ W24 ] 'W23' DEF\n[ W25 ] 'W24' DEF\n[ W26 ] 'W25' DEF\n[ W27 ] 'W26' DEF\n[ W28 ] 'W27' DEF\n[ W29 ] 'W28' DEF\n[ W30 ] 'W29' DEF\n[ W31 ] 'W30' DEF\n[ W32 ] 'W31' DEF\n[ W33 ] 'W32' DEF\n[ W34 ] 'W33' DEF\n[ W35 ] 'W34' DEF\n[ W36 ] 'W35' DEF\n[ W37 ] 'W36' DEF\n[ W38 ] 'W37' DEF\n[ W39 ] 'W38' DEF\n[ W40 ] 'W39' DEF\n[ W41 ] 'W40' DEF\n[ W42 ] 'W41' DEF\n[ W43 ] 'W42' DEF\n[ W44 ] 'W43' DEF\n[ W45 ] 'W44' DEF\n[ W46 ] 'W45' DEF\n[ W47 ] 'W46' DEF\n[ W48 ] 'W47' DEF\n[ W49 ] 'W48' DEF\n[ W50 ] 'W49' DEF\n[ W51 ] 'W50' DEF\n[ W52 ] 'W51' DEF\n[ W53 ] 'W52' DEF\n[ W54 ] 'W53' DEF\n[ W55 ] 'W54' DEF\n[ W56 ] 'W55' DEF\n[ W57 ] 'W56' DEF\n[ W58 ] 'W57' DEF\n[ W59 ] 'W58' DEF\n[ W60 ] 'W59' DEF\n[ W61 ] 'W60' DEF\n[ W62 ] 'W61' DEF\n[ W63 ] 'W62' DEF\n[ W64 ] 'W63' DEF\n[ W65 ] 'W64' DEF\n[ W66 ] 'W65' DEF\n[ W67 ] 'W66' DEF\n[ W68 ] 'W67' DEF\n[ W69 ] 'W68' DEF\n[ W70 ] 'W69' DEF\n[ W71 ] 'W70' DEF\n[ W72 ] 'W71' DEF\n[ W73 ] 'W72' DEF\n[ W74 ] 'W73' DEF\n[ W75 ] 'W74' DEF\n[ W76 ] 'W75' DEF\n[ W77 ] 'W76' DEF\n[ W78 ] 'W77' DEF\n[ W79 ] 'W78' DEF\n[ W80 ] 'W79' DEF\n[ W81 ] 'W80' DEF\n[ W82 ] 'W81' DEF\n[ W83 ] 'W82' DEF\n[ W84 ] 'W83' DEF\n[ W85 ] 'W84' DEF\n[ W86 ] 'W85' DEF\n[ W87 ] 'W86' DEF\n[ W88 ] 'W87' DEF\n[ W89 ] 'W88' DEF\n[ W90 ] 'W89' DEF\n[ W91 ] 'W90' DEF\n[ W92 ] 'W91' DEF\n[ W93 ] 'W92' DEF\n[ W94 ] 'W93' DEF\n[ W95 ] 'W94' DEF\n[ W96 ] 'W95' DEF\n[ W97 ] 'W96' DEF\n[ W98 ] 'W97' DEF\n[ W99 ] 'W98' DEF\n[ W100 ] 'W99' DEF\n[ W101 ] 'W100' DEF\n[ W102 ] 'W101' DEF\n[ W103 ] 'W102' DEF\n[ W104 ] 'W103' DEF\n[ W105 ] 'W104' DEF\n[ W106 ] 'W105' DEF\n[ W107 ] 'W106' DEF\n[ W108 ] 'W107' DEF\n[ W109 ] 'W108' DEF\n[ W110 ] 'W109' DEF\n[ W111 ] 'W110' DEF\n[ W112 ] 'W111' DEF\n[ W113 ] 'W112' DEF\n[ W114 ] 'W113' DEF\n[ W115 ] 'W114' DEF\n[ W116 ] 'W115' DEF\n[ W117 ] 'W116' DEF\n[ W118 ] 'W117' DEF\n[ W119 ] 'W118' DEF\n[ W120 ] 'W119' DEF\n[ W121 ] 'W120' DEF\n[ W122 ] 'W121' DEF\n[ W123 ] 'W122' DEF\n[ W124 ] 'W123' DEF\n[ W125 ] 'W124' DEF\n[ W126 ] 'W125' DEF\n[ W127 ] 'W126' DEF\n[ W128 ] 'W127' DEF\n[ W129 ] 'W128' DEF\n[ W130 ] 'W129' DEF\n[ W131 ] 'W130' DEF\n[ W132 ] 'W131' DEF\n[ W133 ] 'W132' DEF\n[ W134 ] 'W133' DEF\n[ W135 ] 'W134' DEF\n[ W136 ] 'W135' DEF\n[ W137 ] 'W136' DEF\n[ W138 ] 'W137' DEF\n[ W139 ] 'W138' DEF\n[ W140 ] 'W139' DEF\n[ W141 ] 'W140' DEF\n[ W142 ] 'W141' DEF\n[ W143 ] 'W142' DEF\n[ W144 ] 'W143' DEF\n[ W145 ] 'W144' DEF\n[ W146 ] 'W145' DEF\n[ W147 ] 'W146' DEF\n[ W148 ] 'W147' DEF\n[ W149 ] 'W148' DEF\n[ W150 ] 'W149' DEF\n[ W151 ] 'W150' DEF\n[ W152 ] 'W151' DEF\n[ W153 ] 'W152' DEF\n[ W154 ] 'W153' DEF\n[ W155 ] 'W154' DEF\n[ W156 ] 'W155' DEF\n[ W157 ] 'W156' DEF\n[ W158 ] 'W157' DEF\n[ W159 ] 'W158' DEF\n[ W160 ] 'W159' DEF\n[ W161 ] 'W160' DEF\n[ W162 ] 'W161' DEF\n[ W163 ] 'W162' DEF\n[ W164 ] 'W163' DEF\n[ W165 ] 'W164' DEF\n[ W166 ] 'W165' DEF\n[ W167 ] 'W166' DEF\n[ W168 ] 'W167' DEF\n[ W169 ] 'W168' DEF\n[ W170 ] 'W169' DEF\n[ W171 ] 'W170' DEF\n[ W172 ] 'W171' DEF\n[ W173 ] 'W172' DEF\n[ W174 ] 'W173' DEF\n[ W175 ] 'W174' DEF\n[ W176 ] 'W175' DEF\n[ W177 ] 'W176' DEF\n[ W178 ] 'W177' DEF\n[ W179 ] 'W178' DEF\n[ W180 ] 'W179' DEF\n[ W181 ] 'W180' DEF\n[ W182 ] 'W181' DEF\n[ W183 ] 'W182' DEF\n[ W184 ] 'W183' DEF\n[ W185 ] 'W184' DEF\n[ W186 ] 'W185' DEF\n[ W187 ] 'W186' DEF\n[ W188 ] 'W187' DEF\n[ W189 ] 'W188' DEF\n[ W190 ] 'W189' DEF\n[ W191 ] 'W190' DEF\n[ W192 ] 'W191' DEF\n[ W193 ] 'W192' DEF\n[ W194 ] 'W193' DEF\n[ W195 ] 'W194' DEF\n[ W196 ] 'W195' DEF\n[ W197 ] 'W196' DEF\n[ W198 ] 'W197' DEF\n[ W199 ] 'W198' DEF\n[ W200 ] 'W199' DEF\n[ W201 ] 'W200' DEF\n[ W202 ] 'W201' DEF\n[ W203 ] 'W202' DEF\n[ W204 ] 'W203' DEF\n[ W205 ] 'W204' DEF\n[ W206 ] 'W205' DEF\n[ W207 ] 'W206' DEF\n[ W208 ] 'W207' DEF\n[ W209 ] 'W208' DEF\n[ W210 ] 'W209' DEF\n[ W211 ] 'W210' DEF\n[ W212 ] 'W211' DEF\n[ W213 ] 'W212' DEF\n[ W214 ] 'W213' DEF\n[ W215 ] 'W214' DEF\n[ W216 ] 'W215' DEF\n[ W217 ] 'W216' DEF\n[ W218 ] 'W217' DEF\n[ W219 ] 'W218' DEF\n[ W220 ] 'W219' DEF\n[ W221 ] 'W220' DEF\n[ W222 ] 'W221' DEF\n[ W223 ] 'W222' DEF\n[ W224 ] 'W223' DEF\n[ W225 ] 'W224' DEF\n[ W226 ] 'W225' DEF\n[ W227 ] 'W226' DEF\n[ W228 ] 'W227' DEF\n[ W229 ] 'W228' DEF\n[ W230 ] 'W229' DEF\n[ W231 ] 'W230' DEF\n[ W232 ] 'W231' DEF\n[ W233 ] 'W232' DEF\n[ W234 ] 'W233' DEF\n[ W235 ] 'W234' DEF\n[ W236 ] 'W235' DEF\n[ W237 ] 'W236' DEF\n[ W238 ] 'W237' DEF\n[ W239 ] 'W238' DEF\n[ W240 ] 'W239' DEF\n[ W241 ] 'W240' DEF\n[ W242 ] 'W241' DEF\n[ W243 ] 'W242' DEF\n[ W244 ] 'W243' DEF\n[ W245 ] 'W244' DEF\n[ W246 ] 'W245' DEF\n[ W247 ] 'W246' DEF\n[ W248 ] 'W247' DEF\n[ W249 ] 'W248' DEF\n[ W250 ] 'W249' DEF\n[ W251 ] 'W250' DEF\n[ W252 ] 'W251' DEF\n[ W253 ] 'W252' DEF\n[ W254 ] 'W253' DEF\n[ W255 ] 'W254' DEF\n[ W256 ] 'W255' DEF\n[ W257 ] 'W256' DEF\n[ 1 ] 'W257' DEF\nW1",
+      "expect": "error:recursionLimitExceeded",
+      "rationale": "MAX_USER_WORD_DEPTH is 256 nested User-Word activations (interpreter_core.rs); DEF's acyclicity check (SPEC §8.7) rules out a word calling itself, so the only way to reach this ceiling is a chain of distinct words each calling the next. That needs 257 DEF statements plus a call — far outside what any single-Word domain cell constructs."
+    },
+    {
+      "id": "resourceLimitExceeded",
+      "source": "99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999",
+      "expect": "error:resourceLimitExceeded",
+      "rationale": "max_numeric_literal_digits (4,096, identical on every host profile per docs/dev/mcp-host-profiles.md) is a property of one literal's own text, which none of the table's domain representatives are long enough to cross — a 4,097-digit literal is the cheapest possible witness and needs no profile override."
+    },
+    {
+      "id": "undecidable",
+      "source": "PI PI EQ",
+      "expect": "nil:undecidable",
+      "rationale": "Requires a Tier 2 (PI) comparison operand, which is not one of the table's 11 domain representatives (Phase 2 pitfall B: adding a 12th PI domain would multiply the whole table's cell count and its generation cost for one reason alone). Two independently-constructed computable reals with identical enclosures never separate within the comparison budget, so PI PI EQ starves deterministically — no hand-computed digits required (rust/src/interpreter/tier2_undecidable_conformance_tests.rs already pins this exact program)."
+    }
+  ]
+}

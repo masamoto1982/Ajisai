@@ -94,6 +94,28 @@ if (errorCategoryArms.size === 0) {
 // already a fixed structural variant — no filtering needed post-Phase 2.
 const rustStructuralErrorCategories = new Set(errorCategoryArms.values());
 
+// `ErrorCategory::DivisionByZero` is a named exclusion, not an exemption
+// list entry (outcome-space-bijection-work-order-2026-09.md Phase 2 pitfall
+// C rules out the latter): investigation found this one Rust variant never
+// classifies a program *outcome* at all. `AjisaiError::DivisionByZero` is an
+// internal fast-path control-flow signal inside DIV/MOD's scalar arithmetic
+// that is always caught and re-projected to the reasoned NIL
+// `nil:divisionByZero` (a real, witnessed NilReason — untouched by this
+// exclusion) before a Report is built, so `status:error` with this category
+// is unreachable by construction. The variant survives in Rust for a
+// different, legitimate job: `execution_loop.rs`'s
+// `error_category_for_nil_reason` reuses it to tag the diagnostic trace
+// (`errorFlowTrace[].diagnosis`) of that *successful* zero-divisor NIL with
+// evidence, a `CauseClass::Domain` classification and tailored next-checks.
+// That is a diagnosis-layer concern, not an outcome-space one — the same
+// distinction `Declared`'s structural exclusion above already draws, just
+// for a variant whose name happens to collide with a real outcome category
+// instead of forwarding an arbitrary string. `spec/outcomes.json`'s
+// `errorCategories` therefore rightly has no `divisionByZero` entry, and
+// this is the one arm the registry-vs-Rust structural comparison must not
+// require one for.
+rustStructuralErrorCategories.delete('divisionByZero');
+
 // ---------------------------------------------------------------------------
 // spec/outcomes.json
 // ---------------------------------------------------------------------------

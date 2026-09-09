@@ -329,24 +329,7 @@ pub(crate) fn build_next_checks(
             }
         }
         CauseClass::ContractViolation => {
-            if matches!(category, Some(ErrorCategory::ModeUnsupported)) {
-                out.push(check(
-                    "checkSupportedModes",
-                    ("Check supported modes", "対応 mode を確認する"),
-                    (
-                        "Check whether the Word supports the current mode.",
-                        "対象 word が現在の mode をサポートしているか確認する",
-                    ),
-                ));
-                out.push(check(
-                    "checkModeConfusion",
-                    ("Check mode confusion", "mode の取り違えを確認する"),
-                    (
-                        "Check for a Stack mode / Vector mode / Code block mode mix-up.",
-                        "Stack mode / Vector mode / Code block mode の取り違えを確認する",
-                    ),
-                ));
-            } else if matches!(category, Some(ErrorCategory::BuiltinProtection)) {
+            if matches!(category, Some(ErrorCategory::BuiltinProtection)) {
                 out.push(check(
                     "checkProtection",
                     ("Check protection", "保護を確認する"),
