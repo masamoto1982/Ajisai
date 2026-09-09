@@ -52,7 +52,7 @@ Ajisai is built from ten concepts. Everything below is one of them, or a consequ
 
 <div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Source</th><th>Authoritative for</th></tr></thead><tbody><tr><td>This Language Semantics</td><td>Program meaning</td></tr><tr><td><code>spec/words.json</code></td><td>The vocabulary</td></tr><tr><td><code>spec/outcomes.json</code></td><td>The outcome space — the closed list of NIL reasons and ERROR categories a contract's names resolve into, including those no contract reaches (<code>literal</code>) and those belonging to no single Word (arity, source, dictionary, resource)</td></tr><tr><td><code>spec/semantic-families.json</code></td><td>The laws Words share</td></tr><tr><td><code>spec/gui-semantics.md</code></td><td>Presentation</td></tr><tr><td><code>spec/host-protocol.schema.json</code></td><td>The boundary between them</td></tr></tbody></table></div>
 
-<p><code>SPECIFICATION.html</code> is generated from these sources and is not edited directly.</p>
+<p><code>SPECIFICATION.html</code> renders the two prose sources — this document and <code>spec/gui-semantics.md</code> — and is not edited directly. The four data sources are read directly by the implementation and its gates rather than through it: a source is authoritative because this table says so, not by appearing in that document.</p>
 
 <p>
 Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the table above defines nothing; <code>docs/dev/</code> holds design notes and history on those terms.
