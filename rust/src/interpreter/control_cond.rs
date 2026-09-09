@@ -319,69 +319,30 @@ fn evaluate_guard_isolated(
     if is_unknown_guard_result(&result_value) {
         return Ok(false);
     }
-    // A definite Boolean guard fires iff it is TRUE (SPEC §7.7). Accept a
-    // bare Boolean or one wrapped in a single-element vector; fall back to the
-    // legacy numeric-guard handling (0 = false, 1 = true) below otherwise.
+    // A definite Boolean guard fires iff it is TRUE (SPEC §7.7) — a bare
+    // Boolean, nothing else. A scalar 0/1 and a Boolean wrapped in a
+    // single-element Vector used to be accepted here too, both the
+    // truthiness coercion LANG.VALUES.TRUTH rules out, and the second one
+    // LANG.VALUES.DISJOINT rules out twice over (a singleton Vector is not
+    // its element, and a scalar is not a Boolean). `AND`/`OR`/`NOT` and
+    // `extract_predicate_boolean` had the same coercion removed already;
+    // this was the last place it survived
+    // (docs/dev/auditable-kernel-work-order-2026-09.md Phase 3).
     //
-    // FINDING (not fixed here): both fallbacks are the truthiness coercion
-    // LANG.VALUES.TRUTH rules out, and that LANG.VALUES.DISJOINT rules out
-    // twice over — a singleton Vector is not its element, and a scalar is not
-    // a Boolean. `AND`/`OR`/`NOT` and `extract_predicate_boolean` had the same
-    // coercion removed; this is the last place it survives.
-    //
-    // Element lifting made it load-bearing rather than merely reachable. The
-    // comparison Words used to project a singleton operand, so `[ 7 ] [ 5 ] >`
-    // answered a bare `TRUE`; it now answers `[ TRUE ]`, which reaches the
-    // wrapper case below. Tightening the guard therefore has to move the
-    // `[ n ]`-wrapped-scalar idiom off comparisons across the examples and
-    // tests, which is its own change rather than part of the lifting one.
-    if let Some(b) = result_value.as_truth() {
-        return Ok(b);
-    }
-    if result_value.len() == 1 {
-        if let Some(child) = result_value.get_child(0) {
-            if let Some(b) = child.as_truth() {
-                return Ok(b);
-            }
-        }
-    }
-    let unwrapped: &Value = if result_value.as_scalar().is_none() {
-        if result_value.len() == 1 {
-            result_value.get_child(0).ok_or_else(|| {
-                AjisaiError::declared(
-                    "nonTruthGuard",
-                    "COND: guard must return TRUE or FALSE, got non-scalar",
-                )
-            })?
-        } else {
-            return Err(AjisaiError::declared(
-                "nonTruthGuard",
-                "COND: guard must return TRUE or FALSE, got non-scalar",
-            ));
-        }
-    } else {
-        &result_value
-    };
-    let scalar = unwrapped.as_scalar().ok_or_else(|| {
+    // Element lifting made the wrapped-Boolean case load-bearing rather than
+    // merely reachable: the comparison Words used to project a singleton
+    // operand, so `[ 7 ] [ 5 ] >` answered a bare `TRUE`; it now answers
+    // `[ TRUE ]`. A guard written that way has to move to comparing its
+    // scalars directly (`7 5 GT`) instead.
+    result_value.as_truth().ok_or_else(|| {
         AjisaiError::declared(
             "nonTruthGuard",
-            "COND: guard must return TRUE or FALSE, got non-scalar",
+            format!(
+                "COND: guard must return TRUE or FALSE, got {}",
+                result_value
+            ),
         )
-    })?;
-    if scalar.is_zero() {
-        return Ok(false);
-    }
-    if scalar.to_i64() == Some(1) {
-        return Ok(true);
-    }
-
-    Err(AjisaiError::declared(
-        "nonTruthGuard",
-        format!(
-            "COND: guard must return TRUE or FALSE, got {}",
-            result_value
-        ),
-    ))
+    })
 }
 
 /// `true` when a guard reduced to the logical Unknown (U) rather than to a

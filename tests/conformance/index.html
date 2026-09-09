@@ -1501,9 +1501,10 @@
 <!-- ===================== CORE: COND CONTRACT BRANCHES (§7.7.1) ===================== -->
 
 <section class="ajisai-case" id="core-cond-truthy-number-guard" data-category="core">
-  <h3>A guard reducing to the bare number 1 fires as truthy</h3>
+  <h3>A guard reducing to a bare number is malformed use, not truthy</h3>
   <pre class="ajisai-source">7 [ [ 1 ] [ [ 42 ] ] ] COND</pre>
-  <pre class="ajisai-expect-result">[ 42/1 ]</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">guard must return TRUE or FALSE, got 1/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
