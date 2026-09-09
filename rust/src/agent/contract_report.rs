@@ -79,8 +79,20 @@ fn arity_label(flow: &ContractFlow) -> String {
 }
 
 /// The `#:contract` directive that codifies the inferred contract's checkable
-/// subset. A dynamic arity is omitted (the checker cannot pin it); NIL behavior
-/// maps to `nil-free` when the word never manufactures absence, else `may-nil`.
+/// subset. A dynamic arity is omitted (the checker cannot pin it).
+///
+/// The NIL term is derived from `nil_label` — the same rendering the report's
+/// own `nil` field uses — rather than from a second, independently-maintained
+/// match over `NilBehavior`. The two used to disagree in the same JSON object
+/// (`"nil": "nil-propagating"` beside `"suggested": "... nil-free ..."`): both
+/// were true under the checker's own definition (`contract_decl.rs`'s
+/// `nil-free` means "never *manufactures* absence," which a propagating word
+/// satisfies), but stated in two different vocabularies nothing reconciled
+/// for a reader of one response. Deriving `suggested` from `nil_label`'s
+/// output instead makes the two fields agree by construction: only the
+/// literal string `"nil-free"` earns a `nil-free` directive term, so a
+/// propagating word — reported as `nil-propagating` — now suggests no NIL
+/// term at all, the same silence `rejects-nil`/`consumes-nil` already get.
 fn suggested_directive(
     name: &str,
     contract: &crate::interpreter::word_contract::WordContract,
@@ -90,11 +102,12 @@ fn suggested_directive(
         parts.push(format!("( {consumes} -- {produces} )"));
     }
     parts.push(purity_label(contract.purity).to_string());
-    let nil = match contract.nil_behavior {
-        NilBehavior::MayCreate => Some("may-nil"),
-        NilBehavior::NeverCreates | NilBehavior::Propagates => Some("nil-free"),
-        // Rejects/Consumes are not expressible as a nil-free/may-nil flag.
-        NilBehavior::RejectsNil | NilBehavior::ConsumesNil => None,
+    let nil = match nil_label(contract.nil_behavior) {
+        "nil-free" => Some("nil-free"),
+        "may-create-nil" => Some("may-nil"),
+        // "nil-propagating", "rejects-nil", "consumes-nil" are not
+        // expressible as a nil-free/may-nil flag.
+        _ => None,
     };
     if let Some(nil) = nil {
         parts.push(nil.to_string());
