@@ -6,6 +6,7 @@ use crate::interpreter::arithmetic_meter::{
     charge_binary_schema, check_result_size, measure_operand,
 };
 use crate::interpreter::simd_ops;
+use crate::interpreter::tensor_lane_ops::lane_nil_passthrough;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, push_result,
@@ -389,6 +390,15 @@ fn apply_exact_real_recursive_broadcast(
 
     match (broadcast_children(a), broadcast_children(b)) {
         (None, None) => {
+            // Absence before arithmetic, for the reason the rational lift
+            // gives (`tensor_lane_ops::lane_nil_passthrough`) and one more:
+            // `ExactReal::from_fraction(Fraction::nil())` is a *number* whose
+            // denominator happens to be zero, so the exact law answered a NIL
+            // lane with an observable `0/0` scalar — an absence that had
+            // stopped being one.
+            if let Some(nil) = lane_nil_passthrough(a, b) {
+                return Ok(nil);
+            }
             let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
                 // Reached only through ADD/SUB/MUL/DIV/MOD/QUANTIZE's own
                 // binary dispatch, which all declare `nonNumeric` uniformly.
@@ -464,7 +474,14 @@ fn exact_flat_leaf_lanes(a: &Value, b: &Value) -> Option<(Vec<ExactReal>, Vec<Ex
     let mut b_lanes = Vec::with_capacity(b_children.len());
     for (x, y) in a_children.iter().zip(b_children.iter()) {
         // Any nested child must take the recursive path, not the flat kernel.
-        if broadcast_children(x).is_some() || broadcast_children(y).is_some() {
+        // So must an absent lane: the kernel computes `Send` `ExactReal`
+        // lanes, which cannot carry an `AbsenceMetadata`, and the recursion
+        // applies the passthrough law where the lane is still a `Value`.
+        if broadcast_children(x).is_some()
+            || broadcast_children(y).is_some()
+            || x.is_nil()
+            || y.is_nil()
+        {
             return None;
         }
         a_lanes.push(exact_broadcast_leaf(x)?);

@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::interpreter_core::RuntimeMetrics;
-use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
+use crate::interpreter::tensor_lane_ops::{apply_lane_wise_broadcast, contains_absent_lane};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 use std::sync::Arc;
@@ -353,8 +353,18 @@ where
 
     // Ragged or nested-mixed structures (e.g. `[ 10 [ 1 2 3 ] 10 ]`) cannot be
     // flattened to a single tensor whose shape matches its element count, so
-    // they are broadcast structurally by following the value tree.
-    if rectangular_shape(a).is_none() || rectangular_shape(b).is_none() {
+    // they are broadcast structurally by following the value tree. An operand
+    // carrying an absent lane takes that route too: this kernel answers each
+    // lane with a `Fraction`, and a `Fraction` records absence as a zero
+    // denominator with no reason attached, so every NIL it produced read back
+    // as `nil:literal` however it had really arisen. The structural route
+    // keeps each lane a `Value` and lifts the scalar passthrough law over it
+    // (`tensor_lane_ops::lane_nil_passthrough`).
+    if rectangular_shape(a).is_none()
+        || rectangular_shape(b).is_none()
+        || contains_absent_lane(a)
+        || contains_absent_lane(b)
+    {
         return apply_recursive_broadcast(a, b, op);
     }
 
