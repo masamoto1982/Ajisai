@@ -120,6 +120,15 @@ const ADVERSARIAL = [
   "[ [ 1 0 DIV ] ] 'G' DEF G EXEC",
   '[ 1 ADD ] EXEC',
   '[ 1 2 ADD ] 1 GET EXEC',
+  // A String can name a Word, so a Word can run with no `Token::Symbol` for
+  // it anywhere in the source. These two really raise `builtinProtection` and
+  // `wordNotFound` through `'DEL'` written as a string, and a prediction that
+  // reasons from Symbols alone omits both. Added when narrowing the
+  // structural ceiling by reachability made that omission possible: the
+  // twelve cases above did not exercise it, so the gate was green against a
+  // predictor that had just gone unsound.
+  "[ 'ADD' ] 'DEL' MAP",
+  "[ 'NOPE' ] 'DEL' MAP",
   // Ordinary compositions, as controls: a fix that widened everything to the
   // whole universe would still pass the two classes above, and should not.
   '1 2 ADD',
