@@ -190,8 +190,14 @@ mod tests {
         assert_eq!(lookup_surface_form("|").unwrap().concept, "COND-CLAUSE");
         assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
         assert_eq!(lookup_surface_form("]").unwrap().concept, "END-VECTOR");
-        assert_eq!(lookup_surface_form("{").unwrap().concept, "RETIRED-BEGIN-BLOCK");
-        assert_eq!(lookup_surface_form("}").unwrap().concept, "RETIRED-END-BLOCK");
+        assert_eq!(
+            lookup_surface_form("{").unwrap().concept,
+            "RETIRED-BEGIN-BLOCK"
+        );
+        assert_eq!(
+            lookup_surface_form("}").unwrap().concept,
+            "RETIRED-END-BLOCK"
+        );
         assert_eq!(lookup_surface_form("'").unwrap().concept, "STRING-QUOTE");
         assert_eq!(lookup_surface_form("(").unwrap().concept, "RESERVED-BEGIN");
         assert_eq!(lookup_surface_form(")").unwrap().concept, "RESERVED-END");

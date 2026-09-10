@@ -99,5 +99,7 @@ pub fn link_upstream_nil(diagnosis: &mut DebugDiagnosis, trace: &[ErrorFlowEvent
     diagnosis
         .evidence
         .push(format!("upstreamNilProducer={producer}"));
-    diagnosis.evidence.push(format!("upstreamNilReason={reason}"));
+    diagnosis
+        .evidence
+        .push(format!("upstreamNilReason={reason}"));
 }

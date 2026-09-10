@@ -106,7 +106,9 @@ async fn a_genuine_type_error_is_left_alone() {
         "no NIL was produced, so there is no upstream cause to name"
     );
     assert!(
-        !evidence(&report).iter().any(|e| e.starts_with("upstreamNil")),
+        !evidence(&report)
+            .iter()
+            .any(|e| e.starts_with("upstreamNil")),
         "no upstream evidence either"
     );
 }
