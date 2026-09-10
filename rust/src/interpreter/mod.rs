@@ -45,6 +45,9 @@ mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
+pub mod upstream_nil_link;
+#[cfg(test)]
+mod upstream_nil_link_tests;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_ops;
 mod word_candidates;

@@ -64,7 +64,7 @@ async fn surface_form_concepts_are_not_runtime_canonicalizations() {
 
     assert_ne!(canonicalize_core_word_name("#"), "COMMENT-LINE");
     assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
-    assert_ne!(canonicalize_core_word_name("{"), "BEGIN-BLOCK");
+    assert_ne!(canonicalize_core_word_name("{"), "RETIRED-BEGIN-BLOCK");
     assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
 }
 

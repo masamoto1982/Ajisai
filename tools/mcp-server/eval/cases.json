@@ -117,8 +117,8 @@
    "id": "static-check",
    "category": "check",
    "prompts": {
-    "en": "Check this Ajisai definition for problems without running it: { [ 1 ] + } 'INC' DEF",
-    "ja": "この Ajisai 定義を実行せずに検査してください: { [ 1 ] + } 'INC' DEF"
+    "en": "Check this Ajisai definition for problems without running it: [ [ 1 ] + ] 'INC' DEF",
+    "ja": "この Ajisai 定義を実行せずに検査してください: [ [ 1 ] + ] 'INC' DEF"
    },
    "expectedTool": "check",
    "arguments": {
@@ -133,8 +133,8 @@
    "id": "contract-inference",
    "category": "contract",
    "prompts": {
-    "en": "What contract does { [ 1 ] + } 'INC' DEF infer?",
-    "ja": "{ [ 1 ] + } 'INC' DEF はどんな契約になりますか。"
+    "en": "What contract does [ [ 1 ] + ] 'INC' DEF infer?",
+    "ja": "[ [ 1 ] + ] 'INC' DEF はどんな契約になりますか。"
    },
    "expectedTool": "infer_contracts",
    "arguments": {

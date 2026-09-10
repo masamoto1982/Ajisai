@@ -167,7 +167,7 @@ function validateWordManifest(coverage) {
       if (entryClassifiesSurface(entry, manifestEntry)) coveredManifestIds.add(manifestEntry.id);
     }
 
-    const isSurfaceEntry = ['coreword', 'moduleword', 'symbol_alias', 'syntax_sugar', 'input_helper', 'delimiter_sugar', 'literal_sugar', 'modifier_sugar', 'source_directive', 'control_directive', 'reserved_marker', 'conversion_word'].includes(entry.kind);
+    const isSurfaceEntry = ['coreword', 'moduleword', 'symbol_alias', 'syntax_sugar', 'input_helper', 'delimiter_sugar', 'literal_sugar', 'modifier_sugar', 'source_directive', 'control_directive', 'reserved_marker', 'retired_form', 'conversion_word'].includes(entry.kind);
     if (isSurfaceEntry && !manifestById.has(entry.id)) {
       const hasSurfaceMatch = coverageSurfaces(entry).some((surface) => {
         const normalized = normalizeSurface(surface);
@@ -194,6 +194,7 @@ function validateWordManifest(coverage) {
   const SUGAR_KINDS = new Set([
     'symbol_alias', 'syntax_sugar', 'input_helper', 'delimiter_sugar',
     'literal_sugar', 'source_directive', 'control_directive', 'reserved_marker',
+    'retired_form',
   ]);
   const coverageIds = new Set(coverage.entries.map((entry) => entry.id));
   const unledgered = manifest.entries

@@ -25,8 +25,22 @@ function formatTimestamp(date: Date): string {
 
 /**
  * Label the header badge `playground`, matching the Reference header's own
- * `リファレンス` badge, and disclose the release version and build timestamp
- * on hover.
+ * `リファレンス` badge, and put the release and build stamp on screen beside it.
+ *
+ * The build identity used to be hover-only — the badge read the constant word
+ * `playground` and the version lived in a `title` tooltip. A tooltip does not
+ * exist on a touch device and is not something anyone thinks to reach for, so
+ * in practice the site said nothing about which build it was running, while
+ * the MCP server reports `engineVersion` and `registryDigest` on every
+ * response.
+ *
+ * That asymmetry matters because the Playground is a separately deployed
+ * artifact and a deploy can be stranded — see the `workflow_dispatch` note in
+ * `.github/workflows/build.yml` for the incident that added it. When that
+ * happens the symptom is a site whose behaviour disagrees with the
+ * specification, and with no version on screen there is nothing to compare
+ * against. The badge keeps saying which page this is; the stamp says which
+ * build, so the divergence is checkable by looking.
  */
 export function setBuildVersionLabel(): void {
     const versionElement = document.querySelector<HTMLElement>('.version');
@@ -35,6 +49,14 @@ export function setBuildVersionLabel(): void {
     const timestamp = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
     versionElement.textContent = 'playground';
     versionElement.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}\nBuild ${timestamp}`;
+
+    const buildElement = document.querySelector<HTMLElement>('#build-stamp');
+    if (!buildElement) return;
+    buildElement.hidden = false;
+    buildElement.textContent = `v${__AJISAI_RELEASE_VERSION__} · ${timestamp}`;
+    buildElement.title =
+        `Ajisai ${__AJISAI_RELEASE_VERSION__}, playground build ${timestamp}.\n` +
+        'Compare against the repository when the Playground disagrees with the specification.';
 }
 
 /**
