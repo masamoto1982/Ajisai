@@ -121,11 +121,17 @@ fn word_outcome_table() -> &'static HashMap<String, WordVocabulary> {
 
 /// Every outcome id a builtin could ever produce, per `spec/words.json`'s own
 /// declaration: `value`, one `error:<category>` per declared `errorWhen`
-/// condition, and one `nil:<reason>` per declared projection reason.
+/// condition, and one `nil:<reason>` per declared projection reason — plus
+/// `NIL`'s own `nil:literal`, which no declaration can carry (see
+/// [`NIL_LITERAL`]).
 pub(crate) fn builtin_outcomes_for(name: &str) -> BTreeSet<String> {
     let mut outcomes = BTreeSet::new();
     outcomes.insert("value".to_string());
-    if let Some((error_when, reasons)) = word_outcome_table().get(&name.to_uppercase()) {
+    let canonical = name.to_uppercase();
+    if canonical == NIL_WORD {
+        outcomes.insert(NIL_LITERAL.to_string());
+    }
+    if let Some((error_when, reasons)) = word_outcome_table().get(&canonical) {
         for condition in error_when {
             outcomes.insert(format!("error:{condition}"));
         }
@@ -134,6 +140,55 @@ pub(crate) fn builtin_outcomes_for(name: &str) -> BTreeSet<String> {
         }
     }
     outcomes
+}
+
+/// The outcome id of a NIL that carries no reason.
+///
+/// It is the one id a Word's `spec/words.json` declaration can never name.
+/// The declaration derives outcomes from `errorWhen` (what the Word raises)
+/// and `projection.reason` (what the Word *computes* an absence for), and
+/// `spec/outcomes.json` defines `literal` as the complement of both: "a NIL
+/// the program wrote rather than computed ... not produced by any Word's
+/// projection". So a vocabulary union over declarations alone omits it by
+/// construction — the under-approximation this pair of constants exists to
+/// close, measured on `NIL 1 ADD` (really `nil:literal`, predicted without
+/// any `nil:` id at all) and on 676 of the exhaustive table's 6,593 cells.
+pub(crate) const NIL_LITERAL: &str = "nil:literal";
+
+/// The one Word that answers with a reasonless NIL by definition: `NIL`
+/// pushes the literal, and `spec/words.json` records its projection as
+/// `never` — correctly, since pushing an absence is not projecting one.
+/// `[ NIL 1 ]` needs no separate case: a NIL inside a vector literal is the
+/// same `Token::Symbol("NIL")` this name matches, and both walks resolve
+/// every Symbol wherever it is written.
+const NIL_WORD: &str = "NIL";
+
+/// Widen `outcomes` to admit `nil:literal` whenever the program can produce
+/// *any* NIL — the closure that keeps prediction sound against reason loss.
+///
+/// A reason is metadata on a whole `Value`, and a dense tensor lane holds
+/// presence but not a reason (`tensor_lane_ops`' module doc and
+/// `arithmetic_division::build_scalar_fast_projection` both say so in those
+/// words). A computed, reasoned NIL that crosses one of those lanes comes
+/// back reasonless, and a reasonless NIL reads back as `literal`:
+///
+/// ```text
+/// [ 1 2 ] [ 1 0 ] DIV [ 1 ] GET NIL-REASON            -> 'divisionByZero'
+/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET NIL-REASON -> 'literal'
+/// ```
+///
+/// The second program contains no `NIL` token, so "a NIL literal is written
+/// somewhere" is *not* a sound trigger, however exactly it matches the
+/// exhaustive table (where every `nil:literal` cell does take `nilLiteral`
+/// as an input). Predicting from what the program can produce instead of
+/// from what it writes stays sound whatever the value representation does
+/// with reasons — including after that reason loss is fixed, since dropping
+/// an outcome the program cannot reach is the allowed direction (pitfall A)
+/// and adding one it can is not.
+pub(crate) fn close_over_nil_reason_loss(outcomes: &mut BTreeSet<String>) {
+    if outcomes.iter().any(|id| id.starts_with("nil:")) {
+        outcomes.insert(NIL_LITERAL.to_string());
+    }
 }
 
 /// The full outcome universe: every NIL reason and error category
