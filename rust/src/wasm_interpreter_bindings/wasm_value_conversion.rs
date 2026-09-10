@@ -248,7 +248,8 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<Interpretatio
 }
 
 fn tensor_data_to_js_array(
-    data: &[crate::types::fraction::Fraction],
+    data: &crate::types::DenseTensor,
+    offset: usize,
     shape: &[usize],
     leaf_hint: Interpretation,
 ) -> js_sys::Array {
@@ -259,9 +260,23 @@ fn tensor_data_to_js_array(
     let leaves_are_bool = leaf_hint == Interpretation::TruthValue;
     let arr = js_sys::Array::new();
     if shape.is_empty() || shape.len() == 1 {
-        for f in data {
+        let len = shape.first().copied().unwrap_or_else(|| data.len());
+        for lane in offset..offset + len {
+            // An absent lane is a NIL, and says why it is absent. Rendering
+            // its `Fraction` instead put the unreadable number `0/0` on the
+            // screen: the denominator-0 sentinel a lane stores, shown as if it
+            // were a rational. It never appeared because a vector holding a
+            // NIL was never stored densely — which is no longer true, and was
+            // never a property this boundary should have relied on.
+            let element_value = Value::from_dense_lane(data, lane);
+            let f = &data.fraction_or_nil(lane);
             let elem = js_sys::Object::new();
-            if leaves_are_bool {
+            if element_value.is_nil() {
+                js_sys::Reflect::set(&elem, &"type".into(), &"nil".into()).unwrap();
+                js_sys::Reflect::set(&elem, &"value".into(), &JsValue::NULL).unwrap();
+                let hint_str = if leaves_are_bool { "truthValue" } else { "nil" };
+                js_sys::Reflect::set(&elem, &"displayHint".into(), &hint_str.into()).unwrap();
+            } else if leaves_are_bool {
                 js_sys::Reflect::set(&elem, &"type".into(), &"boolean".into()).unwrap();
                 js_sys::Reflect::set(&elem, &"value".into(), &(!f.is_zero()).into()).unwrap();
                 js_sys::Reflect::set(&elem, &"displayHint".into(), &"truthValue".into()).unwrap();
@@ -283,8 +298,9 @@ fn tensor_data_to_js_array(
                 js_sys::Reflect::set(&elem, &"value".into(), &num_obj).unwrap();
                 js_sys::Reflect::set(&elem, &"displayHint".into(), &"rawNumber".into()).unwrap();
             }
-            let element_value = Value::from_fraction(f.clone());
-            let leaf_role = if leaves_are_bool {
+            let leaf_role = if element_value.is_nil() && !leaves_are_bool {
+                Interpretation::Nil
+            } else if leaves_are_bool {
                 Interpretation::TruthValue
             } else {
                 Interpretation::RawNumber
@@ -307,8 +323,7 @@ fn tensor_data_to_js_array(
             "unassigned"
         };
         for i in 0..outer {
-            let inner =
-                tensor_data_to_js_array(&data[i * stride..(i + 1) * stride], rest, leaf_hint);
+            let inner = tensor_data_to_js_array(data, offset + i * stride, rest, leaf_hint);
             let elem = js_sys::Object::new();
             js_sys::Reflect::set(&elem, &"type".into(), &"vector".into()).unwrap();
             js_sys::Reflect::set(&elem, &"value".into(), &inner).unwrap();
@@ -399,10 +414,23 @@ pub(crate) fn arena_node_to_js(
             js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
         }
-        NodeKind::Tensor { data, shape } => {
+        NodeKind::Tensor {
+            data,
+            shape,
+            absences,
+        } => {
             // Hydrate a dense Tensor at the WASM boundary so the GUI/TS layer
-            // can keep treating values uniformly as nested Vectors.
-            let js_array = tensor_data_to_js_array(data, shape, effective_hint);
+            // can keep treating values uniformly as nested Vectors. The arena
+            // holds a tensor as columns plus its absence map, so both halves
+            // are rebuilt before the lanes are read — a lane's reason is not
+            // in the columns.
+            let dense = crate::types::DenseTensor::from_fractions_with_absences(
+                data.clone(),
+                shape.clone(),
+                absences.clone(),
+            )
+            .expect("arena tensor nodes preserve shape-compatible dense data");
+            let js_array = tensor_data_to_js_array(&dense, 0, shape, effective_hint);
             js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
         }

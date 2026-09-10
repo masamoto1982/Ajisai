@@ -126,9 +126,13 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
                 }
             }
             ValueData::Vector(children) => children.iter().flat_map(collect_fractions).collect(),
-            ValueData::Tensor { data, .. } => {
-                data.iter().map(|f| format_fraction_to_string(&f)).collect()
-            }
+            // Through the lane, not its `Fraction`: `format_fraction_to_string`
+            // renders the denominator-0 absence sentinel as the unreadable
+            // number `0/0`. `[ 1 NIL ] STR` is `'1 NIL'`, and used to be only
+            // because a vector holding a NIL was never stored densely.
+            ValueData::Tensor { data, .. } => (0..data.len())
+                .flat_map(|lane| collect_fractions(&Value::from_dense_lane(data, lane)))
+                .collect(),
             ValueData::Text(s) => vec![s.to_string()],
             ValueData::Symbol(name) => vec![name.to_string()],
         }

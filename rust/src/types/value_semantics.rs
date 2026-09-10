@@ -6,7 +6,9 @@
 use super::fraction::Fraction;
 use super::value_tensor::tensor_to_nested_values;
 use super::{DenseTensor, Interpretation, Value, ValueData};
-use crate::semantic::{AbsenceOrigin, Capability, SemanticKind, ValueOrigin, ValueShape};
+use crate::semantic::{
+    AbsenceMetadata, AbsenceOrigin, Capability, SemanticKind, ValueOrigin, ValueShape,
+};
 use std::sync::Arc;
 
 impl Value {
@@ -23,7 +25,13 @@ impl Value {
     /// stored under does not survive densification.
     pub fn from_fraction(f: Fraction) -> Self {
         if f.is_nil() {
-            return Self::nil_literal();
+            // A `Fraction` records that it is absent and nothing about why, so
+            // this is a *reasonless* NIL — not `nil_literal()`, which claims
+            // the program wrote it (`spec/outcomes.json`: "a NIL the program
+            // wrote rather than computed"). Where the reason is known it is
+            // stored beside the lane, and `Value::from_dense_lane` is the
+            // materialization that reads it.
+            return Self::nil_with_absence(AbsenceMetadata::with_reasonless_unknown());
         }
         Self {
             data: ValueData::Scalar(f),

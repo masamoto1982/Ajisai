@@ -4,10 +4,33 @@
 //! values; all other vectors retain their ordinary nested representation.
 
 use super::fraction::Fraction;
+use super::value_densify::try_collect_dense;
 use super::{DenseTensor, Interpretation, Value, ValueData};
+use crate::semantic::AbsenceMetadata;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 impl Value {
+    /// The lane at `index` of a dense tensor as a `Value`, keeping an absent
+    /// lane's reason.
+    ///
+    /// The one materialization of a lane, and the reason there is only one:
+    /// going through the lane's `Fraction` instead loses the reason before a
+    /// `Value` exists to carry it, because a `Fraction` records absence and
+    /// nothing about why. Where the tensor itself was told no reason the
+    /// answer is a *reasonless* NIL rather than a wrong one — absent, for a
+    /// reason this value was never given.
+    pub fn from_dense_lane(data: &DenseTensor, index: usize) -> Value {
+        match data.get_small_fraction(index) {
+            Some(fraction) => Value::from_fraction(fraction),
+            None => Value::nil_with_absence(
+                data.absence_at(index)
+                    .cloned()
+                    .unwrap_or_else(AbsenceMetadata::with_reasonless_unknown),
+            ),
+        }
+    }
+
     /// Construct a dense `Tensor` value. `data.len()` must equal the product of
     /// `shape` (or `shape` may be empty for a flat 1-D buffer; in that case
     /// `[data.len()]` is used).
@@ -31,14 +54,30 @@ impl Value {
     }
 
     pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
+        Self::from_tensor_with_absences(data, shape, BTreeMap::new())
+    }
+
+    /// [`Value::from_tensor`] for a caller that knows why its absent lanes are
+    /// absent. Prefer it wherever the lanes came from `Value`s: `from_tensor`
+    /// takes `Fraction`s, which record absence without a reason for it, so
+    /// every lane it makes absent is reasonless.
+    pub fn from_tensor_with_absences(
+        data: Vec<Fraction>,
+        shape: Vec<usize>,
+        absences: BTreeMap<usize, AbsenceMetadata>,
+    ) -> Self {
         let resolved_shape = if shape.is_empty() {
             vec![data.len()]
         } else {
             shape
         };
-        let Some(tensor) = DenseTensor::from_fractions(data.clone(), resolved_shape.clone()) else {
+        let Some(tensor) = DenseTensor::from_fractions_with_absences(
+            data.clone(),
+            resolved_shape.clone(),
+            absences.clone(),
+        ) else {
             return Self::from_vector_with_hint(
-                tensor_fractions_to_nested_values(&data, &resolved_shape),
+                tensor_fractions_to_nested_values(&data, &resolved_shape, &absences),
                 Interpretation::Unassigned,
             );
         };
@@ -59,12 +98,16 @@ impl Value {
     /// The `String` display hint suppresses promotion at every level so that
     /// codepoint-based strings retain their nested representation.
     pub fn from_vector_promoted_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
-        if let Some((data, shape)) = try_collect_dense(&values) {
-            if let Some(tensor) = DenseTensor::from_fractions(data, shape.clone()) {
+        if let Some(collected) = try_collect_dense(&values) {
+            if let Some(tensor) = DenseTensor::from_fractions_with_absences(
+                collected.data,
+                collected.shape.clone(),
+                collected.absences,
+            ) {
                 return Self {
                     data: ValueData::Tensor {
                         data: Arc::new(tensor),
-                        shape: Arc::new(shape),
+                        shape: Arc::new(collected.shape),
                     },
                     hint,
                     absence: None,
@@ -85,29 +128,6 @@ impl Value {
     }
 }
 
-/// Walk a list of `Value`s and return `(flat data, shape)` if every leaf is a
-/// Fraction scalar (or a child Tensor) and the shape is rectangular. Returns
-/// `None` if any leaf is non-numeric (NIL, Record, CodeBlock, Vector with
-/// String hint, etc.) or if shapes disagree.
-fn try_collect_dense(values: &[Value]) -> Option<(Vec<Fraction>, Vec<usize>)> {
-    if values.is_empty() {
-        return None;
-    }
-    let first = try_dense_value(&values[0])?;
-    let inner_shape = first.1;
-    let mut data = first.0;
-    for v in values.iter().skip(1) {
-        let (cdata, cshape) = try_dense_value(v)?;
-        if cshape != inner_shape {
-            return None;
-        }
-        data.extend(cdata);
-    }
-    let mut shape = vec![values.len()];
-    shape.extend(inner_shape);
-    Some((data, shape))
-}
-
 /// Materialize the i-th child of a dense Tensor as an owned `Value`. For 1-D
 /// shape `[n]` the child is a Scalar; for higher rank the child is itself a
 /// dense Tensor with the trailing dimensions.
@@ -120,9 +140,9 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
         return None;
     }
     if shape.len() == 1 {
-        // An absent lane is still a child — it materializes as NIL through
-        // `from_fraction`, not as "no such index".
-        return Some(Value::from_fraction(data.fraction_or_nil(index)));
+        // An absent lane is still a child — it materializes as NIL, carrying
+        // the reason it was stored with, not as "no such index".
+        return Some(Value::from_dense_lane(data, index));
     }
     let rest: Vec<usize> = shape[1..].to_vec();
     let stride: usize = rest.iter().product();
@@ -130,30 +150,52 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
     let slice: Vec<Fraction> = (start..start + stride)
         .map(|lane| data.fraction_or_nil(lane))
         .collect();
-    Some(Value::from_tensor(slice, rest))
+    // The sub-tensor's lanes are re-indexed from the slice's start, so its
+    // absences are too. Dropping this rebase was the whole bug one level down:
+    // the child kept the holes and lost the reasons for them.
+    let absences = data
+        .absences()
+        .filter(|(lane, _)| *lane >= start && *lane < start + stride)
+        .map(|(lane, metadata)| (lane - start, metadata.clone()))
+        .collect();
+    Some(Value::from_tensor_with_absences(slice, rest, absences))
 }
 
-fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
-    match &v.data {
-        ValueData::Scalar(f) => Some((vec![f.clone()], Vec::new())),
-        ValueData::ExactScalar(_) => None, // ExactScalar cannot be densified into a Fraction tensor
-        ValueData::Tensor { data, shape } => Some((data.to_fractions(), (**shape).clone())),
-        ValueData::Vector(children) => try_collect_dense(children),
-        ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Nil | ValueData::Symbol(_) => None,
+/// The nested fallback for lanes too wide for `i64` columns. Takes the
+/// absence map alongside the lanes for the same reason every other
+/// materialization here does: the `Fraction` says a lane is absent and the
+/// map says why, and a fallback that dropped the second would make "this
+/// value is too big to store densely" silently mean "and its absences are
+/// now anonymous".
+fn tensor_fractions_to_nested_values(
+    data: &[Fraction],
+    shape: &[usize],
+    absences: &BTreeMap<usize, AbsenceMetadata>,
+) -> Vec<Value> {
+    fn lane(data: &[Fraction], absences: &BTreeMap<usize, AbsenceMetadata>, index: usize) -> Value {
+        if !data[index].is_nil() {
+            return Value::from_fraction(data[index].clone());
+        }
+        Value::nil_with_absence(
+            absences
+                .get(&index)
+                .cloned()
+                .unwrap_or_else(AbsenceMetadata::with_reasonless_unknown),
+        )
     }
-}
-
-fn tensor_fractions_to_nested_values(data: &[Fraction], shape: &[usize]) -> Vec<Value> {
-    fn build(data: &[Fraction], shape: &[usize], offset: usize) -> Vec<Value> {
+    fn build(
+        data: &[Fraction],
+        shape: &[usize],
+        absences: &BTreeMap<usize, AbsenceMetadata>,
+        offset: usize,
+    ) -> Vec<Value> {
         if shape.is_empty() || shape.len() == 1 {
             let len = shape
                 .first()
                 .copied()
                 .unwrap_or_else(|| data.len().saturating_sub(offset));
-            return data[offset..offset + len]
-                .iter()
-                .cloned()
-                .map(Value::from_fraction)
+            return (offset..offset + len)
+                .map(|index| lane(data, absences, index))
                 .collect();
         }
         let outer = shape[0];
@@ -161,11 +203,16 @@ fn tensor_fractions_to_nested_values(data: &[Fraction], shape: &[usize]) -> Vec<
         let stride: usize = rest.iter().product();
         let mut out = Vec::with_capacity(outer);
         for i in 0..outer {
-            out.push(Value::from_children(build(data, rest, offset + i * stride)));
+            out.push(Value::from_children(build(
+                data,
+                rest,
+                absences,
+                offset + i * stride,
+            )));
         }
         out
     }
-    build(data, shape, 0)
+    build(data, shape, absences, 0)
 }
 
 /// Materialize a dense Tensor (`data` + `shape`) as a tree of nested `Value`s.
@@ -178,7 +225,7 @@ pub(super) fn tensor_to_nested_values(data: &DenseTensor, shape: &[usize]) -> Ve
                 .copied()
                 .unwrap_or_else(|| data.len().saturating_sub(offset));
             return (offset..offset + len)
-                .map(|lane| Value::from_fraction(data.fraction_or_nil(lane)))
+                .map(|lane| Value::from_dense_lane(data, lane))
                 .collect();
         }
         let outer = shape[0];

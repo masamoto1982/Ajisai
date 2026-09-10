@@ -71,6 +71,11 @@ function resolveAjisaiBin() {
 // can become absent and each representation a lane can live in: a dense
 // rational vector, a nested one, a ragged one, and a vector of irrational
 // exact reals (which takes an entirely separate lift).
+//
+// The written NIL (`[ 1 NIL 3 ]`) is not a spare case. A vector holding one
+// used to be barred from dense storage, because dense storage could record
+// only *that* a lane was absent; now that it records why, that vector is
+// stored densely like any other and takes the same path as a computed one.
 const PRODUCERS = [
   ['[ 1 2 ] [ 1 0 ] /', 'divisionByZero'],
   ['[ 6 6 6 ] [ 1 2 0 ] /', 'divisionByZero'],
@@ -105,6 +110,14 @@ const CHAINS = [
   'REVERSE',
   '[ 1 1 ] + [ 1 1 ] *',
   '[ 1 + ] MAP',
+  // Structural rebuilds. These add no absence and remove none, but they
+  // reassemble the collection from its children — which is where dense
+  // storage is chosen. A lane whose reason lives only outside the dense
+  // columns is lost exactly here, and nowhere the arithmetic chains above
+  // would show it.
+  '[ 3 4 ] CONCAT',
+  '[ 3 4 ] CONCAT REVERSE',
+  '[ 1 1 ] + [ 3 4 ] CONCAT',
 ];
 
 function collectAbsenceReasons(node, out) {

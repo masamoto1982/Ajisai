@@ -1,8 +1,10 @@
 use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Value, ValueData};
 use crate::error::NilReason;
+use crate::semantic::AbsenceMetadata;
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 pub type NodeId = u32;
@@ -22,6 +24,11 @@ pub enum NodeKind {
     Tensor {
         data: Vec<Fraction>,
         shape: Vec<usize>,
+        /// Why each absent lane is absent. A `Fraction` records that a lane
+        /// is absent and nothing about why, so without this the arena is a
+        /// boundary a reason does not survive — the same gap `Nil(reason)`
+        /// closes for a whole-value absence.
+        absences: BTreeMap<usize, AbsenceMetadata>,
     },
     Symbol(Arc<str>),
 }
@@ -56,9 +63,17 @@ impl ValueArena {
         &mut self,
         data: Vec<Fraction>,
         shape: Vec<usize>,
+        absences: BTreeMap<usize, AbsenceMetadata>,
         hint: Interpretation,
     ) -> NodeId {
-        self.alloc_node(NodeKind::Tensor { data, shape }, hint)
+        self.alloc_node(
+            NodeKind::Tensor {
+                data,
+                shape,
+                absences,
+            },
+            hint,
+        )
     }
 
     pub fn alloc_string(&mut self, value: &str) -> NodeId {
@@ -136,9 +151,14 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
                     .collect();
                 arena.alloc_vector(child_ids, value.hint)
             }
-            ValueData::Tensor { data, shape } => {
-                arena.alloc_tensor(data.to_fractions(), (**shape).clone(), value.hint)
-            }
+            ValueData::Tensor { data, shape } => arena.alloc_tensor(
+                data.to_fractions(),
+                (**shape).clone(),
+                data.absences()
+                    .map(|(index, metadata)| (index, metadata.clone()))
+                    .collect(),
+                value.hint,
+            ),
             ValueData::Symbol(name) => {
                 arena.alloc_node(NodeKind::Symbol(Arc::clone(name)), value.hint)
             }
@@ -190,11 +210,19 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                     absence: None,
                 }
             }
-            NodeKind::Tensor { data, shape } => Value {
+            NodeKind::Tensor {
+                data,
+                shape,
+                absences,
+            } => Value {
                 data: ValueData::Tensor {
                     data: Arc::new(
-                        DenseTensor::from_fractions(data.clone(), shape.clone())
-                            .expect("arena tensor nodes preserve shape-compatible dense data"),
+                        DenseTensor::from_fractions_with_absences(
+                            data.clone(),
+                            shape.clone(),
+                            absences.clone(),
+                        )
+                        .expect("arena tensor nodes preserve shape-compatible dense data"),
                     ),
                     shape: Arc::new(shape.clone()),
                 },
@@ -306,7 +334,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
                 .collect();
             JsonValue::Array(arr)
         }
-        NodeKind::Tensor { data, shape } => tensor_to_json(data, shape),
+        NodeKind::Tensor { data, shape, .. } => tensor_to_json(data, shape),
         NodeKind::Symbol(name) => JsonValue::String(name.to_string()),
     }
 }

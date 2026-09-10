@@ -1,29 +1,133 @@
 //! Dense and sparse numeric tensor storage.
 //!
 //! Invariant: storage validity, shape, and density are representation concerns;
-//! semantic interpretation remains owned by `Value`.
+//! semantic interpretation remains owned by `Value` — with one exception this
+//! module states rather than hides. A lane can be *absent*, and under
+//! LANG.VALUES.NIL the reason for an absence is its entire observable
+//! content, so a store that records absence without the reason for it does
+//! not store the value it was given. [`DenseTensor::absences`] is where that
+//! reason lives.
+
+use std::collections::BTreeMap;
 
 use super::fraction::Fraction;
+use crate::error::NilReason;
+use crate::semantic::AbsenceMetadata;
 
 /// A dense numeric tensor in struct-of-arrays form.
 ///
-/// Absence is recorded once, as the denominator-0 sentinel [`Fraction::nil`]
-/// stores. There used to be a second record beside it — a `valid_mask` bitmap
-/// with one bit per lane — and the two were never cross-checked: every
-/// production write path stored the sentinel and left the mask fully set,
-/// while every read trusted the mask alone and handed the 0 denominator
-/// straight to `Fraction::new`, which panicked. Nothing ever cleared a mask
-/// bit outside the tests. One fact, one place.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// *Whether* a lane is absent is recorded once, as the denominator-0 sentinel
+/// [`Fraction::nil`] stores. There used to be a second record beside it — a
+/// `valid_mask` bitmap with one bit per lane — and the two were never
+/// cross-checked: every production write path stored the sentinel and left the
+/// mask fully set, while every read trusted the mask alone and handed the 0
+/// denominator straight to `Fraction::new`, which panicked. Nothing ever
+/// cleared a mask bit outside the tests. One fact, one place.
+///
+/// *Why* a lane is absent is a different fact, and `absences` is its one
+/// place. It is not a second account of presence: it is keyed by lane index,
+/// it is read only through [`Self::absence_at`], which screens through
+/// [`Self::is_valid`] first, and a constructor drops any entry for a lane the
+/// sentinel calls present. So the `valid_mask` failure mode — two records of
+/// the same fact, drifting apart — cannot recur here; there is no second
+/// record of that fact to drift.
+#[derive(Debug, Clone, Eq)]
 pub struct DenseTensor {
     pub numerators: Vec<i64>,
     pub denominators: Vec<i64>,
     pub shape: Vec<usize>,
     pub is_pure_integer: bool,
+    /// Why each absent lane is absent, keyed by lane index.
+    ///
+    /// Sparse deliberately: only absent lanes appear, so the overwhelmingly
+    /// common all-present tensor carries an empty map and pays nothing for a
+    /// facility it does not use. An absent lane is a failure, and failures are
+    /// rare in a buffer that may hold a million numbers.
+    ///
+    /// Private, because the screening in [`Self::absence_at`] is the whole
+    /// guarantee: a caller reading this field directly could observe a reason
+    /// for a lane that holds a number.
+    absences: BTreeMap<usize, AbsenceMetadata>,
+}
+
+/// Lanes, shape, and — for each absent lane — its *reason*, and nothing more
+/// of its provenance.
+///
+/// [`AbsenceMetadata`] also carries an origin, a recoverability and a debug
+/// diagnosis. Comparing those would make two dense tensors disagree where the
+/// same two values held as nested `Vector`s agree, because `Value`'s own
+/// equality is `data == data && nil_reason == nil_reason`: LANG.VALUES.NIL
+/// makes the reason the observable content of an absence and leaves the rest
+/// as provenance, and the persistence codec says the same in its own words.
+/// One value identity, whichever representation holds it.
+impl PartialEq for DenseTensor {
+    fn eq(&self, other: &Self) -> bool {
+        if self.numerators != other.numerators
+            || self.denominators != other.denominators
+            || self.shape != other.shape
+            || self.is_pure_integer != other.is_pure_integer
+        {
+            return false;
+        }
+        // The denominators matched, so the two agree on *which* lanes are
+        // absent; only the reasons are left to compare, and only there.
+        (0..self.len())
+            .filter(|index| !self.is_valid(*index))
+            .all(|index| self.lane_reason(index) == other.lane_reason(index))
+    }
 }
 
 impl DenseTensor {
+    /// The reason lane `index` is absent, or `None` when it holds a number
+    /// *or* is absent for a reason this tensor was never told. The identity of
+    /// an absence, as [`PartialEq`] and the `Value` hash both read it.
+    pub fn lane_reason(&self, index: usize) -> Option<NilReason> {
+        self.absence_at(index).and_then(|metadata| metadata.reason)
+    }
+
+    /// Assemble a tensor from already-separated columns.
+    ///
+    /// The single place a `DenseTensor` is built field-by-field, so the
+    /// absence map can be reconciled against the sentinel in one place:
+    /// an entry naming a lane that holds a number is dropped, because the
+    /// sentinel is the authority on presence and a reason for a present lane
+    /// is not a fact about this tensor.
+    pub fn from_columns(
+        numerators: Vec<i64>,
+        denominators: Vec<i64>,
+        shape: Vec<usize>,
+        is_pure_integer: bool,
+        absences: BTreeMap<usize, AbsenceMetadata>,
+    ) -> Self {
+        let absences = absences
+            .into_iter()
+            .filter(|(index, _)| matches!(denominators.get(*index), Some(0)))
+            .collect();
+        Self {
+            numerators,
+            denominators,
+            shape,
+            is_pure_integer,
+            absences,
+        }
+    }
+
+    /// Build from rationals alone, which carry absence but no reason for it.
+    ///
+    /// Every lane this makes absent is therefore *reasonless* — see
+    /// [`Self::absence_at`] for what that means when the lane is read back.
+    /// Prefer [`Self::from_lane_values`] wherever the caller holds `Value`
+    /// lanes, which do carry the reason.
     pub fn from_fractions(data: Vec<Fraction>, shape: Vec<usize>) -> Option<Self> {
+        Self::from_fractions_with_absences(data, shape, BTreeMap::new())
+    }
+
+    /// [`Self::from_fractions`] plus the reason for each absent lane.
+    pub fn from_fractions_with_absences(
+        data: Vec<Fraction>,
+        shape: Vec<usize>,
+        absences: BTreeMap<usize, AbsenceMetadata>,
+    ) -> Option<Self> {
         let expected_len = if shape.is_empty() {
             0
         } else {
@@ -43,12 +147,36 @@ impl DenseTensor {
             is_pure_integer &= denominator == 1;
         }
 
-        Some(Self {
+        Some(Self::from_columns(
             numerators,
             denominators,
             shape,
             is_pure_integer,
-        })
+            absences,
+        ))
+    }
+
+    /// The reason lane `index` is absent, or `None` when it holds a number.
+    ///
+    /// Screened through [`Self::is_valid`] first, so a present lane never
+    /// reports a reason however the map was built. `Some(metadata)` whose
+    /// `reason` is itself `None` is the honest answer for a lane that was
+    /// made absent by a rational alone: absent, for a reason this tensor was
+    /// never told.
+    pub fn absence_at(&self, index: usize) -> Option<&AbsenceMetadata> {
+        if self.is_valid(index) {
+            return None;
+        }
+        self.absences.get(&index)
+    }
+
+    /// Every recorded absence, in lane order — for the boundaries that must
+    /// carry the whole tensor across (persistence, the value arena).
+    pub fn absences(&self) -> impl Iterator<Item = (usize, &AbsenceMetadata)> {
+        self.absences
+            .iter()
+            .filter(|(index, _)| !self.is_valid(**index))
+            .map(|(index, metadata)| (*index, metadata))
     }
 
     /// Build a 1-D pure-integer dense tensor directly from `i64` numerators,
@@ -64,6 +192,7 @@ impl DenseTensor {
             denominators,
             shape: vec![len],
             is_pure_integer: true,
+            absences: BTreeMap::new(),
         }
     }
 
@@ -210,12 +339,15 @@ impl SparseTensor {
                 denominators[index] = self.denominators[entry];
             }
         }
-        DenseTensor {
+        // A sparse tensor holds no absent lanes (`from_dense` refuses one), so
+        // there is no absence to restore here — every unstored lane is zero.
+        DenseTensor::from_columns(
             numerators,
             denominators,
-            shape: self.shape.clone(),
-            is_pure_integer: self.is_pure_integer,
-        }
+            self.shape.clone(),
+            self.is_pure_integer,
+            BTreeMap::new(),
+        )
     }
 
     pub fn get_small_fraction(&self, index: usize) -> Option<Fraction> {
