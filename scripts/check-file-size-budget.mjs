@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// File-size budget guard for the Rust source surface (SPECIFICATION §14.1).
+// File-size budget guard for the Rust source surface (SPECIFICATION the file-size budget in docs/dev/specification-implementation-rules.md).
 //
-// §14.1 keeps new and substantially-rewritten Rust files at or under 500 lines.
+// docs/dev/specification-implementation-rules.md keeps new and substantially-rewritten Rust files at or under 500 lines.
 // A large legacy surface predates that discipline, so a hard 500-line wall would
 // fail on day one and get muted rather than obeyed. Instead this guard encodes
-// the §14.1 policy mechanically:
+// the the file-size budget in docs/dev/specification-implementation-rules.md policy mechanically:
 //   - a file NOT recorded in the baseline must stay at or under LIMIT lines
 //     (new files, and files small enough to have never breached it, cannot cross
 //     the wall unnoticed);
@@ -29,7 +29,7 @@ const LIMIT = 500;
 const GROWTH_ALLOWANCE = 0.1;
 
 const BASELINE_COMMENT = [
-  'Baseline of Rust source files that exceed the SPECIFICATION §14.1 500-line',
+  'Baseline of Rust source files that exceed the SPECIFICATION the file-size budget in docs/dev/specification-implementation-rules.md 500-line',
   'budget. Recorded so the mandatory rule can be enforced going forward without',
   'a mass file split: files listed here are grandfathered at their recorded line',
   'count and must not grow by 10% or more; files not listed here must stay at or',
@@ -51,7 +51,7 @@ function countLines(content) {
 }
 
 // A file is exempt when its first line carries the `// @generated` marker.
-// The §14.1 budget exists to keep *hand-written and hand-maintained* Rust
+// The the file-size budget in docs/dev/specification-implementation-rules.md budget exists to keep *hand-written and hand-maintained* Rust
 // reviewable; a generated file is a mechanical projection of a source that is
 // itself reviewed and drift-checked (e.g. spec/words.json), so its line count
 // is not a maintainability signal and cannot be reduced by hand-splitting.
@@ -136,7 +136,7 @@ function check() {
       }
     } else if (lines > LIMIT) {
       violations.push(
-        `${path}: ${lines} lines exceeds the ${LIMIT}-line budget (§14.1); keep new/rewritten files at or under ${LIMIT} lines`,
+        `${path}: ${lines} lines exceeds the ${LIMIT}-line budget (the file-size budget in docs/dev/specification-implementation-rules.md); keep new/rewritten files at or under ${LIMIT} lines`,
       );
     }
   }

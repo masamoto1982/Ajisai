@@ -345,7 +345,7 @@ impl ExactReal {
 
     // ---- Observations ----
 
-    /// Three-way comparison under a water budget (LANG.VALUES.EXACT / §7.4.2).
+    /// Three-way comparison under a water budget (LANG.VALUES.EXACT / LANG.VALUES.EXACT).
     /// Tier ≤ 1 pairs decide exactly without consuming any water; the
     /// budget bounds refinement only when a Tier 2 observation is
     /// involved, where exhaustion yields `Starved` — the source of the
@@ -374,7 +374,7 @@ impl ExactReal {
     }
 
     /// Water-explicit rational enclosure of this value after spending `budget`
-    /// refinement steps (the `MATH@ENCLOSE` observation, LANG.VALUES.EXACT / §14.3).
+    /// refinement steps (the `MATH@ENCLOSE` observation, LANG.VALUES.EXACT / LANG.VALUES.EXACT).
     /// `None` for nil (the empty observation). Tier ≤ 1 values return a point
     /// (or tight algebraic bounds); a Tier 2 value returns its generator's
     /// enclosure — the only tier whose width the budget actually governs.

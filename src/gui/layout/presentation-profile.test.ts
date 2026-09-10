@@ -2,7 +2,7 @@
 // Portability Profiles "Presentation Profile").
 //
 // SPEC formalizes the device-facing programming experience in two layers:
-//   * §12.3 — the four observation surfaces are total, pure projections of the
+//   * LANG.OBSERVATION.PROJECTIONS — the four observation surfaces are total, pure projections of the
 //     runtime state: π_Input, π_Stack, π_Output, π_Dict over the surface set A.
 //   * Presentation Profile — how those surfaces are made visible on a device is
 //     a labeled transition system M = (C, Σ, →, c0) over visibility

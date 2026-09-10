@@ -8,7 +8,7 @@
 //! with its members referenced by position within the component.
 //!
 //! The digest below is BLAKE3, a standard cryptographic hash, which is what
-//! `SPECIFICATION.html` §8.6 requires of an identity: distinct content must not
+//! LANG.AUTHORITY.FREEDOM requires of an identity: distinct content must not
 //! be able to share an identity, by accident or by construction. It replaced a
 //! deterministic polynomial hash that was collision-resistant against neither.
 //! That mattered beyond an attacker model, because a shared `body_content_key`
@@ -78,7 +78,7 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
 /// Canonical content key for a word body, independent of references' identities
 /// (references are keyed by their canonical spelling). Two textually identical
 /// bodies — e.g. the same definition exported and re-imported into another
-/// dictionary — produce the same key and can share one stored body (§8.6
+/// dictionary — produce the same key and can share one stored body (LANG.AUTHORITY.FREEDOM
 /// content store). Exact-rational numbers are normalized so `1` and `1/1` agree.
 pub(crate) fn body_content_key(lines: &[crate::types::ExecutionLine]) -> String {
     let mut bytes = Vec::new();

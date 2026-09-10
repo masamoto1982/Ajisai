@@ -34,7 +34,7 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     // hint) already shows `NIL` here, so this keeps hint-driven callers
     // consistent with it. The empty string `''` is itself a NIL with reason
     // `EmptySequence` (see `Value::from_string`), so it likewise renders as
-    // `NIL`, matching its canonical form (LANG.VALUES.NIL; §12.2).
+    // `NIL`, matching its canonical form (LANG.VALUES.NIL; LANG.OBSERVATION.PROTOCOL).
     if matches!(value.data, ValueData::Nil) && value.absence_metadata().is_some() {
         return "NIL".to_string();
     }
@@ -196,7 +196,7 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
                     // A nested element keeps its own role: a Text-role child
                     // renders as a quoted string (`'AB'`), so strings stay
                     // recognizable as strings inside a collection (SPEC
-                    // §12.2). This now falls out of `format_value_recursive`
+                    // LANG.OBSERVATION.PROTOCOL). This now falls out of `format_value_recursive`
                     // dispatching on the String domain, with no role to
                     // consult.
                     format_value_recursive(&child.data, depth + 1)

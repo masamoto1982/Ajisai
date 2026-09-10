@@ -10,7 +10,7 @@
 //! whose terms decrease monotonically to zero lies between any two consecutive
 //! partial sums, so `[min(Sₙ, Sₙ₊₁), max(Sₙ, Sₙ₊₁)]` encloses it.
 //!
-//! Invariants (LANG.VALUES.EXACT; Phase 7 §14.4):
+//! Invariants (LANG.VALUES.EXACT):
 //! - deterministic — the same step yields the same interval;
 //! - rational endpoints;
 //! - nested — `enclosure(k+1) ⊆ enclosure(k)`;

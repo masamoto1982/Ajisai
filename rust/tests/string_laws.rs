@@ -114,7 +114,7 @@ fn the_empty_string_is_a_string() {
 }
 
 /// **A non-numeric `NUM` projects NIL** (`NUM` is total-by-projection, NIL
-/// Projection Rule §11.2): parsing `'abc'` as a number yields an absence, not an error.
+/// Projection Rule LANG.FAILURE.PROJECT): parsing `'abc'` as a number yields an absence, not an error.
 #[test]
 fn num_of_non_numeric_projects_nil() {
     assert_eq!(obs1("'abc' NUM"), "NIL");

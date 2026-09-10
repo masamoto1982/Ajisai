@@ -116,7 +116,7 @@ fn definite_truth_values_expose_truth_value_axis() {
 #[test]
 fn nil_with_reason_undecidable_routes_to_comparison_budget_origin() {
     // `nil_with_reason` is the runtime's primary entry point for
-    // building reasoned NIL values. Verify the §7.4.1 reason/origin
+    // building reasoned NIL values. Verify the LANG.VALUES.EXACT reason/origin
     // pairing is preserved end-to-end.
     use crate::types::Value;
     let v = Value::nil_with_reason_unknown(NilReason::Undecidable);

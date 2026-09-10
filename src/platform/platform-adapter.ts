@@ -71,7 +71,7 @@ export interface Runtime {
 }
 
 /**
- * Host-configurable execution water levels (SPECIFICATION.html §5.3).
+ * Host-configurable execution water levels (LANG.MACHINE.LIMITS).
  * These are runtime safety controls, not language semantics: a host may
  * raise or lower them without changing what any program means, and
  * conformance never depends on a particular value.
@@ -91,7 +91,7 @@ export interface PlatformAdapter {
     readonly fileIO: FileIO;
     readonly runtime: Runtime;
     /**
-     * Where a platform surfaces host execution settings (§5.3 water levels).
+     * Where a platform surfaces host execution settings (LANG.MACHINE.LIMITS water levels).
      * Both current adapters return the empty config (all defaults); a Tauri
      * settings store or a web host embedding the playground fills this in.
      */

@@ -1,4 +1,4 @@
-//! Tests for the §8.6 content digest.
+//! Tests for the LANG.AUTHORITY.FREEDOM content digest.
 //!
 //! The digest is a published cryptographic hash, so its correctness is checked
 //! against BLAKE3's own test vectors rather than against whatever this build

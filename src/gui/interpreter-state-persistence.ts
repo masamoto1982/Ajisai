@@ -99,7 +99,7 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
     };
 };
 
-// Identity-keyed export/import (SPECIFICATION.html §8.6). The export document
+// Identity-keyed export/import (LANG.AUTHORITY.FREEDOM). The export document
 // carries each word's content identity so a shared group is content-addressed:
 // re-importing it is recognised as a no-op (deduplicated), and a definition
 // edited without re-exporting is detected via an identity mismatch.
@@ -474,7 +474,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     dictionary
                 }));
 
-                // Content-addressed dedup (§8.6): compare identities before and
+                // Content-addressed dedup (LANG.AUTHORITY.FREEDOM): compare identities before and
                 // after the merge. Words whose identity is unchanged were already
                 // present with identical content and count as deduplicated.
                 const before = collectWordIdentityMap(window.ajisaiInterpreter);

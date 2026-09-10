@@ -1,6 +1,6 @@
 //! The full strong-Kleene truth tables for `AND`/`OR`/`NOT` (LANG.VALUES.TRUTH),
 //! with NIL standing for UNKNOWN. Split out from `nil_conformance_tests` to
-//! stay under the §14.1 file-size budget.
+//! stay under the the file-size budget in docs/dev/specification-implementation-rules.md file-size budget.
 
 use crate::interpreter::Interpreter;
 use crate::types::Value;

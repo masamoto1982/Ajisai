@@ -2,11 +2,11 @@
 //!
 //! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 5: the
 //! vector vocabulary of LANG.COLLECTIONS.LIFT is a free monoid under `CONCAT` with an
-//! involutive `REVERSE`, and the tensor vocabulary of §7.2 is the reshape group
+//! involutive `REVERSE`, and the tensor vocabulary of LANG.COLLECTIONS.LIFT is the reshape group
 //! acting on `Tensor ≅ (data: V*, shape)` — `TRANSPOSE` is an involution on 2-D
 //! tensors, `RESHAPE` round-trips, and `SHAPE`/`RANK` read off the index
-//! structure. `SORT` (canonical home `ALGO`, §9.1) is idempotent and
-//! permutation-invariant on the decidable rational sub-domain (§7.4.3).
+//! structure. `SORT` (canonical home `ALGO`, LANG.DICTIONARY.RESOLUTION) is idempotent and
+//! permutation-invariant on the decidable rational sub-domain (LANG.VALUES.TRUTH).
 //!
 //! Observation matches the conformance runner: whole-stack `Value::to_string`.
 
@@ -103,7 +103,7 @@ fn reverse_is_anti_homomorphism() {
     );
 }
 
-// ── SORT (ALGO) on the decidable rational sub-domain (§7.4.3) ──
+// ── SORT (ALGO) on the decidable rational sub-domain (LANG.VALUES.TRUTH) ──
 
 #[test]
 fn sort_is_idempotent_and_permutation_invariant() {

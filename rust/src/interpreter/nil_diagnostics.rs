@@ -1,7 +1,7 @@
-//! Diagnostic absence accessors (LANG.VALUES.NIL / §7.15).
+//! Diagnostic absence accessors (LANG.VALUES.NIL / LANG.OBSERVATION.DIAGNOSIS).
 //!
 //! `NIL?` and `NIL-REASON` let a program read what a reasoned NIL carries
-//! (LANG.FAILURE.ERROR, `NilReason`) instead of collapsing every absence with a single
+//! (LANG.VALUES.NIL, `NilReason`) instead of collapsing every absence with a single
 //! `OR-NIL` fallback. They are the whole set: `NIL-ORIGIN`,
 //! `NIL-RECOVERABLE?` and `NIL-DIAGNOSIS` named the origin / recoverability /
 //! diagnosis metadata that the canonical minimal-NIL model does not have, and
@@ -24,7 +24,7 @@
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
 //! a predicate answers its question — and `NIL-REASON` projects a NIL whose
 //! reason is `notAvailable`: the "well-formed but cannot produce a value" case
-//! of the NIL Projection Rule (LANG.FAILURE.ERROR), never an error.
+//! of the NIL Projection Rule (LANG.FAILURE.PROJECT), never an error.
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::Interpreter;

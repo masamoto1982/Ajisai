@@ -11,7 +11,7 @@ use serde::Serialize;
 /// are pushed; under `KEEP` the `consumes` operands are additionally retained
 /// (LANG.MODIFIERS.CONSUMPTION). This is the machine-readable form of the "arity /
 /// consumption / production / bifurcation" declaration; the NIL-projection part
-/// of §13.1 is carried by `nil_policy`.
+/// of LANG.MACHINE.WORD is carried by `nil_policy`.
 ///
 /// `Dynamic` marks a data-dependent arity (e.g. `COLLECT`'s count-driven gather
 /// or runtime-shaped vector ops) that is not statically pinned; the static

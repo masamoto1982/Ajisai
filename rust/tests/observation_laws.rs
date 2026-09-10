@@ -3,10 +3,10 @@
 //! These encode the algebraic content of the observation function and the
 //! renderer (Phase 1): `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff)` with
 //! `render : (data, role) → display` a **pure** function over **all** SPEC
-//! §12.2 roles, observed through the LANG.OBSERVATION.FIREWALL semantic axes only.
+//! LANG.OBSERVATION.PROTOCOL roles, observed through the LANG.OBSERVATION.FIREWALL semantic axes only.
 //!
 //! Unlike `algebraic_laws.rs` — which observes through whole-stack
-//! `Value::to_string()` (a *display* surface, non-canonical per §2.3) — this
+//! `Value::to_string()` (a *display* surface, non-canonical per LANG.OBSERVATION.FIREWALL) — this
 //! file observes through protocol axes and treats `render` as the explicit
 //! `(data, role)` function. It is the firewall-clean basis later phases reuse
 //! by adding domain generators (`test_support::generators`).
@@ -161,7 +161,7 @@ proptest! {
         prop_assert_eq!(has_axis, has_cap);
     }
 
-    /// Every value advertises the universal stack capabilities (§2.3 baseline):
+    /// Every value advertises the universal stack capabilities (LANG.OBSERVATION.FIREWALL baseline):
     /// it is a `stackItem`, `serializable`, and `displayable`.
     #[test]
     fn every_value_is_a_displayable_stack_item(src in any_value_src()) {

@@ -1,6 +1,6 @@
 //! The default resource ceilings a host gets if it does not inject its own
 //! `RuntimeLimits` — i.e. the playground / native-CLI (`ajisai run`) profile.
-//! Split out of `runtime_limits.rs` (SPECIFICATION §14.1's 500-line budget)
+//! Split out of `runtime_limits.rs` (SPECIFICATION the file-size budget in docs/dev/specification-implementation-rules.md's 500-line budget)
 //! and re-exported from there (`pub use host_profile_defaults::*;`), so every
 //! existing `runtime_limits::DEFAULT_MAX_*` path keeps resolving unchanged.
 //!

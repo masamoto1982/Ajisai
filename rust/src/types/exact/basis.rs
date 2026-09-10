@@ -7,7 +7,7 @@
 //! basis are never perfect squares — exactly the hypothesis the
 //! linear-independence theorem needs — so a coefficient map keyed by
 //! subset products is a true normal form; primality is never required.
-//! (Same construction as the §4.2.7 comparison pre-pass this module's
+//! (Same construction as the LANG.VALUES.EXACT comparison pre-pass this module's
 //! type grew out of.)
 
 use crate::types::bigint_gcd::balanced_bigint_gcd;

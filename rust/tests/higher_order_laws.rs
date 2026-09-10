@@ -5,7 +5,7 @@
 //! models — `MAP` is a functor lift, `FOLD` a catamorphism, `FILTER` a
 //! predicate restriction, `ANY`/`ALL` existential/universal quantifiers,
 //! `EXEC`/`EVAL` reflection of `⟦·⟧`, and `COND` a K3-honest guarded case in
-//! which a `unknown` (U) guard does not fire (§7.4.3).
+//! which a `unknown` (U) guard does not fire (LANG.VALUES.TRUTH).
 //!
 //! Observation matches the conformance runner: whole-stack `Value::to_string`.
 
@@ -161,7 +161,7 @@ fn all_any_de_morgan() {
 }
 
 // ── SCAN exposes the catamorphism's intermediate accumulators ──
-// ── COND is K3-honest: a U guard does not fire (§7.4.3) ──
+// ── COND is K3-honest: a U guard does not fire (LANG.VALUES.TRUTH) ──
 //
 // A guard reducing to `unknown` (an undecidable CF comparison) must fall
 // through exactly like a `false` guard, while a definite `true` fires.

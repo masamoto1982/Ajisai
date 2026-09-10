@@ -1,4 +1,4 @@
-//! Tests for the diagnostic absence accessors (LANG.VALUES.NIL / §7.15):
+//! Tests for the diagnostic absence accessors (LANG.VALUES.NIL / LANG.OBSERVATION.DIAGNOSIS):
 //! `NIL?`, `NIL-REASON`, `NIL-ORIGIN`, `NIL-RECOVERABLE?`, `NIL-DIAGNOSIS`.
 //!
 //! Coverage follows the §15 discipline: success paths, the non-NIL path, the

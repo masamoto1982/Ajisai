@@ -1,5 +1,5 @@
 //! Behavioral coverage for element-wise arithmetic over vectors/structures
-//! that carry irrational `ExactScalar` lanes (LANG.COLLECTIONS.LIFT vector ops + §4.2
+//! that carry irrational `ExactScalar` lanes (LANG.COLLECTIONS.LIFT vector ops + LANG.VALUES.EXACT
 //! exact-real scalars).
 //!
 //! Before this path existed, any vector containing an irrational continued

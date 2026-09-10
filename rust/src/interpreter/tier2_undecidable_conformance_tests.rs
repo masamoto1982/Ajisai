@@ -1,6 +1,6 @@
 //! Tier 2 (`PI`) comparison-budget exhaustion (LANG.VALUES.EXACT), the first
 //! source-reachable witness of a genuinely undecidable comparison. Split out
-//! from `nil_conformance_tests` to stay under the §14.1 file-size budget.
+//! from `nil_conformance_tests` to stay under the the file-size budget in docs/dev/specification-implementation-rules.md file-size budget.
 //!
 //! `PI PI EQ`/`PI PI LT` (etc.) never separate: two independently-constructed
 //! computable reals with numerically-identical enclosures run the full

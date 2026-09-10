@@ -519,7 +519,7 @@ mod comparison_budget_infrastructure_tests {
         // is constructable yet — Phase 7 introduces that), so this
         // test pins the helper that the comparison.rs refactor calls:
         // building NIL with reason `Undecidable` must yield the
-        // §7.4.1 origin `ComparisonBudget`.
+        // LANG.VALUES.EXACT origin `ComparisonBudget`.
         let v = Value::nil_with_reason_unknown(NilReason::Undecidable);
         let absence = v.absence_metadata().expect("nil carries absence");
         assert_eq!(absence.reason, Some(NilReason::Undecidable));
@@ -551,7 +551,7 @@ mod comparison_budget_infrastructure_tests {
 /// 1. `pairwise_eq` is three-valued (`Option<bool>`): rational
 ///    operands always decide; non-Rational `ExactReal` operands run
 ///    through `ExactReal::eq_with_budget` and may surface `None`.
-/// 2. `apply_equality` projects `None` to the §7.4.1 Undecidable
+/// 2. `apply_equality` projects `None` to the LANG.VALUES.EXACT Undecidable
 ///    NIL via the existing `push_undecidable_nil` helper.
 /// 3. A vector-lifted `EQ` / `NEQ` short-circuits on the first
 ///    NIL-producing pair (LANG.VALUES.EXACT).
@@ -682,12 +682,12 @@ mod phase_seven_eq_budget_tests {
         );
     }
 
-    // ── Undecidable-NIL helper still has the §7.4.1 origin ───────────────
+    // ── Undecidable-NIL helper still has the LANG.VALUES.EXACT origin ───────────────
     //
     // `apply_equality` projects the `None` branch through
     // `push_undecidable_nil` — the same helper the ordering path
     // already uses. The contract is identical, so any future EQ /
-    // NEQ Undecidable NIL surfaces the §7.4.1 metadata.
+    // NEQ Undecidable NIL surfaces the LANG.VALUES.EXACT metadata.
 
     #[tokio::test]
     async fn eq_undecidable_nil_carries_comparison_budget_origin() {

@@ -61,11 +61,11 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
     // LANG.CONTRACT.REGISTRY: all six comparison primitives are
     // Projecting/PassthroughThenProject/B. They are Projecting because a
     // Tier 2 (`PI`) pair can exhaust its comparison-refinement budget
-    // (§7.4.1) without deciding — that genuine incomparability projects onto
+    // (LANG.VALUES.EXACT) without deciding — that genuine incomparability projects onto
     // the logical `Unknown` (U), a reasoned NIL tagged `TruthValue` so it
     // reads as U rather than as an ordinary absence. They are
     // PassthroughThenProject because they still pass a NIL operand through
-    // first (§7.12), and only then may project the budget-exhaustion case.
+    // first (LANG.FAILURE.PASSTHROUGH), and only then may project the budget-exhaustion case.
     for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
@@ -136,12 +136,12 @@ fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
 
 #[test]
 fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
-    // LANG.VALUES.NIL / §7.15: the five diagnostic absence accessors inspect a
+    // LANG.VALUES.NIL / LANG.OBSERVATION.DIAGNOSIS: the five diagnostic absence accessors inspect a
     // NIL rather than propagate it, so their nil_policy is ConsumesNil (the
     // OR-NIL-family "inspect or branch on NIL" classification). They are pure,
     // total, safety-A observations that retain their inspection target, so
     // their mass contract is Dynamic (net +1, like the LENGTH/GET
-    // inspection words of §7.1.1 — a Fixed contract would mis-model the
+    // inspection words of LANG.OBSERVATION.DIAGNOSIS — a Fixed contract would mis-model the
     // retained operand for the static depth analyzer).
     for name in &["NIL?", "NIL-REASON"] {
         let meta =
@@ -204,7 +204,7 @@ fn aq_ver_contract_c_effectful_words_have_d_safety() {
 #[test]
 fn aq_ver_contract_e_builtin_spec_stability_matches_safety_level() {
     // Three-layer documentation model §5.3: stability label must agree
-    // with the §7.14 contract metadata declared on each `BuiltinSpec`.
+    // with the LANG.CONTRACT.REGISTRY contract metadata declared on each `BuiltinSpec`.
     // The mapping is:
     //   safety_level A or B          -> "stable"
     //   safety_level D                -> "experimental"

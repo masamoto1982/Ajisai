@@ -129,7 +129,7 @@ pub struct DebugDiagnosis {
     pub summary: String,
     pub evidence: Vec<String>,
     pub next_checks: Vec<DebugCheck>,
-    /// CF-comparison agreed-prefix length (LANG.VALUES.NIL / §7.4.1): the
+    /// CF-comparison agreed-prefix length (LANG.VALUES.NIL / LANG.VALUES.EXACT): the
     /// number of leading partial quotients that matched before the
     /// partial-quotient budget was exhausted on an `Unknown` (U)
     /// comparison result. `None` for diagnoses unrelated to CF

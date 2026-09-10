@@ -1,7 +1,7 @@
 //! The `cost` axis of a `#:contract` declaration (Phase 5 of `docs/dev/
 //! competitive-advantage-work-order-2026-08.md`; design rationale in
 //! `docs/dev/cost-contract-design.md`). Split out of `contract_decl.rs` to
-//! keep that file within the §14.1 file-size budget.
+//! keep that file within the file-size budget in docs/dev/specification-implementation-rules.md.
 
 use super::contract_decl::{DeclFinding, Severity};
 use crate::interpreter::word_cost::{CostBound, CostClass};

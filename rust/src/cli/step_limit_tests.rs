@@ -1,5 +1,5 @@
 //! Native tests for `ajisai run --step-limit <N>`: the host-configurable
-//! execution step budget (water level, SPECIFICATION.html §5.3). The budget
+//! execution step budget (water level, LANG.MACHINE.LIMITS). The budget
 //! is a runtime safety control, not language semantics, so these tests only
 //! assert *whether* `ExecutionLimitExceeded` is raised — raising the budget
 //! lets a legitimately large `FOLD` run to completion, lowering it sandboxes
@@ -12,7 +12,7 @@ use crate::interpreter::{Interpreter, DEFAULT_MAX_EXECUTION_STEPS};
 
 /// A `FOLD` over a generated range: `RANGE` materializes its elements
 /// internally and so counts as a single step regardless of length (SPEC
-/// §5.3), while `FOLD` dispatches its body once per element — a bounded,
+/// LANG.MACHINE.LIMITS), while `FOLD` dispatches its body once per element — a bounded,
 /// non-recursive way to spend a large, roughly-known number of steps. Kept
 /// as the fixed probe for the "raised limit" direction below, where the
 /// point is that an explicit `--step-limit` still works, not that it is

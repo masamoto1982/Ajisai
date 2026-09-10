@@ -21,7 +21,7 @@ fn checked_shape_product(shape: &[usize]) -> Option<usize> {
 
 /// Push a LANG.VALUES.EXACT Undecidable NIL. Used when an exact-real (CF)
 /// arithmetic word cannot resolve its result within the partial-quotient
-/// budget; the NIL Projection Rule (LANG.FAILURE.ERROR) places NIL on the stack instead
+/// budget; the NIL Projection Rule (LANG.FAILURE.PROJECT) places NIL on the stack instead
 /// of raising an error, matching the comparison-budget exhaustion path.
 fn push_undecidable_nil(interp: &mut Interpreter) {
     interp
@@ -76,7 +76,7 @@ where
 
     // ExactScalar path: exact irrational via CF (LANG.VALUES.EXACT). When the
     // CF stream exhausts its partial-quotient budget the result is
-    // undecidable, so project to a NIL (LANG.VALUES.EXACT, §11.2)
+    // undecidable, so project to a NIL (LANG.VALUES.EXACT, LANG.FAILURE.PROJECT)
     // instead of raising an error — matching the comparison-budget path.
     if let ValueData::ExactScalar(er) = &val.data {
         match exact_op(er) {
@@ -354,7 +354,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 /// `Err` is malformed use (text, a code block, a multi-element vector); `None`
 /// is a well-formed number that is not a rational — an exact irrational, which
 /// is in the numeric domain but not in *this* Word's domain, so it projects
-/// rather than raising (LANG.FAILURE.ERROR).
+/// rather than raising (LANG.FAILURE.PROJECT).
 fn single_rational_operand(value: &Value) -> Result<Option<Fraction>> {
     match &value.data {
         ValueData::Scalar(f) => Ok(Some(f.clone())),

@@ -31,7 +31,7 @@ export interface AjisaiInterpreter {
     collect_stack(): Value[];
     // Tuple shape: [dictionary, name, isProtected].
     collect_user_words_info(): Array<[string, string, boolean]>;
-    // Content identity per user word (SPECIFICATION.html §8.6).
+    // Content identity per user word (LANG.AUTHORITY.FREEDOM).
     // Tuple shape: [fullyQualifiedName, contentId].
     collect_word_identities(): Array<[string, string]>;
     // Tuple shape: [name, hover_summary, hover_syntax].
@@ -74,11 +74,11 @@ export interface AjisaiInterpreter {
     restore_user_words(words: UserWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
-    // Execution step budget override (water level, SPECIFICATION.html §5.3).
+    // Execution step budget override (water level, LANG.MACHINE.LIMITS).
     // Host-side runtime safety control, not a language semantic; the wasm
     // side ignores non-positive values and defaults to 100,000.
     set_max_execution_steps(steps: number): void;
-    // Cost-model counters (SPECIFICATION.html §4.8): observational only,
+    // Cost-model counters (LANG.AUTHORITY.FREEDOM): observational only,
     // session-cumulative, reset with the interpreter.
     collect_runtime_metrics(): RuntimeMetricsSnapshot;
 
@@ -86,7 +86,7 @@ export interface AjisaiInterpreter {
 
 /**
  * Cost-model counters as exposed by `collect_runtime_metrics()`
- * (SPECIFICATION.html §4.8). These are the machine-channel names; the GUI
+ * (LANG.AUTHORITY.FREEDOM). These are the machine-channel names; the GUI
  * renders them in the Reference cost-model vocabulary (fast lane, dense
  * vectors, comparison depth) and never shows these identifiers to users.
  * Counters are diagnostics: reading them changes no result.
@@ -167,7 +167,7 @@ export interface ProtocolDiagnosis {
         observed?: number;
     };
     /**
-     * CF-comparison agreed-prefix length (LANG.VALUES.NIL / §7.4.1): the number
+     * CF-comparison agreed-prefix length (LANG.VALUES.NIL / LANG.VALUES.EXACT): the number
      * of leading partial quotients that matched before the partial-quotient
      * budget was exhausted on an `Unknown` (U) comparison result. Present
      * only on diagnoses produced by an undecidable continued-fraction
@@ -188,7 +188,7 @@ export interface ProtocolAbsence {
 
 export interface ProtocolValueSemantics {
     /**
-     * Three-valued logic surface (LANG.OBSERVATION.FIREWALL, §7.5). Present only on
+     * Three-valued logic surface (LANG.OBSERVATION.FIREWALL, LANG.VALUES.TRUTH). Present only on
      * truth-valued values; `'true'` / `'false'` / `'unknown'`. This is the
      * only observable surface for the third value — do not infer it from
      * the value's `type` or the internal NIL representation.

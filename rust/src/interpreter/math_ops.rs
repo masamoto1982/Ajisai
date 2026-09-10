@@ -124,10 +124,10 @@ pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
 /// the same budgeted comparison as the relations and negates when `x < 0`,
 /// otherwise returns `x` unchanged. It therefore accepts the full numeric
 /// domain including lazy continued-fraction operands, and over the admitted
-/// domain (§4.2.7) is total and exact. When the order against `0` does not
+/// domain (LANG.VALUES.EXACT) is total and exact. When the order against `0` does not
 /// decide within the budget, the result is the logical `Unknown` (U) carrying
 /// `diagnosis.agreedPrefix`. NIL-passthrough, with NIL taking priority over a
-/// U-producing comparison (§4.5.2); a non-numeric operand raises an error.
+/// U-producing comparison (LANG.VALUES.TRUTH); a non-numeric operand raises an error.
 pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
     require_stack_top(interp, "ABS")?;
     if nil_passthrough_unary(interp) {

@@ -1,5 +1,5 @@
 //! `PROBE`'s inference entry point, split from `word_contract.rs` to keep
-//! that file under the per-file line budget (§14.1). The algorithm itself is
+//! that file under the per-file line budget (the file-size budget in docs/dev/specification-implementation-rules.md). The algorithm itself is
 //! unchanged: this is a thin adapter that lets `infer_word_contract_inner`
 //! walk an anonymous CodeBlock's tokens the same way it already walks a
 //! named dictionary Word's body.

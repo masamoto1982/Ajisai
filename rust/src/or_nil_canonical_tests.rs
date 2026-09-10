@@ -99,7 +99,7 @@ async fn caret_and_legacy_vent_no_longer_coalesce_nil() {
     assert!(run("5 VENT 99").await.is_err());
 }
 
-// --- machine-readable contract (§7.14 metadata) ---------------------------
+// --- machine-readable contract (LANG.CONTRACT.REGISTRY metadata) ---------------------------
 
 #[test]
 fn or_nil_contract_is_lazy_not_eager_binary() {

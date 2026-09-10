@@ -1,6 +1,6 @@
 //! Resolves a `[ ... ]` code operand's Symbols into the enclosing Word's
 //! contract, split from `word_contract.rs` to keep that file under the
-//! per-file line budget (§14.1). The algorithm itself is unchanged: this is
+//! per-file line budget (the file-size budget in docs/dev/specification-implementation-rules.md). The algorithm itself is unchanged: this is
 //! the same resolve-then-widen step `infer_word_contract_inner` already runs
 //! for an ordinary body-level dependency, applied instead to a Symbol found
 //! inside a literal that `word_contract_widen.rs` classified as
