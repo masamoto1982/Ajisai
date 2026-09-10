@@ -176,7 +176,14 @@ pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
             1
         };
         if a_dim == b_dim || a_dim == 1 || b_dim == 1 {
-            out[i] = a_dim.max(b_dim);
+            // A length-1 axis takes the *other* axis's length, which is not
+            // its maximum when the other one is empty: `max` read
+            // `[ ] 1 ADD` (shapes `[0]` and `[]`, the scalar broadcast to
+            // `[1]`) as a one-lane result and then indexed lane 0 of a
+            // zero-lane tensor — a panic, which is no outcome at all and so
+            // outside LANG.FAILURE.TRICHOTOMY entirely. Stretching a
+            // one-element axis over an empty one yields an empty axis.
+            out[i] = if a_dim == 1 { b_dim } else { a_dim };
         } else {
             // Report the axis, not just the two shapes. `i` is an index into
             // the *aligned* rank (shapes are right-aligned, NumPy-style), which

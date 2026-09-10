@@ -176,3 +176,42 @@ fn a_string_that_names_no_word_stays_a_literal() {
     assert!(!outcomes.contains(&"error:condExhausted".to_string()));
     assert!(!outcomes.contains(&"error:recursionLimitExceeded".to_string()));
 }
+
+/// A reasonless NIL is `nil:literal`, and no Word's `spec/words.json`
+/// declaration names it — so a vocabulary union alone omits it. It was the
+/// second most frequent outcome in the exhaustive table (676 of 6,593 cells)
+/// and the predictor produced it for no program at all.
+#[test]
+fn a_written_nil_predicts_its_own_literal_outcome() {
+    for source in ["NIL", "NIL 1 ADD", "TRUE NIL AND", "[ NIL 1 ] 0 GET"] {
+        assert!(
+            predict(source).contains(&"nil:literal".to_string()),
+            "{source} really answers nil:literal, so it must be predicted"
+        );
+    }
+}
+
+/// The trigger is what the program can *produce*, not what it writes:
+/// `[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET` answers `nil:literal` with no
+/// `NIL` token anywhere, because the divide-by-zero lane's reason does not
+/// survive a second lane-wise pass.
+#[test]
+fn a_computed_nil_admits_the_reasonless_one_too() {
+    let outcomes = predict("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET");
+    assert!(outcomes.contains(&"nil:divisionByZero".to_string()));
+    assert!(
+        outcomes.contains(&"nil:literal".to_string()),
+        "{outcomes:?}"
+    );
+}
+
+/// A program that can produce no NIL keeps a NIL-free prediction — the
+/// widening is a closure over reason loss, not a blanket.
+#[test]
+fn a_program_that_cannot_produce_a_nil_predicts_none() {
+    let outcomes = predict("1 2 ADD");
+    assert!(
+        !outcomes.iter().any(|id| id.starts_with("nil:")),
+        "{outcomes:?}"
+    );
+}

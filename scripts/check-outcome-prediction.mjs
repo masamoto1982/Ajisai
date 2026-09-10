@@ -1,19 +1,37 @@
 #!/usr/bin/env node
 // Predicted-vs-actual gate for `ajisai agent outcomes` (Phase 5,
 // docs/dev/auditable-kernel-work-order-2026-09.md §5), pitfall D: "the
-// predictor doesn't run the program, but verification does." For every
-// witness in spec/outcome-witnesses.json (Phase 2's file — a witness is
-// already "a source and its actual, executed outcome," exactly the input
-// this gate needs), this predicts the source's outcome set *without*
-// running it, then checks the witness's own already-verified `expect`
-// against that prediction. A prediction that ever fails to contain a real,
-// executed outcome is a predictor that lies — the one failure this gate
-// exists to catch (pitfall A: over-approximation is allowed, omission is
-// not).
+// predictor doesn't run the program, but verification does." Given a source
+// and its actual, executed outcome, this predicts the source's outcome set
+// *without* running it and checks that the prediction contains the real
+// outcome. A prediction that ever fails to is a predictor that lies — the
+// one failure this gate exists to catch (pitfall A: over-approximation is
+// allowed, omission is not).
 //
-// This does not re-execute anything itself (spec/outcome-witnesses.json's
-// own `expect` field, checked by scripts/check-outcome-bijection.mjs, is
-// already that proof) — it only calls the predictor and checks containment.
+// It draws those (source, observed outcome) pairs from three places:
+//
+//   1. Every cell of docs/semantics-table.json — the exhaustive
+//      (Word x domain-tuple) table, 6,593 already-executed programs.
+//   2. Every witness in spec/outcome-witnesses.json — the registry ids the
+//      exhaustive table cannot reach, one hand-written witness each.
+//   3. Compositions — a hand-written adversarial list plus a generated
+//      operand x operand x Word sweep, below — executed here.
+//
+// (1) is not redundant with (2): they are complements by construction, and
+// that is exactly how this gate went blind once. A witness exists in
+// spec/outcome-witnesses.json *because* no table cell produces its id, so a
+// gate sampling only witnesses can never see an outcome the table does
+// witness — however common. `nil:literal` is 676 of the table's 6,593 cells,
+// the second most frequent outcome in the language, and the predictor omitted
+// it entirely while this gate stayed green. Sampling the table closes that
+// class of blind spot at its root rather than by adding one more case.
+//
+// Neither (1) nor (2) re-executes anything: both files carry an outcome that
+// was produced by running the program (scripts/generate-semantics-table.mjs
+// executes every cell; spec/outcome-witnesses.json's `expect` is checked by
+// scripts/check-outcome-bijection.mjs). Only (3) runs here — it has no such
+// file behind it, and running is also what lets it catch an engine that
+// answers with no outcome at all (a panic), which no recorded table can show.
 //
 // Usage:
 //   node scripts/check-outcome-prediction.mjs
@@ -135,7 +153,50 @@ const ADVERSARIAL = [
   '[ 1 2 3 ] [ 2 MUL ] MAP',
   "[ 1 ADD ] 'INC' DEF 5 INC",
   '1 0 DIV OR-NIL 9',
+  // Reason loss: a lane holds an absence but not the reason for it, so a
+  // computed NIL that crosses one twice comes back reasonless and reads as
+  // `nil:literal` — with no NIL written anywhere in the source. Prediction
+  // must admit that (word_outcome_vocabulary::close_over_nil_reason_loss).
+  '[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET',
+  'NIL 1 ADD',
 ];
+
+// Operand shapes and the Words applied to them, crossed exhaustively below.
+//
+// Unlike the table pass, this one *executes* every program, so it also
+// catches an outcome that is not an outcome at all: a panic leaves no value,
+// no NIL and no ERROR, so LANG.FAILURE.TRICHOTOMY does not classify it and
+// every prediction for that program is vacuously wrong. That is what this
+// cross product found on `main` — `[ ] 1 ADD` broadcast shapes `[0]` and `[]`
+// to a one-lane result and then indexed lane 0 of a zero-lane tensor
+// (tensor_ops::broadcast_shape). The empty vector, the ragged vector and the
+// NIL-carrying vector are the shapes the exhaustive table's own domain list
+// does not represent, which is why they are the point of this list.
+const SWEEP_OPERANDS = [
+  '1',
+  '0',
+  "'a'",
+  'TRUE',
+  'NIL',
+  '[ ]',
+  '[ 1 2 ]',
+  '[ 1 ]',
+  '[ NIL 1 ]',
+  '[ 1 [ 2 3 ] ]',
+];
+const SWEEP_BINARY = ['ADD', 'DIV', 'MOD', 'EQ', 'AND', 'CONCAT', 'GET', 'MAP'];
+const SWEEP_UNARY = ['NEG', 'SQRT', 'NOT', 'LENGTH', 'SORT', 'JOIN', 'NIL-REASON', 'EXEC'];
+
+function sweepPrograms() {
+  const programs = new Set();
+  for (const a of SWEEP_OPERANDS) {
+    for (const u of SWEEP_UNARY) programs.add(`${a} ${u}`);
+    for (const b of SWEEP_OPERANDS) {
+      for (const op of SWEEP_BINARY) programs.add(`${a} ${b} ${op}`);
+    }
+  }
+  return [...programs];
+}
 
 const witnessDoc = JSON.parse(read('spec/outcome-witnesses.json'));
 const witnesses = Array.isArray(witnessDoc.witnesses) ? witnessDoc.witnesses : [];
@@ -143,15 +204,69 @@ if (witnesses.length === 0) {
   fail('spec/outcome-witnesses.json declares zero witnesses');
 }
 
+// Every cell of the exhaustive table, as (source, already-observed outcome).
+// The source is rebuilt from the table's own embedded `domains` by the rule
+// scripts/generate-semantics-table.mjs used to build it — operands in tuple
+// order, then the Word name — read from the JSON rather than imported from
+// the generator, which would regenerate the table (the same reason
+// classifyOutcome above is a deliberate copy).
+function tableCases() {
+  const table = JSON.parse(read('docs/semantics-table.json'));
+  const domains = new Map((table.domains ?? []).map((d) => [d.id, d.source]));
+  const cells = Array.isArray(table.cells) ? table.cells : [];
+  if (cells.length === 0) {
+    fail('docs/semantics-table.json declares zero cells');
+  }
+  return cells.map((cell) => {
+    const operands = (cell.inputs ?? []).map((id) => {
+      const source = domains.get(id);
+      if (source === undefined) {
+        throw new Error(`cell names domain "${id}", which docs/semantics-table.json does not define`);
+      }
+      return source;
+    });
+    return { source: [...operands, cell.word].join(' '), expect: cell.outcome };
+  });
+}
+
+let tableCells;
+try {
+  tableCells = tableCases();
+} catch (e) {
+  fail(`docs/semantics-table.json could not be read as prediction cases: ${e.message}`);
+  tableCells = [];
+}
+
 const ajisaiBin = resolveAjisaiBin();
 const scratchDir = mkdtempSync(join(tmpdir(), 'ajisai-outcome-prediction-'));
 
 let checked = 0;
+let counter = 0;
 try {
-  witnesses.forEach((w, i) => {
+  tableCells.forEach((cell) => {
     let prediction;
     try {
-      prediction = predict(ajisaiBin, scratchDir, i, w.source);
+      prediction = predict(ajisaiBin, scratchDir, counter++, cell.source);
+    } catch (e) {
+      fail(`table cell ${JSON.stringify(cell.source)}: prediction failed to run: ${e.message}`);
+      return;
+    }
+    const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
+    if (!outcomes.includes(cell.expect)) {
+      fail(
+        `table cell ${JSON.stringify(cell.source)}: docs/semantics-table.json records the executed ` +
+          `outcome ${JSON.stringify(cell.expect)}, but the static predictor's set did not include it: ` +
+          `${JSON.stringify(outcomes)} — the predictor under-approximates, which pitfall A forbids`,
+      );
+      return;
+    }
+    checked += 1;
+  });
+
+  witnesses.forEach((w) => {
+    let prediction;
+    try {
+      prediction = predict(ajisaiBin, scratchDir, counter++, w.source);
     } catch (e) {
       fail(`witness "${w.id}": prediction failed to run: ${e.message}`);
       return;
@@ -168,20 +283,24 @@ try {
     checked += 1;
   });
 
-  ADVERSARIAL.forEach((source, i) => {
+  [...ADVERSARIAL, ...sweepPrograms()].forEach((source) => {
     let prediction;
     let observed;
+    const index = counter++;
     try {
-      prediction = predict(ajisaiBin, scratchDir, witnesses.length + i, source);
-      observed = run(ajisaiBin, scratchDir, witnesses.length + i, source);
+      prediction = predict(ajisaiBin, scratchDir, index, source);
+      observed = run(ajisaiBin, scratchDir, index, source);
     } catch (e) {
-      fail(`adversarial case ${JSON.stringify(source)}: failed to run: ${e.message}`);
+      fail(
+        `executed case ${JSON.stringify(source)}: failed to run: ${e.message} — an engine that does not ` +
+          `answer at all produces no outcome under LANG.FAILURE.TRICHOTOMY, so no prediction for it can be right`,
+      );
       return;
     }
     const outcomes = Array.isArray(prediction.outcomes) ? prediction.outcomes : [];
     if (!outcomes.includes(observed)) {
       fail(
-        `adversarial case ${JSON.stringify(source)}: running it observed ${JSON.stringify(observed)}, ` +
+        `executed case ${JSON.stringify(source)}: running it observed ${JSON.stringify(observed)}, ` +
           `but the static predictor's set did not include it: ${JSON.stringify(outcomes)} — the predictor ` +
           `under-approximates, which pitfall A forbids`,
       );
@@ -192,7 +311,7 @@ try {
     // lying under its strongest label — check it separately from containment.
     if (prediction.exact === true && (outcomes.length !== 1 || outcomes[0] !== observed)) {
       fail(
-        `adversarial case ${JSON.stringify(source)}: claimed exact but ${JSON.stringify(outcomes)} ` +
+        `executed case ${JSON.stringify(source)}: claimed exact but ${JSON.stringify(outcomes)} ` +
           `is not exactly the observed ${JSON.stringify(observed)}`,
       );
       return;
@@ -209,5 +328,6 @@ if (errors.length > 0) {
 }
 console.log(
   `[outcome-prediction] the static predictor's set contains the actually-observed outcome for all ${checked} cases ` +
-    `(${witnesses.length} registry witnesses + ${ADVERSARIAL.length} adversarial compositions, the latter run for real).`,
+    `(${tableCells.length} exhaustive-table cells + ${witnesses.length} registry witnesses + ` +
+    `${ADVERSARIAL.length + sweepPrograms().length} compositions, the last group run for real).`,
 );

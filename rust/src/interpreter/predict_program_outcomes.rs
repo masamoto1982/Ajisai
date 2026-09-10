@@ -28,6 +28,16 @@
 //! unconditionally whenever there is anything to run at all — sound, and
 //! honestly coarse, per pitfall A. `scripts/check-outcome-prediction.mjs`
 //! is what caught the gap and is what would catch a future one.
+//!
+//! # Why `nil:literal` is added from the *rest* of the prediction
+//!
+//! `nil:literal` is the one outcome id no Word's `spec/words.json`
+//! declaration can carry, so the vocabulary union omits it by construction —
+//! see `word_outcome_vocabulary::NIL_LITERAL`. Two things put it back: the
+//! `NIL` Word's own vocabulary (a written literal), and
+//! `word_outcome_vocabulary::close_over_nil_reason_loss`, run last here over
+//! the assembled set, for the computed NILs whose reason a dense tensor lane
+//! cannot carry.
 
 use std::collections::{BTreeSet, HashSet};
 
@@ -37,7 +47,8 @@ use super::word_contract::ContractFlow;
 use super::word_contract_flow::FlowSim;
 use super::word_contract_widen::classify_vector_positions;
 use super::word_outcome_vocabulary::{
-    builtin_outcomes_for, resolve_and_collect, structural_ceiling_ids, Reachability,
+    builtin_outcomes_for, close_over_nil_reason_loss, resolve_and_collect, structural_ceiling_ids,
+    Reachability,
 };
 use super::Interpreter;
 
@@ -126,6 +137,9 @@ impl Interpreter {
         if !tokens.is_empty() {
             outcomes.extend(structural_ceiling_ids(&reach));
         }
+        // Last, so it sees every `nil:` id the walk collected — including the
+        // ones a `DEF`'d body or a String-named Word contributed.
+        close_over_nil_reason_loss(&mut outcomes);
         outcomes.insert("value".to_string());
 
         OutcomePrediction {

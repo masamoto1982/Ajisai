@@ -118,3 +118,45 @@ async fn rational_vector_addition_unchanged() {
         "rational vector add must be unchanged"
     );
 }
+
+/// **An empty axis stays empty when a one-element axis broadcasts over it.**
+///
+/// `broadcast_shape` stretched a length-1 axis to `a_dim.max(b_dim)`, which is
+/// right for every length but zero: `[ ] 1 ADD` aligns shapes `[0]` and `[]`,
+/// so the scalar's implicit `1` won the `max` and the broadcast then read lane
+/// 0 of a zero-lane tensor. That was a panic — no value, no NIL, no ERROR, so
+/// no outcome under LANG.FAILURE.TRICHOTOMY at all, and a program whose
+/// predicted outcome set is vacuously wrong whatever it contains. Found by the
+/// composition sweep behind `scripts/check-outcome-prediction.mjs`.
+#[tokio::test]
+async fn a_one_element_axis_broadcast_over_an_empty_one_stays_empty() {
+    let empty = run_ok("[ ]").await;
+    for code in ["[ ] 1 +", "[ 1 ] [ ] +", "[ ] [ ] +", "[ ] 1 /", "[ ] 0 /"] {
+        let stack = run_ok(code).await;
+        assert_eq!(stack.len(), 1, "`{code}` must leave one value");
+        assert_eq!(
+            stack[0], empty[0],
+            "`{code}` must answer the empty vector, got {:?}",
+            stack[0]
+        );
+    }
+}
+
+/// The neighbouring shape rules are untouched: an empty axis against a
+/// *longer* one still mismatches, and ordinary broadcasts still stretch.
+#[tokio::test]
+async fn an_empty_axis_against_a_longer_one_still_mismatches() {
+    let mut interp = Interpreter::new();
+    let error = interp
+        .execute("[ 1 2 ] [ ] +")
+        .await
+        .expect_err("shapes [2] and [0] do not broadcast");
+    assert_eq!(
+        crate::error::ErrorCategory::from_error(&error).as_protocol_str(),
+        "shapeMismatch",
+        "got {error}"
+    );
+
+    let stack = run_ok("[ 1 ] [ 2 3 ] +").await;
+    assert_eq!(stack[0], run_ok("[ 3 4 ]").await[0]);
+}
