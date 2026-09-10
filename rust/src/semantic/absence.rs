@@ -6,7 +6,7 @@ pub enum AbsenceOrigin {
     Literal,
     /// Division by zero (or by a value indistinguishable from zero within the
     /// comparison budget) produced a reasoned NIL under the NIL Projection Rule
-    /// (LANG.FAILURE.ERROR). Used together with `NilReason::DivisionByZero`.
+    /// (LANG.FAILURE.PROJECT). Used together with `NilReason::DivisionByZero`.
     ///
     /// Every construction path reaches this through
     /// `absence_origin_for_reason`, which is the sole derivation of an origin
@@ -24,12 +24,12 @@ pub enum AbsenceOrigin {
     ComparisonBudget,
     /// A well-formed generative operation exceeded the space water level
     /// (`max_materialized_elements`) and was projected to NIL under the
-    /// NIL Projection Rule (LANG.FAILURE.ERROR). Used together with
+    /// NIL Projection Rule (LANG.FAILURE.PROJECT). Used together with
     /// `NilReason::SpaceExhausted`.
     SpaceBudget,
     /// A well-formed operation was applied outside its domain — `SQRT` of a
     /// negative rational, the "well-formed domain miss" of LANG.FAILURE.PROJECT — and was
-    /// projected to NIL under the NIL Projection Rule (LANG.FAILURE.ERROR). Used
+    /// projected to NIL under the NIL Projection Rule (LANG.FAILURE.PROJECT). Used
     /// together with `NilReason::DomainMiss`.
     DomainMiss,
     /// A diagnostic accessor found nothing to report — the origin paired with

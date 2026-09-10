@@ -1,6 +1,6 @@
 //! Building a bracketed literal (`[ ... ]`) from source tokens.
 //!
-//! Split out of `execution_loop` when that file outgrew the §14.1 size budget.
+//! Split out of `execution_loop` when that file outgrew the the file-size budget in docs/dev/specification-implementation-rules.md size budget.
 //! The two concerns are genuinely separate: the execution loop decides *which*
 //! token runs next, and this decides what a bracketed token sequence denotes.
 //!

@@ -2,9 +2,9 @@
 //!
 //! Companion to `algebraic_laws.rs`, encoding
 //! `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 2: the surface
-//! desugaring of LANG.SOURCE.DESUGAR / §7.0 is *observationally transparent*. Every
+//! desugaring of LANG.SOURCE.DESUGAR / LANG.SOURCE.NORMALIZE is *observationally transparent*. Every
 //! symbolic alias renders identically to its English-word canonical form, and
-//! word names are case-normalized (§3.8). Each law is the compressed form
+//! word names are case-normalized (LANG.SOURCE.NORMALIZE). Each law is the compressed form
 //! of infinitely many tokenizer conformance cases: if desugaring were not
 //! `⟦desugar(s)⟧ = ⟦s⟧`, some generated pair would render differently.
 //!
@@ -40,7 +40,7 @@ fn nonzero() -> impl Strategy<Value = i64> {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
-    // ── Arithmetic aliases (§3.9 Word alias): + - * / % ──
+    // ── Arithmetic aliases (LANG.SOURCE.NORMALIZE Word alias): + - * / % ──
     #[test]
     fn arith_aliases(a in small(), b in nonzero()) {
         assert_law("alias-add", &format!("{a} {b} +"), &format!("{a} {b} ADD"));
@@ -50,7 +50,7 @@ proptest! {
         assert_law("alias-mod", &format!("{a} {b} %"), &format!("{a} {b} MOD"));
     }
 
-    // ── Comparison aliases (§3.9): = != < <= > >= ──
+    // ── Comparison aliases (LANG.SOURCE.NORMALIZE): = != < <= > >= ──
     #[test]
     fn comparison_aliases(a in small(), b in small()) {
         // The comparison family is symmetric: all six relations have a symbol,
@@ -87,7 +87,7 @@ proptest! {
         }
     }
 
-    // ── Word-name case normalization (§3.8): add ≡ Add ≡ ADD ──
+    // ── Word-name case normalization (LANG.SOURCE.NORMALIZE): add ≡ Add ≡ ADD ──
     #[test]
     fn case_normalization(a in small(), b in small()) {
         assert_law("case-lower", &format!("{a} {b} add"), &format!("{a} {b} ADD"));
@@ -122,7 +122,7 @@ fn arithmetic_alias_preserves_nil_absence_metadata() {
 #[test]
 fn comparison_alias_decides_composed_equality_identically() {
     // The bare relations are total over the admitted domain (LANG.VALUES.EXACT /
-    // §7.4): (√2+1)−(√2+1) EQ 0 decides TRUE, and the `=` alias observes
+    // LANG.VALUES.EXACT): (√2+1)−(√2+1) EQ 0 decides TRUE, and the `=` alias observes
     // identically. (This law formerly pinned the UNKNOWN diagnosis here;
     // with comparison total over D, UNKNOWN is confined to COMPARE-WITHIN,
     // which has no alias sugar to desugar.)

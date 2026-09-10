@@ -1,5 +1,5 @@
 //! LOOKUP rendering checks for `builtin_word_details.rs`. Kept in a sibling
-//! file so the renderer stays within the §14.1 file-size budget.
+//! file so the renderer stays within the the file-size budget in docs/dev/specification-implementation-rules.md file-size budget.
 
 use super::builtin_word_definitions::{builtin_specs, lookup_builtin_spec};
 use super::builtin_word_details::lookup_builtin_detail;
@@ -49,7 +49,7 @@ fn every_authored_doc_entry_names_a_real_builtin() {
 
 #[test]
 fn authored_doc_entries_are_editor_safe_plain_text() {
-    // §3.3: UTF-8 English plain text, ≤ 80 columns, no control
+    // three-layer model §3.3: UTF-8 English plain text, ≤ 80 columns, no control
     // characters, no trailing whitespace — the LOOKUP body is loaded
     // into the code editor verbatim.
     for doc in builtin_lookup_docs() {

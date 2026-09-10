@@ -43,12 +43,12 @@ fn binary_arith() -> impl Strategy<Value = &'static str> {
     prop_oneof![Just("ADD"), Just("MUL"), Just("SUB")]
 }
 
-// ───────────────────────── modifier algebra (§6, §13.2) ─────────────────────
+// ───────────────────────── modifier algebra (§6, LANG.MODIFIERS.CONSUMPTION) ─────────────────────
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
-    /// `KEEP` is bifurcation (§13.2): operands are retained *and* the result is
+    /// `KEEP` is bifurcation (LANG.MODIFIERS.CONSUMPTION): operands are retained *and* the result is
     /// pushed. Observationally `a b KEEP w == (a b) ++ (a b w)`. The sugar
     /// `,,`≡KEEP (LANG.MODIFIERS.CONSUMPTION).
     #[test]
@@ -59,7 +59,7 @@ proptest! {
         prop_assert_eq!(&expected, &obs(&format!("{a} {b} KEEP {w}")));
     }
 
-    /// **Mass conservation / bifurcation arity** (§13.1/§13.2): for a binary
+    /// **Mass conservation / bifurcation arity** (LANG.MACHINE.WORD/LANG.MODIFIERS.CONSUMPTION): for a binary
     /// word the only stack-mass difference between `KEEP` and default consumption is the two
     /// retained operands, so `depth(KEEP w) − depth(w) = arity = 2`.
     #[test]
@@ -68,7 +68,7 @@ proptest! {
         let keep = depth(&format!("{a} {b} KEEP {w}")) as i64;
         prop_assert_eq!(keep - eat, 2);
     }
-    // ──────────── partiality contract ↔ observable behavior (§7.14) ──────────
+    // ──────────── partiality contract ↔ observable behavior (LANG.CONTRACT.REGISTRY) ──────────
 
     /// A `Total` word never errors on well-shaped input: it always leaves a
     /// value (Hoare `ensures` discharged), here over total binary arithmetic.
@@ -78,7 +78,7 @@ proptest! {
     }
 }
 
-// ─────────────────── KEEP composes with abstraction (§6.2) ──────────────────
+// ─────────────────── KEEP composes with abstraction (LANG.MODIFIERS.CONSUMPTION) ──────────────────
 
 /// `KEEP` modifies the *call*, not the body. A User Word is the only place the
 /// two readings can differ, and the body reading is unsound: it let the
@@ -195,7 +195,7 @@ fn a_failed_keep_call_reports_the_failure() {
 // ───────────────── projecting words project onto NIL for domain misses ──────
 
 /// `Projecting`/`CreatesNil` words project a well-formed domain miss onto NIL
-/// rather than raising (LANG.CONTRACT.REGISTRY, NIL Projection Rule §11.2): division by
+/// rather than raising (LANG.CONTRACT.REGISTRY, NIL Projection Rule LANG.FAILURE.PROJECT): division by
 /// zero and an out-of-range `GET` both yield NIL, not an error.
 #[test]
 fn projecting_words_project_onto_nil_for_domain_misses() {
@@ -206,7 +206,7 @@ fn projecting_words_project_onto_nil_for_domain_misses() {
     assert_eq!(obs("[ 1 2 3 ] 9 GET"), vec!["NIL"]);
 }
 
-// ──────────────────────── contract lattice laws (§7.14) ─────────────────────
+// ──────────────────────── contract lattice laws (LANG.CONTRACT.REGISTRY) ─────────────────────
 
 /// Every built-in carries a contract reachable by its own name, with all three
 /// classification fields in their declared domains. A Coreword without a
@@ -316,7 +316,7 @@ fn safety_a_words_are_total() {
     );
 }
 
-/// Concrete §7.14 anchor contracts (the narrative examples of §7.14, pinned as
+/// Concrete LANG.CONTRACT.REGISTRY anchor contracts (the narrative examples of LANG.CONTRACT.REGISTRY, pinned as
 /// machine-checked facts).
 #[test]
 fn key_word_contracts_match_spec_7_14() {

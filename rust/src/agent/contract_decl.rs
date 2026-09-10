@@ -23,7 +23,7 @@
 //! `const`/`linear`/`superlinear`/`unbounded`
 //! (`docs/dev/cost-contract-design.md`). Each part is optional; fields left
 //! out are not checked. Inference is deliberately conservative (SPEC
-//! §7.14), so an unprovable declaration is a `note`, never a false `error`.
+//! LANG.CONTRACT.REGISTRY), so an unprovable declaration is a `note`, never a false `error`.
 
 use super::contract_cost::{check_cost_decl, parse_cost_terms, CostDecl};
 use super::contract_gap::GapCode;

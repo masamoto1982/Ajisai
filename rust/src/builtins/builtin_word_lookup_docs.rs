@@ -5,13 +5,14 @@
 //! Only content that must be *authored* lives here. Everything derivable
 //! from `BuiltinSpec` — Failure baseline (partiality / nil_policy), Side
 //! Effects (effects), Stability — is derived at render time in
-//! `builtin_word_details.rs`, so it can never drift from the §7.14
+//! `builtin_word_details.rs`, so it can never drift from the LANG.CONTRACT.REGISTRY
 //! contract metadata. Words without an entry here still render the full
 //! derived template; an entry adds the authored depth on top.
 //!
-//! Authoring rules (§3.3): UTF-8 English plain text, lines ≤ 80 columns,
-//! no control characters. `behavior` is the mechanical effect on inputs
-//! and runtime state (§3.5), never design history.
+//! Authoring rules (three-layer model §3.3): UTF-8 English plain text,
+//! lines ≤ 80 columns, no control characters. `behavior` is the mechanical
+//! effect on inputs and runtime state (that model's §3.5), never design
+//! history.
 
 /// One authored example: the canonical invocation and an optional result
 /// note (empty string = no result line).
@@ -25,7 +26,7 @@ pub struct BuiltinExampleDoc {
 pub struct BuiltinLookupDoc {
     /// Canonical word name (must match a `BuiltinSpec.name`).
     pub word: &'static str,
-    /// Mechanical effect on inputs and runtime state (§3.5 Behavior).
+    /// Mechanical effect on inputs and runtime state (three-layer model §3.5).
     pub behavior: &'static str,
     /// Authored examples; empty slice = derive one from `hover_syntax`.
     pub examples: &'static [BuiltinExampleDoc],

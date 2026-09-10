@@ -4,7 +4,7 @@
 //! (every word has a contract, fields are internally consistent). This
 //! suite closes the complementary gap: it drives the interpreter and
 //! asserts the *runtime* honors each word's declared `nil_policy` and the
-//! NIL Projection Rule (LANG.FAILURE.PROJECT, §7.12, §11.2).
+//! NIL Projection Rule (LANG.FAILURE.PROJECT, LANG.FAILURE.PASSTHROUGH, LANG.FAILURE.PROJECT).
 //!
 //! The completeness tests are registry-driven: a newly added Core
 //! passthrough / projecting word without a behavioral probe here fails.
@@ -120,7 +120,7 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
     for (name, class) in CORE_PASSTHROUGH {
         match class {
             NilClass::BinaryBlanket => {
-                // §4.5.1: any NIL operand => single NIL result.
+                // LANG.FAILURE.PASSTHROUGH: any NIL operand => single NIL result.
                 for code in [
                     format!("NIL NIL {name}"),
                     format!("1 NIL {name}"),
@@ -143,7 +143,7 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
     }
 }
 
-// --- NIL projection: Projecting / CreatesNil words (LANG.FAILURE.ERROR) ----------
+// --- NIL projection: Projecting / CreatesNil words (LANG.FAILURE.PROJECT) ----------
 
 /// Projecting words: a well-formed domain miss yields a reasoned NIL with a
 /// reason; malformed use raises an ordinary error.
@@ -346,7 +346,7 @@ async fn nil_check_answers_rather_than_projecting() {
 async fn nil_projection_comparison_nil_input() {
     // Comparison words are Projecting/PassthroughThenProject (LANG.CONTRACT.REGISTRY). A
     // NIL operand propagates as NIL output via the passthrough rule
-    // (LANG.FAILURE.PROJECT, §7.12). (Budget exhaustion instead yields Unknown, a NIL
+    // (LANG.FAILURE.PROJECT, LANG.FAILURE.PASSTHROUGH). (Budget exhaustion instead yields Unknown, a NIL
     // tagged TruthValue — covered by `tier2_undecidable_conformance_tests`.)
     for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
         for code in [
@@ -398,7 +398,7 @@ async fn malformed_use_raises_error_not_a_projected_nil() {
     );
 }
 
-// --- OR-NIL replaces a reasoned NIL with a fallback (LANG.FAILURE.ERROR) ---
+// --- OR-NIL replaces a reasoned NIL with a fallback (LANG.FAILURE.RECOVERY) ---
 
 #[tokio::test]
 async fn or_nil_supplies_fallback_and_clears_reason() {

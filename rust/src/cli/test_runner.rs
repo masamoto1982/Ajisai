@@ -4,7 +4,7 @@
 //! expectations declared as `#@` **directive comments**. It adds NO language
 //! word (no `ASSERT` in Core): the expectations live in host-read comments that
 //! the interpreter ignores as ordinary `#` comments (LANG.SOURCE.CODE), so the test
-//! harness stays strictly separate from language semantics (§15.1). The runner
+//! harness stays strictly separate from language semantics (LANG.CONFORMANCE.FAMILIES). The runner
 //! drives the production Core, the same execution path as `run`.
 //!
 //! Directives (one per line, anywhere in the file):

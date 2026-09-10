@@ -242,7 +242,7 @@ fn binding_preserves_an_absence_and_its_reason() {
 /// A Word call is a barrier frame: its body reads its own bindings and its
 /// operands, never a caller's — a name bound above is unreachable inside a
 /// Word it calls, whether that call sits one level down or several (SPEC
-/// §6.3, LANG.SOURCE.FRAME). LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now rules
+/// LANG.MODIFIERS.CONSUMPTION, LANG.SOURCE.FRAME). LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now rules
 /// out testing this through a self-recursive call or a tail-jumped frame
 /// reuse — neither can be defined any more — so both cases below use only
 /// ordinary calls between distinct words.

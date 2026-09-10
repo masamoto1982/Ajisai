@@ -66,8 +66,8 @@ mod contract_report_tests {
 
     #[test]
     fn suggested_round_trips_through_the_checker() {
-        // The one test that matters most (§1.5 Step 1.4): every `suggested`
-        // line this Phase produces, pasted back into its own source, must
+        // The one test that matters most (that work order §1.5 Step 1.4): every
+        // `suggested` line this Phase produces, pasted back into its own source, must
         // pass `check --contract` cleanly.
         //
         // The assertions below are deliberately anchored on `findings`,

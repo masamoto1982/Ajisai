@@ -4,7 +4,7 @@
 //! crossed and raises when it was. This is the other answer to the same
 //! question: a well-formed operation whose result cannot be materialized
 //! within budget is projected onto a diagnosable NIL under the NIL Projection
-//! Rule (LANG.FAILURE.ERROR) rather than raised, because the program is not wrong —
+//! Rule (LANG.FAILURE.PROJECT) rather than raised, because the program is not wrong —
 //! it is too big, and a pipeline can recover it with `OR-NIL`.
 
 use crate::error::{ErrorCategory, NilReason, ResourceLimit};

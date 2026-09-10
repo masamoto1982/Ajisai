@@ -8,7 +8,7 @@ use crate::kernel::generated::{generated_word, AcceptedDomain, VocabularyTier};
 /// sections (Category / Summary / Role / Stack Effect), the authored
 /// Layer 2 sections when `builtin_word_lookup_docs.rs` carries an entry
 /// (Behavior / Examples / Failure note / Related), and the sections
-/// derived from the §7.14 contract metadata (Failure baseline, Side
+/// derived from the LANG.CONTRACT.REGISTRY contract metadata (Failure baseline, Side
 /// Effects, Stability) — derived so they can never drift from the
 /// registry. See docs/dev/three-layer-documentation-model.md §3.
 pub fn lookup_builtin_detail(name: &str) -> String {
@@ -136,7 +136,7 @@ fn derive_vocabulary_text(canonical: &str) -> String {
     }
 }
 
-/// Failure baseline derived from the §7.14 contract metadata. The wording
+/// Failure baseline derived from the LANG.CONTRACT.REGISTRY contract metadata. The wording
 /// follows the specification's Bubble Rule framing (three-layer model §2.3,
 /// internally the NIL Projection Rule): well-formed operations that cannot
 /// produce a value project onto NIL with a reason, while malformed usage
@@ -197,7 +197,7 @@ fn accepted_domain_sentence(domain: AcceptedDomain) -> &'static str {
     }
 }
 
-/// Side Effects derived from the §7.14 `effects` list declared in
+/// Side Effects derived from the LANG.CONTRACT.REGISTRY `effects` list declared in
 /// `spec/words.json`. Each declared effect maps to one user-facing sentence;
 /// `effect_sentence` returns `None` for a name it does not know, which
 /// `builtin_word_details_tests.rs` turns into a failure rather than letting the

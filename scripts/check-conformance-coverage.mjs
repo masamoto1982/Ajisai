@@ -105,7 +105,7 @@ for (const src of sources) {
 
 // Every module-canonical word regardless of classification bucket (the
 // manifest splits module words across Module / Exploratory / HostedEffect /
-// Core-listed), so the metric covers the full §9.1 module vocabulary.
+// Core-listed), so the metric covers the full LANG.DICTIONARY.RESOLUTION module vocabulary.
 const moduleEntries = manifest.entries.filter(
   (e) => e.kind === 'moduleword',
 );

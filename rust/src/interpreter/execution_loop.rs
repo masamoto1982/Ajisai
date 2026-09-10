@@ -154,7 +154,7 @@ fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
 /// event per Word call as the trace's shape requires.
 fn projected_nil_reason(value: &Value) -> Option<NilReason> {
     // Only operational NIL is meant to participate in error-flow tracing
-    // (LANG.VALUES.TRUTH / §7.5); the logical Unknown (U) — `Nil` data carrying
+    // (LANG.VALUES.TRUTH / LANG.VALUES.TRUTH); the logical Unknown (U) — `Nil` data carrying
     // the `TruthValue` hint, not a dedicated variant — should not. `is_nil`
     // does not look at `hint`, so it does not currently distinguish the
     // two; this has no observable effect today because U is unreachable

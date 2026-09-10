@@ -26,11 +26,36 @@ const SKIP_DIRS = new Set(['node_modules', 'target', '.git', 'dist', 'build']);
 const EXTENSIONS = /\.(rs|ts|js|mjs|cjs|css|html|json|md|sh|yml|yaml)$/;
 const CITATION = /SPEC\s*§\s*[0-9]+(?:\.[0-9]+)*/g;
 
+// Source files have no sections of their own, so a bare `§N.M` in one names
+// some other document — and after the sweep above, the only document it can
+// name is the retired specification. A `.md` under docs/dev/ is different: a
+// memo numbers its own sections and cites its siblings' legitimately, so bare
+// references are only rejected in source.
+//
+// Multi-part only. A bare single-digit `§7` in source is usually a real
+// reference to a document that owns numbered sections — the formalization
+// roadmap's `§1.2-(T)`, a work order's `§3`, or SKILL.md's own `§6`/`§9`,
+// which `generate-skill-md.mjs` writes *into* the file it generates. Those
+// are correct, so the pattern requires a dot and the allowance below carries
+// the rest.
+const SOURCE_EXTENSIONS = /\.(rs|ts|js|mjs|cjs|css|html)$/;
+const BARE_CITATION = /§ ?[0-9]+\.[0-9]+(?:\.[0-9]+)*/g;
+
+// A `§N.M` is fine when the sentence around it names the document that owns
+// the numbering. Four lines of lookback, because a doc comment wraps and the
+// name often sits a line or two above the reference.
+const NAMES_ITS_DOCUMENT =
+  /three-layer|documentation model|work order|work-order|roadmap|migration plan|handoff|proposal|methodology|Phase \d|SKILL|\.(md|json|html|mjs)\b/i;
+
 // A passage *about* a stale citation is not itself one. Keyed by path so a new
-// dangling citation in the same file is still caught: the line must also name
-// the retired numbering it is discussing.
+// dangling citation in the same file is still caught: the passage must also
+// name the retired numbering it is discussing. Matched against the same short
+// context window the bare check uses, because the disclaimer and the sections
+// it disclaims routinely land on different lines of one wrapped comment.
 const DISCUSSES_RATHER_THAN_CITES = new Map([
   ['docs/dev/semantic-spine-migration-plan.md', /削減前|pre-reduction/],
+  // This file's own header enumerates the phantom subsections as evidence.
+  ['scripts/check-spec-citations.mjs', /never existed/],
 ]);
 
 function* walk(dir) {
@@ -52,12 +77,25 @@ for (const file of walk(ROOT)) {
   } catch {
     continue;
   }
-  if (!text.includes('SPEC')) continue;
-  text.split('\n').forEach((line, index) => {
-    const matches = line.match(CITATION);
-    if (!matches) return;
-    if (exempt && exempt.test(line)) return;
-    for (const match of matches) findings.push(`${rel}:${index + 1}: ${match}`);
+  // Both patterns need the section sign; only the first needs the word.
+  // Testing for 'SPEC' alone here made the bare-citation pass vacuous, which a
+  // probe caught and a green run did not.
+  if (!text.includes('§')) continue;
+  const isSource = SOURCE_EXTENSIONS.test(file);
+  const lines = text.split('\n');
+  lines.forEach((line, index) => {
+    const context = lines.slice(Math.max(0, index - 3), index + 2).join(' ');
+    if (exempt && exempt.test(context)) return;
+    for (const match of line.match(CITATION) ?? []) {
+      findings.push(`${rel}:${index + 1}: ${match}`);
+    }
+    if (!isSource) return;
+    if (NAMES_ITS_DOCUMENT.test(context)) return;
+    for (const match of line.match(BARE_CITATION) ?? []) {
+      // `SPEC §N.M` was already reported by the pass above.
+      if (new RegExp(`SPEC\\s*${match.replace('§', '§')}`).test(line)) continue;
+      findings.push(`${rel}:${index + 1}: ${match} (bare)`);
+    }
   });
 }
 

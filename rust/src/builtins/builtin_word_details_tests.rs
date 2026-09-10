@@ -1,7 +1,7 @@
 //! Structural consistency checks for built-in `hover_syntax` examples
 //! (structural-constraint ledger items 9 and 10; see
 //! `docs/dev/structural-constraint-ledger.md`). Kept in a sibling file so
-//! `builtin_word_details.rs` stays within the §14.1 file-size budget.
+//! `builtin_word_details.rs` stays within the file-size budget in docs/dev/specification-implementation-rules.md.
 //!
 //! These convert three invariants from authoring convention into a build-time
 //! guarantee: a `hover_syntax` example must be a well-formed snippet (item 9),
@@ -115,7 +115,7 @@ fn count_stack_items(side: &str) -> Option<u16> {
 fn fixed_stack_effect_prose_matches_the_machine_mass() {
     // Structural-constraint ledger item 11 (convention -> structure): the
     // human-facing `stack_effect` prose and the machine `mass` contract (SPEC
-    // §13.1) are two descriptions of one word's arity that could drift. For
+    // LANG.MACHINE.WORD) are two descriptions of one word's arity that could drift. For
     // every word with a `Fixed` mass, the arity parsed from the prose must equal
     // the mass. The parser abstains (skips) on any prose outside its
     // machine-checkable subset, so this never raises a false mismatch; it only

@@ -105,7 +105,7 @@ fn diagnosis_to_protocol_js(
         set_prop(&obj, "resourceLimit", &limit_obj.into());
     }
 
-    // CF-comparison agreed-prefix (LANG.VALUES.NIL / §7.4.1): machine-readable
+    // CF-comparison agreed-prefix (LANG.VALUES.NIL / LANG.VALUES.EXACT): machine-readable
     // count of leading partial quotients that matched before an Unknown (U)
     // comparison gave up. Emitted only when present.
     if let Some(prefix) = diagnosis.agreed_prefix {

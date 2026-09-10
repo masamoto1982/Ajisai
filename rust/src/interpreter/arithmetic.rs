@@ -379,7 +379,7 @@ fn value_contains_exact_scalar(val: &Value) -> bool {
 /// back on a rational to a plain `Scalar`, so an all-rational result is
 /// byte-identical to the rational path. Per-lane division by zero becomes a
 /// reasoned `NIL` — the same NIL Projection Rule the scalar `√x 0 /` path
-/// uses (LANG.FAILURE.ERROR) — rather than aborting the whole vector.
+/// uses (LANG.FAILURE.PROJECT) — rather than aborting the whole vector.
 fn apply_exact_real_recursive_broadcast(
     a: &Value,
     b: &Value,

@@ -141,28 +141,28 @@
 </section>
 
 <section class="ajisai-case" id="core-nil-reason-division-by-zero" data-category="core">
-  <h3>NIL-REASON reads the reason of a Bubble/NIL as a protocol string (§4.5.0/§7.15)</h3>
+  <h3>NIL-REASON reads the reason of a Bubble/NIL as a protocol string (LANG.VALUES.NIL/LANG.OBSERVATION.DIAGNOSIS)</h3>
   <pre class="ajisai-source">1 0 / NIL-REASON</pre>
   <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-check-true-retains-source" data-category="core">
-  <h3>NIL? is TRUE for an operational NIL and retains the inspected value (§7.15)</h3>
+  <h3>NIL? is TRUE for an operational NIL and retains the inspected value (LANG.OBSERVATION.DIAGNOSIS)</h3>
   <pre class="ajisai-source">1 0 / NIL?</pre>
   <pre class="ajisai-expect-result">NIL TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-check-false-for-present-value" data-category="core">
-  <h3>NIL? is FALSE for a present value and retains it (§7.15)</h3>
+  <h3>NIL? is FALSE for a present value and retains it (LANG.OBSERVATION.DIAGNOSIS)</h3>
   <pre class="ajisai-source">5 NIL?</pre>
   <pre class="ajisai-expect-result">5/1 FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-reason-present-value-is-nil" data-category="core">
-  <h3>NIL-REASON on a present value is NIL, never an error (Bubble Rule, §7.15)</h3>
+  <h3>NIL-REASON on a present value is NIL, never an error (Bubble Rule, LANG.OBSERVATION.DIAGNOSIS)</h3>
   <pre class="ajisai-source">5 NIL-REASON</pre>
   <pre class="ajisai-expect-result">5/1 NIL</pre>
   <div class="ajisai-expect-effects"></div>
@@ -308,7 +308,7 @@
 <!-- ===================== CORE: TRUTH VALUES ===================== -->
 <!-- A definite Boolean is a distinct value kind (not a number) and renders
      uniformly as TRUE/FALSE through every path: literals, comparisons, and
-     logic words (LANG.VALUES.DISJOINT, §7.5, §12.2). -->
+     logic words (LANG.VALUES.DISJOINT, LANG.VALUES.TRUTH, LANG.OBSERVATION.PROTOCOL). -->
 
 <section class="ajisai-case" id="core-true-literal" data-category="core">
   <h3>TRUE renders as TRUE</h3>
@@ -367,7 +367,7 @@
 </section>
 
 <!-- ===================== CORE: EXPLICIT-BUDGET COMPARE ===================== -->
-<!-- COMPARE-WITHIN returns the RawNumber scalars -1/0/1 (§7.4.2); these are
+<!-- COMPARE-WITHIN returns the RawNumber scalars -1/0/1 (LANG.VALUES.EXACT); these are
      genuine numbers, not the TruthValue axis, so encoding them does not
      cement the decided-comparison truth-value rendering discussed in the
      evaluation note. -->
@@ -378,7 +378,7 @@
      sqrt(...) wrappers, or approximate ~n/d rationals are conformance
      failures. -->
 
-<!-- §4.2.7 / §7.4 exactness over the admitted domain D: the six relations
+<!-- LANG.VALUES.EXACT / LANG.VALUES.EXACT exactness over the admitted domain D: the six relations
      are total and exact for every value the current Coreword set can
      construct, including sums, products, and quotients of square roots
      whose continued fractions never diverge. These cases pin the normative
@@ -386,7 +386,8 @@
 
 <!-- ===================== CORE: SIGNATURES & PARTIALITY ===================== -->
 <!-- These cases pin stack signatures, consumption, and rounding/error rules
-     that SPECIFICATION.html §6.1, §7.1.1, §7.3, §7.6 and §11.2 now state
+     that LANG.MODIFIERS.CONSUMPTION, LANG.OBSERVATION.DIAGNOSIS, LANG.VALUES.EXACT,
+     LANG.VALUES.DISJOINT and LANG.FAILURE.PROJECT now state
      normatively, so that an independent port reproduces them exactly. -->
 
 <section class="ajisai-case" id="core-get-bare-index-retained" data-category="core">
@@ -696,9 +697,9 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: ARITHMETIC & ROUNDING (§7.3) ===================== -->
+<!-- ===================== CORE: ARITHMETIC & ROUNDING (LANG.VALUES.EXACT) ===================== -->
 <!-- Every case below was observed against the reference Rust CLI before being
-     written down, extending the suite toward the §15.1 per-Coreword contract
+     written down, extending the suite toward the LANG.CONFORMANCE.FAMILIES per-Coreword contract
      coverage (success path, failure path, nil_policy, partiality) in the
      language-independent form §"Conformance and Identity" requires. -->
 
@@ -759,7 +760,7 @@
 </section>
 
 <section class="ajisai-case" id="core-add-underflow-error" data-category="core">
-  <h3>ADD with one operand raises stackUnderflow (requires violated, §15.1)</h3>
+  <h3>ADD with one operand raises stackUnderflow (requires violated, LANG.CONFORMANCE.FAMILIES)</h3>
   <pre class="ajisai-source">1 ADD</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">Stack underflow</pre>
@@ -965,7 +966,7 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: NIL PASSTHROUGH (§4.5.1, §7.12) ===================== -->
+<!-- ===================== CORE: NIL PASSTHROUGH (LANG.FAILURE.PASSTHROUGH, LANG.FAILURE.PASSTHROUGH) ===================== -->
 
 <section class="ajisai-case" id="core-nil-passthrough-sub" data-category="core">
   <h3>SUB passes a NIL operand through</h3>
@@ -1038,7 +1039,7 @@
 </section>
 
 <section class="ajisai-case" id="core-nil-leftmost-reason-preserved" data-category="core">
-  <h3>Combining two reasoned NILs preserves the leftmost reason (§4.5.1)</h3>
+  <h3>Combining two reasoned NILs preserves the leftmost reason (LANG.FAILURE.PASSTHROUGH)</h3>
   <pre class="ajisai-source">1 0 / 'abc' NUM ADD NIL-REASON</pre>
   <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1062,7 +1063,7 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: CREATES-NIL PROJECTIONS (§7.12, §11.2) ===================== -->
+<!-- ===================== CORE: CREATES-NIL PROJECTIONS (LANG.FAILURE.PASSTHROUGH, LANG.FAILURE.PROJECT) ===================== -->
 
 <section class="ajisai-case" id="core-get-out-of-bounds-reason" data-category="core">
   <h3>GET out of bounds projects to a reasoned Bubble</h3>
@@ -1126,7 +1127,7 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: CONVERSION AND TEXT (§7.6) ===================== -->
+<!-- ===================== CORE: CONVERSION AND TEXT (LANG.VALUES.DISJOINT) ===================== -->
 
 <section class="ajisai-case" id="core-num-integer" data-category="core">
   <h3>NUM parses integer text to an exact rational</h3>
@@ -1169,7 +1170,7 @@
 </section>
 
 <section class="ajisai-case" id="core-num-rejects-nil" data-category="core">
-  <h3>NUM rejects a NIL operand with a channel error (not passthrough, §7.12)</h3>
+  <h3>NUM rejects a NIL operand with a channel error (not passthrough, LANG.FAILURE.PASSTHROUGH)</h3>
   <pre class="ajisai-source">NIL NUM</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">NUM: expected String, got Nil</pre>
@@ -1372,7 +1373,7 @@
 
 
 
-<!-- ===================== CORE: VECTOR AND TENSOR WORDS (§7.1, §7.2) ===================== -->
+<!-- ===================== CORE: VECTOR AND TENSOR WORDS (LANG.COLLECTIONS.LIFT, LANG.COLLECTIONS.LIFT) ===================== -->
 
 <section class="ajisai-case" id="core-fill-1d" data-category="core">
   <h3>FILL builds a vector of a given shape filled with a value</h3>
@@ -1520,16 +1521,16 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ================== CORE: OR-NIL GROUP SKIP (§6.4) ==================== -->
+<!-- ================== CORE: OR-NIL GROUP SKIP (LANG.FAILURE.RECOVERY) ==================== -->
 
 <section class="ajisai-case" id="core-or-nil-group-skip-atomic" data-category="core">
-  <h3>OR-NIL skips one balanced [ ] group atomically on a non-NIL top (§6.4 example)</h3>
+  <h3>OR-NIL skips one balanced [ ] group atomically on a non-NIL top (LANG.FAILURE.RECOVERY example)</h3>
   <pre class="ajisai-source">1 OR-NIL [ 2 3 ADD ]</pre>
   <pre class="ajisai-expect-result">1/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: COND CONTRACT BRANCHES (§7.7.1) ===================== -->
+<!-- ===================== CORE: COND CONTRACT BRANCHES (LANG.COLLECTIONS.HIGHER) ===================== -->
 
 <section class="ajisai-case" id="core-cond-truthy-number-guard" data-category="core">
   <h3>A guard reducing to a bare number is malformed use, not truthy</h3>
@@ -1591,7 +1592,7 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: HIGHER-ORDER NIL POLICY (§7.7.1) ===================== -->
+<!-- ===================== CORE: HIGHER-ORDER NIL POLICY (LANG.COLLECTIONS.HIGHER) ===================== -->
 
 <section class="ajisai-case" id="core-map-nil-target" data-category="core">
   <h3>MAP of a NIL target yields NIL</h3>
@@ -1672,7 +1673,7 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: EXEC / EVAL / PRECOMPUTE / DICTIONARY (§7.7, §7.8, §8) ===================== -->
+<!-- ===================== CORE: EXEC / EVAL / PRECOMPUTE / DICTIONARY (LANG.COLLECTIONS.HIGHER, LANG.DICTIONARY.MUTATION, §8) ===================== -->
 
 <section class="ajisai-case" id="core-exec-block" data-category="core">
   <h3>EXEC runs a code block</h3>
@@ -1860,13 +1861,13 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: MODULE VISIBILITY (§9.2) ===================== -->
+<!-- ===================== CORE: MODULE VISIBILITY (LANG.DICTIONARY.RESOLUTION) ===================== -->
 
 <!-- Observable resolution contract of a partial import (Section 9.2):
      selected words resolve bare and qualified; unselected siblings resolve
      in neither form. -->
 
-<!-- ===================== CORE: QUANTIZE AND CONSERVE (§7.13, §13.3) ===================== -->
+<!-- ===================== CORE: QUANTIZE AND CONSERVE (LANG.VALUES.EXACT, LANG.VALUES.EXACT) ===================== -->
 
 <!-- JSON module basics (pure words, so `core` per the established contract:
      cf. core-qualified-name-requires-import, which exercises MATH@SQRT).
@@ -1874,9 +1875,9 @@ W</pre>
      construction, and the consumed input string's Text role must never leak
      onto the result at the same stack position. -->
 
-<!-- ===================== MODULE WORDS (§9.1) ===================== -->
+<!-- ===================== MODULE WORDS (LANG.DICTIONARY.RESOLUTION) ===================== -->
 <!-- Coverage extension for the module vocabulary. Categorization follows the
-     registry portability profile (§7.14 metadata): a module word whose profile
+     registry portability profile (LANG.CONTRACT.REGISTRY metadata): a module word whose profile
      is Core (pure, no host capability) is a `core` case; a word whose profile
      is Hosted (TIME@NOW, CRYPTO@CSPRNG, all MUSIC words, SERIAL, JSON@EXPORT,
      IO) is a `hosted` case, even when its executor is a pure constructor.
@@ -1890,7 +1891,7 @@ W</pre>
          now passes a NIL through per its `passthrough` declaration, enforced
          at dispatch. Pinned by core-sort-passes-a-nil-through-with-its-reason.
        - The reason string of the MATH@SQRT negative-radicand Bubble
-         (implementation reports `divisionByZero`; the §11.2 taxonomy has no
+         (implementation reports `divisionByZero`; the LANG.FAILURE.PROJECT taxonomy has no
          pinned reason for a negative radicand). Only the NIL projection
          itself is pinned (core-math-sqrt-negative-nil).
        - NIL-operand handling of TIME civil words, ALGO@UNIQUE/CONTAINS/
@@ -1914,7 +1915,7 @@ W</pre>
 
 <!-- ===================== MATH module (core: pure words) ===================== -->
 
-<!-- Tier 2 (§4.2): `PI` is the first Word that constructs a general
+<!-- Tier 2 (LANG.VALUES.EXACT): `PI` is the first Word that constructs a general
      computable real, so a comparison can now reach the logical UNKNOWN, while
      every Tier 0/1 operand a program can otherwise build still decides
      regardless of budget (LANG.VALUES.EXACT). -->
@@ -2303,7 +2304,7 @@ W</pre>
 <!-- ===================== ALGO module (core: pure words) ===================== -->
 
 <!-- ===================== TIME module (core: pure civil words) ===================== -->
-<!-- Value shapes (§9.1): instant = exact seconds since the Unix epoch;
+<!-- Value shapes (LANG.DICTIONARY.RESOLUTION): instant = exact seconds since the Unix epoch;
      datetime = [ Y M D h m s ]; date = [ Y M D ]; time = [ h m s ].
      The timezone appears only at the instant<->civil boundary as a UTC
      offset in hours. TIME@NOW is Hosted and covered in the hosted section. -->
@@ -2325,7 +2326,7 @@ W</pre>
 
 <!-- ===================== HOSTED: MUSIC pure constructors ===================== -->
 <!-- These executors are pure and deterministic, but every MUSIC word is
-     Hosted-profile (required capability: audio) in the §7.14 registry, so
+     Hosted-profile (required capability: audio) in the LANG.CONTRACT.REGISTRY registry, so
      they are hosted cases. Music values are structural records whose display
      is pinned exactly. -->
 

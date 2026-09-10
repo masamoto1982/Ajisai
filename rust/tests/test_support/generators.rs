@@ -49,7 +49,7 @@ pub fn boolean_src() -> impl Strategy<Value = String> {
     ]
 }
 
-/// Pushes a reasoned NIL via the NIL Projection Rule (division by zero, §11.2).
+/// Pushes a reasoned NIL via the NIL Projection Rule (division by zero, LANG.FAILURE.PROJECT).
 pub fn nil_src() -> impl Strategy<Value = String> {
     small().prop_map(|n| format!("{n} 0 /"))
 }
@@ -87,7 +87,7 @@ pub fn block_src() -> impl Strategy<Value = String> {
 // ───────────────────────── Phase 6: names & dictionary ──────────────────────
 
 /// A short user-word name in the runtime's action-object style (already
-/// uppercase, so word-name normalization §3.8 is a no-op on it). Kept distinct
+/// uppercase, so word-name normalization LANG.SOURCE.NORMALIZE is a no-op on it). Kept distinct
 /// from every built-in so `DEF` never hits the "cannot redefine built-in" path.
 pub fn user_word_name() -> impl Strategy<Value = &'static str> {
     prop::sample::select(vec!["INC", "TWICE", "BUMP", "STEP-UP", "ADD-ONE", "GROW"])
@@ -193,7 +193,7 @@ pub fn failing_block_body() -> impl Strategy<Value = String> {
 
 /// A non-empty lowercase word (1–6 letters), used as a string-literal body
 /// `'word'`. Kept to `[a-h]` so it never collides with whitespace / quotes and
-/// so `CHARS`/`JOIN` round-trip cleanly (an empty string is NIL, §4.5).
+/// so `CHARS`/`JOIN` round-trip cleanly (an empty string is NIL, LANG.VALUES.NIL).
 pub fn ascii_word() -> impl Strategy<Value = String> {
     prop::collection::vec(0u8..8, 1..7)
         .prop_map(|cs| cs.iter().map(|b| (b'a' + b) as char).collect())
