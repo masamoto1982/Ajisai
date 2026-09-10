@@ -129,6 +129,11 @@ function buildWordTable() {
       // marker "shorthand" would read as an invitation to use one.
       const note = {
         reserved_marker: `${concept} — reserved, never valid in source`,
+        // A retired form is not a reserved one: it *was* valid, so the note
+        // says what replaced it rather than only that it is refused. Listing
+        // these as `delimiter_sugar` is what let §9 advertise `{` and `}` as
+        // structural delimiters while §2 called them invalid characters.
+        retired_form: `${concept} — retired, no longer valid in source`,
         source_directive: `${concept} — consumed by the lexer, not a Word`,
         control_directive: `${concept} — only inside the construct that defines it`,
         delimiter_sugar: `${concept} — structural delimiter, not a Word`,

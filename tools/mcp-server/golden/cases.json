@@ -170,7 +170,7 @@
       },
       "hostDivergence": {
         "playground": "succeeds, materializing 100002 elements",
-        "why": "The browser playground applies the interpreter's default RuntimeLimits (max_materialized_elements = 1,000,000); this profile applies LOCAL_AGENT_RUNTIME_LIMITS (100,000). Both are correct for their host: SPEC 2.5 makes limits a safety control rather than value semantics, so a conforming host chooses its own. Recorded here so the divergence is a documented decision rather than a surprise for anyone who prototypes in the playground and runs through MCP. See docs/dev/mcp-host-profiles.md."
+        "why": "The browser playground applies the interpreter's default RuntimeLimits (max_materialized_elements = 1,000,000); this profile applies LOCAL_AGENT_RUNTIME_LIMITS (100,000). Both are correct for their host: LANG.MACHINE.LIMITS makes limits a safety control rather than value semantics, so a conforming host chooses its own. Recorded here so the divergence is a documented decision rather than a surprise for anyone who prototypes in the playground and runs through MCP. See docs/dev/mcp-host-profiles.md."
       }
     },
     {

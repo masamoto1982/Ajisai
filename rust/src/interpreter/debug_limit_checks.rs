@@ -39,8 +39,8 @@ pub(super) fn resource_limit_checks(category: Option<&ErrorCategory>) -> Vec<Deb
                 "checkTailPosition",
                 ("Check tail position", "末尾位置を確認する"),
                 (
-                    "Guarded tail recursion at the end of a COND clause (SPEC 8.4) is not depth-limited.",
-                    "COND 節末尾のガード付き末尾再帰 (SPEC 8.4) に書き換えると深度制限を受けない",
+                    "Guarded tail recursion written at the end of a COND clause is trampolined, so it is not depth-limited.",
+                    "COND 節末尾のガード付き末尾再帰に書き換えるとトランポリン化され、深度制限を受けない",
                 ),
             ));
     } else if matches!(category, Some(ErrorCategory::ResourceLimitExceeded)) {

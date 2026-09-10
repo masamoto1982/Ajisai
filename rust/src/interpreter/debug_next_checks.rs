@@ -15,6 +15,14 @@ use super::debug_diagnosis::{CauseClass, DebugCheck, LocalizedText};
 use super::debug_limit_checks::resource_limit_checks;
 use crate::error::{ErrorCategory, NilReason};
 
+/// Whether an unresolved name is a double-quoted string someone wrote with the
+/// wrong delimiter. Both quotes are required: a name that merely contains one
+/// is a different mistake, and a bare leading quote is more likely a truncated
+/// token than a string.
+fn looks_double_quoted(word: &str) -> bool {
+    word.len() >= 2 && word.starts_with('"') && word.ends_with('"')
+}
+
 fn check(code: &'static str, title: (&str, &str), detail: (&str, &str)) -> DebugCheck {
     DebugCheck {
         code,
@@ -51,12 +59,21 @@ pub(crate) fn build_next_checks(
                         &format!("{} の右オペランドを確認する", word_label),
                     ),
                 ));
+                // `OR-NIL`, not `SAFE`. This check named `SAFE` for as long as
+                // it existed, and `SAFE` has never been one of the Core Words:
+                // it is the pre-rename spelling of the NIL-coalescing directive
+                // that shipped as `OR-NIL`. A diagnosis is the one surface an
+                // agent is told to follow literally, so pointing it at a word
+                // the dictionary will reject — while never naming the word that
+                // works — cost more than saying nothing. `word_recovery_tests`
+                // now holds every word a check names to the dictionary, so this
+                // class of stale spelling cannot come back silently.
                 out.push(check(
                     "checkZeroIsExpected",
                     ("Check zero is expected", "0 が正常値かを確認する"),
                     (
-                        "If 0 is a legitimate value here, handle it with SAFE or a fallback.",
-                        "0 が正常値としてあり得るなら SAFE / fallback を検討する",
+                        "If 0 is a legitimate value here, recover it with OR-NIL or guard the divisor.",
+                        "0 が正常値としてあり得るなら OR-NIL で回復するか、除数を事前に確認する",
                     ),
                 ));
                 out.push(check(
@@ -106,6 +123,27 @@ pub(crate) fn build_next_checks(
             ));
         }
         CauseClass::TypoOrUnknownName => {
+            // A double-quoted token is a specific, recognizable mistake, not a
+            // misspelling: `'` is Ajisai's only string delimiter, so `"hi"`
+            // reaches the dictionary as the *name* `"HI"` — quotes included —
+            // and fails as an unknown word. Left to the generic checks the
+            // reader was sent to look for a spelling error in a token that has
+            // no spelling error, with nothing naming the real rule. SKILL.md
+            // already lists this among the common mistakes, which is the
+            // clearest sign it is worth diagnosing rather than documenting.
+            if word.is_some_and(looks_double_quoted) {
+                out.push(check(
+                    "checkStringQuoting",
+                    ("Check string quoting", "文字列の引用符を確認する"),
+                    (
+                        "This name is wrapped in double quotes. Ajisai has one string \
+                         delimiter, the single quote: write 'text', not \"text\". A \
+                         double-quoted token is read as a Word name, quotes and all.",
+                        "この名前は二重引用符で囲まれている。Ajisai の文字列区切りは単一引用符だけなので \
+                         'text' と書く。二重引用符付きのトークンは引用符ごと word 名として読まれる",
+                    ),
+                ));
+            }
             out.push(check(
                 "checkSpelling",
                 ("Check spelling", "スペルを確認する"),
@@ -304,8 +342,8 @@ pub(crate) fn build_next_checks(
                     "checkTailPosition",
                     ("Check tail position", "末尾位置を確認する"),
                     (
-                        "Guarded tail recursion at the end of a COND clause (SPEC 8.4) is not depth-limited.",
-                        "COND 節末尾のガード付き末尾再帰 (SPEC 8.4) に書き換えると深度制限を受けない",
+                        "Guarded tail recursion written at the end of a COND clause is trampolined, so it is not depth-limited.",
+                        "COND 節末尾のガード付き末尾再帰に書き換えるとトランポリン化され、深度制限を受けない",
                     ),
                 ));
             } else if matches!(category, Some(ErrorCategory::CondExhausted)) {

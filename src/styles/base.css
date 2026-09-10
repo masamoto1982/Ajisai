@@ -259,6 +259,23 @@ header h1 a {
     line-height: 1.5;
 }
 
+/* Which build is deployed. Same quiet treatment as the host profile: it is
+   reference information a reader checks deliberately, not part of the app's
+   identity. It is on screen rather than in a tooltip because a tooltip does
+   not exist on a touch device, and a build stamp nobody can read cannot be
+   compared against the specification. */
+.build-stamp {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: var(--color-primary);
+    background: transparent;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-button);
+    padding: 0.125rem 0.5rem;
+    line-height: 1.5;
+    cursor: help;
+}
+
 /* Which resource profile this host applies. Quieter than the version badge —
    it is reference information, not identity — with the full ceiling table on
    hover. */

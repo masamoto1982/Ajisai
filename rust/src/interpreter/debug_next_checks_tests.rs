@@ -155,3 +155,183 @@ fn a_word_with_no_registry_entry_still_gets_its_class_level_checks() {
     assert!(checks.iter().all(|c| !c.code.starts_with("checkDeclared")));
     assert_eq!(checks.first().map(|c| c.code), Some("checkArity"));
 }
+
+/// Every Word-shaped name a check *names to the reader* must be a name the
+/// dictionary will actually accept.
+///
+/// This gate exists because of a defect it would have caught on the day it
+/// landed: the zero-division check told both locales to "handle it with SAFE",
+/// and `SAFE` is not an Ajisai word — it is the pre-rename spelling of
+/// `OR-NIL`. `1 0 /` therefore answered a correct NIL whose diagnosis sent the
+/// reader to `1 0 / SAFE`, which fails with `Unknown word: SAFE`, and no check
+/// ever named `OR-NIL`. For a language whose stated claim is that a machine can
+/// follow a structured diagnosis to a first-attempt repair, a check that names
+/// a word the dictionary rejects is worse than a check that names none.
+///
+/// Prose is not the thing being pinned here: a check may be reworded freely.
+/// What may not change is that a name written in Word shape resolves.
+mod diagnosis_vocabulary_is_real {
+    use super::*;
+    use crate::error::NilReason;
+
+    /// Word-shaped: upper-case runs, optionally hyphenated (`OR-NIL`,
+    /// `NIL-REASON`), which is exactly the shape Ajisai Words are written in.
+    ///
+    /// Single letters are excluded: `U` (the truth value) and `A`/`I` as
+    /// ordinary English are not Word references, and no Word is one letter.
+    fn word_shaped_tokens(text: &str) -> Vec<String> {
+        let mut out = Vec::new();
+        for raw in text.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')) {
+            let token = raw.trim_matches('-');
+            if token.len() < 2 {
+                continue;
+            }
+            let has_letter = token.chars().any(|c| c.is_ascii_alphabetic());
+            let all_upper = token
+                .chars()
+                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '-');
+            if has_letter && all_upper {
+                out.push(token.to_string());
+            }
+        }
+        out
+    }
+
+    /// Names that are written in Word shape but denote something other than a
+    /// Word, so the dictionary is the wrong place to look them up.
+    ///
+    /// Keep this list short and justified. A new entry is a claim that a
+    /// reader will not mistake the name for something they can type.
+    fn is_not_a_word_reference(token: &str) -> bool {
+        matches!(
+            token,
+            // Type and value names from LANG.VALUES, not callable Words.
+            "NIL" | "TRUE" | "FALSE"
+            // Specification section ids, which appear verbatim in checks.
+            | "LANG"
+        ) || token.starts_with("LANG-")
+    }
+
+    fn resolves(token: &str) -> bool {
+        if crate::kernel::generated::generated_word(token).is_some() {
+            return true;
+        }
+        if crate::surface_forms::lookup_surface_form(token).is_some() {
+            return true;
+        }
+        let canonical = crate::core_word_aliases::canonicalize_core_word_name(token);
+        crate::kernel::generated::generated_word(canonical.as_ref()).is_some()
+    }
+
+    #[test]
+    fn every_word_named_by_a_check_is_in_the_dictionary() {
+        let classes = [
+            CauseClass::Domain,
+            CauseClass::StackShape,
+            CauseClass::TypoOrUnknownName,
+            CauseClass::Environment,
+            CauseClass::ValueShape,
+            CauseClass::Index,
+            CauseClass::VectorLength,
+            CauseClass::ShapeMismatch,
+            CauseClass::SourceForm,
+            CauseClass::ResourceLimit,
+            CauseClass::UserLogic,
+            CauseClass::ContractViolation,
+            CauseClass::Effect,
+            CauseClass::NilFlow,
+            CauseClass::OptimizerMismatch,
+            CauseClass::InternalInvariant,
+            CauseClass::Unknown,
+        ];
+        let categories = [
+            None,
+            Some(ErrorCategory::StackUnderflow),
+            Some(ErrorCategory::StructureError),
+            Some(ErrorCategory::UnknownWord),
+            Some(ErrorCategory::DivisionByZero),
+            Some(ErrorCategory::IndexOutOfBounds),
+            Some(ErrorCategory::VectorLengthMismatch),
+            Some(ErrorCategory::ShapeMismatch),
+            Some(ErrorCategory::MalformedSource),
+            Some(ErrorCategory::NameConflict),
+            Some(ErrorCategory::ExecutionLimitExceeded),
+            Some(ErrorCategory::ResourceLimitExceeded),
+            Some(ErrorCategory::RecursionLimitExceeded),
+            Some(ErrorCategory::BuiltinProtection),
+            Some(ErrorCategory::CondExhausted),
+            Some(ErrorCategory::SelfReferentialDefinition),
+            Some(ErrorCategory::Declared("divisorEqualsZero")),
+        ];
+        let reasons = [
+            None,
+            Some(NilReason::DivisionByZero),
+            Some(NilReason::MissingField),
+            Some(NilReason::InvalidEncoding),
+            Some(NilReason::IndexOutOfBounds),
+            Some(NilReason::Undecidable),
+            Some(NilReason::SpaceExhausted),
+            Some(NilReason::DomainMiss),
+            Some(NilReason::NotAvailable),
+            Some(NilReason::Literal),
+        ];
+
+        // `DIV` is a real Word, so a check that interpolates the failing word's
+        // own name stays resolvable and the sweep tests the *table's* text.
+        for why in &classes {
+            for category in &categories {
+                for reason in &reasons {
+                    let checks =
+                        build_next_checks(why, Some("DIV"), category.as_ref(), reason.as_ref());
+                    for check in checks {
+                        for text in [
+                            &check.detail.en,
+                            &check.detail.ja,
+                            &check.title.en,
+                            &check.title.ja,
+                        ] {
+                            for token in word_shaped_tokens(text) {
+                                if is_not_a_word_reference(&token) {
+                                    continue;
+                                }
+                                assert!(
+                                    resolves(&token),
+                                    "check `{}` names `{token}`, which no Ajisai Word, alias or \
+                                     surface form resolves. A diagnosis may not send a reader to \
+                                     a name the dictionary rejects. Text: {text}",
+                                    check.code
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The positive half: the zero-division advice must name the word that
+    /// actually recovers a NIL, so the fix is not merely "stopped saying SAFE".
+    #[test]
+    fn zero_division_advice_names_or_nil() {
+        let checks = build_next_checks(
+            &CauseClass::Domain,
+            Some("DIV"),
+            Some(&ErrorCategory::DivisionByZero),
+            Some(&NilReason::DivisionByZero),
+        );
+        let advice = checks
+            .iter()
+            .find(|c| c.code == "checkZeroIsExpected")
+            .expect("zero-division diagnosis offers a recovery check");
+        assert!(
+            advice.detail.en.contains("OR-NIL") && advice.detail.ja.contains("OR-NIL"),
+            "both locales must name OR-NIL: en={} ja={}",
+            advice.detail.en,
+            advice.detail.ja
+        );
+        assert!(
+            !advice.detail.en.contains("SAFE") && !advice.detail.ja.contains("SAFE"),
+            "SAFE is not an Ajisai Word and must not be advised"
+        );
+    }
+}

@@ -208,7 +208,7 @@ mod single_char_aliases {
     /// whitespace ends a token, so `^` glued to a name is part of that name
     /// rather than a symbol of its own. `[` and `]` are no exception — they
     /// must stand alone too, so `^` glued to a closing bracket does not split
-    /// off either; it makes the whole `]^` an invalid token (SPEC 3.4).
+    /// off either; it makes the whole `]^` an invalid token (LANG.SOURCE.TEXT).
     #[test]
     fn aq_ver_002_d_caret_needs_surrounding_whitespace() {
         assert_eq!(tokenize("a^b").unwrap(), vec![sym("a^b")]);

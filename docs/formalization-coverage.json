@@ -2814,7 +2814,7 @@
     },
     {
       "id": "surface.left-brace",
-      "kind": "delimiter_sugar",
+      "kind": "retired_form",
       "surface": "{",
       "classification": "Surface",
       "spec_sections": [
@@ -2826,17 +2826,17 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "Block opening delimiter; parser-level structure for quotation/code-block construction, not a runtime word.",
+      "notes": "Retired block opening delimiter. Code blocks and vectors were unified onto '[' ']', and the tokenizer has rejected '{' since; recorded so a reader who meets it in older material is told what replaced it, not offered it as a delimiter.",
       "semantic_role": "Sugar",
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
-      "desugars_to": "BEGIN-BLOCK"
+      "desugars_to": "RETIRED-BEGIN-BLOCK"
     },
     {
       "id": "surface.right-brace",
-      "kind": "delimiter_sugar",
+      "kind": "retired_form",
       "surface": "}",
       "classification": "Surface",
       "spec_sections": [
@@ -2848,13 +2848,13 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "Block closing delimiter; parser-level structure for quotation/code-block construction, not a runtime word.",
+      "notes": "Retired block closing delimiter. Code blocks and vectors were unified onto '[' ']', and the tokenizer has rejected '}' since; recorded so a reader who meets it in older material is told what replaced it, not offered it as a delimiter.",
       "semantic_role": "Sugar",
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
-      "desugars_to": "END-BLOCK"
+      "desugars_to": "RETIRED-END-BLOCK"
     },
     {
       "id": "surface.quote",

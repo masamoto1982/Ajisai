@@ -26,6 +26,17 @@ const SKIP_DIRS = new Set(['node_modules', 'target', '.git', 'dist', 'build']);
 const EXTENSIONS = /\.(rs|ts|js|mjs|cjs|css|html|json|md|sh|yml|yaml)$/;
 const CITATION = /SPEC\s*§\s*[0-9]+(?:\.[0-9]+)*/g;
 
+// The same citation with the section sign left off. This form was invisible to
+// the gate for as long as the gate existed: both patterns above require a `§`,
+// and the whole-file guard below skipped any file that contained no `§` at all,
+// so a comment naming the retired document and a bare number passed clean. Four
+// such citations were sitting in `rust/src/interpreter/` — two of them in the
+// diagnosis tables, which is the surface an agent is told to read literally.
+// `SPEC` immediately before a number is unambiguous enough to match on its own:
+// the current specification numbers nothing, so there is no live document for
+// such a reference to name.
+const CITATION_NO_SIGN = /\bSPEC\s+[0-9]+(?:\.[0-9]+)*\b/g;
+
 // Source files have no sections of their own, so a bare `§N.M` in one names
 // some other document — and after the sweep above, the only document it can
 // name is the retired specification. A `.md` under docs/dev/ is different: a
@@ -77,10 +88,15 @@ for (const file of walk(ROOT)) {
   } catch {
     continue;
   }
-  // Both patterns need the section sign; only the first needs the word.
-  // Testing for 'SPEC' alone here made the bare-citation pass vacuous, which a
-  // probe caught and a green run did not.
-  if (!text.includes('§')) continue;
+  // Cheap whole-file guard before the per-line work. It must admit a file that
+  // carries a sign-less `SPEC <number>` and no section sign anywhere —
+  // requiring `§` here is exactly what hid that form. Testing for 'SPEC' alone
+  // would instead make the bare-`§N.M` pass vacuous, which a probe caught and a
+  // green run did not, so the two conditions stay separate.
+  if (!text.includes('§') && !CITATION_NO_SIGN.test(text)) continue;
+  // `CITATION_NO_SIGN` is a global regex, so the test above advanced its
+  // lastIndex. Reset it, or the per-line pass below starts mid-string.
+  CITATION_NO_SIGN.lastIndex = 0;
   const isSource = SOURCE_EXTENSIONS.test(file);
   const lines = text.split('\n');
   lines.forEach((line, index) => {
@@ -88,6 +104,9 @@ for (const file of walk(ROOT)) {
     if (exempt && exempt.test(context)) return;
     for (const match of line.match(CITATION) ?? []) {
       findings.push(`${rel}:${index + 1}: ${match}`);
+    }
+    for (const match of line.match(CITATION_NO_SIGN) ?? []) {
+      findings.push(`${rel}:${index + 1}: ${match} (no section sign)`);
     }
     if (!isSource) return;
     if (NAMES_ITS_DOCUMENT.test(context)) return;

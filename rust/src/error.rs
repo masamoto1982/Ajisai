@@ -12,7 +12,7 @@ pub enum NilReason {
     /// agreed on every emitted partial quotient up to the budget
     /// without diverging, or one of the operands' CF streams reported
     /// `CfStep::Exhausted`. The NIL Projection Rule projects this to NIL with
-    /// `absence.origin = comparisonBudget` rather than a SAFE-caught
+    /// `absence.origin = comparisonBudget` rather than an `OR-NIL`-recovered
     /// error.
     Undecidable,
     // `LogicallyUnknown` was retired: no `NilReason` value represents the

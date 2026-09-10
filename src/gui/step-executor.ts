@@ -54,13 +54,24 @@ const advanceState = (state: StepState): StepState => ({
     currentIndex: state.currentIndex + 1
 });
 
+/// A step's text can now span lines — a multi-line vector is one step — and a
+/// status line that wrapped mid-vector would undo the point of showing it. The
+/// editor highlight carries the exact range, so the message only needs enough
+/// of the text to recognise which step it is.
+const STEP_LABEL_LIMIT = 40;
+
 const formatStepMessage = (
     currentIndex: number,
-    totalTokens: number,
-    token: string
+    totalSteps: number,
+    step: string
 ): string => {
-    const remaining = totalTokens - currentIndex - 1;
-    return `[>] Step ${currentIndex + 1}/${totalTokens}: "${token}" (${remaining} remaining)`;
+    const remaining = totalSteps - currentIndex - 1;
+    const collapsed = step.replace(/\s+/g, ' ');
+    const label =
+        collapsed.length > STEP_LABEL_LIMIT
+            ? `${collapsed.slice(0, STEP_LABEL_LIMIT - 1)}…`
+            : collapsed;
+    return `[>] Step ${currentIndex + 1}/${totalSteps}: "${label}" (${remaining} remaining)`;
 };
 
 export const createStepExecutor = (
@@ -108,7 +119,7 @@ export const createStepExecutor = (
 
         state = createActiveState(tokens);
 
-        showInfo(`[STEP] Step mode: ${tokens.length} tokens (Ctrl+Enter to continue)`, true);
+        showInfo(`[STEP] Step mode: ${tokens.length} steps (Ctrl+Enter to continue)`, true);
 
         await executeNextToken();
     };

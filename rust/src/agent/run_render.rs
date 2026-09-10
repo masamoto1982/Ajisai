@@ -7,6 +7,7 @@
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
+use crate::interpreter::upstream_nil_link::link_upstream_nil;
 use crate::interpreter::Interpreter;
 
 use super::execution_receipt::build_receipt;
@@ -65,11 +66,16 @@ pub(crate) fn completed_run_report(
         Err(err) => {
             let message = err.to_string();
             let stack_len = interp.get_stack().len();
-            let diagnosis = trace
+            let mut diagnosis = trace
                 .iter()
                 .rev()
                 .find_map(|event| event.diagnosis.clone())
                 .unwrap_or_else(|| DebugDiagnosis::from_error(&err, None, stack_len, stack_len));
+            // A NIL that flowed downstream fails at the Word that *received* it,
+            // so the top-level diagnosis names that Word and not the cause. Give
+            // the top level a link back to the producing node rather than
+            // leaving the cause reachable only by walking `errorFlowTrace`.
+            link_upstream_nil(&mut diagnosis, &trace);
             let category = ErrorCategory::from_error(&err);
             error_report(
                 interp,
