@@ -24,19 +24,21 @@ pub(crate) use contract::{
     safety_from_contract, stability_from_contract,
 };
 pub use contract::{mass_contract, ExecutionForm, MassContract};
+use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
 
 pub use crate::kernel::generated::{Determinism, GeneratedWord, NilPolicy, Partiality, Purity};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum SafetyLevel {
     A,
     B,
     D,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum WordProfile {
     /// Host-independent, portable Ajisai semantics.
     Core,
@@ -46,7 +48,8 @@ pub enum WordProfile {
     PlatformSpecific,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CorewordMetadata {
     pub name: String,
     pub category: String,
