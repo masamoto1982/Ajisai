@@ -20,7 +20,7 @@
 use serde_json::{json, Value as Json};
 
 use crate::interpreter::word_identity::content_digest;
-use crate::interpreter::{ResourceUsage, RuntimeLimits};
+use crate::interpreter::{limit_profile, ResourceUsage, RuntimeLimits};
 
 /// Version tag for the receipt's own byte grammar. Bump it if the grammar
 /// changes — a receipt is not a compatible value across a tag change, the
@@ -66,28 +66,14 @@ fn write_str(bytes: &mut Vec<u8>, s: &str) {
 /// `outcomes` tool: a static prediction is only meaningful relative to a
 /// named profile (`docs/dev/auditable-kernel-work-order-2026-09.md` §5.2
 /// pitfall C), and this is the same shape a receipt already reports it in.
+/// The ceiling set itself is enumerated once, in
+/// `interpreter::limit_profile` — see that module for why.
 pub(crate) fn limit_profile_json(limits: &RuntimeLimits, step_limit: usize) -> Json {
-    json!({
-        "executionSteps": step_limit,
-        "materializedElements": limits.max_materialized_elements,
-        "sourceBytes": limits.max_source_bytes,
-        "numericLiteralDigits": limits.max_numeric_literal_digits,
-        "numericWork": limits.max_numeric_work,
-        "collectionWork": limits.max_collection_work,
-        "bigintBits": limits.max_bigint_bits,
-        "algebraicTerms": limits.max_algebraic_terms,
-    })
+    limit_profile::to_json(limits, step_limit)
 }
 
 fn write_limit_profile(bytes: &mut Vec<u8>, limits: &RuntimeLimits, step_limit: usize) {
-    bytes.extend_from_slice(&(step_limit as u64).to_be_bytes());
-    bytes.extend_from_slice(&(limits.max_materialized_elements as u64).to_be_bytes());
-    bytes.extend_from_slice(&(limits.max_source_bytes as u64).to_be_bytes());
-    bytes.extend_from_slice(&(limits.max_numeric_literal_digits as u64).to_be_bytes());
-    bytes.extend_from_slice(&limits.max_numeric_work.to_be_bytes());
-    bytes.extend_from_slice(&limits.max_collection_work.to_be_bytes());
-    bytes.extend_from_slice(&limits.max_bigint_bits.to_be_bytes());
-    bytes.extend_from_slice(&(limits.max_algebraic_terms as u64).to_be_bytes());
+    limit_profile::write_digest_bytes(bytes, limits, step_limit);
 }
 
 /// Assemble the execution receipt for one run, or `None` when the

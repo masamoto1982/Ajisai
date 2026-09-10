@@ -495,7 +495,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, and <code>ALL</code> evaluate their code operand (LANG.SOURCE.CODE) once per visited element, in index order, with the block's stack effect isolated to its own operands.</p>
 
-<p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state. The block's single result is the mapped element as it stands, whatever domain it is in: a Vector of one element is a Vector of one element (LANG.VALUES.DISJOINT), so <code>[ 1 2 ] [ 1 COLLECT ] MAP</code> answers <code>[ [ 1 ] [ 2 ] ]</code> and no Word unwraps a result on the grounds of its length.</p>
+<p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state. The block's result is what it leaves on top when it finishes, taken as it stands, whatever domain it is in: a Vector of one element is a Vector of one element (LANG.VALUES.DISJOINT), so <code>[ 1 2 ] [ 1 COLLECT ] MAP</code> answers <code>[ [ 1 ] [ 2 ] ]</code> and no Word unwraps a result on the grounds of its length. A block that finishes having left nothing raises the <code>blockContractViolation</code> its caller's contract registers; leaving more than the result is ordinary and the rest is discarded, because a predicate need not consume the element it was given and KEEP (LANG.MODIFIERS.CONSUMPTION) applies inside the block as well as outside it.</p>
 
 <h3 id="lang-collections-budget">LANG.COLLECTIONS.BUDGET — Materialization</h3>
 

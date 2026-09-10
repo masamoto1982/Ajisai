@@ -59,7 +59,10 @@ impl AjisaiInterpreter {
     }
 
     /// The resource ceilings this interpreter is actually running under, as
-    /// JSON, under the same names every other Ajisai host publishes them by.
+    /// JSON, under the same names every other Ajisai host publishes them by —
+    /// literally the same, since `interpreter::limit_profile` is the one place
+    /// the ceiling set is enumerated and the receipt reads it too. This
+    /// sentence used to be a claim with nothing checking it.
     ///
     /// LANG.MACHINE.LIMITS makes limits a host safety control rather than value
     /// semantics, so two conforming hosts legitimately disagree about them —
@@ -71,18 +74,10 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn host_profile(&self) -> String {
         let limits = self.interpreter.runtime_limits();
+        let step_limit = self.interpreter.max_execution_steps();
         serde_json::json!({
             "profile": "browser-playground",
-            "limits": {
-                "sourceBytes": limits.max_source_bytes,
-                "executionSteps": self.interpreter.max_execution_steps(),
-                "materializedElements": limits.max_materialized_elements,
-                "numericLiteralDigits": limits.max_numeric_literal_digits,
-                "numericWork": limits.max_numeric_work,
-                "collectionWork": limits.max_collection_work,
-                "bigintBits": limits.max_bigint_bits,
-                "algebraicTerms": limits.max_algebraic_terms,
-            },
+            "limits": crate::interpreter::limit_profile::to_json(limits, step_limit),
         })
         .to_string()
     }
