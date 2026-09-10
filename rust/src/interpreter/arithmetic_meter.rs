@@ -78,8 +78,10 @@ pub(crate) fn charge_binary_schema(
         let pairs = match schema {
             ExactArithmeticSchema::Mul => left_terms.saturating_mul(right_terms),
             // Division inverts the right operand (conjugation recursion, ~term²
-            // inner products) and multiplies; bound by both.
-            ExactArithmeticSchema::Div => left_terms
+            // inner products) and multiplies; bound by both. `MOD` performs
+            // that division and then one more multiply and subtract, which the
+            // same bound already covers.
+            ExactArithmeticSchema::Div | ExactArithmeticSchema::Mod => left_terms
                 .saturating_mul(right_terms)
                 .saturating_add(right_terms.saturating_mul(right_terms)),
             ExactArithmeticSchema::Add | ExactArithmeticSchema::Sub => {
