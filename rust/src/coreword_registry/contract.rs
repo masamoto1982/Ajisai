@@ -4,7 +4,6 @@
 //! and control arities never acquire a guessed fixed contract.
 
 use crate::kernel::generated::{Arity, GeneratedWord};
-use serde::Serialize;
 
 /// Static mass contract: a word's flow-mass relationship under the
 /// default target/consume mode. `consumes` operands are read and `produces` results
@@ -16,8 +15,7 @@ use serde::Serialize;
 /// `Dynamic` marks a data-dependent arity (e.g. `COLLECT`'s count-driven gather
 /// or runtime-shaped vector ops) that is not statically pinned; the static
 /// mass-conservation validator abstains on `Dynamic` words.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase", tag = "kind")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MassContract {
     Fixed { consumes: u8, produces: u8 },
     Dynamic,
@@ -42,8 +40,7 @@ impl MassContract {
 /// execution loop interprets the *following source unit* positionally rather
 /// than popping operands. This enum lets generators and consistency tests assert
 /// that classification instead of parsing the prose.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase", tag = "kind")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExecutionForm {
     /// Ordinary word: dispatched by name, operates on stack operands.
     RuntimeWord,
