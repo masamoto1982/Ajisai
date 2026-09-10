@@ -160,3 +160,69 @@ async fn an_empty_axis_against_a_longer_one_still_mismatches() {
     let stack = run_ok("[ 1 ] [ 2 3 ] +").await;
     assert_eq!(stack[0], run_ok("[ 3 4 ]").await[0]);
 }
+
+/// **An absent lane stays absent through the exact-real broadcast.**
+///
+/// The exact lift read a lane through `ExactReal::from_fraction(Fraction::
+/// nil())` — a *number* whose denominator happens to be zero — so the law
+/// computed with it and answered an observable `0/0` scalar. The lane stopped
+/// being an absence at all: `NIL-REASON` on it reported `notAvailable`, the
+/// answer for a value that carries no reason, because by then it was a value.
+/// Losing the reason is one bug; losing the NIL is a value escaping
+/// LANG.FAILURE.TRICHOTOMY.
+#[tokio::test]
+async fn an_absent_lane_survives_the_exact_real_broadcast() {
+    for code in [
+        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] +",
+        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] *",
+        "[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / 2 +",
+    ] {
+        let stack = run_ok(code).await;
+        let lane = stack[0]
+            .child(1)
+            .unwrap_or_else(|| panic!("`{code}` must leave a two-lane vector"));
+        assert!(lane.is_nil(), "`{code}` lane 1 must stay NIL, got {lane:?}");
+        assert_eq!(
+            lane.nil_reason().cloned(),
+            Some(NilReason::DivisionByZero),
+            "`{code}` lane 1 must keep the reason it was created with"
+        );
+        // The exact lane beside it is untouched.
+        assert!(is_exact_real_lane(&stack[0].child(0).unwrap()));
+    }
+}
+
+/// **`MOD` over a vector of irrationals computes, rather than crashing.**
+///
+/// `MOD` had a scalar exact-real arm and no vector one, so a vector of
+/// continued fractions fell through to the rational kernel, which flattened
+/// them into a lane buffer it then indexed off the end. That was a panic — no
+/// value, no NIL, no ERROR, so no outcome under LANG.FAILURE.TRICHOTOMY at
+/// all. `arithmetic_division`'s header already says `DIV` and `MOD` share the
+/// division underneath; they now share the schema that carries it.
+#[tokio::test]
+async fn modulo_over_an_irrational_vector_stays_exact() {
+    // √2 mod 1 = √2 - 1, √3 mod 1 = √3 - 1: both irrational, both exact.
+    let stack = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 1 ] %").await;
+    let children = vector_children(&stack[0]);
+    assert_eq!(children.len(), 2);
+    for lane in children {
+        assert!(
+            is_exact_real_lane(lane) && !lane.is_nil(),
+            "each lane must stay an exact real, got {lane:?}"
+        );
+    }
+    assert_eq!(stack[0], run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 1 ] % ").await[0]);
+
+    // A zero divisor projects per lane here exactly as it does for `DIV`.
+    let zero = run_ok("[ 2 3 ] [ SQRT ] MAP [ 0 0 ] %").await;
+    for lane in vector_children(&zero[0]) {
+        assert_eq!(lane.nil_reason().cloned(), Some(NilReason::DivisionByZero));
+    }
+
+    // And an already-absent lane passes through `MOD` with its reason, the
+    // same as through every other element-wise Word.
+    let mixed = run_ok("[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] %").await;
+    let lane = mixed[0].child(1).expect("two-lane vector");
+    assert_eq!(lane.nil_reason().cloned(), Some(NilReason::DivisionByZero));
+}

@@ -30,11 +30,15 @@ pub(crate) fn division_by_zero_projection() -> Value {
 /// The scalar law of `DIV` as a whole `Value`, for the lane-wise lift.
 ///
 /// A zero divisor is a projection, not a failure (`LANG.FAILURE.TRICHOTOMY`),
-/// so it answers with the reasoned NIL the scalar `6 0 /` answers with. A NIL
-/// operand is ordinary passthrough and carries no reason of its own — the
-/// operand was already absent before `DIV` saw it. The NIL test comes first
-/// because `Fraction::nil` has numerator 0, so an absent divisor answers
-/// `is_zero` as well.
+/// so it answers with the reasoned NIL the scalar `6 0 /` answers with.
+///
+/// An absent operand never reaches here: `apply_lane_wise_broadcast` lifts the
+/// scalar passthrough law over each lane *before* consulting this one, while
+/// the lane is still a `Value` and its reason is still readable. The guard
+/// stays because it is not only about absence — `Fraction::nil` has
+/// denominator *and* numerator 0, so an absent divisor answers `is_zero` too,
+/// and dropping the test would read one as a zero divisor and invent a
+/// `divisionByZero` the program never performed.
 fn divide_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
     if a.is_nil() || b.is_nil() {
         return Ok(Value::nil());
@@ -70,9 +74,8 @@ pub(crate) fn build_scalar_fast_projection(wrap: &ScalarFastWrap) -> Value {
 /// The scalar law of `MOD` as a whole `Value`, for the lane-wise lift.
 ///
 /// Identical in shape to [`divide_lane`], and for the reason in this module's
-/// header: the zero divisor is the same one. A NIL operand is ordinary
-/// passthrough; the NIL test comes first because `Fraction::nil` has
-/// numerator 0, so an absent divisor answers `is_zero` as well.
+/// header: the zero divisor is the same one. Its absence guard is the same
+/// guard, kept for the same reason [`divide_lane`]'s doc gives.
 pub(crate) fn modulo_lane(a: &Fraction, b: &Fraction) -> Result<Value> {
     if a.is_nil() || b.is_nil() {
         return Ok(Value::nil());

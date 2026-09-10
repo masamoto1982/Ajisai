@@ -16,10 +16,62 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::tensor_ops::{
     broadcast_children, broadcast_leaf, broadcast_shape, compute_strides, project_broadcast_index,
-    ravel_index, rectangular_shape, unravel_index, FlatTensor,
+    ravel_index, rectangular_shape, unravel_index,
 };
 use crate::types::fraction::Fraction;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
+
+/// Whether an absent lane sits anywhere inside `value`.
+///
+/// Two representations record one fact. A NIL that lives as a `Value` carries
+/// its `AbsenceMetadata`, and therefore its reason; a NIL that lives as a
+/// dense tensor lane is the denominator-0 sentinel `Fraction::nil` stores,
+/// which records *that* the lane is absent and nothing about why. Both count
+/// here: this predicate exists to steer a broadcast away from the flat
+/// `Fraction` kernels, which can only produce the second kind.
+///
+/// Reached only when a broadcast is about to choose a route, so the cost is
+/// one linear scan against a value the flat path would have walked anyway.
+pub(crate) fn contains_absent_lane(value: &Value) -> bool {
+    match &value.data {
+        ValueData::Nil => true,
+        ValueData::Vector(items) => items.iter().any(contains_absent_lane),
+        ValueData::Tensor { data, .. } => !data.all_lanes_valid(),
+        ValueData::Scalar(f) => f.is_nil(),
+        ValueData::Boolean(_)
+        | ValueData::ExactScalar(_)
+        | ValueData::Symbol(_)
+        | ValueData::Text(_) => false,
+    }
+}
+
+/// The per-lane lift of the scalar NIL passthrough law, or `None` when this
+/// lane has two present operands and the numeric law decides it.
+///
+/// `LANG.COLLECTIONS.LIFT` says each lane preserves the scalar law's NIL
+/// distinction, and the scalar law is one rule stated once, in
+/// `Interpreter::declared_nil_contract`'s `Passthrough` arm: a NIL operand
+/// *is* the result, and the leftmost one wins, matching left-to-right
+/// evaluation order. This is that rule, per lane — the same
+/// `Value::nil_inheriting_absence_from` the scalar helpers use, so a lane
+/// cannot answer a NIL the scalar would not.
+///
+/// It is applied *before* the lane's numeric law, not inside it. A law that
+/// takes `&Fraction` operands cannot obey it: `Fraction` records absence as a
+/// zero denominator and carries no reason, so every such law could answer was
+/// a reasonless NIL — which reads back as `nil:literal`, "a NIL the program
+/// wrote rather than computed" (`spec/outcomes.json`). That is how
+/// `[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV` reported a written NIL for a computed
+/// division by zero.
+pub(crate) fn lane_nil_passthrough(a: &Value, b: &Value) -> Option<Value> {
+    if a.is_nil() {
+        return Some(Value::nil_inheriting_absence_from(a));
+    }
+    if b.is_nil() {
+        return Some(Value::nil_inheriting_absence_from(b));
+    }
+    None
+}
 
 /// The tree-walking half of [`apply_lane_wise_broadcast`], for ragged or
 /// nested-mixed operands. Mirrors [`apply_recursive_broadcast`] exactly; only
@@ -31,15 +83,7 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
 {
     match (broadcast_children(a), broadcast_children(b)) {
-        (None, None) => {
-            let (Some(fa), Some(fb)) = (broadcast_leaf(a), broadcast_leaf(b)) else {
-                return Err(AjisaiError::declared(
-                    "nonNumeric",
-                    "expected a number or vector, got a non-numeric value",
-                ));
-            };
-            op(&fa, &fb)
-        }
+        (None, None) => apply_lane_law(a, b, op),
         (Some(children), None) => {
             let out: Vec<Value> = children
                 .iter()
@@ -88,8 +132,11 @@ where
 /// broadcasts its single dividend across three divisors here exactly as
 /// `[ 6 ] [ 1 2 3 ] /` does there.
 ///
-/// The leaf sees `Fraction::nil()` for an absent operand (see
-/// [`broadcast_leaf`]), so the law can tell a NIL operand apart from a zero.
+/// The leaf law never sees an absent operand: [`apply_lane_law`] settles those
+/// first, from the `Value`, so each lane's reason survives the lift. It is not
+/// a special case for values that happen to carry one — every lane of every
+/// operand takes that route, which is why no caller has to ask whether a
+/// reason is at stake before choosing this lift.
 pub(crate) fn apply_lane_wise_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
@@ -104,20 +151,24 @@ where
         ));
     }
 
-    if rectangular_shape(a).is_none() || rectangular_shape(b).is_none() {
+    // Ragged operands cannot be flattened to a tensor whose shape matches
+    // their element count, so they follow the value tree instead.
+    let (Some(shape_a), Some(shape_b)) = (rectangular_shape(a), rectangular_shape(b)) else {
         return apply_lane_wise_recursive(a, b, op);
-    }
+    };
 
-    let tensor_a = FlatTensor::from_value(a)?;
-    let tensor_b = FlatTensor::from_value(b)?;
-    let out_shape = broadcast_shape(&tensor_a.shape, &tensor_b.shape)?;
+    let lanes_a = flat_leaf_values(a);
+    let lanes_b = flat_leaf_values(b);
+    let out_shape = broadcast_shape(&shape_a, &shape_b)?;
     let out_size: usize = if out_shape.is_empty() {
         1
     } else {
         out_shape.iter().product()
     };
     let out_strides = compute_strides(&out_shape);
-    let same_shape = tensor_a.shape == tensor_b.shape;
+    let strides_a = compute_strides(&shape_a);
+    let strides_b = compute_strides(&shape_b);
+    let same_shape = shape_a == shape_b;
 
     let mut out_values: Vec<Value> = Vec::with_capacity(out_size);
     for linear in 0..out_size {
@@ -125,17 +176,71 @@ where
             (linear, linear)
         } else {
             let out_index = unravel_index(linear, &out_shape, &out_strides);
-            let a_index = project_broadcast_index(&out_index, &out_shape, &tensor_a.shape);
-            let b_index = project_broadcast_index(&out_index, &out_shape, &tensor_b.shape);
+            let a_index = project_broadcast_index(&out_index, &out_shape, &shape_a);
+            let b_index = project_broadcast_index(&out_index, &out_shape, &shape_b);
             (
-                ravel_index(&a_index, &tensor_a.strides),
-                ravel_index(&b_index, &tensor_b.strides),
+                ravel_index(&a_index, &strides_a),
+                ravel_index(&b_index, &strides_b),
             )
         };
-        out_values.push(op(&tensor_a.data[a_offset], &tensor_b.data[b_offset])?);
+        out_values.push(apply_lane_law(&lanes_a[a_offset], &lanes_b[b_offset], op)?);
     }
 
     Ok(nest_lane_values(out_values, &out_shape))
+}
+
+/// One lane: the passthrough law first, then the numeric law.
+///
+/// The two flat operands and the tree walk share this so a lane cannot be
+/// decided one way in a rectangular value and another way in a ragged one.
+fn apply_lane_law<F>(a: &Value, b: &Value, op: F) -> Result<Value>
+where
+    F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
+{
+    // Absence first, and from the `Value` rather than the `Fraction`: this is
+    // the one point in the lift where the lane's reason is still readable.
+    if let Some(nil) = lane_nil_passthrough(a, b) {
+        return Ok(nil);
+    }
+    let (Some(fa), Some(fb)) = (broadcast_leaf(a), broadcast_leaf(b)) else {
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            "expected a number or vector, got a non-numeric value",
+        ));
+    };
+    op(&fa, &fb)
+}
+
+/// The leaves of a rectangular value, in the order `FlatTensor` flattens it.
+///
+/// This is `tensor_ops::FlatTensor::from_value` with the lane type widened
+/// from `Fraction` to `Value` — the whole point of this module. A `Fraction` lane records that
+/// it is absent and nothing about why, so flattening through one discards
+/// every reason before any lane law could preserve it; a `Value` lane carries
+/// its `AbsenceMetadata` intact.
+///
+/// A dense tensor's absent lane is the one case with nothing to carry: the
+/// reason was already gone when the tensor was built, so it materializes as a
+/// reasonless NIL, which is what it is.
+fn flat_leaf_values(value: &Value) -> Vec<Value> {
+    fn collect(value: &Value, out: &mut Vec<Value>) {
+        match &value.data {
+            ValueData::Vector(items) => {
+                for item in items.iter() {
+                    collect(item, out);
+                }
+            }
+            ValueData::Tensor { data, .. } => {
+                for lane in 0..data.len() {
+                    out.push(Value::from_fraction(data.fraction_or_nil(lane)));
+                }
+            }
+            _ => out.push(value.clone()),
+        }
+    }
+    let mut out = Vec::new();
+    collect(value, &mut out);
+    out
 }
 
 /// Fold flat lane values back into `out_shape`.

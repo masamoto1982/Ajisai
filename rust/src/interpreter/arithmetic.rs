@@ -6,6 +6,7 @@ use crate::interpreter::arithmetic_meter::{
     charge_binary_schema, check_result_size, measure_operand,
 };
 use crate::interpreter::simd_ops;
+use crate::interpreter::tensor_lane_ops::lane_nil_passthrough;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, push_result,
@@ -24,6 +25,12 @@ pub(crate) enum ExactArithmeticSchema {
     Sub,
     Mul,
     Div,
+    /// `MOD` shares `DIV`'s division, so it shares its schema: `a MOD b` is
+    /// `a - b * floor(a/b)`, and a zero divisor is the same undefined
+    /// operation underneath (`arithmetic_division`'s module header). It joined
+    /// the schema when a vector of irrationals reached `MOD` with no exact
+    /// route to take and panicked in the rational kernel.
+    Mod,
 }
 
 impl ExactArithmeticSchema {
@@ -39,6 +46,13 @@ impl ExactArithmeticSchema {
                     Ok(a.div(b))
                 }
             }
+            ExactArithmeticSchema::Mod => {
+                if b.is_zero() {
+                    Err(AjisaiError::DivisionByZero)
+                } else {
+                    Ok(a.modulo(b))
+                }
+            }
         }
     }
 
@@ -48,6 +62,13 @@ impl ExactArithmeticSchema {
             ExactArithmeticSchema::Sub => Some(a.sub(b)),
             ExactArithmeticSchema::Mul => Some(a.mul(b)),
             ExactArithmeticSchema::Div => a.div(b),
+            // `a - b * floor(a/b)`, the definition `op_mod`'s scalar arm
+            // already computes. `None` folds a zero divisor together with
+            // continued-fraction budget exhaustion, exactly as `Div` does.
+            ExactArithmeticSchema::Mod => a
+                .div(b)
+                .and_then(|quotient| quotient.floor())
+                .map(|floor| a.sub(&b.mul(&floor))),
         }
     }
 }
@@ -74,7 +95,9 @@ fn simd_schema_candidate(
         ExactArithmeticSchema::Mul => simd_ops::apply_simd_mul(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_mul(a, b))
             .or_else(|| simd_ops::apply_simd_scalar_mul(b, a)),
-        ExactArithmeticSchema::Div => None,
+        // No SIMD kernel inverts or divides a lane, so neither of the two
+        // Words built on division takes this route.
+        ExactArithmeticSchema::Div | ExactArithmeticSchema::Mod => None,
     }
 }
 
@@ -128,7 +151,7 @@ fn push_exact_real_schema_result(
     Ok(true)
 }
 
-fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
+pub(crate) fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
     if interp.stack.len() < 2 {
         return None;
     }
@@ -220,6 +243,11 @@ fn schema_via_kernel(
         ExactArithmeticSchema::Sub => kernel_arithmetic::sub,
         ExactArithmeticSchema::Mul => kernel_arithmetic::mul,
         ExactArithmeticSchema::Div => kernel_arithmetic::div,
+        // The Spine has no modulo primitive, and `MOD` does not take the
+        // scalar fast path that reaches this. Answering by the schema's own
+        // rational law keeps that a fact about routing rather than a panic
+        // waiting for the caller that stops being true.
+        ExactArithmeticSchema::Mod => return schema.fraction(a, b),
     };
     match &primitive(&operands)[0] {
         KernelValue::Scalar(result) => Ok(result.as_fraction().cloned().expect("rational")),
@@ -389,6 +417,15 @@ fn apply_exact_real_recursive_broadcast(
 
     match (broadcast_children(a), broadcast_children(b)) {
         (None, None) => {
+            // Absence before arithmetic, for the reason the rational lift
+            // gives (`tensor_lane_ops::lane_nil_passthrough`) and one more:
+            // `ExactReal::from_fraction(Fraction::nil())` is a *number* whose
+            // denominator happens to be zero, so the exact law answered a NIL
+            // lane with an observable `0/0` scalar — an absence that had
+            // stopped being one.
+            if let Some(nil) = lane_nil_passthrough(a, b) {
+                return Ok(nil);
+            }
             let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
                 // Reached only through ADD/SUB/MUL/DIV/MOD/QUANTIZE's own
                 // binary dispatch, which all declare `nonNumeric` uniformly.
@@ -464,7 +501,14 @@ fn exact_flat_leaf_lanes(a: &Value, b: &Value) -> Option<(Vec<ExactReal>, Vec<Ex
     let mut b_lanes = Vec::with_capacity(b_children.len());
     for (x, y) in a_children.iter().zip(b_children.iter()) {
         // Any nested child must take the recursive path, not the flat kernel.
-        if broadcast_children(x).is_some() || broadcast_children(y).is_some() {
+        // So must an absent lane: the kernel computes `Send` `ExactReal`
+        // lanes, which cannot carry an `AbsenceMetadata`, and the recursion
+        // applies the passthrough law where the lane is still a `Value`.
+        if broadcast_children(x).is_some()
+            || broadcast_children(y).is_some()
+            || x.is_nil()
+            || y.is_nil()
+        {
             return None;
         }
         a_lanes.push(exact_broadcast_leaf(x)?);
@@ -477,7 +521,7 @@ fn exact_flat_leaf_lanes(a: &Value, b: &Value) -> Option<(Vec<ExactReal>, Vec<Ex
 /// lanes. Returns `Ok(false)` (leaving the stack untouched) for the cases the
 /// caller still routes elsewhere — Stack target mode and top-level NIL — so the
 /// existing NIL-passthrough and reduction paths keep their behavior.
-fn push_exact_real_broadcast_result(
+pub(crate) fn push_exact_real_broadcast_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
     a: &Value,

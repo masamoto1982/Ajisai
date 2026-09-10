@@ -1424,6 +1424,29 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- LANG.COLLECTIONS.LIFT: "each lane preserves the exactness, truth, NIL, and
+     ERROR distinctions of the scalar law". The scalar law is passthrough with
+     the reason intact, so a lane that a previous Word emptied still says why
+     it is empty after the next element-wise Word runs over it. It used to say
+     `literal` instead — the reason for a NIL the program wrote rather than
+     computed — because the element-wise kernels answer each lane with a
+     rational, and a rational records that a lane is absent but nothing about
+     why. -->
+
+<section class="ajisai-case" id="core-arithmetic-preserves-a-nil-lanes-reason" data-category="core">
+  <h3>A NIL lane keeps the reason it was created with through the next arithmetic Word</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-arithmetic-preserves-an-exact-lanes-nil" data-category="core">
+  <h3>A NIL lane beside an irrational one is still a NIL after the next arithmetic Word</h3>
+  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-division-projects-the-zero-divisor-lane-only" data-category="core">
   <h3>A zero divisor empties its own lane, not the vector around it</h3>
   <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] /</pre>

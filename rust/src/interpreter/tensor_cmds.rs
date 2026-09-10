@@ -1,4 +1,5 @@
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::arithmetic::{push_exact_real_broadcast_result, ExactArithmeticSchema};
 use crate::interpreter::arithmetic_division::{division_by_zero_projection, modulo_lane};
 use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
 use crate::interpreter::value_extraction_helpers::{
@@ -182,6 +183,19 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
+    // A *vector* of irrationals has no scalar `ExactScalar` on top, so the
+    // block above declines it and the rational broadcast below cannot hold it
+    // either: `[ 2 3 ] [ SQRT ] MAP [ 1 1 ] %` flattened two continued
+    // fractions into a rational lane buffer and indexed off its end — a panic,
+    // which is no outcome at all under LANG.FAILURE.TRICHOTOMY. Take the same
+    // exact-real broadcast ADD/SUB/MUL/DIV take; `MOD` was simply never given
+    // one.
+    if let Some((a, b)) = crate::interpreter::arithmetic::stacktop_pair(interp) {
+        if push_exact_real_broadcast_result(interp, ExactArithmeticSchema::Mod, &a, &b)? {
+            return Ok(());
+        }
+    }
+
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     let b_val: Value = if is_keep_mode {
@@ -207,13 +221,7 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     let result = apply_binary_broadcast_with_metrics(
         &a_val,
         &b_val,
-        |x, y| {
-            if y.is_zero() {
-                Err(AjisaiError::DivisionByZero)
-            } else {
-                Ok(x.modulo(y))
-            }
-        },
+        |x, y| ExactArithmeticSchema::Mod.fraction(x, y),
         Some(&mut interp.runtime_metrics),
     );
 

@@ -67,6 +67,7 @@
     "outcome-registry:check": "node scripts/check-outcome-registry.mjs",
     "outcome-bijection:check": "node scripts/check-outcome-bijection.mjs",
     "outcome-prediction:check": "node scripts/check-outcome-prediction.mjs",
+    "nil-reason-lift:check": "node scripts/check-nil-reason-lift.mjs",
     "vendor:katex": "rm -rf public/vendor/katex && mkdir -p public/vendor/katex/contrib public/vendor/katex/fonts && cp node_modules/katex/dist/katex.min.css node_modules/katex/dist/katex.min.js public/vendor/katex/ && cp node_modules/katex/dist/contrib/auto-render.min.js public/vendor/katex/contrib/ && cp node_modules/katex/dist/fonts/*.woff2 public/vendor/katex/fonts/ && cp node_modules/katex/LICENSE public/vendor/katex/LICENSE && node scripts/vendor-katex-banner.mjs"
   },
   "devDependencies": {

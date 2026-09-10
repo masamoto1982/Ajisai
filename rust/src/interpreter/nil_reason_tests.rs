@@ -322,3 +322,65 @@ async fn every_reachable_nil_carries_a_reason() {
         }
     }
 }
+
+/// **A lane keeps its reason across a second element-wise Word.**
+///
+/// `LANG.COLLECTIONS.LIFT` says each lane preserves the scalar law's NIL
+/// distinction, and the scalar law is passthrough with the reason intact
+/// (`1 0 / 1 +` is still `NIL(divisionByZero)`). Lifted, it was not: the
+/// element-wise kernels answer each lane with a `Fraction`, which records
+/// absence as a zero denominator and carries no reason, so the second Word
+/// re-reported every lane as `NIL(literal)` — "a NIL the program wrote rather
+/// than computed" (`spec/outcomes.json`), for a division by zero the program
+/// had performed and no NIL written anywhere in the source.
+#[tokio::test]
+async fn a_nil_lane_keeps_its_reason_through_the_next_element_wise_word() {
+    for (source, expected) in [
+        ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] +", NilReason::DivisionByZero),
+        ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] -", NilReason::DivisionByZero),
+        ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] *", NilReason::DivisionByZero),
+        ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] /", NilReason::DivisionByZero),
+        ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] %", NilReason::DivisionByZero),
+        ("[ 1 2 ] [ 1 0 ] / 2 *", NilReason::DivisionByZero),
+        ("[ 4 -1 ] SQRT [ 1 1 ] +", NilReason::DomainMiss),
+        (
+            "[ '1' 'a' ] [ NUM ] MAP [ 1 1 ] +",
+            NilReason::InvalidEncoding,
+        ),
+    ] {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(source)
+            .await
+            .unwrap_or_else(|e| panic!("`{source}` unexpectedly errored: {e}"));
+        let lane = interp.get_stack()[0]
+            .child(1)
+            .unwrap_or_else(|| panic!("`{source}` must leave a two-lane vector"));
+        assert!(lane.is_nil(), "`{source}` lane 1 must stay NIL: {lane:?}");
+        assert_eq!(
+            lane.nil_reason().cloned(),
+            Some(expected),
+            "`{source}` lane 1 lost the reason it was created with"
+        );
+    }
+}
+
+/// **The leftmost NIL wins, per lane** — the same tie-break the scalar law
+/// takes (`Interpreter::declared_nil_contract`'s `Passthrough` arm, "matching
+/// left-to-right evaluation order"), so a lane cannot answer a NIL the scalar
+/// would not.
+#[tokio::test]
+async fn the_leftmost_nil_lane_decides_the_reason() {
+    for (source, expected) in [
+        (
+            "[ 1 2 ] [ 1 0 ] / [ 4 -1 ] SQRT +",
+            NilReason::DivisionByZero,
+        ),
+        ("[ 4 -1 ] SQRT [ 1 2 ] [ 1 0 ] / +", NilReason::DomainMiss),
+    ] {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        let lane = interp.get_stack()[0].child(1).expect("two-lane vector");
+        assert_eq!(lane.nil_reason().cloned(), Some(expected), "{source}");
+    }
+}
