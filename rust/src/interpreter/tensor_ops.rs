@@ -289,12 +289,13 @@ pub(crate) fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
 pub(crate) fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
     match &value.data {
         ValueData::Vector(items) => Some(items.as_ref().clone()),
-        ValueData::Tensor { data, shape } => {
-            let nested = build_nested_value(&data.to_fractions(), shape);
-            match nested.data {
-                ValueData::Vector(items) => Some(items.as_ref().clone()),
-                _ => None,
-            }
+        // One row per outermost index, through `Value::child` — the
+        // reason-preserving materialization. Rebuilding the rows from
+        // `to_fractions()` instead dropped every absent lane's reason here,
+        // one level above the lane laws that were taught to keep it.
+        ValueData::Tensor { shape, .. } => {
+            let outer = *shape.first()?;
+            Some((0..outer).filter_map(|row| value.child(row)).collect())
         }
         _ => None,
     }

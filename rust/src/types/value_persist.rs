@@ -21,14 +21,31 @@
 //! outside that oracle (their round-trip is a separate future concern).
 
 use crate::error::NilReason;
+use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Interpretation, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
+
+/// The absence a reason alone determines, taken from the one constructor that
+/// derives it.
+///
+/// A dense tensor keeps a lane's absence beside the lane rather than on a
+/// `Value`, so decoding one needs the metadata without the `Value` around it.
+/// Building it here by pairing a reason with an origin would give that pairing
+/// a second source; `value_absence`'s own doc reserves it to one place, so
+/// this asks that place and takes the answer apart.
+fn absence_from_reason(reason: NilReason) -> AbsenceMetadata {
+    Value::nil_with_reason_unknown(reason)
+        .absence_metadata()
+        .cloned()
+        .expect("nil_with_reason_unknown always attaches absence metadata")
+}
 
 // ---- Interpretation role <-> stable tag ----
 
@@ -122,6 +139,13 @@ enum PersistData {
         dshape: Vec<usize>,
         pure_int: bool,
         shape: Vec<usize>,
+        /// The reason each absent lane is absent, as `(lane index, protocol
+        /// string)`. Empty for a tensor with no holes, which is almost all of
+        /// them, and absent from the encoded payload entirely — so a tensor
+        /// written before lane reasons were carried decodes as it always did,
+        /// with reasonless holes.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        absent: Vec<(usize, String)>,
     },
     Nil {
         /// The NIL's reason as its protocol string. `None` decodes a payload
@@ -201,6 +225,17 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
             dshape: data.shape.clone(),
             pure_int: data.is_pure_integer,
             shape: (**shape).clone(),
+            // The denominators already say *which* lanes are absent. This says
+            // why, one entry per absent lane that knows — the same `r` field a
+            // scalar NIL carries, addressed by lane. Without it a saved
+            // session reloaded `[ 1 2 ] [ 1 0 ] /` as a vector whose second
+            // lane had stopped being a division by zero.
+            absent: data
+                .absences()
+                .filter_map(|(index, metadata)| {
+                    Some((index, metadata.reason?.as_protocol_str().to_string()))
+                })
+                .collect(),
         },
         ValueData::Nil => PersistData::Nil { r: None },
         ValueData::Symbol(name) => PersistData::Symbol {
@@ -244,17 +279,25 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             dshape,
             pure_int,
             shape,
+            absent,
         } => {
             if nums.len() != dens.len() {
                 return Err("tensor numerator/denominator length mismatch".to_string());
             }
+            let mut absences = BTreeMap::new();
+            for (index, reason) in absent {
+                let reason = NilReason::from_protocol_str(reason)
+                    .ok_or_else(|| format!("unknown NIL reason: {reason}"))?;
+                absences.insert(*index, absence_from_reason(reason));
+            }
             ValueData::Tensor {
-                data: Arc::new(DenseTensor {
-                    numerators: nums.clone(),
-                    denominators: dens.clone(),
-                    shape: dshape.clone(),
-                    is_pure_integer: *pure_int,
-                }),
+                data: Arc::new(DenseTensor::from_columns(
+                    nums.clone(),
+                    dens.clone(),
+                    dshape.clone(),
+                    *pure_int,
+                    absences,
+                )),
                 shape: Arc::new(shape.clone()),
             }
         }

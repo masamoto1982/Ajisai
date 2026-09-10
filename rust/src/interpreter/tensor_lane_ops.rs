@@ -232,7 +232,10 @@ fn flat_leaf_values(value: &Value) -> Vec<Value> {
             }
             ValueData::Tensor { data, .. } => {
                 for lane in 0..data.len() {
-                    out.push(Value::from_fraction(data.fraction_or_nil(lane)));
+                    // Through the lane, not through its `Fraction`: the
+                    // reason for an absent lane is stored beside it and is
+                    // gone by the time a `Fraction` is all that is left.
+                    out.push(Value::from_dense_lane(data, lane));
                 }
             }
             _ => out.push(value.clone()),

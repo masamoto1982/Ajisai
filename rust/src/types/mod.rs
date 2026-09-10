@@ -9,6 +9,8 @@ mod fraction_mcdc_tests;
 pub mod stack;
 mod value_absence;
 mod value_children;
+mod value_densify;
+mod value_identity;
 mod value_semantics;
 mod value_tensor;
 // The lossless persistence codec is consumed only by the wasm boundary
@@ -17,6 +19,8 @@ mod value_tensor;
 // free of dead code while still running the round-trip tests under `cargo test`.
 #[cfg(test)]
 mod value_hash_tests;
+#[cfg(test)]
+mod value_lane_absence_tests;
 #[cfg(any(test, feature = "wasm"))]
 pub(crate) mod value_persist;
 #[cfg(test)]
@@ -30,6 +34,7 @@ mod tensor_storage;
 use self::fraction::Fraction;
 pub use self::stack::Stack;
 pub use self::tensor_storage::{DenseTensor, SparseTensor};
+use self::value_identity::{dense_flatten, dense_lane_reasons, tensor_eq_vector};
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use std::collections::HashSet;
@@ -139,129 +144,10 @@ impl PartialEq for ValueData {
     }
 }
 
-fn tensor_eq_vector(data: &DenseTensor, shape: &[usize], v: &[Value]) -> bool {
-    // A dense tensor is always rectangular, so a ragged nested vector (no
-    // well-defined rectangular shape) can never equal one. `nested_vector_shape`
-    // returns `None` for ragged structures, which fails the comparison here
-    // rather than colliding with the dense shape via a count-only fallback.
-    let Some(nested_shape) = nested_vector_shape(v) else {
-        return false;
-    };
-    if nested_shape != shape {
-        return false;
-    }
-    let mut idx = 0usize;
-    nested_flatten_matches(v, data, &mut idx) && idx == data.len()
-}
-
-/// The rectangular shape of a nested vector, or `None` when the structure is
-/// ragged (sibling elements with differing shapes, or mixed scalar/vector
-/// siblings). Used only for dense-tensor equality, which requires a
-/// rectangular counterpart.
-fn nested_vector_shape(v: &[Value]) -> Option<Vec<usize>> {
-    if v.is_empty() {
-        return Some(vec![0]);
-    }
-    let first_shape = element_rect_shape(&v[0])?;
-    for child in v.iter().skip(1) {
-        if element_rect_shape(child)? != first_shape {
-            return None;
-        }
-    }
-    let mut s = vec![v.len()];
-    s.extend(first_shape);
-    Some(s)
-}
-
-/// Rectangular shape of a single value, or `None` for non-numeric leaves or
-/// ragged sub-structures.
-fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
-    match &value.data {
-        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
-        // A String is not a numeric leaf, so it has no rectangular element
-        // shape and forces the structural (non-dense) path, like a Boolean.
-        ValueData::Text(_) => None,
-        ValueData::Tensor { shape, .. } => Some((**shape).clone()),
-        ValueData::Vector(items) => nested_vector_shape(items),
-        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
-        // has no dedicated variant, so it takes the `Nil` arm above too and
-        // counts as a rank-0 element (a nil lane, via the valid-mask), same
-        // as an operational NIL.
-        ValueData::Boolean(_) | ValueData::Symbol(_) => None,
-    }
-}
-
-fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> bool {
-    for child in v {
-        match &child.data {
-            ValueData::Scalar(f) => {
-                if *idx >= data.len() || data.fraction_or_nil(*idx) != *f {
-                    return false;
-                }
-                *idx += 1;
-            }
-            // ExactScalar cannot equal a dense-tensor Fraction element
-            ValueData::ExactScalar(_) => return false,
-            ValueData::Vector(inner) => {
-                if !nested_flatten_matches(inner, data, idx) {
-                    return false;
-                }
-            }
-            ValueData::Tensor {
-                data: inner_data, ..
-            } => {
-                for f in inner_data.iter() {
-                    if *idx >= data.len() || data.fraction_or_nil(*idx) != f {
-                        return false;
-                    }
-                    *idx += 1;
-                }
-            }
-            _ => return false,
-        }
-    }
-    true
-}
-
-/// Flatten a nested `Vector` into `(shape, leaves)` the same way
-/// `nested_flatten_matches` walks it against a dense tensor's lanes:
-/// `Scalar` contributes its `Fraction`, `Tensor` contributes its own dense
-/// lanes, `Vector` recurses, and anything else (`ExactScalar`, `Nil`,
-/// `Boolean`, `Text`, `Symbol`) fails the flatten — mirroring exactly
-/// which leaves `nested_flatten_matches` is willing to match against a
-/// tensor lane. Used only to make [`ValueData`]'s `Hash` agree with the
-/// `Vector`/`Tensor` cross-equality in `PartialEq`: a value that *can*
-/// equal a dense tensor must hash the way that tensor does.
-fn dense_flatten(v: &[Value]) -> Option<(Vec<usize>, Vec<Fraction>)> {
-    let shape = nested_vector_shape(v)?;
-    let mut leaves = Vec::new();
-    if collect_dense_leaves(v, &mut leaves) {
-        Some((shape, leaves))
-    } else {
-        None
-    }
-}
-
-fn collect_dense_leaves(v: &[Value], out: &mut Vec<Fraction>) -> bool {
-    for child in v {
-        match &child.data {
-            ValueData::Scalar(f) => out.push(f.clone()),
-            ValueData::Vector(inner) => {
-                if !collect_dense_leaves(inner, out) {
-                    return false;
-                }
-            }
-            ValueData::Tensor { data, .. } => out.extend(data.iter()),
-            _ => return false,
-        }
-    }
-    true
-}
-
 /// Discriminant tags for [`ValueData`]'s `Hash`. `DENSE` is shared by
 /// `Vector` and `Tensor` deliberately: it is what makes a rectangular
 /// numeric `Vector` hash the same as the `Tensor` holding the same data,
-/// matching the cross-representation equality `tensor_eq_vector` grants
+/// matching the cross-representation equality `value_identity` grants
 /// them. `STRUCT_VECTOR` is everything else — a `Vector` that is not a
 /// dense-tensor lookalike, hashed structurally instead.
 const HASH_TAG_BOOLEAN: u8 = 0;
@@ -289,10 +175,11 @@ impl std::hash::Hash for ValueData {
                 e.hash(state);
             }
             ValueData::Vector(v) => match dense_flatten(v) {
-                Some((shape, leaves)) => {
+                Some((shape, leaves, reasons)) => {
                     state.write_u8(HASH_TAG_DENSE);
                     shape.hash(state);
                     leaves.hash(state);
+                    reasons.hash(state);
                 }
                 None => {
                     state.write_u8(HASH_TAG_STRUCT_VECTOR);
@@ -304,6 +191,7 @@ impl std::hash::Hash for ValueData {
                 shape.hash(state);
                 let leaves: Vec<Fraction> = data.iter().collect();
                 leaves.hash(state);
+                dense_lane_reasons(data).hash(state);
             }
             ValueData::Nil => state.write_u8(HASH_TAG_NIL),
             ValueData::Symbol(name) => {

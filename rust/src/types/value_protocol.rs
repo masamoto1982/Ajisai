@@ -9,7 +9,7 @@
 //! / property tested natively (AQ-REQ-003, see `value_protocol_tests.rs`).
 
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{DenseTensor, Interpretation, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 
@@ -189,22 +189,29 @@ fn scalar_to_protocol(f: &Fraction, effective: Interpretation) -> (&'static str,
 /// only the `TruthValue` role propagates to leaves (booleans), all other
 /// roles render numbers. Interior nodes of rank >= 2 carry no `semantics`.
 fn tensor_to_protocol(
-    data: &[Fraction],
+    data: &DenseTensor,
+    offset: usize,
     shape: &[usize],
     leaf_hint: Interpretation,
 ) -> Vec<ProtocolNode> {
     let leaves_are_bool = leaf_hint == Interpretation::TruthValue;
     if shape.is_empty() || shape.len() == 1 {
-        data.iter()
-            .map(|f| {
-                // `from_fraction` turns the denominator-0 absence sentinel a
-                // lane stores into `ValueData::Nil`, so an absent lane is
-                // decided once, here, and reported as `nil` rather than as the
-                // unreadable number `0/0`. Under the truth role the absent
-                // lane is the logical Unknown, which keeps the `truthValue`
-                // display hint — the axis LANG.OBSERVATION.FIREWALL says to
-                // read — while still reporting `type: "nil"`.
-                let leaf = Value::from_fraction(f.clone());
+        let len = shape.first().copied().unwrap_or_else(|| data.len());
+        (offset..offset + len)
+            .map(|lane| {
+                // `from_dense_lane` turns the denominator-0 absence sentinel a
+                // lane stores into `ValueData::Nil` *carrying the reason
+                // stored beside it*, so an absent lane is decided once, here,
+                // and reported as `nil` rather than as the unreadable number
+                // `0/0` — and says why it is absent, which is the whole
+                // observable content of an absence (LANG.VALUES.NIL). Under
+                // the truth role the absent lane is the logical Unknown, which
+                // keeps the `truthValue` display hint — the axis
+                // LANG.OBSERVATION.FIREWALL says to read — while still
+                // reporting `type: "nil"`.
+                let leaf = Value::from_dense_lane(data, lane);
+                let f = data.fraction_or_nil(lane);
+                let f = &f;
                 let (type_str, value, hint) = if leaf.is_nil() {
                     let hint = if leaves_are_bool {
                         Interpretation::TruthValue
@@ -246,7 +253,8 @@ fn tensor_to_protocol(
             .map(|i| ProtocolNode {
                 type_str: "vector",
                 value: ProtocolValue::Children(tensor_to_protocol(
-                    &data[i * stride..(i + 1) * stride],
+                    data,
+                    offset + i * stride,
                     rest,
                     leaf_hint,
                 )),
@@ -320,7 +328,7 @@ pub(crate) fn value_to_protocol(
             ("vector", ProtocolValue::Children(kids))
         }
         ValueData::Tensor { data, shape } => {
-            let kids = tensor_to_protocol(&data.to_fractions(), shape, effective);
+            let kids = tensor_to_protocol(data, 0, shape, effective);
             ("vector", ProtocolValue::Children(kids))
         }
         // A Symbol is a value of its own domain (LANG.VALUES.DISJOINT); it

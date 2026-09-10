@@ -1447,6 +1447,28 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- Storage is not semantics. A rectangular numeric vector is held either as
+     dense columns or as a tree of child values, and which one is a decision no
+     clause makes; LANG.VALUES.NIL makes a NIL's reason its whole observable
+     content, so neither form may drop it. A vector holding a NIL used to be
+     barred from the dense form for exactly that reason — the columns could say
+     a lane was absent and nothing about why — and these two hold the reason
+     across the rebuild that chooses it. -->
+
+<section class="ajisai-case" id="core-nil-lane-survives-a-structural-rebuild" data-category="core">
+  <h3>A NIL lane keeps its reason when the vector is rebuilt around it</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 3 4 ] CONCAT [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-written-nil-lane-keeps-its-own-reason" data-category="core">
+  <h3>A NIL written into a vector literal still reports itself as written after the lift</h3>
+  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] * [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'literal'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-division-projects-the-zero-divisor-lane-only" data-category="core">
   <h3>A zero divisor empties its own lane, not the vector around it</h3>
   <pre class="ajisai-source">[ 6 6 6 ] [ 1 2 0 ] /</pre>
