@@ -37,7 +37,7 @@ use super::word_contract::ContractFlow;
 use super::word_contract_flow::FlowSim;
 use super::word_contract_widen::classify_vector_positions;
 use super::word_outcome_vocabulary::{
-    builtin_outcomes_for, resolve_and_collect, structural_ceiling_ids,
+    builtin_outcomes_for, resolve_and_collect, structural_ceiling_ids, Reachability,
 };
 use super::Interpreter;
 
@@ -68,11 +68,22 @@ impl Interpreter {
         let mut flow = FlowSim::new();
         let mut visiting: HashSet<String> = HashSet::new();
         let mut outcomes: BTreeSet<String> = BTreeSet::new();
+        let mut reach = Reachability::default();
 
         let contexts = classify_vector_positions(tokens);
         for (idx, token) in tokens.iter().enumerate() {
             match token {
-                Token::Number(_) | Token::String(_) => flow.feed_literal(),
+                Token::Number(_) => flow.feed_literal(),
+                // A String is one operand to `flow`, and may also name a Word
+                // the program runs — see `word_outcome_vocabulary`'s
+                // `Token::String` arm for why that is not hypothetical.
+                Token::String(text) => {
+                    flow.feed_literal();
+                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(text);
+                    if self.resolve_word_entry(&canonical).is_some() {
+                        outcomes.extend(resolve_and_collect(self, text, &mut visiting, &mut reach));
+                    }
+                }
                 Token::Symbol(symbol) => {
                     // Arity and vocabulary read this Symbol differently, and
                     // both readings are right. Inside a `[ ... ]` it is one
@@ -91,12 +102,13 @@ impl Interpreter {
                     // Its *outcomes* count either way: a block written here
                     // may be executed anywhere later. See
                     // `word_outcome_vocabulary`'s module doc.
-                    outcomes.extend(resolve_and_collect(self, symbol, &mut visiting));
+                    outcomes.extend(resolve_and_collect(self, symbol, &mut visiting, &mut reach));
                 }
                 // `OR-NIL` desugars to this token rather than a Symbol; see
                 // `word_outcome_vocabulary::structural_ceiling_ids`'s doc.
                 Token::NilCoalesce => {
                     flow.feed_structural(token);
+                    reach.saw_word("OR-NIL");
                     outcomes.extend(builtin_outcomes_for("OR-NIL"));
                 }
                 Token::VectorStart | Token::VectorEnd | Token::CondClauseSep | Token::LineBreak => {
@@ -112,7 +124,7 @@ impl Interpreter {
             outcomes.insert("error:stackUnderflow".to_string());
         }
         if !tokens.is_empty() {
-            outcomes.extend(structural_ceiling_ids().iter().cloned());
+            outcomes.extend(structural_ceiling_ids(&reach));
         }
         outcomes.insert("value".to_string());
 

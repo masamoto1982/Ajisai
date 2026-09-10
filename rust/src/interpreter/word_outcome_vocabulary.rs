@@ -169,6 +169,69 @@ pub(crate) fn conservative_outcomes() -> BTreeSet<String> {
         .clone()
 }
 
+/// What the walk learned about *which* Words a program can reach, carried
+/// alongside the outcome ids it collects.
+///
+/// The walk already visits every Word a program could execute — every
+/// `Token::Symbol` wherever written, recursing through `DEF`'d bodies — so it
+/// knows this; it simply threw the names away. Keeping them lets
+/// `structural_ceiling_ids` answer a question it could not before: whether
+/// anything the program can reach is even able to raise a given structural
+/// category.
+#[derive(Default)]
+pub(crate) struct Reachability {
+    /// Canonical names of every Word the walk resolved, including Words
+    /// reached only through a `DEF`'d body.
+    names: BTreeSet<String>,
+    /// A resolved Word was user-defined, so a User-Word activation happens.
+    calls_user_word: bool,
+    /// A name did not resolve, so the walk fell back to the conservative
+    /// universe and `names` is no longer a complete account of what runs.
+    /// Every gated category stays in while this holds.
+    unresolved: bool,
+}
+
+impl Reachability {
+    fn saw(&mut self, name: &str, is_builtin: bool) {
+        self.names.insert(name.to_uppercase());
+        self.calls_user_word |= !is_builtin;
+    }
+
+    pub(crate) fn saw_word(&mut self, name: &str) {
+        self.names.insert(name.to_uppercase());
+    }
+
+    fn reaches_any(&self, words: &[&str]) -> bool {
+        self.unresolved || words.iter().any(|w| self.names.contains(*w))
+    }
+}
+
+/// Structural categories that only one class of Word can raise, and what has
+/// to be reachable before one is possible. Each pairing is the complete set of
+/// raise sites for that category in the engine, read off the source rather
+/// than inferred from the name:
+///
+/// - `condExhausted` — `interpreter::control_cond` only.
+/// - `nameConflict`, `selfReferentialDefinition` — `interpreter::execute_def`
+///   only.
+/// - `builtinProtection` — `execute_def` and `execute_del`.
+///
+/// `recursionLimitExceeded` is gated too but on a different predicate (any
+/// User-Word activation, since `execute_builtin` raises it on `call_depth`),
+/// so it is handled separately rather than forced into this table.
+///
+/// Everything not listed stays unconditional. `structureError`,
+/// `indexOutOfBounds` and `vectorLengthMismatch` are spread across the
+/// arithmetic and collection modules, and narrowing them would mean modelling
+/// which of those a program reaches — a different and much larger claim than
+/// "this program contains no `DEF`".
+const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 4] = [
+    ("error:condExhausted", &["COND"]),
+    ("error:nameConflict", &["DEF"]),
+    ("error:selfReferentialDefinition", &["DEF"]),
+    ("error:builtinProtection", &["DEF", "DEL"]),
+];
+
 /// Every structural error category (see `structural_error_categories`),
 /// except `stackUnderflow` (given a precise, flow-sensitive answer by
 /// `predict_program_outcomes`'s own `FlowSim` run) and `malformedSource`
@@ -185,16 +248,24 @@ pub(crate) fn conservative_outcomes() -> BTreeSet<String> {
 /// its own handling instead, since it is tied to a specific Word's own
 /// vocabulary but that Word tokenizes to `Token::NilCoalesce`, never a
 /// `Token::Symbol("OR-NIL")` a normal body walk would see.
-pub(crate) fn structural_ceiling_ids() -> &'static BTreeSet<String> {
-    static CEILING: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
-    CEILING.get_or_init(|| {
-        structural_error_categories()
-            .into_iter()
-            .map(|category| category.as_protocol_str())
-            .filter(|id| *id != "stackUnderflow" && *id != "malformedSource")
-            .map(|id| format!("error:{id}"))
-            .collect()
-    })
+pub(crate) fn structural_ceiling_ids(reach: &Reachability) -> BTreeSet<String> {
+    structural_error_categories()
+        .into_iter()
+        .map(|category| category.as_protocol_str())
+        .filter(|id| *id != "stackUnderflow" && *id != "malformedSource")
+        .map(|id| format!("error:{id}"))
+        .filter(|id| {
+            // `recursionLimitExceeded` is `execute_builtin`'s call-depth guard,
+            // so it needs a User-Word activation and nothing else does.
+            if id == "error:recursionLimitExceeded" {
+                return reach.unresolved || reach.calls_user_word;
+            }
+            match GATED_STRUCTURAL_IDS.iter().find(|(gated, _)| gated == id) {
+                Some((_, triggers)) => reach.reaches_any(triggers),
+                None => true,
+            }
+        })
+        .collect()
 }
 
 /// The set of outcome ids reachable through `name`'s body: its own declared
@@ -209,7 +280,9 @@ pub(crate) fn outcome_vocabulary_for_word(
     name: &str,
     def: &Arc<WordDefinition>,
     visiting: &mut HashSet<String>,
+    reach: &mut Reachability,
 ) -> BTreeSet<String> {
+    reach.saw(name, def.is_builtin);
     if def.is_builtin {
         return builtin_outcomes_for(name);
     }
@@ -221,13 +294,34 @@ pub(crate) fn outcome_vocabulary_for_word(
         for token in line.body_tokens.iter() {
             match token {
                 Token::Symbol(symbol) => {
-                    outcomes.extend(resolve_and_collect(interp, symbol, visiting));
+                    outcomes.extend(resolve_and_collect(interp, symbol, visiting, reach));
+                }
+                // A String can name a Word: the higher-order Words take
+                // `'NAME'` as their code operand (`[ 1 2 3 ] 'DBL' MAP`), so a
+                // Word can run with no `Token::Symbol` for it anywhere in the
+                // source. `[ 'ADD' ] 'DEL' MAP` really raises
+                // `builtinProtection` that way. Treating any String that
+                // resolves as reaching that Word over-approximates — a data
+                // string spelling a Word name pulls its vocabulary in for
+                // nothing — which is the allowed direction.
+                Token::String(text) => {
+                    if interp
+                        .resolve_word_entry(&crate::core_word_aliases::canonicalize_core_word_name(
+                            text,
+                        ))
+                        .is_some()
+                    {
+                        outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
+                    }
                 }
                 // `OR-NIL` desugars to this token rather than a Symbol, but
                 // is a real Word with its own declared vocabulary — see
                 // `structural_ceiling_ids`'s doc for why it needs this
                 // separate case.
-                Token::NilCoalesce => outcomes.extend(builtin_outcomes_for("OR-NIL")),
+                Token::NilCoalesce => {
+                    reach.saw_word("OR-NIL");
+                    outcomes.extend(builtin_outcomes_for("OR-NIL"));
+                }
                 _ => {}
             }
         }
@@ -246,13 +340,17 @@ pub(crate) fn resolve_and_collect(
     interp: &mut Interpreter,
     symbol: &str,
     visiting: &mut HashSet<String>,
+    reach: &mut Reachability,
 ) -> BTreeSet<String> {
     let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
     match interp.resolve_word_entry(&canonical) {
         Some((dep_name, dep_def)) => {
-            outcome_vocabulary_for_word(interp, &dep_name, &dep_def, visiting)
+            outcome_vocabulary_for_word(interp, &dep_name, &dep_def, visiting, reach)
         }
         None => {
+            // Reachability is no longer known: an unresolved name could be
+            // anything once it exists, so every gated category stays in.
+            reach.unresolved = true;
             let mut fallback = conservative_outcomes();
             fallback.insert("error:unknownWord".to_string());
             fallback
