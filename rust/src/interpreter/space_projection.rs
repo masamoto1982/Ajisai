@@ -60,6 +60,6 @@ pub(crate) fn space_exhausted_nil(word: &str, limit: usize, observed: Option<u12
         reason: Some(NilReason::SpaceExhausted),
         origin: AbsenceOrigin::SpaceBudget,
         recoverability: Recoverability::Unknown,
-        diagnosis: Some(diagnosis),
+        diagnosis: Some(Box::new(diagnosis)),
     })
 }
