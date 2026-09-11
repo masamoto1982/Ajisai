@@ -85,6 +85,16 @@ jobs:
         # blocklist, so deleting a Word is enough to keep prose honest about it.
         run: npm run check:reading-surfaces
 
+      - name: Reference samples produce the values printed beside them
+        # Every sample block in the Reference carries a "Playgroundで開く" button,
+        # so a reader runs it. Two COND examples dispatched on one-element
+        # Vectors, so their guards answered [ FALSE ] / [ TRUE ] instead of a
+        # bare Boolean and both raised nonTruthGuard — the language's two
+        # introductory examples of conditional dispatch, neither of which ran.
+        # SKILL.md and the MCP corpus were already gated this way; the
+        # Reference was the surface that was not.
+        run: npm run check:reference-samples
+
       - name: Verify generated specification surfaces are in sync
         # The Word reference and Core hover contracts are generated from
         # spec/words.json. None of these were gated in CI, which is how a stale

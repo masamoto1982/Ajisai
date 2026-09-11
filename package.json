@@ -36,6 +36,7 @@
     "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh",
     "check:file-size": "node scripts/check-file-size-budget.mjs",
     "check:reading-surfaces": "node scripts/check-reading-surfaces.mjs",
+    "check:reference-samples": "cargo build --manifest-path rust/Cargo.toml --bin ajisai && node scripts/check-reference-samples.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "specification:generate": "node scripts/generate-specification.mjs",
     "specification:check": "node scripts/generate-specification.mjs --check",
