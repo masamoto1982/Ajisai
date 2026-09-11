@@ -584,19 +584,19 @@
                     <h2>基本(トークン, <code>#</code>)</h2>
                     <p>Ajisaiのプログラムは、空白などで区切られた一連の<strong>トークン</strong>の並びです。</p>
                     <h3>トークンの区切り規則</h3>
-                    <p>トークンが区切られる条件は、次の3通りだけです。</p>
+                    <p>トークンを区切るのは<strong>空白文字(スペース、タブ、改行)だけ</strong>です。ほかにトークンを分割する文字はありません。記号も句読点も、すべて通常の名前を構成する文字として扱われます。</p>
+                    <p>この規則に例外はなく、次の2つも例外ではありません。</p>
                     <ul class="ref-list">
-                        <li>空白文字(スペース、タブ、改行)</li>
-                        <li>構造区切り文字(<code>[</code> <code>]</code> <code>(</code> <code>)</code>)</li>
-                        <li>コメントの開始(行末までの<code>#</code>)</li>
+                        <li><code>[</code>と<code>]</code>は、他のどのワードとも同じく単独で立たなければなりません。<code>[ 1 2 3 ]</code>は正しく、<code>[1 2 3]</code>は空白の不足を指摘するソースエラーになります。</li>
+                        <li><code>#</code>がコメントを開始するのは、それがトークンの先頭にあるときだけです。直前のトークンに密着した<code>#</code>はその名前の一部になるため、<code>ADD# メモ</code>はコメント付きの<code>ADD</code>ではなく、<code>ADD#</code>という未定義のワードです。</li>
                     </ul>
-                    <p>これ以外の文字は、記号や句読点を含めすべて通常の名前を構成する文字として扱われます。</p>
-                    <p class="ref-note"><code>(</code>と<code>)</code>はトークンを区切る構造文字の一種ですが、ソースコードの中では使えません。書けば必ずエラーになる予約済みの記号(<code>RESERVED-BEGIN</code> / <code>RESERVED-END</code>)です。Ajisaiで使う括弧は<code>[</code> <code>]</code>だけであり、コードブロックにも、連分数の表示形式にも同じ<code>[</code> <code>]</code>を使います。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
+                    <p class="ref-note"><code>(</code>と<code>)</code>はソースコードの中では使えません。書けば必ずエラーになる予約済みの記号(<code>RESERVED-BEGIN</code> / <code>RESERVED-END</code>)です。Ajisaiで使う括弧は<code>[</code> <code>]</code>だけであり、コードブロックにも、連分数の表示形式にも同じ<code>[</code> <code>]</code>を使います。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
                     <h3>演算子と空白の必要性</h3>
                     <p>一般的な演算記号もワード(名前)の一種であるため、前後に空白が必要です。<code>2 +</code>は<code>2</code>と<code>+</code>の2つのトークンとして正しく解釈されます。<code>2+</code>は「2+」という1つの名前とみなされ、加算ではなく未定義ワードとしてエラーになります。</p>
-                    <p class="ref-note">角括弧<code>[</code> <code>]</code>は例外で、それ自体が前後の境界となるため、前後に空白がなくても独立したトークンとして区切られます。<code>[ 1 2 ]LENGTH</code>は、空白で区切った場合とまったく同じに解釈されます。</p>
+                    <p class="ref-note">角括弧<code>[</code> <code>]</code>も同じです。それ自体で1つのワードであり、前後に空白が必要です。<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>という不正なトークンとして拒否されるため、<code>[ 1 2 ] LENGTH</code>と書いてください。</p>
+                    <p class="ref-note">Playgroundの<strong>Format</strong>ボタンは、この足りない空白を補います(実行前にも同じ整形が走るため、<code>[1 2 3]</code>はPlaygroundでは<code>[ 1 2 3 ]</code>として実行されます)。整形されるのは編集中のソースだけで、言語の規則がゆるむわけではありません。CLIやMCPに同じソースをそのまま渡せばエラーになります。</p>
                     <h3>記号ワードとトークン判定</h3>
-                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ほとんどの記号は1文字ですが、比較系のワードには2文字の記号が3つあります。<code>&lt;=</code>が<code>LTE</code>、<code>&gt;=</code>が<code>GTE</code>、<code>!=</code>が<code>NEQ</code>にあたります。トークンが終わるのは空白または区切り文字のときだけで、途中で終わることは決してないため、2文字の記号があっても上の規則は何も複雑になりません。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
+                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ほとんどの記号は1文字ですが、比較系のワードには2文字の記号が3つあります。<code>&lt;=</code>が<code>LTE</code>、<code>&gt;=</code>が<code>GTE</code>、<code>!=</code>が<code>NEQ</code>にあたります。トークンが終わるのは空白のときだけで、途中で終わることは決してないため、2文字の記号があっても上の規則は何も複雑になりません。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
                     <h3>コメント</h3>
                     <p><code>#</code>は行末まで続くコメントを開始します。<code>#</code>からその行の末尾までの文字は、トークン化される前に破棄されます。なお、文字列リテラルの中にある<code>#</code>は通常のテキストとして扱われるため、<code>'a # b'</code>は全体で1つの文字列です。</p>
                     <h3>具体例</h3>
@@ -608,7 +608,7 @@
                             <tbody>
                                 <tr><td><code>3 4 +</code></td><td class="notes">3トークン</td><td class="notes">空白が各トークンを区切る。<code>+</code>は<code>ADD</code>の記号。</td></tr>
                                 <tr><td><code>3 4+</code></td><td class="notes">2トークン</td><td class="notes"><code>4+</code>全体で1つの名前とみなされ、加算ではなく未定義エラーになる。</td></tr>
-                                <tr><td><code>[ 1 2 ]LENGTH</code></td><td class="notes">5トークン</td><td class="notes">構造区切り文字<code>[</code> <code>]</code>がどちら側からもトークンを区切る。</td></tr>
+                                <tr><td><code>[ 1 2 ] LENGTH</code></td><td class="notes">5トークン</td><td class="notes">空白が各トークンを区切る。空白を省いた<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>が不正なトークンとなりエラー。</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -617,7 +617,7 @@
                     <h3>数値リテラル</h3>
                     <p>小数リテラルは、小数点の<strong>両側</strong>に少なくとも1桁の数字を必要とします。<code>0.5</code>や<code>5.0</code>は数ですが、<code>.5</code>や<code>5.</code>は数ではありません。この規則により小数点が数の先頭や末尾の文字になることは決してなく、単独の<code>.</code>を不完全なリテラルではなく通常の名前として安全に使えます。</p>
                     <h3>文字列リテラル</h3>
-                    <p class="ref-note">文字列リテラルは、トークン境界に位置する引用符(<code>'</code>)で閉じます。文字列の内部にアポストロフィがあっても、直後に空白や区切り文字が続かなければ文字列は終了しません。これにより、エスケープ文字なしで<code>'It's fine'</code>のような文字列を1つのリテラルとして書けます。引用符の直後に名前用文字が続く場合はテキストの内側にとどまるため、<code>'abc'CHARS</code>は2つのトークンではなく閉じられていない文字列として扱われます。</p>
+                    <p class="ref-note">文字列リテラルは、トークン境界に位置する引用符(<code>'</code>)で閉じます。ここでもトークンを区切るのは空白だけなので、閉じる<code>'</code>の直後には空白(または入力の終わり)が必要です。文字列の内部にアポストロフィがあっても、直後が空白でなければ文字列は終了しません。これにより、エスケープ文字なしで<code>'It's fine'</code>のような文字列を1つのリテラルとして書けます。逆に、引用符の直後が空白以外であればテキストの内側にとどまるため、<code>'abc'CHARS</code>も<code>[ 'abc']</code>も、2つのトークンではなく閉じられていない文字列として扱われます。</p>
                 </section>
 
                 <section id="values" class="ref-page">
@@ -1785,10 +1785,10 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 0 ]
+                                    <td><code>0
 [
-[ [ 0 ] &lt; | 'negative' ]
-[ [ 0 ] = | 'zero' ]
+[ 0 &lt; | 'negative' ]
+[ 0 = | 'zero' ]
 [ TRUE | 'positive' ]
 ] COND</code></td>
                                     <td><code>'zero'</code></td>
@@ -1809,7 +1809,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ -5 ] [ [ [ 0 ] &lt; ] [ 'negative' ] [ TRUE ] [ 'positive' ] ] COND</code></td>
+                                    <td><code>-5 [ [ 0 &lt; ] [ 'negative' ] [ TRUE ] [ 'positive' ] ] COND</code></td>
                                     <td><code>'negative'</code></td>
                                     <td class="notes">対形式：ガードと本体のブロックを交互に並べる。これも1つの節用<code>[ ]</code>。</td>
                                 </tr>
@@ -1822,6 +1822,8 @@
                     </div>
                     <h3>書き方の規則</h3>
                     <p class="ref-note">各ガードは<code>TRUE</code>か<code>FALSE</code>を返すので、節は発火するかしないかのどちらかです。どの節も一致せずelse節もない場合、<code>COND</code>はエラーを送出します。</p>
+                    <p class="ref-note">ここで言う<code>TRUE</code>/<code>FALSE</code>は<strong>裸の真偽値</strong>のことで、1要素の<code>Vector</code>に包まれた<code>[ TRUE ]</code>はガードとして通りません(<code>nonTruthGuard</code>)。比較ワードは要素ごとに持ち上がるため、ベクトルを比較したガードはベクトルを返します。<code>[ 7 ] [ 5 ] &gt;</code>が答えるのは<code>TRUE</code>ではなく<code>[ TRUE ]</code>です。したがってディスパッチ対象の値も、ガードが比べる相手も、スカラーで書いてください。上の例が<code>[ 0 ]</code>ではなく<code>0</code>を、<code>[ 0 ] &lt;</code>ではなく<code>0 &lt;</code>を使っているのはそのためです。</p>
+                    <p class="ref-note">どうしてもベクトルをディスパッチしたい場合は、ガードの中でスカラーに落としてから比べます。<code>[ -5 ] [ [ 0 GET 0 &lt; | 'negative' ] [ IDLE | 'other' ] ] COND</code>のように、<code>GET</code>で要素を取り出せばガードは裸の真偽値を返します。</p>
                     <p class="ref-note">1行に1節が正式な形式であり、Formatボタンもこの形を生成しますが、これは規則というよりレイアウト上の好みです。1行に折りたたんだ<code>COND</code>も実行でき、意味は変わりません。それでも縦に並べて書いてください。人がガードを上から下へ目で追って読めるのは、節が縦に積まれているときだけです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1921,7 +1923,7 @@
                                 <tr>
                                     <td><code>[ 1 2 3 4 ] [ 0 ] '+' FOLD</code></td>
                                     <td><code>[ 10/1 ]</code></td>
-                                    <td class="notes">初期累積値付きで畳み込む：0 + 1 + 2 + 3 + 4。</td>
+                                    <td class="notes">初期累積値付きで畳み込む：0 + 1 + 2 + 3 + 4。初期値の形が結果の形を決める：ここでは<code>[ 0 ]</code>というベクトルで始めたので、答えもベクトルの<code>[ 10/1 ]</code>になる。裸の<code>0</code>で始めれば答えも裸の<code>10/1</code>。</td>
                                 </tr>
                             </tbody>
                         </table>
