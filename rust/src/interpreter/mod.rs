@@ -86,6 +86,8 @@ pub mod interpreter_core;
 mod resolve_word;
 
 mod execution_loop;
+#[cfg(test)]
+mod execution_loop_tests;
 mod value_as_code;
 mod vector_literal;
 

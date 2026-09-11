@@ -21,6 +21,8 @@ mod value_tensor;
 mod value_hash_tests;
 #[cfg(test)]
 mod value_lane_absence_tests;
+#[cfg(test)]
+mod value_layout_tests;
 #[cfg(any(test, feature = "wasm"))]
 pub(crate) mod value_persist;
 #[cfg(test)]

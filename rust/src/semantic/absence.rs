@@ -52,7 +52,16 @@ pub struct AbsenceMetadata {
     pub reason: Option<NilReason>,
     pub origin: AbsenceOrigin,
     pub recoverability: Recoverability,
-    pub diagnosis: Option<DebugDiagnosis>,
+    /// Boxed, not inlined. A [`DebugDiagnosis`] is 256 bytes — a summary
+    /// string, an evidence list, a next-check list, a candidate list — and
+    /// inlining it made `AbsenceMetadata` 264 bytes and `Value` 344, against
+    /// `ValueData`'s 72. Every stack slot and every lane of an AoS `Vector`
+    /// carried that width, so a vector of a million numbers moved 344 MB to
+    /// hold 72 MB of numbers, and the 264 bytes were `None` in all but the
+    /// rare absent lane. The diagnosis is the rarest thing a value can carry;
+    /// it pays for its own allocation when it exists and costs a pointer when
+    /// it does not.
+    pub diagnosis: Option<Box<DebugDiagnosis>>,
 }
 
 impl AbsenceMetadata {
