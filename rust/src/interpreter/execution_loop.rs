@@ -1,10 +1,10 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
 use crate::types::fraction::Fraction;
-use crate::types::{ExecutionLine, Interpretation, Token, Value};
+use crate::types::{ExecutionLine, Interpretation, Token, Value, ValueData};
 
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
-use super::value_extraction_helpers::create_number_value;
+use super::value_extraction_helpers::{create_number_value, is_vector_value};
 use super::{ConsumptionMode, Interpreter};
 
 /// Index just past the single *source unit* that begins at `start` in `tokens`:
@@ -102,11 +102,17 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
             // `[ 4 9 ] SQRT` as `[2/1, 3/1]` — a scalar's notation wrapped
             // around a collection. A collection keeps whatever role it was
             // built with; the lanes inside it are numbers either way.
+            //
+            // Asked of the representation, not of a materialized view.
+            // `as_vector_view` hands back a `Cow`, and for a `Tensor` that
+            // `Cow` is `Owned`: it built one boxed `Value` per lane to answer
+            // "is this a collection?", then dropped them all. This runs after
+            // every core word in the table above, so a single `[ ... ] 2 MUL`
+            // over a million-lane tensor materialized a million `Value`s for a
+            // question the discriminant already answers — and paid for it again
+            // on the next Word. `is_vector_value` reads the tag.
             let stamps_a_scalar_role = matches!(h, Interpretation::Interval);
-            let top_is_collection = interp
-                .stack
-                .last()
-                .is_some_and(|value| value.as_vector_view().is_some());
+            let top_is_collection = interp.stack.last().is_some_and(is_vector_value);
             if !(stamps_a_scalar_role && top_is_collection) {
                 interp.stack.set_role_at(len - 1, h);
             }
@@ -165,8 +171,32 @@ fn projected_nil_reason(value: &Value) -> Option<NilReason> {
             Some(reason) => Some(*reason),
         };
     }
+    // A dense tensor already keeps *why* each absent lane is absent, in a map
+    // holding only the absent ones. Materializing every lane to look for it
+    // read the rare fact out of the common one: `as_vector_view` on a `Tensor`
+    // rebuilds the whole buffer as boxed `Value`s, and this runs after every
+    // Word. The map is the same evidence, in lane order, sized to the failures
+    // rather than to the data.
+    if let ValueData::Tensor { data, .. } = &value.data {
+        return dense_projected_nil_reason(data);
+    }
     let lanes = value.as_vector_view()?;
     lanes.iter().find_map(projected_nil_reason)
+}
+
+/// [`projected_nil_reason`] for a dense tensor, read from its absence map.
+///
+/// Equivalent to the materialized walk lane by lane: `absences()` yields the
+/// absent lanes in ascending lane order and screens each against the presence
+/// sentinel, which is exactly the order and the filter a walk over the boxed
+/// lanes applied. A lane the tensor was never told a reason for carries none,
+/// and is skipped here as `with_reasonless_unknown` was skipped there.
+fn dense_projected_nil_reason(data: &crate::types::DenseTensor) -> Option<NilReason> {
+    data.absences()
+        .find_map(|(_, metadata)| match metadata.reason {
+            Some(NilReason::Literal) | None => None,
+            Some(reason) => Some(reason),
+        })
 }
 
 /// The absence envelope of the same value [`projected_nil_reason`] answered
@@ -178,6 +208,17 @@ fn projected_absence_metadata(value: &Value) -> Option<crate::semantic::AbsenceM
             Some(NilReason::Literal) | None => None,
             Some(_) => value.normalized_absence_metadata(),
         };
+    }
+    // Same lane, same map, same reason as `projected_nil_reason` picked — see
+    // `dense_projected_nil_reason`. The two must agree on *which* lane they
+    // describe, which is why both read the absence map in its lane order.
+    if let ValueData::Tensor { data, .. } = &value.data {
+        return data
+            .absences()
+            .find_map(|(_, metadata)| match metadata.reason {
+                Some(NilReason::Literal) | None => None,
+                Some(_) => Some(metadata.clone()),
+            });
     }
     let lanes = value.as_vector_view()?;
     lanes.iter().find_map(projected_absence_metadata)
