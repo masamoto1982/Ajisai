@@ -217,4 +217,171 @@ mod arithmetic_meter_tests {
             );
         }
     }
+
+    // ── SUM's dense route charges what SUM's fold charges ───────────────────
+    //
+    // `SUM` over a flat pure-integer dense buffer adds its numerator column
+    // instead of boxing a `Value` per lane and re-entering the arithmetic
+    // dispatch. That is a *route* choice, which LANG.AUTHORITY.FREEDOM makes
+    // unobservable — so the meter must not be able to tell which one ran, or the
+    // shape fix this module exists for is undone at a different address.
+    //
+    // `CONCAT` builds with the non-promoting constructor, so joining two ranges
+    // holds the same integers as a nested `Vector` that the dense route declines.
+    // One pair of programs, two representations, identical numbers: anything the
+    // meter reports differently is the defect.
+
+    /// The same eight, then the same hundred, as a dense buffer and as a nested
+    /// vector.
+    fn dense_and_nested(n: i64) -> (String, String) {
+        let half = n / 2;
+        (
+            format!("[ 1 {n} ] RANGE SUM"),
+            format!("[ 1 {half} ] RANGE [ {} {n} ] RANGE CONCAT SUM", half + 1),
+        )
+    }
+
+    async fn result_of(interp: &mut Interpreter, source: &str) -> String {
+        match interp.execute(source).await {
+            Ok(()) => format!(
+                "{}",
+                interp
+                    .get_stack()
+                    .as_slice()
+                    .last()
+                    .expect("a result on the stack")
+            ),
+            Err(e) => format!("{e:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn sums_charge_the_same_whichever_route_runs() {
+        for n in [8i64, 100, 1000] {
+            let (dense, nested) = dense_and_nested(n);
+            assert_eq!(
+                charged_by(&dense).await,
+                charged_by(&nested).await,
+                "`{dense}` and `{nested}` hold the same integers and must cost the same"
+            );
+            // And the charge is one unit per lane: every lane of a dense tensor
+            // is a `Small` fraction, so each of the fold's additions is
+            // `binary_numeric_work(1, 1)`.
+            assert_eq!(
+                charged_by(&dense).await,
+                n as u64,
+                "`{dense}` must charge one unit per lane"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn sums_answer_the_same_whichever_route_runs() {
+        for n in [8i64, 100, 1000] {
+            let (dense, nested) = dense_and_nested(n);
+            let mut a = Interpreter::new();
+            let mut b = Interpreter::new();
+            assert_eq!(
+                result_of(&mut a, &dense).await,
+                result_of(&mut b, &nested).await,
+                "`{dense}` and `{nested}` must answer alike"
+            );
+        }
+    }
+
+    /// An `i64` sum that overflows must promote exactly, not wrap and not
+    /// saturate — the dense route declines and the fold answers in `BigInt`.
+    /// The third case is the one a single end-to-end check would miss: no
+    /// *intermediate* fits, but the total does.
+    #[tokio::test]
+    async fn a_sum_past_i64_promotes_exactly() {
+        for (dense, nested, expected) in [
+            (
+                "[ 9223372036854775807 1 ] SUM",
+                "[ 9223372036854775807 ] [ 1 ] CONCAT SUM",
+                "9223372036854775808/1",
+            ),
+            (
+                "[ -9223372036854775808 -1 ] SUM",
+                "[ -9223372036854775808 ] [ -1 ] CONCAT SUM",
+                "-9223372036854775809/1",
+            ),
+            (
+                "[ 9223372036854775807 1 -1 ] SUM",
+                "[ 9223372036854775807 ] [ 1 -1 ] CONCAT SUM",
+                "9223372036854775807/1",
+            ),
+        ] {
+            let mut a = Interpreter::new();
+            assert_eq!(
+                result_of(&mut a, dense).await,
+                expected,
+                "`{dense}` must promote exactly"
+            );
+            let mut b = Interpreter::new();
+            assert_eq!(
+                result_of(&mut b, nested).await,
+                expected,
+                "`{nested}` must agree with the dense route"
+            );
+            assert_eq!(
+                charged_by_or_partial(dense).await,
+                charged_by_or_partial(nested).await,
+                "`{dense}` must cost what `{nested}` costs"
+            );
+        }
+    }
+
+    /// Work charged by a source whether or not it computed — a refusal's
+    /// partial charge is as observable as a success's total.
+    async fn charged_by_or_partial(source: &str) -> u64 {
+        let mut interp = Interpreter::new();
+        let _ = interp.execute(source).await;
+        interp.numeric_work_used
+    }
+
+    /// Both ceilings a summation can cross must refuse at the same lane on
+    /// either route, with the same work already spent. `max_bigint_bits` is
+    /// injectable, which is why the dense route keeps the fold's per-result
+    /// width check rather than assuming an `i64` accumulator always fits.
+    #[tokio::test]
+    async fn a_refused_sum_is_refused_identically_on_either_route() {
+        let (dense, nested) = dense_and_nested(200);
+
+        for bits in [4u64, 8, 64] {
+            let limits = RuntimeLimits {
+                max_bigint_bits: bits,
+                ..Default::default()
+            };
+            let mut a = with_limits(limits);
+            let mut b = with_limits(limits);
+            assert_eq!(
+                result_of(&mut a, &dense).await,
+                result_of(&mut b, &nested).await,
+                "max_bigint_bits={bits} must decide both routes alike"
+            );
+            assert_eq!(
+                a.numeric_work_used, b.numeric_work_used,
+                "max_bigint_bits={bits} must refuse after the same work"
+            );
+        }
+
+        for cap in [5u64, 50, 500] {
+            let limits = RuntimeLimits {
+                max_numeric_work: cap,
+                ..Default::default()
+            };
+            let mut a = with_limits(limits);
+            let mut b = with_limits(limits);
+            assert_eq!(
+                a.execute(&dense).await.is_ok(),
+                b.execute(&nested).await.is_ok(),
+                "max_numeric_work={cap} must decide both routes alike"
+            );
+            assert_eq!(
+                a.numeric_work_used, b.numeric_work_used,
+                "max_numeric_work={cap} must refuse at the same lane"
+            );
+        }
+    }
 }

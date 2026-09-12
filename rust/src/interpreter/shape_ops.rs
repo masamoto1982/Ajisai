@@ -9,7 +9,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value};
+use crate::types::{Interpretation, Value, ValueData};
 use num_bigint::BigInt;
 
 use super::ordering_ops::{elements_of, restore, take_operand};
@@ -117,6 +117,76 @@ pub fn op_zip(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// Sum a flat pure-integer dense buffer from its numerator column.
+///
+/// `Some(total)` when this route ran, `None` when the value is any other shape
+/// and the per-element fold below must handle it. An `Err` is the fold's own
+/// error, raised at the same lane the fold would have raised it at.
+///
+/// The per-element fold reaches `elements_of`, which materializes a `Tensor`
+/// into one boxed `Value` per lane, and then pays the whole binary-arithmetic
+/// dispatch — metering, route selection, `Fraction` addition, gcd normalization
+/// — to add two machine integers. Summing 262,144 of them cost 116 ms.
+///
+/// **The charge is unit-for-unit what the fold charges, and that is what makes
+/// this route legal.** LANG.AUTHORITY.FREEDOM makes the choice of route
+/// unobservable, so a route that charged differently would turn an internal
+/// decision into an observable one — the exact defect `arithmetic_meter`'s
+/// module header records, where `2 3 *` was priced and `[ 2 ] 3 *` was free.
+/// The arithmetic here works out to a constant: every lane of a dense tensor is
+/// a `Small` fraction, `fraction_work_bits` answers 1 for a `Small`, and the
+/// accumulator stays `Small` for as long as the sum fits `i64` — so every one of
+/// the fold's additions charges `binary_numeric_work(1, 1)`, which is 1 unit.
+/// `n` lanes cost `n` units, charged one lane at a time so a numeric-work
+/// ceiling refuses at the same lane and with the same accumulated total.
+///
+/// `max_bigint_bits` is injectable, so the fold's per-result size check is kept
+/// too, at the same point and against the same width: an integer accumulator's
+/// width is `max(bits, 1)`, read off the leading zeros instead of built into a
+/// `BigInt`.
+///
+/// Overflow declines rather than promotes. Deciding it needs one pass that only
+/// adds, before a single unit is charged — charging and *then* falling back to
+/// the exact path would bill the sum twice.
+fn dense_integer_sum(interp: &mut Interpreter, value: &Value) -> Result<Option<Value>> {
+    let ValueData::Tensor { data, shape } = &value.data else {
+        return Ok(None);
+    };
+    // Rank 1 only: `SUM` folds the *outer* axis, so a rank-2 tensor sums to a
+    // row rather than to a scalar, which is a different answer and not this
+    // route's to give. A rational lane is not an `i64` addition, and an absent
+    // lane short-circuits the fold to NIL without charging for the lanes it
+    // never reached — so both stay with the fold.
+    if shape.len() != 1 || !data.is_pure_integer || !data.all_lanes_valid() {
+        return Ok(None);
+    }
+
+    let lanes: &[i64] = &data.numerators;
+    let mut probe: i64 = 0;
+    for lane in lanes {
+        match probe.checked_add(*lane) {
+            Some(next) => probe = next,
+            // The fold would promote to `BigInt` here; this route cannot, and
+            // has charged nothing yet, so the fold takes it from the top.
+            None => return Ok(None),
+        }
+    }
+
+    let mut total: i64 = 0;
+    for lane in lanes {
+        // Charged before the addition, as the fold charges before each `ADD`.
+        interp.charge_numeric_work(1)?;
+        total += lane;
+        // Checked after it, on the result, as the fold checks. `BigInt::bits()`
+        // answers 0 for zero and the denominator contributes 1, so the width of
+        // an integer accumulator is its magnitude's bit length, floored at 1.
+        let bits = u64::from(64 - total.unsigned_abs().leading_zeros()).max(1);
+        interp.runtime_limits.check_bigint_bits(bits)?;
+    }
+
+    Ok(Some(Value::from_int(total)))
+}
+
 /// `SUM ( [ vec ] -> [ total ] )`: fold the outermost axis with `ADD`.
 ///
 /// `0 { ADD } FOLD` says the same thing in four tokens, and those four tokens
@@ -131,6 +201,13 @@ pub fn op_sum(interp: &mut Interpreter) -> Result<()> {
     let value = take_operand(interp)?;
     if value.is_nil() {
         interp.stack.push(value);
+        return Ok(());
+    }
+
+    if let Some(total) = dense_integer_sum(interp, &value)? {
+        interp
+            .stack
+            .push_with_role(total, Interpretation::RawNumber);
         return Ok(());
     }
 
