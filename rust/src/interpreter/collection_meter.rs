@@ -167,6 +167,23 @@ pub(crate) fn charge_comparison_sort(interp: &mut Interpreter, items: &[Value]) 
     charge(interp, units)
 }
 
+/// [`charge_comparison_sort`] for a caller that still holds the vector rather
+/// than its elements.
+///
+/// The same units, and that is the point rather than a hope: for a flat dense
+/// tensor of `n` machine integers, `element_cost` reads
+/// `OperandWork { lanes: n, bits: 1 }` off the representation in O(1), while
+/// `element_cost_of_slice` reaches the identical `OperandWork` by joining `n`
+/// `leaf(1)` readings — `join` sums lanes and maxes bits — and both then divide
+/// by the same `n`. So both arrive at `ElementCost { leaves: 1, width: 1 }`, and
+/// a sort that never materializes its elements is priced exactly as the sort
+/// that does. Which of the two routes runs stays unobservable
+/// (LANG.AUTHORITY.FREEDOM).
+pub(crate) fn charge_comparison_sort_of(interp: &mut Interpreter, value: &Value) -> Result<()> {
+    let units = element_cost(value).comparison_sort(value.len());
+    charge(interp, units)
+}
+
 /// The running charge for a hash-keyed scan — `UNIQUE`, `TALLY`, `GROUP`.
 ///
 /// The one place in either meter that does not charge everything at the
@@ -200,11 +217,27 @@ pub(crate) struct ScanMeter {
 impl ScanMeter {
     /// Price a scan over `items`.
     pub(crate) fn new(items: &[Value]) -> Self {
-        let cost = element_cost_of_slice(items);
+        Self::from_cost(element_cost_of_slice(items), items.len())
+    }
+
+    /// [`ScanMeter::new`] for a caller that still holds the vector rather than
+    /// its elements.
+    ///
+    /// The same units, for the reason `charge_comparison_sort_of` sets out:
+    /// `element_cost` and `element_cost_of_slice` reach the identical
+    /// `OperandWork` for a flat dense tensor, one by reading the representation
+    /// in O(1) and the other by joining a reading per lane. So a scan that never
+    /// materializes its elements is priced exactly as the scan that does, and
+    /// which route ran stays unobservable (LANG.AUTHORITY.FREEDOM).
+    pub(crate) fn for_vector(value: &Value) -> Self {
+        Self::from_cost(element_cost(value), value.len())
+    }
+
+    fn from_cost(cost: ElementCost, total: usize) -> Self {
         Self {
             probe_units: cost.probe(),
             copy_units: cost.copy(),
-            total: items.len() as u64,
+            total: total as u64,
         }
     }
 

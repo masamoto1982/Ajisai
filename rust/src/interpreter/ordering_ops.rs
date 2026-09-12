@@ -14,7 +14,7 @@ use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value};
+use crate::types::{Interpretation, Value, ValueData};
 use std::collections::HashMap;
 
 /// Take the Word's single operand, honouring `KEEP`.
@@ -161,6 +161,59 @@ fn distinct_with_counts(interp: &mut Interpreter, items: &[Value]) -> Result<Vec
         .collect())
 }
 
+/// [`distinct_with_counts`] over a flat pure-integer dense buffer, reading its
+/// numerator column.
+///
+/// `Some(pairs)` when this route ran — each distinct lane with its count, in
+/// first-occurrence order, exactly as the boxed scan reports them. `None` when
+/// the value is any other shape and that scan must handle it. An `Err` is the
+/// scan's own refusal, raised at the same element and with the same progress.
+///
+/// The boxed scan materializes a `Tensor` into one 96-byte `Value` per lane and
+/// then keys a `HashMap<&Value, usize>` on it, hashing through `ValueData`'s
+/// discriminant and `Fraction`'s reduced pair to ask a question about one
+/// machine integer. Keying the `i64` instead is the same question: every lane of
+/// a pure-integer buffer has denominator 1, so numerator equality *is* value
+/// equality, and `Fraction`'s cross-multiplying `eq` agrees lane for lane.
+///
+/// **The charge is the scan's own, element for element.** `ScanMeter::for_vector`
+/// reaches the same `ElementCost` without materializing (see its note), and the
+/// sequence of charges depends on nothing else: `charge_scan_of` once per lane in
+/// order, and `charge_retained` only where a lane is newly distinct — which for
+/// integers is decided identically either way. So a ceiling refuses at the same
+/// lane, with the same `completed` progress, and the choice of route stays
+/// unobservable (LANG.AUTHORITY.FREEDOM).
+fn dense_integer_distinct_with_counts(
+    interp: &mut Interpreter,
+    value: &Value,
+) -> Result<Option<Vec<(i64, usize)>>> {
+    let ValueData::Tensor { data, shape } = &value.data else {
+        return Ok(None);
+    };
+    // A rational lane is not identified by its numerator, an absent lane asks
+    // whether two NILs are the same value (their reasons decide, and a dense
+    // lane's reason lives elsewhere), and rank above 1 reports distinct *rows*.
+    if shape.len() != 1 || !data.is_pure_integer || !data.all_lanes_valid() {
+        return Ok(None);
+    }
+
+    let meter = ScanMeter::for_vector(value);
+    let mut first_seen: HashMap<i64, usize> = HashMap::with_capacity(data.len());
+    let mut distinct: Vec<(i64, usize)> = Vec::new();
+    for (completed, lane) in data.numerators.iter().enumerate() {
+        meter.charge_scan_of(interp, completed)?;
+        match first_seen.entry(*lane) {
+            std::collections::hash_map::Entry::Occupied(slot) => distinct[*slot.get()].1 += 1,
+            std::collections::hash_map::Entry::Vacant(slot) => {
+                meter.charge_retained(interp, completed)?;
+                slot.insert(distinct.len());
+                distinct.push((*lane, 1));
+            }
+        }
+    }
+    Ok(Some(distinct))
+}
+
 /// `UNIQUE ( [ vec ] -> [ distinct ] )`: the distinct elements in
 /// first-occurrence order.
 ///
@@ -173,6 +226,21 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(value);
         return Ok(());
     }
+    match dense_integer_distinct_with_counts(interp, &value) {
+        Ok(Some(distinct)) => {
+            let lanes: Vec<i64> = distinct.into_iter().map(|(lane, _)| lane).collect();
+            interp
+                .stack
+                .push_with_role(Value::from_int_tensor(lanes), Interpretation::Unassigned);
+            return Ok(());
+        }
+        Ok(None) => {}
+        Err(e) => {
+            restore(interp, value);
+            return Err(e);
+        }
+    }
+
     let items = match elements_of(&value, "vector") {
         Ok(items) => items,
         Err(e) => {
@@ -207,6 +275,24 @@ pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(value);
         return Ok(());
     }
+    match dense_integer_distinct_with_counts(interp, &value) {
+        Ok(Some(distinct)) => {
+            let counts: Vec<i64> = distinct
+                .into_iter()
+                .map(|(_, count)| count as i64)
+                .collect();
+            interp
+                .stack
+                .push_with_role(Value::from_int_tensor(counts), Interpretation::Unassigned);
+            return Ok(());
+        }
+        Ok(None) => {}
+        Err(e) => {
+            restore(interp, value);
+            return Err(e);
+        }
+    }
+
     let items = match elements_of(&value, "vector") {
         Ok(items) => items,
         Err(e) => {

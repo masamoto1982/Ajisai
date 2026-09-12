@@ -31,6 +31,8 @@ pub mod logic;
 pub mod math_ops;
 pub(crate) mod naming_convention_checker;
 mod ordering_ops;
+#[cfg(test)]
+mod ordering_ops_tests;
 pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
@@ -41,6 +43,8 @@ mod session_lifecycle;
 mod shape_ops;
 pub(crate) mod simd_ops;
 pub mod sort;
+#[cfg(test)]
+mod sort_tests;
 mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
