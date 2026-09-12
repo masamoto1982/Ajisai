@@ -400,11 +400,28 @@ mod collection_meter_tests {
         interp.collection_work_used()
     }
 
-    /// What appending `SORT` to `prefix` costs on its own.
-    async fn sort_charge_after(prefix: &str) -> u64 {
+    /// What appending `word` to `prefix` costs on its own.
+    async fn charge_of_appending(word: &str, prefix: &str) -> u64 {
         let without = collection_work_of(prefix).await;
-        let with = collection_work_of(&format!("{prefix} SORT")).await;
+        let with = collection_work_of(&format!("{prefix} {word}")).await;
         with - without
+    }
+
+    /// The same integers, as a flat dense `Tensor` and as a nested `Vector`.
+    /// `REVERSE` of a range leaves the former; `CONCAT` does not promote, so it
+    /// leaves the latter. `modulo` sets how many distinct values the data holds,
+    /// which is the axis a hash-keyed scan's price actually turns on.
+    fn dense_and_nested(n: usize, modulo: Option<usize>) -> (String, String) {
+        let half = n / 2;
+        let fold = modulo.map_or(String::new(), |m| format!(" [ {m} MOD ] MAP"));
+        (
+            format!("[ 0 {} ] RANGE{fold} REVERSE", n - 1),
+            format!(
+                "[ 0 {} ] RANGE{fold} [ {half} {} ] RANGE{fold} CONCAT",
+                half - 1,
+                n - 1
+            ),
+        )
     }
 
     #[tokio::test]
@@ -416,8 +433,8 @@ mod collection_meter_tests {
             // Nested: `CONCAT` does not promote, so this stays a `Vector`.
             let nested = format!("[ 0 {} ] RANGE [ {half} {} ] RANGE CONCAT", half - 1, n - 1);
             assert_eq!(
-                sort_charge_after(&dense).await,
-                sort_charge_after(&nested).await,
+                charge_of_appending("SORT", &dense).await,
+                charge_of_appending("SORT", &nested).await,
                 "sorting {n} integers must cost the same held densely as held nested"
             );
         }
@@ -428,11 +445,32 @@ mod collection_meter_tests {
     /// times as much.
     #[tokio::test]
     async fn sorting_more_elements_costs_more_than_linearly() {
-        let small = sort_charge_after("[ 0 99 ] RANGE REVERSE").await;
-        let large = sort_charge_after("[ 0 999 ] RANGE REVERSE").await;
+        let small = charge_of_appending("SORT", "[ 0 99 ] RANGE REVERSE").await;
+        let large = charge_of_appending("SORT", "[ 0 999 ] RANGE REVERSE").await;
         assert!(
             large > small.saturating_mul(10),
             "1000 elements charged {large} against 100 elements' {small},              which is at most linear — the log factor is missing"
         );
+    }
+
+    /// `UNIQUE` and `TALLY` share one hash-keyed scan, and it too has a dense
+    /// route now — keying the `i64` column rather than a boxed `Value` per lane.
+    /// Unlike the sort's, this scan charges *as it goes*, and how often it
+    /// charges for retaining an element depends on how many distinct values the
+    /// data holds. So the parity is checked across that axis as well as across
+    /// size: `[ m MOD ] MAP` sets the distinct count to `m`.
+    #[tokio::test]
+    async fn a_hash_keyed_scan_costs_the_same_whichever_representation_holds_it() {
+        for (n, modulo) in [(8usize, 2usize), (100, 4), (1000, 7), (1000, 1000)] {
+            let (dense, nested) = dense_and_nested(n, Some(modulo));
+            for word in ["UNIQUE", "TALLY"] {
+                assert_eq!(
+                    charge_of_appending(word, &dense).await,
+                    charge_of_appending(word, &nested).await,
+                    "`{word}` over {n} integers with {modulo} distinct values must \
+                     cost the same held densely as held nested"
+                );
+            }
+        }
     }
 }

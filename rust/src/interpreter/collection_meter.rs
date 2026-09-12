@@ -217,11 +217,27 @@ pub(crate) struct ScanMeter {
 impl ScanMeter {
     /// Price a scan over `items`.
     pub(crate) fn new(items: &[Value]) -> Self {
-        let cost = element_cost_of_slice(items);
+        Self::from_cost(element_cost_of_slice(items), items.len())
+    }
+
+    /// [`ScanMeter::new`] for a caller that still holds the vector rather than
+    /// its elements.
+    ///
+    /// The same units, for the reason `charge_comparison_sort_of` sets out:
+    /// `element_cost` and `element_cost_of_slice` reach the identical
+    /// `OperandWork` for a flat dense tensor, one by reading the representation
+    /// in O(1) and the other by joining a reading per lane. So a scan that never
+    /// materializes its elements is priced exactly as the scan that does, and
+    /// which route ran stays unobservable (LANG.AUTHORITY.FREEDOM).
+    pub(crate) fn for_vector(value: &Value) -> Self {
+        Self::from_cost(element_cost(value), value.len())
+    }
+
+    fn from_cost(cost: ElementCost, total: usize) -> Self {
         Self {
             probe_units: cost.probe(),
             copy_units: cost.copy(),
-            total: items.len() as u64,
+            total: total as u64,
         }
     }
 

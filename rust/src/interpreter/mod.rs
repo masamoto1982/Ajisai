@@ -31,6 +31,8 @@ pub mod logic;
 pub mod math_ops;
 pub(crate) mod naming_convention_checker;
 mod ordering_ops;
+#[cfg(test)]
+mod ordering_ops_tests;
 pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
