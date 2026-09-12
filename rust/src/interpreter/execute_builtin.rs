@@ -363,7 +363,7 @@ impl Interpreter {
 
     pub(crate) fn format_token_to_string(&self, token: &Token) -> String {
         match token {
-            Token::Number(n) => n.to_string(),
+            Token::Number(literal) => literal.lexeme().to_string(),
             Token::String(s) => format!("'{}'", s),
             Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),

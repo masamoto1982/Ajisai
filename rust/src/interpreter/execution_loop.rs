@@ -1,5 +1,4 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
-use crate::types::fraction::Fraction;
 use crate::types::{ExecutionLine, Interpretation, Token, Value, ValueData};
 
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
@@ -314,8 +313,12 @@ impl Interpreter {
                 self.current_source_span = self.source_spans.get(start_index + i).copied();
             }
             match &execute_tokens[i] {
-                Token::Number(n) => {
-                    let frac = Fraction::from_str(n).map_err(AjisaiError::MalformedSource)?;
+                Token::Number(literal) => {
+                    // Parsed when the lexeme was read, not here — this line ran
+                    // once per element of every `MAP` block that mentioned a
+                    // number. `parsed` only re-derives anything on the refusal
+                    // path, which ends the program.
+                    let frac = literal.parsed().map_err(AjisaiError::MalformedSource)?;
                     self.stack
                         .push_with_role(create_number_value(frac), Interpretation::RawNumber);
                 }
@@ -543,7 +546,11 @@ impl Interpreter {
     pub(crate) fn check_source_numeric_literals(&self, tokens: &[Token]) -> Result<()> {
         for token in tokens {
             if let Token::Number(literal) = token {
-                let digits = literal.chars().filter(|c| c.is_ascii_digit()).count();
+                let digits = literal
+                    .lexeme()
+                    .chars()
+                    .filter(|c| c.is_ascii_digit())
+                    .count();
                 self.runtime_limits.check_numeric_literal_digits(digits)?;
             }
         }

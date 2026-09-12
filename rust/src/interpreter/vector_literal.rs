@@ -14,7 +14,6 @@
 //! occurs here.
 
 use crate::error::{AjisaiError, Result};
-use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Token, Value};
 
 use super::Interpreter;
@@ -69,9 +68,9 @@ impl Interpreter {
                         Self::element_hint(has_other, has_bool, has_number),
                     ));
                 }
-                Token::Number(n) => {
+                Token::Number(literal) => {
                     values.push(Value::from_number(
-                        Fraction::from_str(n).map_err(AjisaiError::MalformedSource)?,
+                        literal.parsed().map_err(AjisaiError::MalformedSource)?,
                     ));
                     has_number = true;
                     i += 1;

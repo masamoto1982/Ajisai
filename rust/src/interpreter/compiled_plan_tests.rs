@@ -27,7 +27,7 @@ fn test_word(tokens: Vec<Token>) -> WordDefinition {
 #[test]
 fn compiled_plan_invalidates_on_dictionary_epoch_change() {
     let mut interp = Interpreter::new();
-    let wd = test_word(vec![Token::Number("1".into())]);
+    let wd = test_word(vec![Token::number("1")]);
     let plan = compile_word_definition(&wd, &interp);
     assert!(is_plan_valid(&plan, &interp));
     interp.bump_dictionary_epoch();
@@ -38,7 +38,7 @@ fn compile_collects_vector_literal() {
     let interp = Interpreter::new();
     let wd = test_word(vec![
         Token::VectorStart,
-        Token::Number("1".into()),
+        Token::number("1"),
         Token::Symbol("+".into()),
         Token::VectorEnd,
     ]);

@@ -219,7 +219,7 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
 /// Shared by source tokenization and the public code-data decoder so the two
 /// entry paths cannot drift into different numeric languages.
 pub(crate) fn is_number_token_lexeme(lexeme: &str) -> bool {
-    matches!(parse_number_from_string(lexeme), Some(Token::Number(value)) if value.as_ref() == lexeme)
+    matches!(parse_number_from_string(lexeme), Some(Token::Number(literal)) if literal.lexeme() == lexeme)
 }
 
 /// Whether `lexeme` is exactly one Symbol token under the canonical lexer.
@@ -419,7 +419,7 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
         }
 
         if i == chars.len() {
-            return Some(Token::Number(s.into()));
+            return Some(Token::number(s));
         } else {
             return None;
         }
@@ -456,7 +456,7 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     }
 
     if i == chars.len() {
-        Some(Token::Number(s.into()))
+        Some(Token::number(s))
     } else {
         None
     }

@@ -18,6 +18,8 @@ mod value_tensor;
 // tests. Gating it on `any(test, feature = "wasm")` keeps a plain native build
 // free of dead code while still running the round-trip tests under `cargo test`.
 #[cfg(test)]
+mod number_literal_tests;
+#[cfg(test)]
 mod value_hash_tests;
 #[cfg(test)]
 mod value_lane_absence_tests;
@@ -257,9 +259,91 @@ impl std::hash::Hash for Value {
     }
 }
 
+/// A numeric literal: how it was written, and — when it is a plain machine
+/// integer — the integer it denotes.
+///
+/// The parse belongs to the *source*, not to the execution. It used to happen
+/// wherever a `Token::Number` was reached, which meant a literal inside a block
+/// was re-parsed once per element: `[ 2 MUL ] MAP` rebuilt a `BigInt` from `"2"`
+/// and gcd-normalized it on every lane. `value_as_code` made that worse by
+/// formatting an already-parsed `Scalar` back into a string for the token, so a
+/// block literal made a full round trip — parsed value → string → parsed value,
+/// once per element.
+///
+/// **Only `i64` is carried, and that is a measurement rather than a shortcut.**
+/// Carrying the full `Fraction` worked for blocks and lost elsewhere: a literal is
+/// met *once* per straight-line program, so hoisting its parse to the lexer saves
+/// nothing there, while a 64-byte `Fraction` in every token took `Token` from 24
+/// bytes to 80 and pushing a thousand literals from 238 ns each to 293. An `i64`
+/// keeps `Token` at 40, costs a digit scan rather than a `BigInt` allocation to
+/// fill, and covers the literals that actually appear in hot blocks. A rational,
+/// an exponent, a decimal point or a digit separator simply has no `integer` and
+/// is parsed where it is reached, as before.
+///
+/// **The lexeme is kept, not discarded.** Three consumers need the spelling
+/// rather than the value: the numeric-literal digit ceiling counts digits as
+/// written, `format_token_to_string` echoes source back, and the tokenizer's own
+/// round-trip check compares a lexeme against itself.
+///
+/// **A malformed lexeme is not an error here.** `1/0` tokenizes as a Number and is
+/// refused when it is *reached* — and `1 PRINT 1/0` really does print `1/1` before
+/// failing, so refusing it at tokenize time would erase a host effect a program
+/// was entitled to. Such a lexeme has no `integer` either, and [`Self::parsed`]
+/// raises the identical message at the point it was always raised.
+#[derive(Debug, Clone, PartialEq, Hash)]
+pub struct NumberLiteral {
+    lexeme: Arc<str>,
+    /// Set only when the lexeme is exactly `[+-]?digits` in `i64` range, in which
+    /// case it denotes precisely this integer over 1. Every other spelling —
+    /// `1/2`, `1.5`, `1e5`, `1_000`, `1/0`, or anything wider than `i64` — leaves
+    /// it `None` and reaches `Fraction::from_str` as it did before.
+    integer: Option<i64>,
+}
+
+impl NumberLiteral {
+    /// From a lexeme the lexer has just recognized. The `i64` attempt is a digit
+    /// scan with no allocation; it declines rather than approximating.
+    pub(crate) fn from_lexeme(lexeme: Arc<str>) -> Self {
+        let integer = lexeme.parse::<i64>().ok();
+        Self { lexeme, integer }
+    }
+
+    /// From a rational the caller already holds. `value_as_code` uses this when
+    /// bridging a `Scalar` element back into a token, so an integer it already
+    /// had is never re-parsed from the string it was formatted into.
+    pub(crate) fn from_value(value: Fraction) -> Self {
+        let lexeme: Arc<str> = format!("{value}").into();
+        let integer = lexeme.parse::<i64>().ok();
+        Self { lexeme, integer }
+    }
+
+    /// The literal as written.
+    pub fn lexeme(&self) -> &str {
+        &self.lexeme
+    }
+
+    /// The rational this denotes, or the message its own parse reports.
+    ///
+    /// The integer case is the whole point: it builds a `Fraction` from an `i64`
+    /// with no scan, no `BigInt` and no allocation. Everything else parses here,
+    /// exactly where it used to.
+    pub(crate) fn parsed(&self) -> std::result::Result<Fraction, String> {
+        match self.integer {
+            Some(n) => Ok(Fraction::from(n)),
+            None => Fraction::from_str(&self.lexeme),
+        }
+    }
+
+    /// [`Self::parsed`] as an `Option`, for the callers that decline rather than
+    /// report — the compiled-plan lowering and the word-shape digest.
+    pub(crate) fn value(&self) -> Option<Fraction> {
+        self.parsed().ok()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Token {
-    Number(Arc<str>),
+    Number(NumberLiteral),
     String(Arc<str>),
     Symbol(Arc<str>),
     VectorStart,
@@ -267,6 +351,19 @@ pub enum Token {
     NilCoalesce,
     CondClauseSep,
     LineBreak,
+}
+
+impl Token {
+    /// A `Number` token from a lexeme, parsed once here.
+    pub fn number(lexeme: &str) -> Self {
+        Token::Number(NumberLiteral::from_lexeme(lexeme.into()))
+    }
+
+    /// A `Number` token for a rational already in hand — see
+    /// [`NumberLiteral::from_value`].
+    pub(crate) fn number_from_value(value: Fraction) -> Self {
+        Token::Number(NumberLiteral::from_value(value))
+    }
 }
 
 #[derive(Debug, Clone)]
