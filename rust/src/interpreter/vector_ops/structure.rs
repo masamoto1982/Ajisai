@@ -3,7 +3,6 @@ use super::targeting::with_stacktop_vector_target_no_arg;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_bigint_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
@@ -216,22 +215,30 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
 
-    let mut range_vec = Vec::with_capacity(element_count as usize);
+    // Built as columns, not as boxed lanes. `parse_range_args` answers in
+    // `i64`, so *every* value RANGE can produce is an `i64` with denominator 1
+    // and no lane absent — a 1-D pure-integer dense tensor is not a guess about
+    // this result, it is what the result is. Building `Vec<Value>` instead
+    // boxed each lane into a 96-byte `Value` wrapping a 64-byte `Fraction` to
+    // carry 8 bytes of integer, and then every Word downstream had to decline
+    // its dense fast path because the dense representation had been thrown away
+    // at construction: `[ 0 262143 ] RANGE` spent 9.9 ms laying out 25 MB to
+    // describe 2 MB of numbers.
+    //
+    // `element_count` is exact (`span / stride + 1` counts the lanes the
+    // comparison loops below used to visit), so the count drives the loop and
+    // the bound comparison is gone with it. `saturating_add` matters only on the
+    // final, unused step past the last lane, where `current += step` could
+    // overflow `i64` for an extreme bound; the lanes themselves are unchanged.
+    let count = element_count as usize;
+    let mut numerators = Vec::with_capacity(count);
     let mut current = start;
-
-    if step > 0 {
-        while current <= end {
-            range_vec.push(Value::from_fraction(Fraction::from(current)));
-            current += step;
-        }
-    } else {
-        while current >= end {
-            range_vec.push(Value::from_fraction(Fraction::from(current)));
-            current += step;
-        }
+    for _ in 0..count {
+        numerators.push(current);
+        current = current.saturating_add(step);
     }
 
-    interp.stack.push(Value::from_vector(range_vec));
+    interp.stack.push(Value::from_int_tensor(numerators));
 
     Ok(())
 }
