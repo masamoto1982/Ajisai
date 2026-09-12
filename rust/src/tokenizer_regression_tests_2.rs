@@ -11,10 +11,10 @@ mod tokenizer_regression_tests_2 {
         assert_eq!(
             result,
             vec![
-                Token::Number("1".into()),
-                Token::Number("2".into()),
-                Token::Number("3".into()),
-                Token::Number("4".into()),
+                Token::number("1"),
+                Token::number("2"),
+                Token::number("3"),
+                Token::number("4"),
             ]
         );
     }
@@ -43,18 +43,18 @@ mod tokenizer_regression_tests_2 {
     #[test]
     fn test_fraction_literal() {
         let result = tokenize("1/3").unwrap();
-        assert_eq!(result, vec![Token::Number("1/3".into())]);
+        assert_eq!(result, vec![Token::number("1/3")]);
 
         let result2 = tokenize("-1/3").unwrap();
-        assert_eq!(result2, vec![Token::Number("-1/3".into())]);
+        assert_eq!(result2, vec![Token::number("-1/3")]);
 
         let result3 = tokenize("1/3 + 2/5").unwrap();
         assert_eq!(
             result3,
             vec![
-                Token::Number("1/3".into()),
+                Token::number("1/3"),
                 Token::Symbol("+".into()),
-                Token::Number("2/5".into()),
+                Token::number("2/5"),
             ]
         );
     }
@@ -66,8 +66,8 @@ mod tokenizer_regression_tests_2 {
             result,
             vec![
                 Token::VectorStart,
-                Token::Number("1/2".into()),
-                Token::Number("3/4".into()),
+                Token::number("1/2"),
+                Token::number("3/4"),
                 Token::VectorEnd,
             ]
         );
@@ -99,7 +99,7 @@ mod tokenizer_regression_tests_2 {
             vec![
                 Token::Symbol(".".into()),
                 Token::Symbol("+".into()),
-                Token::Number("3".into()),
+                Token::number("3"),
             ]
         );
 
@@ -109,7 +109,7 @@ mod tokenizer_regression_tests_2 {
             vec![
                 Token::Symbol("..".into()),
                 Token::Symbol("+".into()),
-                Token::Number("3".into()),
+                Token::number("3"),
             ]
         );
     }
@@ -136,9 +136,9 @@ mod tokenizer_regression_tests_2 {
             result,
             vec![
                 Token::VectorStart,
-                Token::Number("1".into()),
-                Token::Number("2".into()),
-                Token::Number("3".into()),
+                Token::number("1"),
+                Token::number("2"),
+                Token::number("3"),
                 Token::VectorEnd,
                 Token::Symbol(".".into()),
                 Token::Symbol("LENGTH".into()),
@@ -153,7 +153,7 @@ mod tokenizer_regression_tests_2 {
                 Token::Symbol("b".into()),
                 Token::Symbol("c".into()),
                 Token::VectorStart,
-                Token::Number("1".into()),
+                Token::number("1"),
                 Token::VectorEnd,
                 Token::Symbol("..".into()),
                 Token::Symbol("GET".into()),
@@ -182,11 +182,7 @@ mod tokenizer_regression_tests_2 {
         let result = tokenize("[ 1 ]").unwrap();
         assert_eq!(
             result,
-            vec![
-                Token::VectorStart,
-                Token::Number("1".into()),
-                Token::VectorEnd,
-            ]
+            vec![Token::VectorStart, Token::number("1"), Token::VectorEnd,]
         );
 
         let result2 = tokenize("[ 1 2 3 ]").unwrap();
@@ -194,9 +190,9 @@ mod tokenizer_regression_tests_2 {
             result2,
             vec![
                 Token::VectorStart,
-                Token::Number("1".into()),
-                Token::Number("2".into()),
-                Token::Number("3".into()),
+                Token::number("1"),
+                Token::number("2"),
+                Token::number("3"),
                 Token::VectorEnd,
             ]
         );
@@ -207,10 +203,10 @@ mod tokenizer_regression_tests_2 {
             vec![
                 Token::VectorStart,
                 Token::VectorStart,
-                Token::Number("1".into()),
+                Token::number("1"),
                 Token::VectorEnd,
                 Token::VectorStart,
-                Token::Number("2".into()),
+                Token::number("2"),
                 Token::VectorEnd,
                 Token::VectorEnd,
             ]
@@ -221,13 +217,13 @@ mod tokenizer_regression_tests_2 {
             result4,
             vec![
                 Token::VectorStart,
-                Token::Number("1".into()),
-                Token::Number("2".into()),
+                Token::number("1"),
+                Token::number("2"),
                 Token::VectorEnd,
                 Token::Symbol("+".into()),
                 Token::VectorStart,
-                Token::Number("3".into()),
-                Token::Number("4".into()),
+                Token::number("3"),
+                Token::number("4"),
                 Token::VectorEnd,
             ]
         );
@@ -252,7 +248,7 @@ mod tokenizer_regression_tests_2 {
         assert_eq!(result.len(), 6);
         assert!(matches!(&result[0], Token::VectorStart));
         assert!(matches!(&result[1], Token::VectorStart));
-        assert!(matches!(&result[2], Token::Number(n) if n.as_ref() == "1"));
+        assert!(matches!(&result[2], Token::Number(n) if n.lexeme() == "1"));
         assert!(matches!(&result[3], Token::VectorEnd));
         assert!(matches!(&result[4], Token::Symbol(s) if s.as_ref() == "+"));
         assert!(matches!(&result[5], Token::VectorEnd));
@@ -297,8 +293,8 @@ mod tokenizer_regression_tests_2 {
         assert_eq!(
             result,
             vec![
-                Token::Number("5".into()),
-                Token::Number("3".into()),
+                Token::number("5"),
+                Token::number("3"),
                 Token::Symbol(">".into()),
             ]
         );

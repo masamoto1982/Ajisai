@@ -23,7 +23,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::core_word_aliases::canonicalize_core_word_name;
-use crate::types::fraction::Fraction;
 use crate::types::{Token, WordDefinition};
 
 use super::Interpreter;
@@ -46,17 +45,17 @@ pub(crate) fn content_digest(bytes: &[u8]) -> String {
 /// caller still writes precisely the bytes it wrote inline.
 pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
     match tok {
-        Token::Number(n) => match Fraction::from_str(n) {
-            Ok(frac) => {
+        Token::Number(literal) => match literal.value() {
+            Some(frac) => {
                 let (num, den) = frac.to_bigint_pair();
                 bytes.push(b'N');
                 bytes.extend_from_slice(num.to_str_radix(16).as_bytes());
                 bytes.push(b'/');
                 bytes.extend_from_slice(den.to_str_radix(16).as_bytes());
             }
-            Err(_) => {
+            None => {
                 bytes.push(b'n');
-                bytes.extend_from_slice(n.as_bytes());
+                bytes.extend_from_slice(literal.lexeme().as_bytes());
             }
         },
         Token::String(s) => {
@@ -104,9 +103,9 @@ fn structural_atom(tag: u8) -> Atom {
     Atom::Raw(vec![tag])
 }
 
-fn number_atom(n: &str) -> Atom {
-    match Fraction::from_str(n) {
-        Ok(frac) => {
+fn number_atom(literal: &crate::types::NumberLiteral) -> Atom {
+    match literal.value() {
+        Some(frac) => {
             let (num, den) = frac.to_bigint_pair();
             let mut b = vec![b'N'];
             b.extend_from_slice(num.to_str_radix(16).as_bytes());
@@ -116,9 +115,9 @@ fn number_atom(n: &str) -> Atom {
         }
         // Unparseable numeric literal: fall back to the raw spelling so the
         // shape is still total and deterministic.
-        Err(_) => {
+        None => {
             let mut b = vec![b'n'];
-            b.extend_from_slice(n.as_bytes());
+            b.extend_from_slice(literal.lexeme().as_bytes());
             Atom::Raw(b)
         }
     }
@@ -243,7 +242,7 @@ impl Interpreter {
             atoms.push(structural_atom(b'\n'));
             for tok in line.body_tokens.iter() {
                 let atom = match tok {
-                    Token::Number(n) => number_atom(n),
+                    Token::Number(literal) => number_atom(literal),
                     Token::String(s) => {
                         let mut b = vec![b'S'];
                         b.extend_from_slice(s.as_bytes());

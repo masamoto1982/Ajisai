@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use crate::builtins::lookup_builtin_spec;
 use crate::error::Result;
-use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Token, Value, WordDefinition};
 
 use super::compiled_call::{execute_compiled_call, CompiledCall};
@@ -141,8 +140,8 @@ fn try_collect_literal_vector(
                 };
                 return Some((values, i - start + 1, element_hint));
             }
-            Token::Number(n) => {
-                values.push(Value::from_number(Fraction::from_str(n).ok()?));
+            Token::Number(literal) => {
+                values.push(Value::from_number(literal.value()?));
                 has_number = true;
                 i += 1;
             }
@@ -207,9 +206,9 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
     while i < tokens.len() {
         let token = &tokens[i];
         let op = match token {
-            Token::Number(n) => match crate::types::fraction::Fraction::from_str(n) {
-                Ok(frac) => CompiledOp::PushLiteral(Value::from_number(frac)),
-                Err(_) => CompiledOp::FallbackToken(token.clone()),
+            Token::Number(literal) => match literal.value() {
+                Some(frac) => CompiledOp::PushLiteral(Value::from_number(frac)),
+                None => CompiledOp::FallbackToken(token.clone()),
             },
             Token::String(s) => CompiledOp::PushLiteral(Value::from_string(s)),
             Token::VectorStart => match try_collect_literal_vector(&tokens, i, 1) {

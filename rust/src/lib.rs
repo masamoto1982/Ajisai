@@ -41,6 +41,8 @@ mod wasm_interpreter_bindings;
 pub use wasm_interpreter_bindings::AjisaiInterpreter;
 
 #[cfg(test)]
+mod malformed_numeric_literal_tests;
+#[cfg(test)]
 mod tokenizer_regression_tests;
 
 #[cfg(test)]

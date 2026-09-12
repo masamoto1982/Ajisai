@@ -8,10 +8,7 @@ mod tokenizer_regression_tests {
     #[test]
     fn test_comment_basic() {
         let result = tokenize("1 2 # this is a comment").unwrap();
-        assert_eq!(
-            result,
-            vec![Token::Number("1".into()), Token::Number("2".into()),]
-        );
+        assert_eq!(result, vec![Token::number("1"), Token::number("2"),]);
     }
 
     #[test]
@@ -20,11 +17,11 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result,
             vec![
-                Token::Number("1".into()),
-                Token::Number("2".into()),
+                Token::number("1"),
+                Token::number("2"),
                 Token::LineBreak,
-                Token::Number("3".into()),
-                Token::Number("4".into()),
+                Token::number("3"),
+                Token::number("4"),
             ]
         );
     }
@@ -32,7 +29,7 @@ mod tokenizer_regression_tests {
     #[test]
     fn test_comment_no_newline() {
         let result = tokenize("1 # comment").unwrap();
-        assert_eq!(result, vec![Token::Number("1".into()),]);
+        assert_eq!(result, vec![Token::number("1"),]);
     }
 
     /// `#` starts a comment only at a fresh word boundary — whitespace is the
@@ -56,20 +53,14 @@ mod tokenizer_regression_tests {
         let result = tokenize("'#not a comment' 1").unwrap();
         assert_eq!(
             result,
-            vec![
-                Token::String("#not a comment".into()),
-                Token::Number("1".into()),
-            ]
+            vec![Token::String("#not a comment".into()), Token::number("1"),]
         );
     }
 
     #[test]
     fn test_multiple_comments() {
         let result = tokenize("# line 1\n# line 2\n1 2").unwrap();
-        assert_eq!(
-            result,
-            vec![Token::Number("1".into()), Token::Number("2".into()),]
-        );
+        assert_eq!(result, vec![Token::number("1"), Token::number("2"),]);
     }
 
     #[test]
@@ -145,8 +136,8 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result,
             vec![
-                Token::Number("2".into()),
-                Token::Number("3".into()),
+                Token::number("2"),
+                Token::number("3"),
                 Token::Symbol("足す".into()),
             ]
         );
@@ -161,11 +152,11 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result2,
             vec![
-                Token::Number("2".into()),
+                Token::number("2"),
                 Token::Symbol("足す".into()),
-                Token::Number("3".into()),
+                Token::number("3"),
                 Token::Symbol("掛ける".into()),
-                Token::Number("4".into()),
+                Token::number("4"),
             ]
         );
     }
@@ -203,9 +194,9 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result,
             vec![
-                Token::Number("1".into()),
+                Token::number("1"),
                 Token::Symbol("+".into()),
-                Token::Number("2".into()),
+                Token::number("2"),
                 Token::Symbol("結果".into()),
             ]
         );
@@ -214,16 +205,16 @@ mod tokenizer_regression_tests {
     #[test]
     fn test_number_parsing() {
         let result = tokenize("123").unwrap();
-        assert_eq!(result, vec![Token::Number("123".into())]);
+        assert_eq!(result, vec![Token::number("123")]);
 
         let result2 = tokenize("123.456").unwrap();
-        assert_eq!(result2, vec![Token::Number("123.456".into())]);
+        assert_eq!(result2, vec![Token::number("123.456")]);
 
         let result3 = tokenize("-123").unwrap();
-        assert_eq!(result3, vec![Token::Number("-123".into())]);
+        assert_eq!(result3, vec![Token::number("-123")]);
 
         let result4 = tokenize("1.5e10").unwrap();
-        assert_eq!(result4, vec![Token::Number("1.5e10".into())]);
+        assert_eq!(result4, vec![Token::number("1.5e10")]);
     }
 
     /// A decimal literal carries digits on both sides of the point. The point is
@@ -232,12 +223,9 @@ mod tokenizer_regression_tests {
     /// symbol later without changing the numeric language a second time.
     #[test]
     fn test_decimal_point_needs_digits_on_both_sides() {
-        assert_eq!(tokenize("0.5").unwrap(), vec![Token::Number("0.5".into())]);
-        assert_eq!(
-            tokenize("-0.5").unwrap(),
-            vec![Token::Number("-0.5".into())]
-        );
-        assert_eq!(tokenize("5.0").unwrap(), vec![Token::Number("5.0".into())]);
+        assert_eq!(tokenize("0.5").unwrap(), vec![Token::number("0.5")]);
+        assert_eq!(tokenize("-0.5").unwrap(), vec![Token::number("-0.5")]);
+        assert_eq!(tokenize("5.0").unwrap(), vec![Token::number("5.0")]);
 
         // No integer part, no fractional part, and a point followed only by an
         // exponent: none of these is a number, so each reaches the dictionary as
@@ -268,10 +256,10 @@ mod tokenizer_regression_tests {
             result,
             vec![
                 Token::VectorStart,
-                Token::Number("7".into()),
+                Token::number("7"),
                 Token::VectorEnd,
                 Token::VectorStart,
-                Token::Number("3".into()),
+                Token::number("3"),
                 Token::VectorEnd,
                 Token::Symbol("%".into()),
             ]
@@ -290,11 +278,11 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result2,
             vec![
-                Token::Number("1".into()),
+                Token::number("1"),
                 Token::Symbol("+".into()),
-                Token::Number("2".into()),
+                Token::number("2"),
                 Token::Symbol("-".into()),
-                Token::Number("3".into()),
+                Token::number("3"),
             ]
         );
     }
@@ -329,9 +317,9 @@ mod tokenizer_regression_tests {
             result,
             vec![
                 Token::VectorStart,
-                Token::Number("1".into()),
-                Token::Number("2".into()),
-                Token::Number("3".into()),
+                Token::number("1"),
+                Token::number("2"),
+                Token::number("3"),
                 Token::VectorEnd,
             ]
         );
@@ -391,9 +379,9 @@ mod tokenizer_regression_tests {
             result,
             vec![
                 Token::VectorStart,
-                Token::Number("1".into()),
-                Token::Number("2".into()),
-                Token::Number("3".into()),
+                Token::number("1"),
+                Token::number("2"),
+                Token::number("3"),
                 Token::VectorEnd,
                 Token::Symbol("LENGTH".into()),
                 Token::String("結果".into()),
@@ -408,12 +396,12 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result,
             vec![
-                Token::Number("1".into()),
-                Token::Number("2".into()),
+                Token::number("1"),
+                Token::number("2"),
                 Token::Symbol("+".into()),
                 Token::LineBreak,
-                Token::Number("3".into()),
-                Token::Number("4".into()),
+                Token::number("3"),
+                Token::number("4"),
                 Token::Symbol("*".into()),
             ]
         );
@@ -475,7 +463,7 @@ mod source_span_tests {
         let (tokens, spans) = tokenize_with_spans("# note\n42 ADD").unwrap();
         let index = tokens
             .iter()
-            .position(|t| matches!(t, crate::types::Token::Number(n) if n.as_ref() == "42"))
+            .position(|t| matches!(t, crate::types::Token::Number(n) if n.lexeme() == "42"))
             .expect("42 is a token");
         assert_eq!((spans[index].line, spans[index].column), (2, 1));
     }

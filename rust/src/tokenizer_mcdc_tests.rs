@@ -23,7 +23,7 @@ fn sym(s: &str) -> Token {
 }
 
 fn num(s: &str) -> Token {
-    Token::Number(s.into())
+    Token::number(s)
 }
 
 fn string_tok(s: &str) -> Token {

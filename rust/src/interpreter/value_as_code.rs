@@ -42,7 +42,11 @@ fn push_value_as_tokens(value: &Value, out: &mut Vec<Token>) -> Result<()> {
         ValueData::Symbol(name) if name.as_ref() == "|" => out.push(Token::CondClauseSep),
         ValueData::Symbol(name) => out.push(Token::Symbol(name.clone())),
         ValueData::Text(s) => out.push(Token::String(s.clone())),
-        ValueData::Scalar(f) => out.push(Token::Number(format!("{f}").into())),
+        // The value is already in hand, so it is carried across rather than
+        // formatted into a string for the executor to parse back. That round
+        // trip — parsed value → string → parsed value — happened once per
+        // element of every higher-order block holding a number.
+        ValueData::Scalar(f) => out.push(Token::number_from_value(f.clone())),
         ValueData::Boolean(true) => out.push(Token::Symbol("TRUE".into())),
         ValueData::Boolean(false) => out.push(Token::Symbol("FALSE".into())),
         ValueData::Nil => out.push(Token::Symbol("NIL".into())),
