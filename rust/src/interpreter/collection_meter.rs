@@ -167,6 +167,23 @@ pub(crate) fn charge_comparison_sort(interp: &mut Interpreter, items: &[Value]) 
     charge(interp, units)
 }
 
+/// [`charge_comparison_sort`] for a caller that still holds the vector rather
+/// than its elements.
+///
+/// The same units, and that is the point rather than a hope: for a flat dense
+/// tensor of `n` machine integers, `element_cost` reads
+/// `OperandWork { lanes: n, bits: 1 }` off the representation in O(1), while
+/// `element_cost_of_slice` reaches the identical `OperandWork` by joining `n`
+/// `leaf(1)` readings — `join` sums lanes and maxes bits — and both then divide
+/// by the same `n`. So both arrive at `ElementCost { leaves: 1, width: 1 }`, and
+/// a sort that never materializes its elements is priced exactly as the sort
+/// that does. Which of the two routes runs stays unobservable
+/// (LANG.AUTHORITY.FREEDOM).
+pub(crate) fn charge_comparison_sort_of(interp: &mut Interpreter, value: &Value) -> Result<()> {
+    let units = element_cost(value).comparison_sort(value.len());
+    charge(interp, units)
+}
+
 /// The running charge for a hash-keyed scan — `UNIQUE`, `TALLY`, `GROUP`.
 ///
 /// The one place in either meter that does not charge everything at the

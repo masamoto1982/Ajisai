@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::comparison::{three_way_compare, OrderOutcome};
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 use std::cell::RefCell;
 
 /// The logical Unknown as a plain NIL (LANG.VALUES.TRUTH): `SORT`/`ORDER`'s output
@@ -110,6 +110,44 @@ pub(crate) fn order_indices(items: &[Value]) -> Result<Option<Vec<usize>>> {
     }
 }
 
+/// Sort a flat pure-integer dense buffer by sorting its numerator column.
+///
+/// `Some(())` when this route ran and pushed the result; `None` when the value
+/// is any other shape and the comparison sort below must handle it. An `Err` is
+/// that sort's own error — the charge — raised before anything is consumed.
+///
+/// The comparison sort materializes a `Tensor` into one boxed `Value` per lane
+/// and then orders a *permutation* of indices, calling the budgeted
+/// continued-fraction comparison through two `Value` derefs per probe. None of
+/// that is needed to order machine integers: every comparison decides (nothing
+/// here is a Tier 2 real that could exhaust its budget, and nothing is
+/// non-comparable), so the outcome is always `Ordered`, and equal integers are
+/// indistinguishable, so the stability the permutation sort provides is not
+/// observable. Sorting 262,144 of them cost 86 ms.
+///
+/// Declines for anything but a flat, all-present, pure-integer buffer: a
+/// rational lane still sorts by value rather than by numerator, an absent lane
+/// raises the question of where NIL orders, rank above 1 sorts *rows*, and an
+/// empty buffer must answer with the empty `Vector` the route below pushes.
+fn dense_integer_sort(interp: &mut Interpreter, value: &Value) -> Result<Option<()>> {
+    let ValueData::Tensor { data, shape } = &value.data else {
+        return Ok(None);
+    };
+    if shape.len() != 1 || !data.is_pure_integer || !data.all_lanes_valid() || data.is_empty() {
+        return Ok(None);
+    }
+
+    // Priced before the sort runs, in the same units and at the same point the
+    // comparison route prices it — see `charge_comparison_sort_of`. Nothing has
+    // been consumed yet, so a refusal leaves the caller's restore path intact.
+    crate::interpreter::collection_meter::charge_comparison_sort_of(interp, value)?;
+
+    let mut sorted: Vec<i64> = data.numerators.clone();
+    sorted.sort_unstable();
+    interp.stack.push(Value::from_int_tensor(sorted));
+    Ok(Some(()))
+}
+
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -122,6 +160,17 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
+
+    match dense_integer_sort(interp, &val) {
+        Ok(Some(())) => return Ok(()),
+        Ok(None) => {}
+        Err(e) => {
+            if !is_keep_mode {
+                interp.stack.push(val);
+            }
+            return Err(e);
+        }
+    }
 
     // VTU Phase III boundary helper: as_vector_view() borrows for
     // Vector/Record and materializes once for Tensor, collapsing the

@@ -372,4 +372,67 @@ mod collection_meter_tests {
             );
         }
     }
+
+    // ── SORT's dense route is priced as SORT's comparison route ─────────────
+    //
+    // `SORT` over a flat pure-integer dense buffer sorts its numerator column
+    // instead of materializing a boxed `Value` per lane and ordering a
+    // permutation through the budgeted comparison. That is a representation
+    // decision, and this module's subject is a price that must not turn on one.
+    //
+    // Measured as a *delta*, not as a total: the two programs that put the same
+    // integers on the stack in different representations do so through different
+    // prefixes, and a total would be comparing those prefixes as much as the
+    // sort. `CONCAT` builds with the non-promoting constructor, so it leaves a
+    // nested `Vector` where `REVERSE` of a range leaves a dense `Tensor`.
+
+    /// Collection work charged by `source`, which must compute.
+    async fn collection_work_of(source: &str) -> u64 {
+        let mut interp = Interpreter::new();
+        let mut limits = *interp.runtime_limits();
+        limits.max_materialized_elements = 10_000_000;
+        limits.max_collection_work = u64::MAX;
+        interp.set_runtime_limits(limits);
+        interp
+            .execute(source)
+            .await
+            .unwrap_or_else(|e| panic!("`{source}` must compute, got: {e:?}"));
+        interp.collection_work_used()
+    }
+
+    /// What appending `SORT` to `prefix` costs on its own.
+    async fn sort_charge_after(prefix: &str) -> u64 {
+        let without = collection_work_of(prefix).await;
+        let with = collection_work_of(&format!("{prefix} SORT")).await;
+        with - without
+    }
+
+    #[tokio::test]
+    async fn sorting_costs_the_same_whichever_representation_holds_the_elements() {
+        for n in [8usize, 100, 1000] {
+            let half = n / 2;
+            // Dense: a range reversed is a flat `Tensor`.
+            let dense = format!("[ 0 {} ] RANGE REVERSE", n - 1);
+            // Nested: `CONCAT` does not promote, so this stays a `Vector`.
+            let nested = format!("[ 0 {} ] RANGE [ {half} {} ] RANGE CONCAT", half - 1, n - 1);
+            assert_eq!(
+                sort_charge_after(&dense).await,
+                sort_charge_after(&nested).await,
+                "sorting {n} integers must cost the same held densely as held nested"
+            );
+        }
+    }
+
+    /// And the price still moves with the axis that costs something: a sort is
+    /// `n⌈log₂n⌉` comparisons, so ten times the elements costs more than ten
+    /// times as much.
+    #[tokio::test]
+    async fn sorting_more_elements_costs_more_than_linearly() {
+        let small = sort_charge_after("[ 0 99 ] RANGE REVERSE").await;
+        let large = sort_charge_after("[ 0 999 ] RANGE REVERSE").await;
+        assert!(
+            large > small.saturating_mul(10),
+            "1000 elements charged {large} against 100 elements' {small},              which is at most linear — the log factor is missing"
+        );
+    }
 }

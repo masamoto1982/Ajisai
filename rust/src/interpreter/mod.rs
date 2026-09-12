@@ -41,6 +41,8 @@ mod session_lifecycle;
 mod shape_ops;
 pub(crate) mod simd_ops;
 pub mod sort;
+#[cfg(test)]
+mod sort_tests;
 mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
