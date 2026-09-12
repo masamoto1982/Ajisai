@@ -179,6 +179,38 @@ impl DenseTensor {
             .map(|(index, metadata)| (*index, metadata))
     }
 
+    /// This flat buffer with its lanes in reverse order, columns and all.
+    ///
+    /// Rearranging lanes is a representation concern, so it happens here rather
+    /// than by unpacking the tensor into boxed `Value`s, reversing those, and
+    /// re-densifying: two columns of `i64` reverse in place, and the only fact
+    /// that has to move with them is *why* an absent lane is absent — lane
+    /// `index` becomes lane `len - 1 - index`, which is the whole of the
+    /// remapping. Whether a lane is absent travels with the denominator
+    /// sentinel, as it does everywhere else, so there is no second record to
+    /// keep in step.
+    ///
+    /// Flat buffers only: the caller checks rank, because reversing a rank-2
+    /// tensor reverses its *rows*, and a row is a stride rather than a lane.
+    pub fn reversed_lanes(&self) -> Self {
+        let len = self.len();
+        let mut numerators = self.numerators.clone();
+        numerators.reverse();
+        let mut denominators = self.denominators.clone();
+        denominators.reverse();
+        let absences = self
+            .absences()
+            .map(|(index, metadata)| (len - 1 - index, metadata.clone()))
+            .collect();
+        Self::from_columns(
+            numerators,
+            denominators,
+            self.shape.clone(),
+            self.is_pure_integer,
+            absences,
+        )
+    }
+
     /// Build a 1-D pure-integer dense tensor directly from `i64` numerators,
     /// without routing through `Fraction`. Every lane is valid and the
     /// denominator is implicitly `1`. This is the SoA fast-path constructor
@@ -388,87 +420,5 @@ impl SparseTensor {
     /// (see the type's own note), so being addressable is being present.
     pub fn is_valid(&self, index: usize) -> bool {
         index < self.len
-    }
-}
-
-#[cfg(test)]
-mod sparse_tensor_tests {
-    use super::{DenseTensor, SparseTensor};
-    use crate::types::fraction::Fraction;
-
-    fn dense_from_i64(values: &[i64], shape: Vec<usize>) -> DenseTensor {
-        DenseTensor::from_fractions(values.iter().copied().map(Fraction::from).collect(), shape)
-            .expect("small dense tensor should build")
-    }
-
-    #[test]
-    fn dense_tensor_sparse_density_counts_zero_and_nonzero_lanes() {
-        let all_zero = dense_from_i64(&vec![0; 64], vec![64]);
-        assert_eq!(all_zero.zero_count(), 64);
-        assert_eq!(all_zero.nonzero_count(), 0);
-        assert_eq!(all_zero.density(), 0.0);
-        assert!(all_zero.is_sparse_candidate());
-
-        let all_nonzero = dense_from_i64(&vec![1; 64], vec![64]);
-        assert_eq!(all_nonzero.zero_count(), 0);
-        assert_eq!(all_nonzero.nonzero_count(), 64);
-        assert_eq!(all_nonzero.density(), 1.0);
-        assert!(!all_nonzero.is_sparse_candidate());
-
-        let mixed = dense_from_i64(&[0, 7, 0, -3], vec![4]);
-        assert_eq!(mixed.zero_count(), 2);
-        assert_eq!(mixed.nonzero_count(), 2);
-        assert_eq!(mixed.density(), 0.5);
-        assert!(!mixed.is_sparse_candidate());
-    }
-
-    #[test]
-    fn dense_tensor_sparse_density_does_not_count_absent_lanes_as_zero() {
-        // An absent lane has numerator 0, exactly like a zero lane, so it is
-        // the denominator that tells them apart. A density that counted the
-        // two alike would offer a NIL-holding tensor to the sparse form, which
-        // stores no absence and would silently read those lanes back as 0.
-        let dense = DenseTensor::from_fractions(
-            vec![
-                Fraction::nil(),
-                Fraction::nil(),
-                Fraction::from(0_i64),
-                Fraction::from(9_i64),
-            ],
-            vec![4],
-        )
-        .expect("small fractions admit dense representation");
-        assert!(!dense.is_valid(0));
-        assert!(dense.is_valid(2), "a zero lane is present, not absent");
-        assert_eq!(dense.zero_count(), 1);
-        assert_eq!(dense.nonzero_count(), 1);
-        assert_eq!(dense.density(), 0.25);
-        assert!(SparseTensor::from_dense(&dense).is_none());
-    }
-
-    #[test]
-    fn sparse_tensor_round_trips_dense_values_and_shape() {
-        let dense = dense_from_i64(&[0, 0, 3, 0, -4, 0], vec![2, 3]);
-        let sparse =
-            SparseTensor::from_dense(&dense).expect("all-valid dense tensor is sparseable");
-        assert_eq!(sparse.shape, vec![2, 3]);
-        assert_eq!(sparse.len, 6);
-        assert_eq!(sparse.indices, vec![2, 4]);
-        assert_eq!(sparse.nonzero_count(), 2);
-        assert!(sparse.indices.windows(2).all(|w| w[0] < w[1]));
-        assert_eq!(sparse.fraction_or_zero(0), Fraction::from(0_i64));
-        assert_eq!(sparse.get_small_fraction(2), Some(Fraction::from(3_i64)));
-        assert_eq!(sparse.to_dense(), dense);
-    }
-
-    #[test]
-    fn sparse_tensor_accepts_all_zero_dense_tensor() {
-        let dense = dense_from_i64(&vec![0; 64], vec![8, 8]);
-        let sparse =
-            SparseTensor::from_dense(&dense).expect("all-zero all-valid tensor is sparseable");
-        assert!(sparse.indices.is_empty());
-        assert_eq!(sparse.nonzero_count(), 0);
-        assert_eq!(sparse.density(), 0.0);
-        assert_eq!(sparse.to_dense(), dense);
     }
 }

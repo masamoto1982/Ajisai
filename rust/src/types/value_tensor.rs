@@ -53,6 +53,30 @@ impl Value {
         }
     }
 
+    /// Wrap an already-assembled dense tensor, keeping its columns as they are.
+    ///
+    /// The constructor for a Word that *rearranges* lanes rather than
+    /// recomputing them — a reversal, a permutation. Going through
+    /// [`Value::from_tensor`] would mean handing it `Fraction`s rebuilt from
+    /// columns the caller already holds, which is the round-trip the dense
+    /// representation exists to avoid. `hint` matches every other tensor
+    /// constructor (`Unassigned`).
+    pub fn from_dense_tensor(data: DenseTensor, shape: Vec<usize>) -> Self {
+        let resolved_shape = if shape.is_empty() {
+            vec![data.len()]
+        } else {
+            shape
+        };
+        Self {
+            data: ValueData::Tensor {
+                data: Arc::new(data),
+                shape: Arc::new(resolved_shape),
+            },
+            hint: Interpretation::Unassigned,
+            absence: None,
+        }
+    }
+
     pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
         Self::from_tensor_with_absences(data, shape, BTreeMap::new())
     }

@@ -138,6 +138,25 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     crate::interpreter::collection_meter::charge_stacktop_copy(interp, |len| len)?;
 
     let reversed = with_stacktop_vector_target_no_arg(interp, is_keep_mode, |vector_val| {
+        // A flat dense buffer reverses as columns. The nested route below
+        // unpacked the tensor into one boxed `Value` per lane, reversed *those*,
+        // and handed back an AoS `Vector` — so reversing 262,144 numbers cost
+        // 68.5 ms and, worse, threw the dense representation away, leaving every
+        // Word downstream to decline its own dense path. Rank is the caller's
+        // check because reversing a rank-2 tensor reverses rows, and a row is a
+        // stride rather than a lane; those keep the nested route.
+        //
+        // The charge is unaffected: `charge_stacktop_copy` above prices this by
+        // length alone, so both routes cost the same, which is what keeps the
+        // choice of route unobservable (LANG.AUTHORITY.FREEDOM).
+        if let crate::types::ValueData::Tensor { data, shape } = &vector_val.data {
+            if shape.len() == 1 {
+                return Ok(Value::from_dense_tensor(
+                    data.reversed_lanes(),
+                    (**shape).clone(),
+                ));
+            }
+        }
         let mut v = extract_vector_elements(vector_val).to_vec();
         v.reverse();
         Ok(Value::from_vector(v))

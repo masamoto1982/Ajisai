@@ -32,6 +32,8 @@ pub(crate) mod value_protocol;
 mod value_protocol_tests;
 
 mod tensor_storage;
+#[cfg(test)]
+mod tensor_storage_tests;
 
 use self::fraction::Fraction;
 pub use self::stack::Stack;
