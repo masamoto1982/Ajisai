@@ -115,6 +115,18 @@ impl Interpreter {
         // is intentionally not reset here.
         self.word_identities.clear();
         self.body_store.clear();
+        // A reset is documented as clearing every trace of the previous program,
+        // and a resolved-name cache is such a trace. Every *other* way the
+        // dictionary changes goes through `bump_dictionary_epoch`, which clears
+        // this cache as it moves the epoch; a reset moves neither, so its
+        // entries were the one kind that outlived the dictionary they described
+        // and still answered at a matching epoch. Nothing observable depended on
+        // it — `resolve_word_entry` re-checks the live vocabulary on every hit,
+        // and a name whose word the reset cleared falls through to a fresh
+        // resolution — but that re-check was the only thing standing between a
+        // stale entry and a wrong answer, which is a load none of the other
+        // clears here are asked to carry.
+        self.clear_resolve_cache();
         self.defer_identity_recompute = false;
         self.next_registration_order = 1;
         // Top-level roles live on the stack now and were cleared with it above
