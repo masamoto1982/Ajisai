@@ -6,16 +6,17 @@
 
 Ajisai is an AI-first, vector-oriented dataflow language for auditable, exact vector computation with machine-readable contracts. Fractions and the Vector data structure carry the central role.
 
-The name comes from *hydrangea*, whose scientific name means "water vessel" — and Ajisai's own metaphor follows it: a fraction is water, and Vector is the vessel that holds it. Ajisai explains itself through this water-centered metaphor throughout.
+## Why Ajisai
 
-| Metaphor | What it stands for |
-|---|---|
-| Vessel | The Stack, realized as a Vector in the data structure — it can nest |
-| Water | An exact rational number — closed under `SQRT`, never rounded |
-| Flow | Dataflow through an operation |
-| Ripple | `PRINT` output |
-| Bubble | `NIL`, whose cause can be read out mechanically |
-| Breach | Evaluation halts because of improper use |
+Ajisai wasn't built to build something else with — it came from the pull of building a language itself, after years of not sticking with any other one.
+
+The turning point was **Forth**: a stack-oriented minimalism that strips away syntactic noise and leaves computation exposed as a bare vessel. But giving up the rigor of types felt wrong too, which left a real contradiction: wanting types to matter without wanting to write them down.
+
+The resolution was to unify every number around one exact representation — the **fraction**, closed under `SQRT`, free of rounding error — so a value's numeric shape is never something a program has to declare.
+
+That uncompromising, unsweetened design became realistic once **AI** could act as a genuine collaborator in reading intent: with an AI-first premise, syntax doesn't need to be dressed up for human convenience — only machine-readable rules, and otherwise plain dataflow through a stack, need to exist.
+
+The name comes from *hydrangea* (紫陽花), whose scientific name is often read as "water vessel" — a fitting namesake for a design that took shape, fittingly, during Japan's early-summer rainy season.
 
 ## Status
 

@@ -27,10 +27,8 @@
         区切りはインライン \( ... \)・ディスプレイ \[ ... \] のみ。これらは
         Ajisai のどの表層形とも衝突しない。code/pre はスキャン対象外なので
         Ajisai チャネルが数式描画に巻き込まれることはない。
-      - 用語対訳: word=ワード, stack=スタック, vector=ベクトル, bubble=泡
-        （バブル）, block=ブロック, frame=フレーム, bind=束縛, dictionary=辞書,
-        vessel=器, flow=流れ, ripple=波紋, channel error/breach=決壊
-        （水路の破れ）。
+      - 用語対訳: word=ワード, stack=スタック, vector=ベクトル, block=ブロック,
+        frame=フレーム, bind=束縛, dictionary=辞書。
     -->
     <style>
         :root {
@@ -532,25 +530,11 @@
                 <section id="intro" class="ref-page">
                     <h2>はじめに</h2>
                     <p>Ajisaiは、監査可能で正確なベクトル計算と機械可読な契約を実現する、AIファーストのベクトル指向データフロー言語です。プログラムは<strong>ワード</strong>の並びとして構成されます。値は単一のスタック上で管理され、各ワードがスタックからオペランドを取り出し(消費し)、処理結果をスタックに積みます。分数とデータ構造における<strong>Vector</strong>が中心的な役割を持ちます。</p>
-                    <p>Ajisaiという名前は、「水を湛える器」を意味する学名を持つ紫陽花(あじさい)に由来しており、Ajisaiはこの水を中心に据えたメタファーで自らの仕組みを説明します。Stackは水を湛える<strong>器</strong>であり、その実体はVectorです。そこに注がれる<strong>水</strong>が値にあたり、もっとも純粋な形は<code>SQRT</code>で拡張された厳密な分数です。プログラムを実行することは器に水を注ぐ行為であり、注がれた水が入力から出力へ動いていく過程が<strong>流れ</strong>、その水面に現れる痕跡が<strong>波紋</strong>、すなわち<code>PRINT</code>による出力です。</p>
-                    <p>器の中には、水以外にもう一つだけ混じるものがあります。整った操作が値を作れなかったときに残る<strong>泡</strong>、すなわち<code>NIL</code>です。泡は不在であって虚偽ではなく、理由を持ったまま下流へ流れていきます。</p>
-                    <p>一方、操作や入力の形そのものが誤っているときは、水路が持ちこたえられずに<strong>決壊</strong>し、評価はその場で止まります。決壊は流れの中を運ばれる値ではなく、プログラムを終わらせる唯一の結果です。形が正しい場合でも、水路や器が支えられる限度を超えれば同じく決壊します。この限度については<a href="#control">制御構文</a>のページで扱います。</p>
-                    <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>水の比喩</th><th>言語での意味</th><th>観察できるもの</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>器(Vessel)</td><td>Stack。実体はVector</td><td><code>[ ]</code>、入れ子、インデックス</td></tr>
-                                <tr><td>水(Water)</td><td>器に注がれる値。もっとも純粋な形は厳密な分数(<code>SQRT</code>拡張を含む)</td><td>数値・真偽値・文字列・ベクトル・コードブロック</td></tr>
-                                <tr><td>流れ(Flow)</td><td>水が入力から出力へ、ワードによって形を変えながら動く過程</td><td>演算を通るデータフロー</td></tr>
-                                <tr><td>波紋(Ripple)</td><td>流れが水面に残す痕跡</td><td><code>PRINT</code>の出力</td></tr>
-                                <tr><td>泡(Bubble)</td><td>整った操作が値を作れなかった状態</td><td><code>NIL</code>。機械可読な理由を伴う</td></tr>
-                                <tr><td>決壊(Breach)</td><td>器や水路そのものが破れる。操作や入力の形が誤っている</td><td>伝播して評価を止めるエラー</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="ref-note">この対応表は本書が説明のために使う読み方であって、言語の語彙そのものではありません。ワードの名前は<code>NIL</code>や<code>OR-NIL</code>のように、そのワードが何をするかだけを述べます。器・水・流れ・波紋・泡・決壊という言葉が出てくるのは本書の地の文だけで、プログラムに書くものではありません。比喩は規則の入り口であって、規則の代わりではないからです。</p>
+                    <h3>Ajisaiという名前と、この言語が生まれた理由</h3>
+                    <p>Ajisaiという名前は、「水を湛える器」を意味する学名を持つ紫陽花(あじさい)に由来します。この由来には、この言語がどのように生まれたかの経緯が重なっています。</p>
+                    <p>Ajisaiを作った動機は、言語を使って何かを作ることではなく、「言語そのものを作ること」への渇望でした。転機になったのは<strong>Forth</strong>との出会いです。スタック指向という、構文のノイズを削ぎ落としたミニマリズムが、計算という行為そのものをむき出しにする美しさを教えてくれました。とはいえ型の堅牢さも手放したくはなく、「型を大切にしたいが、型について書きたくはない」という葛藤が残りました。</p>
+                    <p>その答えが、数をただ一つの厳密な表現である<strong>分数</strong>へ統一することです。<code>SQRT</code>で閉じた代数的数まで含め、丸め誤差から完全に逃れながら、値の数値としての形をプログラムがいちいち宣言する必要はなくなります。この妥協のない設計を現実のものにしたのが<strong>AI</strong>との出会いでした。AIが意図を汲み取る対話者になり得る前提(AIファースト)に立てば、人間の便宜のための構文糖で言語を飾る必要はなく、機械可読な規則と、スタックを流れる素のデータフローだけがあればよいのです。</p>
+                    <p>整った操作が値を作れなかったときは<code>NIL</code>となり、理由を持ったまま下流の計算へそのまま渡されます。一方、操作や入力の形そのものが誤っているときはエラーとなり、評価はその場で停止します。形が正しい場合でも、ホストが支えられる限度を超えれば同じくエラーになります。この限度については<a href="#control">制御構文</a>のページで扱います。</p>
                     <h3>数値の厳密性</h3>
                     <p>すべての数値は厳密に扱われます。値は厳密な有理数と、それらを<code>SQRT</code>で閉じたときに生じる代数的無理数、すなわち多重二次正規形として保持されます。算術も比較も丸め誤差なしに実行されます。なお、連分数形式(<code>[ 1; 2, 2, … ]</code>)は値そのものから導出される正準表示であり、内部の格納形式ではありません。Playgroundのスタック領域は、この形式ではなく正規形を根号で描きます。</p>
                     <h3>本リファレンスの特徴</h3>
@@ -684,7 +668,7 @@
                     <h3>リテラル中の裸の名前</h3>
                     <p class="ref-note">ベクトルリテラルは最後まで徹底してリテラルです。<code>[ ]</code>の中に書かれた裸の名前は<strong>Symbol</strong>を表し、ワードの呼び出しとして実行されることも未定義エラーになることもありません。したがって<code>[ FOO BAR ]</code>は2つのSymbolからなるベクトル<code>[ FOO BAR ]</code>です。テキストが欲しければ引用符で囲んでください――<code>[ 'FOO' 'BAR' ]</code>はStringのベクトルになります。これは値に名前を付け始めたときに戸惑いやすい点でもあります。変数やワードを実行した結果をベクトルに入れたい場合は、リテラルではなく<code>COLLECT</code>のような実行時のコレクション構築ワードを使ってください。詳しくは<a href="#name-inside-brackets"><code>[ ]</code>の中の名前はSymbolになる</a>を参照してください。</p>
                     <h3><code>[ ]</code>と<code>NIL</code>の違い</h3>
-                    <p class="ref-note"><code>[ ]</code>は空ベクトルです。値を1つも持たないコレクションですが、書いたり入れ子にしたり測ったりできる普通の値であり、<code>[ ] LENGTH</code>は<code>0</code>になります。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、泡になるのではなく<code>[ ]</code>を返します。<code>[ 1 2 3 ] [ 5 GT ] FILTER</code>の結果は<code>[ ]</code>です。</p>
+                    <p class="ref-note"><code>[ ]</code>は空ベクトルです。値を1つも持たないコレクションですが、書いたり入れ子にしたり測ったりできる普通の値であり、<code>[ ] LENGTH</code>は<code>0</code>になります。これは<code>NIL</code>ではありません。<code>NIL</code>は値の不在であり、たまたま何も保持していないコレクションとは別のものです。結果が空になる操作は、<code>NIL</code>になるのではなく<code>[ ]</code>を返します。<code>[ 1 2 3 ] [ 5 GT ] FILTER</code>の結果は<code>[ ]</code>です。</p>
 
                     <h3 id="numbers">厳密な数</h3>
                     <p>Ajisaiにおけるすべての数値は<strong>厳密数</strong>として扱われます。</p>
@@ -838,9 +822,9 @@
                         </div>
                     </div>
 
-                    <h3 id="nil">泡(<code>NIL</code>)</h3>
-                    <p>失敗のモデルは一言でまとめられます。<strong>値を作れなかったなら泡、そもそも使い方が違うならエラー</strong>です。正しい形の操作が結果を作れない場合は、構造化された理由を伴う泡、すなわち<code>NIL</code>に写像されます。一方、型違いやオペランド不足といった誤った使い方は、通常のエラーを送出します。</p>
-                    <h3>泡は流れる</h3>
+                    <h3 id="nil">NILの規則</h3>
+                    <p>失敗のモデルは一言でまとめられます。<strong>値を作れなかったなら<code>NIL</code>、そもそも使い方が違うならエラー</strong>です。正しい形の操作が結果を作れない場合は、構造化された理由を伴う<code>NIL</code>に写像されます。一方、型違いやオペランド不足といった誤った使い方は、通常のエラーを送出します。</p>
+                    <h3>NILは伝播する</h3>
                     <p>算術と比較はどちらも<code>NIL</code>をそのまま通します。<code>NIL</code>のオペランドが入っても、パイプラインをクラッシュさせることなく結果が<code>NIL</code>になるだけです。<code>EQ</code>や<code>NEQ</code>も例外ではなく、<code>NIL 1 EQ</code>は<code>FALSE</code>ではなく<code>NIL</code>になります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -852,7 +836,7 @@
                                 <tr>
                                     <td><code>1 0 /</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">ゼロ除算はトラップではなく、理由付きの泡になる。</td>
+                                    <td class="notes">ゼロ除算はトラップではなく、理由付きの<code>NIL</code>になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -890,7 +874,7 @@
                                 <tr>
                                     <td><code>[ 10 20 30 ] [ 5 ] GET</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">有効なベクトルに対する範囲外のインデックスは泡になる(理由：indexOutOfBounds)。</td>
+                                    <td class="notes">有効なベクトルに対する範囲外のインデックスは<code>NIL</code>になる(理由：indexOutOfBounds)。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -909,7 +893,7 @@
                                 <tr>
                                     <td><code>'ABC' NUM</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">数としてパースできないテキストは泡になる(理由：invalidEncoding)。</td>
+                                    <td class="notes">数としてパースできないテキストは<code>NIL</code>になる(理由：invalidEncoding)。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -918,8 +902,8 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3>泡を調べる: <code>NIL?</code>と<code>NIL-REASON</code></h3>
-                    <p>この2つのワードは、泡を乱すことなく調べます。<code>NIL?</code>はスタック最上位の値が泡かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも値をその場に残したまま、答えをその上に積みます。</p>
+                    <h3>NILを調べる: <code>NIL?</code>と<code>NIL-REASON</code></h3>
+                    <p>この2つのワードは、<code>NIL</code>を変えずに調べます。<code>NIL?</code>はスタック最上位の値が<code>NIL</code>かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも値をその場に残したまま、答えをその上に積みます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -959,7 +943,7 @@
                         </div>
                     </div>
                     <h3>代わりの値を与える: <code>OR-NIL</code></h3>
-                    <p><code>OR-NIL</code>は、最上位の値が泡のときだけ代わりの値を与えます。この代わりの値は<code>OR-NIL</code>の直後に書かれたソースそのものであり、あらかじめスタックに積んでおいた値ではありません。最上位が泡でなければ<em>評価すらされずに読み飛ばされる</em>ので、重い処理や副作用のある式を書いても、実際に泡が出たときにしか実行されません。</p>
+                    <p><code>OR-NIL</code>は、最上位の値が<code>NIL</code>のときだけ代わりの値を与えます。この代わりの値は<code>OR-NIL</code>の直後に書かれたソースそのものであり、あらかじめスタックに積んでおいた値ではありません。最上位が<code>NIL</code>でなければ<em>評価すらされずに読み飛ばされる</em>ので、重い処理や副作用のある式を書いても、実際に<code>NIL</code>が出たときにしか実行されません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -970,7 +954,7 @@
                                 <tr>
                                     <td><code>1 0 / OR-NIL 99</code></td>
                                     <td><code>99/1</code></td>
-                                    <td class="notes"><code>OR-NIL</code>は泡を代わりの値に置き換える。</td>
+                                    <td class="notes"><code>OR-NIL</code>は<code>NIL</code>を代わりの値に置き換える。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1158,11 +1142,11 @@
                         <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)</li>
                         <li><strong>量子化</strong>: <code>QUANTIZE</code>は<code>1/d</code>の最も近い倍数に丸めます。ループ処理や反復計算での使用に適したワードです。詳しくは<a href="#iterative">反復のコスト</a>を参照してください。</li>
                     </ul>
-                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">泡の規則</a>を参照してください。</p>
+                    <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">NILの規則</a>を参照してください。</p>
                     <h3>決定論的擬似乱数 <code>RANDOM</code></h3>
                     <p class="ref-note"><code>RANDOM</code>もここにあり、他のすべてのワードと同じく1つの純粋関数です。<code>7 3 RANDOM</code>はシード<code>7</code>だけによって決まる、[0, 1)の範囲の厳密な有理数を3つ引きますが、これは毎回、どのセッションでも同じ3つを引きます。隠れた状態もホストのエントロピーもないため、厳密性や純粋性と矛盾するところは何もありません。<code>ORDER</code>と組み合わせた<code>SEED N RANDOM ORDER</code>は決定論的なシャッフルになり、読みやすい分解能で値を引きたいときは<code>QUANTIZE</code>と組み合わせます。</p>
                     <h3>ベクトルへの自動リフティング</h3>
-                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり、<code>+</code>と同じ規則でブロードキャストします。負の値を0で打ち切るレクティファイアは<code>[ -1 2 -3 ] 0 MAX</code>と書けて<code>[ 0/1 2/1 0/1 ]</code>になり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で求まり、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>で得られます。いずれも<code>MAP</code>もブロックも不要です。これらに手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが泡になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
+                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり、<code>+</code>と同じ規則でブロードキャストします。負の値を0で打ち切るレクティファイアは<code>[ -1 2 -3 ] 0 MAX</code>と書けて<code>[ 0/1 2/1 0/1 ]</code>になり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で求まり、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>で得られます。いずれも<code>MAP</code>もブロックも不要です。これらに手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが<code>NIL</code>になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
 
                     <h3 id="comparison">比較と真偽値</h3>
                     <p>6つの順序関係はすべてワードとして用意されています。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値であって、数ではありません。6つそれぞれに対応する記号があり、1文字のものが3つ、2文字のものが3つです。トークンが終わるのは空白または区切り文字の位置だけで、途中で終わることは決してないため、2文字の記号を使ってもトークナイザに余計なコストはかかりません。</p>
@@ -1264,7 +1248,7 @@
                     <h3 id="logic">論理</h3>
                     <p>Ajisaiには<code>AND</code>、<code>OR</code>、<code>NOT</code>という3つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。3つとも綴りのまま書き、記号は持ちません。</p>
                     <h3>NILはそのまま伝わる</h3>
-                    <p>いずれかのオペランドが<code>NIL</code>であれば、その不在はそのまま結果に伝わります。<code>NIL</code>が入れば<code>NIL</code>が出るので、もう一方のオペランドだけで答えが決まりそうな場合でも、泡は結果の中に見える形で残ります。</p>
+                    <p>いずれかのオペランドが<code>NIL</code>であれば、その不在はそのまま結果に伝わります。<code>NIL</code>が入れば<code>NIL</code>が出るので、もう一方のオペランドだけで答えが決まりそうな場合でも、<code>NIL</code>は結果の中に見える形で残ります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1332,7 +1316,7 @@
                                 <tr>
                                     <td><code>1 0 DIV TRUE AND</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">左のオペランドが泡になったので、その不在が結果まで伝わる。必要な箇所で<code>OR-NIL</code>を使って回復させる。</td>
+                                    <td class="notes">左のオペランドが<code>NIL</code>になったので、その不在が結果まで伝わる。必要な箇所で<code>OR-NIL</code>を使って回復させる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1584,7 +1568,7 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく泡になります。</p>
+                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。</p>
 
                     <h3 id="ordering">順序付け、計数、形状</h3>
                     <p>ベクトル全体を一度に見る必要がある操作は、7つのワードでカバーされます。そのそれぞれは、他の語彙だけを使って書き下すこともできますが、書き下すと漸近的に高いコストがかかります。それだけが、これらがワードとして存在する理由です。</p>
@@ -2153,13 +2137,13 @@ FILTER</code></td>
                     <h3>閉じた形はループに勝る</h3>
                     <p>反復法に手を伸ばす前に、その問題に閉じた形があるかどうかを確かめてください。厳密算術においては、閉じた形は単に速いだけでなく、種類の異なる答えになるからです。最小二乗法、有理数のペナルティを使うリッジ回帰、k近傍法、有理確率上のナイーブベイズ、ジニ分割による決定木、パーセプトロン、単体法は、いずれも反復を伴わない厳密な解を持ちます。そしてAjisaiは、係数を最も近い表現可能な浮動小数点数としてではなく、まさにその有理数として返します。<code>529/532</code>として返ってくる<code>R²</code>は言語の不備によるものではなく、それが答えなのです。</p>
                     <p class="ref-note">指数関数、対数関数、任意のべき乗といった超越関数は語彙にありません。それらに対する有理数の答えは存在せず、Ajisaiは正当化できない数を返さないからです。ロジスティック回帰、softmax、交差エントロピー、ガウス尤度など、それらの上に組み立てられる手法も、この言語が計算する範囲の外にあります。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数です。</p>
-                    <p class="ref-note">代数的数の外側に、ただ1つだけ語彙があります。<code>PI</code>です。<code>PI</code>が積むπは代数的正規形を持たない一般の計算可能実数であり、算術も比較もそのまま書けますが、性質が2つ異なります。第一に、比較は有理数の区間を必要なだけ絞り込んで判定するため、予算内で判定しきれない比較は、真偽が決まらないまま理由<code>undecidable</code>の泡になります。<code>PI 3 GT</code>は<code>TRUE</code>ですが、<code>PI PI EQ</code>は<code>NIL</code>です。第二に、この値はセッションに保存できません。Playgroundは実行結果をスタックに保存する形で持ち回るため、<code>PI</code>を含む結果は「プログラムは実行できたが、セッションには残せない」と報告され、スタックは実行前のまま保たれます。</p>
+                    <p class="ref-note">代数的数の外側に、ただ1つだけ語彙があります。<code>PI</code>です。<code>PI</code>が積むπは代数的正規形を持たない一般の計算可能実数であり、算術も比較もそのまま書けますが、性質が2つ異なります。第一に、比較は有理数の区間を必要なだけ絞り込んで判定するため、予算内で判定しきれない比較は、真偽が決まらないまま理由<code>undecidable</code>の<code>NIL</code>になります。<code>PI 3 GT</code>は<code>TRUE</code>ですが、<code>PI PI EQ</code>は<code>NIL</code>です。第二に、この値はセッションに保存できません。Playgroundは実行結果をスタックに保存する形で持ち回るため、<code>PI</code>を含む結果は「プログラムは実行できたが、セッションには残せない」と報告され、スタックは実行前のまま保たれます。</p>
 
                     <h3>もう一つのコスト: ホストの安全制御</h3>
-                    <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときにどちらの結果になるかは決まっていて、その違いは器の比喩にきれいに対応します。器が支えきれる分量を超えれば<strong>泡</strong>に、水路そのものが支えきれなければ<strong>決壊</strong>になります。</p>
+                    <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときにどちらの結果になるかは決まっていて、1つの値そのものの生成が上限を超えれば理由付きの<strong><code>NIL</code></strong>に、実行そのものが続けられないほど超えれば<strong>エラー</strong>になり評価が停止します。</p>
 
-                    <h3 id="limits">決壊: 複数の理由を持つ一つの結果</h3>
-                    <p>整った操作や入力であっても、ホストが支えられる限度を超えれば決壊します。限度は1つではなく、超過したものが何かによって少なくとも3つの名前で報告されます。名前が違うのは、直し方も違うからです。</p>
+                    <h3 id="limits">実行時エラー: 複数の理由を持つ一つの結果</h3>
+                    <p>整った操作や入力であっても、ホストが支えられる限度を超えればエラーになり、評価はその場で停止します。限度は1つではなく、超過したものが何かによって少なくとも3つの名前で報告されます。名前が違うのは、直し方も違うからです。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -2176,8 +2160,8 @@ FILTER</code></td>
                     <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「<code>QUANTIZE</code>による刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>[ 0 100001 ] RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
                     <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>[ 0 99999 ] RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。<code>QUANTIZE</code>で刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
 
-                    <h3>具体化の上限: 泡としてのNIL</h3>
-                    <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、エラーではなく理由付きの<strong>泡</strong>になります。<code>NIL</code>が残り、理由は<code>spaceExhausted</code>です。負の数や非整数のように、次元や形状の指定そのものが誤っている場合はこれとは別で、従来どおりエラーになります。</p>
+                    <h3>具体化の上限: 理由付きのNIL</h3>
+                    <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、エラーではなく理由付きの<strong><code>NIL</code></strong>になります。理由は<code>spaceExhausted</code>です。負の数や非整数のように、次元や形状の指定そのものが誤っている場合はこれとは別で、従来どおりエラーになります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2188,7 +2172,7 @@ FILTER</code></td>
                                 <tr>
                                     <td><code>[ 0 999999999999 ] RANGE NIL-REASON</code></td>
                                     <td><code>NIL 'spaceExhausted'</code></td>
-                                    <td class="notes">要求は整った形だが大きすぎるので、エラーではなく理由付きの泡になる。<code>FILL</code>も同じ理由で同じ振る舞いをする。</td>
+                                    <td class="notes">要求は整った形だが大きすぎるので、エラーではなく理由付きの<code>NIL</code>になる。<code>FILL</code>も同じ理由で同じ振る舞いをする。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2197,7 +2181,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">泡なので、<code>OR-NIL</code>で代わりの値に差し替えて先へ進めます。<code>[ 0 999999999999 ] RANGE OR-NIL [ ]</code>は空ベクトルへ回復します。決壊にはこの回復手段がありません。</p>
+                    <p class="ref-note"><code>NIL</code>なので、<code>OR-NIL</code>で代わりの値に差し替えて先へ進めます。<code>[ 0 999999999999 ] RANGE OR-NIL [ ]</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
                 </section>
 
                 <section id="words" class="ref-page">
@@ -2251,7 +2235,7 @@ FILTER</code></td>
                     <h3 id="acyclic">ワードは自分自身を呼び出せない</h3>
                     <p>User辞書の参照グラフは循環しません。<code>[ REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
                     <p>これは間接的な循環にも及びます。<code>A</code>が<code>B</code>を呼び出すよう定義し、続けて<code>B</code>が<code>A</code>を呼び出すよう定義しようとすると、その2つ目の<code>DEF</code>が拒否されます。<code>A</code>はすでに<code>B</code>という名前を(まだ存在しなくても)本体に含んでおり、そこへ<code>B</code>から<code>A</code>への参照を足すと<code>A</code>に戻る循環が閉じるからです。すでに存在する言葉を新しい定義が呼び出すこと自体は自由です。禁じられているのは、今まさに定義しようとしているワードへ、その連鎖が戻ってくることだけです。</p>
-                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>ANY</code> <code>ALL</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">決壊</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
+                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>ANY</code> <code>ALL</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
                     <h3>ワードの管理</h3>
                     <p><code>DEL</code>は、引用された名前でユーザー定義ワードを削除します。依存関係は追跡されており、他のワードが依存しているワードはまったく削除できません。したがって宙ぶらりんの参照は起こり得ません。先に依存している側を削除してください。</p>
                     <p class="ref-note">ワード名は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。慣例として<code>APPLY-GAIN</code>のような動詞-目的語の形に従います。名前がどのように定義と対応付けられるかは、<a href="#dictionaries">辞書とワードの同一性</a>で扱います。</p>

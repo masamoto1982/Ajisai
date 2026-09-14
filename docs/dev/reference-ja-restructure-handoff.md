@@ -1,10 +1,18 @@
-# Reference 日本語版 再編 引き継ぎ書
+# Reference 日本語版 再編 引き継ぎ書（破棄・非推奨）
 
 作成日: 2026-08-20
 対象セッション: 独立した 1 セッション（再編）＋ 後続 1 セッション（英語版再生成）
 関連: [`reference-writing-style.md`](./reference-writing-style.md) /
 [`three-layer-documentation-model.md`](./three-layer-documentation-model.md) /
 [`ajisai-authoring-style.md`](./ajisai-authoring-style.md)
+
+> **2026-09-14 追記: 本書の方針は撤回された。** 本書は水のメタファーを
+> README・Reference の中心へさらに拡張する計画だったが、上級プログラマーに
+> とって学習ノイズになるという指摘を受け、逆に水のメタファーを両文書から
+> 撤去し、開発コンセプト（Forth との出会い・分数への型統一・AIファースト）
+> の説明に置き換える作業を実施済み（`README.md` の "Why Ajisai" 節、
+> `public/docs/ja/index.html` の「はじめに」節）。本書は経緯を残すためだけの
+> 履歴であり、以下の内容に従って再編作業を行ってはならない。
 
 ## 0. この文書の位置づけ
 
