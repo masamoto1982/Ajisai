@@ -66,7 +66,13 @@ pub enum ConsumptionMode {
 
 #[derive(Debug, Clone)]
 pub struct ResolveCacheEntry {
-    pub resolved_name: String,
+    /// `Arc<str>` rather than `String` because this is read far more often than
+    /// it is written — once per word dispatch — and every read used to hand the
+    /// caller a fresh heap copy of a name the cache already held. Sharing it is
+    /// a refcount bump; the callers that genuinely need an owned `String` (the
+    /// call stack, a failure record) ask for one, and those run per *User* word
+    /// call rather than per dispatch.
+    pub resolved_name: std::sync::Arc<str>,
     pub dictionary_epoch: u64,
     pub registration_order: u64,
 }

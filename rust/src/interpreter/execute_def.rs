@@ -233,7 +233,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
                 new_text_references.insert(upper_s.to_string());
                 if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
                     if !resolved_def.is_builtin || resolved_name.contains('@') {
-                        new_dependencies.insert(resolved_name);
+                        new_dependencies.insert(resolved_name.to_string());
                     }
                 }
             }
@@ -274,6 +274,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         namespace: None,
         registration_order: interp.next_registration_order(),
         execution_plans: None,
+        // A User Word has no registry entry: `DEF` cannot define a Core Word
+        // (LANG.DICTIONARY.RESOLUTION seals Core), so this is `None` by
+        // construction rather than by omission.
+        generated: None,
     };
 
     interp

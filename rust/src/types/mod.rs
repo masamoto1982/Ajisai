@@ -464,4 +464,15 @@ pub struct WordDefinition {
     pub namespace: Option<String>,
     pub registration_order: u64,
     pub execution_plans: Option<Arc<crate::interpreter::execution_plan_set::ExecutionPlanSet>>,
+    /// The generated registry entry for a Core Word, held rather than looked up
+    /// again.
+    ///
+    /// `None` for a User Word. Dispatch resolves a name to this definition and
+    /// then, for a Core Word, used to find the *same* Word a second time by
+    /// string: `generated_word(name)` is a linear scan of the 65-entry registry
+    /// comparing names, and it ran once per element — 220,000 `memcmp` calls and
+    /// 6.25% of the instructions of a 20,000-element `[ ABS ] MAP`, to re-answer
+    /// a question resolution had already answered. `builtins::register` has the
+    /// entry in hand when it builds each definition, so it puts it here.
+    pub generated: Option<&'static crate::kernel::generated::GeneratedWord>,
 }

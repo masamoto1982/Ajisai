@@ -170,6 +170,8 @@ pub use compiled_plan::{
 pub use epoch::EpochSnapshot;
 
 #[cfg(test)]
+mod builtin_dispatch_tests;
+#[cfg(test)]
 mod compiled_clause_tests;
 #[cfg(test)]
 mod compiled_plan_tests;

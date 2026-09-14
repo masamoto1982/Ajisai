@@ -38,7 +38,17 @@ impl Interpreter {
         // — `BIND` refuses a Word's name and `DEF` refuses a live binding's —
         // so the order settles no contest; it is here because a binding is the
         // cheaper lookup and the more local fact.
-        if let Some((value, role)) = self.lookup_binding(&name.to_uppercase()) {
+        //
+        // `name` is already uppercase, so no `to_uppercase()` here or below.
+        // `canonicalize_core_word_name` returns one of three things: an alias's
+        // canonical name (every one in the table is uppercase), the input
+        // unchanged when it is ASCII with no lowercase byte (uppercasing that is
+        // the identity), or an owned `to_uppercase()`. `bind_local` keys a scope
+        // by `name.to_uppercase()`, so this asks for the key the binding was
+        // stored under either way — the uppercase that used to be here could
+        // only ever rebuild a string already in hand, once per word dispatch,
+        // which is the hottest path the interpreter has.
+        if let Some((value, role)) = self.lookup_binding(name) {
             self.stack.push_with_role(value, role);
             return Ok(());
         }
@@ -54,10 +64,10 @@ impl Interpreter {
             if !ambiguous.is_empty() {
                 AjisaiError::UnknownWord(format!(
                     "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
-                    name.to_uppercase(),
+                    name,
                     ambiguous.join(", ")
                 ))
-            } else if self.binding_exists_beyond_barrier(&name.to_uppercase()) {
+            } else if self.binding_exists_beyond_barrier(name) {
                 // The reader can see the name in their own source, so the bare
                 // "unknown word" is the least useful true thing to say. What
                 // went wrong is the scope, and naming it is the difference
@@ -66,7 +76,7 @@ impl Interpreter {
                     "'{}' is bound in another frame. A binding is reachable in the frame that made it \
                      and in the blocks written there, never inside a Word it calls — pass the value \
                      as an operand instead.",
-                    name.to_uppercase()
+                    name
                 ))
             } else {
                 AjisaiError::UnknownWord(name.to_string())
@@ -84,7 +94,20 @@ impl Interpreter {
         }
 
         if def.lines.is_empty() {
-            return self.execute_builtin(&resolved_name);
+            // Dispatch the Word resolution already found, rather than finding it
+            // again. `execute_builtin` re-canonicalized the name — a third fold
+            // of a name folded once above — and then `generated_word` scanned the
+            // 65-entry registry comparing strings to reach the entry this
+            // definition was built from. `def.generated` is that entry.
+            //
+            // The `None` arm is not dead: a definition with an empty body and no
+            // registry entry is what `word_contract_probe` synthesizes, and the
+            // old route is the right answer for it — an unknown name must still
+            // report `UnknownWord` rather than silently doing nothing.
+            return match def.generated {
+                Some(word) => self.execute_generated_word(word),
+                None => self.execute_builtin(&resolved_name),
+            };
         }
 
         // Call-depth guard: catches blown Rust stack before WASM traps. Guards
@@ -95,7 +118,7 @@ impl Interpreter {
         if self.call_depth + 1 > super::interpreter_core::MAX_USER_WORD_DEPTH {
             return Err(AjisaiError::RecursionLimitExceeded {
                 limit: super::interpreter_core::MAX_USER_WORD_DEPTH,
-                word: resolved_name.clone(),
+                word: resolved_name.to_string(),
             });
         }
         self.call_depth += 1;
@@ -105,7 +128,7 @@ impl Interpreter {
 
         let plan_set = self.get_execution_plan_set(&resolved_name, &def);
 
-        self.call_stack.push(resolved_name.clone());
+        self.call_stack.push(resolved_name.to_string());
 
         // `KEEP` modifies the *call*, not the first consuming Word inside the
         // body (LANG.MODIFIERS.CONSUMPTION). Both readings agree for a Core Word, because a Core
@@ -203,6 +226,21 @@ impl Interpreter {
         let Some(word) = generated_word(name) else {
             return Err(AjisaiError::UnknownWord(name.to_string()));
         };
+        self.execute_generated_word(word)
+    }
+
+    /// Run a Core Word from its registry entry.
+    ///
+    /// Split out from `execute_builtin_direct` so the hot path can hand over the
+    /// entry it already holds (`WordDefinition::generated`) instead of scanning
+    /// the registry by name to find it again. Both routes run exactly this, so
+    /// the declared-NIL contract is applied once and in one place whichever way
+    /// the Word was reached — which is what keeps the choice of route
+    /// unobservable (LANG.AUTHORITY.FREEDOM).
+    pub(crate) fn execute_generated_word(
+        &mut self,
+        word: &'static crate::kernel::generated::GeneratedWord,
+    ) -> Result<()> {
         if let Some(decided) = self.apply_declared_nil_contract(word) {
             return decided;
         }

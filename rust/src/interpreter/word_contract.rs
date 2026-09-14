@@ -381,7 +381,7 @@ impl Interpreter {
                         };
                         let dep_contract = if dep_def.is_builtin {
                             Arc::new(static_word_contract(&dep_name, &dep_def))
-                        } else if visiting.contains(&dep_name) {
+                        } else if visiting.contains(dep_name.as_ref()) {
                             complete = false;
                             acc.gaps.push(GapCode::RecursiveDependency);
                             // Cleared, not merged: incompleteness here is
