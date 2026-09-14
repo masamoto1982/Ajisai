@@ -274,6 +274,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         namespace: None,
         registration_order: interp.next_registration_order(),
         execution_plans: None,
+        // A User Word has no registry entry: `DEF` cannot define a Core Word
+        // (LANG.DICTIONARY.RESOLUTION seals Core), so this is `None` by
+        // construction rather than by omission.
+        generated: None,
     };
 
     interp

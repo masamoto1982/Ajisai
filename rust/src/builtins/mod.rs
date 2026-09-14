@@ -55,6 +55,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
                 namespace: None,
                 registration_order: 0,
                 execution_plans: None,
+                generated: Some(word),
             }),
         );
     }

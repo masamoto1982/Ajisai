@@ -97,3 +97,42 @@ fn canonicalize_borrows_without_allocating_on_hot_paths() {
     assert!(matches!(folded, Cow::Owned(_)), "lowercase must fold owned");
     assert_eq!(folded, "MAP");
 }
+
+/// Canonicalization over the whole alias table, plus the shapes that sit at its
+/// edges: an empty name, a non-ASCII one, a name that merely *starts* like an
+/// alias, and one that is alphanumeric-with-a-digit. Added while testing — and
+/// rejecting — a fast screen in front of the alias walk; the screen is gone but
+/// the coverage is worth keeping, since nothing else pinned these.
+#[test]
+fn canonicalization_is_exact_over_the_alias_table_and_its_edges() {
+    use crate::core_word_aliases::{canonicalize_core_word_name, CORE_WORD_ALIASES};
+
+    for entry in CORE_WORD_ALIASES {
+        if let Some(canonical) = entry.canonical {
+            assert_eq!(
+                canonicalize_core_word_name(entry.alias),
+                canonical,
+                "alias `{}` must still reach its canonical name",
+                entry.alias
+            );
+        }
+    }
+
+    for (name, expected) in [
+        ("", ""),
+        ("ADD", "ADD"),
+        ("add", "ADD"),
+        ("A1", "A1"),
+        ("1ADD", "1ADD"),
+        ("+ADD", "+ADD"),
+        ("<X", "<X"),
+        ("日本語", "日本語"),
+        ("TIME@NOW", "TIME@NOW"),
+    ] {
+        assert_eq!(
+            canonicalize_core_word_name(name),
+            expected,
+            "`{name}` must canonicalize to `{expected}`"
+        );
+    }
+}

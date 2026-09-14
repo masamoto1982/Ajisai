@@ -94,7 +94,20 @@ impl Interpreter {
         }
 
         if def.lines.is_empty() {
-            return self.execute_builtin(&resolved_name);
+            // Dispatch the Word resolution already found, rather than finding it
+            // again. `execute_builtin` re-canonicalized the name — a third fold
+            // of a name folded once above — and then `generated_word` scanned the
+            // 65-entry registry comparing strings to reach the entry this
+            // definition was built from. `def.generated` is that entry.
+            //
+            // The `None` arm is not dead: a definition with an empty body and no
+            // registry entry is what `word_contract_probe` synthesizes, and the
+            // old route is the right answer for it — an unknown name must still
+            // report `UnknownWord` rather than silently doing nothing.
+            return match def.generated {
+                Some(word) => self.execute_generated_word(word),
+                None => self.execute_builtin(&resolved_name),
+            };
         }
 
         // Call-depth guard: catches blown Rust stack before WASM traps. Guards
@@ -213,6 +226,21 @@ impl Interpreter {
         let Some(word) = generated_word(name) else {
             return Err(AjisaiError::UnknownWord(name.to_string()));
         };
+        self.execute_generated_word(word)
+    }
+
+    /// Run a Core Word from its registry entry.
+    ///
+    /// Split out from `execute_builtin_direct` so the hot path can hand over the
+    /// entry it already holds (`WordDefinition::generated`) instead of scanning
+    /// the registry by name to find it again. Both routes run exactly this, so
+    /// the declared-NIL contract is applied once and in one place whichever way
+    /// the Word was reached — which is what keeps the choice of route
+    /// unobservable (LANG.AUTHORITY.FREEDOM).
+    pub(crate) fn execute_generated_word(
+        &mut self,
+        word: &'static crate::kernel::generated::GeneratedWord,
+    ) -> Result<()> {
         if let Some(decided) = self.apply_declared_nil_contract(word) {
             return decided;
         }
