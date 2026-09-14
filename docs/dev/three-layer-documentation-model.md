@@ -76,6 +76,8 @@ Such language-design context belongs in Reference and may be repeated in concept
 
 Reference must include a concept page for the Bubble Rule. The page explains: well-formed operations that cannot produce a value return Bubble/NIL with a reason, while malformed usage raises an error. Per-word Reference entries for `GET`, `DIV`/`/`, `NUM`, and `CHR` must describe their Bubble/NIL cases separately from contract-violation errors.
 
+(2026-09-14: the water metaphor was removed from `README.md` and `public/docs/ja/index.html` as reader-facing noise. The concept page still exists under `#nil` and still explains this rule — it now just says `NIL` throughout instead of the borrowed word "泡"/"Bubble". `Bubble/NIL` unchanged in LOOKUP text below, which is Rust source, out of scope for that cleanup.)
+
 ---
 
 ## 3. LOOKUP (Layer 2)
