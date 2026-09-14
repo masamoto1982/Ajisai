@@ -215,6 +215,108 @@ mod tests {
         );
     }
 
+    // ── a dispatch asks for a name it already has ─────────────────────────────
+    //
+    // `execute_word_core_inner` canonicalizes the name once, and every question
+    // it then asks is about *that* name. Two of those questions used to rebuild
+    // it first: the binding lookup re-uppercased a name canonicalization had
+    // already uppercased, and resolution answered with a freshly allocated
+    // `String` copy of the name it was handed. Both ran once per word dispatch,
+    // which is the most-travelled path the interpreter has, and neither could
+    // produce anything but the name already in hand.
+    //
+    // `canonicalize_core_word_name` returns one of three things, and all three
+    // are uppercase: an alias's canonical name (every entry in the table is),
+    // the input unchanged when it is ASCII with no lowercase byte (uppercasing
+    // that is the identity), or an owned `to_uppercase()`. Resolution looks a
+    // name up in Core and then in User and answers with the key it looked up —
+    // when the dictionary had named tiers and `DICT@WORD` paths it could answer
+    // with a different, qualified name, and that is what the returned copy was
+    // for; with two tiers there is no other answer to give.
+    //
+    // These pin the observable consequences, so the allocations cannot come back
+    // as the only thing holding a spelling or a name together.
+
+    /// The binding lookup reads the canonical name directly, so a name written
+    /// in any case must still find the binding `BIND` stored under its
+    /// uppercase. Lowercase is the case that would break if the canonical name
+    /// were *not* already uppercase.
+    #[tokio::test]
+    async fn a_binding_is_reached_through_every_spelling_of_its_name() {
+        for spelling in ["value", "VALUE", "Value", "vALUe"] {
+            let mut interp = Interpreter::new();
+            interp
+                .execute(&format!("7 'value' BIND {spelling}"))
+                .await
+                .unwrap_or_else(|e| panic!("binding read as `{spelling}` must run: {e:?}"));
+            assert_eq!(
+                format!("{}", interp.get_stack().last().expect("a result")),
+                "7/1",
+                "a binding must be reachable as `{spelling}`"
+            );
+        }
+    }
+
+    /// Resolution answers with the canonical name, whatever spelling it was
+    /// asked with — an alias included. This is the invariant that lets the
+    /// resolved name be *shared* rather than copied: there is nothing in it that
+    /// the caller's own canonical name does not already say.
+    #[tokio::test]
+    async fn a_resolution_answers_with_the_canonical_name() {
+        let mut interp = Interpreter::new();
+        define(&mut interp, "INC", "1 ADD");
+
+        for (asked, canonical) in [
+            ("+", "ADD"),
+            ("add", "ADD"),
+            ("ADD", "ADD"),
+            ("Add", "ADD"),
+            ("inc", "INC"),
+            ("INC", "INC"),
+        ] {
+            let (name, _) = interp
+                .resolve_word_entry_readonly(asked)
+                .unwrap_or_else(|| panic!("`{asked}` resolves"));
+            assert_eq!(
+                name.as_str(),
+                canonical,
+                "`{asked}` must resolve under the name `{canonical}`"
+            );
+
+            // And the caching route must agree with the read-only one, since a
+            // hit returns a *shared* name where a miss builds one.
+            let (cached_name, _) = interp
+                .resolve_word_entry(asked)
+                .unwrap_or_else(|| panic!("`{asked}` resolves through the cache"));
+            assert_eq!(
+                cached_name.as_ref(),
+                canonical,
+                "`{asked}` must resolve under `{canonical}` on a cache hit too"
+            );
+        }
+    }
+
+    /// The resolved name is *shared*, not copied: an `Arc<str>` is two words, a
+    /// `String` three. This pins the representation rather than the timing,
+    /// because wall-clock on the machine this was measured on drifts by more
+    /// than the change is worth (see the commit message); what is verifiable is
+    /// that handing a resolution back costs a refcount bump and no allocation.
+    #[test]
+    fn a_cached_resolution_shares_its_name_rather_than_copying_it() {
+        use crate::interpreter::ResolveCacheEntry;
+        assert_eq!(
+            std::mem::size_of::<std::sync::Arc<str>>(),
+            2 * std::mem::size_of::<usize>(),
+            "an Arc<str> is a shared fat pointer"
+        );
+        assert_eq!(
+            std::mem::size_of::<ResolveCacheEntry>(),
+            2 * std::mem::size_of::<usize>() + 2 * std::mem::size_of::<u64>(),
+            "a cache entry is a shared name plus its two counters; a String name \
+             would make it a word wider and every read an allocation"
+        );
+    }
+
     /// A session reset is documented as clearing every trace of the previous
     /// program, and the resolve cache is such a trace. It is also the one trace
     /// a reset used to leave behind *at a matching epoch*: every other way the

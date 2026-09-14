@@ -19,11 +19,14 @@ impl Interpreter {
     /// is a lookup, and a lookup that allocates to ask its question is not a
     /// saving over the work it avoids. `HashMap<String, _>` borrows `&str` for
     /// `get`, so asking costs nothing now.
-    pub(crate) fn lookup_resolve_cache(&mut self, canonical_name: &str) -> Option<String> {
+    pub(crate) fn lookup_resolve_cache(
+        &mut self,
+        canonical_name: &str,
+    ) -> Option<std::sync::Arc<str>> {
         let entry = self.resolve_cache.get(canonical_name)?;
         if entry.dictionary_epoch == self.dictionary_epoch {
             self.runtime_metrics.resolve_cache_hit_count += 1;
-            Some(entry.resolved_name.clone())
+            Some(std::sync::Arc::clone(&entry.resolved_name))
         } else {
             self.runtime_metrics.resolve_cache_miss_count += 1;
             None
@@ -41,7 +44,7 @@ impl Interpreter {
         self.resolve_cache.insert(
             canonical_name.to_string(),
             ResolveCacheEntry {
-                resolved_name: resolved_name.to_string(),
+                resolved_name: std::sync::Arc::from(resolved_name),
                 dictionary_epoch: self.dictionary_epoch,
                 registration_order,
             },

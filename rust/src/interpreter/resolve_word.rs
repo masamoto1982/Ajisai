@@ -50,26 +50,33 @@ impl Interpreter {
         self.resolve_short_name(canonical_name.as_ref())
     }
 
+    /// Resolve for execution, sharing the resolved name instead of copying it.
+    ///
+    /// The name comes back as `Arc<str>`. This runs once per word dispatch — the
+    /// hottest path the interpreter has — and the `String` it used to return was
+    /// allocated, on a cache hit, purely to be borrowed straight back: a Core
+    /// Word's dispatch does `execute_builtin(&resolved_name)` and drops it. The
+    /// callers that need an owned name (the call stack, a failure record, a
+    /// recursion-limit report) run per *User* Word call, not per dispatch, and
+    /// ask for a `String` where they need one.
     pub(crate) fn resolve_word_entry(
         &mut self,
         name: &str,
-    ) -> Option<(String, Arc<WordDefinition>)> {
+    ) -> Option<(Arc<str>, Arc<WordDefinition>)> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
         let name = canonical_name.as_ref();
         if let Some(cached_name) = self.lookup_resolve_cache(name) {
-            if let Some(def) = self.core_vocabulary.get(&cached_name).cloned() {
+            if let Some(def) = self.core_vocabulary.get(cached_name.as_ref()).cloned() {
                 return Some((cached_name, def));
             }
-            if let Some(def) = self.user_words.get(&cached_name).cloned() {
+            if let Some(def) = self.user_words.get(cached_name.as_ref()).cloned() {
                 return Some((cached_name, def));
             }
         }
 
-        let resolved = self.resolve_word_entry_readonly(name);
-        if let Some((resolved_name, def)) = resolved.clone() {
-            self.store_resolve_cache(name, &resolved_name, def.registration_order);
-        }
-        resolved
+        let (resolved_name, def) = self.resolve_word_entry_readonly(name)?;
+        self.store_resolve_cache(name, &resolved_name, def.registration_order);
+        Some((Arc::from(resolved_name), def))
     }
 
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
@@ -111,9 +118,9 @@ impl Interpreter {
                             // Only User Words are dependencies: Core is sealed,
                             // so nothing can invalidate a reference to it.
                             if !resolved_def.is_builtin {
-                                dependencies.insert(resolved_name.clone());
+                                dependencies.insert(resolved_name.to_string());
                                 self.dependents
-                                    .entry(resolved_name)
+                                    .entry(resolved_name.to_string())
                                     .or_default()
                                     .insert(word_name.clone());
                             }
