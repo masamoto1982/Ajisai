@@ -291,7 +291,7 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
                 absences.insert(*index, absence_from_reason(reason));
             }
             ValueData::Tensor {
-                data: Arc::new(DenseTensor::from_columns(
+                data: Arc::new(DenseTensor::from_untrusted_columns(
                     nums.clone(),
                     dens.clone(),
                     dshape.clone(),

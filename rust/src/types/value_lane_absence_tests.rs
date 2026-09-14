@@ -189,3 +189,138 @@ fn a_tensors_absent_lane_keeps_its_reason_across_the_boundary() {
         "reason and all, the reloaded value is the value that was saved"
     );
 }
+
+// ── promotion appends lanes into one buffer, and must index absences the
+//    same way it did when each leaf carried its own ─────────────────────────
+//
+// `try_collect_dense` used to build a `DenseCollect` per leaf and splice each
+// one in, offsetting that leaf's absences by the buffer length at the moment of
+// the splice. It now appends straight into a shared buffer and records each
+// absence at the index it lands on. Those are the same arithmetic only if the
+// offset is taken before the lanes are appended and nested runs write absolute
+// indices — which is the whole of what a misplaced reason would look like.
+
+#[test]
+fn promotion_puts_every_reason_on_the_lane_it_belongs_to() {
+    let lanes = vec![
+        Value::from_fraction(Fraction::from(1)),
+        div_by_zero(),
+        Value::from_fraction(Fraction::from(3)),
+        Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable),
+        Value::from_fraction(Fraction::from(5)),
+    ];
+    let promoted = Value::from_vector_promoted(lanes);
+
+    let ValueData::Tensor { data, shape } = &promoted.data else {
+        panic!("a flat run of numeric lanes promotes: {promoted:?}");
+    };
+    assert_eq!(**shape, vec![5]);
+    assert_eq!(
+        data.absences()
+            .map(|(index, metadata)| (index, metadata.reason))
+            .collect::<Vec<_>>(),
+        vec![
+            (1, Some(NilReason::DivisionByZero)),
+            (3, Some(NilReason::IndexOutOfBounds)),
+        ],
+        "each reason sits on its own lane"
+    );
+    for (index, rendered) in [(0, "1/1"), (2, "3/1"), (4, "5/1")] {
+        assert_eq!(
+            promoted.child(index).map(|c| format!("{c}")),
+            Some(rendered.to_string()),
+            "present lane {index}"
+        );
+    }
+}
+
+#[test]
+fn promotion_rebases_a_nested_runs_absences_onto_the_flat_buffer() {
+    // Row 1 lane 1 is absent, so the flat index is 1*3 + 1 = 4; row 2 lane 2 is
+    // 2*3 + 2 = 8. An offset taken after appending, or a nested run writing
+    // indices from its own zero, puts both somewhere else.
+    let row = |values: [Option<i64>; 3]| {
+        Value::from_vector(
+            values
+                .into_iter()
+                .map(|v| match v {
+                    Some(n) => Value::from_fraction(Fraction::from(n)),
+                    None => div_by_zero(),
+                })
+                .collect(),
+        )
+    };
+    let promoted = Value::from_vector_promoted(vec![
+        row([Some(1), Some(2), Some(3)]),
+        row([Some(4), None, Some(6)]),
+        row([Some(7), Some(8), None]),
+    ]);
+
+    let ValueData::Tensor { data, shape } = &promoted.data else {
+        panic!("a rectangular run of numeric rows promotes: {promoted:?}");
+    };
+    assert_eq!(**shape, vec![3, 3]);
+    assert_eq!(
+        data.absences().map(|(index, _)| index).collect::<Vec<_>>(),
+        vec![4, 8],
+        "nested absences land at their flat index"
+    );
+    assert!(
+        data.absences()
+            .all(|(_, metadata)| metadata.reason == Some(NilReason::DivisionByZero)),
+        "and keep the reason they were written with"
+    );
+}
+
+#[test]
+fn promotion_refuses_what_it_refused_before_and_leaves_it_nested() {
+    // A non-numeric leaf, and a ragged shape. Either must leave the value in
+    // its nested form rather than half-promoting the lanes appended before the
+    // refusal was reached — the buffer is scratch, and a refusal discards it.
+    let with_text = Value::from_vector_promoted(vec![
+        Value::from_fraction(Fraction::from(1)),
+        Value::from_string("two"),
+        Value::from_fraction(Fraction::from(3)),
+    ]);
+    assert!(
+        matches!(with_text.data, ValueData::Vector(_)),
+        "a Text leaf blocks promotion: {with_text:?}"
+    );
+    assert_eq!(with_text.len(), 3, "and every element survives");
+
+    let ragged = Value::from_vector_promoted(vec![
+        Value::from_vector(vec![Value::from_fraction(Fraction::from(1))]),
+        Value::from_vector(vec![
+            Value::from_fraction(Fraction::from(2)),
+            Value::from_fraction(Fraction::from(3)),
+        ]),
+    ]);
+    assert!(
+        matches!(ragged.data, ValueData::Vector(_)),
+        "disagreeing shapes block promotion: {ragged:?}"
+    );
+    assert_eq!(ragged.len(), 2);
+}
+
+#[test]
+fn promotion_carries_an_existing_tensors_lanes_and_reasons_in() {
+    // A Tensor leaf is the case whose lanes arrive in bulk, so its absences are
+    // the ones most easily left at their own indices instead of the buffer's.
+    let inner =
+        Value::from_vector_promoted(vec![Value::from_fraction(Fraction::from(1)), div_by_zero()]);
+    assert!(
+        matches!(inner.data, ValueData::Tensor { .. }),
+        "inner promotes"
+    );
+
+    let promoted = Value::from_vector_promoted(vec![inner.clone(), inner]);
+    let ValueData::Tensor { data, shape } = &promoted.data else {
+        panic!("two tensors of one shape promote: {promoted:?}");
+    };
+    assert_eq!(**shape, vec![2, 2]);
+    assert_eq!(
+        data.absences().map(|(index, _)| index).collect::<Vec<_>>(),
+        vec![1, 3],
+        "the second copy's hole is offset by the first copy's length"
+    );
+}
