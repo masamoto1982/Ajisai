@@ -112,6 +112,60 @@ impl DenseTensor {
         }
     }
 
+    /// Assemble a tensor from columns of *unverified* provenance.
+    ///
+    /// [`Self::from_columns`] takes its columns as already being in lowest terms
+    /// with a positive denominator, which every in-process path satisfies
+    /// because it writes lanes from `Fraction`s that have been normalized. A
+    /// restored session is the one place that is not true: the columns come off
+    /// the wire, so a payload could carry `4/2`, or a negative denominator, and
+    /// nothing in the decode path looked. Reading such a lane back through
+    /// `Fraction::new` used to launder it — every read re-normalized — which is
+    /// why it never showed, and which is the per-element cost that laundering
+    /// was.
+    ///
+    /// So the check moves to the boundary, where it runs once per lane per
+    /// restore instead of once per lane per read. A lane whose pair is not
+    /// already normal is normalized here; the absence sentinel (denominator 0)
+    /// is left exactly as it is, since it is not a rational and `from_columns`
+    /// reconciles it against the absence map.
+    pub fn from_untrusted_columns(
+        numerators: Vec<i64>,
+        denominators: Vec<i64>,
+        shape: Vec<usize>,
+        is_pure_integer: bool,
+        absences: BTreeMap<usize, AbsenceMetadata>,
+    ) -> Self {
+        let mut numerators = numerators;
+        let mut denominators = denominators;
+        for index in 0..numerators.len().min(denominators.len()) {
+            let (numerator, denominator) = (numerators[index], denominators[index]);
+            if denominator == 0 {
+                continue;
+            }
+            let normalized = Fraction::create_from_i128(numerator as i128, denominator as i128);
+            match normalized.extract_i64_pair() {
+                Some((n, d)) => {
+                    numerators[index] = n;
+                    denominators[index] = d;
+                }
+                // Normalizing cannot widen a pair of `i64`s past `i64`, so this
+                // is unreachable; leaving the lane as it came is still the
+                // conservative answer if it ever were not.
+                None => continue,
+            }
+        }
+        // `is_pure_integer` is the caller's claim about the same columns, so it
+        // is recomputed rather than believed: a payload claiming purity for a
+        // lane like `1/2` would otherwise send every integer fast path down a
+        // route its own guard had cleared.
+        let is_pure_integer = is_pure_integer
+            && denominators
+                .iter()
+                .all(|denominator| *denominator == 1 || *denominator == 0);
+        Self::from_columns(numerators, denominators, shape, is_pure_integer, absences)
+    }
+
     /// Build from rationals alone, which carry absence but no reason for it.
     ///
     /// Every lane this makes absent is therefore *reasonless* — see
@@ -258,9 +312,16 @@ impl DenseTensor {
         if !self.is_valid(index) {
             return None;
         }
-        Some(Fraction::new(
-            self.numerators[index].into(),
-            self.denominators[index].into(),
+        // The columns are already in lowest terms with a positive denominator
+        // — see `from_columns` — so this reads them rather than re-deriving
+        // them. It used to go through `Fraction::new`, which widened both
+        // halves to `BigInt`, narrowed them straight back, and ran a Euclidean
+        // gcd to reach the normal form they were stored in: two allocations and
+        // a 128-bit division loop, per lane, every time a lane was read. Reading
+        // a lane is what `MAP`, `FILTER` and `FOLD` do once per element.
+        Some(Fraction::from_normalized_pair(
+            self.numerators[index],
+            self.denominators[index],
         ))
     }
 

@@ -143,3 +143,115 @@ fn multi_slot_stack_round_trips_in_order() {
         assert_eq!(got.1, want.1);
     }
 }
+
+// ── a restored tensor's columns are normalized at the boundary ─────────────
+//
+// Every in-process path writes a tensor's columns from `Fraction`s that have
+// already been normalized, so `DenseTensor::get_small_fraction` reads them back
+// as they are. A restored session is the one place that guarantee does not come
+// for free: the columns arrive off the wire. Reading a lane used to launder any
+// payload through `Fraction::new`, which re-derived the normal form on *every*
+// read — so a malformed payload never showed, and correct payloads paid a gcd
+// and two `BigInt` allocations per lane per read.
+//
+// The check now runs once per lane per restore. These pin that it actually
+// does, because the laundering that used to hide its absence is gone.
+
+/// Encode a tensor, then rewrite its columns on the wire the way a corrupted or
+/// hand-edited payload would, and decode that.
+fn decode_tampered_tensor(value: &Value, from: &str, to: &str) -> Value {
+    let json =
+        encode_stack(std::iter::once((value, Interpretation::Unassigned))).expect("encode_stack");
+    assert!(
+        json.contains(from),
+        "payload did not contain `{from}`: {json}"
+    );
+    let tampered = json.replace(from, to);
+    let mut decoded = decode_stack(&tampered).expect("decode_stack");
+    decoded.pop().expect("one slot").0
+}
+
+#[test]
+fn a_restored_tensor_lane_is_reduced_to_lowest_terms() {
+    // `[ 2 3 ]` on the wire, rewritten to the same values unreduced.
+    let value = Value::from_int_tensor(vec![2, 3]);
+    let restored = decode_tampered_tensor(
+        &value,
+        r#""nums":[2,3],"dens":[1,1]"#,
+        r#""nums":[4,9],"dens":[2,3]"#,
+    );
+    assert_eq!(
+        restored.child(0).map(|c| format!("{c}")),
+        Some("2/1".to_string()),
+        "4/2 must restore as the value it denotes"
+    );
+    assert_eq!(
+        restored.child(1).map(|c| format!("{c}")),
+        Some("3/1".to_string()),
+        "9/3 must restore as the value it denotes"
+    );
+    assert_eq!(restored, value, "and the whole tensor equals the original");
+}
+
+#[test]
+fn a_restored_tensor_lane_carries_its_sign_on_the_numerator() {
+    // A negative denominator is a second spelling of the same rational, and the
+    // one that would leave a malformed `Fraction` if it were trusted as stored.
+    let value = Value::from_int_tensor(vec![-2, 5]);
+    let restored = decode_tampered_tensor(
+        &value,
+        r#""nums":[-2,5],"dens":[1,1]"#,
+        r#""nums":[2,-5],"dens":[-1,-1]"#,
+    );
+    assert_eq!(
+        restored, value,
+        "sign belongs on the numerator once restored"
+    );
+}
+
+#[test]
+fn a_restored_tensor_keeps_its_absent_lanes_absent() {
+    // The 0 denominator is the absence sentinel, not a rational: normalizing
+    // must step over it rather than try to reduce it.
+    let value = Value::from_int_tensor(vec![7, 8]);
+    let restored = decode_tampered_tensor(
+        &value,
+        r#""nums":[7,8],"dens":[1,1]"#,
+        r#""nums":[7,0],"dens":[1,0]"#,
+    );
+    assert_eq!(
+        restored.child(0).map(|c| format!("{c}")),
+        Some("7/1".to_string()),
+        "the present lane is untouched"
+    );
+    assert!(
+        restored.child(1).is_some_and(|c| c.is_nil()),
+        "a 0 denominator stays the absence sentinel"
+    );
+}
+
+#[test]
+fn a_restored_tensor_does_not_keep_a_false_claim_of_purity() {
+    // `pure_int` is the payload's claim about the same columns it ships. A
+    // tensor whose lanes are not all integers but which says it is pure would
+    // otherwise send every integer fast path down a route its own guard had
+    // cleared.
+    let value = Value::from_int_tensor(vec![1, 2]);
+    let restored = decode_tampered_tensor(
+        &value,
+        r#""nums":[1,2],"dens":[1,1],"dshape":[2],"pure_int":true"#,
+        r#""nums":[1,1],"dens":[1,2],"dshape":[2],"pure_int":true"#,
+    );
+    assert_eq!(
+        restored.child(1).map(|c| format!("{c}")),
+        Some("1/2".to_string()),
+        "the lane restores as the rational it is"
+    );
+    let crate::types::ValueData::Tensor { data, .. } = &restored.data else {
+        panic!("a tensor restores as a tensor");
+    };
+    assert!(
+        !data.is_pure_integer,
+        "purity is recomputed from the columns, not believed"
+    );
+}

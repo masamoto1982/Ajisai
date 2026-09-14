@@ -184,6 +184,52 @@ impl Fraction {
         matches!(self.repr, FractionRepr::Small(..))
     }
 
+    /// A `Fraction` from a pair the caller already knows is in lowest terms
+    /// with a positive denominator.
+    ///
+    /// `Fraction::new` reaches the same answer by widening both halves to
+    /// `BigInt`, narrowing them straight back, and running a Euclidean gcd —
+    /// two heap allocations and a `__divti3` loop. That is the right price for
+    /// a pair of unknown provenance and pure waste for one that has already
+    /// paid it. A `DenseTensor`'s columns are such a pair: every lane in one
+    /// was written from an already-normalized `Fraction` (see
+    /// `DenseTensor::from_columns`), so reading a lane back re-derived a
+    /// normal form it was stored in.
+    ///
+    /// The precondition is checked in debug builds rather than trusted, so any
+    /// path that ever stores an unnormalized column fails the test suite here
+    /// instead of returning a quietly malformed value.
+    #[inline]
+    pub(crate) fn from_normalized_pair(numerator: i64, denominator: i64) -> Self {
+        debug_assert!(
+            denominator > 0,
+            "from_normalized_pair needs a positive denominator, got {numerator}/{denominator}"
+        );
+        debug_assert!(
+            {
+                fn gcd(mut a: i128, mut b: i128) -> i128 {
+                    a = a.abs();
+                    b = b.abs();
+                    while b != 0 {
+                        let t = b;
+                        b = a % b;
+                        a = t;
+                    }
+                    a
+                }
+                gcd(numerator as i128, denominator as i128) == 1 || numerator == 0
+            },
+            "from_normalized_pair needs lowest terms, got {numerator}/{denominator}"
+        );
+        debug_assert!(
+            numerator != 0 || denominator == 1,
+            "zero normalizes to 0/1, got {numerator}/{denominator}"
+        );
+        Fraction {
+            repr: FractionRepr::Small(numerator, denominator),
+        }
+    }
+
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() {
             panic!("Division by zero");

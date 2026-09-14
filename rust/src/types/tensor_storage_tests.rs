@@ -178,3 +178,72 @@ fn reversed_lanes_keeps_a_rational_tensor_rational() {
     assert_eq!(reversed.numerators, vec![3, 1]);
     assert_eq!(reversed.denominators, vec![2, 2]);
 }
+
+// ── reading a lane reads the columns rather than re-deriving them ──────────
+//
+// `get_small_fraction` used to build two `BigInt`s from the stored `i64` pair
+// and hand them to `Fraction::new`, which narrowed them straight back and ran a
+// Euclidean gcd to reach the normal form the columns were already in. These pin
+// that the cheaper read is the *same* read: the answer for every lane must be
+// the one `Fraction::new` would have given.
+
+/// The oracle is the constructor that was replaced.
+#[test]
+fn a_lane_reads_as_the_fraction_its_columns_denote() {
+    // Dense over a range that crosses zero and both signs, plus the extremes
+    // where the old i128 widening existed specifically to stay total.
+    let mut lanes: Vec<i64> = (-500..=500).collect();
+    lanes.extend([i64::MAX, i64::MIN + 1, i64::MIN]);
+    let tensor = DenseTensor::from_fractions(
+        lanes.iter().copied().map(Fraction::from).collect(),
+        vec![lanes.len()],
+    )
+    .expect("integer lanes build");
+
+    for (index, lane) in lanes.iter().enumerate() {
+        let read = tensor.get_small_fraction(index).expect("lane is present");
+        let oracle = Fraction::new((*lane).into(), 1.into());
+        assert_eq!(read, oracle, "lane {index} holding {lane}");
+        assert_eq!(
+            format!("{read}"),
+            format!("{oracle}"),
+            "lane {index} renders"
+        );
+    }
+}
+
+/// Rationals too: the lanes a division leaves behind are where a denominator
+/// other than 1 comes from, and where a gcd would have had something to do had
+/// the value not already been reduced when it was stored.
+#[test]
+fn a_rational_lane_reads_as_the_fraction_its_columns_denote() {
+    let fractions: Vec<Fraction> = (1..=60)
+        .flat_map(|d| (-3..=3).map(move |n| Fraction::new(n.into(), d.into())))
+        .collect();
+    let tensor =
+        DenseTensor::from_fractions(fractions.clone(), vec![fractions.len()]).expect("lanes build");
+
+    for (index, expected) in fractions.iter().enumerate() {
+        let read = tensor.get_small_fraction(index).expect("lane is present");
+        assert_eq!(&read, expected, "lane {index}");
+    }
+}
+
+/// An absent lane is still absent, and asking for one must not reach the
+/// normalized-pair constructor at all — its denominator is the 0 sentinel,
+/// which is not a rational.
+#[test]
+fn an_absent_lane_reads_as_absent_rather_than_as_a_pair() {
+    let tensor = DenseTensor::from_fractions(
+        vec![Fraction::from(1), Fraction::nil(), Fraction::from(3)],
+        vec![3],
+    )
+    .expect("lanes build");
+    assert!(tensor.get_small_fraction(0).is_some());
+    assert!(
+        tensor.get_small_fraction(1).is_none(),
+        "the sentinel lane has no fraction to read"
+    );
+    assert!(tensor.get_small_fraction(2).is_some());
+    assert!(tensor.fraction_or_nil(1).is_nil());
+}
