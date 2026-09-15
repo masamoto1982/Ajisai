@@ -133,4 +133,46 @@ mod tests {
             );
         }
     }
+
+    /// The ceiling firing on a Word *is* that Word failing, so it is recorded
+    /// like any other failure — on either route.
+    ///
+    /// This is the case the compiled route got wrong twice over. It first did
+    /// not charge at all; then it charged with `?`, which let the ceiling's own
+    /// refusal escape before the failure record, so the trace named nothing
+    /// where the interpreted route names the Word. The interpreted route makes
+    /// its charge *inside* the dispatch, so its refusal lands in the same error
+    /// arm as any other, and that is the behaviour to match.
+    #[tokio::test]
+    async fn a_refusal_by_the_ceiling_names_the_word_it_fired_on() {
+        // Inline, and inside a Word body whose compiled plan is the route that
+        // dropped the name.
+        for (setup, program) in [
+            (String::new(), format!("0 {}", "1 ADD ".repeat(40))),
+            (
+                "[ 1 ADD 1 ADD 1 ADD 1 ADD ] 'BUMP' DEF".to_string(),
+                format!("0 {}", "BUMP ".repeat(10)),
+            ),
+        ] {
+            let mut interp = Interpreter::new();
+            interp.set_max_execution_steps(12);
+            if !setup.is_empty() {
+                interp.execute(&setup).await.expect("setup runs");
+                interp.update_stack(Vec::new());
+            }
+            let error = interp
+                .execute(&program)
+                .await
+                .expect_err("the ceiling must refuse");
+            assert!(
+                format!("{error:?}").contains("ExecutionLimitExceeded"),
+                "expected the ceiling, got {error:?}"
+            );
+            let trace = interp.drain_error_flow_trace();
+            assert!(
+                trace.iter().any(|e| e.word.as_deref() == Some("ADD")),
+                "the refusal must name ADD; trace was {trace:?}"
+            );
+        }
+    }
 }

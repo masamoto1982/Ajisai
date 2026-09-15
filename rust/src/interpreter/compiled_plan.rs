@@ -35,7 +35,7 @@ pub enum CompiledOp {
     /// Core Words in the registry, so each costs one execution step; lowering
     /// them to a plain `PushLiteral` made them free, and a step the two routes
     /// disagree on is a budget and a ceiling the two routes disagree on.
-    PushWordLiteral(Value),
+    PushWordLiteral(Value, &'static str),
     /// A fully-literal vector (`[ 1 2 3 ]`, nested literals, `TRUE`/`FALSE`/`NIL`)
     /// built once at compile time, with the same promoted `Value` and element
     /// hint `collect_vector` would produce. Replaces the per-call vector walk
@@ -72,9 +72,9 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
         "KEEP" => CompiledOp::SetConsumptionKeep,
-        "TRUE" => CompiledOp::PushWordLiteral(Value::from_bool(true)),
-        "FALSE" => CompiledOp::PushWordLiteral(Value::from_bool(false)),
-        "NIL" => CompiledOp::PushWordLiteral(Value::nil()),
+        "TRUE" => CompiledOp::PushWordLiteral(Value::from_bool(true), "TRUE"),
+        "FALSE" => CompiledOp::PushWordLiteral(Value::from_bool(false), "FALSE"),
+        "NIL" => CompiledOp::PushWordLiteral(Value::nil(), "NIL"),
         _ => {
             if lookup_builtin_spec(symbol).is_some() {
                 CompiledOp::CallBuiltin(Arc::new(CompiledCall::resolve(symbol)))
@@ -435,19 +435,32 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 // push the prebuilt vector and its element hint.
                 interp.stack.push_with_role(v.clone(), *hint);
             }
-            CompiledOp::PushWordLiteral(v) => {
+            CompiledOp::PushWordLiteral(v, name) => {
                 // A Word, so it costs a step, exactly as the Symbol dispatch the
-                // interpreted route takes for it does.
-                interp.charge_execution_step()?;
+                // interpreted route takes for it does — and a refusal by the
+                // ceiling is that Word's failure, recorded like any other.
+                let stack_len_before = interp.stack.len();
+                if let Err(err) = interp.charge_execution_step() {
+                    interp.record_word_dispatch_failure(name, &err, stack_len_before);
+                    return Err(err);
+                }
                 interp
                     .stack
                     .push_with_role(v.clone(), Interpretation::Unassigned);
             }
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(call) => {
-                interp.charge_execution_step()?;
+                // The step and the call are one dispatch, so one failure record
+                // covers both. Charging with `?` instead would let the ceiling's
+                // own refusal escape unattributed — and the ceiling firing on a
+                // Word *is* that Word failing, which is what the interpreted
+                // route records when its charge, made inside the dispatch, fails.
                 let stack_len_before = interp.stack.len();
-                if let Err(err) = execute_compiled_call(interp, call) {
+                let mut outcome = interp.charge_execution_step();
+                if outcome.is_ok() {
+                    outcome = execute_compiled_call(interp, call);
+                }
+                if let Err(err) = outcome {
                     interp.record_word_dispatch_failure(&call.name, &err, stack_len_before);
                     return Err(err);
                 }
@@ -462,9 +475,12 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 }
             }
             CompiledOp::CondDispatch(clauses) => {
-                interp.charge_execution_step()?;
                 let stack_len_before = interp.stack.len();
-                if let Err(err) = super::control_cond::op_cond_dispatch(interp, clauses) {
+                let mut outcome = interp.charge_execution_step();
+                if outcome.is_ok() {
+                    outcome = super::control_cond::op_cond_dispatch(interp, clauses);
+                }
+                if let Err(err) = outcome {
                     interp.record_word_dispatch_failure("COND", &err, stack_len_before);
                     return Err(err);
                 }
