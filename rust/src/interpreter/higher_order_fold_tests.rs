@@ -26,7 +26,7 @@ mod tests {
     #[tokio::test]
     async fn test_fold_basic() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 2 3 4 ] [ 0 ] '+' FOLD").await;
+        let result = interp.execute("[ 1 2 3 4 ] [ 0 ] [ + ] FOLD").await;
         assert!(result.is_ok(), "FOLD should succeed: {:?}", result);
         assert_eq!(top_scalar_i64(&interp), 10);
     }
@@ -34,7 +34,7 @@ mod tests {
     #[tokio::test]
     async fn test_fold_nil_returns_initial() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("NIL [ 42 ] '+' FOLD").await;
+        let result = interp.execute("NIL [ 42 ] [ + ] FOLD").await;
         assert!(
             result.is_ok(),
             "FOLD on NIL should return initial: {:?}",
@@ -61,7 +61,7 @@ mod tests {
             .execute("[ [ 2 ] MOD [ 0 ] = ] 'IS_EVEN' DEF")
             .await
             .unwrap();
-        let ok3 = interp3.execute("[ 1 3 6 ] 'IS_EVEN' ANY").await;
+        let ok3 = interp3.execute("[ 1 3 6 ] [ IS_EVEN ] ANY").await;
         assert!(ok3.is_ok(), "ANY user word failed: {:?}", ok3);
         assert_eq!(top_scalar_i64(&interp3), 1);
     }
