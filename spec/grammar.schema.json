@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ajisai.dev/spec/grammar.schema.json",
+  "title": "Ajisai lexical grammar",
+  "description": "Shape of spec/grammar.json. The grammar is normative for what text is Ajisai source; this schema is normative only for the grammar's shape.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "authority",
+    "clauses",
+    "description",
+    "implementation",
+    "totality",
+    "characterClasses",
+    "tokens",
+    "phases",
+    "lexemeRules",
+    "numericGrammar",
+    "stringLiteral",
+    "sourceErrors"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "authority": { "type": "string" },
+    "clauses": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^LANG\\.[A-Z]+\\.[A-Z]+$" }
+    },
+    "description": { "type": "string" },
+    "implementation": { "type": "string" },
+    "totality": { "type": "string" },
+
+    "characterClasses": {
+      "type": "object",
+      "required": ["whitespace", "lineTerminator", "asciiDigit"],
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "definition": { "type": "string" },
+          "codepoints": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9A-F]{4,6}(-[0-9A-F]{4,6})?$"
+            }
+          },
+          "note": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "tokens": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "carries"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "carries": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "summary"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "summary": { "type": "string" },
+          "note": { "type": "string" },
+          "positionRules": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/positionRule" }
+          },
+          "rejectedCharacters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["chars", "condition"],
+              "additionalProperties": false,
+              "properties": {
+                "chars": { "type": "array", "items": { "type": "string" } },
+                "condition": { "type": "string" }
+              }
+            }
+          },
+          "rejectedCharacterNote": { "type": "string" },
+          "postScan": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "note"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string" },
+                "note": { "type": "string" }
+              }
+            }
+          },
+          "conditions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+
+    "lexemeRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "match"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "match": { "$ref": "#/definitions/matcher" },
+          "emits": { "type": "string" },
+          "condition": { "type": "string" },
+          "surface": { "type": "string" },
+          "note": { "type": "string" }
+        },
+        "oneOf": [{ "required": ["emits"] }, { "required": ["condition"] }]
+      }
+    },
+
+    "numericGrammar": {
+      "type": "object",
+      "required": ["pattern", "ebnf", "anchored", "notes", "examples"],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": { "type": "string" },
+        "ebnf": { "type": "string" },
+        "anchored": { "type": "string" },
+        "notes": { "type": "array", "items": { "type": "string" } },
+        "examples": {
+          "type": "object",
+          "required": ["accepted", "rejectedAsName"],
+          "additionalProperties": false,
+          "properties": {
+            "accepted": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string" }
+            },
+            "rejectedAsName": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "stringLiteral": {
+      "type": "object",
+      "required": ["open", "close", "closeRule", "escape", "notes", "condition"],
+      "additionalProperties": false,
+      "properties": {
+        "open": { "type": "string" },
+        "close": { "type": "string" },
+        "closeRule": { "type": "string" },
+        "escape": { "type": "null" },
+        "notes": { "type": "array", "items": { "type": "string" } },
+        "condition": { "type": "string" }
+      }
+    },
+
+    "sourceErrors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "phase",
+          "errorCategory",
+          "summary",
+          "messageContains",
+          "witness"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "phase": { "type": "string" },
+          "errorCategory": { "type": "string" },
+          "summary": { "type": "string" },
+          "messageContains": {
+            "type": "string",
+            "description": "A stable fingerprint of the implementation's message for this condition. The differential test uses it to check WHICH condition was raised, not merely that one was."
+          },
+          "witness": {
+            "type": "string",
+            "description": "A source program that reaches this condition. Both sides run it: the reference lexer must report this condition id, and the implementation must reject it with a message containing the fingerprint. This is what makes a declared condition demonstrably reachable rather than merely referenced."
+          },
+          "witnessNote": { "type": "string" }
+        }
+      }
+    },
+
+    "lexicallyTransparent": {
+      "type": "array",
+      "description": "Surface forms registered elsewhere that the lexical grammar deliberately allocates nothing for, with the reason. Keeps the manifest closure check honest instead of silently exempting them.",
+      "items": {
+        "type": "object",
+        "required": ["surface", "concept", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "surface": { "type": "string" },
+          "concept": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "positionRule": {
+      "type": "object",
+      "required": ["id", "guard", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "guard": { "$ref": "#/definitions/matcher" },
+        "action": { "type": "string" },
+        "surface": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "matcher": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "description": "A closed vocabulary of match forms, so the grammar stays interpretable by scripts/lib/reference-lexer.mjs rather than becoming prose in JSON clothing.",
+      "properties": {
+        "literal": { "type": "string" },
+        "literalAsciiCaseInsensitive": { "type": "string" },
+        "containsAny": { "type": "array", "items": { "type": "string" } },
+        "pattern": { "type": "string" },
+        "charClass": { "type": "string" },
+        "otherwise": { "const": true }
+      }
+    }
+  }
+}

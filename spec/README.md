@@ -6,11 +6,22 @@ it defines Ajisai semantics.
 | Source | Defines |
 | --- | --- |
 | `language-semantics.md` | Program meaning — the semantic kernel |
+| `grammar.json` (`grammar.schema.json`) | The lexical grammar — what text is Ajisai source |
 | `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
 | `outcomes.json` (`outcomes.schema.json`) | The complete outcome space — every NIL reason and every error category a Word's contract can name |
 | `semantic-families.json` | The shared laws Words select |
 | `gui-semantics.md` | Presentation |
 | `host-protocol.schema.json` | The host protocol boundary between them |
+
+`grammar.json` is the one source here that is executed rather than only read.
+`scripts/lib/reference-lexer.mjs` interprets it — it hardcodes no character, no
+token spelling and no rule order — and two gates hold both implementations to
+that one file: `npm run check:grammar` runs the grammar over its own numeric
+examples and over one witness program per source-error condition, and
+`rust/src/lexical_grammar_laws.rs` runs the same file and the same witnesses
+against the Rust tokenizer under `cargo test`. A failure means the grammar and
+the tokenizer disagree; the grammar is canonical for what source *is*, so a
+deliberate language change updates it first.
 
 The two `.md` sources retain raw HTML blocks so the generated specification
 preserves the existing typography, anchors, tables, and mathematical channels

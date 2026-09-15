@@ -95,6 +95,15 @@ jobs:
         # Reference was the surface that was not.
         run: npm run check:reference-samples
 
+      - name: Check the canonical lexical grammar
+        # spec/grammar.json is executed, not just read: the gate runs the
+        # grammar over its own numeric examples and over one witness per
+        # source-error condition, and closes it against spec/outcomes.json and
+        # the word manifest. The other half of the proof is the Rust side,
+        # rust/src/lexical_grammar_laws.rs, which holds the tokenizer to the
+        # same file and the same witnesses under `cargo test`.
+        run: npm run check:grammar
+
       - name: Verify generated specification surfaces are in sync
         # The Word reference and Core hover contracts are generated from
         # spec/words.json. None of these were gated in CI, which is how a stale
