@@ -34657,21 +34657,13 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
       "inputs": [
         "scalarOne",
         "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "scalarOne",
-        "vectorTriple"
       ],
       "outcome": "error:nonVector"
     },
@@ -34679,6 +34671,14 @@
       "word": "MAP",
       "inputs": [
         "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "scalarOne",
         "vectorHuge"
       ],
       "outcome": "error:nonVector"
@@ -34745,7 +34745,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -34833,7 +34833,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -34921,7 +34921,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -35009,7 +35009,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -35097,7 +35097,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -35185,7 +35185,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -35273,7 +35273,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -35361,7 +35361,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
@@ -35449,978 +35449,10 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "nilLiteral",
-        "vectorPair"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "nilLiteral",
-        "vectorTriple"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "nilLiteral",
-        "vectorHuge"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "nilLiteral",
-        "nilLiteral"
-      ],
       "outcome": "error:notExecutable"
     },
     {
       "word": "MAP",
-      "inputs": [
-        "nilLiteral",
-        "codeBlock"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "MAP",
-      "inputs": [
-        "codeBlock",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarOne",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarZero",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarNegative",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "scalarLarge",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "booleanTrue",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "textShort",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "vectorPair"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorPair",
-        "codeBlock"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "vectorPair"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorTriple",
-        "codeBlock"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "vectorPair"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "vectorHuge",
-        "codeBlock"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "nilLiteral",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "nilLiteral",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "nilLiteral",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "nilLiteral",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "nilLiteral",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "FILTER",
-      "inputs": [
-        "nilLiteral",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "FILTER",
       "inputs": [
         "nilLiteral",
         "vectorPair"
@@ -36428,6 +35460,974 @@
       "outcome": "nil:literal"
     },
     {
+      "word": "MAP",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "MAP",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarOne",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "FILTER",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
       "word": "FILTER",
       "inputs": [
         "nilLiteral",
@@ -36505,7 +36505,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FILTER",
@@ -36599,7 +36599,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -36698,7 +36698,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -36797,7 +36797,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -36896,7 +36896,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -36995,7 +36995,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37094,7 +37094,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37193,7 +37193,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37292,7 +37292,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37391,7 +37391,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37490,7 +37490,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37589,7 +37589,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37688,7 +37688,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37787,7 +37787,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37886,7 +37886,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -37985,7 +37985,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38084,7 +38084,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38183,7 +38183,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38282,7 +38282,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38381,7 +38381,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38480,7 +38480,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38579,7 +38579,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38678,7 +38678,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38777,7 +38777,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38876,7 +38876,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -38975,7 +38975,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39074,7 +39074,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39173,7 +39173,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39272,7 +39272,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39371,7 +39371,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39470,7 +39470,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39569,7 +39569,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39668,7 +39668,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39767,7 +39767,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39866,7 +39866,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -39965,7 +39965,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40064,7 +40064,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40163,7 +40163,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40262,7 +40262,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40361,7 +40361,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40460,7 +40460,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40559,7 +40559,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40658,7 +40658,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40757,7 +40757,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40856,7 +40856,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -40955,7 +40955,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41054,7 +41054,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41153,7 +41153,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41252,7 +41252,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41351,7 +41351,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41450,7 +41450,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41549,7 +41549,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41648,7 +41648,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41747,7 +41747,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41846,7 +41846,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -41945,7 +41945,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42044,7 +42044,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42143,7 +42143,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42242,7 +42242,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42341,7 +42341,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42440,7 +42440,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42539,7 +42539,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42638,7 +42638,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42737,7 +42737,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42836,7 +42836,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -42935,7 +42935,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43034,7 +43034,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43133,7 +43133,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43232,7 +43232,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43331,7 +43331,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43430,7 +43430,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43529,7 +43529,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43628,7 +43628,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43727,7 +43727,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43826,7 +43826,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -43925,7 +43925,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44024,7 +44024,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44123,7 +44123,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44222,7 +44222,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44321,7 +44321,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44420,7 +44420,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44519,7 +44519,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44618,7 +44618,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44717,7 +44717,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44816,7 +44816,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -44915,7 +44915,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45014,7 +45014,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45113,7 +45113,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45212,7 +45212,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45311,7 +45311,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45410,7 +45410,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45509,7 +45509,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45608,7 +45608,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45707,7 +45707,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45806,7 +45806,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -45905,7 +45905,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46004,7 +46004,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46103,7 +46103,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46202,7 +46202,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46301,7 +46301,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46400,7 +46400,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46499,7 +46499,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46598,7 +46598,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46697,7 +46697,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46796,7 +46796,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46895,7 +46895,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -46994,7 +46994,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47093,7 +47093,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47192,7 +47192,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47291,7 +47291,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47299,15 +47299,6 @@
         "nilLiteral",
         "nilLiteral",
         "vectorPair"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "FOLD",
-      "inputs": [
-        "nilLiteral",
-        "nilLiteral",
-        "vectorTriple"
       ],
       "outcome": "nil:literal"
     },
@@ -47316,6 +47307,15 @@
       "inputs": [
         "nilLiteral",
         "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FOLD",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral",
         "vectorHuge"
       ],
       "outcome": "nil:literal"
@@ -47390,7 +47390,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47398,15 +47398,6 @@
         "nilLiteral",
         "codeBlock",
         "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "FOLD",
-      "inputs": [
-        "nilLiteral",
-        "codeBlock",
-        "vectorTriple"
       ],
       "outcome": "value"
     },
@@ -47415,6 +47406,15 @@
       "inputs": [
         "nilLiteral",
         "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FOLD",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock",
         "vectorHuge"
       ],
       "outcome": "value"
@@ -47489,7 +47489,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47497,15 +47497,6 @@
         "codeBlock",
         "scalarOne",
         "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "FOLD",
-      "inputs": [
-        "codeBlock",
-        "scalarOne",
-        "vectorTriple"
       ],
       "outcome": "value"
     },
@@ -47514,6 +47505,15 @@
       "inputs": [
         "codeBlock",
         "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FOLD",
+      "inputs": [
+        "codeBlock",
+        "scalarOne",
         "vectorHuge"
       ],
       "outcome": "value"
@@ -47588,7 +47588,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47687,7 +47687,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47786,7 +47786,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47885,7 +47885,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -47984,7 +47984,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -48083,7 +48083,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -48182,7 +48182,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -48190,15 +48190,6 @@
         "codeBlock",
         "vectorTriple",
         "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "FOLD",
-      "inputs": [
-        "codeBlock",
-        "vectorTriple",
-        "vectorTriple"
       ],
       "outcome": "value"
     },
@@ -48207,6 +48198,15 @@
       "inputs": [
         "codeBlock",
         "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FOLD",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple",
         "vectorHuge"
       ],
       "outcome": "value"
@@ -48281,7 +48281,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -48380,7 +48380,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -48479,7 +48479,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "FOLD",
@@ -48487,15 +48487,6 @@
         "codeBlock",
         "codeBlock",
         "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "FOLD",
-      "inputs": [
-        "codeBlock",
-        "codeBlock",
-        "vectorTriple"
       ],
       "outcome": "value"
     },
@@ -48504,6 +48495,15 @@
       "inputs": [
         "codeBlock",
         "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FOLD",
+      "inputs": [
+        "codeBlock",
+        "codeBlock",
         "vectorHuge"
       ],
       "outcome": "value"
@@ -48572,21 +48572,13 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ANY",
       "inputs": [
         "scalarOne",
         "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "scalarOne",
-        "vectorTriple"
       ],
       "outcome": "error:nonVector"
     },
@@ -48594,6 +48586,14 @@
       "word": "ANY",
       "inputs": [
         "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "scalarOne",
         "vectorHuge"
       ],
       "outcome": "error:nonVector"
@@ -48660,7 +48660,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ANY",
@@ -48748,7 +48748,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ANY",
@@ -48836,7 +48836,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ANY",
@@ -48924,7 +48924,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ANY",
@@ -49012,7 +49012,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ANY",
@@ -49100,978 +49100,10 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorPair",
-        "vectorPair"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorPair",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorPair",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorPair",
-        "nilLiteral"
-      ],
       "outcome": "error:notExecutable"
     },
     {
       "word": "ANY",
-      "inputs": [
-        "vectorPair",
-        "codeBlock"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "vectorPair"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorTriple",
-        "codeBlock"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "vectorPair"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "vectorHuge",
-        "codeBlock"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "nilLiteral",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "vectorPair"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ANY",
-      "inputs": [
-        "codeBlock",
-        "codeBlock"
-      ],
-      "outcome": "error:nonTruthValue"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarOne",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarZero",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarNegative",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "scalarLarge",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "booleanTrue",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "vectorPair"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "textShort",
-        "codeBlock"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "vectorPair",
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "vectorPair",
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "vectorPair",
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "vectorPair",
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "vectorPair",
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "ALL",
-      "inputs": [
-        "vectorPair",
-        "textShort"
-      ],
-      "outcome": "error:unknownWord"
-    },
-    {
-      "word": "ALL",
       "inputs": [
         "vectorPair",
         "vectorPair"
@@ -50079,6 +49111,974 @@
       "outcome": "error:nonTruthValue"
     },
     {
+      "word": "ANY",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ANY",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarOne",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:notExecutable"
+    },
+    {
+      "word": "ALL",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "error:nonTruthValue"
+    },
+    {
       "word": "ALL",
       "inputs": [
         "vectorPair",
@@ -50156,7 +50156,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ALL",
@@ -50244,7 +50244,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ALL",
@@ -50332,7 +50332,7 @@
         "nilLiteral",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ALL",
@@ -50420,7 +50420,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:unknownWord"
+      "outcome": "error:notExecutable"
     },
     {
       "word": "ALL",

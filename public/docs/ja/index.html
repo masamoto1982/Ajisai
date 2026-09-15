@@ -1872,7 +1872,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</code></td>
+                                    <td><code>[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">定義済みのワードは、その引用された名前で渡せる。</td>
                                 </tr>
@@ -1910,7 +1910,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] [ 0 ] '+' FOLD</code></td>
+                                    <td><code>[ 1 2 3 4 ] [ 0 ] [ + ] FOLD</code></td>
                                     <td><code>[ 10/1 ]</code></td>
                                     <td class="notes">初期累積値付きで畳み込む：0 + 1 + 2 + 3 + 4。初期値の形が結果の形を決める：ここでは<code>[ 0 ]</code>というベクトルで始めたので、答えもベクトルの<code>[ 10/1 ]</code>になる。裸の<code>0</code>で始めれば答えも裸の<code>10/1</code>。</td>
                                 </tr>
@@ -2222,7 +2222,7 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 2 * ] 'DBL' DEF
-[ 1 2 3 ] 'DBL' MAP</code></td>
+[ 1 2 3 ] [ DBL ] MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
                                 </tr>

@@ -228,7 +228,7 @@ mod attribution_tests {
 
     #[tokio::test]
     async fn a_user_word_applied_by_a_higher_order_word_is_still_the_locus() {
-        let diagnosis = diagnose("[ SORT ] 'S' DEF [ 1 2 ] 'S' MAP").await;
+        let diagnosis = diagnose("[ SORT ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
     }

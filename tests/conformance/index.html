@@ -170,14 +170,14 @@
 
 <section class="ajisai-case" id="core-map" data-category="core">
   <h3>MAP applies a user block element-wise</h3>
-  <pre class="ajisai-source">[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</pre>
+  <pre class="ajisai-source">[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</pre>
   <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-fold" data-category="core">
   <h3>FOLD reduces with an initial accumulator</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 ] [ 0 ] '+' FOLD</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 ] [ 0 ] [ + ] FOLD</pre>
   <pre class="ajisai-expect-result">[ 10/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -299,9 +299,10 @@
 </section>
 
 <section class="ajisai-case" id="core-fold-word-name" data-category="core">
-  <h3>FOLD reduces using a word-name block</h3>
+  <h3>FOLD rejects a String code operand: code is a Vector, and String is not one</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] '+' FOLD</pre>
-  <pre class="ajisai-expect-result">[ 6/1 ]</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected a Vector ([ ... ]) as the code operand</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

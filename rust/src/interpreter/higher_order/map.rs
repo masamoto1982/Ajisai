@@ -16,13 +16,6 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    if let ExecutableCode::WordName(ref word_name) = executable {
-        if !interp.word_exists(word_name) {
-            interp.stack.push(code_val);
-            return Err(AjisaiError::UnknownWord(word_name.clone()));
-        }
-    }
-
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     let target_val: Value = if is_keep_mode {

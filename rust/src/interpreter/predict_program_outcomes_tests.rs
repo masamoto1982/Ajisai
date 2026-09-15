@@ -153,20 +153,22 @@ fn a_gated_trigger_inside_a_definition_body_still_counts() {
     assert!(outcomes.contains(&"error:condExhausted".to_string()));
 }
 
-/// A String can name a Word — the higher-order Words take `'NAME'` as their
-/// code operand — so a Word can run with no `Token::Symbol` for it anywhere
-/// in the source. Reasoning about reachability from Symbols alone omits it.
+/// A String is not a code operand, so neither of these runs `DEL` at all: both
+/// answer `notExecutable`, which is what `MAP`'s own contract declares, and the
+/// prediction has to contain it.
 ///
-/// `[ 'NOPE' ] 'DEL' MAP` really answers `error:wordNotFound`, a *declared*
-/// condition of `DEL`, and the predictor missed it before this change: the
-/// unconditional structural ceiling never covered a declared condition. That
-/// is a pre-existing under-approximation, not one the reachability narrowing
-/// introduced — the narrowing is what made it visible, by threatening to drop
-/// `builtinProtection` (which the ceiling *did* cover) for the same reason.
+/// These two programs used to be the witnesses that a Word could run with no
+/// `Token::Symbol` for it anywhere in the source — the higher-order Words took
+/// `'NAME'` as their code operand, and `[ 'NOPE' ] 'DEL' MAP` really answered
+/// `wordNotFound`. That spelling is gone, because a name the program *computed*
+/// appeared in no token for the DEF-time acyclicity check to read, which left
+/// LANG.DICTIONARY.ACYCLIC's termination argument resting on a runtime ceiling.
+/// They are kept here as the regression: a call must never again be reachable
+/// without a Symbol naming it.
 #[test]
-fn a_word_named_by_a_string_is_reachable() {
-    assert!(predict("[ 'ADD' ] 'DEL' MAP").contains(&"error:builtinProtection".to_string()));
-    assert!(predict("[ 'NOPE' ] 'DEL' MAP").contains(&"error:wordNotFound".to_string()));
+fn a_string_is_not_a_code_operand() {
+    assert!(predict("[ 'ADD' ] 'DEL' MAP").contains(&"error:notExecutable".to_string()));
+    assert!(predict("[ 'NOPE' ] 'DEL' MAP").contains(&"error:notExecutable".to_string()));
 }
 
 /// A String that names nothing is just data and pulls in no vocabulary.

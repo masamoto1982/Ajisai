@@ -123,6 +123,12 @@
       "source": "PI PI EQ",
       "expect": "nil:undecidable",
       "rationale": "Requires a Tier 2 (PI) comparison operand, which is not one of the table's 11 domain representatives (Phase 2 pitfall B: adding a 12th PI domain would multiply the whole table's cell count and its generation cost for one reason alone). Two independently-constructed computable reals with identical enclosures never separate within the comparison budget, so PI PI EQ starves deterministically — no hand-computed digits required (rust/src/interpreter/tier2_undecidable_conformance_tests.rs already pins this exact program)."
+    },
+    {
+      "id": "unknownWord",
+      "source": "FROBNICATE",
+      "expect": "error:unknownWord",
+      "rationale": "The exhaustive table only ever runs a Word that exists, so no cell reaches a name that resolves to nothing. It used to reach this id indirectly: the higher-order Words took a String as their code operand, so a cell handing MAP the text domain looked up a Word named 'a' and answered unknownWord. That spelling is gone (LANG.SOURCE.CODE — code is a Vector, and a computed name defeated the acyclicity check LANG.DICTIONARY.ACYCLIC rests on), and those cells now answer notExecutable, which is what MAP's own contract declares. Writing an undefined name is the direct witness, and always was the honest one."
     }
   ]
 }

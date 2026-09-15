@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "authority": "spec/language-semantics.md",
+  "clauses": [
+    "LANG.DICTIONARY.ACYCLIC",
+    "LANG.MACHINE.LIMITS",
+    "LANG.SOURCE.CODE",
+    "LANG.SOURCE.FRAME",
+    "LANG.COLLECTIONS.HIGHER"
+  ],
+  "description": "Why every Ajisai evaluation is finite, as data rather than as a sentence. Ajisai has no recursion and no unbounded loop, so this is a real property of the language and not a budget the host happens to enforce — but it is a property with an exact shape, and that shape is what this file states: the places evaluation descends into more evaluation, what strictly decreases at each one, and the invariant the whole argument rests on.",
+
+  "claim": "Every evaluation of a well-formed Ajisai program halts. The ceilings of LANG.MACHINE.LIMITS bound what a run may cost; none of them decides whether it ends.",
+
+  "consequence": {
+    "totality": "Ajisai is a total language: it is not Turing-complete, and that is a deliberate trade rather than an omission.",
+    "cost": "There is no unbounded iteration. A computation that must run until it converges, rather than once per element of a collection that already exists, cannot be written — it has to be re-expressed over a finite Vector the program builds first.",
+    "benefit": "A denotational reading of Ajisai needs no domain theory: with no divergence there is no bottom to model, no continuity obligation and no least-fixed-point construction, so the semantic function is an ordinary recursive function on finite structures.",
+    "selfInterpretation": "A total language cannot define an interpreter for itself, so Ajisai cannot be its own metalanguage. This is also why the pre-execution check of LANG.CONTRACT.CHECK is necessarily conservative and partial rather than merely cautious."
+  },
+
+  "invariant": {
+    "id": "everyReachableWordIsNamedBySymbol",
+    "statement": "A Word runs only when a Symbol naming it is written in source. There is no way to compute a call: no Word turns text into a Symbol, and a String is not code (LANG.SOURCE.CODE), so the code operand of the higher-order Words is a Vector and nothing else.",
+    "whyItMatters": "The DEF-time acyclicity check reads the Symbols in a body. It is sound only if every call a body can make is visible to it as a Symbol. A call reachable some other way would not be in the reference graph at all, and the graph's acyclicity would say nothing about whether that call returns.",
+    "history": "Until this was fixed, the higher-order Words also accepted a String naming a Word as their code operand. The name could be computed, so it appeared in no token for the check to read: `[ [ 1 ] [ 'J' 'W' ] JOIN MAP ] 'JW' DEF` was accepted and then recursed until the native depth guard fired. Termination there was decided by a ceiling, which is exactly what the claim above says it never is.",
+    "witnesses": {
+      "refused": [
+        {
+          "source": "[ 1 2 3 ] 'DBL' MAP",
+          "expect": "error:notExecutable",
+          "note": "A String, even one naming a real Word, is not a code operand."
+        },
+        {
+          "source": "[ 1 2 3 ] [ 'J' 'W' ] JOIN MAP",
+          "expect": "error:notExecutable",
+          "note": "The computed-name case, which no DEF-time check could ever have caught."
+        }
+      ],
+      "accepted": [
+        {
+          "source": "[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP",
+          "note": "The Vector spelling, which names DBL with a Symbol the acyclicity check reads."
+        }
+      ]
+    }
+  },
+
+  "acyclicity": {
+    "id": "acyclicUserDictionary",
+    "clause": "LANG.DICTIONARY.ACYCLIC",
+    "statement": "The User dictionary's reference graph is acyclic. DEF refuses a definition whose body names the Word being defined, directly or through any chain of other User Words, however that name is reached.",
+    "errorCategory": "selfReferentialDefinition",
+    "consequence": "A chain of Word calls is therefore shorter than the number of User Words, so it cannot be infinite.",
+    "witnesses": {
+      "refused": [
+        { "source": "[ REC ] 'REC' DEF", "note": "Direct self-reference." },
+        { "source": "[ B ] 'A' DEF\n[ A ] 'B' DEF", "note": "Indirect, through one other Word." },
+        { "source": "[ B ] 'A' DEF\n[ C ] 'B' DEF\n[ A ] 'C' DEF", "note": "A longer chain." },
+        {
+          "source": "[ [ REC2 ] EXEC ] 'REC2' DEF",
+          "note": "Reached only through a nested block, which LANG.SOURCE.FRAME says still counts as a reference even though nothing there evaluates it."
+        },
+        {
+          "source": "[ LATER ] 'FIRST' DEF\n[ FIRST ] 'LATER' DEF",
+          "note": "A forward reference to a Word that does not exist yet: the cycle closes at the second DEF, which is where it is caught. Definition order does not matter."
+        }
+      ],
+      "accepted": [
+        {
+          "source": "[ 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\n[ W2 ] 'W3' DEF\nW3",
+          "note": "An acyclic chain. Completeness matters as much as soundness: a check that refused this would make the language smaller, not safer."
+        }
+      ]
+    }
+  },
+
+  "measure": {
+    "note": "Lexicographic, outermost component first. Every descent below strictly decreases one component and leaves the components before it unchanged, so no descent chain is infinite.",
+    "components": [
+      {
+        "id": "dictionaryRank",
+        "description": "The length of the longest chain of User Word references leaving the Word being evaluated. Finite because the reference graph is acyclic and the dictionary is finite."
+      },
+      {
+        "id": "remainingElements",
+        "description": "How many elements of the collection being walked are still unvisited. The collection is already materialized when the walk begins, so this is a finite number that falls by one per step."
+      },
+      {
+        "id": "blockNesting",
+        "description": "The nesting depth of code blocks still to be entered within the token sequence being evaluated. Finite because a Vector is finite and cannot contain itself — values are immutable and built from parts that already exist."
+      }
+    ]
+  },
+
+  "recursionSites": [
+    {
+      "id": "userWordCall",
+      "kind": "dictionary",
+      "descendsInto": "the body of the named Word",
+      "decreases": "dictionaryRank",
+      "why": "The callee's longest outgoing reference chain is shorter than the caller's, because the graph is acyclic.",
+      "witness": "[ 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\nW2"
+    },
+    {
+      "id": "EXEC",
+      "kind": "word",
+      "descendsInto": "the Vector operand, read as code",
+      "decreases": "blockNesting",
+      "why": "The operand is a finite Vector that existed before EXEC ran, and the tokens inside it can only name blocks nested within it or Words reached through the acyclic dictionary.",
+      "witness": "[ [ [ 1 ] EXEC ] EXEC ] EXEC"
+    },
+    {
+      "id": "COND",
+      "kind": "word",
+      "descendsInto": "each guard, and the winning body",
+      "decreases": "blockNesting",
+      "why": "The clauses are written inside the Vector COND receives, so each one is nested strictly within the sequence being evaluated.",
+      "witness": "TRUE [ [ IDLE ] [ 42 ] ] COND"
+    },
+    {
+      "id": "MAP",
+      "kind": "word",
+      "descendsInto": "the code block, once per element",
+      "decreases": "remainingElements",
+      "why": "The collection is finite and already materialized, so the block runs a fixed number of times.",
+      "witness": "[ 1 2 3 ] [ 2 MUL ] MAP"
+    },
+    {
+      "id": "FILTER",
+      "kind": "word",
+      "descendsInto": "the code block, once per element",
+      "decreases": "remainingElements",
+      "why": "As MAP.",
+      "witness": "[ 1 2 3 ] [ 1 GT ] FILTER"
+    },
+    {
+      "id": "FOLD",
+      "kind": "word",
+      "descendsInto": "the code block, once per element",
+      "decreases": "remainingElements",
+      "why": "As MAP. The accumulator changes value but adds no descent of its own.",
+      "witness": "[ 1 2 3 ] 0 [ ADD ] FOLD"
+    },
+    {
+      "id": "ANY",
+      "kind": "word",
+      "descendsInto": "the code block, once per visited element",
+      "decreases": "remainingElements",
+      "why": "As MAP, and it may stop early, which only shortens the walk.",
+      "witness": "[ 1 2 3 ] [ 2 GT ] ANY"
+    },
+    {
+      "id": "ALL",
+      "kind": "word",
+      "descendsInto": "the code block, once per visited element",
+      "decreases": "remainingElements",
+      "why": "As ANY.",
+      "witness": "[ 1 2 3 ] [ 0 GT ] ALL"
+    }
+  ],
+
+  "ceilings": {
+    "note": "LANG.MACHINE.LIMITS' ceilings bound cost. None of them is what makes a program end, and a program that needs one to stop is a bug in this argument, not a program the language accepts. The witnesses above are run under the default profile and must all finish without reaching any ceiling.",
+    "notLoadBearing": [
+      "executionLimitExceeded",
+      "recursionLimitExceeded",
+      "resourceLimitExceeded"
+    ]
+  }
+}

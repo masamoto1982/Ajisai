@@ -104,6 +104,16 @@ jobs:
         # same file and the same witnesses under `cargo test`.
         run: npm run check:grammar
 
+      - name: Check the canonical termination argument
+        # spec/termination.json states why every evaluation is finite. This
+        # gate closes it both ways against spec/words.json's cost classes: a
+        # Word whose cost.steps.class is "unbounded" is one whose step count is
+        # decided by a block it is given, so it must be a declared recursion
+        # site, and a declared Word-shaped site must carry that cost class.
+        # Adding a block-evaluating Word therefore cannot silently escape the
+        # argument. The behavioural half is rust/tests/termination_laws.rs.
+        run: npm run check:termination
+
       - name: Verify generated specification surfaces are in sync
         # The Word reference and Core hover contracts are generated from
         # spec/words.json. None of these were gated in CI, which is how a stale

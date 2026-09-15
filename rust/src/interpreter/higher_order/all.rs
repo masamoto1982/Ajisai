@@ -17,13 +17,6 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    if let ExecutableCode::WordName(ref word_name) = executable {
-        if !interp.word_exists(word_name) {
-            interp.stack.push(code_val);
-            return Err(AjisaiError::UnknownWord(word_name.clone()));
-        }
-    }
-
     // `KEEP` retains the collection a higher-order Word walks, the same as
     // `MAP`, `FILTER` and `FOLD`. `ANY` and `ALL` used to ignore the modifier
     // outright, so `[ 1 2 3 ] KEEP { 1 GT } ANY` answered with the bare `TRUE`

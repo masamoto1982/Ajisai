@@ -81,10 +81,6 @@ impl Interpreter {
         self.resolve_word_entry(name).map(|(_, def)| def)
     }
 
-    pub(crate) fn word_exists(&self, name: &str) -> bool {
-        self.resolve_word(name).is_some()
-    }
-
     pub fn rebuild_dependencies(&mut self) -> crate::error::Result<()> {
         // Quiescent recompute point (also reached after import, which does not
         // bump the dictionary epoch on its own). Invalidate the resolve cache so
