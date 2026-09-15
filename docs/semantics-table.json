@@ -14626,7 +14626,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MIN",
@@ -14706,7 +14706,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MIN",
@@ -14722,7 +14722,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MIN",
@@ -14802,7 +14802,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MIN",
@@ -15594,7 +15594,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MAX",
@@ -15674,7 +15674,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MAX",
@@ -15690,7 +15690,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MAX",
@@ -15770,7 +15770,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "MAX",

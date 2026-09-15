@@ -9,10 +9,21 @@
 //! `projection.reason`, read from the spec itself — the generated registry's
 //! own `projection` field carries the `when` condition names, not the
 //! `reason` ids `errorWhen`'s sibling would suggest, so this reads the JSON
-//! directly rather than through that indirection) is always sound by
-//! construction: the outcome-bijection gate
-//! (`scripts/check-outcome-bijection.mjs`) already proves every observed
-//! outcome for a Word resolves into its declared repertoire. Composing a
+//! directly rather than through that indirection) covers what that Word is
+//! observed to do: `scripts/check-word-outcome-containment.mjs` holds every
+//! executed cell of `docs/semantics-table.json` to the raising Word's own
+//! repertoire, widened only by the machine-attributable error categories and
+//! the non-projectable NIL reasons that reach a Word by passthrough.
+//!
+//! This doc used to credit `scripts/check-outcome-bijection.mjs` with that
+//! property. It does not have it: that gate asks whether an observed outcome
+//! resolves to a *registered id*, and whether every registered id is observed
+//! *somewhere* — both registry-level, neither per-word. The difference was
+//! load-bearing rather than pedantic. `MIN` and `MAX` raised
+//! `vectorLengthMismatch` while their contracts named `shapeMismatch`, and
+//! this module's soundness argument rested on a property nothing checked and
+//! that the vocabulary itself violated; only the structural ceiling below
+//! kept the prediction sound in practice. Composing a
 //! program's prediction as the *union* of every reachable word's own
 //! vocabulary can therefore never under-approximate — the one failure mode
 //! Phase 5's pitfall A forbids — at the cost of precision: it does not try

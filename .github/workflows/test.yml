@@ -164,6 +164,18 @@ jobs:
         # See docs/dev/auditable-kernel-work-order-2026-09.md Phase 2.
         run: npm run outcome-bijection:check
 
+      - name: Every Word's outcomes lie in its own declared repertoire
+        # LANG.MACHINE.WORD's "the executor must refine its contract", at the
+        # per-Word level the two gates above do not reach: they ask whether an
+        # observed outcome resolves to a registered id and whether every id is
+        # observed somewhere, both registry-wide. Neither asks whether ADD
+        # fails with a category ADD's own contract declares. MIN and MAX raised
+        # vectorLengthMismatch against their own shapeMismatch contracts with
+        # every gate green, and the static predictor's soundness argument
+        # (rust/src/interpreter/word_outcome_vocabulary.rs) assumed exactly the
+        # property nothing was checking.
+        run: npm run word-outcome-containment:check
+
       - name: Static outcome prediction contains what actually runs
         # `ajisai agent outcomes` predicts a program's outcome set without
         # executing it (Phase 5 pitfall D: the predictor doesn't run the
