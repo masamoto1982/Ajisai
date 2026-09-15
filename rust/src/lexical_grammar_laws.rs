@@ -39,11 +39,15 @@ fn strings(node: &Json) -> Vec<String> {
 fn accepted_numeric_examples_lex_as_one_number() {
     let g = grammar();
     let accepted = strings(&g["numericGrammar"]["examples"]["accepted"]);
-    assert!(!accepted.is_empty(), "the grammar must list accepted examples");
+    assert!(
+        !accepted.is_empty(),
+        "the grammar must list accepted examples"
+    );
 
     for lexeme in accepted {
-        let tokens = tokenize(&lexeme)
-            .unwrap_or_else(|e| panic!("grammar lists {lexeme:?} as a number, but it is rejected: {e}"));
+        let tokens = tokenize(&lexeme).unwrap_or_else(|e| {
+            panic!("grammar lists {lexeme:?} as a number, but it is rejected: {e}")
+        });
         match tokens.as_slice() {
             [Token::Number(literal)] => assert_eq!(
                 literal.lexeme(),
@@ -62,7 +66,10 @@ fn accepted_numeric_examples_lex_as_one_number() {
 fn rejected_numeric_examples_are_not_numbers() {
     let g = grammar();
     let rejected = strings(&g["numericGrammar"]["examples"]["rejectedAsName"]);
-    assert!(!rejected.is_empty(), "the grammar must list rejected examples");
+    assert!(
+        !rejected.is_empty(),
+        "the grammar must list rejected examples"
+    );
 
     for lexeme in rejected {
         let Ok(tokens) = tokenize(&lexeme) else {
@@ -99,8 +106,13 @@ fn the_numeric_grammar_is_anchored_at_both_ends() {
 #[test]
 fn every_source_error_condition_has_a_reachable_witness() {
     let g = grammar();
-    let conditions = g["sourceErrors"].as_array().expect("sourceErrors is an array");
-    assert!(!conditions.is_empty(), "the grammar must declare source errors");
+    let conditions = g["sourceErrors"]
+        .as_array()
+        .expect("sourceErrors is an array");
+    assert!(
+        !conditions.is_empty(),
+        "the grammar must declare source errors"
+    );
 
     for condition in conditions {
         let id = condition["id"].as_str().expect("condition id");
@@ -137,9 +149,17 @@ fn rejected_characters_are_refused_anywhere_in_a_word() {
         .find(|p| p["id"] == "scan")
         .expect("a scan phase");
 
-    for group in scan["rejectedCharacters"].as_array().expect("rejectedCharacters") {
+    for group in scan["rejectedCharacters"]
+        .as_array()
+        .expect("rejectedCharacters")
+    {
         for ch in strings(&group["chars"]) {
-            for source in [ch.clone(), format!("a{ch}"), format!("{ch}a"), format!("a{ch}b")] {
+            for source in [
+                ch.clone(),
+                format!("a{ch}"),
+                format!("{ch}a"),
+                format!("a{ch}b"),
+            ] {
                 assert!(
                     tokenize(&source).is_err(),
                     "{ch:?} is declared a rejected character, so {source:?} must be refused",
@@ -188,7 +208,10 @@ fn line_terminators_are_whitespace() {
             "U+{cp:04X} is declared whitespace but the implementation does not treat it as such",
         );
         assert!(
-            tokenize(&format!("a{ch}b")).expect("whitespace separates").len() >= 2,
+            tokenize(&format!("a{ch}b"))
+                .expect("whitespace separates")
+                .len()
+                >= 2,
             "U+{cp:04X} is declared whitespace, so it must separate two tokens",
         );
     }
@@ -199,7 +222,9 @@ fn line_terminators_are_whitespace() {
         "U+FEFF must not be whitespace; the grammar's note depends on it",
     );
     assert_eq!(
-        tokenize("a\u{FEFF}b").expect("a BOM is an ordinary name character").len(),
+        tokenize("a\u{FEFF}b")
+            .expect("a BOM is an ordinary name character")
+            .len(),
         1,
         "U+FEFF must glue into one name, as the grammar's whitespace note states",
     );
@@ -210,8 +235,21 @@ fn line_terminators_are_whitespace() {
 /// through to Symbol rather than needing a rule of its own.
 #[test]
 fn lexeme_classification_is_total() {
-    for name in ["hello", "こんにちは", ".", "==", "^", "~", ";", "<=", "MATH@OR-NIL"] {
-        match tokenize(name).unwrap_or_else(|e| panic!("{name:?} should lex: {e}")).as_slice() {
+    for name in [
+        "hello",
+        "こんにちは",
+        ".",
+        "==",
+        "^",
+        "~",
+        ";",
+        "<=",
+        "MATH@OR-NIL",
+    ] {
+        match tokenize(name)
+            .unwrap_or_else(|e| panic!("{name:?} should lex: {e}"))
+            .as_slice()
+        {
             [Token::Symbol(value)] => assert_eq!(&**value, name),
             other => panic!("{name:?} should be one Symbol, got {other:?}"),
         }
