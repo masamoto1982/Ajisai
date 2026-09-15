@@ -73,11 +73,44 @@
       "declared"
      ]
     },
+    "attribution": {
+     "enum": [
+      "operand",
+      "machine"
+     ],
+     "description": "Whether raising this category is attributable to the raising Word's own operands, and so must appear in that Word's errorWhen (`operand`), or to the machine or the program text, which any Word can hit whatever its contract says (`machine`). This is the error-category counterpart of nilReason's `projectable`, and it is what makes per-word containment checkable: without it, the structural categories form a ceiling wide enough to absorb every real mislabelling (scripts/check-word-outcome-containment.mjs). Required on `structural` entries and absent on `declared` ones, which are operand-attributable by construction — a Word names them in errorWhen or nothing raises them at all."
+    },
     "documentation": {
      "type": "string",
      "description": "One sentence: what condition this category names."
     }
    },
+   "allOf": [
+    {
+     "if": {
+      "properties": {
+       "kind": {
+        "const": "structural"
+       }
+      },
+      "required": [
+       "kind"
+      ]
+     },
+     "then": {
+      "required": [
+       "attribution"
+      ]
+     },
+     "else": {
+      "not": {
+       "required": [
+        "attribution"
+       ]
+      }
+     }
+    }
+   ],
    "additionalProperties": false
   }
  }

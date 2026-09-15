@@ -415,7 +415,7 @@ Take the first N or last -N elements of a vector.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 4 5 ] [ 3 ] TAKE`
-- **ERROR conditions:** `nonVector`, `invalidCount`
+- **ERROR conditions:** `nonVector`, `invalidCount`, `indexOutOfBounds`
 
 ## `CONCAT`
 

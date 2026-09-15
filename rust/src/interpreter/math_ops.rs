@@ -229,9 +229,28 @@ fn lift_binary_numeric(
         }
         (Some(left), Some(right)) => {
             if left.len() != right.len() {
-                return Err(AjisaiError::VectorLengthMismatch {
-                    len1: left.len(),
-                    len2: right.len(),
+                // The same category the arithmetic broadcast raises for the
+                // same operands, because this is the same clause: both are
+                // element-wise Words of the same family, and
+                // LANG.COLLECTIONS.LIFT gives element-wise pairing one failure
+                // condition, not one per implementation route. This site used
+                // to answer `VectorLengthMismatch` — the category for a Word
+                // that *requires* two lengths equal, like `GROUP` pairing
+                // values with keys — so `[ 1 2 ] [ 1 2 3 ] MIN` and
+                // `[ 1 2 ] [ 1 2 3 ] ADD` reported different categories for
+                // one situation, and MIN/MAX contradicted their own contract,
+                // which has always named `shapeMismatch`.
+                //
+                // The axes that parted are reported as the one-axis shapes
+                // they are at this level of the walk: unlike the tensor route,
+                // a ragged tree has no whole-value shape to quote, which is
+                // why the walk exists. The category is the machine-readable
+                // surface (LANG.OBSERVATION.DIAGNOSIS); the message is
+                // correspondingly less detailed than the tensor route's.
+                return Err(AjisaiError::ShapeMismatch {
+                    left: vec![left.len()],
+                    right: vec![right.len()],
+                    axis: 0,
                 });
             }
             Ok(Value::from_children(

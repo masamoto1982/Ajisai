@@ -56,11 +56,13 @@
     {
       "id": "builtinProtection",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "An operation tried to redefine or delete a Core Word."
     },
     {
       "id": "condExhausted",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "COND: every guard failed and no else clause was given."
     },
     {
@@ -71,11 +73,13 @@
     {
       "id": "executionLimitExceeded",
       "kind": "structural",
+      "attribution": "machine",
       "documentation": "The total execution-step budget was exhausted before the program finished."
     },
     {
       "id": "indexOutOfBounds",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "A well-formed index or count outside the addressed collection's bounds, raised rather than projected — TAKE asking for more elements than the vector holds."
     },
     {
@@ -116,6 +120,7 @@
     {
       "id": "malformedSource",
       "kind": "structural",
+      "attribution": "machine",
       "documentation": "Program text that does not parse — an unclosed block, a | outside a clause, a mismatched delimiter."
     },
     {
@@ -126,6 +131,7 @@
     {
       "id": "nameConflict",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "DEF was asked to define a name a live binding already holds — a name was asked to mean two things at once."
     },
     {
@@ -201,36 +207,43 @@
     {
       "id": "recursionLimitExceeded",
       "kind": "structural",
+      "attribution": "machine",
       "documentation": "The native call-depth guard fired: a pathologically long acyclic call chain reached its nesting limit."
     },
     {
       "id": "resourceLimitExceeded",
       "kind": "structural",
+      "attribution": "machine",
       "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, a numeric literal's digit count, or a program's byte length."
     },
     {
       "id": "selfReferentialDefinition",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "DEF was refused because the body names itself, directly or through other User words — the DEF-time acyclicity check."
     },
     {
       "id": "shapeMismatch",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "Two operands of an element-wise Word have shapes that do not broadcast on some axis."
     },
     {
       "id": "stackUnderflow",
       "kind": "structural",
+      "attribution": "machine",
       "documentation": "A Word was applied with fewer operands than its declared arity."
     },
     {
       "id": "structureError",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "A value's structure did not match what the operation expected, outside the more specific shape/vector-length categories."
     },
     {
       "id": "unknownWord",
       "kind": "structural",
+      "attribution": "machine",
       "documentation": "A name in program text did not resolve to any Word in the compiled-in vocabulary or the live dictionary."
     },
     {
@@ -241,6 +254,7 @@
     {
       "id": "vectorLengthMismatch",
       "kind": "structural",
+      "attribution": "operand",
       "documentation": "Two one-dimensional operands have different lengths where the operation requires them equal — the one-dimensional case of shapeMismatch."
     },
     {

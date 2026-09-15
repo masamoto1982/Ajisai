@@ -1480,7 +1480,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Standard,
         standard_kind: Some("namedPattern"),
         effects: &[],
-        error_when: &["nonVector", "invalidCount"],
+        error_when: &["nonVector", "invalidCount", "indexOutOfBounds"],
         syntax: Some("[ 1 2 3 4 5 ] [ 3 ] TAKE"),
     },
     GeneratedWord {
