@@ -70,14 +70,14 @@ fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> Compiled
         _ => {
             if lookup_builtin_spec(symbol).is_some() {
                 CompiledOp::CallBuiltin(Arc::new(CompiledCall::resolve(symbol)))
-            } else if let Some((resolved, _)) = interp.resolve_word_entry_readonly(symbol) {
+            } else if let Some((resolved, _)) = interp.resolve_word_entry(symbol) {
                 if let Some((namespace, word)) = resolved.split_once('@') {
                     CompiledOp::CallQualifiedWord {
                         namespace: namespace.to_string(),
                         word: word.to_string(),
                     }
                 } else {
-                    CompiledOp::CallUserWord(resolved)
+                    CompiledOp::CallUserWord(resolved.to_string())
                 }
             } else {
                 CompiledOp::FallbackToken(token.clone())

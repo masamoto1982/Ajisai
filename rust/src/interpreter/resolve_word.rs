@@ -5,12 +5,13 @@ use std::sync::Arc;
 use super::Interpreter;
 
 impl Interpreter {
-    /// Resolve a name against the dictionary LANG.DICTIONARY.RESOLUTION
-    /// describes: "The dictionary has two tiers. **Core** holds the 66
-    /// canonical Words and is sealed ... **User** holds definitions made by
-    /// `DEF`. Resolution is a deterministic function of the normalized name and
-    /// the current dictionary, and User never shadows Core." And: "Those two
-    /// tiers are the whole dictionary."
+    /// The definition an **already canonical** name resolves to, against the
+    /// dictionary LANG.DICTIONARY.RESOLUTION describes: "The dictionary has two
+    /// tiers. **Core** holds the 66 canonical Words and is sealed ... **User**
+    /// holds definitions made by `DEF`. Resolution is a deterministic function
+    /// of the normalized name and the current dictionary, and User never shadows
+    /// Core." And: "Those two tiers are the whole dictionary." Core is probed
+    /// first because of that last clause, and that is the whole of resolution.
     ///
     /// It used to be more than two. A `user_dictionaries` map held named user
     /// dictionaries; an `active_user_dictionary` decided which one `DEF` wrote
@@ -18,22 +19,24 @@ impl Interpreter {
     /// and a bare name fell through three stages, collapsing cross-dictionary
     /// matches by content identity and reporting an `Ambiguous` outcome when
     /// they disagreed. `DICT@WORD`, `USER@D@WORD` and `DICT@USER@D@WORD` paths
-    /// addressed those tiers.
+    /// addressed those tiers. None of it was reachable from the language: no
+    /// Word changes the active dictionary, so every `DEF` wrote to the same one
+    /// ("EXAMPLE"), and `user_words` was already maintained as a flat mirror of
+    /// it. The tiers were structure without a way to observe them, and the
+    /// clause says there are two.
     ///
-    /// None of it was reachable from the language: no Word changes the active
-    /// dictionary, so every `DEF` wrote to the same one ("EXAMPLE"), and
-    /// `user_words` was already maintained as a flat mirror of it. The tiers
-    /// were structure without a way to observe them, and the clause says there
-    /// are two.
-    pub(crate) fn resolve_short_name(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
-        let upper = name.to_uppercase();
-
-        // Core first: User never shadows Core.
-        if let Some(def) = self.core_vocabulary.get(&upper) {
-            return Some((upper, def.clone()));
+    /// No name comes back, and that is the point: the resolved name is the
+    /// canonical name the caller passed in (gated by
+    /// `a_resolution_answers_with_the_canonical_name`), so returning one means
+    /// handing the caller a copy of what it already holds. `resolve_short_name`
+    /// used to do exactly that, and to `to_uppercase` a name already uppercase
+    /// to build it. This is what a word dispatch calls, once per element of a
+    /// `MAP`.
+    pub(crate) fn definition_of(&self, canonical_name: &str) -> Option<Arc<WordDefinition>> {
+        if let Some(def) = self.core_vocabulary.get(canonical_name) {
+            return Some(def.clone());
         }
-
-        self.user_words.get(&upper).map(|def| (upper, def.clone()))
+        self.user_words.get(canonical_name).cloned()
     }
 
     /// A bare name is never ambiguous: there is one User tier, so a name is in
@@ -42,45 +45,40 @@ impl Interpreter {
         vec![]
     }
 
-    pub(crate) fn resolve_word_entry_readonly(
-        &self,
-        name: &str,
-    ) -> Option<(String, Arc<WordDefinition>)> {
-        let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
-        self.resolve_short_name(canonical_name.as_ref())
-    }
-
-    /// Resolve for execution, sharing the resolved name instead of copying it.
+    /// Resolve a name to the Word it names, and the canonical name it resolved
+    /// under.
     ///
-    /// The name comes back as `Arc<str>`. This runs once per word dispatch — the
-    /// hottest path the interpreter has — and the `String` it used to return was
-    /// allocated, on a cache hit, purely to be borrowed straight back: a Core
-    /// Word's dispatch does `execute_builtin(&resolved_name)` and drops it. The
-    /// callers that need an owned name (the call stack, a failure record, a
-    /// recursion-limit report) run per *User* Word call, not per dispatch, and
-    /// ask for a `String` where they need one.
-    pub(crate) fn resolve_word_entry(
-        &mut self,
-        name: &str,
-    ) -> Option<(Arc<str>, Arc<WordDefinition>)> {
+    /// There used to be two of these, and a cache between them. The caching one
+    /// consulted a `HashMap<String, ResolveCacheEntry>` keyed by the canonical
+    /// name, and on a hit went on to look the definition up in the vocabulary
+    /// anyway — because the entry stored a resolved *name*, and the definition
+    /// had to come from the live dictionary or a redefinition could be served
+    /// from under it. So the cache memoized one hashmap probe behind another
+    /// hashmap probe, which is not a saving; and it could not memoize the thing
+    /// that would have been one. Caching the `Arc<WordDefinition>` was tried and
+    /// reverted at a 66% regression, because `store_execution_plan_set_for_word`
+    /// replaces a word's `Arc` in `user_words` when it caches a compiled plan
+    /// and rightly does not bump the dictionary epoch for it — so a cached `Arc`
+    /// pinned the pre-plan definition forever and every call recompiled.
+    ///
+    /// What is left is the lookup the cache was in front of. `resolve_short_name`
+    /// is one probe of Core and then one of User, and
+    /// LANG.DICTIONARY.RESOLUTION makes that the whole of resolution: "a name
+    /// resolves in Core or in User", deterministically in the current
+    /// dictionary. There is nothing in that to remember.
+    ///
+    /// The name comes back as `Arc<str>` so a dispatch can share it rather than
+    /// copy it; the callers that need an owned `String` (the call stack, a
+    /// failure record, a recursion-limit report) run per *User* Word call rather
+    /// than per dispatch and ask for one there.
+    pub(crate) fn resolve_word_entry(&self, name: &str) -> Option<(Arc<str>, Arc<WordDefinition>)> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
-        let name = canonical_name.as_ref();
-        if let Some(cached_name) = self.lookup_resolve_cache(name) {
-            if let Some(def) = self.core_vocabulary.get(cached_name.as_ref()).cloned() {
-                return Some((cached_name, def));
-            }
-            if let Some(def) = self.user_words.get(cached_name.as_ref()).cloned() {
-                return Some((cached_name, def));
-            }
-        }
-
-        let (resolved_name, def) = self.resolve_word_entry_readonly(name)?;
-        self.store_resolve_cache(name, &resolved_name, def.registration_order);
-        Some((Arc::from(resolved_name), def))
+        let def = self.definition_of(canonical_name.as_ref())?;
+        Some((Arc::from(canonical_name.as_ref()), def))
     }
 
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
-        self.resolve_word_entry_readonly(name).map(|(_, def)| def)
+        self.resolve_word_entry(name).map(|(_, def)| def)
     }
 
     pub(crate) fn word_exists(&self, name: &str) -> bool {

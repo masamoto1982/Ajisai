@@ -37,7 +37,6 @@ pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
 mod probe;
-mod resolve_cache;
 pub mod runtime_limits;
 mod session_lifecycle;
 mod shape_ops;
