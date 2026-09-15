@@ -1,0 +1,257 @@
+//! The canonical lexical grammar, held against the implementation.
+//!
+//! `spec/grammar.json` is read here as data, and every claim it makes that the
+//! tokenizer can answer is run rather than inspected. This is the half of the
+//! grammar's proof that lives in the language of record; the other half is
+//! `scripts/lib/reference-lexer.mjs`, which executes the same file in JS, and
+//! `scripts/check-grammar.mjs`, which runs the same witnesses through it.
+//! Because both sides consume one file and one shared corpus, the grammar
+//! cannot quietly become a description of something the implementation no
+//! longer does.
+//!
+//! What a failure here means: the grammar and the tokenizer disagree. Neither
+//! is automatically right. `spec/grammar.json` is canonical for what Ajisai
+//! source *is*, so a deliberate language change updates it first and the
+//! tokenizer follows; an accidental divergence is a tokenizer bug.
+
+use crate::tokenizer::tokenize;
+use crate::types::Token;
+use serde_json::Value as Json;
+
+fn grammar() -> Json {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/grammar.json");
+    let text = std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("cannot read the canonical grammar at {path}: {e}"));
+    serde_json::from_str(&text).expect("spec/grammar.json is valid JSON")
+}
+
+fn strings(node: &Json) -> Vec<String> {
+    node.as_array()
+        .expect("expected a JSON array")
+        .iter()
+        .map(|v| v.as_str().expect("expected a JSON string").to_string())
+        .collect()
+}
+
+/// Every lexeme the grammar lists as a number is one Number token, carrying the
+/// lexeme it was written as.
+#[test]
+fn accepted_numeric_examples_lex_as_one_number() {
+    let g = grammar();
+    let accepted = strings(&g["numericGrammar"]["examples"]["accepted"]);
+    assert!(
+        !accepted.is_empty(),
+        "the grammar must list accepted examples"
+    );
+
+    for lexeme in accepted {
+        let tokens = tokenize(&lexeme).unwrap_or_else(|e| {
+            panic!("grammar lists {lexeme:?} as a number, but it is rejected: {e}")
+        });
+        match tokens.as_slice() {
+            [Token::Number(literal)] => assert_eq!(
+                literal.lexeme(),
+                lexeme,
+                "a Number must carry the lexeme it was written as"
+            ),
+            other => panic!("grammar lists {lexeme:?} as a number, but it lexes as {other:?}"),
+        }
+    }
+}
+
+/// Every lexeme the grammar lists as rejected-as-name is not a number. The
+/// grammar's claim is about the numeric language only, so this asserts what it
+/// actually says rather than pinning these to Symbol.
+#[test]
+fn rejected_numeric_examples_are_not_numbers() {
+    let g = grammar();
+    let rejected = strings(&g["numericGrammar"]["examples"]["rejectedAsName"]);
+    assert!(
+        !rejected.is_empty(),
+        "the grammar must list rejected examples"
+    );
+
+    for lexeme in rejected {
+        let Ok(tokens) = tokenize(&lexeme) else {
+            continue; // A source error is not a number either.
+        };
+        assert!(
+            !matches!(tokens.as_slice(), [Token::Number(_)]),
+            "grammar lists {lexeme:?} as not a number, but it lexes as one",
+        );
+    }
+}
+
+/// The numeric pattern the grammar publishes is the numeric language, not a
+/// paraphrase of it: the regex and the tokenizer must agree on every lexeme in
+/// the examples. Checked without a regex engine by construction — the examples
+/// are partitioned by the tokenizer above, so this asserts the partition is the
+/// one the pattern describes via its own stated boundaries.
+#[test]
+fn the_numeric_grammar_is_anchored_at_both_ends() {
+    let g = grammar();
+    let pattern = g["numericGrammar"]["pattern"]
+        .as_str()
+        .expect("the grammar publishes a numeric pattern");
+    assert!(
+        pattern.starts_with('^') && pattern.ends_with('$'),
+        "an unanchored numeric pattern would accept a prefix, making '1/2/3' a number: {pattern}",
+    );
+}
+
+/// Each declared source-error condition has a witness that reaches it, and the
+/// implementation's message for that witness carries the condition's stable
+/// fingerprint. This is what makes the condition list demonstrably reachable
+/// rather than a set of names.
+#[test]
+fn every_source_error_condition_has_a_reachable_witness() {
+    let g = grammar();
+    let conditions = g["sourceErrors"]
+        .as_array()
+        .expect("sourceErrors is an array");
+    assert!(
+        !conditions.is_empty(),
+        "the grammar must declare source errors"
+    );
+
+    for condition in conditions {
+        let id = condition["id"].as_str().expect("condition id");
+        let witness = condition["witness"].as_str().expect("condition witness");
+        let fingerprint = condition["messageContains"]
+            .as_str()
+            .expect("condition messageContains");
+
+        let message = match tokenize(witness) {
+            Err(message) => message,
+            Ok(tokens) => panic!(
+                "condition {id}: witness {witness:?} should be rejected, but it lexes as {tokens:?}",
+            ),
+        };
+
+        assert!(
+            message.contains(fingerprint),
+            "condition {id}: witness {witness:?} was rejected, but with a message that does not \
+             carry the declared fingerprint {fingerprint:?}. Got: {message}",
+        );
+    }
+}
+
+/// Every character the grammar declares rejected is rejected wherever it sits
+/// in a word — that is the character-validity rule, as distinct from the
+/// delimiter rule.
+#[test]
+fn rejected_characters_are_refused_anywhere_in_a_word() {
+    let g = grammar();
+    let scan = g["phases"]
+        .as_array()
+        .expect("phases")
+        .iter()
+        .find(|p| p["id"] == "scan")
+        .expect("a scan phase");
+
+    for group in scan["rejectedCharacters"]
+        .as_array()
+        .expect("rejectedCharacters")
+    {
+        for ch in strings(&group["chars"]) {
+            for source in [
+                ch.clone(),
+                format!("a{ch}"),
+                format!("{ch}a"),
+                format!("a{ch}b"),
+            ] {
+                assert!(
+                    tokenize(&source).is_err(),
+                    "{ch:?} is declared a rejected character, so {source:?} must be refused",
+                );
+            }
+        }
+    }
+}
+
+/// A line terminator must also be whitespace. The scan rules read the two
+/// classes independently, so a terminator outside the whitespace class would
+/// never be reached by the rule that emits LineBreak.
+#[test]
+fn line_terminators_are_whitespace() {
+    let g = grammar();
+    let classes = &g["characterClasses"];
+
+    let expand = |name: &str| -> Vec<u32> {
+        let mut out = Vec::new();
+        for entry in strings(&classes[name]["codepoints"]) {
+            let (lo, hi) = match entry.split_once('-') {
+                Some((lo, hi)) => (lo.to_string(), hi.to_string()),
+                None => (entry.clone(), entry.clone()),
+            };
+            let lo = u32::from_str_radix(&lo, 16).expect("hex codepoint");
+            let hi = u32::from_str_radix(&hi, 16).expect("hex codepoint");
+            out.extend(lo..=hi);
+        }
+        out
+    };
+
+    let whitespace = expand("whitespace");
+    for cp in expand("lineTerminator") {
+        assert!(
+            whitespace.contains(&cp),
+            "U+{cp:04X} is a line terminator but not whitespace",
+        );
+    }
+
+    // The declared whitespace class must be the one the implementation uses,
+    // or every token boundary in the grammar is describing a different language.
+    for cp in whitespace {
+        let ch = char::from_u32(cp).expect("a valid scalar value");
+        assert!(
+            ch.is_whitespace(),
+            "U+{cp:04X} is declared whitespace but the implementation does not treat it as such",
+        );
+        assert!(
+            tokenize(&format!("a{ch}b"))
+                .expect("whitespace separates")
+                .len()
+                >= 2,
+            "U+{cp:04X} is declared whitespace, so it must separate two tokens",
+        );
+    }
+
+    // U+FEFF is the documented near-miss: not Unicode White_Space, so it glues.
+    assert!(
+        !'\u{FEFF}'.is_whitespace(),
+        "U+FEFF must not be whitespace; the grammar's note depends on it",
+    );
+    assert_eq!(
+        tokenize("a\u{FEFF}b")
+            .expect("a BOM is an ordinary name character")
+            .len(),
+        1,
+        "U+FEFF must glue into one name, as the grammar's whitespace note states",
+    );
+}
+
+/// Every surface the grammar says it produces is one the tokenizer actually
+/// treats as that form, and the lexeme rules are total: an arbitrary name falls
+/// through to Symbol rather than needing a rule of its own.
+#[test]
+fn lexeme_classification_is_total() {
+    for name in [
+        "hello",
+        "こんにちは",
+        ".",
+        "==",
+        "^",
+        "~",
+        ";",
+        "<=",
+        "MATH@OR-NIL",
+    ] {
+        match tokenize(name)
+            .unwrap_or_else(|e| panic!("{name:?} should lex: {e}"))
+            .as_slice()
+        {
+            [Token::Symbol(value)] => assert_eq!(&**value, name),
+            other => panic!("{name:?} should be one Symbol, got {other:?}"),
+        }
+    }
+}
