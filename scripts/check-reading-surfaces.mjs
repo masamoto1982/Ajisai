@@ -49,6 +49,12 @@ const EXAMPLE_NAMES = new Set([
   'DELTA', 'STEP',
   // the identity word the Stack clause uses to show KEEP copying any value
   'ID', 'DOUBLE',
+  // the doubling word of the MAP and FOLD examples. It only became visible to
+  // this check when those examples stopped spelling their code operand as the
+  // String 'DBL' — a String is no longer a code operand (LANG.SOURCE.CODE,
+  // spec/termination.json), so the example now writes the Symbol the Word
+  // actually needs, and a Symbol is what this check reads.
+  'DBL',
   // binding names from the Naming a Value clause. These are locals, not Words:
   // the clause exists to say a binding is not a dictionary entry, so the
   // registry is correctly the wrong place to look for them.
