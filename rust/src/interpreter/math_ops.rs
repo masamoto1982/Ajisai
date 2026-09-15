@@ -21,8 +21,8 @@ fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
 fn compare_for_numeric(
     a: &Value,
     b: &Value,
-) -> Result<crate::interpreter::comparison::OrderOutcome> {
-    match crate::interpreter::comparison::three_way_compare(a, b) {
+) -> Result<crate::interpreter::comparison_scalar::OrderOutcome> {
+    match crate::interpreter::comparison_scalar::three_way_compare(a, b) {
         Err(AjisaiError::StructureError { expected, .. }) if expected == "scalar value" => {
             Err(AjisaiError::declared("nonNumeric", "expected a number"))
         }
@@ -71,15 +71,14 @@ fn neg_scalar(value: &Value) -> Result<Value> {
 fn abs_scalar(value: &Value) -> Result<Value> {
     let zero = Value::from_fraction(Fraction::from(0));
     match compare_for_numeric(value, &zero)? {
-        crate::interpreter::comparison::OrderOutcome::Decided(std::cmp::Ordering::Less) => {
+        crate::interpreter::comparison_scalar::OrderOutcome::Decided(std::cmp::Ordering::Less) => {
             let er = exact_real_of(value).expect("comparable operand is numeric");
             Ok(Value::from_exact_real(er.neg()))
         }
-        crate::interpreter::comparison::OrderOutcome::Decided(_) => Ok(value.clone()),
-        crate::interpreter::comparison::OrderOutcome::Undecided(_) => Ok(Value::nil_with_reason(
-            NilReason::Undecidable,
-            Recoverability::Retryable,
-        )),
+        crate::interpreter::comparison_scalar::OrderOutcome::Decided(_) => Ok(value.clone()),
+        crate::interpreter::comparison_scalar::OrderOutcome::Undecided(_) => Ok(
+            Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
+        ),
     }
 }
 
@@ -267,10 +266,10 @@ where
     let operands = extract_operands(interp, 2)?;
     let select = |a: &Value, b: &Value| -> Result<Value> {
         match compare_for_numeric(a, b)? {
-            crate::interpreter::comparison::OrderOutcome::Decided(ord) => {
+            crate::interpreter::comparison_scalar::OrderOutcome::Decided(ord) => {
                 Ok(if pick_left(ord) { a.clone() } else { b.clone() })
             }
-            crate::interpreter::comparison::OrderOutcome::Undecided(_) => Ok(
+            crate::interpreter::comparison_scalar::OrderOutcome::Undecided(_) => Ok(
                 Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
             ),
         }

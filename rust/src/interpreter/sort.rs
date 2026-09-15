@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::comparison::{three_way_compare, OrderOutcome};
+use crate::interpreter::comparison_scalar::{three_way_compare, OrderOutcome};
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};

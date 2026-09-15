@@ -126,7 +126,7 @@ impl Interpreter {
         // resolution — but that re-check was the only thing standing between a
         // stale entry and a wrong answer, which is a load none of the other
         // clears here are asked to carry.
-        self.clear_resolve_cache();
+
         self.defer_identity_recompute = false;
         self.next_registration_order = 1;
         // Top-level roles live on the stack now and were cleared with it above

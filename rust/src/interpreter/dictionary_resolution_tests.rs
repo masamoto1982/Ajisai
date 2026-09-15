@@ -30,9 +30,9 @@ mod tests {
     async fn a_core_name_resolves_to_core() {
         let interp = Interpreter::new();
         let (name, def) = interp
-            .resolve_word_entry_readonly("ADD")
+            .resolve_word_entry("ADD")
             .expect("ADD is a Core Word");
-        assert_eq!(name, "ADD");
+        assert_eq!(name.as_ref(), "ADD");
         assert!(def.is_builtin);
     }
 
@@ -41,10 +41,8 @@ mod tests {
         let mut interp = Interpreter::new();
         define(&mut interp, "INC", "1 ADD");
 
-        let (name, def) = interp
-            .resolve_word_entry_readonly("INC")
-            .expect("INC was defined");
-        assert_eq!(name, "INC", "a name is the whole address");
+        let (name, def) = interp.resolve_word_entry("INC").expect("INC was defined");
+        assert_eq!(name.as_ref(), "INC", "a name is the whole address");
         assert!(!def.is_builtin);
     }
 
@@ -55,7 +53,7 @@ mod tests {
         for spelling in ["INC", "inc", "Inc"] {
             assert_eq!(
                 interp
-                    .resolve_word_entry_readonly(spelling)
+                    .resolve_word_entry(spelling)
                     .map(|(n, _)| n)
                     .as_deref(),
                 Some("INC"),
@@ -73,7 +71,7 @@ mod tests {
         let result = crate::interpreter::execute_def::op_def_inner(&mut interp, "ADD", &tokens);
         assert!(result.is_err(), "Core is sealed against redefinition");
 
-        let (_, def) = interp.resolve_word_entry_readonly("ADD").expect("ADD");
+        let (_, def) = interp.resolve_word_entry("ADD").expect("ADD");
         assert!(def.is_builtin, "ADD still resolves to Core");
     }
 
@@ -91,7 +89,7 @@ mod tests {
             "DICT@CORE@ADD",
         ] {
             assert!(
-                interp.resolve_word_entry_readonly(path).is_none(),
+                interp.resolve_word_entry(path).is_none(),
                 "{path} must not resolve"
             );
         }
@@ -111,7 +109,7 @@ mod tests {
     #[tokio::test]
     async fn an_unknown_name_does_not_resolve() {
         let interp = Interpreter::new();
-        assert!(interp.resolve_word_entry_readonly("NO-SUCH-WORD").is_none());
+        assert!(interp.resolve_word_entry("NO-SUCH-WORD").is_none());
     }
 
     #[tokio::test]
@@ -194,7 +192,7 @@ mod tests {
         interp.execute("5 GONE").await.expect("GONE runs");
         interp.update_stack(Vec::new());
         assert!(
-            interp.resolve_word_entry_readonly("GONE").is_some(),
+            interp.resolve_word_entry("GONE").is_some(),
             "GONE resolves before it is deleted"
         );
 
@@ -202,7 +200,7 @@ mod tests {
         interp.update_stack(Vec::new());
 
         assert!(
-            interp.resolve_word_entry_readonly("GONE").is_none(),
+            interp.resolve_word_entry("GONE").is_none(),
             "GONE must not resolve after deletion"
         );
         let error = interp
@@ -275,10 +273,10 @@ mod tests {
             ("INC", "INC"),
         ] {
             let (name, _) = interp
-                .resolve_word_entry_readonly(asked)
+                .resolve_word_entry(asked)
                 .unwrap_or_else(|| panic!("`{asked}` resolves"));
             assert_eq!(
-                name.as_str(),
+                name.as_ref(),
                 canonical,
                 "`{asked}` must resolve under the name `{canonical}`"
             );
@@ -294,27 +292,6 @@ mod tests {
                 "`{asked}` must resolve under `{canonical}` on a cache hit too"
             );
         }
-    }
-
-    /// The resolved name is *shared*, not copied: an `Arc<str>` is two words, a
-    /// `String` three. This pins the representation rather than the timing,
-    /// because wall-clock on the machine this was measured on drifts by more
-    /// than the change is worth (see the commit message); what is verifiable is
-    /// that handing a resolution back costs a refcount bump and no allocation.
-    #[test]
-    fn a_cached_resolution_shares_its_name_rather_than_copying_it() {
-        use crate::interpreter::ResolveCacheEntry;
-        assert_eq!(
-            std::mem::size_of::<std::sync::Arc<str>>(),
-            2 * std::mem::size_of::<usize>(),
-            "an Arc<str> is a shared fat pointer"
-        );
-        assert_eq!(
-            std::mem::size_of::<ResolveCacheEntry>(),
-            2 * std::mem::size_of::<usize>() + 2 * std::mem::size_of::<u64>(),
-            "a cache entry is a shared name plus its two counters; a String name \
-             would make it a word wider and every read an allocation"
-        );
     }
 
     /// A session reset is documented as clearing every trace of the previous
@@ -334,7 +311,7 @@ mod tests {
         interp.execute_reset().expect("reset succeeds");
 
         assert!(
-            interp.resolve_word_entry_readonly("INC").is_none(),
+            interp.resolve_word_entry("INC").is_none(),
             "a user word must not resolve after a reset"
         );
         let error = interp
@@ -353,5 +330,33 @@ mod tests {
             "5/1",
             "Core must resolve against the vocabulary the reset re-registered"
         );
+    }
+
+    /// The three `resolveCache*` counters outlive the cache they described.
+    ///
+    /// Removing a published report key is what a schema version is for, and
+    /// `tail_call_jump_count` set the precedent: a counter whose mechanism is
+    /// gone is retained at a constant 0 rather than dropped, because a host may
+    /// already read it. This pins that they are still there and still 0, so
+    /// neither half of that promise can be broken by accident — a later change
+    /// that starts writing one, or one that deletes them, fails here.
+    #[tokio::test]
+    async fn the_retired_resolve_cache_counters_stay_and_stay_zero() {
+        let mut interp = Interpreter::new();
+        define(&mut interp, "INC", "1 ADD");
+        // Resolve plenty, through Core, through User, and across a redefinition,
+        // which is every path that used to move one of these.
+        interp
+            .execute("[ 0 200 ] RANGE [ INC ] MAP")
+            .await
+            .expect("runs");
+        interp.update_stack(Vec::new());
+        define(&mut interp, "INC", "2 ADD");
+        interp.execute("5 INC").await.expect("runs");
+
+        let metrics = interp.runtime_metrics();
+        assert_eq!(metrics.resolve_cache_hit_count, 0);
+        assert_eq!(metrics.resolve_cache_miss_count, 0);
+        assert_eq!(metrics.resolve_cache_invalidation_count, 0);
     }
 }

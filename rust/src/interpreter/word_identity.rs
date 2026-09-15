@@ -250,20 +250,20 @@ impl Interpreter {
                     }
                     Token::Symbol(s) => {
                         let canon = canonicalize_core_word_name(s);
-                        match self.resolve_word_entry_readonly(&canon) {
+                        match self.resolve_word_entry(&canon) {
                             Some((resolved, rdef)) => {
-                                if def.dependencies.contains(&resolved) {
+                                if def.dependencies.contains(resolved.as_ref()) {
                                     // A user-word dependency fixed at definition time:
                                     // encode the recorded target rather than treating a
                                     // later same-named word as a fresh capture.
-                                    Atom::Ref(resolved)
+                                    Atom::Ref(resolved.to_string())
                                 } else if rdef.is_builtin {
                                     // Core word: stable global vocabulary,
                                     // encoded by its canonical resolved name.
                                     let mut b = vec![b'G'];
                                     b.extend_from_slice(resolved.as_bytes());
                                     Atom::Raw(b)
-                                } else if user_set.contains(&resolved) {
+                                } else if user_set.contains(resolved.as_ref()) {
                                     // A user word not recorded in this definition's
                                     // dependency set was not resolved when the word was
                                     // authored. Keep it as a free symbol so adding an
@@ -272,7 +272,7 @@ impl Interpreter {
                                     b.extend_from_slice(canon.as_bytes());
                                     Atom::Raw(b)
                                 } else {
-                                    Atom::Ref(resolved)
+                                    Atom::Ref(resolved.to_string())
                                 }
                             }
                             // Free / unresolved symbol: encoded by canonical name.

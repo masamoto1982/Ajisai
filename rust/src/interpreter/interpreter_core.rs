@@ -64,19 +64,6 @@ pub enum ConsumptionMode {
     Keep,
 }
 
-#[derive(Debug, Clone)]
-pub struct ResolveCacheEntry {
-    /// `Arc<str>` rather than `String` because this is read far more often than
-    /// it is written — once per word dispatch — and every read used to hand the
-    /// caller a fresh heap copy of a name the cache already held. Sharing it is
-    /// a refcount bump; the callers that genuinely need an owned `String` (the
-    /// call stack, a failure record) ask for one, and those run per *User* word
-    /// call rather than per dispatch.
-    pub resolved_name: std::sync::Arc<str>,
-    pub dictionary_epoch: u64,
-    pub registration_order: u64,
-}
-
 /// How the runtime reacts when the compiled (optimized) path and the plain
 /// (reference) path disagree during shadow validation.
 ///
@@ -249,9 +236,6 @@ pub struct Interpreter {
     pub(crate) runtime_metrics: RuntimeMetrics,
     pub(crate) error_flow_trace_log: Vec<super::error_flow_trace::ErrorFlowEvent>,
 
-    // ── Elastic Engine (MVP) ──────────────────────────────────────────────
-    pub(crate) resolve_cache: HashMap<String, ResolveCacheEntry>,
-
     /// Owning user dictionary of the word currently being defined,
     /// dependency-scanned, or executed. Bare names resolve through this
     /// dictionary's words first (Section 8.6), so an imported word group is
@@ -369,7 +353,6 @@ impl Interpreter {
             error_flow_trace_log: Vec::new(),
 
             // Elastic Engine
-            resolve_cache: HashMap::new(),
             word_identities: HashMap::new(),
             body_store: HashMap::new(),
             defer_identity_recompute: false,
@@ -392,13 +375,7 @@ impl Interpreter {
         self.global_epoch
     }
 
-    pub(crate) fn clear_resolve_cache(&mut self) {
-        self.resolve_cache.clear();
-        self.runtime_metrics.resolve_cache_invalidation_count += 1;
-    }
-
     pub(crate) fn invalidate_execution_artifacts(&mut self) {
-        self.clear_resolve_cache();
         self.clear_word_contract_cache();
     }
 

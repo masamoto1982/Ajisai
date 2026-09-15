@@ -6,6 +6,7 @@ pub(crate) mod bindings;
 pub mod cast;
 pub(crate) mod collection_meter;
 pub mod comparison;
+pub(crate) mod comparison_scalar;
 pub(crate) mod compiled_call;
 pub mod compiled_plan;
 pub mod control;
@@ -37,7 +38,6 @@ pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
 mod probe;
-mod resolve_cache;
 pub mod runtime_limits;
 mod session_lifecycle;
 mod shape_ops;
@@ -171,6 +171,8 @@ pub use epoch::EpochSnapshot;
 
 #[cfg(test)]
 mod builtin_dispatch_tests;
+#[cfg(test)]
+mod comparison_rational_screen_tests;
 #[cfg(test)]
 mod compiled_clause_tests;
 #[cfg(test)]

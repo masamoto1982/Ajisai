@@ -37,9 +37,9 @@ mod tests {
         let interp = Interpreter::new();
         for word in GENERATED_WORDS {
             let (name, def) = interp
-                .resolve_word_entry_readonly(word.name)
+                .resolve_word_entry(word.name)
                 .unwrap_or_else(|| panic!("Core Word `{}` must resolve", word.name));
-            assert_eq!(name.as_str(), word.name);
+            assert_eq!(name.as_ref(), word.name);
             let carried = def
                 .generated
                 .unwrap_or_else(|| panic!("`{}` must carry its registry entry", word.name));
@@ -66,9 +66,7 @@ mod tests {
             .execute("[ 1 ADD ] 'INC' DEF")
             .await
             .expect("INC defines");
-        let (_, def) = interp
-            .resolve_word_entry_readonly("INC")
-            .expect("INC resolves");
+        let (_, def) = interp.resolve_word_entry("INC").expect("INC resolves");
         assert!(
             def.generated.is_none(),
             "a User Word must not carry a registry entry"

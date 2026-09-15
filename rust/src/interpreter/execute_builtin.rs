@@ -53,7 +53,11 @@ impl Interpreter {
             return Ok(());
         }
 
-        let (resolved_name, def) = self.resolve_word_entry(name).ok_or_else(|| {
+        // `name` is already canonical, and resolution answers under that same
+        // name, so the dispatch asks only for the definition. Taking a name back
+        // meant allocating a copy of the one in hand — a `String` from
+        // `to_uppercase` and an `Arc<str>` built from it — on every dispatch.
+        let def = self.definition_of(name).ok_or_else(|| {
             let ambiguous = self.check_ambiguity(name);
             // All three arms are the same resolution failure — the name did
             // not resolve to a usable Word — with progressively more specific
@@ -106,7 +110,7 @@ impl Interpreter {
             // report `UnknownWord` rather than silently doing nothing.
             return match def.generated {
                 Some(word) => self.execute_generated_word(word),
-                None => self.execute_builtin(&resolved_name),
+                None => self.execute_builtin(name),
             };
         }
 
@@ -118,7 +122,7 @@ impl Interpreter {
         if self.call_depth + 1 > super::interpreter_core::MAX_USER_WORD_DEPTH {
             return Err(AjisaiError::RecursionLimitExceeded {
                 limit: super::interpreter_core::MAX_USER_WORD_DEPTH,
-                word: resolved_name.to_string(),
+                word: name.to_string(),
             });
         }
         self.call_depth += 1;
@@ -126,9 +130,9 @@ impl Interpreter {
         // The caller's stack as the call begins, for the failure record below.
         let stack_len_at_call: usize = self.stack.len();
 
-        let plan_set = self.get_execution_plan_set(&resolved_name, &def);
+        let plan_set = self.get_execution_plan_set(name, &def);
 
-        self.call_stack.push(resolved_name.to_string());
+        self.call_stack.push(name.to_string());
 
         // `KEEP` modifies the *call*, not the first consuming Word inside the
         // body (LANG.MODIFIERS.CONSUMPTION). Both readings agree for a Core Word, because a Core
@@ -186,7 +190,7 @@ impl Interpreter {
         // record the interpreted route already made stays in the trace as
         // detail; this one is the answer.
         if let Err(err) = &result {
-            self.record_word_failure(&resolved_name, err, stack_len_at_call);
+            self.record_word_failure(name, err, stack_len_at_call);
         }
 
         result
@@ -413,7 +417,7 @@ impl Interpreter {
     }
 
     pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
-        let (_, def) = self.resolve_word_entry_readonly(name)?;
+        let (_, def) = self.resolve_word_entry(name)?;
         if def.is_builtin || def.lines.is_empty() {
             return None;
         }
@@ -436,7 +440,7 @@ impl Interpreter {
     /// or a restored word's saved description. `None` for a builtin, or a
     /// user word that was never given one.
     pub fn lookup_word_description(&self, name: &str) -> Option<String> {
-        let (_, def) = self.resolve_word_entry_readonly(name)?;
+        let (_, def) = self.resolve_word_entry(name)?;
         if def.is_builtin {
             return None;
         }
