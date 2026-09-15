@@ -8,6 +8,7 @@ it defines Ajisai semantics.
 | `language-semantics.md` | Program meaning — the semantic kernel |
 | `grammar.json` (`grammar.schema.json`) | The lexical grammar — what text is Ajisai source |
 | `termination.json` | Why every evaluation is finite — the recursion sites and the measure |
+| `identity.json` | When two things are the same — the law and each level's reach |
 | `words.json` (`words.schema.json`) | The canonical vocabulary and each Word's contract |
 | `outcomes.json` (`outcomes.schema.json`) | The complete outcome space — every NIL reason and every error category a Word's contract can name |
 | `semantic-families.json` | The shared laws Words select |

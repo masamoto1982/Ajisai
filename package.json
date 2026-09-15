@@ -43,6 +43,7 @@
     "semantic-kernel:check": "node scripts/check-semantic-kernel.mjs",
     "check:grammar": "node scripts/check-grammar.mjs",
     "check:termination": "node scripts/check-termination.mjs",
+    "check:identity": "node scripts/check-identity.mjs",
     "word-schema:check": "node scripts/check-word-schema-migration.mjs",
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "check:conformance-coverage": "node scripts/check-conformance-coverage.mjs",
