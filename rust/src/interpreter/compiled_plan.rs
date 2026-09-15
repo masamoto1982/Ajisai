@@ -244,6 +244,32 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
     }
 }
 
+/// Compile a block of tokens — a higher-order Word's code operand — into a
+/// one-line plan.
+///
+/// `MAP`, `FILTER`, `FOLD`, `ALL` and `ANY` used to re-interpret their block's
+/// tokens once per element, which means resolving every Symbol in it by name
+/// every time: `[ ABS ] MAP` over 20,000 lanes hashed the string `"ABS"` and
+/// probed the dictionary 20,000 times to reach the one Word it names. A block is
+/// fixed for the length of the loop, so it is compiled before the loop instead,
+/// and `CompiledOp::CallBuiltin` carries the `CompiledCall` that resolution
+/// already produced.
+///
+/// Same lowering as a word body, including the `COND` dispatch pass, so the two
+/// compiled routes cannot drift; and the same epoch snapshot, so
+/// [`is_plan_valid`] refuses a plan whose dictionary has moved underneath it —
+/// a block that runs `DEF` falls back to interpretation from that element on.
+pub fn compile_token_block(tokens: Vec<Token>, interp: &Interpreter) -> CompiledPlan {
+    let mut lines = vec![compile_one_line(tokens, interp)];
+    if interp.cond_dispatch_enabled {
+        lower_cond_dispatch(&mut lines, interp);
+    }
+    CompiledPlan {
+        lines,
+        compiled_at: interp.current_epoch_snapshot(),
+    }
+}
+
 pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) -> CompiledPlan {
     let mut lines = Vec::with_capacity(word_def.lines.len());
     for line in word_def.lines.iter() {
@@ -352,6 +378,25 @@ fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
     if true {
         interp.reset_execution_modes();
     }
+}
+
+/// `Interpreter::execute_nested_block` from a compiled plan instead of from
+/// tokens.
+///
+/// The same transparent frame, for the same reason, around the same work:
+/// `execute_compiled_line` falls back to `execute_section_core` on the
+/// source tokens for any op it could not lower, which is exactly what the
+/// interpreted route runs — so a block behaves the same whichever route it
+/// took, which is what compiling one has to preserve
+/// (LANG.AUTHORITY.FREEDOM).
+pub(crate) fn execute_compiled_nested_block(
+    interp: &mut Interpreter,
+    plan: &CompiledPlan,
+) -> Result<()> {
+    interp.open_binding_scope(false);
+    let result = execute_compiled_plan(interp, plan);
+    interp.close_binding_scope();
+    result
 }
 
 pub fn execute_compiled_plan(interp: &mut Interpreter, plan: &CompiledPlan) -> Result<()> {
