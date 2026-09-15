@@ -92,6 +92,8 @@ mod resolve_word;
 mod execution_loop;
 #[cfg(test)]
 mod execution_loop_tests;
+#[cfg(test)]
+mod execution_step_parity_tests;
 mod value_as_code;
 mod vector_literal;
 

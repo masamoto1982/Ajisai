@@ -28,6 +28,14 @@ pub struct CompiledLine {
 #[derive(Debug, Clone)]
 pub enum CompiledOp {
     PushLiteral(Value),
+    /// A literal whose source token was a *Word name* — `TRUE`, `FALSE`, `NIL`.
+    ///
+    /// Distinct from `PushLiteral` only in what it costs. The interpreted route
+    /// reaches these three through the ordinary Symbol dispatch, because they are
+    /// Core Words in the registry, so each costs one execution step; lowering
+    /// them to a plain `PushLiteral` made them free, and a step the two routes
+    /// disagree on is a budget and a ceiling the two routes disagree on.
+    PushWordLiteral(Value),
     /// A fully-literal vector (`[ 1 2 3 ]`, nested literals, `TRUE`/`FALSE`/`NIL`)
     /// built once at compile time, with the same promoted `Value` and element
     /// hint `collect_vector` would produce. Replaces the per-call vector walk
@@ -64,9 +72,9 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
         "KEEP" => CompiledOp::SetConsumptionKeep,
-        "TRUE" => CompiledOp::PushLiteral(Value::from_bool(true)),
-        "FALSE" => CompiledOp::PushLiteral(Value::from_bool(false)),
-        "NIL" => CompiledOp::PushLiteral(Value::nil()),
+        "TRUE" => CompiledOp::PushWordLiteral(Value::from_bool(true)),
+        "FALSE" => CompiledOp::PushWordLiteral(Value::from_bool(false)),
+        "NIL" => CompiledOp::PushWordLiteral(Value::nil()),
         _ => {
             if lookup_builtin_spec(symbol).is_some() {
                 CompiledOp::CallBuiltin(Arc::new(CompiledCall::resolve(symbol)))
@@ -382,9 +390,22 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 // push the prebuilt vector and its element hint.
                 interp.stack.push_with_role(v.clone(), *hint);
             }
+            CompiledOp::PushWordLiteral(v) => {
+                // A Word, so it costs a step, exactly as the Symbol dispatch the
+                // interpreted route takes for it does.
+                interp.charge_execution_step()?;
+                interp
+                    .stack
+                    .push_with_role(v.clone(), Interpretation::Unassigned);
+            }
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(call) => {
-                execute_compiled_call(interp, call)?;
+                interp.charge_execution_step()?;
+                let stack_len_before = interp.stack.len();
+                if let Err(err) = execute_compiled_call(interp, call) {
+                    interp.record_word_dispatch_failure(&call.name, &err, stack_len_before);
+                    return Err(err);
+                }
                 // Mirror the interpreted loop: retag the top role from the
                 // word-hint table so the compiled route leaves the same
                 // `(value, role)` observation (LANG.OBSERVATION.PROTOCOL).
@@ -396,7 +417,12 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 }
             }
             CompiledOp::CondDispatch(clauses) => {
-                super::control_cond::op_cond_dispatch(interp, clauses)?;
+                interp.charge_execution_step()?;
+                let stack_len_before = interp.stack.len();
+                if let Err(err) = super::control_cond::op_cond_dispatch(interp, clauses) {
+                    interp.record_word_dispatch_failure("COND", &err, stack_len_before);
+                    return Err(err);
+                }
                 super::execution_loop::apply_word_hint_override(interp, "COND");
                 post_call_cleanup(interp, "COND");
             }
