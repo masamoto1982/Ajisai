@@ -114,6 +114,16 @@ jobs:
         # argument. The behavioural half is rust/tests/termination_laws.rs.
         run: npm run check:termination
 
+      - name: Check the canonical identity law
+        # spec/identity.json states one law — identity is denotation — and what
+        # each of the three levels that decide it can deliver. This gate holds
+        # every partial level to saying how it is partial, so a procedure that
+        # cannot answer "different" cannot quietly be read as answering it.
+        # Content identity is the one that matters: the host deduplicates user
+        # words on import by it, which is sound only in the equal direction.
+        # The behavioural half is rust/src/identity_laws.rs.
+        run: npm run check:identity
+
       - name: Verify generated specification surfaces are in sync
         # The Word reference and Core hover contracts are generated from
         # spec/words.json. None of these were gated in CI, which is how a stale

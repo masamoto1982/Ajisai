@@ -236,11 +236,11 @@ Ajisai is built from ten concepts. Everything below is one of them, or a consequ
 
 <h3 id="lang-authority-sources">LANG.AUTHORITY.SOURCES — Normative sources</h3>
 
-<p>Eight sources are authoritative, each for a different part of the language:</p>
+<p>Nine sources are authoritative, each for a different part of the language:</p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Source</th><th>Authoritative for</th></tr></thead><tbody><tr><td>This Language Semantics</td><td>Program meaning</td></tr><tr><td><code>spec/grammar.json</code></td><td>The lexical grammar — the total correspondence from source text to a token sequence or one named source-error condition</td></tr><tr><td><code>spec/words.json</code></td><td>The vocabulary</td></tr><tr><td><code>spec/termination.json</code></td><td>Why every evaluation is finite — the recursion sites, the measure each one decreases, and the invariant the argument rests on</td></tr><tr><td><code>spec/outcomes.json</code></td><td>The outcome space — the closed list of NIL reasons and ERROR categories a contract's names resolve into, including those no contract reaches (<code>literal</code>) and those belonging to no single Word (arity, source, dictionary, resource)</td></tr><tr><td><code>spec/semantic-families.json</code></td><td>The laws Words share</td></tr><tr><td><code>spec/gui-semantics.md</code></td><td>Presentation</td></tr><tr><td><code>spec/host-protocol.schema.json</code></td><td>The boundary between them</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Source</th><th>Authoritative for</th></tr></thead><tbody><tr><td>This Language Semantics</td><td>Program meaning</td></tr><tr><td><code>spec/grammar.json</code></td><td>The lexical grammar — the total correspondence from source text to a token sequence or one named source-error condition</td></tr><tr><td><code>spec/words.json</code></td><td>The vocabulary</td></tr><tr><td><code>spec/identity.json</code></td><td>When two things are the same — the one law, and what each level that decides it can deliver</td></tr><tr><td><code>spec/termination.json</code></td><td>Why every evaluation is finite — the recursion sites, the measure each one decreases, and the invariant the argument rests on</td></tr><tr><td><code>spec/outcomes.json</code></td><td>The outcome space — the closed list of NIL reasons and ERROR categories a contract's names resolve into, including those no contract reaches (<code>literal</code>) and those belonging to no single Word (arity, source, dictionary, resource)</td></tr><tr><td><code>spec/semantic-families.json</code></td><td>The laws Words share</td></tr><tr><td><code>spec/gui-semantics.md</code></td><td>Presentation</td></tr><tr><td><code>spec/host-protocol.schema.json</code></td><td>The boundary between them</td></tr></tbody></table></div>
 
-<p><code>SPECIFICATION.html</code> renders the two prose sources — this document and <code>spec/gui-semantics.md</code> — and is not edited directly. The six data sources are read directly by the implementation and its gates rather than through it: a source is authoritative because this table says so, not by appearing in that document.</p>
+<p><code>SPECIFICATION.html</code> renders the two prose sources — this document and <code>spec/gui-semantics.md</code> — and is not edited directly. The seven data sources are read directly by the implementation and its gates rather than through it: a source is authoritative because this table says so, not by appearing in that document.</p>
 
 <p>
 Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the table above defines nothing; <code>docs/dev/</code> holds design notes and history on those terms.
@@ -351,7 +351,7 @@ In particular FALSE is not scalar zero, TRUE is not scalar one, and an absent va
 
 <p>A value is what it denotes, never how it was made. Two values are one value exactly when they denote the same thing, whatever operations produced each of them: \(\sqrt{8}\) and \(\sqrt{2}+\sqrt{2}\) are one value, and two NILs carrying one reason are one value. Construction history is not part of a value and cannot be read back out of one.</p>
 
-<p>An internal representation is therefore unobservable, and a display is derived from the value rather than from the source that produced it. The content identity of LANG.DICTIONARY.MUTATION is this law applied to definitions rather than to values.</p>
+<p>An internal representation is therefore unobservable, and a display is derived from the value rather than from the source that produced it. A procedure that decides identity answers about denotation, and where it cannot decide it answers that it cannot, never "different": comparison over the algebraic field decides (LANG.VALUES.EXACT), comparison reaching a computable real may answer UNKNOWN, and the content identity of LANG.DICTIONARY.MUTATION decides only one direction. <code>spec/identity.json</code> states the law and what each level delivers.</p>
 
 <h3 id="lang-values-exact">LANG.VALUES.EXACT — Exact scalars</h3>
 
@@ -511,7 +511,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p><code>DEF</code> binds a name to a code block; <code>DEL</code> removes a User Word and fails with ERROR if any other definition still depends on it. A dictionary mutation commits atomically or raises ERROR with no partial visible mutation.</p>
 
-<p>Every Word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the Words it calls, so a change to a dependency changes the identity of everything that depends on it. Which definitions are one Word follows from LANG.VALUES.DENOTATION.</p>
+<p>Every Word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the Words it calls, so a change to a dependency changes the identity of everything that depends on it, and what a Word or its dependencies are named does not reach it. Equal identities mean one Word, which is what lets a host deduplicate by content; unequal identities mean nothing, since two definitions can denote one function and normalize differently (LANG.VALUES.DENOTATION).</p>
 
 <h3 id="lang-dictionary-acyclic">LANG.DICTIONARY.ACYCLIC — No definition may name itself</h3>
 
