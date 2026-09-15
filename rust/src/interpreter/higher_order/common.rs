@@ -5,11 +5,20 @@ use crate::types::Value;
 
 pub(crate) enum ExecutableCode {
     WordName(String),
-    CodeBlock(Vec<crate::types::Token>),
+    /// A block, with the compiled plan for it built once.
+    ///
+    /// The tokens are kept because the plan can go stale: a block that runs
+    /// `DEF` moves the dictionary epoch, and from that element on the tokens are
+    /// what must be interpreted. They are also what `execute_compiled_line`
+    /// itself falls back to for an op it could not lower.
+    CodeBlock {
+        tokens: Vec<crate::types::Token>,
+        plan: crate::interpreter::CompiledPlan,
+    },
 }
 
 pub(crate) fn extract_executable_code(
-    _interp: &mut Interpreter,
+    interp: &mut Interpreter,
     val: &Value,
 ) -> Result<ExecutableCode> {
     // Every Vector is a code operand candidate now (CodeBlock/Vector
@@ -21,7 +30,11 @@ pub(crate) fn extract_executable_code(
     // before this unification.
     if let Some(elements) = val.as_vector_view() {
         let tokens = crate::interpreter::value_as_code::value_elements_to_tokens(&elements)?;
-        return Ok(ExecutableCode::CodeBlock(tokens));
+        // Compiled here, once, rather than in the caller's loop: this is the one
+        // place a block becomes executable, and every higher-order Word reaches
+        // it before its first element.
+        let plan = crate::interpreter::compile_token_block(tokens.clone(), interp);
+        return Ok(ExecutableCode::CodeBlock { tokens, plan });
     }
 
     // A Word name is a String (`[ 1 2 3 ] 'DBL' MAP`). This tested for a
@@ -63,9 +76,16 @@ pub(crate) fn execute_executable_code(
     exec: &ExecutableCode,
 ) -> Result<()> {
     match exec {
-        ExecutableCode::CodeBlock(tokens) => {
+        ExecutableCode::CodeBlock { tokens, plan } => {
             interp.bump_execution_epoch();
-            interp.execute_nested_block(tokens)
+            // `bump_execution_epoch` moves the execution epoch, not the
+            // dictionary one, so a plan stays valid across the loop's elements;
+            // only a dictionary change inside the block invalidates it.
+            if crate::interpreter::is_plan_valid(plan, interp) {
+                crate::interpreter::compiled_plan::execute_compiled_nested_block(interp, plan)
+            } else {
+                interp.execute_nested_block(tokens)
+            }
         }
         ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
     }

@@ -369,49 +369,11 @@ impl Interpreter {
                                     apply_word_hint_override(self, upper.as_ref());
                                 }
                                 Err(err) => {
-                                    let category = ErrorCategory::from_error(&err);
-                                    let error_text = err.to_string();
-                                    // A failure raised inside a block this Word
-                                    // applied, or inside a User Word's body, is
-                                    // already recorded under the name of the
-                                    // Word that raised it. This frame is the
-                                    // one it happened *inside*, so it adds
-                                    // itself as context and leaves the answer
-                                    // to "which Word failed" alone.
-                                    if self.attribute_enclosing_word(upper.as_ref(), &error_text) {
-                                        return Err(err);
-                                    }
-                                    // The top-level token that reached this
-                                    // failure. A block and a Word body are each
-                                    // their own token stream with no source of
-                                    // their own, so the position a reader is
-                                    // sent to is the top-level token they
-                                    // actually wrote.
-                                    let mut diagnosis = DebugDiagnosis::from_error(
+                                    self.record_word_dispatch_failure(
+                                        upper.as_ref(),
                                         &err,
-                                        Some(upper.as_ref()),
                                         stack_len_before,
-                                        self.stack.len(),
-                                    )
-                                    .with_source_position(self.current_source_span);
-                                    // A misspelled *user* Word is only
-                                    // knowable here: the compiled-in registry
-                                    // has never heard of it, and this is the
-                                    // frame that holds the live dictionary.
-                                    diagnosis.with_user_vocabulary(
-                                        self.user_words.keys().map(String::as_str),
                                     );
-                                    self.push_error_flow_trace(ErrorFlowEvent {
-                                        kind: ErrorFlowEventKind::WordError,
-                                        word: Some(upper.to_string()),
-                                        error_category: Some(category),
-                                        absence: None,
-                                        stack_len_before,
-                                        stack_len_after: self.stack.len(),
-                                        message: format!("word error word={} error={}", upper, err),
-                                        diagnosis: Some(diagnosis),
-                                        error_text,
-                                    });
                                     return Err(err);
                                 }
                             }

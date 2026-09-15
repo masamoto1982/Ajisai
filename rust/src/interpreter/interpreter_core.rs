@@ -398,6 +398,27 @@ impl Interpreter {
         );
     }
 
+    /// One Word dispatch against the execution-step ceiling.
+    ///
+    /// The step is what a Word *costs*, not what any one route happens to count,
+    /// so every route that dispatches a Word calls this. The compiled route used
+    /// to call nothing: a Core Word reached through a `CompiledOp::CallBuiltin`
+    /// cost 0 steps instead of 1, which meant `resourceUsage.executionSteps`
+    /// under-reported a budget the output contract says an agent plans against,
+    /// and — worse — the ceiling could not refuse a program. Work moved inside a
+    /// User Word (whose body compiles) escaped it: 160 builtins inline were
+    /// refused at a 50-step ceiling while the same 160 inside twenty body calls
+    /// ran to completion.
+    pub(crate) fn charge_execution_step(&mut self) -> crate::error::Result<()> {
+        self.execution_step_count += 1;
+        if self.execution_step_count > self.max_execution_steps {
+            return Err(crate::error::AjisaiError::ExecutionLimitExceeded {
+                limit: self.max_execution_steps,
+            });
+        }
+        Ok(())
+    }
+
     pub fn runtime_metrics(&self) -> RuntimeMetrics {
         self.runtime_metrics
     }

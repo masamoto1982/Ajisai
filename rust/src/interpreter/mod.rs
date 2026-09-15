@@ -92,6 +92,8 @@ mod resolve_word;
 mod execution_loop;
 #[cfg(test)]
 mod execution_loop_tests;
+#[cfg(test)]
+mod execution_step_parity_tests;
 mod value_as_code;
 mod vector_literal;
 
@@ -132,6 +134,8 @@ mod error_flow_trace_tests;
 #[cfg(test)]
 mod exact_vector_broadcast_tests;
 #[cfg(test)]
+mod higher_order_block_plan_tests;
+#[cfg(test)]
 mod higher_order_fold_tests;
 #[cfg(test)]
 mod higher_order_map_tests;
@@ -164,8 +168,8 @@ pub use host::{default_host_env, DefaultHostEnv, HostEffect, HostEnv, RecordingH
 pub use crate::types::WordDefinition;
 
 pub use compiled_plan::{
-    compile_word_definition, execute_compiled_plan, is_plan_valid, CompiledLine, CompiledOp,
-    CompiledPlan, COMPILED_PLAN_SCHEMA_VERSION,
+    compile_token_block, compile_word_definition, execute_compiled_plan, is_plan_valid,
+    CompiledLine, CompiledOp, CompiledPlan, COMPILED_PLAN_SCHEMA_VERSION,
 };
 pub use epoch::EpochSnapshot;
 

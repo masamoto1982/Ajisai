@@ -28,6 +28,14 @@ pub struct CompiledLine {
 #[derive(Debug, Clone)]
 pub enum CompiledOp {
     PushLiteral(Value),
+    /// A literal whose source token was a *Word name* — `TRUE`, `FALSE`, `NIL`.
+    ///
+    /// Distinct from `PushLiteral` only in what it costs. The interpreted route
+    /// reaches these three through the ordinary Symbol dispatch, because they are
+    /// Core Words in the registry, so each costs one execution step; lowering
+    /// them to a plain `PushLiteral` made them free, and a step the two routes
+    /// disagree on is a budget and a ceiling the two routes disagree on.
+    PushWordLiteral(Value, &'static str),
     /// A fully-literal vector (`[ 1 2 3 ]`, nested literals, `TRUE`/`FALSE`/`NIL`)
     /// built once at compile time, with the same promoted `Value` and element
     /// hint `collect_vector` would produce. Replaces the per-call vector walk
@@ -64,9 +72,9 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
         "KEEP" => CompiledOp::SetConsumptionKeep,
-        "TRUE" => CompiledOp::PushLiteral(Value::from_bool(true)),
-        "FALSE" => CompiledOp::PushLiteral(Value::from_bool(false)),
-        "NIL" => CompiledOp::PushLiteral(Value::nil()),
+        "TRUE" => CompiledOp::PushWordLiteral(Value::from_bool(true), "TRUE"),
+        "FALSE" => CompiledOp::PushWordLiteral(Value::from_bool(false), "FALSE"),
+        "NIL" => CompiledOp::PushWordLiteral(Value::nil(), "NIL"),
         _ => {
             if lookup_builtin_spec(symbol).is_some() {
                 CompiledOp::CallBuiltin(Arc::new(CompiledCall::resolve(symbol)))
@@ -236,6 +244,32 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
     }
 }
 
+/// Compile a block of tokens — a higher-order Word's code operand — into a
+/// one-line plan.
+///
+/// `MAP`, `FILTER`, `FOLD`, `ALL` and `ANY` used to re-interpret their block's
+/// tokens once per element, which means resolving every Symbol in it by name
+/// every time: `[ ABS ] MAP` over 20,000 lanes hashed the string `"ABS"` and
+/// probed the dictionary 20,000 times to reach the one Word it names. A block is
+/// fixed for the length of the loop, so it is compiled before the loop instead,
+/// and `CompiledOp::CallBuiltin` carries the `CompiledCall` that resolution
+/// already produced.
+///
+/// Same lowering as a word body, including the `COND` dispatch pass, so the two
+/// compiled routes cannot drift; and the same epoch snapshot, so
+/// [`is_plan_valid`] refuses a plan whose dictionary has moved underneath it —
+/// a block that runs `DEF` falls back to interpretation from that element on.
+pub fn compile_token_block(tokens: Vec<Token>, interp: &Interpreter) -> CompiledPlan {
+    let mut lines = vec![compile_one_line(tokens, interp)];
+    if interp.cond_dispatch_enabled {
+        lower_cond_dispatch(&mut lines, interp);
+    }
+    CompiledPlan {
+        lines,
+        compiled_at: interp.current_epoch_snapshot(),
+    }
+}
+
 pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) -> CompiledPlan {
     let mut lines = Vec::with_capacity(word_def.lines.len());
     for line in word_def.lines.iter() {
@@ -346,6 +380,25 @@ fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
     }
 }
 
+/// `Interpreter::execute_nested_block` from a compiled plan instead of from
+/// tokens.
+///
+/// The same transparent frame, for the same reason, around the same work:
+/// `execute_compiled_line` falls back to `execute_section_core` on the
+/// source tokens for any op it could not lower, which is exactly what the
+/// interpreted route runs — so a block behaves the same whichever route it
+/// took, which is what compiling one has to preserve
+/// (LANG.AUTHORITY.FREEDOM).
+pub(crate) fn execute_compiled_nested_block(
+    interp: &mut Interpreter,
+    plan: &CompiledPlan,
+) -> Result<()> {
+    interp.open_binding_scope(false);
+    let result = execute_compiled_plan(interp, plan);
+    interp.close_binding_scope();
+    result
+}
+
 pub fn execute_compiled_plan(interp: &mut Interpreter, plan: &CompiledPlan) -> Result<()> {
     for line in plan.lines.iter() {
         execute_compiled_line(interp, line)?;
@@ -382,9 +435,35 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 // push the prebuilt vector and its element hint.
                 interp.stack.push_with_role(v.clone(), *hint);
             }
+            CompiledOp::PushWordLiteral(v, name) => {
+                // A Word, so it costs a step, exactly as the Symbol dispatch the
+                // interpreted route takes for it does — and a refusal by the
+                // ceiling is that Word's failure, recorded like any other.
+                let stack_len_before = interp.stack.len();
+                if let Err(err) = interp.charge_execution_step() {
+                    interp.record_word_dispatch_failure(name, &err, stack_len_before);
+                    return Err(err);
+                }
+                interp
+                    .stack
+                    .push_with_role(v.clone(), Interpretation::Unassigned);
+            }
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(call) => {
-                execute_compiled_call(interp, call)?;
+                // The step and the call are one dispatch, so one failure record
+                // covers both. Charging with `?` instead would let the ceiling's
+                // own refusal escape unattributed — and the ceiling firing on a
+                // Word *is* that Word failing, which is what the interpreted
+                // route records when its charge, made inside the dispatch, fails.
+                let stack_len_before = interp.stack.len();
+                let mut outcome = interp.charge_execution_step();
+                if outcome.is_ok() {
+                    outcome = execute_compiled_call(interp, call);
+                }
+                if let Err(err) = outcome {
+                    interp.record_word_dispatch_failure(&call.name, &err, stack_len_before);
+                    return Err(err);
+                }
                 // Mirror the interpreted loop: retag the top role from the
                 // word-hint table so the compiled route leaves the same
                 // `(value, role)` observation (LANG.OBSERVATION.PROTOCOL).
@@ -396,7 +475,15 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 }
             }
             CompiledOp::CondDispatch(clauses) => {
-                super::control_cond::op_cond_dispatch(interp, clauses)?;
+                let stack_len_before = interp.stack.len();
+                let mut outcome = interp.charge_execution_step();
+                if outcome.is_ok() {
+                    outcome = super::control_cond::op_cond_dispatch(interp, clauses);
+                }
+                if let Err(err) = outcome {
+                    interp.record_word_dispatch_failure("COND", &err, stack_len_before);
+                    return Err(err);
+                }
                 super::execution_loop::apply_word_hint_override(interp, "COND");
                 post_call_cleanup(interp, "COND");
             }
