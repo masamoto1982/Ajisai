@@ -259,35 +259,12 @@ header h1 a {
     line-height: 1.5;
 }
 
-/* Which build is deployed. Same quiet treatment as the host profile: it is
-   reference information a reader checks deliberately, not part of the app's
-   identity. It is on screen rather than in a tooltip because a tooltip does
-   not exist on a touch device, and a build stamp nobody can read cannot be
-   compared against the specification. */
-.build-stamp {
-    display: inline-block;
-    font-size: 0.75rem;
-    color: var(--color-primary);
-    background: transparent;
-    border: 1px solid var(--color-primary);
-    border-radius: var(--radius-button);
-    padding: 0.125rem 0.5rem;
-    line-height: 1.5;
-    cursor: help;
-}
-
-/* Which resource profile this host applies. Quieter than the version badge —
-   it is reference information, not identity — with the full ceiling table on
-   hover. */
-.host-profile {
-    display: inline-block;
-    font-size: 0.75rem;
-    color: var(--color-primary);
-    background: transparent;
-    border: 1px solid var(--color-primary);
-    border-radius: var(--radius-button);
-    padding: 0.125rem 0.5rem;
-    line-height: 1.5;
+/* In the header this badge is also the handle for the build and resource-limit
+   detail, which it carries in its tooltip (setPlaygroundBadgeTooltip() in
+   src/entry/entry-common.ts) rather than in badges of its own beside it. The
+   splash copy has that same detail written out beside it, so only the header's
+   invites the hover. */
+header .version {
     cursor: help;
 }
 
@@ -396,9 +373,9 @@ header h1 a {
     font-weight: var(--weight-medium);
 }
 
-/* The ceiling table the header's .host-profile badge only ever put behind a
-   hover title. Monospace so the name/value pairs line up, and left-aligned
-   within a centered splash so a list of several lines reads naturally. */
+/* The ceiling table, which the header can only offer on hover. Monospace so
+   the name/value pairs line up, and left-aligned within a centered splash so
+   a list of several lines reads naturally. */
 .splash-limits {
     list-style: none;
     display: flex;
