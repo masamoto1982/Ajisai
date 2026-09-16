@@ -65,14 +65,25 @@ export function setBuildVersionLabel(): void {
         el.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}\nBuild ${timestamp}`;
     });
 
-    setLabelForAll(['#build-stamp', '#splash-build-stamp'], (el) => {
+    // Header badge: stays a compact pill — "vX.Y.Z · timestamp" abbreviated
+    // to fit, with the full sentence on hover.
+    setLabelForAll(['#build-stamp'], (el) => {
         el.hidden = false;
         el.textContent = `v${__AJISAI_RELEASE_VERSION__} · ${timestamp}`;
         el.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}, playground build ${timestamp}.\n${compareNote}`;
     });
 
-    // Written out as plain text in the splash, not tucked into a hover title —
-    // a touch device has no hover to tuck it behind.
+    // Splash: no pill to abbreviate for, and room to spare, so each value is
+    // spelled out in full on its own labeled line instead of packed into a
+    // "vX.Y.Z · timestamp" shorthand.
+    setLabelForAll(['#splash-version-line'], (el) => {
+        el.hidden = false;
+        el.textContent = `Version: ${__AJISAI_RELEASE_VERSION__}`;
+    });
+    setLabelForAll(['#splash-build-line'], (el) => {
+        el.hidden = false;
+        el.textContent = `Build: ${timestamp}`;
+    });
     setLabelForAll(['#splash-build-note'], (el) => {
         el.hidden = false;
         el.textContent = compareNote;
