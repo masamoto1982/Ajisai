@@ -10,7 +10,6 @@ export interface InterpreterStateSnapshot {
     readonly stackSnapshot: string;
     readonly userWords: UserWord[];
     readonly activeDictionarySheet?: string;
-    readonly activeUserDictionary?: string;
 }
 
 export interface TablePayload {
@@ -32,7 +31,6 @@ export interface ExportData {
         readonly stackSnapshot?: unknown;
         readonly userWords: unknown;
         readonly activeDictionarySheet?: string;
-        readonly activeUserDictionary?: string;
         readonly updatedAt: string;
     } | null;
 }

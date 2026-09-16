@@ -54,7 +54,7 @@ const createFakeInterpreter = (): FakeInterpreter => {
         lookup_word_description: () => null,
         snapshot_stack: () => JSON.stringify(stack),
         restore_stack_snapshot: (snapshot: string) => { stack = JSON.parse(snapshot) as Value[]; },
-        restore_user_words: (restored: UserWord[]) => {
+        restore_user_words: async (restored: UserWord[]) => {
             for (const word of restored) {
                 // A word with no definition cannot be defined, so it is skipped.
                 if (!word.definition) continue;

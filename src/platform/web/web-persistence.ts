@@ -19,7 +19,6 @@ interface InterpreterState {
     stackSnapshot?: unknown;
     userWords: unknown;
     activeDictionarySheet?: string;
-    activeUserDictionary?: string;
     updatedAt: string;
 }
 
@@ -157,8 +156,7 @@ class WebPersistence implements Persistence {
                 stack: result.stack as InterpreterStateSnapshot['stack'],
                 stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
                 userWords: result.userWords as InterpreterStateSnapshot['userWords'],
-                activeDictionarySheet: result.activeDictionarySheet,
-                activeUserDictionary: result.activeUserDictionary
+                activeDictionarySheet: result.activeDictionarySheet
             };
         });
     }

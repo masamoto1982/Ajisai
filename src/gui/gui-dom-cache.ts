@@ -10,14 +10,12 @@ export interface GUIElements {
     readonly editorFormatBtn: HTMLButtonElement;
     readonly exportBtn: HTMLButtonElement;
     readonly importBtn: HTMLButtonElement;
-    readonly importJsonBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
     readonly builtInWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
     readonly userWordInfo: HTMLElement;
-    readonly userDictionarySelect: HTMLSelectElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
     readonly dictionarySheetSelect: DictionarySheetSelectElement;
@@ -77,14 +75,12 @@ export const cacheElements = (): GUIElements => ({
     editorFormatBtn: requireElementById('editor-format-btn', HTMLButtonElement),
     exportBtn: requireElementById('export-btn', HTMLButtonElement),
     importBtn: requireElementById('import-btn', HTMLButtonElement),
-    importJsonBtn: requireElementById('import-json-btn', HTMLButtonElement),
     outputDisplay: requireElementById('output-display', HTMLElement),
     stackDisplay: requireElementById('stack-display', HTMLElement),
     builtInWordsDisplay: requireElementById('core-words-display', HTMLElement),
     userWordsDisplay: requireElementById('user-words-display', HTMLElement),
     builtInWordInfo: requireElementById('core-word-info', HTMLElement),
     userWordInfo: requireElementById('user-word-info', HTMLElement),
-    userDictionarySelect: requireElementById('user-dictionary-select', HTMLSelectElement),
     dictionarySearch: requireElementById('dictionary-search', HTMLInputElement),
     dictionarySearchClearBtn: requireElementById('dictionary-search-clear-btn', HTMLButtonElement),
     // A custom selector component installs a `value` accessor on this element
@@ -113,8 +109,7 @@ export const extractVocabularyElements = (elements: GUIElements): VocabularyElem
     builtInWordsDisplay: elements.builtInWordsDisplay,
     userWordsDisplay: elements.userWordsDisplay,
     builtInWordInfo: elements.builtInWordInfo,
-    userWordInfo: elements.userWordInfo,
-    userDictionarySelect: elements.userDictionarySelect
+    userWordInfo: elements.userWordInfo
 });
 
 export const extractMobileElements = (elements: GUIElements): MobileElements => ({

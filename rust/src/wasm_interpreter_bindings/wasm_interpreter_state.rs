@@ -2,7 +2,6 @@ use super::wasm_value_conversion::{value_to_js, UserWordData};
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
-use crate::types::arena::{arena_to_value, json_to_arena_node, ValueArena};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
@@ -342,36 +341,6 @@ impl AjisaiInterpreter {
             arr.push(&obj);
         }
         arr.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn push_json_string(&mut self, json_string: &str) -> Result<JsValue, JsValue> {
-        let obj = js_sys::Object::new();
-
-        match serde_json::from_str::<serde_json::Value>(json_string) {
-            Ok(json_val) => {
-                let mut arena = ValueArena::new();
-                match json_to_arena_node(&mut arena, json_val) {
-                    Ok(root) => {
-                        self.interpreter.stack.push(arena_to_value(&arena, root));
-                        set_js_prop(&obj, "status", &("OK".into()));
-                    }
-                    Err(e) => {
-                        set_js_prop(&obj, "status", &("ERROR".into()));
-                        set_js_prop(&obj, "message", &(e.to_string().into()));
-                    }
-                }
-            }
-            Err(e) => {
-                set_js_prop(&obj, "status", &("ERROR".into()));
-                set_js_prop(
-                    &obj,
-                    "message",
-                    &(format!("JSON parse error: {}", e).into()),
-                );
-            }
-        }
-        Ok(obj.into())
     }
 
     #[wasm_bindgen]
