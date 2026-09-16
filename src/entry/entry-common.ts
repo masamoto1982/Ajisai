@@ -53,7 +53,7 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
 }
 
 /**
- * Label the `playground` badge, matching the Reference header's own
+ * Label the `Playground` badge, matching the Reference header's own
  * `リファレンス` badge, and state which build is deployed.
  *
  * Which build matters because the Playground is a separately deployed
@@ -69,8 +69,11 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
  * not need to keep spending its brand row on a stamp nobody reads twice.
  */
 export function setBuildVersionLabel(): void {
+    // Capitalized to match the other names the site gives its own surfaces:
+    // the header's `Reference` button, and the Reference's own
+    // 「Playgroundで開く」 links back here.
     setLabelForAll(['.version'], (el) => {
-        el.textContent = 'playground';
+        el.textContent = 'Playground';
     });
     // Until the interpreter is up this is all there is to tell; the host
     // profile rewrites this tooltip with its ceilings appended.
@@ -92,7 +95,7 @@ export function setBuildVersionLabel(): void {
 }
 
 /**
- * Put the technical detail on the header's `playground` badge, which is the
+ * Put the technical detail on the header's `Playground` badge, which is the
  * only place it remains once the splash is dismissed.
  *
  * Always the complete text, never an append: the two halves arrive at
