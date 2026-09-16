@@ -202,13 +202,13 @@ footer,
     }
 
     .splash-logo,
-    .splash-title {
+    .splash-heading {
         animation: none;
         opacity: 1;
         transform: none;
     }
 
-    .splash-detail,
+    .splash-version-line,
     .splash-note,
     .splash-limits-heading,
     .splash-limits {
@@ -358,21 +358,34 @@ header h1 a {
     animation: splash-logo-in 0.5s ease forwards;
 }
 
-.splash-title {
-    font-size: var(--text-xl);
-    font-weight: var(--weight-medium);
+/* The title and its "playground" badge read as one identity, side by side —
+   matching how the header itself pairs <h1>Ajisai</h1> with the same badge
+   (see .app-brand-meta) — so both fade in together with the logo, ahead of
+   the technical-detail group below. */
+.splash-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
     opacity: 0;
     animation: splash-fade-in 0.5s ease 0.15s forwards;
 }
 
+.splash-title {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-medium);
+}
+
 /* Hidden until the JS-driven auto-transition reveals them (splash-detail-visible),
-   matching the "logo first, then technical detail" sequence — but the hint
-   below is never gated on that timer, so skipping straight through never
-   means waiting out an animation first. The technical detail itself — the
-   resource-limit ceiling table in particular — is written out here as plain
-   text, not tucked into a `title` hover: a touch device has no hover to read
-   it from, which was the entire point of putting it on the splash. */
-.splash-detail,
+   matching the "logo/title first, then technical detail" sequence — but the
+   hint below is never gated on that timer, so skipping straight through
+   never means waiting out an animation first. The technical detail itself —
+   the version/build line and the resource-limit ceiling table in particular
+   — is written out here as plain text, not tucked into a badge or a `title`
+   hover: a touch device has no hover to read it from, which was the entire
+   point of putting it on the splash. */
+.splash-version-line,
 .splash-note,
 .splash-limits-heading,
 .splash-limits {
@@ -381,7 +394,7 @@ header h1 a {
     transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
-.splash-screen.splash-detail-visible .splash-detail,
+.splash-screen.splash-detail-visible .splash-version-line,
 .splash-screen.splash-detail-visible .splash-note,
 .splash-screen.splash-detail-visible .splash-limits-heading,
 .splash-screen.splash-detail-visible .splash-limits {
@@ -389,12 +402,10 @@ header h1 a {
     transform: translateY(0);
 }
 
-.splash-detail {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-xs);
+.splash-version-line {
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text);
 }
 
 .splash-note {
