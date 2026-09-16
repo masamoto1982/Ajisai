@@ -25,15 +25,16 @@ function formatTimestamp(date: Date): string {
 
 /**
  * Apply a mutation to every element matching any of the given selectors.
- * The header badges and the splash screen (see initSplashScreen()) each keep
- * their own copy of the version/build/resource-limit labels — the splash
- * reaches a touch device before the header's hover-only tooltip ever could —
- * so both need to be written in lockstep from the same source data.
+ *
+ * Every match, not just the first: the header and the splash screen (see
+ * initSplashScreen()) each carry their own `.version` badge, so a
+ * `querySelector` here would write to whichever comes first in the document
+ * — the splash's copy, which is then removed on dismissal — and silently
+ * leave the header's behind.
  */
 function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void): void {
     for (const selector of selectors) {
-        const el = document.querySelector<HTMLElement>(selector);
-        if (el) mutate(el);
+        document.querySelectorAll<HTMLElement>(selector).forEach(mutate);
     }
 }
 
@@ -145,13 +146,15 @@ export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
 }
 
 /**
- * First-visit walkthrough: shows the Ajisai logo, then auto-reveals the same
- * technical detail the header badges carry (see setBuildVersionLabel() /
- * setHostProfileLabel() above, which write into both). Dismissed by click,
- * tap, or any key press — never a wait the user is forced to sit through —
- * and shown at most once per session so reloading mid-session to retry a
- * program never re-interrupts. Runs independently of WASM/GUI startup: the
- * splash is pure DOM and does not gate `initializeApplication()`.
+ * First-visit walkthrough: shows the Ajisai logo, then auto-reveals the build
+ * and resource-limit detail spelled out in full (see setBuildVersionLabel() /
+ * setHostProfileLabel() above, which fill it in) — everything the header
+ * badges can only offer through a hover title, which is what a touch device
+ * never gets. Dismissed by click, tap, or any key press — never a wait the
+ * user is forced to sit through — and shown at most once per session so
+ * reloading mid-session to retry a program never re-interrupts. Runs
+ * independently of WASM/GUI startup: the splash is pure DOM and does not gate
+ * `initializeApplication()`.
  */
 export function initSplashScreen(): void {
     const splash = document.querySelector<HTMLElement>('#splash-screen');
@@ -184,7 +187,13 @@ export function initSplashScreen(): void {
             // Best effort only; worst case the splash reappears next reload.
         }
         splash.classList.add('splash-dismissing');
-        splash.addEventListener('transitionend', () => splash.remove(), { once: true });
+        splash.addEventListener('transitionend', (event) => {
+            // The detail rows' own reveal transitions bubble up here too, and
+            // one still in flight ends before this fade does — taking the
+            // splash off screen mid-fade if it is allowed to answer for it.
+            if (event.target !== splash) return;
+            splash.remove();
+        });
         // Fallback in case the transition never fires (e.g. reduced-motion
         // environments where the opacity change is instant).
         window.setTimeout(() => splash.remove(), 400);

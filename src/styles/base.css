@@ -196,26 +196,6 @@ footer,
     .utsuroi {
         animation: none;
     }
-
-    .splash-screen {
-        transition: none;
-    }
-
-    .splash-logo,
-    .splash-heading {
-        animation: none;
-        opacity: 1;
-        transform: none;
-    }
-
-    .splash-version-line,
-    .splash-note,
-    .splash-limits-heading,
-    .splash-limits {
-        transition: none;
-        opacity: 1;
-        transform: none;
-    }
 }
 
 header {
@@ -331,10 +311,6 @@ header h1 a {
     transition: opacity 0.35s ease;
 }
 
-.splash-screen[hidden] {
-    display: none;
-}
-
 .splash-screen.splash-dismissing {
     opacity: 0;
     pointer-events: none;
@@ -448,6 +424,33 @@ header h1 a {
 @keyframes splash-fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+/* Every splash rule above carries the same specificity as these, so this block
+   has to sit after them to win the cascade — the same reason the header's own
+   override sits directly below the rules it cancels. With the motion gone the
+   splash still says everything it would have said, just all at once: nothing
+   here is only reachable through an animation. */
+@media (prefers-reduced-motion: reduce) {
+    .splash-screen {
+        transition: none;
+    }
+
+    .splash-logo,
+    .splash-heading {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+
+    .splash-version-line,
+    .splash-note,
+    .splash-limits-heading,
+    .splash-limits {
+        transition: none;
+        opacity: 1;
+        transform: none;
+    }
 }
 
 
