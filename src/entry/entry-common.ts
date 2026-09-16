@@ -23,6 +23,20 @@ function formatTimestamp(date: Date): string {
     return `${year}${month}${day}${hours}${minutes}`;
 }
 
+// Fixed once at load: the build and host-profile labels are written at
+// different moments (the second only after the interpreter is up) and both
+// state this stamp, so deriving it per call would let the fallback branch
+// report two different times for one page.
+const BUILD_TIMESTAMP = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
+
+const COMPARE_NOTE =
+    'Compare against the repository when the Playground disagrees with the specification.';
+
+/** The build half of the detail, in the order the splash screen lists it. */
+function buildDetailLines(): string[] {
+    return [`Version: ${__AJISAI_RELEASE_VERSION__}`, `Build: ${BUILD_TIMESTAMP}`, COMPARE_NOTE];
+}
+
 /**
  * Apply a mutation to every element matching any of the given selectors.
  *
@@ -39,60 +53,63 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
 }
 
 /**
- * Label the header badge `playground`, matching the Reference header's own
- * `リファレンス` badge, and put the release and build stamp on screen beside it.
+ * Label the `playground` badge, matching the Reference header's own
+ * `リファレンス` badge, and state which build is deployed.
  *
- * The build identity used to be hover-only — the badge read the constant word
- * `playground` and the version lived in a `title` tooltip. A tooltip does not
- * exist on a touch device and is not something anyone thinks to reach for, so
- * in practice the site said nothing about which build it was running, while
- * the MCP server reports `engineVersion` and `registryDigest` on every
- * response.
- *
- * That asymmetry matters because the Playground is a separately deployed
+ * Which build matters because the Playground is a separately deployed
  * artifact and a deploy can be stranded — see the `workflow_dispatch` note in
  * `.github/workflows/build.yml` for the incident that added it. When that
  * happens the symptom is a site whose behaviour disagrees with the
- * specification, and with no version on screen there is nothing to compare
- * against. The badge keeps saying which page this is; the stamp says which
- * build, so the divergence is checkable by looking.
+ * specification, and with no version anywhere there is nothing to compare
+ * against.
+ *
+ * The header says it on hover and the splash says it in plain text, which is
+ * what makes the pair work: a tooltip does not exist on a touch device, so
+ * the splash is how the detail reaches one — and once it has, the header does
+ * not need to keep spending its brand row on a stamp nobody reads twice.
  */
 export function setBuildVersionLabel(): void {
-    const timestamp = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
-    const compareNote = 'Compare against the repository when the Playground disagrees with the specification.';
-
     setLabelForAll(['.version'], (el) => {
         el.textContent = 'playground';
-        el.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}\nBuild ${timestamp}`;
     });
+    // Until the interpreter is up this is all there is to tell; the host
+    // profile rewrites this tooltip with its ceilings appended.
+    setPlaygroundBadgeTooltip(buildDetailLines());
 
-    // Header badge: stays a compact pill — "vX.Y.Z · timestamp" abbreviated
-    // to fit, with the full sentence on hover.
-    setLabelForAll(['#build-stamp'], (el) => {
-        el.hidden = false;
-        el.textContent = `v${__AJISAI_RELEASE_VERSION__} · ${timestamp}`;
-        el.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}, playground build ${timestamp}.\n${compareNote}`;
-    });
-
-    // Splash: no pill to abbreviate for, and room to spare, so each value is
-    // spelled out in full on its own labeled line instead of packed into a
-    // "vX.Y.Z · timestamp" shorthand.
+    // The splash spells the same thing out on screen, one labeled line each.
     setLabelForAll(['#splash-version-line'], (el) => {
         el.hidden = false;
         el.textContent = `Version: ${__AJISAI_RELEASE_VERSION__}`;
     });
     setLabelForAll(['#splash-build-line'], (el) => {
         el.hidden = false;
-        el.textContent = `Build: ${timestamp}`;
+        el.textContent = `Build: ${BUILD_TIMESTAMP}`;
     });
     setLabelForAll(['#splash-build-note'], (el) => {
         el.hidden = false;
-        el.textContent = compareNote;
+        el.textContent = COMPARE_NOTE;
     });
 }
 
 /**
- * Say which resource profile this host applies, beside the build version.
+ * Put the technical detail on the header's `playground` badge, which is the
+ * only place it remains once the splash is dismissed.
+ *
+ * Always the complete text, never an append: the two halves arrive at
+ * different moments, so a caller that added only its own half would leave the
+ * tooltip reading differently depending on which ran last.
+ *
+ * The splash's own badge is deliberately left alone — everything this tooltip
+ * says is already on screen beside it there.
+ */
+function setPlaygroundBadgeTooltip(lines: string[]): void {
+    setLabelForAll(['header .version'], (el) => {
+        el.title = lines.join('\n');
+    });
+}
+
+/**
+ * Say which resource profile this host applies, and what its ceilings are.
  *
  * LANG.MACHINE.LIMITS makes limits a host safety control rather than value semantics, so
  * two conforming hosts legitimately enforce different ceilings — and they do:
@@ -118,13 +135,9 @@ export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
         `executionTimeoutMs: ${EXECUTION_TIMEOUT_MS.toLocaleString()} (wall clock, this host only)`,
     ];
 
-    // The header badge stays a badge: summary text on screen, the ceiling
-    // table on hover — a desktop convenience that costs nothing there.
-    setLabelForAll(['#host-profile'], (el) => {
-        el.hidden = false;
-        el.textContent = text;
-        el.title = ['Resource limits enforced by this host:', ...limitLines].join('\n');
-    });
+    // Now that the ceilings are known, the badge's tooltip can state the whole
+    // thing — the same detail, in the same order, the splash shows on screen.
+    setPlaygroundBadgeTooltip([...buildDetailLines(), '', text, ...limitLines]);
 
     // The splash has no hover to fall back on, so it gets the full ceiling
     // table written out as plain, always-visible text instead of a title.

@@ -856,16 +856,6 @@
         display: none;
     }
 
-    /* The splash screen (src/entry/entry-common.ts initSplashScreen()) already
-       carries this same build/resource-limit detail once per session, which is
-       the only way it was ever going to reach a touch device — these badges'
-       detail lives in a hover title, and hover does not exist here. Kept out
-       of the header on narrow viewports so they stop crowding the brand row. */
-    #build-stamp,
-    #host-profile {
-        display: none;
-    }
-
     .area-selector-mobile {
         display: flex;
         align-items: center;
