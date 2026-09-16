@@ -311,7 +311,7 @@ header .version {
     animation: splash-logo-in 0.5s ease forwards;
 }
 
-/* The title and its "playground" badge read as one identity, side by side —
+/* The title and its "Playground" badge read as one identity, side by side —
    matching how the header itself pairs <h1>Ajisai</h1> with the same badge
    (see .app-brand-meta) — so both fade in together with the logo, ahead of
    the technical-detail group below. */
