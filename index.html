@@ -18,6 +18,27 @@
     <!-- <link rel="stylesheet" href="/src/styles/debug.css"> -->
 </head>
 <body data-active-area="input">
+    <!-- First-visit walkthrough (both desktop and mobile). Shows the logo, then
+         auto-reveals the build/resource-limit detail written out directly as
+         plain text — not a badge whose detail only exists in a hover title,
+         which is exactly what a touch device cannot reach. Click, tap, or any
+         key skips straight through; see initSplashScreen() in
+         src/entry/entry-common.ts. -->
+    <div id="splash-screen" class="splash-screen utsuroi" role="dialog" aria-modal="true" aria-label="Ajisai" tabindex="-1" hidden>
+        <div class="splash-content">
+            <img src="./images/QR_341216.png" alt="" class="splash-logo" aria-hidden="true">
+            <div class="splash-heading">
+                <h2 class="splash-title">Ajisai</h2>
+                <span class="version">playground</span>
+            </div>
+            <p class="splash-version-line" id="splash-version-line" hidden></p>
+            <p class="splash-version-line" id="splash-build-line" hidden></p>
+            <p class="splash-note" id="splash-build-note" hidden></p>
+            <p class="splash-limits-heading" id="splash-host-profile" hidden></p>
+            <ul class="splash-limits" id="splash-limits" hidden></ul>
+            <p class="splash-hint">Click, tap, or press any key to continue</p>
+        </div>
+    </div>
     <a href="#code-input" class="skip-link">Skip to main content</a>
     <div class="container">
         <header>

@@ -196,6 +196,26 @@ footer,
     .utsuroi {
         animation: none;
     }
+
+    .splash-screen {
+        transition: none;
+    }
+
+    .splash-logo,
+    .splash-heading {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+
+    .splash-version-line,
+    .splash-note,
+    .splash-limits-heading,
+    .splash-limits {
+        transition: none;
+        opacity: 1;
+        transform: none;
+    }
 }
 
 header {
@@ -289,6 +309,145 @@ header h1 a {
     padding: 0.125rem 0.5rem;
     line-height: 1.5;
     cursor: help;
+}
+
+
+/* First-visit walkthrough — see initSplashScreen() in src/entry/entry-common.ts.
+   Reuses the header's moving hydrangea gradient (.utsuroi) so the splash reads
+   as the same surface, not a separate dialog bolted on. Sits above the
+   skip-link's z-index so it is unambiguously on top while active; once
+   dismissed it fades to transparent and stops intercepting pointer events
+   immediately, well before it is removed from the DOM. */
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text);
+    opacity: 1;
+    transition: opacity 0.35s ease;
+}
+
+.splash-screen[hidden] {
+    display: none;
+}
+
+.splash-screen.splash-dismissing {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.splash-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xl);
+    text-align: center;
+}
+
+.splash-logo {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(0.9);
+    animation: splash-logo-in 0.5s ease forwards;
+}
+
+/* The title and its "playground" badge read as one identity, side by side —
+   matching how the header itself pairs <h1>Ajisai</h1> with the same badge
+   (see .app-brand-meta) — so both fade in together with the logo, ahead of
+   the technical-detail group below. */
+.splash-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    opacity: 0;
+    animation: splash-fade-in 0.5s ease 0.15s forwards;
+}
+
+.splash-title {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-medium);
+}
+
+/* Hidden until the JS-driven auto-transition reveals them (splash-detail-visible),
+   matching the "logo/title first, then technical detail" sequence — but the
+   hint below is never gated on that timer, so skipping straight through
+   never means waiting out an animation first. The technical detail itself —
+   the version/build line and the resource-limit ceiling table in particular
+   — is written out here as plain text, not tucked into a badge or a `title`
+   hover: a touch device has no hover to read it from, which was the entire
+   point of putting it on the splash. */
+.splash-version-line,
+.splash-note,
+.splash-limits-heading,
+.splash-limits {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.splash-screen.splash-detail-visible .splash-version-line,
+.splash-screen.splash-detail-visible .splash-note,
+.splash-screen.splash-detail-visible .splash-limits-heading,
+.splash-screen.splash-detail-visible .splash-limits {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.splash-version-line {
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text);
+}
+
+.splash-note {
+    font-size: var(--text-2xs);
+    color: var(--color-text-light);
+    max-width: 32rem;
+}
+
+.splash-limits-heading {
+    font-size: var(--text-xs);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+}
+
+/* The ceiling table the header's .host-profile badge only ever put behind a
+   hover title. Monospace so the name/value pairs line up, and left-aligned
+   within a centered splash so a list of several lines reads naturally. */
+.splash-limits {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3xs);
+    font-family: var(--font-stack-mono);
+    font-size: var(--text-2xs);
+    color: var(--color-text-light);
+    text-align: left;
+}
+
+.splash-hint {
+    font-size: var(--text-2xs);
+    color: var(--color-text-light);
+}
+
+@keyframes splash-logo-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splash-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 
