@@ -71,11 +71,14 @@ export interface AjisaiInterpreter {
     // the session untouched. Clearing values is a host action, not a language
     // one — no Word does it — so it lives here rather than in the vocabulary.
     clear_stack(): void;
-    // The Rust side returns `Result<(), String>`: wasm-bindgen turns that into
-    // a Promise that resolves to `undefined` on success and rejects (throws)
-    // on an unreadable word, which every caller already awaits inside a
-    // try/catch.
-    restore_user_words(words: UserWord[]): Promise<void>;
+    // Throws on a malformed word list: the Rust side returns
+    // `Result<(), String>`, which wasm-bindgen compiles to a synchronous call
+    // that throws the `Err` — a Promise comes only from an `async fn`. Not
+    // `Promise<void>`, which would invite a `.catch` that dies on `undefined`
+    // and an `await` reading as a suspension point where there is none:
+    // `applyInterpreterSnapshot` calls this synchronously and needs the words
+    // in the dictionary when it returns.
+    restore_user_words(words: UserWord[]): void;
     remove_word(name: string): void;
     // Execution step budget override (water level, LANG.MACHINE.LIMITS).
     // Host-side runtime safety control, not a language semantic; the wasm

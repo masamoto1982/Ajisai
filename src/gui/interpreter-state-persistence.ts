@@ -15,11 +15,14 @@ import { Result, ok, err } from './functional-result-helpers';
 // document therefore starts a fresh session rather than being migrated, as any
 // other format change does.
 //
-// 5: dropped `activeUserDictionary`. It tracked the hidden, module-era
-// `#user-dictionary-select`, which is gone along with the rest of that
-// selection mechanism now that the dictionary has one exportable (User)
-// tier; there is no longer a selection to restore.
-export const STATE_FORMAT_VERSION = 5;
+// A bump discards every existing session, so it gates readability, not
+// changes: bump it only when an older document can no longer be read — `mask`
+// above sat inside the stack snapshot, so a version-3 payload could not be
+// parsed — never to record that a field went away. Dropping
+// `activeUserDictionary` kept this at 4 for that reason: a version-4 document
+// still carries everything a reader looks at, and the abandoned key beside
+// them is simply never read.
+export const STATE_FORMAT_VERSION = 4;
 
 export interface InterpreterState {
     readonly stateVersion: number;
@@ -526,7 +529,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
                 if (idMismatches.length > 0) {
                     showInfo?.(
-                        `Content identity mismatch (resolves differently in this dictionary — the word's own body was edited, or a dependency it references was): ${idMismatches.join(', ')}`,
+                        // Claims no behavioural difference: spec/identity.json
+                        // reads a mismatch as `unknown`, never as `different`.
+                        // Names both causes — identity is transitive over
+                        // dependencies, so an untouched body can still mismatch.
+                        `Content identity differs from the exported id (this word's body, or one of its dependencies, is not identical here): ${idMismatches.join(', ')}`,
                         true
                     );
                 }
