@@ -71,7 +71,6 @@ export class AjisaiInterpreter {
      */
     lookup_word_description(name: string): any;
     constructor();
-    push_json_string(json_string: string): any;
     remove_word(name: string): void;
     reset(): any;
     /**

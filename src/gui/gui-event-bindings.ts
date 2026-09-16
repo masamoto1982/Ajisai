@@ -181,7 +181,6 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
     elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
-    elements.importJsonBtn?.addEventListener('click', () => persistence.importJsonAsVector());
 
 
 

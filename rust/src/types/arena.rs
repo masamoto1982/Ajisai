@@ -2,7 +2,9 @@ use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Value, ValueData};
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
+#[cfg(test)]
 use num_traits::ToPrimitive;
+#[cfg(test)]
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -240,51 +242,15 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
     rebuild_recursive(arena, root)
 }
 
-pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<NodeId, String> {
-    match json {
-        JsonValue::Null => Ok(arena.alloc_nil(Interpretation::Nil)),
-        JsonValue::Bool(v) => {
-            Ok(arena.alloc_node(NodeKind::Boolean(v), Interpretation::TruthValue))
-        }
-        JsonValue::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Ok(arena.alloc_scalar(Fraction::from(i), Interpretation::RawNumber))
-            } else if let Some(f) = n.as_f64() {
-                let frac = Fraction::from_str(&f.to_string()).map_err(|e| e.to_string())?;
-                Ok(arena.alloc_scalar(frac, Interpretation::RawNumber))
-            } else {
-                Err("unsupported json number".to_string())
-            }
-        }
-        JsonValue::String(s) => Ok(arena.alloc_string(&s)),
-        JsonValue::Array(items) => {
-            if items.is_empty() {
-                return Ok(arena.alloc_nil(Interpretation::Unassigned));
-            }
-            let children = items
-                .into_iter()
-                .map(|item| json_to_arena_node(arena, item))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(arena.alloc_vector(children, Interpretation::Unassigned))
-        }
-        JsonValue::Object(map) => {
-            if map.is_empty() {
-                return Ok(arena.alloc_nil(Interpretation::Unassigned));
-            }
-            let mut pairs = Vec::with_capacity(map.len());
-            for (key, value) in map {
-                let key_id = arena.alloc_string(&key);
-                let value_id = json_to_arena_node(arena, value)?;
-                let pair_id =
-                    arena.alloc_vector(vec![key_id, value_id], Interpretation::Unassigned);
-                pairs.push(pair_id);
-            }
-            Ok(arena.alloc_vector(pairs, Interpretation::Unassigned))
-        }
-    }
-}
-
-pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
+// Test-only: a convenient way for arena-structure tests to assert on node
+// shape (numeric vs. string, tensor nesting) via JSON comparison. The
+// JSON<->arena conversion this once backed (the Dictionary panel's "JSON"
+// button, `push_json_string`) was removed as a legacy, undocumented,
+// one-directional data-injection path with no vocabulary in the spec
+// (spec/words.json has no JSON words); this reverse direction survives only
+// as a test helper.
+#[cfg(test)]
+fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
     match arena.kind(root) {
         // The logical Unknown (U, LANG.VALUES.TRUTH) is a TruthValue-role NIL
         // node; it serializes to the string `"unknown"` (display-only
@@ -339,6 +305,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
     }
 }
 
+#[cfg(test)]
 fn fraction_to_json(frac: &Fraction) -> JsonValue {
     if frac.is_integer() {
         if let Some(int_val) = frac.to_i64() {
@@ -354,6 +321,7 @@ fn fraction_to_json(frac: &Fraction) -> JsonValue {
     JsonValue::Null
 }
 
+#[cfg(test)]
 fn tensor_to_json(data: &[Fraction], shape: &[usize]) -> JsonValue {
     if shape.is_empty() || shape.len() == 1 {
         let arr = data.iter().map(fraction_to_json).collect();
@@ -407,26 +375,6 @@ mod tests {
 
         let rebuilt = arena_to_value(&arena, root);
         assert_eq!(rebuilt, value);
-    }
-
-    #[test]
-    fn json_object_becomes_a_vector_of_key_value_pairs() {
-        // Records are gone from the value model, so a JSON object is modelled as
-        // a vector of `[ key value ]` pairs (LANG.VALUES.VECTOR). The mapping is
-        // therefore lossy in one direction by design: an object goes in, pairs
-        // come back.
-        let json = serde_json::json!({
-            "name": "Ajisai",
-            "values": [1, 2, 3],
-            "flag": true
-        });
-        let mut arena = ValueArena::new();
-        let root = json_to_arena_node(&mut arena, json).expect("json to arena");
-        let restored = arena_node_to_json(&arena, root);
-        assert_eq!(
-            restored,
-            serde_json::json!([["flag", true], ["name", "Ajisai"], ["values", [1, 2, 3]]])
-        );
     }
 
     #[test]

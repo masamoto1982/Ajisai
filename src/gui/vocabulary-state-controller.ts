@@ -14,7 +14,6 @@ import {
 import { isCanonicalCoreWordName } from './core-word-name';
 
 export interface WordInfo {
-    readonly dictionary: string;
     readonly name: string;
     readonly protected?: boolean;
 }
@@ -24,7 +23,6 @@ export interface VocabularyElements {
     readonly userWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
     readonly userWordInfo: HTMLElement;
-    readonly userDictionarySelect: HTMLSelectElement;
 }
 
 export interface VocabularyCallbacks {
@@ -40,27 +38,19 @@ export interface VocabularyManager {
     readonly renderBuiltInWords: () => void;
     readonly updateUserWords: (userWordsInfo: Array<[string, string, boolean]>) => void;
     readonly updateSearchFilter: (filter: string) => void;
-    readonly setSelectedDictionary: (dictionary: string) => void;
 }
 
-const DICTIONARY_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze({
-    'EXAMPLE': 'Example Words',
-});
-const REMOVED_USER_WORD_DICTIONARIES = new Set(['DEMO']);
-
 export const formatDictionaryTabName = (pathName: string): string => {
-    const displayName = DICTIONARY_DISPLAY_NAMES[pathName]
-        ?? pathName
-            .toLowerCase()
-            .split(/[-_\s]+/)
-            .filter(Boolean)
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ');
+    const displayName = pathName
+        .toLowerCase()
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
     return displayName.endsWith(' Words') ? displayName : `${displayName} Words`;
 };
 
 const createWordInfoFromTuple = (wordData: [string, string, boolean]): WordInfo => ({
-    dictionary: wordData[0],
     name: wordData[1],
     protected: wordData[2] || false
 });
@@ -172,7 +162,6 @@ export const createVocabularyManager = (
 
     let searchFilter = '';
     let cachedUserWords: Array<[string, string, boolean]> = [];
-    let selectedDictionary = 'EXAMPLE';
     // Core words are fixed once WASM is loaded; fetching + canonical-filtering +
     // sorting them on every search keystroke was pure waste.
     let sortedCoreWordsCache: unknown[][] | null = null;
@@ -199,10 +188,10 @@ export const createVocabularyManager = (
         return sortedCoreWordsCache;
     };
 
+    // The dictionary has one exportable (User) tier, so every cached word
+    // belongs on this list; no per-dictionary filter is needed.
     const selectDictionaryWords = (): WordInfo[] =>
-        cachedUserWords
-            .map(createWordInfoFromTuple)
-            .filter(word => word.dictionary === selectedDictionary);
+        cachedUserWords.map(createWordInfoFromTuple);
 
     // A referenced word is not deletable, and there is no way to override that:
     // no Word in the vocabulary forces the delete, so the refusal is final and
@@ -356,22 +345,7 @@ export const createVocabularyManager = (
     const updateUserWords = (
         userWordsInfo: Array<[string, string, boolean]>
     ): void => {
-
         cachedUserWords = userWordsInfo || [];
-        const dictionaries = Array.from(new Set(cachedUserWords.map(([dictionary]) => dictionary)))
-            .filter(dictionary => !REMOVED_USER_WORD_DICTIONARIES.has(dictionary.toUpperCase()))
-            .sort();
-        elements.userDictionarySelect.innerHTML = '';
-        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['EXAMPLE']) {
-            const option = document.createElement('option');
-            option.value = dictionary;
-            option.textContent = formatDictionaryTabName(dictionary);
-            elements.userDictionarySelect.appendChild(option);
-        }
-        if (!dictionaries.includes(selectedDictionary)) {
-            selectedDictionary = dictionaries.includes('EXAMPLE') ? 'EXAMPLE' : (dictionaries[0] || 'EXAMPLE');
-        }
-        elements.userDictionarySelect.value = selectedDictionary;
         renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
     };
 
@@ -382,25 +356,9 @@ export const createVocabularyManager = (
         renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
     };
 
-    const setSelectedDictionary = (dictionary: string): void => {
-        if (!dictionary) return;
-        const optionExists = Array.from(elements.userDictionarySelect.options).some(opt => opt.value === dictionary);
-        if (!optionExists) return;
-        selectedDictionary = dictionary;
-        elements.userDictionarySelect.value = dictionary;
-        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
-    };
-
-    elements.userDictionarySelect.addEventListener('change', () => {
-        selectedDictionary = elements.userDictionarySelect.value;
-        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
-        void onSaveState?.();
-    });
-
     return {
         renderBuiltInWords,
         updateUserWords,
-        updateSearchFilter,
-        setSelectedDictionary
+        updateSearchFilter
     };
 };

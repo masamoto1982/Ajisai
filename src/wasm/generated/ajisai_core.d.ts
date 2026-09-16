@@ -71,7 +71,6 @@ export class AjisaiInterpreter {
      */
     lookup_word_description(name: string): any;
     constructor();
-    push_json_string(json_string: string): any;
     remove_word(name: string): void;
     reset(): any;
     /**
@@ -185,7 +184,6 @@ export interface InitOutput {
     readonly ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_lookup_word_description: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_new: () => number;
-    readonly ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_reset: (a: number) => any;
     readonly ajisaiinterpreter_resolve_host_lookup: (a: number, b: number, c: number) => any;

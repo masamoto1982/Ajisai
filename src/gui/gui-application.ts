@@ -276,9 +276,6 @@ export const createGUI = (): GUI => {
         const restored = await persistence.loadDatabaseData();
         updateAllDisplays();
 
-        if (restored.activeUserDictionary) {
-            vocabulary.setSelectedDictionary(restored.activeUserDictionary);
-        }
         if (restored.activeDictionarySheet) {
             const targetSheetEl = document.getElementById(`dictionary-sheet-${restored.activeDictionarySheet}`);
             if (targetSheetEl) {

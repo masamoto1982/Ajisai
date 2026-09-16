@@ -26,7 +26,6 @@ export const ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: n
 export const ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_lookup_word_description: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_new: () => number;
-export const ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
 export const ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
 export const ajisaiinterpreter_reset: (a: number) => any;
 export const ajisaiinterpreter_resolve_host_lookup: (a: number, b: number, c: number) => any;

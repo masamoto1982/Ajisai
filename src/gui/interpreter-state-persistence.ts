@@ -14,7 +14,12 @@ import { Result, ok, err } from './functional-result-helpers';
 // a second record of that fact which nothing ever wrote to. A version-3
 // document therefore starts a fresh session rather than being migrated, as any
 // other format change does.
-export const STATE_FORMAT_VERSION = 4;
+//
+// 5: dropped `activeUserDictionary`. It tracked the hidden, module-era
+// `#user-dictionary-select`, which is gone along with the rest of that
+// selection mechanism now that the dictionary has one exportable (User)
+// tier; there is no longer a selection to restore.
+export const STATE_FORMAT_VERSION = 5;
 
 export interface InterpreterState {
     readonly stateVersion: number;
@@ -25,12 +30,10 @@ export interface InterpreterState {
     readonly stackSnapshot: string;
     readonly userWords: UserWord[];
     readonly activeDictionarySheet?: string;
-    readonly activeUserDictionary?: string;
 }
 
 export interface RestoredSelection {
     readonly activeDictionarySheet?: string;
-    readonly activeUserDictionary?: string;
 }
 
 export interface PersistenceCallbacks {
@@ -46,7 +49,6 @@ export interface Persistence {
     readonly fullReset: () => Promise<void>;
     readonly exportUserWords: () => void;
     readonly importUserWords: () => void;
-    readonly importJsonAsVector: () => void;
 }
 
 declare global {
@@ -68,16 +70,9 @@ const toUserWord = (
     definition: getDefinition(wordData[1])
 });
 
-const readActiveSelections = (): {
-    activeDictionarySheet?: string;
-    activeUserDictionary?: string;
-} => {
+const readActiveDictionarySheet = (): string | undefined => {
     const sheetSelect = document.getElementById('dictionary-sheet-select') as HTMLSelectElement | null;
-    const userDictSelect = document.getElementById('user-dictionary-select') as HTMLSelectElement | null;
-    return {
-        activeDictionarySheet: sheetSelect?.value || undefined,
-        activeUserDictionary: userDictSelect?.value || undefined
-    };
+    return sheetSelect?.value || undefined;
 };
 
 const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
@@ -86,16 +81,13 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
         toUserWord(wordData, name => interpreter.lookup_word_definition(name))
     );
 
-    const selections = readActiveSelections();
-
     return {
         stateVersion: STATE_FORMAT_VERSION,
         // The lossless snapshot is what restore reads; `stack` is display data.
         stack: interpreter.collect_stack(),
         stackSnapshot: interpreter.snapshot_stack(),
         userWords,
-        activeDictionarySheet: selections.activeDictionarySheet,
-        activeUserDictionary: selections.activeUserDictionary
+        activeDictionarySheet: readActiveDictionarySheet()
     };
 };
 
@@ -128,10 +120,16 @@ const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, str
     return map;
 };
 
-const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string): ExportDocument => {
+// Every User Word, unconditionally. There used to be a per-dictionary
+// filter here, from the module/multi-dictionary era; the dictionary has two
+// tiers and User is the only exportable one (`collect_user_words_info`
+// reports a constant "USER" label for all of them), so a filter could only
+// ever keep everything or — if the label it filtered against came from
+// somewhere that was not also "USER" — silently drop everything. `dictionary`
+// stays in the document for format continuity but is no longer a selection.
+export const createExportData = (interpreter: AjisaiInterpreter): ExportDocument => {
     const identities = collectWordIdentityMap(interpreter);
     const words: ExportWord[] = interpreter.collect_user_words_info()
-        .filter(([dictionary]) => dictionary === dictionaryName)
         .map(([, name]) => {
             const id = identities.get(buildWordKey(name));
             return {
@@ -141,7 +139,7 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
                 ...(id ? { id } : {})
             };
         });
-    return { formatVersion: EXPORT_FORMAT_VERSION, dictionary: dictionaryName, words };
+    return { formatVersion: EXPORT_FORMAT_VERSION, dictionary: 'USER', words };
 };
 
 export interface ParsedImport {
@@ -152,6 +150,7 @@ export interface ParsedImport {
 }
 
 const buildExportFilename = (name: string): string => `${name}.json`;
+const DEFAULT_EXPORT_NAME = 'user-words';
 // The whole key of a User-tier word: its normalized name.
 const buildWordKey = (name: string): string => name.toUpperCase();
 
@@ -399,6 +398,12 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                         ));
                     }
 
+                    // Defensive: on this path (restoring into a freshly created
+                    // interpreter) `currentWords` is always a subset of
+                    // `wordsToRestore`, so this loop is normally a no-op. It
+                    // guards against a future restore path that starts from an
+                    // interpreter that already holds words not present in the
+                    // saved set — those should not survive a load.
                     const savedWordKeys = new Set(
                         wordsToRestore.map((w: UserWord) => buildWordKey(w.name))
                     );
@@ -418,8 +423,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
                 return {
-                    activeDictionarySheet: state.activeDictionarySheet,
-                    activeUserDictionary: state.activeUserDictionary
+                    activeDictionarySheet: state.activeDictionarySheet
                 };
             } else {
                 await loadExampleWords();
@@ -438,13 +442,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             return;
         }
 
-        const selectedDictionary = (document.getElementById('user-dictionary-select') as HTMLSelectElement | null)?.value || 'EXAMPLE';
-        const suggestedName = selectedDictionary.toLowerCase();
-        const requestedName = window.prompt('Export file name', suggestedName)?.trim();
+        const requestedName = window.prompt('Export file name', DEFAULT_EXPORT_NAME)?.trim();
         if (!requestedName) {
             return;
         }
-        const exportData = createExportData(window.ajisaiInterpreter, selectedDictionary);
+        const exportData = createExportData(window.ajisaiInterpreter);
         const filename = buildExportFilename(requestedName);
 
         getPlatform().fileIO.saveJson(filename, exportData)
@@ -524,40 +526,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
                 if (idMismatches.length > 0) {
                     showInfo?.(
-                        `Content identity mismatch (definition edited without re-export): ${idMismatches.join(', ')}`,
+                        `Content identity mismatch (resolves differently in this dictionary — the word's own body was edited, or a dependency it references was): ${idMismatches.join(', ')}`,
                         true
                     );
                 }
 
-            } catch (error) {
-                showError?.(error as Error);
-            }
-        });
-    };
-
-    const importJsonAsVector = (): void => {
-        getPlatform().fileIO.openJsonFile().then(async (openedFile) => {
-            if (!openedFile) {
-                return;
-            }
-
-            try {
-                try {
-                    JSON.parse(openedFile.text);
-                } catch {
-                    showError?.(new Error('Invalid JSON file.'));
-                    return;
-                }
-
-                const result = window.ajisaiInterpreter.push_json_string(openedFile.text);
-
-                if (result.status === 'OK') {
-                    updateDisplays?.();
-                    await saveCurrentState();
-                    showInfo?.(`JSON loaded from ${openedFile.filename}`, true);
-                } else {
-                    showError?.(new Error(result.message || 'Failed to parse JSON'));
-                }
             } catch (error) {
                 showError?.(error as Error);
             }
@@ -586,7 +559,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         loadDatabaseData,
         fullReset,
         exportUserWords,
-        importUserWords,
-        importJsonAsVector
+        importUserWords
     };
 };

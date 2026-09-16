@@ -71,9 +71,12 @@ export interface AjisaiInterpreter {
     // the session untouched. Clearing values is a host action, not a language
     // one — no Word does it — so it lives here rather than in the vocabulary.
     clear_stack(): void;
-    restore_user_words(words: UserWord[]): void;
+    // The Rust side returns `Result<(), String>`: wasm-bindgen turns that into
+    // a Promise that resolves to `undefined` on success and rejects (throws)
+    // on an unreadable word, which every caller already awaits inside a
+    // try/catch.
+    restore_user_words(words: UserWord[]): Promise<void>;
     remove_word(name: string): void;
-    push_json_string(json: string): { status: string; message?: string };
     // Execution step budget override (water level, LANG.MACHINE.LIMITS).
     // Host-side runtime safety control, not a language semantic; the wasm
     // side ignores non-positive values and defaults to 100,000.
