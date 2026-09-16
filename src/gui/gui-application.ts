@@ -35,6 +35,16 @@ declare global {
 
 const INTERPRETER_CLIENT = createInterpreterClient();
 
+/**
+ * How the Reference's 「Playgroundで開く」 links hand a sample over:
+ * `<playground-url>#code=<encodeURIComponent したソース>`.
+ *
+ * Exported because the splash screen also keys off it — arriving this way says
+ * the visitor already knows what they came to do (entry-common.ts
+ * initSplashScreen()) — and a second copy of the literal would drift.
+ */
+export const PLAYGROUND_CODE_HASH_MARKER = '#code=';
+
 const HIDDEN_AUTOCOMPLETE_ALIASES: ReadonlySet<string> = new Set([
     '+', '-', '*', '/', '=', '<', '>',
     '[', ']', '{', '}', '(', ')',
@@ -140,7 +150,7 @@ export const createGUI = (): GUI => {
     // 受け渡し形式: <playground-url>#code=<encodeURIComponent したソース>
     // Ruby 公式トップのように、用例をそのまま試せる動線を実現するための入口。
     const applyPlaygroundCodeFromUrl = (): void => {
-        const marker = '#code=';
+        const marker = PLAYGROUND_CODE_HASH_MARKER;
         const hash = window.location.hash;
         if (!hash.startsWith(marker)) return;
 

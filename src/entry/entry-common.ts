@@ -1,5 +1,5 @@
 import { getPlatform } from '../platform';
-import { GUI_INSTANCE } from '../gui/gui-application';
+import { GUI_INSTANCE, PLAYGROUND_CODE_HASH_MARKER } from '../gui/gui-application';
 import { initWasm } from '../wasm-module-loader';
 import { EXECUTION_TIMEOUT_MS } from '../workers/execution-timeout';
 import type { WasmModule, AjisaiInterpreter, HostProfile } from '../wasm-interpreter-types';
@@ -161,17 +161,31 @@ export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
 /**
  * First-visit walkthrough: shows the Ajisai logo, then auto-reveals the build
  * and resource-limit detail spelled out in full (see setBuildVersionLabel() /
- * setHostProfileLabel() above, which fill it in) — everything the header
- * badges can only offer through a hover title, which is what a touch device
- * never gets. Dismissed by click, tap, or any key press — never a wait the
- * user is forced to sit through — and shown at most once per session so
- * reloading mid-session to retry a program never re-interrupts. Runs
- * independently of WASM/GUI startup: the splash is pure DOM and does not gate
+ * setHostProfileLabel() above, which fill it in) — everything the header badge
+ * can only offer through a hover title, which is what a touch device never
+ * gets. Dismissed by click, tap, or any key press — never a wait the user is
+ * forced to sit through — and shown at most once per session so reloading
+ * mid-session to retry a program never re-interrupts. Runs independently of
+ * WASM/GUI startup: the splash is pure DOM and does not gate
  * `initializeApplication()`.
+ *
+ * It is for an arrival with nothing else in mind. Someone who followed a
+ * Reference sample's 「Playgroundで開く」 link has already said what they came
+ * to do, so that arrival skips it — which is also the one route where it would
+ * otherwise repeat without end: the Reference opens in its own tab, and
+ * `sessionStorage` is per-tab, so the dismissal never reaches it.
  */
 export function initSplashScreen(): void {
     const splash = document.querySelector<HTMLElement>('#splash-screen');
     if (!splash) return;
+
+    // Read before the GUI strips the hash (gui-application.ts
+    // applyPlaygroundCodeFromUrl), which it only does once the wasm is up —
+    // long after this runs at DOMContentLoaded.
+    if (window.location.hash.startsWith(PLAYGROUND_CODE_HASH_MARKER)) {
+        splash.remove();
+        return;
+    }
 
     const SESSION_KEY = 'ajisai-splash-seen';
     try {
