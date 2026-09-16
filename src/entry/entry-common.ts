@@ -58,6 +58,7 @@ function setLabelForAll(selectors: string[], mutate: (el: HTMLElement) => void):
  */
 export function setBuildVersionLabel(): void {
     const timestamp = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
+    const compareNote = 'Compare against the repository when the Playground disagrees with the specification.';
 
     setLabelForAll(['.version'], (el) => {
         el.textContent = 'playground';
@@ -67,9 +68,14 @@ export function setBuildVersionLabel(): void {
     setLabelForAll(['#build-stamp', '#splash-build-stamp'], (el) => {
         el.hidden = false;
         el.textContent = `v${__AJISAI_RELEASE_VERSION__} · ${timestamp}`;
-        el.title =
-            `Ajisai ${__AJISAI_RELEASE_VERSION__}, playground build ${timestamp}.\n` +
-            'Compare against the repository when the Playground disagrees with the specification.';
+        el.title = `Ajisai ${__AJISAI_RELEASE_VERSION__}, playground build ${timestamp}.\n${compareNote}`;
+    });
+
+    // Written out as plain text in the splash, not tucked into a hover title —
+    // a touch device has no hover to tuck it behind.
+    setLabelForAll(['#splash-build-note'], (el) => {
+        el.hidden = false;
+        el.textContent = compareNote;
     });
 }
 
@@ -91,21 +97,40 @@ export function setHostProfileLabel(interpreter: AjisaiInterpreter): void {
         return;
     }
     const text = `resource limits: ${profile.profile}`;
-    const title = [
-        'Resource limits enforced by this host:',
+    const limitLines = [
         ...Object.entries(profile.limits).map(([name, value]) => `${name}: ${value.toLocaleString()}`),
         // The wall-clock guard is this host's alone and is not one of the
         // interpreter's ceilings, so `host_profile()` cannot report it — and a
         // list that omits the guard most likely to stop a long run reads as a
         // complete list that is wrong.
         `executionTimeoutMs: ${EXECUTION_TIMEOUT_MS.toLocaleString()} (wall clock, this host only)`,
-    ].join('\n');
+    ];
 
-    setLabelForAll(['#host-profile', '#splash-host-profile'], (el) => {
+    // The header badge stays a badge: summary text on screen, the ceiling
+    // table on hover — a desktop convenience that costs nothing there.
+    setLabelForAll(['#host-profile'], (el) => {
         el.hidden = false;
         el.textContent = text;
-        el.title = title;
+        el.title = ['Resource limits enforced by this host:', ...limitLines].join('\n');
     });
+
+    // The splash has no hover to fall back on, so it gets the full ceiling
+    // table written out as plain, always-visible text instead of a title.
+    setLabelForAll(['#splash-host-profile'], (el) => {
+        el.hidden = false;
+        el.textContent = text;
+    });
+    const limitsList = document.querySelector<HTMLElement>('#splash-limits');
+    if (limitsList) {
+        limitsList.hidden = false;
+        limitsList.replaceChildren(
+            ...limitLines.map((line) => {
+                const item = document.createElement('li');
+                item.textContent = line;
+                return item;
+            })
+        );
+    }
 }
 
 /**
