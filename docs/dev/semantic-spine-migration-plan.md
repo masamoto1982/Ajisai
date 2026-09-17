@@ -789,6 +789,44 @@ with_metrics` / `apply_exact_real_recursive_broadcast`）と exact-real
 オペランドは、Phase 4 のスコープ外（kernel/arithmetic.rs の docstring
 どおり）のまま legacy 実行のみ。
 
+### 10.13 Phase 9 実施記録（到達しなかった Spine 機構の削除）
+
+§8 の原則「Phase 1〜7 は追加のみ（旧構造と並存）。削除は Phase 9」は、
+**consumer が現れないまま並存だけが続く**という失敗様態を持つ。YAGNI 監査で
+到達可能性を実測したところ、`kernel/` に積まれた次の三つが本番経路から
+一度も呼ばれていなかった。`cargo check --lib` をネイティブと `--features wasm`
+の両方で走らせ、両方で dead と出たものだけを対象にした（`#[cfg(test)]` は
+`--lib` に含まれないため、これは「テストのためだけに存在する」と同義）。
+
+| 削除対象 | 行数 | 到達状況 |
+| --- | --- | --- |
+| `kernel/execute.rs`（`execute_word` / `KernelStack` / `Consumption` / `ExecError` / `Primitive`） | 202 | §12 の共有ラッパ。呼び出しは `kernel/arithmetic.rs` のテストのみ |
+| `kernel/word_contract.rs`（`WordContract` / `Arity` / `passes_nil_through`） | 133 | 同ラッパ専用の契約型。本番参照 0 |
+| `kernel/observation.rs`（`Observation` / `ObservedValue` / `PresentationHint`） | 44 | §17–18 の観測投影。`legacy_adapter` の bridge とテスト以外に参照 0 |
+
+あわせて、これらだけが使っていた `kernel/legacy_adapter.rs` の Observation
+bridge（`presentation_hint` / `impl From<&Value> for ObservedValue` /
+`Observation::from_stack`）と、dispatch 配線されなかった `kernel/arithmetic.rs`
+の単項 primitive（`floor` / `neg` / `unary`、§10.11 が追加し §10.12 が
+「残る範囲」と記録したもの）を削除した。`kernel/` は generated を除いて
+1,270 行から 592 行になった。
+
+**残したもの**: `value.rs`（`KernelValue`）、`scalar.rs`、`nil.rs`、
+`legacy_adapter.rs` の `From` 変換、`arithmetic.rs` の
+`add`/`sub`/`mul`/`div`。これらは §10.12 の `schema_via_kernel` 経由で
+実際に実行される。`arithmetic.rs` の差分テスト（Spine primitive と
+live executor の付き合わせ）も残し、削除した wrapper を経由しない形に
+書き換えた——契約が既知の呼び出し点で primitive を直接呼ぶという
+§10.12 の判断と、テスト側の呼び方を揃えたことになる。
+
+**この削除が後退させたもの**: §12 の「すべての Word を一つの
+`execute_word` に収束させる」と §17–18 の「観測は `Observation` を通す」は、
+実装としては白紙に戻った。再着手する場合、両者は *consumer と同じ変更で*
+入れるべきである——`execute_word` なら少なくとも一つの Word の dispatch を
+同時に差し替える、`Observation` なら conformance か host protocol の
+観測点を同時に付け替える。先に枠だけ置くと、今回削除したものと同じ状態に
+戻る。設計そのものは §12 / §17–18 に残してあるので、記述を読み直す
+コストはかからない。
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）

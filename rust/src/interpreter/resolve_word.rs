@@ -56,7 +56,7 @@ impl Interpreter {
     /// from under it. So the cache memoized one hashmap probe behind another
     /// hashmap probe, which is not a saving; and it could not memoize the thing
     /// that would have been one. Caching the `Arc<WordDefinition>` was tried and
-    /// reverted at a 66% regression, because `store_execution_plan_set_for_word`
+    /// reverted at a 66% regression, because `store_compiled_plan_for_word`
     /// replaces a word's `Arc` in `user_words` when it caches a compiled plan
     /// and rightly does not bump the dictionary epoch for it — so a cached `Arc`
     /// pinned the pre-plan definition forever and every call recompiled.

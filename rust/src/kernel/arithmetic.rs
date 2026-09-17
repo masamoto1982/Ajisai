@@ -1,9 +1,10 @@
-//! Spine-level arithmetic primitives for the `ADD`/`SUB`/`MUL`/`DIV`/`FLOOR`/`NEG`
-//! family (migration plan §12, Phase 4).
+//! Spine-level arithmetic primitives for the `ADD`/`SUB`/`MUL`/`DIV` family
+//! (migration plan §12, Phase 4).
 //!
-//! These are the first Words routed through the shared [`execute_word`] wrapper.
-//! A primitive computes only: the wrapper has already applied arity and NIL
-//! policy, so a primitive receives its operands and returns its results.
+//! A primitive computes only: it receives its operands and returns its results.
+//! `interpreter::arithmetic` applies arity and NIL policy before calling one,
+//! and the differential tests below pin each primitive against the live
+//! executor operand-for-operand.
 //!
 //! Scope: Phase 4 covers the rational-scalar domain, computed with the same
 //! [`Fraction`] arithmetic the legacy executor uses, so results agree by
@@ -15,8 +16,6 @@
 //! `Fraction` (a non-perfect-square root is an exact-real value), so it needs
 //! the wider `KernelValue`/`ScalarRepr` surface a later phase adds rather than
 //! this module's Fraction-only primitives.
-//!
-//! [`execute_word`]: super::execute::execute_word
 
 use super::scalar::Scalar;
 use super::value::KernelValue;
@@ -69,38 +68,12 @@ pub fn div(operands: &[KernelValue]) -> Vec<KernelValue> {
     )
 }
 
-/// Apply a unary rational operation. A non-rational operand yields a
-/// reasonless NIL (out of Phase 4 scope), same as [`binary`].
-fn unary(operands: &[KernelValue], op: impl Fn(&Fraction) -> Fraction) -> Vec<KernelValue> {
-    let result = match operands.first().and_then(scalar_fraction) {
-        Some(a) => KernelValue::Scalar(Scalar::from_fraction(op(&a))),
-        None => KernelValue::Nil(None),
-    };
-    vec![result]
-}
-
-pub fn floor(operands: &[KernelValue]) -> Vec<KernelValue> {
-    unary(operands, Fraction::floor)
-}
-
-pub fn neg(operands: &[KernelValue]) -> Vec<KernelValue> {
-    unary(operands, |a| Fraction::from(0_i64).sub(a))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kernel::execute::{execute_word, Consumption, KernelStack, Primitive};
-    use crate::kernel::generated::GENERATED_WORDS;
-    use crate::kernel::word_contract::WordContract;
 
-    fn contract(name: &str) -> WordContract {
-        let word = GENERATED_WORDS
-            .iter()
-            .find(|word| word.name == name)
-            .expect("word present in generated registry");
-        WordContract::from_generated(word).expect("arithmetic Words are fixed-arity")
-    }
+    /// A spine primitive, as `interpreter::arithmetic` holds one.
+    type Primitive = fn(&[KernelValue]) -> Vec<KernelValue>;
 
     /// Evaluate an Ajisai program on a fresh interpreter and lower its
     /// top-of-stack value onto the spine.
@@ -111,33 +84,20 @@ mod tests {
         KernelValue::from(&interp.stack[0])
     }
 
-    /// The spine wrapper and the live executor must agree, operand-for-operand.
+    /// The spine primitive and the live executor must agree, operand-for-operand.
     /// Operands are produced by the same interpreter, so the comparison isolates
     /// the Word's computation rather than literal parsing.
     async fn assert_agrees(word: &str, primitive: Primitive, a: &str, b: &str) {
-        let operands = vec![eval_top(a).await, eval_top(b).await];
-        let mut stack = KernelStack::from_values(operands);
-        execute_word(&contract(word), primitive, Consumption::Eat, &mut stack).unwrap();
-        assert_eq!(stack.len(), 1);
-        let spine = stack.as_slice()[0].clone();
+        let operands = [eval_top(a).await, eval_top(b).await];
+        let results = primitive(&operands);
+        assert_eq!(results.len(), 1);
+        let spine = results.into_iter().next().expect("one result");
 
         let legacy = eval_top(&format!("{a} {b} {word}")).await;
         assert_eq!(
             spine, legacy,
             "spine and legacy disagree on `{a} {word} {b}`"
         );
-    }
-
-    /// The unary counterpart of [`assert_agrees`].
-    async fn assert_agrees_unary(word: &str, primitive: Primitive, a: &str) {
-        let operands = vec![eval_top(a).await];
-        let mut stack = KernelStack::from_values(operands);
-        execute_word(&contract(word), primitive, Consumption::Eat, &mut stack).unwrap();
-        assert_eq!(stack.len(), 1);
-        let spine = stack.as_slice()[0].clone();
-
-        let legacy = eval_top(&format!("{a} {word}")).await;
-        assert_eq!(spine, legacy, "spine and legacy disagree on `{a} {word}`");
     }
 
     #[tokio::test]
@@ -169,27 +129,21 @@ mod tests {
     async fn div_by_zero_projects_to_the_same_nil() {
         // Both paths project division by zero to NIL(DivisionByZero).
         assert_agrees("DIV", div, "3", "0").await;
-        let mut stack = KernelStack::from_values(vec![eval_top("3").await, eval_top("0").await]);
-        execute_word(&contract("DIV"), div, Consumption::Eat, &mut stack).unwrap();
+        let operands = [eval_top("3").await, eval_top("0").await];
         assert_eq!(
-            stack.as_slice()[0],
+            div(&operands)[0],
             KernelValue::Nil(Some(NilReason::DivisionByZero))
         );
     }
 
-    #[tokio::test]
-    async fn floor_matches_the_live_executor() {
-        assert_agrees_unary("FLOOR", floor, "7").await;
-        assert_agrees_unary("FLOOR", floor, "7/2").await;
-        assert_agrees_unary("FLOOR", floor, "-7/2").await;
-        assert_agrees_unary("FLOOR", floor, "-3").await;
-    }
-
-    #[tokio::test]
-    async fn neg_matches_the_live_executor() {
-        assert_agrees_unary("NEG", neg, "5").await;
-        assert_agrees_unary("NEG", neg, "-5").await;
-        assert_agrees_unary("NEG", neg, "1/3").await;
-        assert_agrees_unary("NEG", neg, "0").await;
+    /// A non-rational operand is out of Phase 4 scope and must project to a
+    /// reasonless NIL rather than a wrong number.
+    #[test]
+    fn non_rational_operands_project_to_a_reasonless_nil() {
+        let operands = [
+            KernelValue::Boolean(true),
+            KernelValue::Scalar(Scalar::from_fraction(Fraction::from(1_i64))),
+        ];
+        assert_eq!(add(&operands)[0], KernelValue::Nil(None));
     }
 }

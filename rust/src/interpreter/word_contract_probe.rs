@@ -7,7 +7,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, WordDefinition};
+use crate::types::{ExecutionLine, Token, WordDefinition};
 
 use super::word_contract::WordContract;
 use super::Interpreter;
@@ -40,16 +40,13 @@ impl Interpreter {
         let def = Arc::new(WordDefinition {
             lines: lines.into(),
             is_builtin: false,
-            tier: Tier::Contrib,
-            stability: Stability::Stable,
-            capabilities: Capabilities::PURE,
             description: None,
             dependencies: HashSet::new(),
             text_references: HashSet::new(),
             original_source: None,
             namespace: None,
             registration_order: self.next_registration_order(),
-            execution_plans: None,
+            compiled_plan: None,
             generated: None,
         });
         let mut visiting = HashSet::new();

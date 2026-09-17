@@ -1,8 +1,8 @@
 //! Verification of declared contracts, profiles, and registry uniqueness.
 
 use super::{
-    collect_duplicate_entries, get_builtin_word_registry, get_coreword_metadata,
-    get_hosted_profile_words, NilPolicy, Partiality, Purity, SafetyLevel, WordProfile,
+    collect_duplicate_entries, get_builtin_word_registry, get_coreword_metadata, NilPolicy,
+    Partiality, Purity, SafetyLevel, WordProfile,
 };
 
 #[test]
@@ -282,7 +282,10 @@ fn aq_ver_profile_a_print_is_the_only_hosted_word() {
     // Output is the only *hosted* effect (LANG.EFFECTS.OUTPUT), so PRINT is the
     // only Word outside the Core profile. DEF/DEL are effectful as well, but
     // their effect stays inside the machine, so they keep the Core profile.
-    let hosted = get_hosted_profile_words();
+    let hosted: Vec<_> = get_builtin_word_registry()
+        .iter()
+        .filter(|word| word.profile == WordProfile::Hosted)
+        .collect();
     assert_eq!(
         hosted.iter().map(|w| w.name.as_str()).collect::<Vec<_>>(),
         vec!["PRINT"],

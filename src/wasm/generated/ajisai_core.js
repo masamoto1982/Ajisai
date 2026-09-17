@@ -11,9 +11,6 @@ export class AjisaiInterpreter {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_ajisaiinterpreter_free(ptr, 0);
     }
-    clear_io_output_buffer() {
-        wasm.ajisaiinterpreter_clear_io_output_buffer(this.__wbg_ptr);
-    }
     /**
      * Discard every value on the stack, leaving the dictionary, the output
      * and every other piece of session state untouched.
@@ -27,13 +24,6 @@ export class AjisaiInterpreter {
      */
     clear_stack() {
         wasm.ajisaiinterpreter_clear_stack(this.__wbg_ptr);
-    }
-    /**
-     * @returns {any}
-     */
-    collect_builtin_word_registry() {
-        const ret = wasm.ajisaiinterpreter_collect_builtin_word_registry(this.__wbg_ptr);
-        return ret;
     }
     /**
      * Returns the canonical Core-listed words.
@@ -59,13 +49,6 @@ export class AjisaiInterpreter {
      */
     collect_core_words_info() {
         const ret = wasm.ajisaiinterpreter_collect_core_words_info(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-     * @returns {any}
-     */
-    collect_error_flow_trace() {
-        const ret = wasm.ajisaiinterpreter_collect_error_flow_trace(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -129,21 +112,6 @@ export class AjisaiInterpreter {
         return ret;
     }
     /**
-     * @returns {string}
-     */
-    extract_io_output_buffer() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const ret = wasm.ajisaiinterpreter_extract_io_output_buffer(this.__wbg_ptr);
-            deferred1_0 = ret[0];
-            deferred1_1 = ret[1];
-            return getStringFromWasm0(ret[0], ret[1]);
-        } finally {
-            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
      * The resource ceilings this interpreter is actually running under, as
      * JSON, under the same names every other Ajisai host publishes them by —
      * literally the same, since `interpreter::limit_profile` is the one place
@@ -170,16 +138,6 @@ export class AjisaiInterpreter {
         } finally {
             wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
-    }
-    /**
-     * @param {string} name
-     * @returns {boolean}
-     */
-    is_safe_preview_word(name) {
-        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.ajisaiinterpreter_is_safe_preview_word(this.__wbg_ptr, ptr0, len0);
-        return ret !== 0;
     }
     /**
      * @param {string} name
@@ -316,14 +274,6 @@ export class AjisaiInterpreter {
         } finally {
             wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
         }
-    }
-    /**
-     * @param {string} _text
-     */
-    update_input_buffer(_text) {
-        const ptr0 = passStringToWasm0(_text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.ajisaiinterpreter_update_input_buffer(this.__wbg_ptr, ptr0, len0);
     }
 }
 if (Symbol.dispose) AjisaiInterpreter.prototype[Symbol.dispose] = AjisaiInterpreter.prototype.free;

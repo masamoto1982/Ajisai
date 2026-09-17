@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use crate::interpreter::word_contract::*;
 use crate::interpreter::Interpreter;
-use crate::types::Capabilities;
 
 async fn contract_for(src: &str, name: &str) -> Arc<WordContract> {
     let mut interp = Interpreter::new();
@@ -32,7 +31,6 @@ async fn pure_arithmetic_user_word_is_complete_and_pure() {
 async fn print_dependency_makes_user_word_effectful() {
     let contract = contract_for("[ PRINT ] 'SAY' DEF", "SAY").await;
     assert_eq!(contract.purity, ContractPurity::Effectful);
-    assert!(contract.capabilities.contains(Capabilities::IO));
 }
 #[tokio::test]
 async fn dependency_chains_widen_monotonically() {

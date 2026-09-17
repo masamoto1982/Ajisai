@@ -16,7 +16,7 @@
     "rust/src/types/fraction_mcdc_tests.rs": 787,
     "rust/src/types/fraction.rs": 727,
     "rust/src/interpreter/arithmetic.rs": 721,
-    "rust/src/interpreter/interpreter_core.rs": 703,
+    "rust/src/interpreter/interpreter_core.rs": 640,
     "rust/src/arithmetic_operation_tests.rs": 679,
     "rust/src/interpreter/dictionary_operation_tests.rs": 663,
     "rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs": 596,
@@ -24,7 +24,7 @@
     "rust/src/types/arena.rs": 531,
     "rust/src/types/display.rs": 522,
     "rust/src/interpreter/execution_loop.rs": 519,
-    "rust/src/interpreter/compiled_plan.rs": 514,
+    "rust/src/interpreter/compiled_plan.rs": 510,
     "rust/src/error.rs": 558
   }
 }
