@@ -1,5 +1,11 @@
 
 
+import {
+    checkIsSwipeExempt,
+    detectSwipeDirection,
+    type GesturePoint
+} from './touch-gestures';
+
 export interface MobileElements {
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
@@ -34,22 +40,6 @@ export const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary']
 
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
-const detectSwipeDirection = (
-    startX: number,
-    startY: number,
-    endX: number,
-    endY: number
-): 'left' | 'right' | null => {
-    const deltaX = endX - startX;
-    const deltaY = endY - startY;
-
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
-        return deltaX > 0 ? 'right' : 'left';
-    }
-
-    return null;
-};
-
 export const resolveNextViewMode = (currentMode: ViewMode, direction: 'left' | 'right'): ViewMode => {
     const currentIndex = VIEW_ORDER.indexOf(currentMode);
     const nextIndex = direction === 'left'
@@ -82,8 +72,10 @@ export const createMobileHandler = (
     options: MobileHandlerOptions = {}
 ): MobileHandler => {
     let currentMode: ViewMode = 'input';
-    let touchStartX = 0;
-    let touchStartY = 0;
+    // `null` means the gesture in progress is not a candidate swipe: it started
+    // on an element that owns its own horizontal drag, or it grew a second
+    // finger (a pinch ends two touches, each with a delta of its own).
+    let swipeOrigin: GesturePoint | null = null;
 
     const updateView = (mode: ViewMode): void => {
         currentMode = mode;
@@ -91,8 +83,8 @@ export const createMobileHandler = (
         applyVisibility(elements, visibility);
     };
 
-    const resolveSwipeGesture = (endX: number, endY: number): void => {
-        const direction = detectSwipeDirection(touchStartX, touchStartY, endX, endY);
+    const resolveSwipeGesture = (origin: GesturePoint, end: GesturePoint): void => {
+        const direction = detectSwipeDirection(origin, end, { thresholdPx: SWIPE_THRESHOLD });
 
         if (direction === null) return;
         const newMode = resolveNextViewMode(currentMode, direction);
@@ -104,18 +96,28 @@ export const createMobileHandler = (
         const container = document.body;
 
         container.addEventListener('touchstart', (e: TouchEvent) => {
-            const touch = e.changedTouches[0];
-            if (touch) {
-                touchStartX = touch.screenX;
-                touchStartY = touch.screenY;
+            if (e.touches.length > 1) {
+                swipeOrigin = null;
+                return;
             }
+            const touch = e.changedTouches[0];
+            if (!touch || checkIsSwipeExempt(e.target)) {
+                swipeOrigin = null;
+                return;
+            }
+            swipeOrigin = { x: touch.screenX, y: touch.screenY };
         }, { passive: true });
 
         container.addEventListener('touchend', (e: TouchEvent) => {
+            const origin = swipeOrigin;
+            swipeOrigin = null;
             if (!checkIsMobile()) return;
+            // Fingers still down: this is one release out of a multi-touch
+            // gesture, and its travel is that gesture's, not a swipe's.
+            if (origin === null || e.touches.length > 0) return;
             const touch = e.changedTouches[0];
             if (touch) {
-                resolveSwipeGesture(touch.screenX, touch.screenY);
+                resolveSwipeGesture(origin, { x: touch.screenX, y: touch.screenY });
             }
         }, { passive: true });
     };

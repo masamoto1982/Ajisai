@@ -8,6 +8,13 @@ export interface GUIElements {
     readonly editorClearBtn: HTMLButtonElement;
     readonly stackClearBtn: HTMLButtonElement;
     readonly editorFormatBtn: HTMLButtonElement;
+    /// The mobile touch action bar (see index.html): the on-screen route to the
+    /// four operations that otherwise exist only as keyboard shortcuts.
+    readonly touchRunBtn: HTMLButtonElement;
+    readonly touchStepBtn: HTMLButtonElement;
+    readonly touchAbortBtn: HTMLButtonElement;
+    readonly touchLookupBtn: HTMLButtonElement;
+    readonly touchResetBtn: HTMLButtonElement;
     readonly exportBtn: HTMLButtonElement;
     readonly importBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
@@ -73,6 +80,11 @@ export const cacheElements = (): GUIElements => ({
     editorClearBtn: requireElementById('editor-clear-btn', HTMLButtonElement),
     stackClearBtn: requireElementById('stack-clear-btn', HTMLButtonElement),
     editorFormatBtn: requireElementById('editor-format-btn', HTMLButtonElement),
+    touchRunBtn: requireElementById('touch-run-btn', HTMLButtonElement),
+    touchStepBtn: requireElementById('touch-step-btn', HTMLButtonElement),
+    touchAbortBtn: requireElementById('touch-abort-btn', HTMLButtonElement),
+    touchLookupBtn: requireElementById('touch-lookup-btn', HTMLButtonElement),
+    touchResetBtn: requireElementById('touch-reset-btn', HTMLButtonElement),
     exportBtn: requireElementById('export-btn', HTMLButtonElement),
     importBtn: requireElementById('import-btn', HTMLButtonElement),
     outputDisplay: requireElementById('output-display', HTMLElement),
