@@ -123,6 +123,25 @@
                 <section id="input-panel" class="input-area" aria-label="Input" tabindex="0">
                     <h2 class="visually-hidden">Input</h2>
                     <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here"></textarea>
+                    <!-- Touch action bar: shown only in the mobile (one-surface)
+                         presentation. Run, Step, Lookup and Reset otherwise
+                         exist only as keyboard shortcuts, which a phone has no
+                         way to press — Run's triple-tap was the single
+                         on-screen route to running anything, and the other
+                         four had none. Format and Clear keep their inline
+                         corner buttons and are not repeated here. -->
+                    <div id="editor-touch-actions" class="editor-touch-actions" aria-label="Editor actions" role="toolbar">
+                        <button id="touch-run-btn" type="button" class="btn touch-action-btn touch-action-btn--primary" title="Run (Shift+Enter)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            Run
+                        </button>
+                        <button id="touch-step-btn" type="button" class="btn touch-action-btn" title="Run one step (Ctrl+Enter)">Step</button>
+                        <button id="touch-abort-btn" type="button" class="btn touch-action-btn" title="Stop a running step (Escape)">Stop</button>
+                        <button id="touch-lookup-btn" type="button" class="btn touch-action-btn" title="Look up the word at the cursor (Ctrl+Alt+L)">Look up</button>
+                        <button id="touch-reset-btn" type="button" class="btn touch-action-btn" title="Reset everything (Ctrl+Alt+Enter)">Reset</button>
+                    </div>
                     <button id="editor-format-btn" type="button" class="inline-clear-btn" aria-label="Format code" title="Format (Shift+Alt+F)">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                             <path d="M4 6h16M4 12h10M4 18h13"/>

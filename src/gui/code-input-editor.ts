@@ -86,7 +86,12 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
 });
 
 const MAX_SUGGESTIONS = 10;
-const MIN_SUGGESTION_TRIGGER_LENGTH = 3;
+// Two characters, not three. The mobile cheat sheet advertises autocomplete
+// while typing, and a three-character floor silently withholds it for exactly
+// the prefixes a phone typist most wants it for: `AB` for `ABS`, `DU` for
+// `DUP`. Ten results are the ceiling either way (`MAX_SUGGESTIONS`), so a
+// shorter prefix costs a longer list, not an unbounded one.
+const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
 const MOBILE_BREAKPOINT = 768;
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
@@ -496,7 +501,13 @@ export const createEditor = (
         syncLastKnownSelection();
     };
 
-    const getWordAtCursor = (): string => extractToken(element.value, element.selectionStart).token;
+    // Reads the last known caret position rather than the live one: the mobile
+    // Lookup button takes focus off the textarea when it is tapped, and a
+    // blurred textarea's own `selectionStart` is not something to rely on.
+    // `lookupEditableSelectionRange` is the same caret every other
+    // cursor-addressed operation here uses.
+    const getWordAtCursor = (): string =>
+        extractToken(element.value, lookupEditableSelectionRange().start).token;
 
     return {
         extractValue,

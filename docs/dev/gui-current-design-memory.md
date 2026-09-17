@@ -6,22 +6,29 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 - Single-page web GUI (`index.html`) with a two-column main layout.
 - Left/editor side can show **Input** or **Output**.
 - Right/state side can show **Stack** or **Dictionary**.
-- Mobile mode switches to a one-panel-at-a-time selector (`input/output/stack/dictionary`).
+- Mobile mode switches to a one-panel-at-a-time selector (`input/output/stack/dictionary`), cycled by the `Select panel` dropdown, by a horizontal swipe, or by a double-tap on the Stack or Output area.
 
 ## Header/footer and app chrome
-- Header includes Ajisai logo, version text, and Test button.
+- Header includes the Ajisai logo, the `Playground` badge, and links out to the MCP install instructions and the Reference. There is no Test button (the line that said so described a control that had been removed).
 - Footer includes copyright + GitHub link.
 - Skip link exists for accessibility (`Skip to main content`).
 
 ## Primary interaction model
 - Main code entry is a textarea.
-- Run via button or `Shift+Enter`.
-- Step execution via `Ctrl+Enter`.
-- Abort via `Escape`. The window-level Escape listener captures and stops propagation, so it asks the editor first (`Editor.dismissSuggestions`): an open suggestion panel takes the key and closes, and Abort gets Escape only when there is no panel to close. Without that hand-off the panel could not be dismissed with Escape at all.
-- Full reset via `Ctrl+Alt+Enter` (with confirmation dialog).
+- Run via `Shift+Enter`, or the `Run` button on the mobile touch action bar, or a triple-tap/triple-click in the editor. (This line used to say "Run via button" while no Run button existed anywhere in `index.html` — on a phone the triple-tap was the only route to running a program at all, which is what the touch action bar exists to fix.)
+- Step execution via `Ctrl+Enter` or the bar's `Step`.
+- Abort via `Escape` or the bar's `Stop`. The window-level Escape listener captures and stops propagation, so it asks the editor first (`Editor.dismissSuggestions`): an open suggestion panel takes the key and closes, and Abort gets Escape only when there is no panel to close. Without that hand-off the panel could not be dismissed with Escape at all.
+- Full reset via `Ctrl+Alt+Enter` or the bar's `Reset`; both ask first, through the same `RESET_CONFIRM_MESSAGE`.
 - **Recall of submitted source** via `Ctrl+Up` / `Ctrl+Down` (`src/gui/editor-history.ts`). A successful Run clears the editor and Reset clears it too, while the Stack persists across runs; without recall the natural edit-and-rerun loop meant retyping the whole program. History is session-lived, holds source text only, survives Reset, and stores neither values nor dictionary entries. The plain arrows are left to caret movement and to the suggestion panel's own list navigation.
 - Output panel supports copy-to-clipboard.
 - Clicking output panel (desktop) toggles focus back to input mode.
+
+## Touch interaction (mobile presentation)
+- **Every operation has an on-screen control.** The touch action bar under the editor (`#editor-touch-actions`) carries Run, Step, Stop, Look up and Reset — the five operations that previously existed only as keyboard shortcuts. Format and Editor clear keep their inline corner buttons; Stack clear keeps its own. Normative as of the Presentation Profile's fourth rule ("No operation is keyboard-only").
+- **A tap is a stationary touch.** `createMultiTapRecognizer` and `checkIsStationary` (`src/gui/touch-gestures.ts`) count a run of taps only while they stay inside the interval *and* inside the movement tolerance of the run's first tap. The tap counting used to sit inline in the bindings and read every `touchend` as a tap, so the end of a drag-to-select, and each release of a pinch, counted toward the triple-tap that runs the program.
+- **A swipe belongs to the layout, not to the element under the finger.** `checkIsSwipeExempt` keeps the panel-cycling swipe off text fields, selects, and the suggestion panel, whose own horizontal drag is a selection or a scroll. The handler also drops a gesture that grew a second touch.
+- **The symbol palette does not cover the cheat sheet.** In the mobile presentation `.editor-suggestions--symbols` is in flow at the bottom of the Input surface rather than positioned at the caret. It opens on focus into an empty editor, which is exactly when the placeholder is showing the only written record of the gestures.
+- **Text fields are at least 16px and tap targets at least 44px** in the mobile block of `components.css`. Under 16px, iOS Safari zooms the page on focus and does not zoom back.
 
 ## Dictionary UX
 - Dictionary panel supports sheet switching:

@@ -201,6 +201,11 @@
 #code-input {
     width: 100%;
     min-height: 0;
+    /* The editor counts taps of its own (triple-tap to Run), and the browser's
+       double-tap-to-zoom sits inside that count: without this the first two
+       taps of a Run could zoom the page instead. `manipulation` keeps pinch
+       zoom and scrolling — only the double-tap shortcut is given up. */
+    touch-action: manipulation;
     padding: 0.75rem;
     border: var(--border-main);
     font-family: var(--font-stack-mono);
@@ -224,10 +229,19 @@
 }
 
 
+/* Touch action bar under the editor. Hidden wherever a keyboard is the
+   expected input device: on desktop every operation it carries already has a
+   shortcut printed in the editor's own placeholder. The mobile block below
+   reveals it. */
+.editor-touch-actions {
+    display: none;
+}
+
 .inline-clear-btn {
     position: absolute;
     width: 1.5rem;
     height: 1.5rem;
+    touch-action: manipulation;
     padding: 0;
     border: none;
     background: none;
@@ -282,6 +296,7 @@
 
 .editor-suggestions {
     position: absolute;
+    touch-action: manipulation;
 
     min-width: 180px;
     max-width: calc(100% - 1rem);
@@ -359,6 +374,7 @@
     margin: 0;
     cursor: pointer;
     accent-color: var(--color-primary);
+    touch-action: manipulation;
 }
 
 /* Cost summary: per-run cost-model activity (Reference: Cost Model),
@@ -501,16 +517,24 @@
     gap: 0.5rem;
 }
 
+/* The usage example for the selected word. It used to be one `nowrap` line
+   with `text-overflow: ellipsis`, which at a phone's width cut a 479px example
+   off inside a 275px box — the line is there to show how the word is used, and
+   the part that showed was the part before the interesting bit. It wraps now,
+   up to three lines, keeping a one-line floor so the word list does not jump
+   as the selection moves between a short example and none at all. */
 .dictionary-sheet .word-info-display {
-    display: block;
-    flex: 0 0 1.25rem;
-    height: 1.25rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    flex: 0 0 auto;
+    min-height: 1.25rem;
     line-height: 1.25rem;
     max-width: 100%;
     color: var(--color-text);
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
 }
 
 .dictionary-sheet .word-info-display.is-placeholder {
@@ -932,10 +956,161 @@
     .stack-area {
         cursor: pointer;
         position: relative;
+        /* Both areas count double-taps to move to the next surface, which is
+           the same gesture the browser reads as zoom. */
+        touch-action: manipulation;
     }
 
     .input-area {
         cursor: default;
+    }
+
+    /* ── Touch targets and text fields ──────────────────────────────────────
+       Two rules run through this block. Anything meant to be tapped gets at
+       least 2.75rem (44px, the smaller of the two platform floors) in its
+       short axis — measured on the hit area, which for an icon button is
+       padding around a glyph that keeps its drawn size. And anything with a
+       caret gets at least 1rem of text: iOS Safari zooms the page when a field
+       under 16px takes focus, and it does not zoom back out, so the editor at
+       0.95rem meant the layout shifted under the user the moment they started
+       typing. */
+
+    #code-input,
+    .vocabulary-search-input {
+        font-size: 1rem;
+    }
+
+    /* The same trio the base rule sizes together: the panel selector, the
+       dictionary sheet selector, and the sheet selector's native trigger. */
+    .area-selector select,
+    .dictionary-sheet-select,
+    .sheet-selector-native-trigger {
+        min-height: 2.75rem;
+        font-size: 1rem;
+    }
+
+    /* The three corner buttons: the glyph keeps its drawn size and the padding
+       around it becomes the target, so they look the same and are four times
+       the area to hit. */
+    #editor-clear-btn,
+    #editor-format-btn,
+    #stack-clear-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
+    #editor-clear-btn,
+    #stack-clear-btn {
+        top: 0;
+        right: 0;
+    }
+
+    #editor-format-btn {
+        bottom: 0;
+        right: 0;
+    }
+
+    /* The search field's own clear button sits inside the field, so it is
+       sized against the field rather than squared off: full height to hit,
+       and the field reserves exactly its width as right padding so the search
+       text never runs underneath it. */
+    .vocabulary-search-input {
+        min-height: 2.75rem;
+        padding-right: 2.5rem;
+        /* The desktop 120px floor is wider than the share this field gets in a
+           300px selector row, so the row measured 313px against a 300px
+           viewport and the field — with its clear button — ran off the right
+           edge. The page never grew a scrollbar for it (the body clips), which
+           is why the overflow reads as "nothing is cut off" from the document
+           and as a half-visible × on the screen. The field shrinks here
+           instead. */
+        min-width: 0;
+    }
+
+    .vocabulary-search-clear-btn {
+        width: 2.5rem;
+        height: 2.75rem;
+        right: 0;
+    }
+
+    .header-actions .btn,
+    .vocabulary-actions .btn,
+    #copy-output-btn {
+        min-height: 2.75rem;
+    }
+
+    .stack-latex-toggle {
+        min-height: 2.75rem;
+        padding-right: 0.25rem;
+        font-size: 0.9rem;
+    }
+
+    .stack-latex-toggle input {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    /* Word completions only. The symbol palette keeps its own 2.25rem cells:
+       they are already comfortable to hit (six to a row, no neighbours to
+       mis-hit into), and at 44px the five rows of it would take another 40px
+       out of the editor it sits under. */
+    .editor-suggestion-item {
+        min-height: 2.75rem;
+        font-size: 0.95rem;
+    }
+
+    /* Dictionary words are packed shoulder to shoulder, so a short button is
+       not only hard to hit, it is hard to hit *instead of its neighbour*. The
+       list scrolls either way. */
+    .word-button {
+        min-height: 2.75rem;
+        touch-action: manipulation;
+    }
+
+    /* ── The symbol palette sits below the editor, not over it ──────────────
+       The palette opens on focus into an empty editor — which is exactly when
+       the editor is showing the placeholder cheat sheet, the only place the
+       gestures are written down. Positioned at the caret it covered them, so
+       tapping in to read how to run something hid how to run something. In
+       flow it takes its own space at the bottom of the Input surface and the
+       textarea (flex: 1) gives way. Word completions keep their absolute
+       position at the caret: those belong to the text being typed. */
+    .editor-suggestions--symbols {
+        position: static;
+        order: 1;
+        max-width: none;
+    }
+
+    .editor-touch-actions {
+        display: flex;
+        order: 2;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* Two rows: Run on its own, the other four sharing the next. The bar sits
+       between the editor and the bottom of the surface, so every row it takes
+       is a row the editor loses — the four share the width evenly rather than
+       each claiming a comfortable minimum and wrapping. */
+    .touch-action-btn {
+        flex: 1 1 0%;
+        align-self: stretch;
+        min-width: 0;
+        min-height: 2.75rem;
+        padding: 0.5rem 0.25rem;
+        gap: 0.25rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        touch-action: manipulation;
+    }
+
+    .touch-action-btn--primary {
+        flex-basis: 100%;
+        font-size: 0.95rem;
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: #fff;
+        font-weight: 600;
     }
 }
 

@@ -52,14 +52,21 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     'stop a running step          → Escape'
 ].join('\n');
 
+// The mobile sheet names the controls first and the gestures after, because
+// that is the order in which they can be found: a control is on screen, a
+// gesture has to be told to you. It also names the swipe, which cycles all
+// four surfaces and went unmentioned here while two double-taps that cover
+// two of those transitions were spelled out. It is deliberately shorter than
+// the desktop sheet: the symbol palette opens under it and the editor gives up
+// the room, so the lines that survive have to be the ones worth keeping.
 const MOBILE_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
-    'Run → Triple-tap the editor',
-    'Stack → Output → Double-tap Stack area',
-    'Output → Editor → Double-tap Output area',
-    'Input assist → Tap words below',
-    'Autocomplete → Tap suggestions while typing'
+    'Run, Step, Stop, Look up, Reset → Buttons below',
+    'Format, clear → Corner buttons',
+    'Change surface → Swipe, or the list above',
+    'Run shortcut → Triple-tap here',
+    'Symbols and words below tap into the editor'
 ].join('\n');
 
 export interface LayoutState {

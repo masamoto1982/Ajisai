@@ -9,6 +9,23 @@ import type { GUIElements } from './gui-dom-cache';
 import type { LayoutState } from './gui-layout-state';
 import type { LayoutController } from './layout/layout-controller';
 import { createEditorHistory } from './editor-history';
+import {
+    checkIsStationary,
+    createMultiTapRecognizer,
+    type GesturePoint
+} from './touch-gestures';
+
+// Gesture tuning, in the same class as the mobile breakpoint: a run of taps is
+// one gesture while the taps stay inside this much time and this much of the
+// screen. The tolerance is generous enough for a thumb that does not land
+// twice on the same pixel and tight enough that a drag-to-select is not three
+// taps in a row.
+const MULTI_TAP_INTERVAL_MS = 500;
+const TAP_MOVEMENT_TOLERANCE_PX = 24;
+
+// Reset is the one operation that throws away the stack *and* the dictionary,
+// so both of its triggers — the shortcut and the mobile button — ask first.
+const RESET_CONFIRM_MESSAGE = 'Are you sure you want to reset the system?';
 
 export type GuiEventBindingContext = {
     readonly elements: GUIElements;
@@ -71,27 +88,19 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
         activeMode: ViewMode,
         nextMode: ViewMode
     ): void => {
-        const MULTI_TAP_INTERVAL_MS = 500;
-        let tapCount = 0;
-        let lastTapAt = 0;
+        const recognizer = createMultiTapRecognizer({
+            intervalMs: MULTI_TAP_INTERVAL_MS,
+            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
+        });
 
         target.addEventListener('click', (e: MouseEvent) => {
             if (!mobile.isMobile()) return;
             if (layoutState.currentMode !== activeMode) return;
             if ((e.target as HTMLElement).closest('button, a')) return;
 
-            const now = Date.now();
-            if (now - lastTapAt <= MULTI_TAP_INTERVAL_MS) {
-                tapCount += 1;
-            } else {
-                tapCount = 1;
-            }
-            lastTapAt = now;
-
-            if (tapCount >= 2) {
+            if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= 2) {
+                recognizer.reset();
                 switchArea(nextMode);
-                tapCount = 0;
-                lastTapAt = 0;
             }
         });
     };
@@ -182,6 +191,29 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
     elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
 
+    // The touch action bar under the editor. Every operation on it also has a
+    // keyboard shortcut, and on a device with no hardware keyboard the shortcut
+    // is not a route to anything — Run, Step, Abort, Lookup and Reset had no
+    // on-screen control at all, so a program could be typed on a phone and then
+    // neither stepped nor reset. These buttons are that route; the shortcuts and
+    // the triple-tap keep working unchanged.
+    elements.touchRunBtn.addEventListener('click', () => runEditorCode());
+    elements.touchStepBtn.addEventListener('click', () => { void executionController.executeStep(); });
+    // The same pair the Escape branch below runs, and equally harmless with
+    // nothing in flight.
+    elements.touchAbortBtn.addEventListener('click', () => {
+        WORKER_MANAGER.abortAll();
+        executionController.abortExecution();
+    });
+    elements.touchLookupBtn.addEventListener('click', () => {
+        executionController.lookupWord(editor.getWordAtCursor());
+    });
+    elements.touchResetBtn.addEventListener('click', () => {
+        if (confirm(RESET_CONFIRM_MESSAGE)) {
+            void executionController.executeReset();
+        }
+    });
+
 
 
     elements.codeInput.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -204,59 +236,70 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         }
     });
 
+    // Triple-tap the editor to Run. This is the shortcut, not the only way in:
+    // the Run button below the editor is, and a gesture that shares its shape
+    // with the OS's own paragraph-select must never be the sole route to
+    // running a program. What it must be is deliberate, so a tap here is a
+    // touch that went down and came up in the same place, on its own: the end
+    // of a drag-to-select and one release out of a pinch are not taps, and
+    // before this guard three of either ran the program.
     {
-        const MULTI_TAP_INTERVAL_MS = 500;
-        let tapCount = 0;
-        let lastTapAt = 0;
+        const recognizer = createMultiTapRecognizer({
+            intervalMs: MULTI_TAP_INTERVAL_MS,
+            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
+        });
+        let touchOrigin: GesturePoint | null = null;
+
+        elements.codeInput.addEventListener('touchstart', (e: TouchEvent) => {
+            const touch = e.changedTouches[0];
+            if (e.touches.length > 1 || !touch) {
+                recognizer.reset();
+                touchOrigin = null;
+                return;
+            }
+            touchOrigin = { x: touch.clientX, y: touch.clientY };
+        }, { passive: true });
 
         elements.codeInput.addEventListener('touchend', (e: TouchEvent) => {
+            const origin = touchOrigin;
+            touchOrigin = null;
             if (!mobile.isMobile()) return;
-            if (e.changedTouches.length === 0) return;
 
-            const now = Date.now();
-            if (now - lastTapAt <= MULTI_TAP_INTERVAL_MS) {
-                tapCount += 1;
-            } else {
-                tapCount = 1;
+            const touch = e.changedTouches[0];
+            if (origin === null || !touch || e.touches.length > 0) {
+                recognizer.reset();
+                return;
             }
 
-            if (tapCount >= 3) {
+            const end: GesturePoint = { x: touch.clientX, y: touch.clientY };
+            if (!checkIsStationary(origin, end, TAP_MOVEMENT_TOLERANCE_PX)) {
+                recognizer.reset();
+                return;
+            }
+
+            if (recognizer.registerTap(end, Date.now()) >= 3) {
+                recognizer.reset();
                 // Run; the post-execution auto-navigation (applyExecutionAreaState)
                 // chooses the destination surface from what actually changed, so
                 // we deliberately do not force a switch to Stack here.
                 runEditorCode();
-                tapCount = 0;
-                lastTapAt = 0;
-                return;
             }
-
-            lastTapAt = now;
         }, { passive: true });
     }
 
     {
-        const MULTI_CLICK_INTERVAL_MS = 500;
-        let clickCount = 0;
-        let lastClickAt = 0;
+        const recognizer = createMultiTapRecognizer({
+            intervalMs: MULTI_TAP_INTERVAL_MS,
+            movementTolerancePx: TAP_MOVEMENT_TOLERANCE_PX
+        });
 
-        elements.codeInput.addEventListener('click', () => {
+        elements.codeInput.addEventListener('click', (e: MouseEvent) => {
             if (mobile.isMobile()) return;
 
-            const now = Date.now();
-            if (now - lastClickAt <= MULTI_CLICK_INTERVAL_MS) {
-                clickCount += 1;
-            } else {
-                clickCount = 1;
-            }
-
-            if (clickCount >= 3) {
+            if (recognizer.registerTap({ x: e.clientX, y: e.clientY }, Date.now()) >= 3) {
+                recognizer.reset();
                 runEditorCode();
-                clickCount = 0;
-                lastClickAt = 0;
-                return;
             }
-
-            lastClickAt = now;
         });
     }
 
@@ -279,7 +322,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
             e.stopImmediatePropagation();
         }
         if (e.key === 'Enter' && e.ctrlKey && e.altKey) {
-            if (confirm('Are you sure you want to reset the system?')) {
+            if (confirm(RESET_CONFIRM_MESSAGE)) {
                 executionController.executeReset();
             }
             e.preventDefault();
