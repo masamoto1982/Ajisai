@@ -1,4 +1,3 @@
-pub mod arena;
 mod bigint_gcd;
 pub mod display;
 pub mod exact;

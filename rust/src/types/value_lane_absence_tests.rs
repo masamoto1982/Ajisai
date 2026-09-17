@@ -5,14 +5,13 @@
 //! different value. `Value` records one on the value itself; a dense tensor
 //! records one per lane, beside the lane. This file is the second half's
 //! coverage, and it is one file rather than three because the property is one
-//! property: promotion into dense storage, materialization back out, the
-//! persistence codec, and the value arena each used to drop it, and each is a
-//! place a future change could drop it again.
+//! property: promotion into dense storage, materialization back out, and the
+//! persistence codec each used to drop it, and each is a place a future change
+//! could drop it again.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use super::arena::{arena_to_value, value_to_arena};
 use super::fraction::Fraction;
 use super::value_persist::{decode_stack, encode_stack};
 use super::{DenseTensor, Interpretation, Value, ValueData};
@@ -126,31 +125,6 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
         "a computed absence is not a written one, in either representation"
     );
     assert_ne!(hash_of(&dense), hash_of(&written));
-}
-
-/// **An absent lane keeps its reason across the arena boundary.**
-///
-/// The arena stored a tensor as `Vec<Fraction>`, which records that a lane
-/// is absent and nothing about why — the same gap `NodeKind::Nil(reason)`
-/// had already closed for a whole-value absence, left open one level down.
-#[test]
-fn tensor_roundtrip_through_arena_preserves_a_lanes_reason() {
-    let value = Value::from_vector_promoted(vec![
-        Value::from_int(1),
-        Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable),
-    ]);
-    assert!(
-        matches!(&value.data, ValueData::Tensor { data, .. } if !data.is_valid(1)),
-        "the fixture must be a tensor with an absent lane"
-    );
-
-    let (arena, root) = value_to_arena(&value);
-    let restored = arena_to_value(&arena, root);
-    let ValueData::Tensor { data, .. } = &restored.data else {
-        panic!("expected a tensor back, got {:?}", restored.data);
-    };
-    assert_eq!(data.lane_reason(1), Some(NilReason::DivisionByZero));
-    assert_eq!(restored, value);
 }
 
 /// **A tensor's absent lane keeps its reason across the persistence
