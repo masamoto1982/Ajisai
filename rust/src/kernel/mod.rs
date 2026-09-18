@@ -2,9 +2,8 @@
 //!
 //! The Semantic Spine is the single place where Ajisai's *meaning* is allowed
 //! to exist. Its public API names only concepts that the language
-//! specification exposes to a program: the canonical value domains, the
-//! reason-centric absence model, and the outward-observable projection of the
-//! runtime.
+//! specification exposes to a program: the canonical value domains and the
+//! reason-centric absence model.
 //!
 //! Governing invariant (migration plan §11, LANG.VALUES.DISJOINT):
 //!
@@ -18,21 +17,23 @@
 //! vector representation). They are a storage detail of a value domain, never a
 //! domain of their own.
 //!
-//! The spine and the legacy value model coexist through the `From`/`Into`
-//! adapters in [`legacy_adapter`] while consumers migrate onto it one at a
-//! time. Wiring has begun: `interpreter::arithmetic` routes the scalar-scalar
-//! `ADD`/`SUB`/`MUL`/`DIV` path through [`arithmetic`] (see that module's own
-//! doc comment for the current scope). See
-//! `docs/dev/semantic-spine-migration-plan.md` for the full migration record.
+//! ## Scope
+//!
+//! What lives here is what a runtime path actually reaches: the value domains,
+//! the absence model, the scalar-scalar arithmetic primitives
+//! `interpreter::arithmetic` routes `ADD`/`SUB`/`MUL`/`DIV` through, and the
+//! `From`/`Into` adapters in [`legacy_adapter`] that the differential tests
+//! compare across. A shared Word-execution wrapper, a spine-level word
+//! contract, and an `Observation` projection were built here ahead of their
+//! consumers and removed once measurement showed no runtime path had reached
+//! them; see `docs/dev/semantic-spine-migration-plan.md` §10.13 for that record
+//! and for what a future phase would have to bring with it.
 
 pub mod arithmetic;
-pub mod execute;
 pub mod generated;
 pub mod nil;
-pub mod observation;
 pub mod scalar;
 pub mod value;
-pub mod word_contract;
 
 // The temporary legacy <-> spine bridge. A private module: its `From` impls are
 // coherent crate-wide regardless, and keeping it unexported holds the spine's
@@ -40,7 +41,6 @@ pub mod word_contract;
 mod legacy_adapter;
 
 pub use nil::NilReason;
-pub use observation::{Observation, ObservedValue, PresentationHint};
 pub use scalar::Scalar;
 pub use value::KernelValue;
 
@@ -62,17 +62,5 @@ mod tests {
         ];
         // The spine has exactly six value domains; this array is the whole set.
         assert_eq!(domains.len(), 6);
-    }
-
-    #[test]
-    fn observation_pairs_a_value_with_a_presentation_hint() {
-        let observed = ObservedValue {
-            value: KernelValue::String(Arc::from("2026-07-30")),
-            presentation: PresentationHint::Timestamp,
-        };
-        let observation = Observation {
-            stack: vec![observed.clone()],
-        };
-        assert_eq!(observation.stack, vec![observed]);
     }
 }

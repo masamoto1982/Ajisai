@@ -132,7 +132,7 @@ mod tests {
     // is fetched live from the vocabulary on every hit. That indirection is load
     // bearing, and the epoch check alone does not replace it: caching the
     // `Arc<WordDefinition>` beside the vocabulary was tried and reverted,
-    // because `store_execution_plan_set_for_word` replaces a word's `Arc` in
+    // because `store_compiled_plan_for_word` replaces a word's `Arc` in
     // `user_words` when it caches a compiled plan and — rightly — does not bump
     // the dictionary epoch for it, a plan being an optimization rather than a
     // dictionary change. A cached `Arc` therefore pinned the pre-plan
@@ -215,7 +215,7 @@ mod tests {
 
     // ── a dispatch asks for a name it already has ─────────────────────────────
     //
-    // `execute_word_core_inner` canonicalizes the name once, and every question
+    // `execute_word_core` canonicalizes the name once, and every question
     // it then asks is about *that* name. Two of those questions used to rebuild
     // it first: the binding lookup re-uppercased a name canonicalization had
     // already uppercased, and resolution answered with a freshly allocated

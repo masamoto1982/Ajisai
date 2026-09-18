@@ -521,7 +521,6 @@ fn semantic_role_for(word: Option<&str>) -> &'static str {
     if let Some(meta) = crate::coreword_registry::get_coreword_metadata(word) {
         return match meta.profile {
             crate::coreword_registry::WordProfile::Hosted => "HostedEffect",
-            crate::coreword_registry::WordProfile::PlatformSpecific => "Extension",
             crate::coreword_registry::WordProfile::Core => {
                 if matches!(word, "COMPARE-WITHIN") {
                     "Primitive"

@@ -53,7 +53,6 @@ pub struct SurfaceForm {
     /// Whether the concept is a runtime word. Every entry in [`SURFACE_FORMS`]
     /// is `false`: these are lexical / structural / reserved forms only.
     pub runtime_word: bool,
-    pub summary: &'static str,
 }
 
 /// The lexical / structural / reserved surface forms.
@@ -66,14 +65,14 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         concept: "COMMENT-LINE",
         kind: SurfaceFormKind::SourceDirective,
         runtime_word: false,
-        summary: "Line comment: characters from `#` to end of line are ignored",
+        // Line comment: characters from `#` to end of line are ignored
     },
     SurfaceForm {
         surface: "|",
         concept: "COND-CLAUSE",
         kind: SurfaceFormKind::ControlDirective,
         runtime_word: false,
-        summary: "COND clause separator (guard | body)",
+        // COND clause separator (guard | body)
     },
     // `IDLE` is the else-guard: a clause whose guard is exactly this one name
     // fires when no earlier clause did. It is matched positionally by
@@ -89,21 +88,21 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         concept: "COND-ELSE-GUARD",
         kind: SurfaceFormKind::ControlDirective,
         runtime_word: false,
-        summary: "COND else-guard: fires when no earlier clause did",
+        // COND else-guard: fires when no earlier clause did
     },
     SurfaceForm {
         surface: "[",
         concept: "BEGIN-VECTOR",
         kind: SurfaceFormKind::DelimiterSugar,
         runtime_word: false,
-        summary: "Vector start",
+        // Vector start
     },
     SurfaceForm {
         surface: "]",
         concept: "END-VECTOR",
         kind: SurfaceFormKind::DelimiterSugar,
         runtime_word: false,
-        summary: "Vector end",
+        // Vector end
     },
     // Retired, not sugar. Code blocks and vectors were unified onto `[` `]`,
     // and the tokenizer has rejected `{` and `}` ever since. They stayed
@@ -117,66 +116,41 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         concept: "RETIRED-BEGIN-BLOCK",
         kind: SurfaceFormKind::RetiredForm,
         runtime_word: false,
-        summary: "Retired block start: use '[' — vectors and code blocks are one bracket",
+        // Retired block start: use '[' — vectors and code blocks are one bracket
     },
     SurfaceForm {
         surface: "}",
         concept: "RETIRED-END-BLOCK",
         kind: SurfaceFormKind::RetiredForm,
         runtime_word: false,
-        summary: "Retired block end: use ']' — vectors and code blocks are one bracket",
+        // Retired block end: use ']' — vectors and code blocks are one bracket
     },
     SurfaceForm {
         surface: "'",
         concept: "STRING-QUOTE",
         kind: SurfaceFormKind::LiteralSugar,
         runtime_word: false,
-        summary: "String literal delimiter (serves as both open and close)",
+        // String literal delimiter (serves as both open and close)
     },
     SurfaceForm {
         surface: "(",
         concept: "RESERVED-BEGIN",
         kind: SurfaceFormKind::ReservedMarker,
         runtime_word: false,
-        summary: "Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)",
+        // Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)
     },
     SurfaceForm {
         surface: ")",
         concept: "RESERVED-END",
         kind: SurfaceFormKind::ReservedMarker,
         runtime_word: false,
-        summary: "Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)",
+        // Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)
     },
 ];
 
 /// Look up the surface-form metadata for a symbol.
 pub fn lookup_surface_form(surface: &str) -> Option<&'static SurfaceForm> {
     SURFACE_FORMS.iter().find(|f| f.surface == surface)
-}
-
-/// Human-readable label for a surface-form kind, for diagnostics.
-pub fn surface_form_kind_label(kind: SurfaceFormKind) -> &'static str {
-    match kind {
-        SurfaceFormKind::DelimiterSugar => "delimiter sugar",
-        SurfaceFormKind::LiteralSugar => "literal sugar",
-        SurfaceFormKind::SourceDirective => "a source directive",
-        SurfaceFormKind::ControlDirective => "control directive sugar",
-        SurfaceFormKind::ReservedMarker => "a reserved marker",
-        SurfaceFormKind::RetiredForm => "a retired form",
-    }
-}
-
-/// One-line diagnostic describing a surface form, e.g.
-/// `'|' is control directive sugar for COND-CLAUSE.`
-pub fn describe_surface_form(surface: &str) -> Option<String> {
-    lookup_surface_form(surface).map(|f| {
-        format!(
-            "'{}' is {} for {}.",
-            f.surface,
-            surface_form_kind_label(f.kind),
-            f.concept
-        )
-    })
 }
 
 #[cfg(test)]
@@ -280,12 +254,6 @@ mod tests {
                 "'{}' should name the bracket that replaced it: {message}",
                 form.surface
             );
-            assert!(
-                form.summary.contains("Retired"),
-                "'{}' summary should say it is retired: {}",
-                form.surface,
-                form.summary
-            );
         }
     }
 
@@ -310,17 +278,5 @@ mod tests {
         assert_ne!(canonicalize_core_word_name("{"), "RETIRED-BEGIN-BLOCK");
         assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
         assert_ne!(canonicalize_core_word_name("|"), "COND-CLAUSE");
-    }
-
-    #[test]
-    fn describe_is_diagnostic_friendly() {
-        assert_eq!(
-            describe_surface_form("|").unwrap(),
-            "'|' is control directive sugar for COND-CLAUSE."
-        );
-        assert_eq!(
-            describe_surface_form("]").unwrap(),
-            "']' is delimiter sugar for END-VECTOR."
-        );
     }
 }

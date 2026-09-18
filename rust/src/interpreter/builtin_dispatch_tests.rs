@@ -1,7 +1,7 @@
 //! A Core Word is dispatched from the registry entry its definition carries,
 //! not from a second lookup by name.
 //!
-//! `execute_word_core_inner` resolves a name to an `Arc<WordDefinition>` and
+//! `execute_word_core` resolves a name to an `Arc<WordDefinition>` and
 //! then, for a Core Word, used to find the *same* Word again by string:
 //! `execute_builtin` re-canonicalized the name and `generated_word` scanned the
 //! 65-entry registry comparing names. That ran once per element — 220,000

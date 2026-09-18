@@ -158,16 +158,6 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn collect_builtin_word_registry(&self) -> JsValue {
-        to_value(&crate::coreword_registry::get_builtin_word_registry()).unwrap_or(JsValue::NULL)
-    }
-
-    #[wasm_bindgen]
-    pub fn is_safe_preview_word(&self, name: &str) -> bool {
-        crate::coreword_registry::is_safe_preview_word(name)
-    }
-
-    #[wasm_bindgen]
     pub fn collect_core_word_aliases_info(&self) -> JsValue {
         to_value(&crate::core_word_aliases::collect_core_word_aliases()).unwrap_or(JsValue::NULL)
     }
@@ -272,17 +262,6 @@ impl AjisaiInterpreter {
         Ok(())
     }
 
-    #[wasm_bindgen]
-    pub fn update_input_buffer(&mut self, _text: String) {}
-
-    #[wasm_bindgen]
-    pub fn extract_io_output_buffer(&self) -> String {
-        String::new()
-    }
-
-    #[wasm_bindgen]
-    pub fn clear_io_output_buffer(&mut self) {}
-
     /// Override the execution step budget (water level, LANG.MACHINE.LIMITS) for
     /// subsequent executions. A runtime safety control, not a language
     /// semantic: the host may raise or lower it; never calling this keeps
@@ -296,7 +275,43 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn collect_error_flow_trace(&mut self) -> JsValue {
+    pub fn restore_user_words(&mut self, words_js: JsValue) -> Result<(), String> {
+        let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
+            .map_err(|e| format!("Failed to deserialize words: {}", e))?;
+
+        // A restored word's saved `dictionary` label is legacy state: the
+        // dictionary has two tiers and User is one of them, so every restored
+        // definition lands in the same place.
+        let entries = words.into_iter().map(|word| {
+            (
+                word.name,
+                word.definition.unwrap_or_default(),
+                word.description,
+            )
+        });
+
+        // Skipping an unreadable entry rather than raising is what keeps the
+        // rest of a dictionary: see `restore_user_word_definitions`. The
+        // skipped names are not raised here either — throwing would abort the
+        // host's own post-restore reconciliation and leave the session holding
+        // a half-restored dictionary, which is the outcome this avoids. The
+        // host reports them by comparing what it asked for against
+        // `collect_user_words_info`.
+        let _skipped = self
+            .interpreter
+            .restore_user_word_definitions(entries)
+            .map_err(|e| e.to_string())?;
+
+        let _ = self.interpreter.collect_output();
+
+        Ok(())
+    }
+}
+
+/// Not part of the exported surface: every run folds the trace into its own
+/// result envelope (`errorFlowTrace`), so no host calls this directly.
+impl AjisaiInterpreter {
+    pub(crate) fn collect_error_flow_trace(&mut self) -> JsValue {
         let arr = js_sys::Array::new();
         for event in self.interpreter.drain_error_flow_trace() {
             let obj = js_sys::Object::new();
@@ -341,38 +356,5 @@ impl AjisaiInterpreter {
             arr.push(&obj);
         }
         arr.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn restore_user_words(&mut self, words_js: JsValue) -> Result<(), String> {
-        let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
-            .map_err(|e| format!("Failed to deserialize words: {}", e))?;
-
-        // A restored word's saved `dictionary` label is legacy state: the
-        // dictionary has two tiers and User is one of them, so every restored
-        // definition lands in the same place.
-        let entries = words.into_iter().map(|word| {
-            (
-                word.name,
-                word.definition.unwrap_or_default(),
-                word.description,
-            )
-        });
-
-        // Skipping an unreadable entry rather than raising is what keeps the
-        // rest of a dictionary: see `restore_user_word_definitions`. The
-        // skipped names are not raised here either — throwing would abort the
-        // host's own post-restore reconciliation and leave the session holding
-        // a half-restored dictionary, which is the outcome this avoids. The
-        // host reports them by comparing what it asked for against
-        // `collect_user_words_info`.
-        let _skipped = self
-            .interpreter
-            .restore_user_word_definitions(entries)
-            .map_err(|e| e.to_string())?;
-
-        let _ = self.interpreter.collect_output();
-
-        Ok(())
     }
 }

@@ -238,6 +238,13 @@ jobs:
         # rust/src, rust/tests, or src. See scripts/check-docs-dev-drift.mjs.
         run: npm run check:docs-dev-drift
 
+      # docs/quality/TRACEABILITY_MATRIX.md is the requirement-to-verification
+      # link QUALITY_POLICY.md requires and seven source files cite by path. It
+      # was missing entirely until it was written, so every citation dangled;
+      # this keeps each end of every row reachable from the other.
+      - name: Check the traceability matrix against the source
+        run: npm run check:traceability
+
       - name: No citations to the retired numbered specification
         # SPECIFICATION.md (17 numbered sections) was deleted in 3f21400c;
         # the current specification publishes stable LANG.* clause IDs so a
@@ -315,6 +322,23 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           cargo check --features wasm --target wasm32-unknown-unknown
+
+      # The step above builds the wasm target's *library* only. Test code
+      # behind `#[cfg(test)]` is not a library target, so nothing here
+      # compiled the test modules that the `wasm` feature gates — and one of
+      # them rotted unnoticed against a `types::Interpretation` variant that
+      # had been removed, for as long as it took someone to run
+      # `--all-targets` by hand.
+      #
+      # This closes that gap on the host target rather than on wasm32,
+      # because `--all-targets` there drags the dev-dependencies in too and
+      # `getrandom` has no wasm32 backend without extra configuration. The
+      # host target type-checks the same `#[cfg(feature = "wasm")]` code,
+      # which is what was going unchecked; wasm32-specific codegen stays the
+      # step above's job.
+      - name: Verify WASM-gated test code still compiles
+        working-directory: rust
+        run: cargo check --all-targets --features wasm
 
       - name: Cache wasm-pack
         uses: actions/cache@v5

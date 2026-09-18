@@ -13,9 +13,8 @@ use super::scalar::Scalar;
 /// representations of an existing domain, held privately by [`Scalar`] (and, in
 /// a later phase, by the vector representation), never surfaced as a separate
 /// kind of value. There is no interpretation-role field on a value: how a value
-/// is *displayed* is carried outside the spine as a
-/// [`PresentationHint`](super::observation::PresentationHint), and it never
-/// changes what a program computes.
+/// is *displayed* is a concern of whatever renders it, outside the spine, and
+/// it never changes what a program computes.
 #[derive(Clone, Debug, PartialEq)]
 pub enum KernelValue {
     /// A single exact number. Its rational/exact-real backing is a private

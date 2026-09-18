@@ -16,7 +16,7 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = super::runtime_limits::DEFAULT_MA
 /// set well above any reasonable hand-written nesting (the existing deep
 /// non-recursive test uses 5 frames) but well below the Rust stack budget on
 /// WASM and on the 2 MiB default native test-thread stack — every user-word
-/// recursion expands to several Rust frames (execute_word_core_inner →
+/// recursion expands to several Rust frames (execute_word_core →
 /// plan/structure runner → execution loop → resolve), so the empirical
 /// safe ceiling is roughly 256 levels in debug builds. `DEFAULT_MAX_EXECUTION_STEPS`
 /// is still the primary backstop for runaway computation generally; this
@@ -62,51 +62,6 @@ pub const MAX_MATERIALIZED_ELEMENTS: usize =
 pub enum ConsumptionMode {
     Consume,
     Keep,
-}
-
-/// How the runtime reacts when the compiled (optimized) path and the plain
-/// (reference) path disagree during shadow validation.
-///
-/// This is an *internal* safety control, never a user-facing knob. The default
-/// (`Fallback`) already guarantees that a divergent optimization result is
-/// never committed: the reference path wins. Ajisai programs get this
-/// protection transparently just by running. The remaining variants exist for
-/// benchmarking the comparison cost (`Off`) and for tests that need to observe
-/// (`Observe`) or hard-reject (`Strict`) a disagreement.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum IntegrityMode {
-    /// Skip the enriched comparison (host effects / absence metadata) and keep
-    /// the historical behavior. Used only to measure the comparison's own cost.
-    Off,
-    /// Run the full comparison and count disagreements, but still adopt the
-    /// compiled path. Non-disruptive characterization.
-    Observe,
-    /// Default. On any disagreement, prefer the plain reference path so a
-    /// result the reference path does not agree with is never committed.
-    #[default]
-    Fallback,
-    /// On disagreement, refuse the result and surface an integrity failure
-    /// instead of silently substituting the reference path.
-    Strict,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ValidationPolicy {
-    pub max_validation_input_len: usize,
-    pub warmup_runs: u64,
-    /// Reaction to a compiled-vs-plain disagreement. Defaults to the safe
-    /// `Fallback`; see `IntegrityMode`.
-    pub integrity_mode: IntegrityMode,
-}
-
-impl Default for ValidationPolicy {
-    fn default() -> Self {
-        Self {
-            max_validation_input_len: 16,
-            warmup_runs: 3,
-            integrity_mode: IntegrityMode::Fallback,
-        }
-    }
 }
 
 /// Counters describing how the runtime went about its work: which cache
@@ -202,7 +157,7 @@ pub struct Interpreter {
     pub(crate) runtime_scratch: HashMap<String, Box<dyn std::any::Any + Send>>,
     pub(crate) call_stack: SmallVec<[String; 5]>,
     /// User-word call depth. Incremented on entry to a user-word body in
-    /// `execute_word_core_inner`, decremented on exit. Compared against
+    /// `execute_word_core`, decremented on exit. Compared against
     /// `MAX_USER_WORD_DEPTH` to prevent a deep recursion from blowing the
     /// Rust call stack and trapping the WASM module.
     pub(crate) call_depth: usize,
@@ -382,20 +337,10 @@ impl Interpreter {
     pub(crate) fn bump_dictionary_epoch(&mut self) {
         self.dictionary_epoch = self.next_epoch();
         self.invalidate_execution_artifacts();
-        #[cfg(feature = "trace-epoch")]
-        eprintln!(
-            "[trace-epoch] dictionary_epoch={} global_epoch={}",
-            self.dictionary_epoch, self.global_epoch
-        );
     }
 
     pub(crate) fn bump_execution_epoch(&mut self) {
         self.execution_epoch = self.next_epoch();
-        #[cfg(feature = "trace-epoch")]
-        eprintln!(
-            "[trace-epoch] execution_epoch={} global_epoch={}",
-            self.execution_epoch, self.global_epoch
-        );
     }
 
     /// One Word dispatch against the execution-step ceiling.

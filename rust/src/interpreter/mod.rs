@@ -20,7 +20,6 @@ pub mod epoch;
 pub mod error_flow_trace;
 pub mod execute_def;
 pub mod execute_del;
-pub mod execution_plan_set;
 pub mod higher_order;
 pub mod higher_order_fold;
 pub mod host;
@@ -169,7 +168,7 @@ pub use crate::types::WordDefinition;
 
 pub use compiled_plan::{
     compile_token_block, compile_word_definition, execute_compiled_plan, is_plan_valid,
-    CompiledLine, CompiledOp, CompiledPlan, COMPILED_PLAN_SCHEMA_VERSION,
+    CompiledLine, CompiledOp, CompiledPlan,
 };
 pub use epoch::EpochSnapshot;
 

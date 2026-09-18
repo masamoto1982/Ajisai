@@ -44,8 +44,6 @@ pub enum WordProfile {
     Core,
     /// Requires an explicit host capability before execution.
     Hosted,
-    /// Reserved for words whose behavior is intentionally platform-specific.
-    PlatformSpecific,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -73,17 +71,6 @@ pub struct CorewordMetadata {
     /// Portability profile used by conformance tooling to keep the Core
     /// profile free of host-boundary words.
     pub profile: WordProfile,
-}
-
-impl CorewordMetadata {
-    /// Whether the Word's result depends on nothing but its operands.
-    ///
-    /// The coarse question the old `deterministic: bool` answered, kept as a
-    /// derived accessor so callers that only need the bit do not have to
-    /// enumerate the three canonical classes.
-    pub fn is_deterministic(&self) -> bool {
-        self.determinism == Determinism::Deterministic
-    }
 }
 
 /// The registry is built by walking the *generated* inventory and joining each
@@ -129,24 +116,6 @@ pub fn get_builtin_word_metadata(name: &str) -> Option<CorewordMetadata> {
 pub fn get_declared_word(name: &str) -> Option<&'static GeneratedWord> {
     let upper = name.to_uppercase();
     GENERATED_WORDS.iter().find(|word| word.name == upper)
-}
-
-pub fn get_words_by_profile(profile: WordProfile) -> Vec<CorewordMetadata> {
-    get_builtin_word_registry()
-        .iter()
-        .filter(|word| word.profile == profile)
-        .cloned()
-        .collect()
-}
-
-pub fn get_hosted_profile_words() -> Vec<CorewordMetadata> {
-    get_words_by_profile(WordProfile::Hosted)
-}
-
-pub fn is_safe_preview_word(name: &str) -> bool {
-    get_coreword_metadata(name)
-        .map(|word| word.safe_preview)
-        .unwrap_or(false)
 }
 
 /// Validates that no two registry entries share a `name`. Built-in words form

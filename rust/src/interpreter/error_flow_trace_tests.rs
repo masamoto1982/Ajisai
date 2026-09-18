@@ -101,9 +101,19 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
         .find(|e| e.kind == ErrorFlowEventKind::NilProduced)
         .expect("expected NilProduced event");
 
-    let payload = event
-        .ai_diagnostic_payload()
-        .expect("NilProduced event should expose AI diagnostic payload");
+    let diagnosis = event
+        .diagnosis
+        .as_ref()
+        .expect("NilProduced event should carry a diagnosis");
+    let payload = diagnosis.ai_payload(
+        event.error_category.as_ref(),
+        event
+            .absence
+            .as_ref()
+            .and_then(|absence| absence.reason.as_ref()),
+        None,
+        None,
+    );
     assert_eq!(payload.kind.as_deref(), Some("divisionByZero"));
     assert_eq!(payload.recoverability, "fixInput");
     assert_eq!(payload.semantic_area, "exact-real-arithmetic");

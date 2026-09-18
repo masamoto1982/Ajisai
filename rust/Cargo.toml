@@ -64,8 +64,6 @@ wasm = [
   "dep:wasm-bindgen-futures", "dep:console_error_panic_hook", "dep:web-sys",
   "getrandom/js",
 ]
-trace-compile = []
-trace-epoch = []
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }

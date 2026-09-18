@@ -20,8 +20,8 @@ pub use builtin_word_definitions::builtin_specs;
 pub use builtin_word_definitions::collect_core_builtin_definitions;
 pub use builtin_word_details::lookup_builtin_detail;
 
-use crate::kernel::generated::{WordId, GENERATED_WORDS};
-use crate::types::{Capabilities, Stability, Tier, WordDefinition};
+use crate::kernel::generated::GENERATED_WORDS;
+use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -39,37 +39,20 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
             .find(|doc| doc.name == name)
             .expect("every registered Core Word must have generated documentation")
             .hover_summary;
-        let capabilities = core_builtin_capabilities(word.id);
         dictionary.insert(
             name.to_string(),
             Arc::new(WordDefinition {
                 lines: std::sync::Arc::from([]),
                 is_builtin: true,
-                tier: Tier::Core,
-                stability: Stability::Stable,
-                capabilities,
                 description: Some(description.to_string()),
                 dependencies: HashSet::new(),
                 text_references: HashSet::new(),
                 original_source: None,
                 namespace: None,
                 registration_order: 0,
-                execution_plans: None,
+                compiled_plan: None,
                 generated: Some(word),
             }),
         );
-    }
-}
-
-/// The host capabilities a Core Word needs, keyed by its canonical identity.
-///
-/// Keyed on `WordId` rather than on the spelling of the name, so renaming a
-/// Word in `spec/words.json` moves its capability with it instead of silently
-/// dropping it to `PURE`.
-fn core_builtin_capabilities(id: WordId) -> Capabilities {
-    match id {
-        WordId::Def | WordId::Del => Capabilities::MUTATES_DICT,
-        WordId::Print => Capabilities::IO,
-        _ => Capabilities::PURE,
     }
 }

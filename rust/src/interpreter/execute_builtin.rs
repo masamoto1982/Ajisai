@@ -10,27 +10,10 @@ use super::{
     ordering_ops, probe, shape_ops, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
 
-#[cfg(feature = "trace-compile")]
-fn trace_compile_metrics(interp: &Interpreter) {
-    let m = interp.runtime_metrics();
-    eprintln!(
-        "[metrics] plan_build={} plan_hit={} plan_miss={}",
-        m.compiled_plan_build_count,
-        m.compiled_plan_cache_hit_count,
-        m.compiled_plan_cache_miss_count
-    );
-}
-
 impl Interpreter {
-    /// Public entry point for word execution.
+    /// Core word-execution logic (greedy, always): the single entry point
+    /// every dispatch route reaches a Word through.
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
-        self.execute_word_core_inner(name)
-    }
-
-    /// Core word-execution logic (greedy, always).
-    ///
-    /// Never call directly — use `execute_word_core` so tracing applies.
-    fn execute_word_core_inner(&mut self, name: &str) -> Result<()> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
         let name = canonical_name.as_ref();
 
@@ -125,7 +108,7 @@ impl Interpreter {
         // The caller's stack as the call begins, for the failure record below.
         let stack_len_at_call: usize = self.stack.len();
 
-        let plan_set = self.get_execution_plan_set(name, &def);
+        let compiled_plan = self.get_compiled_plan(name, &def);
 
         self.call_stack.push(name.to_string());
 
@@ -161,7 +144,7 @@ impl Interpreter {
         // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
         // produces the same result whether it went through the compiled plan
         // or the plain guard structure.
-        let result = match plan_set.as_ref().and_then(|set| set.compiled.as_ref()) {
+        let result = match compiled_plan.as_ref() {
             Some(compiled) => execute_compiled_plan(self, compiled),
             None => self.execute_guard_structure(&def.lines),
         };
@@ -351,23 +334,19 @@ impl Interpreter {
             .unwrap_or("")
     }
 
-    fn get_execution_plan_set(
+    /// The compiled plan for a User Word's body, built on first call and
+    /// reused while the dictionary epoch it was compiled against still holds.
+    fn get_compiled_plan(
         &mut self,
         resolved_name: &str,
         def: &std::sync::Arc<crate::types::WordDefinition>,
-    ) -> Option<std::sync::Arc<super::execution_plan_set::ExecutionPlanSet>> {
+    ) -> Option<std::sync::Arc<super::compiled_plan::CompiledPlan>> {
         if def.lines.is_empty() {
             return None;
         }
 
-        if let Some(existing) = def.execution_plans.as_ref() {
-            let compiled_valid = existing
-                .compiled
-                .as_ref()
-                .map(|p| is_plan_valid(p, self))
-                .unwrap_or(false);
-
-            if compiled_valid {
+        if let Some(existing) = def.compiled_plan.as_ref() {
+            if is_plan_valid(existing, self) {
                 self.runtime_metrics.compiled_plan_cache_hit_count += 1;
                 return Some(existing.clone());
             }
@@ -375,24 +354,19 @@ impl Interpreter {
 
         self.runtime_metrics.compiled_plan_cache_miss_count += 1;
 
-        let mut set =
-            super::execution_plan_set::ExecutionPlanSet::new(self.current_epoch_snapshot());
-
-        set.compiled = self.build_or_reuse_compiled_plan(resolved_name, def);
-
-        let set_arc = std::sync::Arc::new(set);
-        self.store_execution_plan_set_for_word(resolved_name, set_arc.clone());
-        Some(set_arc)
+        let plan = self.build_or_reuse_compiled_plan(resolved_name, def);
+        self.store_compiled_plan_for_word(resolved_name, plan.clone());
+        plan
     }
 
-    fn store_execution_plan_set_for_word(
+    fn store_compiled_plan_for_word(
         &mut self,
         resolved_name: &str,
-        plan_set: std::sync::Arc<super::execution_plan_set::ExecutionPlanSet>,
+        plan: Option<std::sync::Arc<super::compiled_plan::CompiledPlan>>,
     ) {
         if let Some(old_def) = self.user_words.get(resolved_name).cloned() {
             let mut updated = (*old_def).clone();
-            updated.execution_plans = Some(plan_set.clone());
+            updated.compiled_plan = plan;
             self.user_words
                 .insert(resolved_name.to_string(), std::sync::Arc::new(updated));
         }

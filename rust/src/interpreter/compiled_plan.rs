@@ -7,12 +7,6 @@ use crate::types::{Interpretation, Token, Value, WordDefinition};
 use super::compiled_call::{execute_compiled_call, CompiledCall};
 use super::{ConsumptionMode, EpochSnapshot, Interpreter};
 
-/// Schema version of the `CompiledPlan` lowering. Bump whenever the set of
-/// `CompiledOp` variants or their semantics change in a way that makes an
-/// older-lowered plan unsafe to reuse. Part of the cross-reset artifact key so
-/// a plan compiled by a different schema is never reused (Phase 5).
-pub const COMPILED_PLAN_SCHEMA_VERSION: u32 = 1;
-
 #[derive(Debug, Clone)]
 pub struct CompiledPlan {
     pub lines: Vec<CompiledLine>,
@@ -55,7 +49,6 @@ pub enum CompiledOp {
         namespace: String,
         word: String,
     },
-    BeginGuardedBlock,
     LineBreak,
     // FallbackToken keeps runtime-sensitive tokens in the interpreter path:
     // - directives / control markers (NilCoalesce, CondClauseSep)
@@ -498,9 +491,7 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 super::execution_loop::apply_word_hint_override(interp, &full_name);
                 post_call_cleanup(interp, &full_name);
             }
-            CompiledOp::BeginGuardedBlock
-            | CompiledOp::LineBreak
-            | CompiledOp::FallbackToken(_) => {}
+            CompiledOp::LineBreak | CompiledOp::FallbackToken(_) => {}
         }
     }
     Ok(())

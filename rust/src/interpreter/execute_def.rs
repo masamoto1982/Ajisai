@@ -3,7 +3,7 @@ use crate::interpreter::value_extraction_helpers::{
     extract_word_name_from_value, keep_mode_operands, restore_keep_mode_operands,
 };
 use crate::interpreter::{Interpreter, WordDefinition};
-use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token};
+use crate::types::{ExecutionLine, Token};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -264,16 +264,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     let new_def = WordDefinition {
         lines,
         is_builtin: false,
-        tier: Tier::Contrib,
-        stability: Stability::Stable,
-        capabilities: Capabilities::PURE,
         description: None,
         dependencies: new_dependencies,
         text_references: new_text_references,
         original_source: None,
         namespace: None,
         registration_order: interp.next_registration_order(),
-        execution_plans: None,
+        compiled_plan: None,
         // A User Word has no registry entry: `DEF` cannot define a Core Word
         // (LANG.DICTIONARY.RESOLUTION seals Core), so this is `None` by
         // construction rather than by omission.

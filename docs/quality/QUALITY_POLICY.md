@@ -8,7 +8,8 @@ It is a development quality framework and **not** a formal avionics certificatio
 1. **Requirements-first development**
    - Changes must be tied to documented intent (spec, issue, or design note).
 2. **Traceability**
-   - Requirements, implementation, and verification evidence must be linked.
+   - Requirements, implementation, and verification evidence must be linked,
+     in `TRACEABILITY_MATRIX.md`.
 3. **Independent verification mindset**
    - Reviewers validate tests and acceptance criteria, not only code style.
 4. **Configuration integrity**

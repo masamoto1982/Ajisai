@@ -15,7 +15,7 @@ use crate::agent::contract_gap::GapCode;
 use crate::coreword_registry::{
     get_coreword_metadata, Determinism, MassContract, NilPolicy, Purity,
 };
-use crate::types::{Capabilities, Token, WordDefinition};
+use crate::types::{Token, WordDefinition};
 
 use super::word_contract_flow::FlowSim;
 use super::word_contract_lattice::{
@@ -37,7 +37,6 @@ pub struct WordContract {
     pub flow: ContractFlow,
     pub purity: ContractPurity,
     pub effects: Vec<String>,
-    pub capabilities: Capabilities,
     pub determinism: ContractDeterminism,
     pub order_sensitivity: OrderSensitivity,
     pub nil_behavior: NilBehavior,
@@ -119,7 +118,6 @@ impl WordContract {
             flow: ContractFlow::Dynamic,
             purity: ContractPurity::Effectful,
             effects: vec!["conservative".to_string()],
-            capabilities: Capabilities::empty(),
             determinism: ContractDeterminism::NonDeterministic,
             order_sensitivity: OrderSensitivity::OrderSensitive,
             nil_behavior: NilBehavior::MayCreate,
@@ -141,7 +139,6 @@ impl WordContract {
             },
             purity: ContractPurity::Pure,
             effects: Vec::new(),
-            capabilities: Capabilities::PURE,
             determinism: ContractDeterminism::Deterministic,
             order_sensitivity: OrderSensitivity::OrderIndependent,
             nil_behavior: NilBehavior::NeverCreates,
@@ -201,7 +198,6 @@ pub(crate) struct AccumulatedContract {
     flow: ContractFlow,
     purity: ContractPurity,
     effects: Vec<String>,
-    capabilities: Capabilities,
     determinism: ContractDeterminism,
     order_sensitivity: OrderSensitivity,
     nil_behavior: NilBehavior,
@@ -215,7 +211,6 @@ impl AccumulatedContract {
             flow: contract.flow.clone(),
             purity: contract.purity,
             effects: contract.effects.clone(),
-            capabilities: contract.capabilities,
             determinism: contract.determinism,
             order_sensitivity: contract.order_sensitivity,
             nil_behavior: contract.nil_behavior,
@@ -231,7 +226,6 @@ impl AccumulatedContract {
                 self.effects.push(effect.clone());
             }
         }
-        self.capabilities = self.capabilities.union(other.capabilities);
         self.determinism = widen_determinism(self.determinism, other.determinism);
         self.order_sensitivity = widen_order(self.order_sensitivity, other.order_sensitivity);
         self.nil_behavior = widen_nil(self.nil_behavior, other.nil_behavior);
@@ -267,7 +261,6 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
         flow: meta.mass.into(),
         purity: meta.purity.into(),
         effects: meta.effects,
-        capabilities: def.capabilities,
         determinism: meta.determinism.into(),
         order_sensitivity: OrderSensitivity::OrderIndependent,
         nil_behavior,
@@ -455,7 +448,6 @@ impl Interpreter {
             flow: acc.flow,
             purity: acc.purity,
             effects: acc.effects,
-            capabilities: acc.capabilities,
             determinism: acc.determinism,
             order_sensitivity: acc.order_sensitivity,
             nil_behavior: acc.nil_behavior,
