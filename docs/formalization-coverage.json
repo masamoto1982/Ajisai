@@ -1602,6 +1602,37 @@
       "implementation_schema": "traversal_scheme(fold) -> block_application -> accumulator_policy"
     },
     {
+      "id": "core.scan",
+      "kind": "coreword",
+      "surface": "SCAN",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.7"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-scan",
+        "core-scan-empty",
+        "core-scan-nil-target"
+      ],
+      "status": "Formalized",
+      "notes": "FOLD's catamorphism with every intermediate accumulator retained: one lane out per lane in, the seed excluded.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow",
+      "implementation_schema": "traversal_scheme(scan) -> block_application -> accumulator_policy",
+      "standard_relation": "operational",
+      "native_retention_reason": "Re-folding each prefix is quadratic where the walk is linear, and the language has no loop or recursion to carry state any other way; also fixes index-order visitation, isolated callback stacks and effect order."
+    },
+    {
       "id": "core.any",
       "kind": "coreword",
       "surface": "ANY",

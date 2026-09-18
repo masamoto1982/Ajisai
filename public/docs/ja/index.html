@@ -1012,7 +1012,7 @@
                     <h3>結果を積まないワードも例外ではない</h3>
                     <p><code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではありません。これらに<code>KEEP</code>を付けたときに残るのは、そのオペランドそのままの姿です。<code>5 KEEP 'X' BIND</code>は値に名前を付け<em>つつ</em>、<code>5/1 'X'</code>を元の場所に残します。</p>
                     <h3>唯一の例外: 高階ワード</h3>
-                    <p class="ref-note">例外は高階ワードだけです。<code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>ANY</code>、<code>ALL</code>は、自分が走査する<em>コレクション</em>だけを保持し、それ以外は保持しません。したがって<code>[ 1 2 ] KEEP [ 2 MUL ] MAP</code>は<code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code>になります。ブロックは残らず、<code>FOLD</code>の場合は開始時の累積値も残りません。ブロックは呼び出しが読み取ったデータというより、その呼び出しが<em>何であるか</em>を表すものであり、累積値は答えに畳み込まれています。それ以外のすべてのワードは、読み取ったものをすべて保持します。<code>[ 10 3 ] KEEP [ 0 ] GET</code>も例外ではなく、<code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>の3つすべてが残ります。</p>
+                    <p class="ref-note">例外は高階ワードだけです。<code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>SCAN</code>、<code>ANY</code>、<code>ALL</code>は、自分が走査する<em>コレクション</em>だけを保持し、それ以外は保持しません。したがって<code>[ 1 2 ] KEEP [ 2 MUL ] MAP</code>は<code>[ 1/1 2/1 ] [ 2/1 4/1 ]</code>になります。ブロックは残らず、<code>FOLD</code>の場合は開始時の累積値も残りません。ブロックは呼び出しが読み取ったデータというより、その呼び出しが<em>何であるか</em>を表すものであり、累積値は答えに畳み込まれています。それ以外のすべてのワードは、読み取ったものをすべて保持します。<code>[ 10 3 ] KEEP [ 0 ] GET</code>も例外ではなく、<code>[ 10/1 3/1 ] [ 0/1 ] 10/1</code>の3つすべてが残ります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1752,7 +1752,7 @@
                                 <tr><td>ワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                                                 <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
-                                <tr><td><code>FOLD</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
+                                <tr><td><code>FOLD</code> <code>SCAN</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1857,9 +1857,9 @@ SELECT</code></td>
                     </div>
                     <p class="ref-note">真偽値の位置に裸の数値は書けません(<code>nonTruthValue</code>)。<code>1</code>や<code>0</code>は真偽値ではないからです(<a href="#disjoint">領域は互いに素</a>)。数値で判定したいなら比較を書いてください。<code>[ 1 ] [ 0 ] NEQ</code>のようにです。</p>
 
-                    <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>ANY</code>・<code>ALL</code>)</h3>
+                    <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>SCAN</code>・<code>ANY</code>・<code>ALL</code>)</h3>
                     <p>コードブロック<code>[ ]</code>は第一級の値です。高階ワードは、ブロックや、定義済みワードの引用された名前を、ベクトルの各要素に適用します。</p>
-                    <p class="ref-note">この5つが反復のすべてです。ワードが自分自身を呼び出して繰り返す書き方はありません。<code>DEF</code>が<a href="#acyclic">循環する定義を拒否する</a>からです。したがって反復の回数は、必ず手元にある有限なベクトルの長さとして書かれており、ブロックを読む前から見えています。</p>
+                    <p class="ref-note">この6つが反復のすべてです。ワードが自分自身を呼び出して繰り返す書き方はありません。<code>DEF</code>が<a href="#acyclic">循環する定義を拒否する</a>からです。したがって反復の回数は、必ず手元にある有限なベクトルの長さとして書かれており、ブロックを読む前から見えています。</p>
                     <p class="ref-note">ブロックが残したものが、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません。点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -1937,6 +1937,49 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h4 id="scan">途中経過を残す畳み込み(<code>SCAN</code>)</h4>
+                    <p><code>SCAN</code>は<code>FOLD</code>と同じ歩き方をして、<strong>最後の累積値だけでなく、各要素の時点での累積値をすべて</strong>答えます。ブロックが見るものも残すものも<code>FOLD</code>と同一で、違うのは何が返るかだけです。</p>
+                    <p>答えは<strong>入力と同じ長さ</strong>になります。初期累積値は「種」であってレーンではないので、答えには含まれません。長さが揃うので、元のベクトルと<code>ZIP</code>したり、比較して<code>SELECT</code>のマスクにしたりできます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 ] 0 [ + ] SCAN</code></td>
+                                    <td><code>[ 1/1 3/1 6/1 10/1 ]</code></td>
+                                    <td class="notes">累積和。同じ式を<code>FOLD</code>で書くと最後の<code>10/1</code>だけが返る。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p><strong>これが、この言語で「前の結果を次に持ち越す」唯一の書き方です。</strong>ワードは自分自身を呼べず、ループもないので、走る途中の状態を運ぶ手段は累積値しかありません。<code>FOLD</code>はその状態を最後に1つだけ見せ、<code>SCAN</code>は途中も見せる、という関係です。累積最大、残高の推移、列の上を進む状態機械、漸化式——順番に効いていく計算はすべてこの形になります。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 3 1 4 1 5 ] 0 [ MAX ] SCAN</code></td>
+                                    <td><code>[ 3/1 3/1 4/1 4/1 5/1 ]</code></td>
+                                    <td class="notes">累積最大。各時点までに現れた最大値。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">空のベクトルは空のベクトルを答えます（レーンが0本なので答えも0本。種は返りません）。不在(<code>NIL</code>)のベクトルは、その不在を理由ごと答えます。ここは<code>FOLD</code>と違う点で、<code>FOLD</code>はどちらの場合も<em>種</em>を答えます——畳み込むものが何も無いなら答えは種だからです。答えの形が問いの形に従う、という同じ規則の裏表です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2256,7 +2299,7 @@ FILTER</code></td>
                     <h3 id="acyclic">ワードは自分自身を呼び出せない</h3>
                     <p>User辞書の参照グラフは循環しません。<code>[ REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
                     <p>これは間接的な循環にも及びます。<code>A</code>が<code>B</code>を呼び出すよう定義し、続けて<code>B</code>が<code>A</code>を呼び出すよう定義しようとすると、その2つ目の<code>DEF</code>が拒否されます。<code>A</code>はすでに<code>B</code>という名前を(まだ存在しなくても)本体に含んでおり、そこへ<code>B</code>から<code>A</code>への参照を足すと<code>A</code>に戻る循環が閉じるからです。すでに存在する言葉を新しい定義が呼び出すこと自体は自由です。禁じられているのは、今まさに定義しようとしているワードへ、その連鎖が戻ってくることだけです。</p>
-                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>ANY</code> <code>ALL</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
+                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code> <code>ANY</code> <code>ALL</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
                     <h3>ワードの管理</h3>
                     <p><code>DEL</code>は、引用された名前でユーザー定義ワードを削除します。依存関係は追跡されており、他のワードが依存しているワードはまったく削除できません。したがって宙ぶらりんの参照は起こり得ません。先に依存している側を削除してください。</p>
                     <p class="ref-note">ワード名は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。慣例として<code>APPLY-GAIN</code>のような動詞-目的語の形に従います。名前がどのように定義と対応付けられるかは、<a href="#dictionaries">辞書とワードの同一性</a>で扱います。</p>

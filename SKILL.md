@@ -188,8 +188,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-66 canonical Words in one flat Core dictionary, of which
-37 form the Semantic Kernel and 29 are Standard Words. Both are
+67 canonical Words in one flat Core dictionary, of which
+37 form the Semantic Kernel and 30 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -243,6 +243,7 @@ no module system and nothing to import.
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] [ 2 MUL ] MAP` |
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] [ 2 = ] FILTER` |
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] [ + ] FOLD` |
+| `SCAN` | higher-order | Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence. — e.g. `[ 1 2 3 4 ] 0 [ ADD ] SCAN` |
 | `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] [ 2 = ] ANY` |
 | `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] [ 2 MOD 0 = ] ALL` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |

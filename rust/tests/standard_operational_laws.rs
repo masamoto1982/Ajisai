@@ -60,6 +60,63 @@ async fn any_and_all_short_circuit_before_unvisited_effects() {
     assert_eq!(rendered_stack(&all), ["FALSE"]);
 }
 
+/// `SCAN` answers the accumulator after each element, in index order, with one
+/// lane out per lane in — and the accumulator it answers for a lane is the one
+/// the next lane starts from, which is what makes the walk a walk rather than
+/// a map.
+///
+/// Native retention rests on the cost. The same answer is reachable by folding
+/// every prefix (`standard_derivation_laws.rs` shape, written here as the
+/// comparison it is), but that re-reads each prefix from the start: quadratic
+/// interpreted steps for a linear answer. With no recursion and no unbounded
+/// loop in the language (`spec/termination.json`), carrying state from one
+/// element to the next has no other shape, so the quadratic cost would be paid
+/// by every running total, every state machine over a sequence, and every
+/// recurrence.
+#[tokio::test]
+async fn scan_walks_in_index_order_and_answers_one_lane_per_element() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute("[ 3 1 2 ] 0 [ KEEP PRINT ADD ] SCAN")
+        .await
+        .unwrap();
+
+    // The block sees the element (printed) once per lane, in index order.
+    assert_eq!(effect_payloads(&interpreter), ["3/1", "1/1", "2/1"]);
+    assert_eq!(rendered_stack(&interpreter), ["[ 3/1 4/1 6/1 ]"]);
+
+    // The same answer, derived: fold each prefix from the start.
+    let mut derived = Interpreter::new();
+    derived
+        .execute("[ 3 1 2 ] 'V' BIND [ 1 3 ] RANGE [ 'K' BIND V K TAKE 0 [ ADD ] FOLD ] MAP")
+        .await
+        .unwrap();
+    assert_eq!(rendered_stack(&derived), ["[ 3/1 4/1 6/1 ]"]);
+}
+
+/// The seed is not a lane, so it is not in the answer, and a walk with no
+/// lanes answers no lanes. `FOLD` differs on both counts because it reduces to
+/// one value rather than to a lane per lane: with nothing to reduce it answers
+/// the seed it was handed.
+#[tokio::test]
+async fn scan_is_lane_for_lane_where_fold_is_seed_shaped() {
+    let mut empty_scan = Interpreter::new();
+    empty_scan.execute("[ ] 7 [ ADD ] SCAN").await.unwrap();
+    assert_eq!(rendered_stack(&empty_scan), ["[ ]"]);
+
+    let mut empty_fold = Interpreter::new();
+    empty_fold.execute("[ ] 7 [ ADD ] FOLD").await.unwrap();
+    assert_eq!(rendered_stack(&empty_fold), ["7/1"]);
+
+    let mut absent_scan = Interpreter::new();
+    absent_scan.execute("NIL 7 [ ADD ] SCAN").await.unwrap();
+    assert_eq!(rendered_stack(&absent_scan), ["NIL"]);
+
+    let mut absent_fold = Interpreter::new();
+    absent_fold.execute("NIL 7 [ ADD ] FOLD").await.unwrap();
+    assert_eq!(rendered_stack(&absent_fold), ["7/1"]);
+}
+
 #[tokio::test]
 async fn higher_order_errors_restore_the_original_operand_atomically() {
     for word in ["MAP", "FILTER", "ANY", "ALL"] {

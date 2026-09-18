@@ -135,6 +135,14 @@
       "witness": "[ 1 2 3 ] 0 [ ADD ] FOLD"
     },
     {
+      "id": "SCAN",
+      "kind": "word",
+      "descendsInto": "the code block, once per element",
+      "decreases": "remainingElements",
+      "why": "As FOLD — the same walk over the same materialized collection. Keeping every accumulator rather than only the last one adds a value to the answer, not a descent.",
+      "witness": "[ 1 2 3 ] 0 [ ADD ] SCAN"
+    },
+    {
       "id": "ANY",
       "kind": "word",
       "descendsInto": "the code block, once per visited element",

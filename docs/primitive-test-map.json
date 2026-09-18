@@ -7,7 +7,7 @@
     "primitives": 24,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 18,
-    "distinct_conformance_cases": 74
+    "distinct_conformance_cases": 80
   },
   "primitives": [
     {
@@ -17,12 +17,11 @@
       "status": "accepted",
       "derived_word_count": 18,
       "law_test_count": 10,
-      "conformance_case_count": 17,
+      "conformance_case_count": 20,
       "derived_words": [
         "core.all",
         "core.any",
         "core.comparison",
-        "core.cond",
         "core.eq",
         "core.false",
         "core.filter",
@@ -33,6 +32,7 @@
         "core.neq",
         "core.nil-p",
         "core.order",
+        "core.select",
         "core.true",
         "module.algo.sort",
         "module.math.max",
@@ -57,6 +57,9 @@
         "core-false-literal",
         "core-nil-check-false-for-present-value",
         "core-nil-check-true-retains-source",
+        "core-select-chooses-by-truth",
+        "core-select-chooses-lane-by-lane",
+        "core-select-unknown-truth-chooses-neither",
         "core-true-literal",
         "standard-all",
         "standard-any",
@@ -415,9 +418,9 @@
       "algebraic_family": "structure-lift",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 22,
+      "derived_word_count": 23,
       "law_test_count": 6,
-      "conformance_case_count": 23,
+      "conformance_case_count": 26,
       "derived_words": [
         "core.all",
         "core.any",
@@ -434,6 +437,7 @@
         "core.random",
         "core.range",
         "core.reverse",
+        "core.scan",
         "core.sum",
         "core.take",
         "core.tally",
@@ -459,6 +463,9 @@
         "core-length",
         "core-range",
         "core-reverse",
+        "core-scan",
+        "core-scan-empty",
+        "core-scan-nil-target",
         "core-take",
         "kernel-random",
         "standard-all",
@@ -589,10 +596,9 @@
       "status": "accepted",
       "derived_word_count": 11,
       "law_test_count": 4,
-      "conformance_case_count": 11,
+      "conformance_case_count": 14,
       "derived_words": [
         "core.bind",
-        "core.cond",
         "core.def",
         "core.del",
         "core.exec",
@@ -601,6 +607,7 @@
         "core.import.name-resolution",
         "core.map",
         "core.probe",
+        "core.scan",
         "exploratory.child-runtime"
       ],
       "law_tests": [
@@ -619,6 +626,9 @@
         "core-probe-pure-block",
         "core-probe-rejects-non-codeblock",
         "core-probe-unresolved-word-is-a-gap",
+        "core-scan",
+        "core-scan-empty",
+        "core-scan-nil-target",
         "core-user-definition-resolved",
         "standard-filter"
       ]

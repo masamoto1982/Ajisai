@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **66 Words**, of which **37** form the Semantic Kernel and **29** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **67 Words**, of which **37** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -667,6 +667,20 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 ] [ 0 ] [ + ] FOLD`
+- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
+
+## `SCAN`
+
+Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `higherOrder`
+- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `consumeNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Effects:** none
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Syntax:** `[ 1 2 3 4 ] 0 [ ADD ] SCAN`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `ANY`
