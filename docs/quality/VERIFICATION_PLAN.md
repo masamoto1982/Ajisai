@@ -32,10 +32,10 @@ Define minimum verification evidence required for Ajisai changes.
 - **QL-A**
   - Baseline checks + targeted semantic/regression tests.
   - MC/DC-like checklist reviewed for modified boolean logic paths.
-  - Traceability matrix row updates required.
+  - Traceability matrix row updates required (`TRACEABILITY_MATRIX.md`).
 - **QL-B**
   - Baseline checks + impacted unit/integration tests.
-  - Traceability updates for requirement-to-test linkage.
+  - Traceability updates for requirement-to-test linkage (`TRACEABILITY_MATRIX.md`).
 - **QL-C**
   - Baseline checks; focused verification accepted if unaffected stacks are justified.
 - **QL-D**
