@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **67 Words**, of which **37** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **66 Words**, of which **36** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -860,20 +860,6 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
 - **Syntax:** `1 0 / NIL-REASON`
-
-## `OR-NIL`
-
-Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `absence`
-- **Stack:** control input(s) → control output(s); `conditional` consumption
-- **NIL policy:** `inspectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `NIL OR-NIL [ 0 ]`
-- **ERROR conditions:** `missingFollowingSourceUnit`
 
 ## `KEEP`
 

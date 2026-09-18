@@ -21,9 +21,12 @@
 //! A fifth was added when the stack-flow simulation stopped guessing at the
 //! constructs it cannot model (`word_contract_flow.rs`):
 //!
-//!  * the body reaches a control directive whose paths differ in stack height
-//!    (`OR-NIL`, `|`), or an unbalanced `[`/`{` delimiter, so no fixed arity
-//!    describes it (`UnmodelledControlFlow`).
+//!  * the body reaches a control directive whose paths differ in stack height,
+//!    or an unbalanced delimiter, so no fixed arity describes it
+//!    (`UnmodelledControlFlow`). No source reaches this any more: the two
+//!    directives that had differing-height paths were `COND`'s `|` and
+//!    `OR-NIL`, both retired, and an unbalanced delimiter is refused at
+//!    tokenize time. The id is kept, unreachable, for protocol stability.
 //!
 //! It earns an id of its own rather than being folded into `ConservativeSeed`
 //! for the reason that seed is named after: `ConservativeSeed` says inference

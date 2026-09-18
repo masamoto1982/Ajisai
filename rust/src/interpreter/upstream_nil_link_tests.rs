@@ -131,7 +131,7 @@ async fn a_written_nil_is_not_reported_as_an_upstream_cause() {
 /// reads from.
 #[tokio::test]
 async fn a_recovered_absence_leaves_no_trace_of_the_link() {
-    let report = report("1 0 / OR-NIL 42").await;
+    let report = report("42 1 0 / NIL? SELECT").await;
     assert_eq!(report["status"], "ok");
     assert!(report["diagnosis"].is_null());
 }

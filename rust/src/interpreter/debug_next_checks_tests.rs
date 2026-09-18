@@ -307,10 +307,10 @@ mod diagnosis_vocabulary_is_real {
         }
     }
 
-    /// The positive half: the zero-division advice must name the word that
-    /// actually recovers a NIL, so the fix is not merely "stopped saying SAFE".
+    /// The positive half: the zero-division advice must name the Words that
+    /// actually recover a NIL, so the fix is not merely "stopped saying SAFE".
     #[test]
-    fn zero_division_advice_names_or_nil() {
+    fn zero_division_advice_names_the_recovery_words() {
         let checks = build_next_checks(
             &CauseClass::Domain,
             Some("DIV"),
@@ -321,12 +321,14 @@ mod diagnosis_vocabulary_is_real {
             .iter()
             .find(|c| c.code == "checkZeroIsExpected")
             .expect("zero-division diagnosis offers a recovery check");
-        assert!(
-            advice.detail.en.contains("OR-NIL") && advice.detail.ja.contains("OR-NIL"),
-            "both locales must name OR-NIL: en={} ja={}",
-            advice.detail.en,
-            advice.detail.ja
-        );
+        for word in ["NIL?", "SELECT"] {
+            assert!(
+                advice.detail.en.contains(word) && advice.detail.ja.contains(word),
+                "both locales must name {word}: en={} ja={}",
+                advice.detail.en,
+                advice.detail.ja
+            );
+        }
         assert!(
             !advice.detail.en.contains("SAFE") && !advice.detail.ja.contains("SAFE"),
             "SAFE is not an Ajisai Word and must not be advised"

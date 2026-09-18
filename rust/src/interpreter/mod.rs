@@ -111,8 +111,6 @@ mod collection_meter_tests;
 #[cfg(test)]
 mod control_exec_eval_tests;
 #[cfg(test)]
-mod control_or_else_tests;
-#[cfg(test)]
 mod debug_next_checks_tests;
 #[cfg(test)]
 mod declared_condition_tests;

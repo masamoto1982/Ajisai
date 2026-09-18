@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 67,
-    "semanticKernelWords": 37,
+    "canonicalWords": 66,
+    "semanticKernelWords": 36,
     "standardWords": 30,
-    "corewords": 67,
+    "corewords": 66,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 88
+    "manifestEntries": 87
   },
   "entries": [
     {
@@ -1122,24 +1122,6 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.bubble.domain"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.or-nil",
-      "kind": "coreword",
-      "surface": "OR-NIL",
-      "category": "control-directive",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "OR-NIL",
-      "coverage_entry_id": "core.or-nil",
-      "semantic_role": "Derived",
-      "algebraic_family": "bubble",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.bubble.handler",
         "algebra.bubble.domain"
       ],
       "classification": "Core"

@@ -947,8 +947,11 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3>代わりの値を与える: <code>OR-NIL</code></h3>
-                    <p><code>OR-NIL</code>は、最上位の値が<code>NIL</code>のときだけ代わりの値を与えます。この代わりの値は<code>OR-NIL</code>の直後に書かれたソースそのものであり、あらかじめスタックに積んでおいた値ではありません。最上位が<code>NIL</code>でなければ<em>評価すらされずに読み飛ばされる</em>ので、重い処理や副作用のある式を書いても、実際に<code>NIL</code>が出たときにしか実行されません。</p>
+                    <h3 id="recovery">代わりの値を与える: <code>NIL?</code>と<code>SELECT</code></h3>
+                    <p>不在の回復に専用の構文はありません。<a href="#cond"><code>SELECT</code></a>と<code>NIL?</code>を並べるだけです。</p>
+                    <p><code>NIL?</code>は<strong>調べた値をそのまま残したうえで</strong>、それが不在かどうかの真偽値を積みます(<code>[ x ] -&gt; [ x ] [ bool ]</code>)。積まれる順番が<code>SELECT</code>の求める順番とちょうど一致するので、<code>代わりの値 調べる値 NIL? SELECT</code>と書けば「値があればその値、なければ代わりの値」になります。<strong>名前を付ける必要も、同じ式を2度書く必要もありません。</strong></p>
+                    <p class="ref-note">代わりの値は普通のオペランドなので、他のオペランドと同じく<code>SELECT</code>より前に計算され終わります。値がある場合でも代わりの値の計算は行われる、ということです(<a href="#cond"><code>SELECT</code></a>の節を参照)。重い計算や<code>PRINT</code>のような作用を代わりの値の位置に書かないでください。</p>
+                    <p class="ref-note"><code>NIL?</code>が尋ねるのは<strong>値全体</strong>についてです。ベクトルの中の1レーンが<code>NIL</code>でも、そのベクトル自体は不在ではないので<code>FALSE</code>と答えます。<code>[ 0 0 ] [ 1 NIL ] NIL? SELECT</code>は<code>[ 1/1 NIL ]</code>であり、レーンの不在は回復されません。レーンを回復したいなら、ベクトルの外側ではなく内側で回復してください。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -957,9 +960,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 / OR-NIL 99</code></td>
+                                    <td><code>99 1 0 / NIL? SELECT</code></td>
                                     <td><code>99/1</code></td>
-                                    <td class="notes"><code>OR-NIL</code>は<code>NIL</code>を代わりの値に置き換える。</td>
+                                    <td class="notes">不在だったので代わりの値が選ばれる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -976,9 +979,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>7 2 / OR-NIL 99</code></td>
+                                    <td><code>99 7 2 / NIL? SELECT</code></td>
                                     <td><code>7/2</code></td>
-                                    <td class="notes">結果が実際の値であるとき、フォールバックは使われない。</td>
+                                    <td class="notes">結果が実際の値であるとき、代わりの値は選ばれない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1321,7 +1324,7 @@
                                 <tr>
                                     <td><code>1 0 DIV TRUE AND</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">左のオペランドが<code>NIL</code>になったので、その不在が結果まで伝わる。必要な箇所で<code>OR-NIL</code>を使って回復させる。</td>
+                                    <td class="notes">左のオペランドが<code>NIL</code>になったので、その不在が結果まで伝わる。必要な箇所で<a href="#recovery">代わりの値を選んで</a>回復させる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2245,7 +2248,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note"><code>NIL</code>なので、<code>OR-NIL</code>で代わりの値に差し替えて先へ進めます。<code>[ 0 999999999999 ] RANGE OR-NIL [ ]</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
+                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>[ ] [ 0 999999999999 ] RANGE NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
                 </section>
 
                 <section id="words" class="ref-page">

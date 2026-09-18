@@ -113,11 +113,6 @@
       "documentation": "Program text that does not parse — an unclosed block, a | outside a clause, a mismatched delimiter."
     },
     {
-      "id": "missingFollowingSourceUnit",
-      "kind": "declared",
-      "documentation": "OR-NIL's top was NIL and no source unit follows it to evaluate as the fallback."
-    },
-    {
       "id": "nameConflict",
       "kind": "structural",
       "attribution": "operand",

@@ -1,7 +1,7 @@
 use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
 use super::builtin_word_lookup_docs::lookup_builtin_lookup_doc;
 use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
-use crate::coreword_registry::{ExecutionForm, NilPolicy, Partiality};
+use crate::coreword_registry::{NilPolicy, Partiality};
 use crate::kernel::generated::{generated_word, AcceptedDomain, VocabularyTier};
 
 /// Render the LOOKUP body for a built-in word: the four authored base
@@ -31,22 +31,6 @@ pub fn lookup_builtin_detail(name: &str) -> String {
         spec.role,
         spec.stack_effect,
     );
-
-    // Machine-readable execution form (LANG.FAILURE.RECOVERY): surface the control-directive
-    // classification so LOOKUP states it explicitly rather than leaving it to
-    // the prose. `RuntimeWord`s add nothing here.
-    match spec.execution_form {
-        ExecutionForm::LazyNextUnitFallback => {
-            out.push('\n');
-            out.push_str(
-                "Form:\n  Lazy control directive (LANG.FAILURE.RECOVERY): inspects the stack top; a\n  \
-                 non-NIL top is kept and the following source unit is skipped\n  \
-                 unevaluated, a NIL top is discarded and the following unit is\n  \
-                 evaluated as the fallback. Not a stack-consuming word.\n",
-            );
-        }
-        ExecutionForm::RuntimeWord => {}
-    }
 
     let doc = lookup_builtin_lookup_doc(spec.name);
 
@@ -162,7 +146,6 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
             NilPolicy::CreatesNil => {}
             NilPolicy::RejectNil => lines.push("NIL operands are rejected with an error."),
             NilPolicy::ConsumeNil => lines.push("Accepts NIL operands as data."),
-            NilPolicy::InspectNil => lines.push("Inspects whether its subject is NIL."),
             NilPolicy::PreserveReason => {
                 lines.push("A NIL value keeps its reason through this word.")
             }

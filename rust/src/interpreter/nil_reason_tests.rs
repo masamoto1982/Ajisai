@@ -123,14 +123,15 @@ async fn bare_nil_literal_is_reasoned_as_literal() {
 }
 
 #[tokio::test]
-async fn or_nil_consumes_direct_projected_nil_and_substitutes_fallback() {
+async fn a_fallback_replaces_a_directly_projected_nil() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 /").await.unwrap();
-    interp.execute("42 OR-NIL").await.unwrap();
+    interp.execute("'X' BIND 42 X NIL? SELECT").await.unwrap();
     let stack = interp.get_stack();
+    assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
     assert!(
         !stack.last().unwrap().is_nil(),
-        "top should not be NIL after OR-NIL fallback"
+        "top should not be NIL after the fallback is chosen"
     );
     assert_eq!(format!("{}", stack.last().unwrap()), "42/1");
 }
@@ -182,9 +183,9 @@ async fn nil_projection_rule_division_by_zero_without_safe_has_direct_reason() {
 }
 
 #[tokio::test]
-async fn nil_projection_rule_division_by_zero_recovers_with_or_nil() {
+async fn nil_projection_rule_division_by_zero_is_recoverable() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 / OR-NIL 99").await.unwrap();
+    interp.execute("99 10 0 / NIL? SELECT").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(!top.is_nil());
     assert_eq!(format!("{}", top), "99/1");
@@ -200,10 +201,10 @@ async fn nil_projection_rule_get_out_of_range_without_safe_has_direct_reason() {
 }
 
 #[tokio::test]
-async fn nil_projection_rule_get_out_of_range_recovers_with_or_nil() {
+async fn nil_projection_rule_get_out_of_range_is_recoverable() {
     let mut interp = Interpreter::new();
     interp
-        .execute("[ 10 20 ] [ 99 ] GET OR-NIL 0")
+        .execute("0 [ 10 20 ] [ 99 ] GET NIL? SELECT")
         .await
         .unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -232,7 +233,7 @@ async fn nil_projection_rule_num_parse_failure_has_direct_reason_and_fallback() 
     assert_eq!(top.nil_reason(), Some(&NilReason::InvalidEncoding));
 
     let mut interp = Interpreter::new();
-    interp.execute("'abc' NUM OR-NIL 0").await.unwrap();
+    interp.execute("0 'abc' NUM NIL? SELECT").await.unwrap();
     assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0/1");
 }
 

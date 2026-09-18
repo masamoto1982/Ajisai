@@ -249,7 +249,7 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
         NilPolicy::PassthroughThenProject | NilPolicy::CreatesNil => NilBehavior::MayCreate,
         NilPolicy::RejectNil => NilBehavior::RejectsNil,
         // `inspectNil` reads NIL-ness rather than propagating it — `ConsumesNil`.
-        NilPolicy::ConsumeNil | NilPolicy::InspectNil => NilBehavior::ConsumesNil,
+        NilPolicy::ConsumeNil => NilBehavior::ConsumesNil,
         // `kleeneAbsorbing` may or may not produce a NIL depending on the
         // other operand (LANG.VALUES.TRUTH) — the same "plan for either"
         // shape as `passthroughThenProject`, so it widens the same way.
@@ -410,10 +410,7 @@ impl Interpreter {
                         cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
                         acc.widen_with(&dep_contract);
                     }
-                    Token::VectorStart
-                    | Token::VectorEnd
-                    | Token::NilCoalesce
-                    | Token::LineBreak => {
+                    Token::VectorStart | Token::VectorEnd | Token::LineBreak => {
                         flow.feed_structural(token);
                         sim.feed_structural(token);
                         cost_sim.feed_structural(token);

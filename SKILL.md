@@ -48,9 +48,9 @@ pushes `NIL` (reason: `divisionByZero`). The projection is recorded in
 `errorFlowTrace` as a `nilProduced` event with a full diagnosis, and the NIL
 value itself carries `semantics.absence.reason` on the stack.
 
-- Provide a fallback with `OR-NIL`: `1 0 DIV OR-NIL [ 99 ]` → stack `[ 99/1 ]`.
+- Provide a fallback with `NIL?` and `SELECT`: `[ 99 ] 1 0 DIV NIL? SELECT` → stack `[ 99/1 ]`. `NIL?` answers its subject *and* whether it is absent, which is exactly where `SELECT` wants the truth — so the phrase reads "X, or the fallback if X is absent" with nothing named and nothing repeated.
 - Over a vector the projection is **per lane, not per value**: `[ 6 6 ] [ 1 0 ] DIV` → stack `[ 6/1 NIL ]`. The lane that could not divide is the only one emptied.
-- That makes the top a vector, not a NIL, so `OR-NIL` — which inspects the stack top — keeps it as-is. Recover a lifted result inside the vector, not around it.
+- That makes the top a vector, not a NIL, so `NIL?` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field
@@ -188,8 +188,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-67 canonical Words in one flat Core dictionary, of which
-37 form the Semantic Kernel and 30 are Standard Words. Both are
+66 canonical Words in one flat Core dictionary, of which
+36 form the Semantic Kernel and 30 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -257,7 +257,6 @@ no module system and nothing to import.
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
-| `OR-NIL` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL OR-NIL [ 0 ]` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |

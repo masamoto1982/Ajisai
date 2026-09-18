@@ -33,36 +33,12 @@ impl MassContract {
     }
 }
 
-/// How a Coreword takes effect, as a machine-readable signal independent of the
-/// human-facing `stack_effect` prose.
-///
-/// Most words are ordinary `RuntimeWord`s dispatched by name and consuming/
-/// producing stack values. The lazy control directive of LANG.FAILURE.RECOVERY is not: the
-/// tokenizer emits it as a dedicated token (`OR-NIL` -> `NilCoalesce`) and the
-/// execution loop interprets the *following source unit* positionally rather
-/// than popping operands. This enum lets generators and consistency tests assert
-/// that classification instead of parsing the prose.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase", tag = "kind")]
-pub enum ExecutionForm {
-    /// Ordinary word: dispatched by name, operates on stack operands.
-    RuntimeWord,
-    /// Lazy NIL-coalescing control directive: inspects the stack top and, if it
-    /// is non-NIL, keeps it and skips the following source unit *unevaluated*;
-    /// if it is NIL, discards it and evaluates the following source unit as the
-    /// fallback. The fallback is source that follows the directive, never a
-    /// value already on the stack (e.g. `OR-NIL`).
-    LazyNextUnitFallback,
-}
-
 /// The mass contract implied by a Word's declared stack arity.
 ///
 /// `MassContract` is the analyzers' vocabulary — they need one bit, "is this
-/// arity statically pinned" — while the specification distinguishes *why* an
-/// arity is not pinned (`variable` data-dependence vs a `control` directive
-/// that is not a stack operation at all). Both collapse to `Dynamic` here, so
-/// the analyzers keep the question they can answer and the distinction stays
-/// available in the registry for anything that needs it.
+/// arity statically pinned". An arity that is not pinned is `variable`: it is
+/// decided by the data. The `control` shape, for a directive that was not a
+/// stack operation at all, went with the one Word that had it (`OR-NIL`).
 pub(super) fn mass_from_arity(word: &GeneratedWord) -> MassContract {
     match (word.stack_inputs, word.stack_outputs) {
         (Arity::Fixed(consumes), Arity::Fixed(produces)) => {
@@ -109,15 +85,5 @@ pub(crate) const fn stability_from_contract(word: &GeneratedWord) -> &'static st
     match safety_from_contract(word) {
         super::SafetyLevel::A | super::SafetyLevel::B => "stable",
         super::SafetyLevel::D => "experimental",
-    }
-}
-
-/// Positional control is identified by the canonical executor identity.
-pub(crate) const fn execution_form_from_contract(word: &GeneratedWord) -> ExecutionForm {
-    match word.id {
-        crate::kernel::generated::WordId::LazyNextUnitFallback => {
-            ExecutionForm::LazyNextUnitFallback
-        }
-        _ => ExecutionForm::RuntimeWord,
     }
 }

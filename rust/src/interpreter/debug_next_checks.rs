@@ -59,21 +59,20 @@ pub(crate) fn build_next_checks(
                         &format!("{} の右オペランドを確認する", word_label),
                     ),
                 ));
-                // `OR-NIL`, not `SAFE`. This check named `SAFE` for as long as
-                // it existed, and `SAFE` has never been one of the Core Words:
-                // it is the pre-rename spelling of the NIL-coalescing directive
-                // that shipped as `OR-NIL`. A diagnosis is the one surface an
-                // agent is told to follow literally, so pointing it at a word
-                // the dictionary will reject — while never naming the word that
-                // works — cost more than saying nothing. `word_recovery_tests`
-                // now holds every word a check names to the dictionary, so this
-                // class of stale spelling cannot come back silently.
+                // Name the Words that actually recover an absence. This
+                // check has twice named a Word the dictionary would reject —
+                // first `SAFE`, which never existed, then `OR-NIL`, which was
+                // retired — and a diagnosis is the one surface an agent is
+                // told to follow literally, so a stale spelling here costs
+                // more than saying nothing. `word_recovery_tests` holds every
+                // Word a check names to the dictionary, which is what stops
+                // that class of staleness coming back silently.
                 out.push(check(
                     "checkZeroIsExpected",
                     ("Check zero is expected", "0 が正常値かを確認する"),
                     (
-                        "If 0 is a legitimate value here, recover it with OR-NIL or guard the divisor.",
-                        "0 が正常値としてあり得るなら OR-NIL で回復するか、除数を事前に確認する",
+                        "If 0 is a legitimate value here, choose a fallback with NIL? and SELECT, or guard the divisor.",
+                        "0 が正常値としてあり得るなら NIL? と SELECT で代替値を選ぶか、除数を事前に確認する",
                     ),
                 ));
                 out.push(check(

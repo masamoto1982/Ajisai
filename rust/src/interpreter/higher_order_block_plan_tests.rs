@@ -103,7 +103,10 @@ mod tests {
             // A binding, and a nested block, and OR-NIL — the shapes that reach
             // the fallback rather than a lowered op.
             ("[ 1 2 ] [ 'X' BIND X X ADD ] MAP", "[ 2/1 4/1 ]"),
-            ("[ 1 2 ] [ 0 DIV OR-NIL 7 ] MAP", "[ 7/1 7/1 ]"),
+            (
+                "[ 1 2 ] [ 'E' BIND 7 E 0 DIV NIL? SELECT ] MAP",
+                "[ 7/1 7/1 ]",
+            ),
         ] {
             assert_eq!(answer(program).await, expected, "`{program}`");
         }

@@ -27,7 +27,7 @@ mod tests {
     /// at all.
     #[tokio::test]
     async fn a_name_that_cannot_be_written_is_refused() {
-        for name in ["A[B", "2]", "123", "#foo", "my word", "OR-NIL", ""] {
+        for name in ["A[B", "2]", "123", "#foo", "my word", ""] {
             let err = def(name)
                 .await
                 .expect_err(&format!("`{name}` should not be definable"));

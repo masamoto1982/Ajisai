@@ -175,7 +175,7 @@ fn try_collect_literal_vector(
             // `[ IDLE | 1 ]`: `|` inside an unclosed `[` is data until COND
             // runs it, the same promotion an ordinary name gets — mirrors
             // `collect_bracketed_with_depth`'s handling exactly.
-            Token::LineBreak | Token::NilCoalesce => {
+            Token::LineBreak => {
                 i += 1;
             }
         }
@@ -206,7 +206,6 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
                 _ => CompiledOp::FallbackToken(token.clone()),
             },
             Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
-            Token::NilCoalesce => CompiledOp::FallbackToken(token.clone()),
             Token::LineBreak => CompiledOp::LineBreak,
             Token::Symbol(s) => {
                 let upper = crate::core_word_aliases::canonicalize_core_word_name(s);

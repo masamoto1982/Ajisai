@@ -20,7 +20,7 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
 /// carrying the reason a comparison could not decide. Mirrors
 /// `interpreter::logic::as_unknown` — U's `hint` is `TruthValue` directly
 /// (not just the stack role) so `Value::truth_value()` reports `"unknown"`
-/// from the value alone, and `NIL?`/`NIL-REASON`/`OR-NIL` still see the
+/// from the value alone, and `NIL?`/`NIL-REASON` still see the
 /// absence it is (SPEC: being read in truth position adds an observation, it
 /// takes none away).
 fn undecidable_truth_value() -> Value {

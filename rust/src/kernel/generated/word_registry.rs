@@ -70,7 +70,6 @@ pub enum WordId {
     Nil,
     NilCheck,
     NilReason,
-    LazyNextUnitFallback,
     SetConsumptionKeep,
     Bind,
     Def,
@@ -141,8 +140,6 @@ pub enum Consumption {
     Eat,
     /// `retain`
     Retain,
-    /// `conditional`
-    Conditional,
 }
 
 impl Consumption {
@@ -152,7 +149,6 @@ impl Consumption {
             Consumption::None => "none",
             Consumption::Eat => "eat",
             Consumption::Retain => "retain",
-            Consumption::Conditional => "conditional",
         }
     }
 }
@@ -172,8 +168,6 @@ pub enum NilPolicy {
     RejectNil,
     /// `passthrough`
     Passthrough,
-    /// `inspectNil`
-    InspectNil,
     /// `createsNil`
     CreatesNil,
     /// `passthroughThenProject`
@@ -190,7 +184,6 @@ impl NilPolicy {
             NilPolicy::ConsumeNil => "consumeNil",
             NilPolicy::RejectNil => "rejectNil",
             NilPolicy::Passthrough => "passthrough",
-            NilPolicy::InspectNil => "inspectNil",
             NilPolicy::CreatesNil => "createsNil",
             NilPolicy::PassthroughThenProject => "passthroughThenProject",
             NilPolicy::KleeneAbsorbing => "kleeneAbsorbing",
@@ -2586,40 +2579,6 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         effects: &[],
         error_when: &[],
         syntax: Some("1 0 / NIL-REASON"),
-    },
-    GeneratedWord {
-        id: WordId::LazyNextUnitFallback,
-        name: "OR-NIL",
-        aliases: &[],
-        family: Family::Absence,
-        stack_inputs: Arity::Control,
-        stack_outputs: Arity::Control,
-        consumption: Consumption::Conditional,
-        nil_policy: NilPolicy::InspectNil,
-        projection: &[],
-        partiality: Partiality::Total,
-        accepted_domain: None,
-        purity: Purity::Conditional,
-        determinism: Determinism::StateRelative,
-        cost: WordCost {
-            steps: CostAxis {
-                class: CostClass::Const,
-                exact: true,
-            },
-            numeric: CostAxis {
-                class: CostClass::Const,
-                exact: false,
-            },
-            collection: CostAxis {
-                class: CostClass::Const,
-                exact: false,
-            },
-        },
-        vocabulary_tier: VocabularyTier::Kernel,
-        standard_kind: None,
-        effects: &[],
-        error_when: &["missingFollowingSourceUnit"],
-        syntax: Some("NIL OR-NIL [ 0 ]"),
     },
     GeneratedWord {
         id: WordId::SetConsumptionKeep,

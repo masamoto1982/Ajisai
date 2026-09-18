@@ -80,10 +80,6 @@
       "reason": "variableArity"
     },
     {
-      "word": "OR-NIL",
-      "reason": "controlArity"
-    },
-    {
       "word": "KEEP",
       "reason": "modifierNotWord"
     }

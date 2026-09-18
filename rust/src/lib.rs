@@ -76,9 +76,6 @@ mod extreme_index_tests;
 mod conformance_tests;
 
 #[cfg(test)]
-mod or_nil_canonical_tests;
-
-#[cfg(test)]
 mod stack_render_tests;
 
 #[cfg(test)]

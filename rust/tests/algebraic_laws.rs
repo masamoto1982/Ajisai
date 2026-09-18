@@ -149,14 +149,15 @@ proptest! {
         assert_law("nil-passthrough", &format!("1 0 DIV {a} ADD"), "NIL");
     }
 
-    /// OR-NIL handler: a projected NIL is replaced by the fallback (verified
-    /// operand order `projected-NIL OR-NIL fallback`, LANG.FAILURE.RECOVERY), a present
-    /// value is kept.
+    /// Absence handler: a projected NIL is replaced by the fallback, a present
+    /// value is kept (LANG.FAILURE.RECOVERY). `NIL?` answers its subject and
+    /// whether it is absent, which is exactly `SELECT`'s truth operand, so the
+    /// handler is `fallback subject NIL? SELECT` with nothing named.
     #[test]
-    fn or_nil_handler(a in small()) {
-        assert_law("or-nil-recovers-projection", &format!("1 0 DIV OR-NIL {a}"), &format!("{a}"));
-        // A non-NIL value is its own left-biased result regardless of fallback.
-        assert_law("or-nil-present", &format!("{a} OR-NIL 999"), &format!("{a}"));
+    fn absence_handler(a in small()) {
+        assert_law("absence-recovers-projection", &format!("{a} 1 0 DIV NIL? SELECT"), &format!("{a}"));
+        // A present value is its own result regardless of the fallback.
+        assert_law("absence-present", &format!("999 {a} NIL? SELECT"), &format!("{a}"));
     }
 }
 

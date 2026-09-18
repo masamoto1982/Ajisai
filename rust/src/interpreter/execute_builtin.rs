@@ -313,14 +313,13 @@ impl Interpreter {
             WordId::Put => shape_ops::op_put(self),
             WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
-            // The positional control directives of LANG.FAILURE.RECOVERY. The execution
-            // loop interprets these against the source stream — `OR-NIL` decides
-            // whether the *following source unit* is evaluated and `KEEP`
-            // sets the non-default consumption mode — so they are never dispatched by name
-            // and have no primitive. Reaching one here means a caller bypassed
-            // the loop, which is exactly the unknown-word answer the old
-            // `executor_key: None` path gave.
-            WordId::LazyNextUnitFallback | WordId::SetConsumptionKeep => {
+            // The one modifier (LANG.MODIFIERS.CONSUMPTION). The execution
+            // loop interprets it against the source stream — it sets the
+            // non-default consumption mode for the Word that follows — so it
+            // is never dispatched by name and has no primitive. Reaching it
+            // here means a caller bypassed the loop, which is exactly the
+            // unknown-word answer the old `executor_key: None` path gave.
+            WordId::SetConsumptionKeep => {
                 Err(AjisaiError::UnknownWord(self.word_name_for(id).to_string()))
             }
         }
@@ -380,7 +379,6 @@ impl Interpreter {
             Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::NilCoalesce => "OR-NIL".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }

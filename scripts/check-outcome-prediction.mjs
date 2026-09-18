@@ -154,7 +154,7 @@ const ADVERSARIAL = [
   '1 2 ADD',
   '[ 1 2 3 ] [ 2 MUL ] MAP',
   "[ 1 ADD ] 'INC' DEF 5 INC",
-  '1 0 DIV OR-NIL 9',
+  '9 1 0 DIV NIL? SELECT',
   // Reason loss: a lane holds an absence but not the reason for it, so a
   // computed NIL that crosses one twice comes back reasonless and reads as
   // `nil:literal` — with no NIL written anywhere in the source. Prediction

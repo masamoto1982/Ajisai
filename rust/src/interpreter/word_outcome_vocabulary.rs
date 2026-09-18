@@ -262,10 +262,6 @@ impl Reachability {
         self.calls_user_word |= !is_builtin;
     }
 
-    pub(crate) fn saw_word(&mut self, name: &str) {
-        self.names.insert(name.to_uppercase());
-    }
-
     fn reaches_any(&self, words: &[&str]) -> bool {
         self.unresolved || words.iter().any(|w| self.names.contains(*w))
     }
@@ -384,14 +380,6 @@ pub(crate) fn outcome_vocabulary_for_word(
                     {
                         outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
                     }
-                }
-                // `OR-NIL` desugars to this token rather than a Symbol, but
-                // is a real Word with its own declared vocabulary — see
-                // `structural_ceiling_ids`'s doc for why it needs this
-                // separate case.
-                Token::NilCoalesce => {
-                    reach.saw_word("OR-NIL");
-                    outcomes.extend(builtin_outcomes_for("OR-NIL"));
                 }
                 _ => {}
             }

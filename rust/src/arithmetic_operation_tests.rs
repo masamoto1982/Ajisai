@@ -300,12 +300,13 @@ mod nil_passthrough_tests {
     }
 
     #[tokio::test]
-    async fn or_nil_can_supply_fallback_after_passthrough() {
-        let interp = run("[ 10 ] [ 0 ] / 1 + 0 OR-NIL").await;
+    async fn a_fallback_can_replace_a_nil_that_passed_through() {
+        let interp = run("0 10 0 / 1 + NIL? SELECT").await;
         let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
         assert!(
             !stack.last().unwrap().is_nil(),
-            "OR-NIL should have replaced NIL with the fallback; got {}",
+            "the fallback should have been chosen; got {}",
             stack.last().unwrap()
         );
     }

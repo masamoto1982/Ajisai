@@ -5,7 +5,7 @@
 //! question: a well-formed operation whose result cannot be materialized
 //! within budget is projected onto a diagnosable NIL under the NIL Projection
 //! Rule (LANG.FAILURE.PROJECT) rather than raised, because the program is not wrong —
-//! it is too big, and a pipeline can recover it with `OR-NIL`.
+//! it is too big, and a pipeline can recover it with a chosen fallback.
 
 use crate::error::{ErrorCategory, NilReason, ResourceLimit};
 use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase, ResourceLimitFacts};

@@ -167,12 +167,6 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
             continue;
         }
 
-        if let Some(token) = parse_control_directive_word(&token_str) {
-            tokens.push(token);
-            spans.push(span_at(start));
-            continue;
-        }
-
         // `|` separated a `COND` clause's guard from its body. `COND` is gone
         // and `SELECT` needs no separator, so the form is retired rather than
         // freed: a reader who meets it in older material gets told what
@@ -360,24 +354,6 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
 /// like every other token boundary.
 fn is_string_close_delimiter(c: char) -> bool {
     c.is_whitespace()
-}
-
-/// `OR-NIL` (LANG.FAILURE.RECOVERY, core_word_aliases.rs) has no symbol or legacy-name
-/// sugar: it is emitted as its own dedicated control token directly from the
-/// bare word, because the execution loop reads the *following* source unit
-/// positionally — a spelled-out control directive must not fall through to a
-/// stack-consuming builtin or an `UnknownWord`.
-///
-/// Matching is case-folded (`or-nil` == `OR-NIL`) but only on a bare, whole-word
-/// token: a qualified name such as `MATH@OR-NIL` is a single token containing `@`
-/// and never compares equal, and string literals are lexed earlier, so neither
-/// is misconverted. Because the tokenizer emits the control token directly,
-/// this name is also not shadowable by a user definition.
-fn parse_control_directive_word(s: &str) -> Option<Token> {
-    match s {
-        _ if s.eq_ignore_ascii_case("OR-NIL") => Some(Token::NilCoalesce),
-        _ => None,
-    }
 }
 
 fn parse_number_from_string(s: &str) -> Option<Token> {

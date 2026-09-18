@@ -29,7 +29,6 @@
     },
     {
      "enum": [
-      "control",
       "variable"
      ]
     }
@@ -237,8 +236,7 @@
      "enum": [
       "none",
       "eat",
-      "retain",
-      "conditional"
+      "retain"
      ]
     },
     "nilPolicy": {
@@ -247,7 +245,6 @@
       "consumeNil",
       "rejectNil",
       "passthrough",
-      "inspectNil",
       "createsNil",
       "passthroughThenProject",
       "kleeneAbsorbing"

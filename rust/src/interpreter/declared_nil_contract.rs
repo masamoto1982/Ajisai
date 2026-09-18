@@ -196,7 +196,6 @@ impl Interpreter {
             // a blanket `passthrough` does.
             NilPolicy::CreatesNil
             | NilPolicy::ConsumeNil
-            | NilPolicy::InspectNil
             | NilPolicy::PreserveReason
             | NilPolicy::KleeneAbsorbing => NilContract::Run,
         }

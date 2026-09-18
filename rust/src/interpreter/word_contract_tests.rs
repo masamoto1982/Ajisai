@@ -168,16 +168,26 @@ async fn a_symbol_inside_a_vector_literal_is_content_not_a_call() {
     assert_eq!(contract.flow, fixed(0, 1));
 }
 
+/// A recovery phrase has a fixed arity, where the `OR-NIL` it replaced had
+/// none.
+///
+/// `OR-NIL` selected between paths of differing height — it either kept the
+/// top and skipped the following source unit, or discarded the top and ran
+/// that unit — so no fixed arity described it and inference gave up with
+/// `gap.unmodelledControlFlow`. `SELECT` chooses between two values that are
+/// both already on the stack, so the same recovery is three operands in and
+/// one out, and the walk models it exactly.
 #[tokio::test]
-async fn or_nil_leaves_the_flow_unmodelled_rather_than_wrong() {
-    // `OR-NIL` selects between paths of differing height, so no fixed arity
-    // describes it. Reported as a gap, which can only ever produce a note.
-    let contract = contract_for("[ 1 0 DIV OR-NIL 9 ] 'FALLBACK' DEF", "FALLBACK").await;
-    assert_eq!(contract.flow, ContractFlow::Dynamic);
-    assert_eq!(contract.confidence, ContractConfidence::Conservative);
-    assert!(contract
-        .gaps
-        .contains(&crate::agent::contract_gap::GapCode::UnmodelledControlFlow));
+async fn a_recovery_phrase_has_a_fixed_arity() {
+    let contract = contract_for("[ 9 1 0 DIV NIL? SELECT ] 'FALLBACK' DEF", "FALLBACK").await;
+    assert_eq!(contract.flow, fixed(0, 1));
+    assert!(
+        !contract
+            .gaps
+            .contains(&crate::agent::contract_gap::GapCode::UnmodelledControlFlow),
+        "nothing in the body is unmodelled control flow: {:?}",
+        contract.gaps
+    );
 }
 
 #[tokio::test]
