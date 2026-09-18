@@ -6,7 +6,13 @@ import {
 } from '../workers/interpreter-snapshot';
 import { getPlatform } from '../platform';
 import { ExecutionTimeoutError } from '../workers/execution-timeout';
-import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
+import type {
+    AjisaiInterpreter,
+    ExecuteResult,
+    ProtocolDiagnosis,
+    UserWord
+} from '../wasm-interpreter-types';
+import { renderDiagnosisReport } from './diagnosis-report';
 
 // A word is addressed by its bare name. The dictionary has two tiers and User
 // is one of them (LANG.DICTIONARY.RESOLUTION), so there is nothing for a
@@ -35,7 +41,7 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
         stackSnapshot: interpreter.snapshot_stack(),
         userWords: collectUserWords(interpreter),
         // Host-configured step budget (LANG.MACHINE.LIMITS water level); undefined
-        // keeps the interpreter default of 100,000.
+        // keeps the interpreter's own default (`DEFAULT_MAX_EXECUTION_STEPS`).
         stepLimit: getPlatform().executionConfig.stepLimit
     });
 
@@ -84,24 +90,74 @@ export const describeSnapshotRefusal = (result: ExecuteResult): string | null =>
 // the bare sentence was all the reader got. What is knowable here is knowable
 // without the run — which guard fired, that it is the host's and not the
 // language's, and what makes a program fit inside it.
+//
+// It is assembled as a `ProtocolDiagnosis` and rendered by
+// `renderDiagnosisReport`, the same way a diagnosis that arrives from the
+// interpreter is: this used to hand-write the `[DIAGNOSIS]` / `Q1` / `next:`
+// lines as literals, which made the reading format two things instead of one.
+// Only the ceiling line is its own, because a wall-clock stop has no observed
+// value to report against the limit and no Word to attribute it to.
+const TIMEOUT_DIAGNOSIS: ProtocolDiagnosis = {
+    when: 'hostGuard',
+    // `playground` is the host, not a Word: the guard belongs to the page that
+    // owns the worker, and naming it here is what tells a reader the language
+    // did not refuse their program.
+    where: { kind: 'hostEnvironment', word: 'playground' },
+    why: 'resourceLimit',
+    summary: 'hostGuard / playground (hostEnvironment) / resourceLimit (executionTimeout)',
+    evidence: [],
+    nextChecks: [
+        {
+            code: 'checkWhichGuardStopped',
+            title: { en: 'Check which guard stopped it', ja: 'どのガードが止めたか確認する' },
+            detail: {
+                en: 'The playground stops a run on wall-clock time. '
+                    + "The interpreter's own budgets (execution steps, materialized elements, "
+                    + 'numeric work) did not refuse this program; it was still running when the '
+                    + 'time ran out.',
+                ja: 'プレイグラウンドは実時間で実行を停止する。インタプリタ自身の予算（実行ステップ、'
+                    + '実体化要素数、数値処理量）はこのプログラムを拒否していない。時間切れの時点で'
+                    + 'まだ実行中だった。'
+            }
+        },
+        {
+            code: 'rewriteLoopAsBulkOperation',
+            title: { en: 'Rewrite the loop as a bulk operation', ja: 'ループを一括操作に書き換える' },
+            detail: {
+                en: 'A whole-vector Word does in one step what a per-element loop does in as '
+                    + 'many, and only the loop is charged per step.',
+                ja: 'ベクタ全体を扱うWordは、要素ごとのループが要素数だけ費やす処理を1ステップで行う。'
+                    + 'ステップ課金を受けるのはループの側だけである。'
+            }
+        },
+        {
+            code: 'trimWhatTheRunCarries',
+            title: { en: 'Trim what the run carries', ja: '実行が抱える値を削る' },
+            detail: {
+                en: 'Exact values grow as they are combined; QUANTIZE bounds a denominator that '
+                    + 'is otherwise free to grow every iteration.',
+                ja: '厳密値は組み合わせるほど大きくなる。QUANTIZE は、そのままでは反復ごとに'
+                    + '増え続ける分母に上限を与える。'
+            }
+        },
+        {
+            code: 'checkHostProfile',
+            title: { en: 'Check the host profile', ja: 'ホストプロファイルを確認する' },
+            detail: {
+                en: 'This guard is not part of the language. Another host (the MCP server) '
+                    + 'applies different limits; the profile badge beside the build version lists '
+                    + 'the ones in force here.',
+                ja: 'このガードは言語の一部ではない。別のホスト（MCPサーバ）は異なる上限を適用する。'
+                    + 'ここで有効な上限は、ビルド版数の隣にあるプロファイル表示に並んでいる。'
+            }
+        }
+    ]
+};
+
 export const describeTimeoutDiagnosis = (limitMs: number): string =>
-    [
-        '[DIAGNOSIS] hostGuard / playground (hostEnvironment) / resourceLimit (executionTimeout)',
-        'Q1 when: hostGuard',
-        'Q2 where: playground (hostEnvironment)',
-        'Q3 why: resourceLimit',
-        `limit executionTimeoutMs: ${limitMs} (wall clock, this host only)`,
-        'next: Check which guard stopped it - The playground stops a run on wall-clock time. '
-            + "The interpreter's own budgets (execution steps, materialized elements, numeric work) "
-            + 'did not refuse this program; it was still running when the time ran out.',
-        'next: Rewrite the loop as a bulk operation - A whole-vector Word does in one step what a '
-            + 'per-element loop does in as many, and only the loop is charged per step.',
-        'next: Trim what the run carries - Exact values grow as they are combined; QUANTIZE bounds a '
-            + 'denominator that is otherwise free to grow every iteration.',
-        'next: Check the host profile - This guard is not part of the language. Another host '
-            + '(the MCP server) applies different limits; the profile badge beside the build version '
-            + 'lists the ones in force here.'
-    ].join('\n');
+    renderDiagnosisReport(TIMEOUT_DIAGNOSIS, {
+        extraLines: [`limit executionTimeoutMs: ${limitMs} (wall clock, this host only)`]
+    });
 
 export const syncInterpreterState = (
     interpreter: AjisaiInterpreter,

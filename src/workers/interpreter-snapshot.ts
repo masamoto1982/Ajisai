@@ -13,7 +13,8 @@ export interface InterpreterSnapshot {
     readonly userWords: UserWord[];
     /**
      * Host override for the execution step budget (water level, LANG.MACHINE.LIMITS).
-     * A positive integer; omitted keeps the interpreter default (100,000).
+     * A positive integer; omitted keeps the interpreter's own default
+     * (`DEFAULT_MAX_EXECUTION_STEPS`).
      * Runtime safety control, not a language semantic.
      */
     readonly stepLimit?: number;

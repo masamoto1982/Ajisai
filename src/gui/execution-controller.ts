@@ -12,6 +12,7 @@ import {
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
+import { renderDiagnosisReport } from './diagnosis-report';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 import type { ViewMode } from './mobile-view-switcher';
@@ -97,77 +98,23 @@ export const createExecutionController = (
         saveState
     });
 
-    const evidence = (entries: readonly string[] | undefined, key: string): string | null => {
-        const hit = entries?.find((entry) => entry.startsWith(`${key}=`));
-        return hit ? hit.slice(key.length + 1) : null;
-    };
-
     // The word that failed, where in the source it failed, the stack depth at
     // that point, and what to check — written *under* the error rather than
     // before it. This block used to run first, and `showError` then cleared the
     // area, so the one message that named the failing word was drawn and
     // immediately erased: what survived was a bare "Error: Stack underflow"
     // with nothing to say where.
+    //
+    // Selecting the diagnosis is this controller's job; presenting one belongs
+    // to `renderDiagnosisReport`, which every diagnosis in the playground goes
+    // through (see that module's header).
     const describeDiagnosis = (result: ExecuteResult): string | null => {
         const event = result.errorFlowTrace
             ?.filter((candidate) => Boolean(candidate.diagnosis))
             .at(-1);
         const diagnosis: ProtocolDiagnosis | undefined = event?.diagnosis;
         if (!diagnosis) return null;
-
-        const where = diagnosis.where.word
-            ? `${diagnosis.where.word} (${diagnosis.where.kind})`
-            : diagnosis.where.kind;
-        const depth =
-            event && typeof event.stackLenBefore === 'number'
-                ? `, stack depth ${event.stackLenBefore}`
-                : '';
-        // Where in the source the run was when it failed. The host records it
-        // as evidence — the same `key=value` channel `stackLenBefore` uses —
-        // so nothing about the protocol had to change to carry it.
-        const at = evidence(diagnosis.evidence, 'sourceLine')
-            ? ` at line ${evidence(diagnosis.evidence, 'sourceLine')}, column ${evidence(
-                  diagnosis.evidence,
-                  'sourceColumn'
-              )}`
-            : '';
-        // The Words the failure happened *inside*, innermost first. A block and
-        // a Word body are each their own token stream with no source of their
-        // own, so the position above is the top-level token that reached the
-        // failure; this says which construct the failing word was written in.
-        const insideWords = evidence(diagnosis.evidence, 'insideWords');
-        const inside = insideWords ? `, inside ${insideWords.split(',').join(', ')}` : '';
-        // The known Words closest to a name that did not resolve. Telling a
-        // reader to check the spelling without saying what it might have been
-        // is the one hint nobody can act on.
-        const candidates = diagnosis.candidates?.length
-            ? [`did you mean: ${diagnosis.candidates.join(', ')}`]
-            : [];
-        // Which declared ceiling fired, so "too big" says what was too big.
-        const limit = diagnosis.resourceLimit
-            ? [
-                  `limit ${diagnosis.resourceLimit.resource}: ${
-                      diagnosis.resourceLimit.observed ?? '?'
-                  } against ${diagnosis.resourceLimit.limit}`
-              ]
-            : [];
-        return [
-            `[DIAGNOSIS] ${diagnosis.summary}`,
-            `Q1 when: ${diagnosis.when}`,
-            `Q2 where: ${where}${inside}${at}${depth}`,
-            `Q3 why: ${diagnosis.why}`,
-            ...candidates,
-            ...limit,
-            // One locale per line. Each check carries both, and this used to
-            // print the English heading in front of the Japanese sentence, so
-            // every next-step read as half a message in each language. The
-            // playground's own text is English (`<html lang="en">`), so English
-            // is the side that matches its surroundings; the `ja` half stays in
-            // the protocol for a host that renders in Japanese.
-            ...diagnosis.nextChecks.map(
-                (check) => `next: ${check.title.en} - ${check.detail.en}`
-            )
-        ].join('\n');
+        return renderDiagnosisReport(diagnosis, { stackLenBefore: event?.stackLenBefore });
     };
 
     const applyExecutionResult = (result: ExecuteResult): void => {
