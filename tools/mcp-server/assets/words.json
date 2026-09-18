@@ -2522,6 +2522,59 @@
       "vocabularyTier": "kernel"
     },
     {
+      "name": "SCAN",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "notExecutable",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER"
+      ],
+      "documentation": {
+        "summary": "Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence.",
+        "hover": "SCAN — reduce, keeping every step",
+        "lookup": "Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence.",
+        "syntax": "[ 1 2 3 4 ] 0 [ ADD ] SCAN",
+        "role": "Higher-order primitive: the accumulator walk of FOLD, answering every accumulator it passes through rather than only the last.",
+        "stackEffect": "[ vec ] [ init ] [ combine ] -> [ steps ]"
+      },
+      "executorKey": "Scan",
+      "effects": [],
+      "partiality": "partial",
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "standardKind": "operational"
+    },
+    {
       "name": "ANY",
       "aliases": [],
       "family": "higherOrder",

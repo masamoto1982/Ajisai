@@ -250,6 +250,7 @@ impl Interpreter {
             WordId::Map => higher_order::op_map(self),
             WordId::Filter => higher_order::op_filter(self),
             WordId::Fold => higher_order_fold::op_fold(self),
+            WordId::Scan => higher_order_fold::op_scan(self),
             WordId::Any => higher_order::op_any(self),
             WordId::All => higher_order::op_all(self),
             WordId::Get => vector_ops::op_get(self),

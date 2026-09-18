@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 66,
+    "canonicalWords": 67,
     "semanticKernelWords": 37,
-    "standardWords": 29,
-    "corewords": 66,
+    "standardWords": 30,
+    "corewords": 67,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 87
+    "manifestEntries": 88
   },
   "entries": [
     {
@@ -876,6 +876,25 @@
         "algebra.state-transformer.composition"
       ],
       "implementation_schema": "traversal_scheme(fold) -> block_application -> accumulator_policy",
+      "classification": "Core"
+    },
+    {
+      "id": "core.scan",
+      "kind": "coreword",
+      "surface": "SCAN",
+      "category": "higher-order",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "SCAN",
+      "coverage_entry_id": "core.scan",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "implementation_schema": "traversal_scheme(scan) -> block_application -> accumulator_policy",
       "classification": "Core"
     },
     {

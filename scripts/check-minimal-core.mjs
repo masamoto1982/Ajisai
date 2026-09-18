@@ -7,7 +7,7 @@ GET LENGTH CONCAT COLLECT RANGE FOLD
 CHARS JOIN NUM STR
 SELECT EXEC PROBE NIL NIL? NIL-REASON OR-NIL KEEP BIND DEF DEL PRINT RANDOM`.split(/\s+/));
 const STANDARD = new Set(`OR NEQ LTE GTE SUB MOD ROUND QUANTIZE ABS MIN MAX
-TAKE REVERSE FILL SORT ORDER UNIQUE TALLY ZIP SUM PUT GROUP INDEX-OF MAP FILTER ANY ALL
+TAKE REVERSE FILL SORT ORDER UNIQUE TALLY ZIP SUM PUT GROUP INDEX-OF MAP FILTER SCAN ANY ALL
 TRIM TOKENIZE`.split(/\s+/));
 // The alpha Words retired in the phase-1 vocabulary freeze. `UNIQUE` is not
 // among them any more: it was cut as one of several overlapping collection
@@ -21,7 +21,7 @@ const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
 const DERIVABLE = new Set(`OR NEQ LTE GTE SUB MOD ROUND QUANTIZE ABS MIN MAX
 TAKE REVERSE INDEX-OF TRIM TOKENIZE SUM`.split(/\s+/));
-const OPERATIONAL = new Set('MAP FILTER ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP'.split(/\s+/));
+const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP'.split(/\s+/));
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
@@ -46,9 +46,9 @@ for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: une
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
 if (kernelWords.size !== 37) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 37`);
-if (standardWords.size !== 29) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 29`);
+if (standardWords.size !== 30) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 30`);
 
-if (words.length !== 66) errors.push(`canonical inventory has ${words.length} Words; expected 66`);
+if (words.length !== 67) errors.push(`canonical inventory has ${words.length} Words; expected 67`);
 for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 
 for (const word of words) {

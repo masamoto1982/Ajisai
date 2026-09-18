@@ -86,7 +86,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Eq | Lt | Le | Gt | Gte | Neq | And | Or | Not | Select => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
-        Map | Filter | Fold | Any | All => (Unbounded, false),
+        Map | Filter | Fold | Scan | Any | All => (Unbounded, false),
         Exec => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
         // `Probe` walks the block's tokens once without evaluating them, so

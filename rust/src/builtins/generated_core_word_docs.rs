@@ -435,6 +435,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 1 2 3 ] [ 0 ] [ + ] FOLD",
     },
     GeneratedCoreWordDoc {
+        name: "SCAN",
+        category: "higher-order",
+        summary: "Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence.",
+        role: "Higher-order primitive: the accumulator walk of FOLD, answering every accumulator it passes through rather than only the last.",
+        stack_effect: "[ vec ] [ init ] [ combine ] -> [ steps ]",
+        hover_summary: "SCAN — reduce, keeping every step",
+        hover_syntax: "[ 1 2 3 4 ] 0 [ ADD ] SCAN",
+    },
+    GeneratedCoreWordDoc {
         name: "ANY",
         category: "higher-order",
         summary: "TRUE if at least one element satisfies the predicate.",
