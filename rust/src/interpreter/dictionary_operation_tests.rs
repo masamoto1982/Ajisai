@@ -589,21 +589,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lookup_of_a_cond_word_round_trips_through_def() {
+    async fn lookup_of_a_branching_word_round_trips_through_def() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[\n[\n[ 5 LT | 'small' ]\n[ IDLE | 'big' ]\n] COND ] 'SIZE' DEF")
+            .execute("[ 'N' BIND\n[ 'small' ] [ 'big' ]\nN [ 5 ] LT\nSELECT ] 'SIZE' DEF")
             .await
             .unwrap();
         let loaded = lookup_source(&interp, "SIZE");
         assert!(
-            loaded.contains('|'),
-            "the clause separator must survive the round trip: {loaded}"
+            loaded.contains("SELECT"),
+            "the branch must survive the round trip: {loaded}"
         );
 
         interp.execute(&loaded).await.unwrap();
-        interp.execute("7 SIZE").await.unwrap();
-        assert_eq!(format!("{}", interp.stack.last().unwrap()), "'big'");
+        interp.execute("[ 7 ] SIZE").await.unwrap();
+        assert_eq!(format!("{}", interp.stack.last().unwrap()), "[ 'big' ]");
     }
 
     #[tokio::test]

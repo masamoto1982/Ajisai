@@ -83,11 +83,11 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Add | Sub | Mul | Div => (Linear, true),
         // Comparisons and logic may produce elementwise results; O(input),
         // not audited as tight.
-        Eq | Lt | Le | Gt | Gte | Neq | And | Or | Not => (Linear, false),
+        Eq | Lt | Le | Gt | Gte | Neq | And | Or | Not | Select => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
         Map | Filter | Fold | Any | All => (Unbounded, false),
-        Exec | Cond => (Unbounded, false),
+        Exec => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
         // `Probe` walks the block's tokens once without evaluating them, so
         // its output scales with the block's own size rather than with
@@ -319,9 +319,9 @@ impl SpaceSim {
                     self.vector_dirty = false;
                 }
             }
-            // The lazy fallback unit of `OR-NIL` and COND clause separators change
-            // heights along a path the linear walk cannot follow.
-            Token::NilCoalesce | Token::CondClauseSep => self.degrade(),
+            // `OR-NIL`'s lazy fallback unit changes heights along a path the
+            // linear walk cannot follow.
+            Token::NilCoalesce => self.degrade(),
             _ => {}
         }
     }

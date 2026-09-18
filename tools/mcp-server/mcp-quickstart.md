@@ -23,13 +23,13 @@ reaching for it exactly where it would have helped. The 65 Words are:
 | you need | Words |
 |---|---|
 | arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `SUM` `RANDOM` |
-| comparison and logic | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` · `AND` `OR` `NOT` `TRUE` `FALSE` |
+| comparison and logic | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` · `AND` `OR` `NOT` `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
 | collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `ANY` `ALL` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
 | absence | `NIL` `NIL?` `NIL-REASON` `OR-NIL` |
-| naming, control, output | `DEF` `BIND` `DEL` · `COND` `EXEC` · `PRINT` `KEEP` |
+| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` · `PRINT` `KEEP` |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
 invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that

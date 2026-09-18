@@ -348,7 +348,6 @@ pub enum Token {
     VectorStart,
     VectorEnd,
     NilCoalesce,
-    CondClauseSep,
     LineBreak,
 }
 

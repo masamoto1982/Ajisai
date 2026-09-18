@@ -1,4 +1,5 @@
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
@@ -97,9 +98,12 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
 
 /// Apply an ordering Word across the shapes LANG.COLLECTIONS.LIFT allows.
 ///
-/// "An arithmetic or comparison Word applies element-wise when given vectors.
-/// Two vectors combine element-wise when their lengths are equal; a scalar
-/// combines with every element of a vector. Any other pairing is ERROR."
+/// The alignment is `lane_lift`'s, shared with `booleanLogic`, so a
+/// comparison and the `AND` that combines two of its results agree on what
+/// pairs: equal lengths pair lane by lane, and a one-lane operand is reused
+/// across the other's length. That last case is what makes a mask writable
+/// against a bare threshold — `[ 1 2 3 ] [ 2 ] GT` — and it was the one shape
+/// this family refused while `[ 1 2 3 ] [ 2 ] MUL` had always accepted it.
 ///
 /// The comparison family used to do the reverse of this: it projected a
 /// singleton Vector to its element (`[ 3 ] 4 LT` was `TRUE`) and refused the
@@ -109,64 +113,32 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
 /// `NIL 3 LT` — the clause says each lane preserves the scalar law's NIL
 /// distinction.
 fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Value> {
-    let a_items = a_val.as_vector_view();
-    let b_items = b_val.as_vector_view();
+    lift_lanes([a_val, b_val], &|[a, b]| compare_lane(a, b, kind))
+}
 
-    match (a_items, b_items) {
-        (None, None) => {
-            if a_val.is_nil() || b_val.is_nil() {
-                return Ok(Value::nil_with_reason_unknown(
-                    a_val
-                        .nil_reason()
-                        .or_else(|| b_val.nil_reason())
-                        .copied()
-                        .unwrap_or(NilReason::Literal),
-                ));
-            }
-            // `unsupportedComparison`: LT/LTE/GT/GTE, the only callers of
-            // `lift_comparison`, declare it uniformly. EQ/NEQ never reach
-            // here — `pairwise_eq` is total and raises nothing.
-            match compare_scalar_pair(a_val, b_val, kind).map_err(|e| match e {
-                AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
-                    AjisaiError::declared("unsupportedComparison", "expected comparable operands")
-                }
-                other => other,
-            })? {
-                ScalarCmp::Decided(b) => Ok(Value::from_bool(b)),
-                ScalarCmp::Undecided => Ok(undecidable_truth_value()),
-            }
+/// One lane of an ordering comparison: both operands are past the alignment,
+/// so neither is a Vector here.
+fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Value> {
+    if a_val.is_nil() || b_val.is_nil() {
+        return Ok(Value::nil_with_reason_unknown(
+            a_val
+                .nil_reason()
+                .or_else(|| b_val.nil_reason())
+                .copied()
+                .unwrap_or(NilReason::Literal),
+        ));
+    }
+    // `unsupportedComparison`: LT/LTE/GT/GTE, the only callers of
+    // `compare_lane`, declare it uniformly. EQ/NEQ never reach here —
+    // `pairwise_eq` is total and raises nothing.
+    match compare_scalar_pair(a_val, b_val, kind).map_err(|e| match e {
+        AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
+            AjisaiError::declared("unsupportedComparison", "expected comparable operands")
         }
-        (Some(items), None) => {
-            let lanes = items
-                .iter()
-                .map(|item| lift_comparison(item, b_val, kind))
-                .collect::<Result<Vec<_>>>()?;
-            Ok(Value::from_vector(lanes))
-        }
-        (None, Some(items)) => {
-            let lanes = items
-                .iter()
-                .map(|item| lift_comparison(a_val, item, kind))
-                .collect::<Result<Vec<_>>>()?;
-            Ok(Value::from_vector(lanes))
-        }
-        (Some(a_items), Some(b_items)) => {
-            // `shapeMismatch` (LANG.COLLECTIONS.LIFT): unequal-length
-            // vectors don't combine, same as `ADD`'s broadcast failure.
-            if a_items.len() != b_items.len() {
-                return Err(AjisaiError::ShapeMismatch {
-                    left: vec![a_items.len()],
-                    right: vec![b_items.len()],
-                    axis: 0,
-                });
-            }
-            let lanes = a_items
-                .iter()
-                .zip(b_items.iter())
-                .map(|(x, y)| lift_comparison(x, y, kind))
-                .collect::<Result<Vec<_>>>()?;
-            Ok(Value::from_vector(lanes))
-        }
+        other => other,
+    })? {
+        ScalarCmp::Decided(b) => Ok(Value::from_bool(b)),
+        ScalarCmp::Undecided => Ok(undecidable_truth_value()),
     }
 }
 

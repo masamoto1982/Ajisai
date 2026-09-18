@@ -5,9 +5,9 @@ use crate::types::{Interpretation, Token, Value};
 use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
-    algo_ops, arithmetic, bindings, cast, comparison, control, control_cond, execute_def,
-    execute_del, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
-    ordering_ops, probe, shape_ops, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
+    algo_ops, arithmetic, bindings, cast, comparison, control, execute_def, execute_del,
+    higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, ordering_ops, probe,
+    shape_ops, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
 
 impl Interpreter {
@@ -258,6 +258,7 @@ impl Interpreter {
             WordId::And => logic::op_and(self),
             WordId::Or => logic::op_or(self),
             WordId::Not => logic::op_not(self),
+            WordId::Select => logic::op_select(self),
             WordId::True => {
                 self.stack
                     .push_with_role(Value::from_bool(true), Interpretation::TruthValue);
@@ -274,7 +275,6 @@ impl Interpreter {
             }
             WordId::Exec => control::op_exec(self),
             WordId::Probe => probe::op_probe(self),
-            WordId::Cond => control_cond::op_cond(self),
             WordId::Bind => bindings::op_bind(self),
             WordId::Def => execute_def::op_def(self),
             WordId::Del => execute_del::op_del(self),
@@ -380,7 +380,6 @@ impl Interpreter {
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
             Token::NilCoalesce => "OR-NIL".to_string(),
-            Token::CondClauseSep => "|".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }

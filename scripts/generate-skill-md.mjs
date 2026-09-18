@@ -171,9 +171,14 @@ const canonicalExamples = [
     code: "[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
   },
   {
-    id: 'cond-basic',
-    title: 'COND: value, then one [ ] of [ guard ] [ body ] pairs (use [ TRUE ] as else-guard)',
-    code: "4 [ [ 0 GTE ] [ 'non-negative' PRINT ] [ TRUE ] [ 'negative' PRINT ] ] COND",
+    id: 'select-basic',
+    title: 'SELECT: the two candidates, then the truth that chooses between them',
+    code: "[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT",
+  },
+  {
+    id: 'select-lanes',
+    title: 'SELECT chooses lane by lane, so a whole vector branches at once',
+    code: '[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT',
   },
   { title: 'Strings are bare \'...\' literals; CHARS/JOIN convert', code: "'hello' CHARS REVERSE JOIN" },
   { title: 'Cast a string to an exact number', code: "'42' NUM" },
@@ -200,14 +205,14 @@ const commonErrors = [
     fix: 'FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.',
   },
   {
-    title: 'COND clauses must be wrapped in a single [ ]',
-    code: "5 [ 3 > ] [ 'big' PRINT ] COND",
-    fix: "COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.",
+    title: 'SELECT takes three operands: both candidates, then the truth',
+    code: "[ 'big' ] [ 5 ] [ 3 ] GT SELECT",
+    fix: "SELECT is `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.",
   },
   {
-    title: 'COND guards must yield a boolean',
-    code: 'TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND',
-    fix: 'The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] [ [ predicate ] [ body ] ... ] COND`.',
+    title: 'SELECT needs a truth value, not a number',
+    code: "[ 'y' ] [ 'n' ] 1 SELECT",
+    fix: 'The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] NEQ`.',
   },
   {
     title: 'Broadcast shape mismatch',
@@ -254,7 +259,7 @@ const forbiddenPatterns = [
   {
     pattern: 'IF / ELSE / THEN / WHILE',
     code: '[ 1 ] IF',
-    why: 'No structured keywords, and no loops. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD / ANY / ALL.',
+    why: 'No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / ANY / ALL.',
   },
   {
     pattern: 'A word calling itself',
@@ -304,7 +309,7 @@ function renderResult(json) {
 }
 
 // §2/§3 used to restate a runnable-looking syntax shape (`[ body ] 'NAME'
-// DEF`, `value [ [ guard ] [ body ] ... ] COND`) as its own hand-typed
+// DEF`, `[ a ] [ b ] truth SELECT`) as its own hand-typed
 // backtick span, independent of the identical, generator-executed example a
 // few sections later in §6 — exactly the "same fact in two places, only one
 // of them cross-checked" pattern this repo's Phase-2 alignment pass looks
@@ -449,7 +454,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
 - Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar — **except where a Word takes an *element*** (\`PUT\`, \`GET\`, \`INDEX-OF\`): there \`[ 9 ]\` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
-- Code blocks are quoted programs passed to MAP / FILTER / FOLD / COND / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and \`{\` / \`}\` are not valid Ajisai source characters.
+- Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and \`{\` / \`}\` are not valid Ajisai source characters. SELECT is not among them: it takes values, not code.
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
 - One modifier, prefixing the *next word only*: \`KEEP\` (do not consume operands). Consumption is the default.
@@ -457,7 +462,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 3. Control and iteration
 
-- Branch: a value, then one Vector of guard/body pairs, then \`COND\`: \`${canonicalExampleCode('cond-basic')}\` (§6). Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use \`[ TRUE ]\` as the final else-guard. The value remains on the stack after COND.
+- Branch: the two candidates, then the truth that chooses between them, then \`SELECT\`: \`${canonicalExampleCode('select-basic')}\` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: \`${canonicalExampleCode('select-lanes')}\`. An absent truth chooses neither and answers that same absence.
 - Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial-value Vector.
 - Predicates: \`ANY\` / \`ALL\` take a predicate block (examples in §6).
 - No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.

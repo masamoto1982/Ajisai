@@ -7,10 +7,12 @@
       "id": "booleanLogic",
       "clauses": [
         "LANG.VALUES.TRUTH",
-        "LANG.VALUES.NIL"
+        "LANG.VALUES.NIL",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "truth": "threeValued",
-      "nilPolicy": "contractSpecific"
+      "nilPolicy": "contractSpecific",
+      "lifting": "elementwise"
     },
     {
       "id": "comparison",

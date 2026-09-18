@@ -218,8 +218,6 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics, usage: &ResourceUsa
         "compiledPlanBuildCount": metrics.compiled_plan_build_count,
         "compiledPlanCacheHitCount": metrics.compiled_plan_cache_hit_count,
         "compiledPlanCacheMissCount": metrics.compiled_plan_cache_miss_count,
-        "condDispatchFastCount": metrics.cond_dispatch_fast_count,
-        "condClauseCompiledCount": metrics.cond_clause_compiled_count,
         "scalarFastpathCount": metrics.scalar_fastpath_count,
         "resolveCacheHitCount": metrics.resolve_cache_hit_count,
         "resolveCacheMissCount": metrics.resolve_cache_miss_count,

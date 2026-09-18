@@ -17,8 +17,8 @@
     "corewords": 66,
     "aliases": 11,
     "inputHelpers": 1,
-    "surface_forms": 10,
-    "manifestEntries": 88
+    "surface_forms": 9,
+    "manifestEntries": 87
   },
   "entries": [
     {
@@ -107,6 +107,24 @@
         "algebra.k3.involution"
       ],
       "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value",
+      "classification": "Core"
+    },
+    {
+      "id": "core.select",
+      "kind": "coreword",
+      "surface": "SELECT",
+      "category": "logic",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "SELECT",
+      "coverage_entry_id": "core.select",
+      "semantic_role": "Derived",
+      "algebraic_family": "boolean-truth",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.k3.domain"
+      ],
+      "implementation_schema": "logic::compute_selection lifted by lane_lift::lift_lanes",
       "classification": "Core"
     },
     {
@@ -1003,24 +1021,6 @@
       "classification": "Core"
     },
     {
-      "id": "core.cond",
-      "kind": "coreword",
-      "surface": "COND",
-      "category": "control",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "COND",
-      "coverage_entry_id": "core.cond",
-      "semantic_role": "Derived",
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
-      "derived_from": [
-        "algebra.k3.domain",
-        "algebra.state-transformer.composition"
-      ],
-      "classification": "Core"
-    },
-    {
       "id": "core.exec",
       "kind": "coreword",
       "surface": "EXEC",
@@ -1403,34 +1403,18 @@
     },
     {
       "id": "surface.pipe",
-      "kind": "control_directive",
+      "kind": "retired_form",
       "surface": "|",
-      "concept": "COND-CLAUSE",
+      "concept": "RETIRED-COND-CLAUSE",
       "runtime_word": false,
       "source": "rust/src/surface_forms.rs",
-      "canonical": "COND-CLAUSE",
+      "canonical": "RETIRED-COND-CLAUSE",
       "coverage_entry_id": "surface.pipe",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "derived_from": [],
-      "desugars_to": "COND-CLAUSE",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.idle",
-      "kind": "control_directive",
-      "surface": "IDLE",
-      "concept": "COND-ELSE-GUARD",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "COND-ELSE-GUARD",
-      "coverage_entry_id": "surface.idle",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "COND-ELSE-GUARD",
+      "desugars_to": "RETIRED-COND-CLAUSE",
       "classification": "Surface"
     },
     {

@@ -73,10 +73,10 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
 /// something executes it — so a `[ ]`-wrapped body round-trips exactly like
 /// the one that defined the word, whatever it called.
 ///
-/// A multi-line body keeps its line structure. COND no longer requires one `|`
-/// clause per line, so this is presentation rather than meaning — but it is the
-/// presentation the formatter treats as canonical, and a definition that comes
-/// back reformatted reads as a definition that was changed.
+/// A multi-line body keeps its line structure. Where the break falls below the
+/// body's own level it is presentation rather than meaning — but it is the
+/// author's presentation, and a definition that comes back reformatted reads
+/// as a definition that was changed.
 ///
 /// A description is emitted as a leading `#` comment. `DEF` takes exactly two
 /// positional arguments, so a third string on the line would be read as the

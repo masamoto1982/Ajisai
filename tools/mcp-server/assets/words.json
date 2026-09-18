@@ -112,7 +112,8 @@
         "reason": null
       },
       "errorWhen": [
-        "nonTruthValue"
+        "nonTruthValue",
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -131,7 +132,8 @@
         }
       },
       "clauses": [
-        "LANG.VALUES.TRUTH"
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
         "summary": "Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.",
@@ -162,7 +164,8 @@
         "reason": null
       },
       "errorWhen": [
-        "nonTruthValue"
+        "nonTruthValue",
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -181,7 +184,8 @@
         }
       },
       "clauses": [
-        "LANG.VALUES.TRUTH"
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
         "summary": "Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.",
@@ -232,7 +236,8 @@
         }
       },
       "clauses": [
-        "LANG.VALUES.TRUTH"
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
         "summary": "Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged.",
@@ -243,6 +248,58 @@
         "stackEffect": "[ a ] -> [ NOT a ]"
       },
       "executorKey": "Not",
+      "effects": [],
+      "partiality": "total",
+      "category": "logic",
+      "vocabularyTier": "kernel"
+    },
+    {
+      "name": "SELECT",
+      "aliases": [],
+      "family": "booleanLogic",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "kleeneAbsorbing",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTruthValue",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
+        "hover": "SELECT — choose between two values by truth",
+        "lookup": "Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
+        "syntax": "[ 'yes' ] [ 'no' ] TRUE SELECT",
+        "role": "The conditional: a truth value chooses between two values, element-wise, with UNKNOWN answering the absence it read.",
+        "stackEffect": "[ whenTrue ] [ whenFalse ] [ mask ] -> [ chosen ]"
+      },
+      "executorKey": "Select",
       "effects": [],
       "partiality": "total",
       "category": "logic",
@@ -2878,58 +2935,6 @@
       "effects": [],
       "partiality": "projecting",
       "category": "cast",
-      "vocabularyTier": "kernel"
-    },
-    {
-      "name": "COND",
-      "aliases": [],
-      "family": "control",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "conditional",
-      "nilPolicy": "inspectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "invalidClauseShape",
-        "nonTruthGuard"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "numeric": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "collection": {
-          "class": "unbounded",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.MACHINE.TRANSFORMERS",
-        "LANG.SOURCE.CODE"
-      ],
-      "documentation": {
-        "summary": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value.",
-        "hover": "COND — evaluate guard/body clauses",
-        "lookup": "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value.",
-        "syntax": "1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND",
-        "role": "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
-        "stackEffect": "value [ [ guard | body ] ... ] -> [ result ]"
-      },
-      "executorKey": "Cond",
-      "effects": [],
-      "partiality": "partial",
-      "category": "control",
       "vocabularyTier": "kernel"
     },
     {

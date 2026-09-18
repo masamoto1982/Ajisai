@@ -57,6 +57,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "TRUE NOT",
     },
     GeneratedCoreWordDoc {
+        name: "SELECT",
+        category: "logic",
+        summary: "Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
+        role: "The conditional: a truth value chooses between two values, element-wise, with UNKNOWN answering the absence it read.",
+        stack_effect: "[ whenTrue ] [ whenFalse ] [ mask ] -> [ chosen ]",
+        hover_summary: "SELECT — choose between two values by truth",
+        hover_syntax: "[ 'yes' ] [ 'no' ] TRUE SELECT",
+    },
+    GeneratedCoreWordDoc {
         name: "EQ",
         category: "comparison",
         summary: "Test equality of two values.",
@@ -496,15 +505,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         stack_effect: "[ x ] -> [ str ]",
         hover_summary: "STR — convert to string",
         hover_syntax: "42 STR",
-    },
-    GeneratedCoreWordDoc {
-        name: "COND",
-        category: "control",
-        summary: "Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value.",
-        role: "General conditional dispatch with first-match semantics, over an isolated one-value frame per clause.",
-        stack_effect: "value [ [ guard | body ] ... ] -> [ result ]",
-        hover_summary: "COND — evaluate guard/body clauses",
-        hover_syntax: "1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND",
     },
     GeneratedCoreWordDoc {
         name: "EXEC",

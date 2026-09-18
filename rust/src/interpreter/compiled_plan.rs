@@ -38,12 +38,6 @@ pub enum CompiledOp {
     PushVectorLiteral(Value, Interpretation),
     SetConsumptionKeep,
     CallBuiltin(Arc<CompiledCall>),
-    /// A `COND` whose guard/body clauses were split once at compile time. The
-    /// preceding `PushVectorLiteral` op is kept (it still pushes the clauses
-    /// vector so stack discipline and the dynamic fallback are preserved); this
-    /// op dispatches on the precomputed table instead of re-collecting and
-    /// re-splitting those blocks every call. Internal-GOTO "jump table".
-    CondDispatch(Arc<[super::control_cond::CondClause]>),
     CallUserWord(String),
     CallQualifiedWord {
         namespace: String,
@@ -51,7 +45,7 @@ pub enum CompiledOp {
     },
     LineBreak,
     // FallbackToken keeps runtime-sensitive tokens in the interpreter path:
-    // - directives / control markers (NilCoalesce, CondClauseSep)
+    // - directives / control markers (NilCoalesce)
     // - unresolved symbols at compile time
     // - structural tokens we cannot lower safely in current pass (e.g. vectors)
     // - tokens that could alter semantic hint behavior in dynamic ways
@@ -180,15 +174,7 @@ fn try_collect_literal_vector(
             }
             // `[ IDLE | 1 ]`: `|` inside an unclosed `[` is data until COND
             // runs it, the same promotion an ordinary name gets — mirrors
-            // `collect_bracketed_with_depth`'s handling exactly, and is what
-            // lets a `COND` clauses wrapper (now always `[ ]`-spelled) still
-            // lower to a compile-time `PushVectorLiteral` so `lower_cond_
-            // dispatch` can find it.
-            Token::CondClauseSep => {
-                values.push(Value::from_symbol("|"));
-                has_other = true;
-                i += 1;
-            }
+            // `collect_bracketed_with_depth`'s handling exactly.
             Token::LineBreak | Token::NilCoalesce => {
                 i += 1;
             }
@@ -220,7 +206,7 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
                 _ => CompiledOp::FallbackToken(token.clone()),
             },
             Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
-            Token::NilCoalesce | Token::CondClauseSep => CompiledOp::FallbackToken(token.clone()),
+            Token::NilCoalesce => CompiledOp::FallbackToken(token.clone()),
             Token::LineBreak => CompiledOp::LineBreak,
             Token::Symbol(s) => {
                 let upper = crate::core_word_aliases::canonicalize_core_word_name(s);
@@ -253,10 +239,7 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
 /// [`is_plan_valid`] refuses a plan whose dictionary has moved underneath it —
 /// a block that runs `DEF` falls back to interpretation from that element on.
 pub fn compile_token_block(tokens: Vec<Token>, interp: &Interpreter) -> CompiledPlan {
-    let mut lines = vec![compile_one_line(tokens, interp)];
-    if interp.cond_dispatch_enabled {
-        lower_cond_dispatch(&mut lines, interp);
-    }
+    let lines = vec![compile_one_line(tokens, interp)];
     CompiledPlan {
         lines,
         compiled_at: interp.current_epoch_snapshot(),
@@ -269,102 +252,10 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
         lines.push(compile_one_line(line.body_tokens.to_vec(), interp));
     }
 
-    if interp.cond_dispatch_enabled {
-        lower_cond_dispatch(&mut lines, interp);
-    }
-
     CompiledPlan {
         lines,
         compiled_at: interp.current_epoch_snapshot(),
     }
-}
-
-/// Compile a COND guard or body token slice into a sub-plan. A section is run
-/// flat (a single line, matching `execute_section_core`), then lowered so nested
-/// `COND`s and literal vectors inside it are compiled too. Returns `None` when
-/// the section did not compile to anything beyond fallbacks — there the
-/// interpreter path is kept, with no behavior change and no wasted dispatch.
-fn compile_clause_plan(tokens: &[Token], interp: &Interpreter) -> Option<Arc<CompiledPlan>> {
-    let mut lines = vec![compile_one_line(tokens.to_vec(), interp)];
-    if interp.cond_dispatch_enabled {
-        lower_cond_dispatch(&mut lines, interp);
-    }
-    let plan = CompiledPlan {
-        lines,
-        compiled_at: interp.current_epoch_snapshot(),
-    };
-    if plan_is_all_fallback(&plan) {
-        None
-    } else {
-        Some(Arc::new(plan))
-    }
-}
-
-/// Replace each `CallBuiltin("COND")` whose clauses operand is statically
-/// known (the single preceding op is a literal `PushVectorLiteral` — `COND`'s
-/// clauses are one fixed-position operand, the same convention
-/// `MAP`/`FILTER`/`FOLD` use for their code operand) with a
-/// `CondDispatch` carrying the split-once clause table. That preceding op is
-/// left in place: it still pushes the wrapper value at runtime, so a compiled
-/// and an interpreted run of the same source see the same stack traffic;
-/// since the split is already known from compile time, `op_cond_dispatch`
-/// pops it unread. A clauses operand that fails to split, or isn't a literal
-/// at all, is left as the dynamic `COND` so its error still surfaces (or its
-/// value is derived normally) at runtime.
-///
-/// When `compiled_clause_enabled`, each clause's guard and body are also
-/// compiled into sub-plans so they run compiled rather than re-interpreted.
-fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
-    let positions: Vec<(usize, usize)> = lines
-        .iter()
-        .enumerate()
-        .flat_map(|(li, l)| (0..l.ops.len()).map(move |oi| (li, oi)))
-        .collect();
-
-    type Replacement = ((usize, usize), Arc<[super::control_cond::CondClause]>);
-    let mut replacements: Vec<Replacement> = Vec::new();
-    for (flat_idx, &(li, oi)) in positions.iter().enumerate() {
-        if !matches!(&lines[li].ops[oi], CompiledOp::CallBuiltin(c) if c.name == "COND") {
-            continue;
-        }
-        if flat_idx == 0 {
-            continue;
-        }
-        let (pli, poi) = positions[flat_idx - 1];
-        let blocks: Option<Vec<Vec<Token>>> = match &lines[pli].ops[poi] {
-            CompiledOp::PushVectorLiteral(value, _) => value
-                .as_vector_view()
-                .and_then(|elements| clause_blocks_from_values(&elements)),
-            _ => None,
-        };
-        let Some(blocks) = blocks else { continue };
-        if let Ok(mut clauses) = super::control_cond::split_clause_blocks(blocks) {
-            if interp.compiled_clause_enabled {
-                for clause in &mut clauses {
-                    clause.guard_plan = compile_clause_plan(&clause.guard, interp);
-                    clause.body_plan = compile_clause_plan(&clause.body, interp);
-                }
-            }
-            replacements.push(((li, oi), Arc::from(clauses)));
-        }
-    }
-
-    for ((li, oi), clauses) in replacements {
-        lines[li].ops[oi] = CompiledOp::CondDispatch(clauses);
-    }
-}
-
-/// Bridge a literal clauses-vector's already-built elements back to tokens
-/// (`value_as_code.rs`), the same conversion the dynamic path
-/// (`control_cond::extract_clause_blocks`) applies at runtime.
-fn clause_blocks_from_values(elements: &[Value]) -> Option<Vec<Vec<Token>>> {
-    elements
-        .iter()
-        .map(|clause| {
-            let inner = clause.as_vector_view()?;
-            super::value_as_code::value_elements_to_tokens(&inner).ok()
-        })
-        .collect()
 }
 
 fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
@@ -466,19 +357,6 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 if !call.mode_preserving {
                     interp.reset_execution_modes();
                 }
-            }
-            CompiledOp::CondDispatch(clauses) => {
-                let stack_len_before = interp.stack.len();
-                let mut outcome = interp.charge_execution_step();
-                if outcome.is_ok() {
-                    outcome = super::control_cond::op_cond_dispatch(interp, clauses);
-                }
-                if let Err(err) = outcome {
-                    interp.record_word_dispatch_failure("COND", &err, stack_len_before);
-                    return Err(err);
-                }
-                super::execution_loop::apply_word_hint_override(interp, "COND");
-                post_call_cleanup(interp, "COND");
             }
             CompiledOp::CallUserWord(name) => {
                 interp.execute_word_core(name)?;

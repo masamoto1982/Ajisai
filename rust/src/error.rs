@@ -166,7 +166,6 @@ pub enum ErrorCategory {
     ResourceLimitExceeded,
     RecursionLimitExceeded,
     BuiltinProtection,
-    CondExhausted,
     SelfReferentialDefinition,
     /// The condition the failing Word's `errorWhen` declares for this state.
     /// Its protocol spelling *is* the declared condition name, so a reader who
@@ -191,7 +190,6 @@ impl ErrorCategory {
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
             ErrorCategory::BuiltinProtection => "builtinProtection",
-            ErrorCategory::CondExhausted => "condExhausted",
             ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
             ErrorCategory::Declared(condition) => condition,
         }
@@ -213,7 +211,6 @@ impl ErrorCategory {
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
             AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
-            AjisaiError::CondExhausted => ErrorCategory::CondExhausted,
             AjisaiError::SelfReferentialDefinition { .. } => {
                 ErrorCategory::SelfReferentialDefinition
             }
@@ -368,8 +365,6 @@ pub enum AjisaiError {
         condition: &'static str,
         message: String,
     },
-
-    CondExhausted,
 }
 
 impl AjisaiError {
@@ -495,9 +490,6 @@ impl fmt::Display for AjisaiError {
                 write!(f, "Cannot {} built-in word: {}", operation, word)
             }
             AjisaiError::DeclaredCondition { message, .. } => write!(f, "{}", message),
-            AjisaiError::CondExhausted => {
-                write!(f, "COND: all guards failed and no else clause")
-            }
         }
     }
 }

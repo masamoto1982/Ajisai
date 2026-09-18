@@ -18,10 +18,10 @@
 //! its own. Two witnesses in `spec/outcome-witnesses.json` proved this the
 //! hard way during development: `resourceLimitExceeded` fires on a numeric
 //! literal alone (`999...9`), with no Word call anywhere to attribute it
-//! to, and `condExhausted`/`builtinProtection`/`nameConflict`/
-//! `structureError` all fire on programs whose every individual Word call
-//! (`COND`, `DEF`, `DEF` again, `DEF`+`DEL`) has a perfectly ordinary
-//! declared vocabulary that simply does not list them. Modeling exactly
+//! to, and `builtinProtection`/`nameConflict`/`structureError` all fire on
+//! programs whose every individual Word call (`DEF`, `DEF` again,
+//! `DEF`+`DEL`) has a perfectly ordinary declared vocabulary that simply
+//! does not list them. Modeling exactly
 //! when each is reachable (the real profile's numeric-literal-digit ceiling
 //! against the literal's actual digit count, for instance) is a sound
 //! refinement future work can add; V1 instead adds the whole set
@@ -122,7 +122,7 @@ impl Interpreter {
                     reach.saw_word("OR-NIL");
                     outcomes.extend(builtin_outcomes_for("OR-NIL"));
                 }
-                Token::VectorStart | Token::VectorEnd | Token::CondClauseSep | Token::LineBreak => {
+                Token::VectorStart | Token::VectorEnd | Token::LineBreak => {
                     flow.feed_structural(token)
                 }
             }

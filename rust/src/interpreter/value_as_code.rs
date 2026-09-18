@@ -36,10 +36,6 @@ pub(crate) fn value_elements_to_tokens(elements: &[Value]) -> Result<Vec<Token>>
 
 fn push_value_as_tokens(value: &Value, out: &mut Vec<Token>) -> Result<()> {
     match &value.data {
-        // `|` round-trips back to the real CondClauseSep token — see
-        // vector_literal.rs's matching note on why a bare Symbol("|") is
-        // what a clause block's literal collection produces.
-        ValueData::Symbol(name) if name.as_ref() == "|" => out.push(Token::CondClauseSep),
         ValueData::Symbol(name) => out.push(Token::Symbol(name.clone())),
         ValueData::Text(s) => out.push(Token::String(s.clone())),
         // The value is already in hand, so it is carried across rather than

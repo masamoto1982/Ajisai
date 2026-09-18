@@ -81,8 +81,6 @@ pub struct RuntimeMetrics {
     pub compiled_plan_build_count: u64,
     pub compiled_plan_cache_hit_count: u64,
     pub compiled_plan_cache_miss_count: u64,
-    pub cond_dispatch_fast_count: u64,
-    pub cond_clause_compiled_count: u64,
     pub scalar_fastpath_count: u64,
     pub resolve_cache_hit_count: u64,
     pub resolve_cache_miss_count: u64,
@@ -237,25 +235,14 @@ pub struct Interpreter {
     pub(crate) section_depth: usize,
     /// The top-level token being executed. An error raised anywhere beneath it
     /// is attributed here, which is what turns "Stack underflow" into
-    /// "Stack underflow at line 4, column 12, in COND".
+    /// "Stack underflow at line 4, column 12, in SELECT".
     pub(crate) current_source_span: Option<crate::tokenizer::SourceSpan>,
-
-    /// When true (default), `compile_word_definition` lowers `COND` ops with
-    /// statically-known clause blocks into `CompiledOp::CondDispatch`, so the
-    /// per-call clause collect/clone/split is replaced by a precomputed jump
-    /// table. Disable via `AJISAI_NO_COND_DISPATCH` for an A/B comparison.
-    pub(crate) cond_dispatch_enabled: bool,
 
     /// When true (default), `compile_word_definition` lowers fully-literal
     /// vectors into a prebuilt `CompiledOp::PushVectorLiteral` instead of
     /// leaving them on the interpreter via `FallbackToken`. Disable via
     /// `AJISAI_NO_VECTOR_LITERAL` for an A/B comparison.
     pub(crate) vector_literal_enabled: bool,
-
-    /// When true (default), precompiled COND clauses (`CondDispatch`) carry
-    /// compiled guard/body sub-plans, so the loop body runs compiled instead of
-    /// re-interpreted each iteration. Disable via `AJISAI_NO_COMPILED_CLAUSE`.
-    pub(crate) compiled_clause_enabled: bool,
 
     /// When true (default), StackTop scalar-scalar arithmetic and comparison can
     /// bypass the tensor broadcast wrapper for bare scalars and same-shape
@@ -316,9 +303,7 @@ impl Interpreter {
             source_spans: Vec::new(),
             section_depth: 0,
             current_source_span: None,
-            cond_dispatch_enabled: std::env::var("AJISAI_NO_COND_DISPATCH").is_err(),
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
-            compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -523,26 +508,11 @@ impl Interpreter {
         self.current_source_span
     }
 
-    /// Enable or disable precompiled COND clause dispatch (the internal "jump
-    /// table"). In-process equivalent of `AJISAI_NO_COND_DISPATCH`; lets a
-    /// benchmark A/B the compiled dispatch against the dynamic stack-collection
-    /// path. Takes effect for word plans compiled after the change.
-    pub fn set_cond_dispatch_enabled(&mut self, enabled: bool) {
-        self.cond_dispatch_enabled = enabled;
-    }
-
     /// Enable or disable compile-time lowering of fully-literal vectors. In-process
     /// equivalent of `AJISAI_NO_VECTOR_LITERAL`; takes effect for word plans
     /// compiled after the change.
     pub fn set_vector_literal_enabled(&mut self, enabled: bool) {
         self.vector_literal_enabled = enabled;
-    }
-
-    /// Enable or disable compiled COND guard/body sub-plans. In-process
-    /// equivalent of `AJISAI_NO_COMPILED_CLAUSE`; takes effect for word plans
-    /// compiled after the change.
-    pub fn set_compiled_clause_enabled(&mut self, enabled: bool) {
-        self.compiled_clause_enabled = enabled;
     }
 
     /// Enable or disable the D1 scalar-scalar arithmetic/comparison fast path.

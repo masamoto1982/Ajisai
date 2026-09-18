@@ -5,9 +5,9 @@
 // originally chosen by type in docs/dev/competitive-advantage-work-order-2026-08.md
 // Phase 2).
 //
-// 65 Words in one flat dictionary with no imports means the language's whole
-// input/outcome surface is finite. Excluding the three variable/control-arity
-// Words (COLLECT, COND, OR-NIL) and the KEEP modifier leaves 61 Words with a
+// 66 Words in one flat dictionary with no imports means the language's whole
+// input/outcome surface is finite. Excluding the variable/control-arity Words
+// (COLLECT, EXEC, OR-NIL) and the KEEP modifier leaves the rest with a
 // fixed integer arity; every (Word, domain tuple) pair is run through the
 // real `ajisai` CLI and its outcome recorded as a stable id — never the
 // human-readable `message`, which can be reworded without changing meaning.
@@ -132,7 +132,7 @@ function* domainTuples(arity) {
 
 // ---------------------------------------------------------------------------
 // Word selection (Step 2.2, pitfalls A/B). `stack.inputs` is a plain integer
-// for every Word except COLLECT/COND/OR-NIL (a JSON string: "variable" or
+// for every Word except COLLECT/EXEC/OR-NIL (a JSON string: "variable" or
 // "control" in the current spec/words.json); KEEP has a numeric arity (0) but
 // is a modifier applied to the next Word, not a Word to expand on its own.
 // This is not a hardcoded list (Phase 3 pitfall E): whichever Words currently

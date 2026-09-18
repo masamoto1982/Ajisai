@@ -34,7 +34,7 @@ const KERNEL_WORDS: &[&str] = &[
     "JOIN",
     "NUM",
     "STR",
-    "COND",
+    "SELECT",
     "EXEC",
     "NIL",
     "NIL?",
@@ -79,10 +79,8 @@ fn assert_kernel_only(source: &str) {
     for token in without_string_literals(source).split_whitespace() {
         if token.chars().any(char::is_alphabetic) {
             let upper = token.to_ascii_uppercase();
-            // `IDLE` is COND's else-marker in the guard position, not a Word:
-            // it has no entry in `spec/words.json` and cannot be called.
             assert!(
-                upper == "IDLE" || KERNEL_WORDS.contains(&upper.as_str()),
+                KERNEL_WORDS.contains(&upper.as_str()),
                 "non-Kernel Word {upper} in witness: {source}"
             );
         }
@@ -177,18 +175,20 @@ async fn collection_standards_have_kernel_only_witnesses() {
             "[ 1 2 3 ] REVERSE",
             "[ 1 2 3 ] [ 2 ] GET [ 1 2 3 ] [ 1 ] GET [ 1 2 3 ] [ 0 ] GET 3 COLLECT",
         ),
-        // INDEX-OF is COND's ordered first match over GET and EQ; the absent
-        // case falls through to the IDLE clause exactly as the Word projects
-        // NIL.
+        // INDEX-OF is a first match over GET and EQ, which is a chain of
+        // SELECTs: each one answers its own index or defers to the rest, and
+        // the innermost `NIL` is what an exhausted chain answers — the same
+        // projection the Word makes. The chain is written outermost-first
+        // because SELECT takes its candidates before the truth that chooses.
         (
             "[ 5 7 9 ] 7 INDEX-OF",
-            "[ 5 7 9 ] [ [ [ 0 ] GET 7 EQ ] [ 0 ] [ [ 1 ] GET 7 EQ ] [ 1 ] \
-             [ [ 2 ] GET 7 EQ ] [ 2 ] [ IDLE ] [ NIL ] ] COND",
+            "0 1 2 NIL [ 5 7 9 ] [ 2 ] GET 7 EQ SELECT \
+             [ 5 7 9 ] [ 1 ] GET 7 EQ SELECT [ 5 7 9 ] [ 0 ] GET 7 EQ SELECT",
         ),
         (
             "[ 5 7 9 ] 4 INDEX-OF",
-            "[ 5 7 9 ] [ [ [ 0 ] GET 4 EQ ] [ 0 ] [ [ 1 ] GET 4 EQ ] [ 1 ] \
-             [ [ 2 ] GET 4 EQ ] [ 2 ] [ IDLE ] [ NIL ] ] COND",
+            "0 1 2 NIL [ 5 7 9 ] [ 2 ] GET 4 EQ SELECT \
+             [ 5 7 9 ] [ 1 ] GET 4 EQ SELECT [ 5 7 9 ] [ 0 ] GET 4 EQ SELECT",
         ),
     ] {
         equivalent(native, witness).await;

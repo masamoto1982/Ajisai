@@ -76,13 +76,12 @@ fn a_code_operand_of_a_higher_order_word_contributes_its_vocabulary() {
 
 /// A structural category that only one class of Word can raise is dropped
 /// when nothing the program reaches is that class. `1 2 ADD` contains no
-/// `COND`, no `DEF`, no `DEL` and no User Word, so none of the five is
-/// possible — and before this narrowing every one of them was predicted.
+/// `DEF`, no `DEL` and no User Word, so none of the four is possible — and
+/// before this narrowing every one of them was predicted.
 #[test]
 fn a_structural_category_no_reachable_word_can_raise_is_dropped() {
     let outcomes = predict("1 2 ADD");
     for id in [
-        "error:condExhausted",
         "error:nameConflict",
         "error:selfReferentialDefinition",
         "error:builtinProtection",
@@ -102,7 +101,6 @@ fn a_structural_category_no_reachable_word_can_raise_is_dropped() {
 #[test]
 fn each_gated_category_returns_when_its_own_trigger_is_reachable() {
     for (source, id) in [
-        ("NIL [ [ TRUE ] [ 1 ] ] COND", "error:condExhausted"),
         ("[ 1 ADD ] 'INC' DEF", "error:nameConflict"),
         ("[ 1 ADD ] 'INC' DEF", "error:selfReferentialDefinition"),
         ("[ 1 ADD ] 'INC' DEF", "error:builtinProtection"),
@@ -132,7 +130,6 @@ fn the_call_depth_guard_needs_a_user_word_to_be_possible() {
 fn an_unresolved_name_restores_every_gated_category() {
     let outcomes = predict("FROBNICATE");
     for id in [
-        "error:condExhausted",
         "error:nameConflict",
         "error:selfReferentialDefinition",
         "error:builtinProtection",
@@ -149,8 +146,8 @@ fn an_unresolved_name_restores_every_gated_category() {
 /// the reachability set it builds is not just the top-level symbols.
 #[test]
 fn a_gated_trigger_inside_a_definition_body_still_counts() {
-    let outcomes = predict("[ [ TRUE ] [ 1 ] ] 'BRANCH' DEF NIL BRANCH COND");
-    assert!(outcomes.contains(&"error:condExhausted".to_string()));
+    let outcomes = predict("[ 'INC' DEL ] 'DROP-INC' DEF DROP-INC");
+    assert!(outcomes.contains(&"error:builtinProtection".to_string()));
 }
 
 /// A String is not a code operand, so neither of these runs `DEL` at all: both
@@ -175,7 +172,7 @@ fn a_string_is_not_a_code_operand() {
 #[test]
 fn a_string_that_names_no_word_stays_a_literal() {
     let outcomes = predict("5 'x' BIND");
-    assert!(!outcomes.contains(&"error:condExhausted".to_string()));
+    assert!(!outcomes.contains(&"error:nameConflict".to_string()));
     assert!(!outcomes.contains(&"error:recursionLimitExceeded".to_string()));
 }
 

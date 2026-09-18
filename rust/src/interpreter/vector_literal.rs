@@ -105,19 +105,6 @@ impl Interpreter {
                     }
                     i += 1;
                 }
-                Token::CondClauseSep => {
-                    // `[ IDLE | 1 ]`: `|` inside a clause block is data until
-                    // COND runs it — a bare Symbol("|"), like any other name,
-                    // symmetric with how `Value::Symbol` was promoted for
-                    // ordinary names. `value_as_code.rs` maps it back to
-                    // `Token::CondClauseSep` when the clause is actually
-                    // executed. Whether it actually sits inside a legitimate
-                    // COND clause is decided later, when `split_clause_blocks`
-                    // tries to split the block that holds it.
-                    values.push(Value::from_symbol("|"));
-                    has_other = true;
-                    i += 1;
-                }
                 Token::LineBreak | Token::NilCoalesce => {
                     i += 1;
                 }

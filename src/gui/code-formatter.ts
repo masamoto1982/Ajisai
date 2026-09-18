@@ -14,10 +14,11 @@
 //   - keeps string literals ('...') and comments (#...) verbatim;
 //   - re-indents the line by the bracket/block nesting depth open at its start.
 //
-// It adds a line break in exactly one situation: when two or more `|` COND
-// clauses begin on the same line. That is a layout choice, not a repair — such
-// a COND runs either way — but one clause per line is the canonical form, and
-// it is the form in which a COND can be read down its guards. If the input
+// It never adds or removes a line break. It used to add one before each
+// clause of a branch after the first, which was the one place it made a layout
+// choice of its own; branching is now `SELECT` over two ordinary values, with
+// no clauses to lay out, so the formatter only rewrites whitespace within a
+// line. If the input
 // contains something it cannot rewrite safely (an unterminated string, or a
 // newline inside a string literal) it returns the input unchanged.
 
@@ -30,8 +31,8 @@ const INDENT_UNIT = '  ';
 // rejects a bracket that touches adjacent text rather than splitting it off.
 // This formatter's job is to supply that missing whitespace proactively, so
 // messy input like `[1 2 3]` becomes valid, canonical source (`[ 1 2 3 ]`)
-// instead of a tokenizer error. Every other punctuation character — including
-// `|` (the COND clause separator) and `^` — obeys the ordinary word-boundary
+// instead of a tokenizer error. Every other punctuation character — `^`, and
+// any other symbol written inside a name — obeys the ordinary word-boundary
 // rule instead: it ends a token only at whitespace, so it stays glued to the
 // surrounding word when written without a space (SPEC AQ-VER-002-D/E). Forcing
 // any of them apart here would turn one Symbol token into several, which is
@@ -147,57 +148,6 @@ const scanLines = (source: string): string[][] | null => {
     return lines;
 };
 
-// Whether the vector opening at `start` (`tokens[start] === '['`) contains a
-// `|` at its own top level — that is, whether it is a COND guard clause rather
-// than an ordinary vector.
-const isCondClauseBlock = (tokens: string[], start: number): boolean => {
-    let depth = 0;
-    for (let i = start; i < tokens.length; i += 1) {
-        const token = tokens[i];
-        if (token === '[') {
-            depth += 1;
-        } else if (token === ']') {
-            depth -= 1;
-            if (depth === 0) return false;
-        } else if (token === '|' && depth === 1) {
-            return true;
-        }
-    }
-    return false;
-};
-
-// Break a line so that at most one COND guard clause begins on it.
-//
-// The formatter otherwise never adds a line break. It adds one here because a
-// COND read down its guards is a different thing to read than a COND read
-// along a line, and the vertical form is what the reference and every example
-// show. The language accepts both — this is the canonical form, not a repair.
-//
-// The break goes immediately before each clause after the first, and nowhere
-// else, so everything the author wrote stays where they put it. Clauses nested
-// inside a clause body are split the same way, so the form is the same at
-// every depth.
-const splitCondClauseLines = (tokens: string[]): string[][] => {
-    const out: string[][] = [];
-    let current: string[] = [];
-    let clausesOnLine = 0;
-
-    for (let i = 0; i < tokens.length; i += 1) {
-        if (tokens[i] === '[' && isCondClauseBlock(tokens, i)) {
-            if (clausesOnLine >= 1 && current.length > 0) {
-                out.push(current);
-                current = [];
-                clausesOnLine = 0;
-            }
-            clausesOnLine += 1;
-        }
-        current.push(tokens[i]!);
-    }
-
-    out.push(current);
-    return out;
-};
-
 const countLeadingClosers = (tokens: string[]): number => {
     let leading = 0;
     while (leading < tokens.length && CLOSING_BRACKETS.has(tokens[leading]!)) {
@@ -252,5 +202,5 @@ export const formatAjisaiSource = (source: string): string => {
     if (lines === null) {
         return source;
     }
-    return renderLines(lines.flatMap(splitCondClauseLines));
+    return renderLines(lines);
 };

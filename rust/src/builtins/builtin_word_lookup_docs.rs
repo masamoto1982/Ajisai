@@ -226,14 +226,14 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     },
     // ── Control and higher-order words ────────────────────────────────────
     BuiltinLookupDoc {
-        word: "COND",
-        behavior: "Pops the clauses, a single Vector of guard/body clause\nblocks, then the target value. Reads the clauses in order;\nthe first guard that holds selects its body; IDLE marks the\nelse clause. In a tail position the selected body continues\nthe loop without growing the stack.",
+        word: "SELECT",
+        behavior: "Pops the truth value, then the two candidates, and pushes\nthe first if the truth is TRUE and the second if it is\nFALSE. Both candidates are values the program already\nbuilt, so nothing is evaluated here and neither one is\nskipped. The choice is made lane by lane, so a vector of\ntruths chooses between two vectors.",
         examples: &[BuiltinExampleDoc {
-            code: "1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND",
-            result: "Pushes 'y'.",
+            code: "[ 'y' ] [ 'n' ] TRUE SELECT",
+            result: "Pushes [ 'y' ].",
         }],
-        failure_note: "When every guard fails and no else clause exists, COND\nraises an error.",
-        related: &["MAP", "EXEC"],
+        failure_note: "An absent truth value chooses neither candidate: the lane\nanswers that same absence, reason and all.",
+        related: &["AND", "NIL?"],
     },
     BuiltinLookupDoc {
         word: "MAP",

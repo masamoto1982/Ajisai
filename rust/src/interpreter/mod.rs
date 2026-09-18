@@ -10,7 +10,6 @@ pub(crate) mod comparison_scalar;
 pub(crate) mod compiled_call;
 pub mod compiled_plan;
 pub mod control;
-pub mod control_cond;
 mod debug_declared_checks;
 pub mod debug_diagnosis;
 mod debug_limit_checks;
@@ -26,6 +25,7 @@ pub mod host;
 pub mod host_lookup;
 mod host_profile_defaults;
 pub mod io;
+pub(crate) mod lane_lift;
 pub(crate) mod limit_profile;
 pub mod logic;
 pub mod math_ops;
@@ -109,8 +109,6 @@ mod arithmetic_meter_tests;
 #[cfg(test)]
 mod collection_meter_tests;
 #[cfg(test)]
-mod control_cond_tests;
-#[cfg(test)]
 mod control_exec_eval_tests;
 #[cfg(test)]
 mod control_or_else_tests;
@@ -177,11 +175,7 @@ mod builtin_dispatch_tests;
 #[cfg(test)]
 mod comparison_rational_screen_tests;
 #[cfg(test)]
-mod compiled_clause_tests;
-#[cfg(test)]
 mod compiled_plan_tests;
-#[cfg(test)]
-mod cond_dispatch_tests;
 #[cfg(test)]
 mod core_word_canonicalization_tests;
 #[cfg(test)]

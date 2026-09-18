@@ -47,6 +47,10 @@ enum NilClass {
     ThreeValAnd,
     ThreeValOr,
     ThreeValNot,
+    /// SELECT: an UNKNOWN truth chooses neither candidate and answers that
+    /// same absence. Not a blanket collapse — an absent *candidate* is only
+    /// NIL in the result when the truth actually chose it.
+    ThreeValSelect,
 }
 
 /// The Core (canonical-home == Core) passthrough words and their NIL
@@ -67,6 +71,7 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
+    ("SELECT", NilClass::ThreeValSelect),
 ];
 
 /// Categories whose Core passthrough words this suite is responsible for.
@@ -138,7 +143,10 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
                 assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
             }
             // Not a blanket collapse; see `kleene_truth_conformance_tests`.
-            NilClass::ThreeValAnd | NilClass::ThreeValOr | NilClass::ThreeValNot => {}
+            NilClass::ThreeValAnd
+            | NilClass::ThreeValOr
+            | NilClass::ThreeValNot
+            | NilClass::ThreeValSelect => {}
         }
     }
 }

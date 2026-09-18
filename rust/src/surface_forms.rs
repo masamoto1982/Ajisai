@@ -1,7 +1,6 @@
 //! Surface-form metadata: the named, English-based concept behind every visible
 //! source form that is *not* a runtime word — the symbolic ones, and the one
-//! word-shaped keyword (`IDLE`) that is read positionally rather than looked
-//! up.
+//! retired one (`|`) the tokenizer still answers by name.
 //!
 //! Ajisai source is word-based. Visible symbols are **surface forms** — aliases
 //! or sugar for named, English-based canonical concepts. Crucially, not every
@@ -26,8 +25,6 @@ pub enum SurfaceFormKind {
     LiteralSugar,
     /// Source-level directive consumed by the tokenizer, e.g. `#`.
     SourceDirective,
-    /// Control-flow directive meaningful only inside a construct, e.g. `|`.
-    ControlDirective,
     /// Reserved marker that is never a runtime token, e.g. `(` `)`.
     ReservedMarker,
     /// A form that *was* valid source and no longer is, e.g. `{` `}`.
@@ -67,28 +64,19 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         runtime_word: false,
         // Line comment: characters from `#` to end of line are ignored
     },
+    // `|` separated a `COND` clause's guard from its body, and `IDLE` was that
+    // clause set's else-guard. Both went with `COND`: `SELECT` chooses between
+    // two values a program already built, so there is no clause to separate and
+    // no clause set to fall off the end of. `|` stays registered as a retired
+    // form because a reader may still meet it in older material and the
+    // tokenizer answers it by name; `IDLE` needed no such entry, being an
+    // ordinary word-shaped name that now resolves like any other unknown word.
     SurfaceForm {
         surface: "|",
-        concept: "COND-CLAUSE",
-        kind: SurfaceFormKind::ControlDirective,
+        concept: "RETIRED-COND-CLAUSE",
+        kind: SurfaceFormKind::RetiredForm,
         runtime_word: false,
-        // COND clause separator (guard | body)
-    },
-    // `IDLE` is the else-guard: a clause whose guard is exactly this one name
-    // fires when no earlier clause did. It is matched positionally by
-    // `control_cond::is_idle_guard`, never resolved through the dictionary, so
-    // it is not one of the Core Words and does not appear in the Dictionary
-    // panel. It was also, until it was registered here, in no registry, no
-    // reading surface, and no reference entry — a name a reader could only learn
-    // from an example, in a language whose whole claim is that a small fixed
-    // vocabulary is all there is. Registering it puts it in the manifest and
-    // lets the reading surfaces name it.
-    SurfaceForm {
-        surface: "IDLE",
-        concept: "COND-ELSE-GUARD",
-        kind: SurfaceFormKind::ControlDirective,
-        runtime_word: false,
-        // COND else-guard: fires when no earlier clause did
+        // Retired: separated a COND clause's guard from its body
     },
     SurfaceForm {
         surface: "[",
@@ -161,7 +149,10 @@ mod tests {
     #[test]
     fn lookup_returns_named_concepts() {
         assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
-        assert_eq!(lookup_surface_form("|").unwrap().concept, "COND-CLAUSE");
+        assert_eq!(
+            lookup_surface_form("|").unwrap().concept,
+            "RETIRED-COND-CLAUSE"
+        );
         assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
         assert_eq!(lookup_surface_form("]").unwrap().concept, "END-VECTOR");
         assert_eq!(
@@ -193,12 +184,6 @@ mod tests {
     #[test]
     fn a_forms_kind_agrees_with_what_the_tokenizer_accepts() {
         for form in SURFACE_FORMS {
-            // `IDLE` is word-shaped and read positionally inside COND; it
-            // tokenizes as an ordinary name, so the accept/reject split below
-            // says nothing about it.
-            if form.surface == "IDLE" {
-                continue;
-            }
             let tokenized = crate::tokenizer::tokenize(form.surface);
             match form.kind {
                 // Never valid on its own or anywhere else.
@@ -216,8 +201,7 @@ mod tests {
                 // one the tokenizer knows — not that the character is invalid.
                 SurfaceFormKind::DelimiterSugar
                 | SurfaceFormKind::LiteralSugar
-                | SurfaceFormKind::SourceDirective
-                | SurfaceFormKind::ControlDirective => {
+                | SurfaceFormKind::SourceDirective => {
                     if let Err(message) = tokenized {
                         assert!(
                             !message.contains("not a valid Ajisai source character")
@@ -261,7 +245,7 @@ mod tests {
     fn unknown_surface_form_is_none() {
         assert!(lookup_surface_form("+").is_none());
         assert!(lookup_surface_form("ADD").is_none());
-        assert!(lookup_surface_form("COND").is_none());
+        assert!(lookup_surface_form("SELECT").is_none());
     }
 
     #[test]
@@ -277,6 +261,6 @@ mod tests {
         assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
         assert_ne!(canonicalize_core_word_name("{"), "RETIRED-BEGIN-BLOCK");
         assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
-        assert_ne!(canonicalize_core_word_name("|"), "COND-CLAUSE");
+        assert_ne!(canonicalize_core_word_name("|"), "RETIRED-COND-CLAUSE");
     }
 }

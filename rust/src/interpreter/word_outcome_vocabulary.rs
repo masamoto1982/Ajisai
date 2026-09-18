@@ -68,7 +68,7 @@ const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 /// `DivisionByZero` is excluded: it is not a registered outcome category at
 /// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
 /// diagnostic-trace-only, Phase 2 of this work order).
-fn structural_error_categories() -> [ErrorCategory; 14] {
+fn structural_error_categories() -> [ErrorCategory; 13] {
     [
         ErrorCategory::StackUnderflow,
         ErrorCategory::StructureError,
@@ -82,7 +82,6 @@ fn structural_error_categories() -> [ErrorCategory; 14] {
         ErrorCategory::ResourceLimitExceeded,
         ErrorCategory::RecursionLimitExceeded,
         ErrorCategory::BuiltinProtection,
-        ErrorCategory::CondExhausted,
         ErrorCategory::SelfReferentialDefinition,
     ]
 }
@@ -277,7 +276,6 @@ impl Reachability {
 /// raise sites for that category in the engine, read off the source rather
 /// than inferred from the name:
 ///
-/// - `condExhausted` — `interpreter::control_cond` only.
 /// - `nameConflict`, `selfReferentialDefinition` — `interpreter::execute_def`
 ///   only.
 /// - `builtinProtection` — `execute_def` and `execute_del`.
@@ -291,8 +289,7 @@ impl Reachability {
 /// arithmetic and collection modules, and narrowing them would mean modelling
 /// which of those a program reaches — a different and much larger claim than
 /// "this program contains no `DEF`".
-const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 4] = [
-    ("error:condExhausted", &["COND"]),
+const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 3] = [
     ("error:nameConflict", &["DEF"]),
     ("error:selfReferentialDefinition", &["DEF"]),
     ("error:builtinProtection", &["DEF", "DEL"]),
@@ -304,8 +301,8 @@ const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 4] = [
 /// (impossible past the point prediction's caller already tokenized the
 /// source successfully). "Structural" means *not* any specific Word's own
 /// declared `errorWhen` — a cross-cutting engine condition (a name reused
-/// across scopes, a definition shadowing a builtin, a `COND` that runs out
-/// of clauses, a numeric literal too long for the profile) that a per-word
+/// across scopes, a definition shadowing a builtin, a numeric literal too
+/// long for the profile) that a per-word
 /// vocabulary union can never include on its own, and so would otherwise
 /// under-approximate for any non-trivial program. Included whenever the
 /// program is non-empty (`predict_program_outcomes` decides that), not

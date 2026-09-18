@@ -156,9 +156,11 @@ const STEPS = [
     // enough to time cleanly, not any particular round number).
     ['add loop x15k', '', `1${' 7 +'.repeat(15_000)}`],
     // Every iteration pays a dictionary lookup and a frame push, not just an
-    // arithmetic op. This was the native floor and is the shape
-    // `cli::step_limit_tests::DOWN_PROBE` uses.
-    ['DOWN trampoline x200k', '', `{\n{ [ 0 ] > | [ 1 ] - DOWN }\n{ IDLE | [ 'done' ] } COND\n} 'DOWN' DEF\n200000 DOWN`],
+    // arithmetic op, which is what makes it the dearer of the two shapes. It
+    // used to be written as a self-calling trampoline; LANG.DICTIONARY.ACYCLIC
+    // refuses a self-call, so the same per-iteration cost is paid by a MAP over
+    // a materialized Vector instead.
+    ['user-word call x200k', "[ [ 7 ] + ] 'STEP' DEF", `[ 1 200000 ] RANGE [ STEP ] MAP`],
 ];
 
 async function section(title, meter, cases) {

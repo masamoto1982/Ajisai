@@ -45,7 +45,6 @@
     { "id": "VectorStart", "carries": null },
     { "id": "VectorEnd", "carries": null },
     { "id": "NilCoalesce", "carries": null },
-    { "id": "CondClauseSep", "carries": null },
     { "id": "LineBreak", "carries": null }
   ],
 
@@ -104,8 +103,7 @@
       "summary": "The acceptance gate, over the token sequence rather than the text, shared with the entry point that decodes a stored code value.",
       "conditions": [
         "mismatchedCodeDelimiter",
-        "unclosedCodeDelimiter",
-        "condSeparatorOutsideBlock"
+        "unclosedCodeDelimiter"
       ],
       "note": "Because this runs on tokens, it is reached identically from source and from a Vector being read as code, which is what keeps the two entry points on one structural grammar."
     }
@@ -137,10 +135,11 @@
       "note": "The whole lexeme must be accepted. This is why no character needs a rule of its own: '1/2' is a number because the entire token parses as one, and '/' is the DIV name for exactly the same reason."
     },
     {
-      "id": "condClauseSep",
+      "id": "retiredCondClauseSep",
       "match": { "literal": "|" },
-      "emits": "CondClauseSep",
-      "surface": "|"
+      "condition": "retiredCondSeparator",
+      "surface": "|",
+      "note": "A whole-lexeme rule rather than a rejected character, so only a bare '|' is refused and a name that merely contains one is not. It separated a COND clause's guard from its body; COND was replaced by SELECT, which chooses between two values that already exist."
     },
     {
       "id": "nilCoalesce",
@@ -268,20 +267,14 @@
       "witnessNote": "Same mechanism as mismatchedCodeDelimiter: bracketPrecheck is blinded by the interior quote, so structural validation is the phase that reports."
     },
     {
-      "id": "condSeparatorOutsideBlock",
-      "phase": "structuralValidation",
+      "id": "retiredCondSeparator",
+      "phase": "scan",
       "errorCategory": "malformedSource",
-      "summary": "'|' appeared outside a code block. It is only valid directly inside one.",
-      "messageContains": "only valid directly inside a code block",
+      "summary": "'|' appeared as a whole lexeme. It separated a COND clause's guard from its body, and COND was replaced by SELECT, which chooses between two values that already exist and needs no separator.",
+      "messageContains": "retired",
       "witness": "|"
     }
   ],
 
-  "lexicallyTransparent": [
-    {
-      "surface": "IDLE",
-      "concept": "COND-ELSE-GUARD",
-      "reason": "Word-shaped and read positionally by COND rather than resolved through the dictionary. It lexes as an ordinary Symbol, so the lexical grammar allocates nothing for it and must not be expected to."
-    }
-  ]
+  "lexicallyTransparent": []
 }
