@@ -35,7 +35,7 @@ use super::Interpreter;
 ///
 /// `barrier` marks a scope that lookup does not search past: the frame of a
 /// User Word call, or of the whole run. A block a Core Word evaluates —
-/// `MAP`'s element block, a `COND` clause, `EXEC`'s block — opens a
+/// `MAP`'s element block, `FOLD`'s, `EXEC`'s block — opens a
 /// transparent scope instead, so it reads the names of the frame it was
 /// written in. That difference is the whole scoping rule: a name reaches into
 /// the blocks written beneath it and never into a Word called from it.

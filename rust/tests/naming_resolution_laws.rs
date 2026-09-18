@@ -158,12 +158,10 @@ fn a_binding_reaches_blocks_written_in_its_frame() {
     assert_eq!(obs("3 'T' BIND [ 1 5 9 ] [ T LT ] FILTER"), vec!["[ 1/1 ]"]);
     assert_eq!(obs("4 'T' BIND [ 1 2 ] 0 [ ADD T ADD ] FOLD"), vec!["11/1"]);
     assert_eq!(obs("5 'T' BIND [ T ] EXEC"), vec!["5/1"]);
-    // A COND clause is such a block: the isolation COND enforces is of the
-    // stack, and a name is not on the stack.
-    assert_eq!(
-        obs("5 'T' BIND T [ [ 1 GT ] [ T ] [ IDLE ] [ 0 ] ] COND"),
-        vec!["5/1"]
-    );
+    // A bound name reaches a block that a higher-order Word runs, and it
+    // reaches the operands of an ordinary Word just as plainly — `SELECT`
+    // opens no frame at all, so there is nothing for a name to cross.
+    assert_eq!(obs("5 'T' BIND T 0 T 1 GT SELECT"), vec!["5/1"]);
     // A block that binds runs in its own scope per evaluation, so the name is
     // fresh each element rather than a collision on the second.
     assert_eq!(
@@ -207,7 +205,7 @@ fn a_binding_ends_with_its_frame() {
 /// reader never has to know which one they got.
 #[test]
 fn a_binding_and_a_word_may_not_share_a_name() {
-    for word in ["ADD", "GET", "COND"] {
+    for word in ["ADD", "GET", "SELECT"] {
         assert!(
             run_err(&format!("5 '{word}' BIND")).contains("may not shadow"),
             "a binding must not take the Core name {word}"

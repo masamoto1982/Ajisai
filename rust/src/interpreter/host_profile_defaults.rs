@@ -173,10 +173,13 @@ pub const DEFAULT_MAX_NUMERIC_WORK: u64 =
 ///
 /// Measured by `scripts/wasm-profile-calibration.mjs`, which tries two
 /// shapes and keeps the slower: a flat loop of machine-word additions (785
-/// steps/ms observed) and a trampolined user-word tail call — the same
-/// construction as `cli::step_limit_tests::DOWN_PROBE` — which is dearer
-/// because every iteration pays a dictionary lookup and a frame push, not
-/// just an arithmetic op (406–419 steps/ms observed). The trampoline sets
+/// steps/ms observed) and a loop of user-word calls, which is dearer because
+/// every iteration pays a dictionary lookup and a frame push, not just an
+/// arithmetic op (406–419 steps/ms observed). The dearer shape was a
+/// self-calling trampoline when those figures were taken; a self-call is no
+/// longer definable (LANG.DICTIONARY.ACYCLIC), so the script now pays the
+/// same per-iteration cost through a `MAP` and the figures stand until
+/// re-measured. The trampoline sets
 /// the floor, same as the numeric and collection meters: minimum of several
 /// runs kept for the same conservative reason. **Container- and
 /// engine-specific: re-measure with the same script on deployment

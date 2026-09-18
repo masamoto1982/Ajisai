@@ -414,15 +414,6 @@ impl Interpreter {
                     // Discard it and let the trailing `i += 1` fall through so the
                     // following source unit is evaluated as the fallback.
                 }
-                Token::CondClauseSep => {
-                    // ControlDirective: '|' -> COND-CLAUSE (see surface_forms.rs).
-                    return Err(AjisaiError::MalformedSource(
-                        "Unexpected '|' separator outside COND clause parsing. \
-                         '|' is control directive sugar for COND-CLAUSE and is meaningful only inside a COND expression."
-                            .to_string(),
-                    ));
-                }
-
                 Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::MalformedSource(

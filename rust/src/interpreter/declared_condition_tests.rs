@@ -71,8 +71,8 @@ async fn a_named_condition_is_one_the_word_declares() {
         ("NIL NUM", "NUM"),
         ("[ 0 5 0 ] RANGE", "RANGE"),
         ("[ 5 0 1 ] RANGE", "RANGE"),
-        ("[ 1 ] [ [ TRUE ] [ FALSE ] [ TRUE ] ] COND", "COND"),
-        ("[ 1 ] [ [ 'x' | 1 ] ] COND", "COND"),
+        ("[ 'y' ] [ 'n' ] 1 SELECT", "SELECT"),
+        ("[ 1 2 ] [ 3 4 5 ] [ TRUE FALSE ] SELECT", "SELECT"),
     ] {
         let diagnosis = raise_diagnosis(code).await;
         let declared = GENERATED_WORDS

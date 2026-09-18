@@ -564,9 +564,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- COND collects consecutive clause blocks, consumes the subject beneath them,
-     runs each guard against a fresh copy of the subject, and returns exactly one
-     value from the winning body (Section 7.7.1). -->
+<!-- SELECT is the conditional: a truth value chooses between two values the
+     program already built, lane by lane under LANG.COLLECTIONS.LIFT. It
+     evaluates nothing, so it is an ordinary Word rather than a construct with
+     laws of its own. -->
 
 <!-- Higher-order words: normative stack signatures in Section 7.7.1. -->
 
@@ -1484,17 +1485,17 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-cond-nil-target-is-unknown" data-category="core">
-  <h3>An absent COND target is Unknown: guards that read it do not fire, and the else-clause takes it</h3>
-  <pre class="ajisai-source">NIL [ [ [ 3 ] &gt; ] [ 'big' ] [ TRUE ] [ 'small' ] ] COND</pre>
-  <pre class="ajisai-expect-result">'small'</pre>
+<section class="ajisai-case" id="core-select-unknown-truth-chooses-neither" data-category="core">
+  <h3>An UNKNOWN truth chooses neither candidate and answers that same absence</h3>
+  <pre class="ajisai-source">[ 'big' ] [ 'small' ] NIL SELECT</pre>
+  <pre class="ajisai-expect-result">[ NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-cond-nil-target-does-not-suppress-a-guard-that-ignores-it" data-category="core">
-  <h3>An absent COND target does not silence a guard that never reads it</h3>
-  <pre class="ajisai-source">NIL [ [ TRUE ] [ 'yes' ] ] COND</pre>
-  <pre class="ajisai-expect-result">'yes'</pre>
+<section class="ajisai-case" id="core-select-an-absent-candidate-is-a-value-like-any-other" data-category="core">
+  <h3>An absent candidate is chosen like any other value: absence in a candidate is not absence in the truth</h3>
+  <pre class="ajisai-source">NIL 'no' TRUE SELECT</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1576,56 +1577,63 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: COND CONTRACT BRANCHES (LANG.COLLECTIONS.HIGHER) ===================== -->
+<!-- ===================== CORE: SELECT CONTRACT BRANCHES (LANG.VALUES.TRUTH) ===================== -->
 
-<section class="ajisai-case" id="core-cond-truthy-number-guard" data-category="core">
-  <h3>A guard reducing to a bare number is malformed use, not truthy</h3>
-  <pre class="ajisai-source">7 [ [ 1 ] [ [ 42 ] ] ] COND</pre>
+<section class="ajisai-case" id="core-select-chooses-by-truth" data-category="core">
+  <h3>SELECT answers the first candidate on TRUE and the second on FALSE</h3>
+  <pre class="ajisai-source">[ 'y' ] [ 'n' ] TRUE SELECT</pre>
+  <pre class="ajisai-expect-result">[ 'y' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-select-truthy-number-is-not-a-truth-value" data-category="core">
+  <h3>A bare number is malformed use, not truthy</h3>
+  <pre class="ajisai-source">[ 'y' ] [ 'n' ] 1 SELECT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">guard must return TRUE or FALSE, got 1/1</pre>
+  <pre class="ajisai-expect-error">expected a truth value</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-cond-idle-fires-in-written-order" data-category="core">
-  <h3>IDLE fires where it is written, not after every other clause</h3>
-  <pre class="ajisai-source">TRUE
-[
-[ IDLE | 1 ]
-[ TRUE | 0 ]
-]
-COND</pre>
-  <pre class="ajisai-expect-result">1/1</pre>
+<section class="ajisai-case" id="core-select-chooses-lane-by-lane" data-category="core">
+  <h3>A Vector of truths chooses lane by lane: no clause order to read</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 10 20 30 ] [ TRUE FALSE TRUE ] SELECT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 20/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-cond-clause-above-idle-wins" data-category="core">
-  <h3>A clause written above IDLE still wins; one written below it cannot</h3>
-  <pre class="ajisai-source">5
-[
-[ 99 GT | 'a' ]
-[ IDLE | 'b' ]
-[ 0 GT | 'c' ]
-]
-COND</pre>
-  <pre class="ajisai-expect-result">'b'</pre>
+<section class="ajisai-case" id="core-select-reuses-a-one-lane-candidate" data-category="core">
+  <h3>A one-lane candidate is reused across the truth's length (LANG.COLLECTIONS.LIFT)</h3>
+  <pre class="ajisai-source">[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT</pre>
+  <pre class="ajisai-expect-result">[ 0/1 5/1 0/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-cond-one-line-is-the-same-program" data-category="core">
-  <h3>Clause layout is presentation: a COND written flat denotes the same program</h3>
-  <pre class="ajisai-source">5 [ [ 3 GT | 'big' ] [ IDLE | 'small' ] ] COND</pre>
-  <pre class="ajisai-expect-result">'big'</pre>
+<section class="ajisai-case" id="core-select-disagreeing-lane-counts-are-an-error" data-category="core">
+  <h3>Lane counts that neither match nor reduce to one are a shape error</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 10 20 ] [ TRUE FALSE TRUE ] SELECT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">broadcast</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-word-body-multi-line-cond" data-category="core">
-  <h3>A word body may hold a multi-line COND inside a nested block</h3>
-  <pre class="ajisai-source">[ [ [
-[ 0 GT | 1 ]
-[ IDLE | 0 ]
-] COND ] MAP ] 'STEPFN' DEF
+<section class="ajisai-case" id="core-select-written-flat-is-the-same-program" data-category="core">
+  <h3>Layout is presentation: a SELECT written across lines denotes the same program</h3>
+  <pre class="ajisai-source">[ 'big' ]
+[ 'small' ]
+[ 5 ] [ 3 ] GT
+SELECT</pre>
+  <pre class="ajisai-expect-result">[ 'big' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-word-body-multi-line-select" data-category="core">
+  <h3>A word body may hold a multi-line SELECT inside a nested block</h3>
+  <pre class="ajisai-source">[ [ 'N' BIND
+[ 1 ] [ 0 ]
+N [ 0 ] GT
+SELECT ] MAP ] 'STEPFN' DEF
 [ -1 2 ] STEPFN</pre>
-  <pre class="ajisai-expect-result">[ 0/1 1/1 ]</pre>
+  <pre class="ajisai-expect-result">[ [ 0/1 ] [ 1/1 ] ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1832,11 +1840,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-map-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through a MAP block</h3>
-  <pre class="ajisai-source">[
-[
-[ 2 LT | 1 * ]
-[ IDLE | [ 1 2 ] - [ FIB ] MAP 0 [ + ] FOLD ]
-] COND ] 'FIB' DEF</pre>
+  <pre class="ajisai-source">[ [ 1 2 ] - [ FIB ] MAP 0 [ + ] FOLD ] 'FIB' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1844,11 +1848,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-exec-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through an EXEC block</h3>
-  <pre class="ajisai-source">[
-[
-[ 0 LTE | 0 * ]
-[ IDLE | 1 - [ CNT ] EXEC 1 + ]
-] COND ] 'CNT' DEF</pre>
+  <pre class="ajisai-source">[ 1 - [ CNT ] EXEC 1 + ] 'CNT' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -1856,11 +1856,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-filter-predicate-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through an EXEC block inside a would-be FILTER predicate</h3>
-  <pre class="ajisai-source">[
-[
-[ 0 EQ | 0 EQ ]
-[ IDLE | 1 - [ EVENP ] EXEC NOT ]
-] COND ] 'EVENP' DEF</pre>
+  <pre class="ajisai-source">[ [ 1 2 ] [ [ EVENP ] EXEC ] FILTER ] 'EVENP' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>

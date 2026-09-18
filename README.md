@@ -18,6 +18,8 @@ The answer was to carry that rigor in **machine-readable contracts on the words*
 
 Numbers follow the same principle. Write an integer or a decimal and the value is an exact rational either way, with `SQRT` extending the field out to algebraic irrationals. Nothing is rounded. The question of float versus double versus decimal does not exist here.
 
+Branching followed the same logic. `SELECT` takes the two candidate values and the truth that chooses between them, and nothing else: the candidates are values the program has already built, so a branch evaluates nothing and skips nothing. That is only affordable because Ajisai has no recursion and no unbounded loop — every arm is finite by construction — and because a failure that depends on data is a reasoned absence rather than a raise, so computing the arm that loses costs a value, never a crash. The choice is made element by element, so one `SELECT` branches a whole vector without a loop, and its cost is the sum of what it was handed rather than something only running can discover.
+
 What made this uncompromising design practical was **AI**. Now that AI can read intent and act as a real partner in development, there is no need to dress a language up in syntactic sugar for human convenience. Taking an AI-first premise — a new kind of intelligence writing the code alongside me — I became convinced that a language could hold nothing but strict machine-readable rules and leave everything else to plain dataflow.
 
 Exact numbers, and a stack to carry them. When that shape settled, the picture in my mind was water poured into a vessel. What fills it is water alone, never rounded; yet there is no limit to the shapes of the ripples AI and I spread across its surface.
@@ -39,7 +41,7 @@ Ajisai is built from ten concepts and nothing else.
 1. Exact rational arithmetic, closed under square roots, with no rounding.
 2. Three outcomes: a value, a reasoned absence, or an error.
 3. A stack of values and vectors of values.
-4. Code blocks, evaluated only when a Word asks for it.
+4. Code blocks, evaluated only when a Word asks for it — and branching is not one of those Words.
 5. One modifier axis: consume or keep.
 6. A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity.
 7. A machine-readable contract for every Word.

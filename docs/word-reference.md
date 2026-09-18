@@ -41,9 +41,9 @@ Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yie
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `TRUE TRUE &`
-- **ERROR conditions:** `nonTruthValue`
+- **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
 
 ## `OR`
 
@@ -55,9 +55,9 @@ Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `TRUE FALSE OR`
-- **ERROR conditions:** `nonTruthValue`
+- **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
 
 ## `NOT`
 
@@ -69,9 +69,23 @@ Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through 
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `TRUE NOT`
 - **ERROR conditions:** `nonTruthValue`
+
+## `SELECT`
+
+Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `booleanLogic`
+- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `kleeneAbsorbing`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
+- **Syntax:** `[ 'yes' ] [ 'no' ] TRUE SELECT`
+- **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
 
 ## `EQ`
 
@@ -765,20 +779,6 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `42 STR`
-
-## `COND`
-
-Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `control`
-- **Stack:** 2 input(s) → 1 output(s); `conditional` consumption
-- **NIL policy:** `inspectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
-- **Syntax:** `1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND`
-- **ERROR conditions:** `invalidClauseShape`, `nonTruthGuard`
 
 ## `EXEC`
 

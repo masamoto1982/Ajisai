@@ -14,12 +14,6 @@
       "rationale": "The exhaustive table only ever emits well-formed programs (one literal or Word name per domain position, then the Word); a program that fails to tokenize/parse at all is a different axis the table has no domain for. An unclosed vector literal is the simplest witness."
     },
     {
-      "id": "condExhausted",
-      "source": "TRUE [ [ FALSE ] [ 1 ] ] COND",
-      "expect": "error:condExhausted",
-      "rationale": "COND has control arity (excluded from the domain table entirely, per scripts/generate-semantics-table.mjs’s arityExclusionReason). A guard that evaluates FALSE with no matching clause and no else exhausts every clause."
-    },
-    {
       "id": "invalidName",
       "source": "[ 1 ] '' DEF",
       "expect": "error:invalidName",
@@ -72,12 +66,6 @@
       "source": "[ 'a' TRUE ] JOIN",
       "expect": "error:nonTextElement",
       "rationale": "Same shape of gap as nonComparableElement: JOIN's nonTextElement fires on one bad element inside an otherwise-fine vector, which no single domain representative constructs (the table's vector-domain representatives are homogeneous)."
-    },
-    {
-      "id": "nonTruthGuard",
-      "source": "1 [ [ 'x' ] [ 1 ] ] COND",
-      "expect": "error:nonTruthGuard",
-      "rationale": "COND has control arity and is excluded from the domain table entirely. A guard clause that evaluates to a non-scalar, non-Boolean value (a String) is neither TRUE/FALSE nor the logical Unknown, so it raises rather than falling through."
     },
     {
       "id": "blockContractViolation",

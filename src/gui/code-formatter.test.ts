@@ -109,15 +109,17 @@ describe('formatAjisaiSource', () => {
     test('indents the body of a multi-line block and dedents its close', () => {
         const input = [
             '[',
-            '[ [ 5 ] > | [ \'big\' ] ]',
-            '[ IDLE   | [ \'small\' ] ] COND',
-            '] \'SIZE\' DEF',
+            "[ 'big' ]   [ 'small' ]",
+            'N [ 5 ]  GT',
+            'SELECT',
+            "] 'SIZE' DEF",
         ].join('\n');
         const expected = [
             '[',
-            '  [ [ 5 ] > | [ \'big\' ] ]',
-            '  [ IDLE | [ \'small\' ] ] COND',
-            '] \'SIZE\' DEF',
+            "  [ 'big' ] [ 'small' ]",
+            '  N [ 5 ] GT',
+            '  SELECT',
+            "] 'SIZE' DEF",
         ].join('\n');
         expect(formatAjisaiSource(input)).toBe(expected);
     });
@@ -155,36 +157,30 @@ describe('formatAjisaiSource', () => {
     });
 
     test('formatting is idempotent on a multi-line block', () => {
-        const messy = '[\n[ [ 5 ] >|[ \'big\' ] ]\n] \'SIZE\' DEF';
+        const messy = "[\n[ [ 5 ]   GT ]\n] 'SIZE' DEF";
         const once = formatAjisaiSource(messy);
         expect(formatAjisaiSource(once)).toBe(once);
     });
 });
 
-// One `|` clause per line is the canonical written form of a COND. The
-// language accepts a one-line COND too, so this is style rather than repair,
-// but it is the form the reference and every example use: a COND is read down
-// its guards.
-describe('formatAjisaiSource COND clause splitting', () => {
-    test('splits a one-line COND into one clause per line', () => {
-        expect(formatAjisaiSource('[ [ 2 LT | 1 * ] [ IDLE | 1 - FOO ] COND ] \'FOO\' DEF'))
-            .toBe("[ [ 2 LT | 1 * ]\n  [ IDLE | 1 - FOO ] COND ] 'FOO' DEF");
-    });
-
-    test('a single clause on a line is left alone', () => {
-        const source = "5\n[ 3 LT | 'small' ]\n[ IDLE | 'big' ]\nCOND";
+// The formatter adds no line break of its own. It used to split a `COND`'s `|`
+// clauses one per line; `COND` and its clauses are gone, so line structure is
+// now purely the author's — which is what makes the line-break rule of
+// LANG.SOURCE.TEXT safe to leave alone.
+describe('formatAjisaiSource line structure', () => {
+    test('a branch written on one line stays on one line', () => {
+        const source = "[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT";
         expect(formatAjisaiSource(source)).toBe(source);
     });
 
-    test('an ordinary vector with no bar is not a clause and is not split', () => {
+    test('a branch written across lines keeps every break', () => {
+        const source = "[ 'big' ]\n[ 'small' ]\n[ 5 ] [ 3 ] GT\nSELECT";
+        expect(formatAjisaiSource(source)).toBe(source);
+    });
+
+    test('an ordinary vector is not rearranged', () => {
         expect(formatAjisaiSource('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP'))
             .toBe('[ 1 2 ] [ 1 * ] MAP [ 2 * ] MAP');
     });
-
-    test('clauses inside a word body are split, wherever they are nested', () => {
-        // Every clause that *begins* on the physical line gets its own,
-        // however deep, so the form is the same at every nesting level.
-        expect(formatAjisaiSource("[ [ A | 1 ] [ B | 2 ] COND ] 'W' DEF"))
-            .toBe("[ [ A | 1 ]\n  [ B | 2 ] COND ] 'W' DEF");
-    });
 });
+

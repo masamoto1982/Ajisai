@@ -280,7 +280,6 @@ impl CauseClass {
             ErrorCategory::ResourceLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
-            ErrorCategory::CondExhausted => CauseClass::UserLogic,
             // A cyclic DEF is a static shape rejected before anything runs —
             // the same kind of fault as `NameConflict`, not a runtime resource
             // question.
@@ -492,7 +491,6 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         | Some(ErrorCategory::StackUnderflow)
         | Some(ErrorCategory::MalformedSource)
         | Some(ErrorCategory::NameConflict)
-        | Some(ErrorCategory::CondExhausted)
         | Some(ErrorCategory::SelfReferentialDefinition) => "fixProgram",
         Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
         Some(ErrorCategory::ExecutionLimitExceeded)

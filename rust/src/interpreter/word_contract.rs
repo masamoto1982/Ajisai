@@ -413,7 +413,6 @@ impl Interpreter {
                     Token::VectorStart
                     | Token::VectorEnd
                     | Token::NilCoalesce
-                    | Token::CondClauseSep
                     | Token::LineBreak => {
                         flow.feed_structural(token);
                         sim.feed_structural(token);

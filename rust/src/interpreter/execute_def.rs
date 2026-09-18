@@ -298,17 +298,18 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 /// vector is interior to a single value, not a separator between two of them,
 /// so it is carried through into that value's token stream untouched.
 ///
-/// Splitting on interior breaks is what used to make a multi-line COND
+/// Splitting on interior breaks is what used to make a multi-line block
 /// unusable inside a Word: a body of
 ///
 /// ```text
-/// [ [ 0 GT | 1 ]
-/// [ IDLE | 0 ]
-/// COND ] MAP
+/// [ [ 'N' BIND
+/// [ 1 ] [ 0 ]
+/// N [ 0 ] GT
+/// SELECT ] MAP
 /// ```
 ///
-/// was cut at the two breaks, leaving `[ [ 0 GT | 1 ]` as its own "line" —
-/// an unclosed block, and an error raised at the call rather than at the
+/// was cut at every break, leaving `[ [ 'N' BIND` as its own "line" — an
+/// unclosed block, and an error raised at the call rather than at the
 /// definition. Depth is the whole rule: at depth 0 a break ends a statement,
 /// below it a break is just a token.
 pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {

@@ -439,87 +439,22 @@ Phase 1 完了後に**必ず測り直すこと**。Phase 1 が `nonText` 等を�
 
 ---
 
-## Phase 3 — COND の真理値強制の除去
+## Phase 3 — COND の真理値強制の除去（完了・対象語は廃止済み）
 
-### 3.1 目的
+本 Phase は「言語で唯一の条件分岐 `COND` だけが `LANG.VALUES.DISJOINT`
+（スカラーは Boolean ではない）の外にある」という逸脱の除去を指示していた。
+逸脱は除去され、その後 `COND` そのものが廃止された。
 
-`LANG.VALUES.DISJOINT`（スカラーは Boolean ではない）と `LANG.VALUES.TRUTH` を
-**例外なく**成立させる。現在、言語で唯一の条件分岐だけがこの規則の外にある。
+分岐は `SELECT` に置き換わっている。`[ whenTrue ] [ whenFalse ] [ mask ] SELECT`
+は既に組み立て終わった二つの値から真理値で選ぶだけの語であり、コードを評価せず、
+節も持たない。したがってガードの真理値強制という問題は語ごと消えた。真理値でない
+第三オペランドは `nonTruthValue`（`AND`/`OR`/`NOT` と同じ条件）で、絶対値の
+UNKNOWN はどちらも選ばずその不在をそのまま答える。
 
-実測（`main` = 3a6b82e）:
-
-```
-5 [ [ 1 ] [ 'fired' PRINT ] ] COND   → ok（スカラー 1 が真として発火する）
-1 1 AND                              → error (nonTruthValue)
-[ 1 2 3 ] [ 1 ] FILTER               → error (nonTruthValue)
-```
-
-`rust/src/interpreter/control_cond.rs` に `FINDING (not fixed here)` として
-既知の逸脱が明記されている。AND/OR/NOT と `extract_predicate_boolean(` からは
-同じ強制が既に除去済みで、**ここが最後の 1 箇所**である。
-
-### 3.2 触ってよいファイル
-
-```
-rust/src/interpreter/control_cond.rs
-rust/src/interpreter/compiled_plan.rs 系（COND の compiled 経路がある場合）
-tests/conformance/index.html
-rust/tests/**
-docs/reference/**（ja/en 両方）
-examples/**
-SKILL.md, tools/mcp-server/assets/**（再生成）
-docs/semantics-table.json（再生成）
-```
-
-### 3.3 手順
-
-1. `control_cond.rs` のスカラー 0/1 フォールバックと単要素 Vector アンラップを
-   削除し、`nonTruthGuard` へ一本化する。
-2. `is_unknown_guard_result(` の枝は**残す**。U ガードが次の節へ落ちる規則
-   （LANG.VALUES.TRUTH）は真理値強制ではなく三値論理そのものである。
-3. 落ちたテスト・例・Reference を移送する（§3.4 落とし穴 B）。
-4. 再生成一式 + WASM 再ビルド。
-
-### 3.4 ⚠️ 落とし穴
-
-#### 落とし穴 A：COND には compiled 経路がある
-
-`compiled_plan.rs` の `lower_cond_dispatch` が節を compile 時に分割し、
-`compiled_clause_enabled` のときは各節の guard が sub-plan として実行される
-（`runtimeMetrics` の `condClauseCompiledCount` / `condDispatchFastCount` が
-その計数）。
-
-**調査済み（再調査不要）:** `op_cond`（解釈）と `op_cond_dispatch`（compile 済み）は
-どちらも `run_cond_core` に合流し、guard 判定は `evaluate_guard_isolated` に
-集約されている。したがって修正箇所は 1 つで足りる**見込み**である。ただし
-`evaluate_guard_greedy` という別経路も存在するため、**両方を読んでから直し、
-compiled / 非 compiled の両モードで目撃テストを置くこと**。片方だけ直して
-「COND は直った」と報告しないこと。
-
-#### 落とし穴 B：本当の作業は削除ではなくイディオムの移送
-
-比較語は要素持ち上げ後 `[ 7 ] [ 5 ] GT` に `[ TRUE ]` を返す。単要素 Vector の
-アンラップを消すと、**`[ n ]` 包みの比較をガードに使っている例が全部落ちる**。
-これが前任者が延期した理由そのものである。
-
-移送先は「ガードはスカラーを直接比較する」形（`7 5 GT`）。Reference（ja/en）・
-`tests/conformance/index.html`・`examples/`・`SKILL.md` の元ネタを機械的に
-grep して洗い出すこと。**Reference が現に教えているイディオムが書けなくなる場合は
-§0.4 の停止条件**——その場合、単要素 Vector の扱いは意味論の問題であり所有者判断。
-
-#### 落とし穴 C：NIL 主体が COND に届く規則を壊さない
-
-「NIL 主体 → 全ガードが U → どの節も発火しない」は、COND が `inspectNil` を
-宣言している理由そのものである。`is_unknown_guard_result(` を消したり、U を
-`nonTruthGuard` に流したりしないこと。テストで固定すること。
-
-### 3.5 受け入れ条件
-
-- `5 [ [ 1 ] [ 'x' PRINT ] ] COND` が `nonTruthGuard` を返す。
-- `5 [ [ 0 ] [ 'x' PRINT ] ] COND` も同様。
-- NIL 主体の COND は従来どおり（U ガードで次節へ）。
-- compiled 経路・インタプリタ経路の両方に目撃テストがある。
-- 全ゲート通過。
+本節が名指していた実装（`control_cond.rs`、compiled 経路、ガード判定の各関数）は
+いずれも現存しない。手順・落とし穴・受け入れ条件は履歴として意味を失ったため
+削除した。現行の規則は `spec/words.json` の `SELECT` と
+`rust/src/interpreter/logic.rs` を正とする。
 
 ---
 

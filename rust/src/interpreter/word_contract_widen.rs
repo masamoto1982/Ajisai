@@ -12,11 +12,10 @@
 //! `[ ]` is now the only bracket, used for both, so the question this module
 //! answers — "does the Symbol at this position ever actually run?" — can no
 //! longer be read off which character opened the group. It is still
-//! answerable, from the same fixed-position-operand convention `COND` was
-//! redesigned to share with `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`
-//! (`compiled_plan.rs`'s `lower_cond_dispatch` doc comment): a `[ ... ]`
-//! immediately followed by one of those Words (or `EXEC`/`PROBE`) *is* that
-//! Word's code operand, and that Word will run it. Any other `[ ... ]` is
+//! answerable, from the fixed-position-operand convention the higher-order
+//! Words share: a `[ ... ]` immediately followed by one of
+//! `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL` (or `EXEC`/`PROBE`) *is* that Word's
+//! code operand, and that Word will run it. Any other `[ ... ]` is
 //! inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]`, PRINT never
 //! resolves or runs, so widening the accumulator with it would be a false
 //! `error` — a body that never prints inferred `effectful` against a correct
@@ -75,14 +74,16 @@ impl LiteralContext {
 }
 
 /// Canonical names of Words whose immediately preceding fixed-position
-/// operand is code they actually execute — the convention `COND` was
-/// redesigned to share with `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`
-/// (`compiled_plan.rs`'s `lower_cond_dispatch`); `EXEC`/`PROBE` take their
-/// sole operand the same way.
+/// operand is code they actually execute — the higher-order Words, with
+/// `EXEC`/`PROBE` taking their sole operand the same way.
+///
+/// `SELECT` is deliberately absent: its operands are values, not code. That
+/// is the whole of the difference between it and the `COND` it replaced, and
+/// it is why branching no longer needs a special case anywhere in this file.
 fn consumes_preceding_as_code(canonical_name: &str) -> bool {
     matches!(
         canonical_name,
-        "MAP" | "FILTER" | "FOLD" | "ANY" | "ALL" | "EXEC" | "PROBE" | "COND"
+        "MAP" | "FILTER" | "FOLD" | "ANY" | "ALL" | "EXEC" | "PROBE"
     )
 }
 
@@ -106,15 +107,12 @@ fn next_symbol_from(tokens: &[Token], from: usize) -> Option<&str> {
 /// all the way down, and only a group whose enclosing context still allows
 /// execution looks at what follows its own close.
 ///
-/// `COND`'s clauses operand needs one further wrinkle: it is one Vector of
-/// clause Vectors (`[ [ guard | body ] [ guard | body ] ... ]`), and `COND`
-/// runs every guard and the winning body — not "whatever the clause Vector's
-/// own close is followed by" (nothing follows an array element
-/// positionally; the consumption is `COND`'s own internal iteration, not a
-/// following symbol). So a direct child of a Vector that is itself `COND`'s
-/// operand is unconditionally `Code`, and only *its* children resume the
-/// ordinary "what follows my close" rule (a clause body can itself contain
-/// an ordinary `[ ... ] MAP`, classified normally from there).
+/// Every code operand in the vocabulary is now one `[ ... ]` a named Word
+/// follows, so "what follows my close" decides every group with no exception
+/// to carry. `COND` was the exception: its clauses were a Vector *of*
+/// clause Vectors, each of which it ran without any symbol following it, so
+/// a direct child of that wrapper had to be forced to `Code` against the
+/// ordinary rule.
 pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext> {
     let mut close_of: Vec<Option<usize>> = vec![None; tokens.len()];
     let mut open_stack: Vec<usize> = Vec::new();
@@ -132,44 +130,32 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
 
     let mut contexts = vec![LiteralContext::TopLevel; tokens.len()];
     let mut level_stack: Vec<LiteralContext> = Vec::new();
-    // Parallel to `level_stack`: whether the level at that depth is COND's
-    // own clauses wrapper, so its direct children skip the lookahead.
-    let mut is_cond_wrapper: Vec<bool> = Vec::new();
     for (i, t) in tokens.iter().enumerate() {
         let enclosing = level_stack
             .last()
             .copied()
             .unwrap_or(LiteralContext::TopLevel);
-        let enclosing_is_cond_wrapper = is_cond_wrapper.last().copied().unwrap_or(false);
         match t {
             Token::VectorStart => {
-                contexts[i] = enclosing;
-                let (this_level, this_is_cond_wrapper) = if enclosing == LiteralContext::Data {
-                    (LiteralContext::Data, false)
-                } else if enclosing_is_cond_wrapper {
-                    (LiteralContext::Code, false)
+                let this_level = if enclosing == LiteralContext::Data {
+                    LiteralContext::Data
                 } else {
                     match close_of[i].and_then(|close| next_symbol_from(tokens, close + 1)) {
-                        Some(name) => {
-                            let canonical =
-                                crate::core_word_aliases::canonicalize_core_word_name(name);
-                            if canonical.as_ref() == "COND" {
-                                (LiteralContext::Code, true)
-                            } else if consumes_preceding_as_code(&canonical) {
-                                (LiteralContext::Code, false)
-                            } else {
-                                (LiteralContext::Data, false)
-                            }
+                        Some(name)
+                            if consumes_preceding_as_code(
+                                &crate::core_word_aliases::canonicalize_core_word_name(name),
+                            ) =>
+                        {
+                            LiteralContext::Code
                         }
-                        None => (LiteralContext::Data, false),
+                        _ => LiteralContext::Data,
                     }
                 };
+                contexts[i] = enclosing;
                 level_stack.push(this_level);
-                is_cond_wrapper.push(this_is_cond_wrapper);
             }
             Token::VectorEnd => {
                 contexts[i] = level_stack.pop().unwrap_or(LiteralContext::TopLevel);
-                is_cond_wrapper.pop();
             }
             _ => {
                 contexts[i] = enclosing;

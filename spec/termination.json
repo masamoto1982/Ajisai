@@ -111,14 +111,6 @@
       "witness": "[ [ [ 1 ] EXEC ] EXEC ] EXEC"
     },
     {
-      "id": "COND",
-      "kind": "word",
-      "descendsInto": "each guard, and the winning body",
-      "decreases": "blockNesting",
-      "why": "The clauses are written inside the Vector COND receives, so each one is nested strictly within the sequence being evaluated.",
-      "witness": "TRUE [ [ IDLE ] [ 42 ] ] COND"
-    },
-    {
       "id": "MAP",
       "kind": "word",
       "descendsInto": "the code block, once per element",

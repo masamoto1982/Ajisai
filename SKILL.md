@@ -28,7 +28,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
 - Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar — **except where a Word takes an *element*** (`PUT`, `GET`, `INDEX-OF`): there `[ 9 ]` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
-- Code blocks are quoted programs passed to MAP / FILTER / FOLD / COND / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and `{` / `}` are not valid Ajisai source characters.
+- Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and `{` / `}` are not valid Ajisai source characters. SELECT is not among them: it takes values, not code.
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
 - One modifier, prefixing the *next word only*: `KEEP` (do not consume operands). Consumption is the default.
@@ -36,7 +36,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 3. Control and iteration
 
-- Branch: a value, then one Vector of guard/body pairs, then `COND`: `4 [ [ 0 GTE ] [ 'non-negative' PRINT ] [ TRUE ] [ 'negative' PRINT ] ] COND` (§6). Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use `[ TRUE ]` as the final else-guard. The value remains on the stack after COND.
+- Branch: the two candidates, then the truth that chooses between them, then `SELECT`: `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: `[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT`. An absent truth chooses neither and answers that same absence.
 - Iterate data, not counters: `MAP` / `FILTER` / `FOLD` with block operands (examples in §6). `FOLD` requires an explicit initial-value Vector.
 - Predicates: `ANY` / `ALL` take a predicate block (examples in §6).
 - No recursion: `DEF` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
@@ -112,8 +112,10 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 1 2 3 ] [ 1 > ] ANY` → stack: `TRUE`
 - Define a user word: [ body ] then name, then DEF
   `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
-- COND: value, then one [ ] of [ guard ] [ body ] pairs (use [ TRUE ] as else-guard)
-  `4 [ [ 0 GTE ] [ 'non-negative' PRINT ] [ TRUE ] [ 'negative' PRINT ] ] COND` → prints `non-negative`; stack: `4/1`
+- SELECT: the two candidates, then the truth that chooses between them
+  `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT` → prints `[ 'non-negative' ]`
+- SELECT chooses lane by lane, so a whole vector branches at once
+  `[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT` → stack: `[ 0/1 5/1 0/1 ]`
 - Strings are bare '...' literals; CHARS/JOIN convert
   `'hello' CHARS REVERSE JOIN` → stack: `'olleh'`
 - Cast a string to an exact number
@@ -141,14 +143,14 @@ produce a value produces NIL (§4); a malformed one raises an error.
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: FOLD is `vector [ init ] [ op ] FOLD`: `[ 1 2 3 ] [ 0 ] [ + ] FOLD`.
-- **COND clauses must be wrapped in a single [ ]** — `5 [ 3 > ] [ 'big' PRINT ] COND`
-  → exit 1, `message: "COND: expected each clause to be a [ guard | body ] block, got a non-Vector element"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+- **SELECT takes three operands: both candidates, then the truth** — `[ 'big' ] [ 5 ] [ 3 ] GT SELECT`
+  → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
+  `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
+  Fix: SELECT is `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.
+- **SELECT needs a truth value, not a number** — `[ 'y' ] [ 'n' ] 1 SELECT`
+  → exit 1, `message: "expected a truth value, got a non-truth value"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
-  Fix: COND takes its clauses as one Vector, not a run of separate blocks: wrap them together, and give every body a guard — the else-branch is `[ TRUE ] [ ... ]`: `5 [ [ 3 > ] [ 'big' PRINT ] [ TRUE ] [ 'small' PRINT ] ] COND`.
-- **COND guards must yield a boolean** — `TRUE [ [ [ 1 ] ] [ [ 2 ] ] ] COND`
-  → exit 1, `message: "COND: guard must return TRUE or FALSE, got [ 1/1 ]"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
-  `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
-  Fix: The first block of each pair is a guard, not a value: it must leave TRUE/FALSE. Branch on a stack value with `[ x ] [ [ predicate ] [ body ] ... ] COND`.
+  Fix: The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] NEQ`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
   → exit 1, `message: "Cannot broadcast shapes [2] and [3]: axis 0 is 2 on the left and 3 on the right, and neither is 1"`, `diagnosis: { when: "executeWord", why: "shapeMismatch" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkDisagreeingAxis`.
@@ -177,7 +179,7 @@ than it looks like it answers, which is the harder kind to notice:
 ## 8. Forbidden patterns (each verified to fail)
 
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.
-- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD / ANY / ALL.
+- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / ANY / ALL.
 - **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
@@ -199,6 +201,7 @@ no module system and nothing to import.
 | `AND` | logic | Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN. — e.g. `TRUE TRUE &` |
 | `OR` | logic | Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN. — e.g. `TRUE FALSE OR` |
 | `NOT` | logic | Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged. — e.g. `TRUE NOT` |
+| `SELECT` | logic | Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once. — e.g. `[ 'yes' ] [ 'no' ] TRUE SELECT` |
 | `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
 | `NEQ` | comparison | Test inequality of two values. — e.g. `1 2 NEQ` |
 | `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
@@ -248,7 +251,6 @@ no module system and nothing to import.
 | `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `COND` | control | Evaluate guard/body clauses in order, executing the first match. The clauses are a single Vector, each element itself a [ guard | body ] (or paired [ guard ] [ body ]) clause block. Each guard and the winning body run in an isolated frame that holds exactly the target value, and exactly one value comes back: whatever the body leaves on top. A body that leaves nothing is an error; extra values below the top are discarded with the frame. An absent target is the logical Unknown, not a rejection: every guard that reads it answers Unknown and so does not fire, and the clauses that do not read it decide as they always do — so `NIL` reaches the `[ TRUE ]` else-clause like any other unmatched value. — e.g. `1 [ [ TRUE ] [ 'y' ] [ IDLE ] [ 'n' ] ] COND` |
 | `EXEC` | control | Evaluate a code block. — e.g. `[ 1 2 ADD ] EXEC` |
 | `PROBE` | control | Infer a code block's contract against the current dictionary, without evaluating it. — e.g. `[ 1 2 ADD ] PROBE` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
@@ -273,8 +275,7 @@ no module system and nothing to import.
 | `!=` | symbol alias | shorthand for `NEQ` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
-| `\|` | control directive | COND-CLAUSE — only inside the construct that defines it |
-| `IDLE` | control directive | COND-ELSE-GUARD — only inside the construct that defines it |
+| `\|` | retired form | RETIRED-COND-CLAUSE — retired, no longer valid in source |
 | `[` | delimiter sugar | BEGIN-VECTOR — structural delimiter, not a Word |
 | `]` | delimiter sugar | END-VECTOR — structural delimiter, not a Word |
 | `{` | retired form | RETIRED-BEGIN-BLOCK — retired, no longer valid in source |

@@ -173,6 +173,17 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
             continue;
         }
 
+        // `|` separated a `COND` clause's guard from its body. `COND` is gone
+        // and `SELECT` needs no separator, so the form is retired rather than
+        // freed: a reader who meets it in older material gets told what
+        // happened instead of "Unknown word: |".
+        if token_str == "|" {
+            return Err(
+                "'|' is a retired Ajisai source form: it separated a COND clause's guard from its body, and COND was replaced by SELECT — `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` chooses between two values that already exist, so there is no clause to separate."
+                    .to_string(),
+            );
+        }
+
         tokens.push(Token::Symbol(token_str.into()));
         spans.push(span_at(start));
     }
@@ -203,9 +214,6 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
             Token::VectorStart => delimiters.push(Token::VectorStart),
             Token::VectorEnd if delimiters.pop() == Some(Token::VectorStart) => {}
             Token::VectorEnd => return Err("mismatched code delimiter".into()),
-            Token::CondClauseSep if !matches!(delimiters.last(), Some(&Token::VectorStart)) => {
-                return Err("'|' separator is only valid directly inside a code block".into())
-            }
             _ => {}
         }
     }
@@ -366,10 +374,7 @@ fn is_string_close_delimiter(c: char) -> bool {
 /// is misconverted. Because the tokenizer emits the control token directly,
 /// this name is also not shadowable by a user definition.
 fn parse_control_directive_word(s: &str) -> Option<Token> {
-    // The COND clause separator obeys the same boundary rule as every other
-    // name.
     match s {
-        "|" => Some(Token::CondClauseSep),
         _ if s.eq_ignore_ascii_case("OR-NIL") => Some(Token::NilCoalesce),
         _ => None,
     }

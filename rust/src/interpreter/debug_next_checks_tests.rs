@@ -37,7 +37,6 @@ fn every_check_carries_a_code_and_both_locales() {
         Some(ErrorCategory::ExecutionLimitExceeded),
         Some(ErrorCategory::ResourceLimitExceeded),
         Some(ErrorCategory::RecursionLimitExceeded),
-        Some(ErrorCategory::CondExhausted),
         Some(ErrorCategory::BuiltinProtection),
     ];
     for why in &classes {
@@ -259,7 +258,6 @@ mod diagnosis_vocabulary_is_real {
             Some(ErrorCategory::ResourceLimitExceeded),
             Some(ErrorCategory::RecursionLimitExceeded),
             Some(ErrorCategory::BuiltinProtection),
-            Some(ErrorCategory::CondExhausted),
             Some(ErrorCategory::SelfReferentialDefinition),
             Some(ErrorCategory::Declared("divisorEqualsZero")),
         ];

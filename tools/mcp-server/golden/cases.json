@@ -197,13 +197,13 @@
       }
     },
     {
-      "name": "COND's body-shape failure names the declared condition it fired",
-      "source": "5 [ [ TRUE | PRINT ] ] COND",
+      "name": "SELECT's truth-operand failure names the declared condition it fired",
+      "source": "[ 'y' ] [ 'n' ] 1 SELECT",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "valueShape",
         "/diagnosis/nextChecks/0/code": "checkFiredCondition",
-        "/diagnosis/nextChecks/0/detail/en": "COND raised the condition `invalidClauseShape`, one of the conditions its contract declares: invalidClauseShape, nonTruthGuard."
+        "/diagnosis/nextChecks/0/detail/en": "SELECT raised the condition `nonTruthValue`, one of the conditions its contract declares: nonTruthValue, shapeMismatch."
       }
     },
     {

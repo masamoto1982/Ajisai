@@ -439,9 +439,9 @@ impl Value {
             // `is_truthy` is a total two-valued coercion. U (`Nil` carrying
             // the `TruthValue` hint) is neither definitely true nor false,
             // so it conservatively collapses to `false` — the same result as
-            // an operational NIL, hence the shared arm. Control words that
-            // must honour the third value branch on `is_truth_value()` first
-            // (e.g. COND), never here.
+            // an operational NIL, hence the shared arm. Words that must
+            // honour the third value read it before asking for a definite
+            // truth (`SELECT`, `AND`/`OR`/`NOT`), never here.
             ValueData::Nil => false,
             // A String is not a truth value. LANG.VALUES.TRUTH is two-valued
             // over Booleans, and the logic Words reject anything else outright

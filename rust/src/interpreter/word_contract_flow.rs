@@ -114,7 +114,7 @@ impl FlowSim {
             Token::VectorEnd => self.close(),
             // Both select between paths of differing height; see the module
             // comment. Inside a literal they are content, not control.
-            Token::NilCoalesce | Token::CondClauseSep => {
+            Token::NilCoalesce => {
                 if !self.in_literal() {
                     self.unmodelled = true;
                 }

@@ -602,7 +602,7 @@
                         </table>
                     </div>
                     <h3>改行が意味を持つところ</h3>
-                    <p>基本規則として、改行はスペースと同様にトークンを区切る空白として扱われます。そのため、プログラムは好きなだけ多くの行にわたって書いてかまいません。ただし<strong>唯一の例外</strong>があります。ワード定義の本体では、<em>その本体自身の階層にある</em>改行が1つの文の終わりと次の文の始まりを意味します。<code>[ ]</code>ブロックや<code>[ ]</code>ベクトルの内部に書かれた改行はその値の内側にあり、何も区切りません。したがってブロックは何行にわたっても1つの文のままです。それ以外の場所、たとえば<code>COND</code>式では改行に特別な意味はなく、1行で書いても複数行に分けて書いてもまったく同じプログラムとして実行されます。</p>
+                    <p>基本規則として、改行はスペースと同様にトークンを区切る空白として扱われます。そのため、プログラムは好きなだけ多くの行にわたって書いてかまいません。ただし<strong>唯一の例外</strong>があります。ワード定義の本体では、<em>その本体自身の階層にある</em>改行が1つの文の終わりと次の文の始まりを意味します。<code>[ ]</code>ブロックや<code>[ ]</code>ベクトルの内部に書かれた改行はその値の内側にあり、何も区切りません。したがってブロックは何行にわたっても1つの文のままです。それ以外の場所では改行に特別な意味はなく、1行で書いても複数行に分けて書いてもまったく同じプログラムとして実行されます。</p>
                     <h3>数値リテラル</h3>
                     <p>小数リテラルは、小数点の<strong>両側</strong>に少なくとも1桁の数字を必要とします。<code>0.5</code>や<code>5.0</code>は数ですが、<code>.5</code>や<code>5.</code>は数ではありません。この規則により小数点が数の先頭や末尾の文字になることは決してなく、単独の<code>.</code>を不完全なリテラルではなく通常の名前として安全に使えます。</p>
                     <h3>文字列リテラル</h3>
@@ -1740,7 +1740,7 @@
                 </section>
 
                 <section id="control" class="ref-page">
-                    <h2>制御構文(<code>COND</code>, <code>MAP</code>)</h2>
+                    <h2>制御構文(<code>SELECT</code>, <code>MAP</code>)</h2>
                     <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
                     <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
                     <div class="ref-table-wrap word-table">
@@ -1751,8 +1751,7 @@
                             <tbody>
                                 <tr><td>ワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
-                                <tr><td><code>COND</code>のガード、および発火した本体</td><td class="notes">ディスパッチ対象の値1つだけ</td><td class="notes">最上位の値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
-                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
+                                                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                                 <tr><td><code>FOLD</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                             </tbody>
                         </table>
@@ -1762,10 +1761,10 @@
                     <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] [ 'x' 1 ADD ] MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。自分で定義したワードのところで、この掘り下げは止まります。その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
                     <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。ただしこれは評価の話であって、参照の話ではありません。定義しようとしているワード自身の名前が、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>の内側にしか書かれていなくても、<code>DEF</code>の<a href="#acyclic">非循環規則</a>はそれを検出し、定義そのものを拒否します。</p>
 
-                    <h3 id="cond">条件分岐(<code>COND</code>)</h3>
-                    <p><code>COND</code>は2つの引数を取ります。ディスパッチ対象の値と、ガード・本体の節をまとめた1つの<code>[ ]</code>です。節を順に評価し、最初にtrueになったガードの本体を実行します。節形式では、<code>|</code>がガードと本体を区切り、各節はちょうど1行を占めます。<code>TRUE</code>は常にtrueなelseガードを作ります。</p>
-                    <p>else節は<code>IDLE</code>とも綴ることができ、こちらの綴りが好ましいものです。<code>IDLE</code>は66個のWordのうちの1つではなく、Dictionaryパネルにも見つかりません。位置によって読み取られるキーワードであり、ガードとしてのみ意味を持ち、<em>それより前のどの節も発火しなかったときにこの節が発火する</em>ことを意味します。<code>TRUE</code>も、ガードが読み取る値を積むことで同じ結果に達しますが、動作はしても語ることは少ないです。<code>IDLE</code>はどの節がフォールバックであるかを明示します。</p>
-                    <p class="ref-note"><code>IDLE</code>は<em>それが書かれた場所で</em>発火します。節は上から下へ試され、<code>IDLE</code>もその順序の中で自分の番を待ちます。したがって<code>IDLE</code>より下に書かれたものには決して到達しません。最後に置いてください。そもそも「フォールバック」とはそういう意味です。</p>
+                    <h3 id="cond">条件分岐(<code>SELECT</code>)</h3>
+                    <p><code>SELECT</code>は3つの引数を取ります。<strong>trueのときの値</strong>、<strong>falseのときの値</strong>、そして<strong>どちらを選ぶかを決める真偽値</strong>です。<code>[ whenTrue ] [ whenFalse ] [ mask ] SELECT</code>と並べます。真偽値を最後に置くのは、何をするかを決めるオペランドを最後に置くという他のワードと同じ並びだからです。</p>
+                    <p><code>SELECT</code>は<strong>何も評価しません</strong>。2つの候補は、プログラムが既に組み立て終えた値です。つまりどちらの候補も、<code>SELECT</code>に届く前に一度ずつ、書かれた順に計算され終わっています。選ばれなかった側が「実行されない」のではなく、選ぶ時点で両方とも既に値になっている、ということです。ブロックを受け取って中身を走らせるワード(<code>MAP</code>や<code>EXEC</code>)とは、ここが根本的に違います。</p>
+                    <p class="ref-note">したがって<code>PRINT</code>のような作用は候補の中には書けません。書いても両方printされます。答えを選んでから、一度だけ作用させてください。<code>[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT PRINT</code>のように、<code>SELECT</code>の<em>後ろ</em>に置きます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1774,14 +1773,12 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>0
-[
-[ 0 &lt; | 'negative' ]
-[ 0 = | 'zero' ]
-[ TRUE | 'positive' ]
-] COND</code></td>
-                                    <td><code>'zero'</code></td>
-                                    <td class="notes">節形式：<code>|</code>の左がガード、右が本体。節は1つの<code>[ ]</code>にまとめ、慣例として1行に1節。</td>
+                                    <td><code>[ 'negative' ]
+[ 'positive' ]
+[ -5 ] [ 0 ] LT
+SELECT</code></td>
+                                    <td><code>[ 'negative' ]</code></td>
+                                    <td class="notes">2つの候補を積んでから、選ぶ真偽値を積む。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1790,6 +1787,8 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3>要素ごとに選ぶ</h3>
+                    <p>真偽値がベクトルなら、選択も<a href="#lift">要素ごと</a>に起こります。比較ワードも要素ごとに持ち上がるので、<code>[ 1 2 3 ] [ 2 ] GT</code>は<code>[ FALSE FALSE TRUE ]</code>という真偽値のベクトルを答えます。これをそのまま<code>SELECT</code>に渡せば、ベクトル全体の分岐が1つの式で書けます。長さ1の候補は、もう一方の長さに合わせて繰り返し使われます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1798,9 +1797,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>-5 [ [ 0 &lt; ] [ 'negative' ] [ TRUE ] [ 'positive' ] ] COND</code></td>
-                                    <td><code>'negative'</code></td>
-                                    <td class="notes">対形式：ガードと本体のブロックを交互に並べる。これも1つの節用<code>[ ]</code>。</td>
+                                    <td><code>[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT</code></td>
+                                    <td><code>[ 0/1 5/1 0/1 ]</code></td>
+                                    <td class="notes">負の要素だけを<code>0</code>に置き換える。長さ1の<code>[ 0 ]</code>が3要素に行き渡る。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1809,11 +1808,9 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3>書き方の規則</h3>
-                    <p class="ref-note">各ガードは<code>TRUE</code>か<code>FALSE</code>を返すので、節は発火するかしないかのどちらかです。どの節も一致せずelse節もない場合、<code>COND</code>はエラーを送出します。</p>
-                    <p class="ref-note">ここで言う<code>TRUE</code>/<code>FALSE</code>は<strong>裸の真偽値</strong>のことで、1要素の<code>Vector</code>に包まれた<code>[ TRUE ]</code>はガードとして通りません(<code>nonTruthGuard</code>)。比較ワードは要素ごとに持ち上がるため、ベクトルを比較したガードはベクトルを返します。<code>[ 7 ] [ 5 ] &gt;</code>が答えるのは<code>TRUE</code>ではなく<code>[ TRUE ]</code>です。したがってディスパッチ対象の値も、ガードが比べる相手も、スカラーで書いてください。上の例が<code>[ 0 ]</code>ではなく<code>0</code>を、<code>[ 0 ] &lt;</code>ではなく<code>0 &lt;</code>を使っているのはそのためです。</p>
-                    <p class="ref-note">どうしてもベクトルをディスパッチしたい場合は、ガードの中でスカラーに落としてから比べます。<code>[ -5 ] [ [ 0 GET 0 &lt; | 'negative' ] [ IDLE | 'other' ] ] COND</code>のように、<code>GET</code>で要素を取り出せばガードは裸の真偽値を返します。</p>
-                    <p class="ref-note">1行に1節が正式な形式であり、Formatボタンもこの形を生成しますが、これは規則というよりレイアウト上の好みです。1行に折りたたんだ<code>COND</code>も実行でき、意味は変わりません。それでも縦に並べて書いてください。人がガードを上から下へ目で追って読めるのは、節が縦に積まれているときだけです。</p>
+                    <p class="ref-note">複数の条件を組み合わせるときは、真偽値のベクトルどうしを<code>AND</code>・<code>OR</code>・<code>NOT</code>でつなぎます。これらも要素ごとに持ち上がります。<code>[ 3 6 9 ] [ 5 ] GT [ 3 6 9 ] [ 8 ] LT AND</code>は<code>[ FALSE TRUE FALSE ]</code>です。</p>
+                    <h3>3つ以上に分ける</h3>
+                    <p><code>SELECT</code>が選ぶのは常に2つのうちの1つです。3つ以上に分けたいときは<code>SELECT</code>を入れ子にします。上から順に試して最初に当たったものが勝つ、という読み方はしません。どちらが優先かは入れ子の形としてそのまま見えています。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1822,13 +1819,12 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>5
-[
-[ 3 &lt; | 'small' ]
-[ IDLE | 'big' ]
-] COND</code></td>
-                                    <td><code>'big'</code></td>
-                                    <td class="notes"><code>IDLE</code>がフォールバック節を明示する。</td>
+                                    <td><code>[ 'zero' ]
+[ 'negative' ] [ 'positive' ] [ 0 ] [ 0 ] LT SELECT
+[ 0 ] [ 0 ] EQ
+SELECT</code></td>
+                                    <td><code>[ 'zero' ]</code></td>
+                                    <td class="notes">内側の<code>SELECT</code>が外側のfalse側の候補になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1837,9 +1833,29 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3>節が見るもの</h3>
-                    <p><code>COND</code>の節は、目に見えるスタックの上では実行されません。すべてのガード、そして発火した節の本体は、<strong><code>COND</code>がディスパッチしている値ちょうど1つだけを保持する、隔離されたフレーム</strong>の中で実行されます。そこから戻ってくるのもちょうど1つの値で、本体が終わったときに最上位にあるものだけです。これは、スタック全体を見るワードの本体や<code>EXEC</code>とは異なります。このページ冒頭の<a href="#blocks-frames">ブロックと評価文脈</a>にある表が、5つの規則をまとめたものです。</p>
-                    <p>ここから導かれる帰結が2つあります。1つは、節の本体が<code>COND</code>より前にスタックにあった値に到達できないことです。<code>1 2 3 4</code>に続けて本体が<code>+</code>である節を書くとスタックアンダーフローになります。<code>+</code>が見つけるのはディスパッチ対象の値だけだからです。もう1つは、複数の値で終わる本体が最上位のものだけを保持することです。<code>[ TRUE | 7 8 9 ]</code>は<code>9</code>を答え、<code>7</code>と<code>8</code>はフレームとともに消えます。</p>
+                    <h3>どちらも選ばれないとき</h3>
+                    <p>真偽値の位置に<a href="#nil">不在(NIL)</a>が来たら、それは<strong>UNKNOWN</strong>です(<a href="#truth">三値論理</a>)。UNKNOWNはどちらの候補も選ばず、読み取ったその不在を<em>理由ごと</em>答えます。ですから<code>NIL-REASON</code>で「なぜ分岐できなかったのか」を後から尋ねられます。</p>
+                    <p class="ref-note">「どの節も当たらなかった」という状態はありません。候補は常に2つあり、真偽値はTRUE・FALSE・UNKNOWNのいずれかなので、<code>SELECT</code>は常に答えを持っています。else節を書き忘れて実行時に落ちる、ということが起こらないのはこのためです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 'y' ] [ 'n' ] NIL SELECT</code></td>
+                                    <td><code>[ NIL ]</code></td>
+                                    <td class="notes">UNKNOWNはどちらも選ばず、その不在を答える。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">真偽値の位置に裸の数値は書けません(<code>nonTruthValue</code>)。<code>1</code>や<code>0</code>は真偽値ではないからです(<a href="#disjoint">領域は互いに素</a>)。数値で判定したいなら比較を書いてください。<code>[ 1 ] [ 0 ] NEQ</code>のようにです。</p>
 
                     <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>ANY</code>・<code>ALL</code>)</h3>
                     <p>コードブロック<code>[ ]</code>は第一級の値です。高階ワードは、ブロックや、定義済みワードの引用された名前を、ベクトルの各要素に適用します。</p>
@@ -2316,7 +2332,7 @@ FILTER</code></td>
                     </div>
                     <h3>名前が届く範囲</h3>
                     <p>束縛は、それを作った<strong>フレーム</strong>に属し、そのフレームとまったく同じだけ生きます。フレームとは、ワードの本体か、直接入力した場合は実行そのものです。ここから2つの規則が導かれ、この2つで話のすべてです。</p>
-                    <p><strong>名前は、そのフレームの中に書かれたブロックにも届きます。</strong><code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>EXEC</code>、<code>COND</code>の節が実行するブロックは、名前にとって新しいフレームではないので、周囲にある名前をそのまま読めます。これらのワードが強制する隔離は<em>スタック</em>についてのものであり、名前はスタックの上にはありません。隔離の詳細は<a href="#blocks-frames">ブロックと評価文脈</a>を参照してください。これにより、述語はプログラムが実行時にしか知り得なかった値に対してテストできます。</p>
+                    <p><strong>名前は、そのフレームの中に書かれたブロックにも届きます。</strong><code>MAP</code>、<code>FILTER</code>、<code>FOLD</code>、<code>EXEC</code>が実行するブロックは、名前にとって新しいフレームではないので、周囲にある名前をそのまま読めます。これらのワードが強制する隔離は<em>スタック</em>についてのものであり、名前はスタックの上にはありません。隔離の詳細は<a href="#blocks-frames">ブロックと評価文脈</a>を参照してください。これにより、述語はプログラムが実行時にしか知り得なかった値に対してテストできます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
