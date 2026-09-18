@@ -5,22 +5,15 @@ import type {
     TablePayload
 } from '../platform-adapter';
 
-interface TableData {
-    name: string;
-    schema: unknown;
-    records: unknown;
-    updatedAt: string;
-}
-
-interface InterpreterState {
-    key: string;
-    stateVersion?: unknown;
-    stack: unknown;
-    stackSnapshot?: unknown;
-    userWords: unknown;
-    activeDictionarySheet?: string;
-    updatedAt: string;
-}
+// The record shapes this store writes are the shapes `exportAll` hands back,
+// so they are read off `ExportData` rather than restated. They used to be two
+// local `interface`s spelling out the same fields — a copy that had already
+// dropped the `readonly` markers, and that a new field on `ExportData` would
+// have left behind silently: the writes below would keep compiling and keep
+// omitting it, and only an export would show the gap. The Tauri store next
+// door derives its own `StoredData` the same way.
+type TableData = ExportData['tables'][number];
+type InterpreterState = NonNullable<ExportData['interpreterState']>;
 
 const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> =>
     new Promise((resolve, reject) => {

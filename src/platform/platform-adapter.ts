@@ -77,7 +77,9 @@ export interface Runtime {
 export interface ExecutionConfig {
     /**
      * Execution step budget for one run. Positive integer; `undefined`
-     * keeps the interpreter default (100,000).
+     * keeps the interpreter's own default (`DEFAULT_MAX_EXECUTION_STEPS`,
+     * derived from the host time budget — see that constant's doc comment
+     * for the derivation; the value is not restated on this side).
      */
     readonly stepLimit?: number;
 }

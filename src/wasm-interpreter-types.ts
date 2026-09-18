@@ -82,7 +82,8 @@ export interface AjisaiInterpreter {
     remove_word(name: string): void;
     // Execution step budget override (water level, LANG.MACHINE.LIMITS).
     // Host-side runtime safety control, not a language semantic; the wasm
-    // side ignores non-positive values and defaults to 100,000.
+    // side ignores non-positive values and falls back to its own
+    // `DEFAULT_MAX_EXECUTION_STEPS`.
     set_max_execution_steps(steps: number): void;
     // Cost-model counters (LANG.AUTHORITY.FREEDOM): observational only,
     // session-cumulative, reset with the interpreter.

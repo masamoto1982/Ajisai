@@ -237,9 +237,16 @@ export class AjisaiInterpreter {
     /**
      * Override the execution step budget (water level, LANG.MACHINE.LIMITS) for
      * subsequent executions. A runtime safety control, not a language
-     * semantic: the host may raise or lower it; never calling this keeps
-     * the default (100,000). A zero or non-positive value is ignored so a
-     * malformed host call cannot disable the safety budget entirely.
+     * semantic: the host may raise or lower it; never calling this keeps the
+     * interpreter's own `DEFAULT_MAX_EXECUTION_STEPS`. A zero or non-positive
+     * value is ignored so a malformed host call cannot disable the safety
+     * budget entirely.
+     *
+     * The default's *value* is deliberately not restated here. It is derived
+     * from the host time budget and has already moved once (it was 100,000);
+     * every doc comment that spelled the number out went on claiming the old
+     * one, on both sides of the wasm boundary. The constant is that number's
+     * single representation, so this names it instead.
      * @param {number} steps
      */
     set_max_execution_steps(steps) {
