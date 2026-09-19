@@ -24,6 +24,7 @@ fn has_no_exact_lexeme(value: &Value) -> bool {
     match &value.data {
         ValueData::ExactScalar(exact) => exact.to_fraction().is_none(),
         ValueData::Vector(children) => children.iter().any(has_no_exact_lexeme),
+        ValueData::Record(record) => record.values().iter().any(has_no_exact_lexeme),
         ValueData::Boolean(_)
         | ValueData::Text(_)
         | ValueData::Scalar(_)

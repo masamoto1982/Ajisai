@@ -39,7 +39,7 @@
 use std::sync::Arc;
 
 use crate::semantic::AbsenceMetadata;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Interpretation, RecordData, Value, ValueData};
 
 use super::scalar::Scalar;
 use super::value::KernelValue;
@@ -58,6 +58,10 @@ impl From<&Value> for KernelValue {
                 KernelValue::Vector(children.iter().map(KernelValue::from).collect())
             }
             ValueData::Tensor { data, shape } => dense_to_kernel(data, shape, 0),
+            ValueData::Record(record) => KernelValue::Record {
+                keys: record.keys().iter().map(KernelValue::from).collect(),
+                values: record.values().iter().map(KernelValue::from).collect(),
+            },
         }
     }
 }
@@ -94,6 +98,13 @@ impl From<&KernelValue> for Value {
                 hint: Interpretation::Unassigned,
                 absence: None,
             },
+            KernelValue::Record { keys, values } => Value::from_record(
+                RecordData::new(
+                    keys.iter().map(Value::from).collect(),
+                    values.iter().map(Value::from).collect(),
+                )
+                .expect("a spine Record's keys are distinct and aligned"),
+            ),
         }
     }
 }

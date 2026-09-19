@@ -334,7 +334,7 @@
    },
    "expect": {
     "/status": "ok",
-    "/stackDisplay/0": "[ 2/1 1/1 ]"
+    "/stackDisplay/0": "{ 'a': 2/1 'b': 1/1 }"
    }
   },
   {
@@ -350,7 +350,7 @@
    },
    "expect": {
     "/status": "ok",
-    "/stackDisplay/0": "[ [ 1/1 3/1 ] [ 2/1 ] ]"
+    "/stackDisplay/0": "{ 'a': [ 1/1 3/1 ] 'b': [ 2/1 ] }"
    }
   },
   {

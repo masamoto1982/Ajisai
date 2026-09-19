@@ -40,7 +40,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 })
                 .collect(),
             ValueData::ExactScalar(_) => vec![],
-            ValueData::Boolean(_) | ValueData::Symbol(_) => vec![],
+            ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => vec![],
         }
     }
 
@@ -55,6 +55,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
 fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
     match &value.data {
         ValueData::Text(_) => Err(AjisaiError::create_structure_error("integer", "string")),
+        ValueData::Record(_) => Err(AjisaiError::create_structure_error("integer", "record")),
         ValueData::Scalar(f) => {
             if !f.is_integer() {
                 return Err(AjisaiError::create_structure_error("integer", "fraction"));

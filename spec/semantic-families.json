@@ -98,6 +98,17 @@
         "LANG.MACHINE.ORDER"
       ],
       "effectOrder": "requestOrder"
+    },
+    {
+      "id": "record",
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "nilPolicy": "contractSpecific",
+      "keyOrder": "insertion",
+      "budgetOutcome": "reasonedNil"
     }
   ]
 }

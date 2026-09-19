@@ -4,6 +4,8 @@ pub enum SemanticKind {
     Collection,
     Code,
     Absence,
+    /// A keyed correspondence (LANG.RECORDS.STRUCTURE).
+    Record,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,6 +15,7 @@ pub enum ValueShape {
     Tensor,
     CodeBlock,
     Absence,
+    Record,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

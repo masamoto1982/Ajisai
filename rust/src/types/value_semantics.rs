@@ -5,7 +5,7 @@
 
 use super::fraction::Fraction;
 use super::value_tensor::tensor_to_nested_values;
-use super::{DenseTensor, Interpretation, Value, ValueData};
+use super::{DenseTensor, Interpretation, RecordData, Value, ValueData};
 use crate::semantic::{
     AbsenceMetadata, AbsenceOrigin, Capability, SemanticKind, ValueOrigin, ValueShape,
 };
@@ -97,6 +97,24 @@ impl Value {
     pub fn as_text(&self) -> Option<&str> {
         match &self.data {
             ValueData::Text(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// Build a Record value (LANG.RECORDS.STRUCTURE).
+    pub fn from_record(record: RecordData) -> Self {
+        Self {
+            data: ValueData::Record(Arc::new(record)),
+            hint: Interpretation::Unassigned,
+            absence: None,
+        }
+    }
+
+    /// The Record behind a Record value, or `None` for any other domain.
+    #[inline]
+    pub fn as_record(&self) -> Option<&RecordData> {
+        match &self.data {
+            ValueData::Record(record) => Some(record),
             _ => None,
         }
     }
@@ -195,6 +213,11 @@ impl Value {
         match &self.data {
             ValueData::ExactScalar(er) => er.is_computable(),
             ValueData::Vector(items) => items.iter().any(Value::carries_computable),
+            ValueData::Record(record) => record
+                .keys()
+                .iter()
+                .chain(record.values())
+                .any(Value::carries_computable),
             _ => false,
         }
     }
@@ -253,6 +276,9 @@ impl Value {
             // (distinct from the Vector holding it) is arguably its own
             // thing; unresolved.
             ValueData::Symbol(_) => SemanticKind::Code,
+            // A keyed correspondence is its own domain; on this coarse axis it
+            // reports `record`, so a consumer never mistakes it for a Vector.
+            ValueData::Record(_) => SemanticKind::Record,
         }
     }
 
@@ -274,6 +300,7 @@ impl Value {
             // already covers what this used to distinguish. Kept for a lone
             // Symbol only.
             ValueData::Symbol(_) => ValueShape::CodeBlock,
+            ValueData::Record(_) => ValueShape::Record,
         }
     }
 
@@ -327,6 +354,9 @@ impl Value {
             ValueData::Symbol(_) => {}
             // A boolean's only extra capability is `truthValued`, added below.
             ValueData::Boolean(_) => {}
+            // A Record is neither iterable nor indexable by position: its
+            // contents are reached by key (`AT`) or through `KEYS`/`VALUES`.
+            ValueData::Record(_) => {}
         }
         // Truth-valued values (true / false / unknown) advertise the
         // `truthValued` capability so consumers know to read the
@@ -405,7 +435,8 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Symbol(_) => None,
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => None,
         }
     }
 
@@ -458,6 +489,9 @@ impl Value {
                 !data.is_empty() && !data.iter().all(|f| f.is_zero() || f.is_nil())
             }
             ValueData::Symbol(_) => true,
+            // A Record is not a truth value either; like a String it collapses
+            // to `false` here and is rejected outright by the logic Words.
+            ValueData::Record(_) => false,
         }
     }
 }

@@ -46,6 +46,7 @@ const allowedAlgebraicFamilies = new Set([
   'syntax-sugar',
   'observation',
   'reflection',
+  'record',
 ]);
 
 const allowedCoreTiers = new Set([

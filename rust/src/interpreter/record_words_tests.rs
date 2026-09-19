@@ -1,0 +1,214 @@
+//! Behavioral probes for the Record domain (LANG.RECORDS.STRUCTURE): the
+//! eight Record Words, the two Words that now answer Records, the value
+//! identity a Record carries, and the one way it lifts.
+
+#[cfg(test)]
+mod record_words_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn run(code: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(code)
+            .await
+            .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+        interp
+    }
+
+    async fn top(code: &str) -> String {
+        run(code)
+            .await
+            .get_stack()
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    async fn error_of(code: &str) -> String {
+        let mut interp = Interpreter::new();
+        let err = interp.execute(code).await.expect_err("must raise an ERROR");
+        crate::error::ErrorCategory::from_error(&err)
+            .as_protocol_str()
+            .to_string()
+    }
+
+    async fn reason(code: &str) -> Option<String> {
+        let interp = run(code).await;
+        let answer = interp.stack.last().cloned().expect("an answer");
+        assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
+        answer
+            .nil_reason()
+            .map(|reason| reason.as_protocol_str().to_string())
+    }
+
+    const R: &str = "[ 'x' 'y' ] [ 1 2 ] RECORD";
+
+    #[tokio::test]
+    async fn record_builds_and_reads_back_in_order() {
+        assert_eq!(top(R).await, "{ 'x': 1/1 'y': 2/1 }");
+        assert_eq!(top(&format!("{R} KEYS")).await, "[ 'x' 'y' ]");
+        assert_eq!(top(&format!("{R} VALUES")).await, "[ 1/1 2/1 ]");
+        assert_eq!(top("[ ] [ ] RECORD").await, "{ }");
+        // The two bridges compose to the identity.
+        assert_eq!(
+            top(&format!("{R} {R} KEYS {R} VALUES RECORD EQ")).await,
+            "TRUE"
+        );
+    }
+
+    #[tokio::test]
+    async fn record_rejects_malformed_key_vectors() {
+        assert_eq!(error_of("[ 'a' 'a' ] [ 1 2 ] RECORD").await, "duplicateKey");
+        assert_eq!(
+            error_of("[ 'a' ] [ 1 2 ] RECORD").await,
+            "vectorLengthMismatch"
+        );
+        assert_eq!(error_of("'a' [ 1 ] RECORD").await, "nonVector");
+        // Operands are back on the stack after the ERROR.
+        let mut interp = Interpreter::new();
+        let _ = interp.execute("[ 'a' 'a' ] [ 1 2 ] RECORD").await;
+        assert_eq!(interp.stack.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn at_answers_by_key_and_projects_missing_field() {
+        assert_eq!(top(&format!("{R} 'y' AT")).await, "2/1");
+        assert_eq!(
+            reason(&format!("{R} 'z' AT")).await.as_deref(),
+            Some("missingField")
+        );
+        assert_eq!(top(&format!("0 {R} 'z' AT NIL? SELECT")).await, "0/1");
+        assert_eq!(error_of("[ 1 2 ] 'x' AT").await, "nonRecord");
+        // A stored NIL is a value under its key: AT answers it, HAS? sees it.
+        assert_eq!(top(&format!("{R} 'n' NIL WITH 'n' HAS?")).await, "TRUE");
+        assert_eq!(top(&format!("{R} 'n' HAS?")).await, "FALSE");
+    }
+
+    #[tokio::test]
+    async fn with_replaces_in_place_or_appends() {
+        assert_eq!(
+            top(&format!("{R} 'x' 9 WITH")).await,
+            "{ 'x': 9/1 'y': 2/1 }"
+        );
+        assert_eq!(
+            top(&format!("{R} 'z' 3 WITH KEYS")).await,
+            "[ 'x' 'y' 'z' ]"
+        );
+        // The operand is a value: it is not changed by WITH, and KEEP retains
+        // all three operands beside the answer.
+        assert_eq!(
+            top(&format!("{R} 'z' 3 KEEP WITH")).await,
+            "{ 'x': 1/1 'y': 2/1 } 'z' 3/1 { 'x': 1/1 'y': 2/1 'z': 3/1 }"
+        );
+        assert_eq!(error_of(&format!("{R} NIL 1 WITH")).await, "nonRecord");
+    }
+
+    #[tokio::test]
+    async fn without_removes_or_projects() {
+        assert_eq!(top(&format!("{R} 'x' WITHOUT")).await, "{ 'y': 2/1 }");
+        assert_eq!(
+            reason(&format!("{R} 'z' WITHOUT")).await.as_deref(),
+            Some("missingField")
+        );
+    }
+
+    #[tokio::test]
+    async fn merge_is_right_biased_and_order_preserving() {
+        assert_eq!(
+            top(&format!("{R} [ 'y' 'z' ] [ 9 3 ] RECORD MERGE")).await,
+            "{ 'x': 1/1 'y': 9/1 'z': 3/1 }"
+        );
+        assert_eq!(error_of(&format!("{R} [ 1 ] MERGE")).await, "nonRecord");
+    }
+
+    /// LANG.VALUES.DENOTATION: the two sequences are the value.
+    #[tokio::test]
+    async fn identity_is_the_key_and_value_sequences() {
+        assert_eq!(top(&format!("{R} {R} EQ")).await, "TRUE");
+        assert_eq!(
+            top(&format!("{R} [ 'y' 'x' ] [ 2 1 ] RECORD EQ")).await,
+            "FALSE"
+        );
+        assert_eq!(
+            top(&format!("{R} [ 'x' 'y' ] [ 1 3 ] RECORD EQ")).await,
+            "FALSE"
+        );
+        // A Record is not the Vector of its pairs (LANG.VALUES.DISJOINT).
+        assert_eq!(top("[ 'x' ] [ 1 ] RECORD [ [ 'x' 1 ] ] EQ").await, "FALSE");
+        assert_eq!(
+            top(&format!(
+                "{R} {R} [ 'x' ] [ 1 ] RECORD 3 COLLECT UNIQUE LENGTH"
+            ))
+            .await,
+            "2/1"
+        );
+    }
+
+    /// Containment rule 1: arithmetic and comparison lift over the values.
+    #[tokio::test]
+    async fn arithmetic_and_comparison_lift_over_values() {
+        assert_eq!(top(&format!("{R} 10 MUL")).await, "{ 'x': 10/1 'y': 20/1 }");
+        assert_eq!(top(&format!("10 {R} SUB")).await, "{ 'x': 9/1 'y': 8/1 }");
+        assert_eq!(top(&format!("{R} NEG")).await, "{ 'x': -1/1 'y': -2/1 }");
+        assert_eq!(top(&format!("{R} {R} ADD")).await, "{ 'x': 2/1 'y': 4/1 }");
+        assert_eq!(top(&format!("{R} 1 GT")).await, "{ 'x': FALSE 'y': TRUE }");
+        assert_eq!(top(&format!("{R} 1 MAX")).await, "{ 'x': 1/1 'y': 2/1 }");
+        // A Vector value lifts on inside the Record.
+        assert_eq!(
+            top("[ 'v' ] [ [ 1 2 ] ] RECORD 2 MUL").await,
+            "{ 'v': [ 2/1 4/1 ] }"
+        );
+        // Division by zero empties the lane, not the Record.
+        assert_eq!(
+            top(&format!("{R} 0 DIV 'x' AT NIL-REASON")).await,
+            "NIL 'divisionByZero'"
+        );
+        assert_eq!(
+            error_of(&format!("{R} [ 'y' 'x' ] [ 1 2 ] RECORD ADD")).await,
+            "shapeMismatch"
+        );
+        assert_eq!(
+            top(&format!("{R} 2 KEEP MUL")).await,
+            "{ 'x': 1/1 'y': 2/1 } 2/1 { 'x': 2/1 'y': 4/1 }"
+        );
+    }
+
+    /// Containment rule 2: no other Word takes a Record.
+    #[tokio::test]
+    async fn no_other_family_accepts_a_record() {
+        assert_eq!(error_of(&format!("{R} LENGTH")).await, "nonVector");
+        assert_eq!(error_of(&format!("{R} 0 GET")).await, "nonVector");
+        assert_eq!(error_of(&format!("{R} [ 1 ADD ] MAP")).await, "nonVector");
+        assert_eq!(error_of(&format!("{R} TRUE AND")).await, "nonTruthValue");
+        assert_eq!(error_of(&format!("{R} CHARS")).await, "nonText");
+    }
+
+    #[tokio::test]
+    async fn tally_and_group_answer_records() {
+        assert_eq!(top("[ 'b' 'a' 'b' ] TALLY").await, "{ 'b': 2/1 'a': 1/1 }");
+        assert_eq!(top("[ 3 1 3 ] TALLY").await, "{ 3/1: 2/1 1/1: 1/1 }");
+        assert_eq!(top("[ 3 1 3 ] TALLY VALUES").await, "[ 2/1 1/1 ]");
+        assert_eq!(
+            top("[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP").await,
+            "{ 'b': [ 1/1 3/1 ] 'a': [ 2/1 4/1 ] }"
+        );
+        assert_eq!(
+            top("[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP 'a' AT").await,
+            "[ 1/1 3/1 ]"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_record_survives_a_block_and_the_protocol() {
+        // Carried into a block as the phrase that rebuilds it.
+        assert_eq!(
+            top(&format!("{R} 1 COLLECT [ 'x' AT ] MAP")).await,
+            "[ 1/1 ]"
+        );
+        let interp = run(R).await;
+        let value = interp.stack.last().cloned().expect("an answer");
+        let node = crate::types::value_protocol::value_to_protocol(&value, None);
+        assert_eq!(node.type_str, "record");
+    }
+}

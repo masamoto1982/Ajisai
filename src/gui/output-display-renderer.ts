@@ -404,11 +404,30 @@ const formatValue = (item: Value, depth: number): string => {
             return item.value === 'unknown' ? 'UNKNOWN' : String(item.value).toUpperCase();
         case 'vector':
             return formatVector(item.value, depth);
+        case 'record':
+            return formatRecord(item.value, depth);
         case 'nil':
             return 'NIL';
         default:
             return JSON.stringify(item.value);
     }
+};
+
+/// A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
+/// arrays of nodes. It renders as `{ key: value … }`, the same display the
+/// engine's own stack rendering uses: braces are retired lexemes, so the
+/// form can never be read back as a literal a Record does not have.
+const formatRecord = (value: unknown, depth: number): string => {
+    const record = value as { keys?: Value[]; values?: Value[] } | null;
+    const keys = Array.isArray(record?.keys) ? record!.keys : [];
+    const values = Array.isArray(record?.values) ? record!.values : [];
+    if (keys.length === 0) return '{ }';
+    const pairs = keys.map((key, index) => {
+        const paired = values[index];
+        const rendered = paired ? formatValue(paired, depth + 1) : 'NIL';
+        return `${formatValue(key, depth + 1)}: ${rendered}`;
+    });
+    return `{ ${pairs.join(' ')} }`;
 };
 
 

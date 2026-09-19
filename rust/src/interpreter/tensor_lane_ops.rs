@@ -38,6 +38,7 @@ pub(crate) fn contains_absent_lane(value: &Value) -> bool {
         ValueData::Vector(items) => items.iter().any(contains_absent_lane),
         ValueData::Tensor { data, .. } => !data.all_lanes_valid(),
         ValueData::Scalar(f) => f.is_nil(),
+        ValueData::Record(record) => record.values().iter().any(contains_absent_lane),
         ValueData::Boolean(_)
         | ValueData::ExactScalar(_)
         | ValueData::Symbol(_)

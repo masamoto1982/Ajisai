@@ -12,11 +12,11 @@
       "description": "One stack value as observed at the host boundary. A vector's own elements are observedValue nodes in turn (see `value` below), so this definition is recursive.",
       "properties": {
         "type": {
-          "description": "The wire type, discriminating `value`'s shape. Not the same seven-way split as LANG.VALUES.DISJOINT's six value domains: a Scalar under the Timestamp role reports `datetime` instead of `number` (same {numerator, denominator} shape, a presentation distinction only), and a Scalar under the ContinuedFraction role reports `string` (rust/src/types/value_protocol.rs::value_to_protocol, the ContinuedFraction branch) instead of `number`.",
-          "enum": ["nil", "boolean", "number", "datetime", "string", "vector", "symbol"]
+          "description": "The wire type, discriminating `value`'s shape. Not the same eight-way split as LANG.VALUES.DISJOINT's seven value domains: a Scalar under the Timestamp role reports `datetime` instead of `number` (same {numerator, denominator} shape, a presentation distinction only), and a Scalar under the ContinuedFraction role reports `string` (rust/src/types/value_protocol.rs::value_to_protocol, the ContinuedFraction branch) instead of `number`.",
+          "enum": ["nil", "boolean", "number", "datetime", "string", "vector", "symbol", "record"]
         },
         "value": {
-          "description": "Shape depends on `type`: nil -> null; boolean -> boolean; number or datetime -> {numerator, denominator} (arbitrary-precision decimal strings); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue.",
+          "description": "Shape depends on `type`: nil -> null; boolean -> boolean; number or datetime -> {numerator, denominator} (arbitrary-precision decimal strings); string or symbol -> string (a symbol's bare name); vector -> an array of observedValue; record -> {keys, values}, two arrays of observedValue of equal length, aligned position by position (LANG.RECORDS.STRUCTURE).",
           "oneOf": [
             { "type": "null" },
             { "type": "boolean" },
@@ -30,7 +30,16 @@
                 "denominator": { "type": "string" }
               }
             },
-            { "type": "array", "items": { "$ref": "#/$defs/observedValue" } }
+            { "type": "array", "items": { "$ref": "#/$defs/observedValue" } },
+            {
+              "type": "object",
+              "required": ["keys", "values"],
+              "additionalProperties": false,
+              "properties": {
+                "keys": { "type": "array", "items": { "$ref": "#/$defs/observedValue" } },
+                "values": { "type": "array", "items": { "$ref": "#/$defs/observedValue" } }
+              }
+            }
           ]
         },
         "displayHint": {
@@ -38,7 +47,7 @@
           "enum": ["unassigned", "rawNumber", "interval", "truthValue", "timestamp", "nil", "continuedFraction"]
         },
         "semantics": {
-          "description": "Present on every node except a continuedFraction-role scalar leaf and an interior (rank >= 2) tensor node. Every field below is optional within it. Both host surfaces emit the same set (rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs::value_semantics_to_js for WASM/GUI, rust/src/agent/report.rs::semantics_json for CLI/agent) — the retired HostProtocolV1 additionally spelled semanticKind/shape/capabilities/origin here, but the six value domains already discriminate themselves through `type`, so no reader ever needed a second axis for it.",
+          "description": "Present on every node except a continuedFraction-role scalar leaf and an interior (rank >= 2) tensor node. Every field below is optional within it. Both host surfaces emit the same set (rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs::value_semantics_to_js for WASM/GUI, rust/src/agent/report.rs::semantics_json for CLI/agent) — the retired HostProtocolV1 additionally spelled semanticKind/shape/capabilities/origin here, but the seven value domains already discriminate themselves through `type`, so no reader ever needed a second axis for it.",
           "type": "object",
           "properties": {
             "truthValue": {

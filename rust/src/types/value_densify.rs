@@ -103,6 +103,8 @@ fn append_dense_value(
         }
         // ExactScalar cannot be densified into a Fraction tensor
         ValueData::ExactScalar(_) => None,
+        // A Record is not a numeric lane.
+        ValueData::Record(_) => None,
         ValueData::Tensor {
             data: tensor,
             shape,
