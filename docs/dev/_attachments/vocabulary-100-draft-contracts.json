@@ -1,0 +1,2205 @@
+{
+  "$comment": "非正典。docs/dev/vocabulary-100-work-order-2026-09.md の添付であり、Ajisai の意味論を定義しない。spec/words.json の entries と同じ形で書いてあるのは機械的な移送のためで、正典へ移すのは Phase ごとに実装と同時である。移送時には draftStatus / draftPhase / draftNote の 3 欄を落とすこと（words.schema.json は additionalProperties を許さない）。",
+  "status": "draft",
+  "canonical": false,
+  "schemaVersion": 1,
+  "source": "docs/dev/vocabulary-100-work-order-2026-09.md",
+  "removals": [
+    {
+      "name": "SUM",
+      "reason": "FOLD ADD と等コストで書ける現行唯一の冗語。100 語の枠を 1 つ空ける（指示書 4.4）。",
+      "phase": 1
+    }
+  ],
+  "newFamilies": [
+    {
+      "name": "record",
+      "reason": "第 7 の値領域の法則（キー順序・封じ込め規則）を共有する語群。words.schema.json の family enum に追加が要る。"
+    },
+    {
+      "name": "shape",
+      "reason": "shape の観測と組み替えの法則を共有する語群。RANK は族としては higherOrder に属する。"
+    }
+  ],
+  "newOutcomes": {
+    "nilReasons": [
+      {
+        "id": "userDeclared",
+        "parameterized": true,
+        "by": [
+          "ABSENT"
+        ],
+        "note": "理由空間で初めて開いた族。outcome-bijection ゲートの扱いは指示書 6.3。"
+      }
+    ],
+    "errorCategories": [
+      {
+        "id": "declaredFailure",
+        "by": [
+          "FAIL"
+        ]
+      },
+      {
+        "id": "unsortedInput",
+        "by": [
+          "BSEARCH"
+        ]
+      },
+      {
+        "id": "duplicateKey",
+        "by": [
+          "RECORD"
+        ]
+      },
+      {
+        "id": "nonRecord",
+        "by": [
+          "KEYS",
+          "VALUES",
+          "AT",
+          "WITH",
+          "WITHOUT",
+          "HAS?",
+          "MERGE"
+        ],
+        "note": "封じ込め規則 2（Record を名指ししない語が Record を受けたとき）もこの分類を使う。"
+      },
+      {
+        "id": "notASymbol",
+        "by": [
+          "DEFINED?",
+          "DIGEST",
+          "CONTRACT"
+        ]
+      }
+    ],
+    "reused": [
+      {
+        "id": "missingField",
+        "by": [
+          "AT",
+          "WITHOUT",
+          "BSEARCH",
+          "SEARCH",
+          "CONTRACT"
+        ]
+      },
+      {
+        "id": "invalidEncoding",
+        "by": [
+          "JSON-DECODE"
+        ]
+      },
+      {
+        "id": "domainMiss",
+        "by": [
+          "SHAPE",
+          "GCD",
+          "RATIO",
+          "LN",
+          "POW",
+          "JSON-ENCODE"
+        ]
+      },
+      {
+        "id": "spaceExhausted",
+        "by": [
+          "RESHAPE"
+        ]
+      }
+    ]
+  },
+  "entries": [
+    {
+      "name": "CEIL",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "arithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "FLOOR の対。正の無限大方向へ丸める。FLOOR があって CEIL がない非対称を閉じるためだけの語であり、力の級ではなく閉包の級で入る。",
+        "hover": "CEIL — round toward positive infinity",
+        "lookup": "FLOOR の対。正の無限大方向へ丸める。FLOOR があって CEIL がない非対称を閉じるためだけの語であり、力の級ではなく閉包の級で入る。",
+        "syntax": "5/2 CEIL",
+        "role": "Arithmetic primitive: round toward positive infinity.",
+        "stackEffect": "[ x ] -> [ ceil x ]"
+      },
+      "executorKey": "Ceil",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand",
+      "draftStatus": "new",
+      "draftPhase": 1,
+      "draftNote": "級B（閉包）。FLOOR/CEIL/ROUND/QUANTIZE で丸めの族が閉じる。"
+    },
+    {
+      "name": "DROP",
+      "aliases": [],
+      "family": "collection",
+      "category": "vector",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "indexOutOfBounds",
+        "reason": "indexOutOfBounds"
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidCount"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "TAKE の対。先頭 N 個（負なら末尾 -N 個）を落とした残りを返す。TAKE と同じく行き過ぎは投影する。",
+        "hover": "DROP — drop the first N or last -N elements",
+        "lookup": "TAKE の対。先頭 N 個（負なら末尾 -N 個）を落とした残りを返す。TAKE と同じく行き過ぎは投影する。",
+        "syntax": "[ 1 2 3 4 5 ] [ 3 ] DROP",
+        "role": "Vector primitive: drop the first N or last -N elements.",
+        "stackEffect": "[ vec ] [ n ] -> [ suffix ]"
+      },
+      "executorKey": "Drop",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern",
+      "draftStatus": "new",
+      "draftPhase": 1,
+      "draftNote": "級B（閉包）。TAKE の契約をそのまま鏡像にする。範囲外の扱いは TAKE/PUT/GET と同一に保つこと。"
+    },
+    {
+      "name": "SHAPE",
+      "aliases": [],
+      "family": "shape",
+      "category": "shape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "raggedNesting",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.VALUES.VECTOR"
+      ],
+      "documentation": {
+        "summary": "矩形にネストしたベクトルの各軸の長さを、外側から並べたベクトルとして返す。LANG.COLLECTIONS.LIFT が既に持っている shape の概念を、初めてプログラムから観測可能にする。ragged なベクトルには shape がないので domainMiss を投影する。",
+        "hover": "SHAPE — the lengths of a rectangular vector's axes, outermost first",
+        "lookup": "矩形にネストしたベクトルの各軸の長さを、外側から並べたベクトルとして返す。LANG.COLLECTIONS.LIFT が既に持っている shape の概念を、初めてプログラムから観測可能にする。ragged なベクトルには shape がないので domainMiss を投影する。",
+        "syntax": "[ [ 1 2 ] [ 3 4 ] ] SHAPE",
+        "role": "Shape primitive: the lengths of a rectangular vector's axes, outermost first.",
+        "stackEffect": "[ vec ] -> [ shape ]"
+      },
+      "executorKey": "Shape",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 2,
+      "draftNote": "現状 LENGTH は最外軸しか返せず、持ち上げ規則が依拠する shape をプログラムが読めない。この非対称を閉じる語。"
+    },
+    {
+      "name": "RESHAPE",
+      "aliases": [],
+      "family": "shape",
+      "category": "shape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "spaceExhausted",
+        "reason": "spaceExhausted"
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidShape"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.COLLECTIONS.BUDGET",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "要素の並びを保ったまま、与えられた shape の入れ子に組み直す。要素数が shape の積と一致しないときは ERROR（invalidShape）、材料化上限を超える要求は spaceExhausted を投影する（RANGE・FILL と同じ規律）。",
+        "hover": "RESHAPE — rebuild a vector's elements under a new axis structure",
+        "lookup": "要素の並びを保ったまま、与えられた shape の入れ子に組み直す。要素数が shape の積と一致しないときは ERROR（invalidShape）、材料化上限を超える要求は spaceExhausted を投影する（RANGE・FILL と同じ規律）。",
+        "syntax": "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE",
+        "role": "Shape primitive: rebuild a vector's elements under a new axis structure.",
+        "stackEffect": "[ vec ] [ shape ] -> [ reshaped ]"
+      },
+      "executorKey": "Reshape",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 2,
+      "draftNote": "FILL/RANGE と同じ材料化上限に従う。要素の巡回補充（APL の ⍴）は採らない——長さ不一致は黙って埋めず ERROR にする。"
+    },
+    {
+      "name": "FLATTEN",
+      "aliases": [],
+      "family": "shape",
+      "category": "shape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.DICTIONARY.ACYCLIC"
+      ],
+      "documentation": {
+        "summary": "どれだけ深く入れ子になっていても、すべての軸を畳んで 1 本のベクトルにする。深さが値ごとに異なるため、この語はユーザー定義では書けない（再帰も無限ループもない）。CONCAT は 1 段しか畳まない。",
+        "hover": "FLATTEN — collapse every axis into one",
+        "lookup": "どれだけ深く入れ子になっていても、すべての軸を畳んで 1 本のベクトルにする。深さが値ごとに異なるため、この語はユーザー定義では書けない（再帰も無限ループもない）。CONCAT は 1 段しか畳まない。",
+        "syntax": "[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN",
+        "role": "Shape primitive: collapse every axis into one.",
+        "stackEffect": "[ vec ] -> [ flat ]"
+      },
+      "executorKey": "Flatten",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 2,
+      "draftNote": "級A の典型。非再帰・全域の言語における「書けない」の代表例であり、本案で最も説明が容易な追加。"
+    },
+    {
+      "name": "DEPTH",
+      "aliases": [],
+      "family": "shape",
+      "category": "shape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR"
+      ],
+      "documentation": {
+        "summary": "値の最大ネスト深さを返す。スカラは 0、平坦なベクトルは 1。FLATTEN と同じ理由でユーザー定義では書けない。RANK に渡す深さを計算するための語でもある。",
+        "hover": "DEPTH — the maximum nesting depth of a value",
+        "lookup": "値の最大ネスト深さを返す。スカラは 0、平坦なベクトルは 1。FLATTEN と同じ理由でユーザー定義では書けない。RANK に渡す深さを計算するための語でもある。",
+        "syntax": "[ 1 [ 2 [ 3 ] ] ] DEPTH",
+        "role": "Shape primitive: the maximum nesting depth of a value.",
+        "stackEffect": "[ x ] -> [ n ]"
+      },
+      "executorKey": "Depth",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 2,
+      "draftNote": "Record の深さをどう数えるかは Phase 5 で確定する（暫定: Record は値方向にのみ深さを持つ）。"
+    },
+    {
+      "name": "RANK",
+      "aliases": [],
+      "family": "higherOrder",
+      "category": "higher-order",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "notExecutable",
+        "blockContractViolation",
+        "invalidCount"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.COLLECTIONS.RANK",
+        "LANG.DICTIONARY.ACYCLIC"
+      ],
+      "documentation": {
+        "summary": "指定した深さにある部分ベクトルのそれぞれにブロックを適用する。深さ 0 は最外のベクトル全体、深さ 1 は MAP と一致する。修飾軸を 2 本目にせずにランク（階）の概念を入れるための、ただ一つの語。",
+        "hover": "RANK — apply a block to every sub-vector at a given depth",
+        "lookup": "指定した深さにある部分ベクトルのそれぞれにブロックを適用する。深さ 0 は最外のベクトル全体、深さ 1 は MAP と一致する。修飾軸を 2 本目にせずにランク（階）の概念を入れるための、ただ一つの語。",
+        "syntax": "[ [ [ 1 2 ] [ 3 4 ] ] ] [ SUM ] 1 RANK",
+        "role": "Higher-order primitive: apply a block to every sub-vector at a given depth.",
+        "stackEffect": "[ vec ] [ body ] [ n ] -> [ result ]"
+      },
+      "executorKey": "Rank",
+      "effects": [],
+      "partiality": "partial",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 2,
+      "draftNote": "本案で有限性の議論を増やす唯一の語。spec/termination.json に再帰点と減少量（残りの深さ）を書けなければ、この語は落とす。"
+    },
+    {
+      "name": "MEMBER",
+      "aliases": [],
+      "family": "collection",
+      "category": "vector",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "superlinear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "探索対象のベクトルに、各 probe が現れるかどうかを要素ごとに答える。ユーザー定義では probe ごとの線形走査になり O(m·n) だが、核は索引を一度作って O(n log n + m) で答えられる。漸近コストの差が採用根拠である。",
+        "hover": "MEMBER — which probes occur in the vector",
+        "lookup": "探索対象のベクトルに、各 probe が現れるかどうかを要素ごとに答える。ユーザー定義では probe ごとの線形走査になり O(m·n) だが、核は索引を一度作って O(n log n + m) で答えられる。漸近コストの差が採用根拠である。",
+        "syntax": "[ 1 2 3 ] [ 2 5 ] MEMBER",
+        "role": "Vector primitive: which probes occur in the vector.",
+        "stackEffect": "[ vec ] [ probes ] -> [ truths ]"
+      },
+      "executorKey": "Member",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm",
+      "draftStatus": "new",
+      "draftPhase": 3,
+      "draftNote": "級A（漸近）。UNIQUE/TALLY と索引構築を共有できる。UNION/INTERSECT/EXCEPT はこの語からユーザー定義で書けるので Core に入れない。"
+    },
+    {
+      "name": "BSEARCH",
+      "aliases": [],
+      "family": "collection",
+      "category": "vector",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "keyAbsent",
+        "reason": "missingField"
+      },
+      "errorWhen": [
+        "nonVector",
+        "unsortedInput",
+        "nonComparableElement"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "superlinear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "昇順に並んだベクトルの中から各キーの位置を二分探索で答える。見つからないキーは missingField を投影する。昇順でない入力は ERROR——順序の検査は O(n) だが、m 件の照会が O(m log n) になるので、m が大きいほど INDEX-OF の O(m·n) に対する利得が残る。",
+        "hover": "BSEARCH — index of each key in an ascending vector",
+        "lookup": "昇順に並んだベクトルの中から各キーの位置を二分探索で答える。見つからないキーは missingField を投影する。昇順でない入力は ERROR——順序の検査は O(n) だが、m 件の照会が O(m log n) になるので、m が大きいほど INDEX-OF の O(m·n) に対する利得が残る。",
+        "syntax": "[ 1 3 5 7 ] [ 5 ] BSEARCH",
+        "role": "Vector primitive: index of each key in an ascending vector.",
+        "stackEffect": "[ sorted ] [ keys ] -> [ indices ]"
+      },
+      "executorKey": "Bsearch",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm",
+      "draftStatus": "new",
+      "draftPhase": 3,
+      "draftNote": "級A（書けない）。区間を半分にし続ける反復は回数が入力依存であり、非再帰・全域の言語では永久に書けない。昇順検査を省いて「未定義」にする案は採らない——Ajisai に未定義の余地はない。"
+    },
+    {
+      "name": "SEARCH",
+      "aliases": [],
+      "family": "text",
+      "category": "cast",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "needleAbsent",
+        "reason": "missingField"
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "superlinear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.SOURCE.TEXT"
+      ],
+      "documentation": {
+        "summary": "部分文字列が最初に現れる位置を返し、現れなければ missingField を投影する。INDEX-OF のテキスト版。CHARS で分解してから書くと O(n·m) かつ冗長になる。",
+        "hover": "SEARCH — index of the first occurrence of a substring",
+        "lookup": "部分文字列が最初に現れる位置を返し、現れなければ missingField を投影する。INDEX-OF のテキスト版。CHARS で分解してから書くと O(n·m) かつ冗長になる。",
+        "syntax": "'hello world' 'world' SEARCH",
+        "role": "Text primitive: index of the first occurrence of a substring.",
+        "stackEffect": "[ text ] [ needle ] -> [ index ]"
+      },
+      "executorKey": "Search",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm",
+      "draftStatus": "new",
+      "draftPhase": 3,
+      "draftNote": "級A（漸近）。テキスト族は現在 6 語しかなく、探索と置換が両方欠けている。"
+    },
+    {
+      "name": "REPLACE",
+      "aliases": [],
+      "family": "text",
+      "category": "cast",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "superlinear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.SOURCE.TEXT"
+      ],
+      "documentation": {
+        "summary": "出現するすべての from を to に置き換えた新しいテキストを返す。空の from は置換を起こさず、元のテキストをそのまま返す（無限展開の余地を残さない）。",
+        "hover": "REPLACE — replace every occurrence of a substring",
+        "lookup": "出現するすべての from を to に置き換えた新しいテキストを返す。空の from は置換を起こさず、元のテキストをそのまま返す（無限展開の余地を残さない）。",
+        "syntax": "'a-b-c' '-' '+' REPLACE",
+        "role": "Text primitive: replace every occurrence of a substring.",
+        "stackEffect": "[ text ] [ from ] [ to ] -> [ text' ]"
+      },
+      "executorKey": "Replace",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm",
+      "draftStatus": "new",
+      "draftPhase": 3,
+      "draftNote": "級A（漸近）。空 from の扱いを契約に明記しないと、実装ごとに無限列を作る余地が残る。"
+    },
+    {
+      "name": "ABSENT",
+      "aliases": [],
+      "family": "absence",
+      "category": "absence",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "always",
+        "reason": "userDeclared"
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "利用者の書いた理由を持つ NIL を作る。現在、ユーザー語は理由つきの不在を自分では作れず、理由なしの NIL を返すか ERROR を出すしかない。理由が NIL の観測内容のすべてである言語にとって、これは中心的な欠落である。",
+        "hover": "ABSENT — produce a NIL carrying a reason the program states",
+        "lookup": "利用者の書いた理由を持つ NIL を作る。現在、ユーザー語は理由つきの不在を自分では作れず、理由なしの NIL を返すか ERROR を出すしかない。理由が NIL の観測内容のすべてである言語にとって、これは中心的な欠落である。",
+        "syntax": "'rate not quoted' ABSENT",
+        "role": "Absence primitive: produce a NIL carrying a reason the program states.",
+        "stackEffect": "[ 'reason' ] -> [ NIL ]"
+      },
+      "executorKey": "Absent",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 4,
+      "draftNote": "結末レジストリに userDeclared を parameterized:true で登録することが前提（指示書 6.3）。これを飛ばすと outcome-bijection ゲートが落ちる。"
+    },
+    {
+      "name": "FAIL",
+      "aliases": [],
+      "family": "absence",
+      "category": "control",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "declaredFailure"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.FAILURE.ERROR"
+      ],
+      "documentation": {
+        "summary": "利用者の書いた分類を持つ ERROR を上げる。ユーザー語が「これは呼び方の誤りだ」と言えるようにするための語であり、不在（ABSENT）との使い分けが三分法をユーザー側にも開く。捕捉する語は依然として存在しない。",
+        "hover": "FAIL — raise an ERROR the program states",
+        "lookup": "利用者の書いた分類を持つ ERROR を上げる。ユーザー語が「これは呼び方の誤りだ」と言えるようにするための語であり、不在（ABSENT）との使い分けが三分法をユーザー側にも開く。捕捉する語は依然として存在しない。",
+        "syntax": "'caller passed a negative width' FAIL",
+        "role": "Control primitive: raise an ERROR the program states.",
+        "stackEffect": "[ 'category' ] -> [ ]"
+      },
+      "executorKey": "Fail",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 4,
+      "draftNote": "ERROR を捕捉できないことは不変。FAIL は三分法を利用者が使えるようにするだけで、TRY への一歩ではない。"
+    },
+    {
+      "name": "RECORD",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "vectorLengthMismatch",
+        "duplicateKey"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.VECTOR"
+      ],
+      "documentation": {
+        "summary": "キー列と値列から Record（第 7 の値領域）を作る。長さが違えば ERROR、キーが重複しても ERROR——後勝ちで黙って捨てない。キーの順序は観測可能な構造として保たれる。",
+        "hover": "RECORD — build a keyed correspondence from a key vector and a value vector",
+        "lookup": "キー列と値列から Record（第 7 の値領域）を作る。長さが違えば ERROR、キーが重複しても ERROR——後勝ちで黙って捨てない。キーの順序は観測可能な構造として保たれる。",
+        "syntax": "[ 'a' 'b' ] [ 1 2 ] RECORD",
+        "role": "Record primitive: build a keyed correspondence from a key vector and a value vector.",
+        "stackEffect": "[ keys ] [ values ] -> [ record ]"
+      },
+      "executorKey": "Record",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "Record リテラルの字句は作らない。構築はこの語だけを通る（指示書 4.3）。"
+    },
+    {
+      "name": "KEYS",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonRecord"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT"
+      ],
+      "documentation": {
+        "summary": "Record のキーを挿入順のベクトルとして返す。VALUES と位置が対応する。",
+        "hover": "KEYS — the key vector, in insertion order",
+        "lookup": "Record のキーを挿入順のベクトルとして返す。VALUES と位置が対応する。",
+        "syntax": "R KEYS",
+        "role": "Record primitive: the key vector, in insertion order.",
+        "stackEffect": "[ record ] -> [ keys ]"
+      },
+      "executorKey": "Keys",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "KEYS と VALUES の位置対応は Record の観測可能構造そのもの。"
+    },
+    {
+      "name": "VALUES",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonRecord"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT"
+      ],
+      "documentation": {
+        "summary": "Record の値を KEYS と同じ順序のベクトルとして返す。ここから先はベクトルの語彙がそのまま使える。",
+        "hover": "VALUES — the value vector, aligned with KEYS",
+        "lookup": "Record の値を KEYS と同じ順序のベクトルとして返す。ここから先はベクトルの語彙がそのまま使える。",
+        "syntax": "R VALUES",
+        "role": "Record primitive: the value vector, aligned with KEYS.",
+        "stackEffect": "[ record ] -> [ values ]"
+      },
+      "executorKey": "Values",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "Record → Vector の一方向の橋。逆方向は RECORD。"
+    },
+    {
+      "name": "AT",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "keyAbsent",
+        "reason": "missingField"
+      },
+      "errorWhen": [
+        "nonRecord"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT",
+        "LANG.FAILURE.PROJECT"
+      ],
+      "documentation": {
+        "summary": "キーに対応する値を返し、キーがなければ missingField を投影する。GET が添字に対して行うことを、AT はキーに対して行う。INDEX-OF による線形走査 O(n) に対し、核では O(1)〜O(log n) で答えられる。",
+        "hover": "AT — the value under a key",
+        "lookup": "キーに対応する値を返し、キーがなければ missingField を投影する。GET が添字に対して行うことを、AT はキーに対して行う。INDEX-OF による線形走査 O(n) に対し、核では O(1)〜O(log n) で答えられる。",
+        "syntax": "R 'a' AT",
+        "role": "Record primitive: the value under a key.",
+        "stackEffect": "[ record ] [ key ] -> [ value ]"
+      },
+      "executorKey": "At",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "級A（漸近）。既存理由 missingField を再利用するので、結末レジストリの追加は不要。"
+    },
+    {
+      "name": "WITH",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonRecord"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT"
+      ],
+      "documentation": {
+        "summary": "キーに値を割り当てた新しい Record を返す。既にあるキーなら値を置き換え、位置は動かさない。なければ末尾に足す。PUT が添字に対して行うことのキー版。",
+        "hover": "WITH — a copy with one key set",
+        "lookup": "キーに値を割り当てた新しい Record を返す。既にあるキーなら値を置き換え、位置は動かさない。なければ末尾に足す。PUT が添字に対して行うことのキー版。",
+        "syntax": "R 'c' 3 WITH",
+        "role": "Record primitive: a copy with one key set.",
+        "stackEffect": "[ record ] [ key ] [ value ] -> [ record' ]"
+      },
+      "executorKey": "With",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "既存キーの位置を保つ規則は、KEYS の順序が観測可能であることの帰結。"
+    },
+    {
+      "name": "WITHOUT",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "keyAbsent",
+        "reason": "missingField"
+      },
+      "errorWhen": [
+        "nonRecord"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT"
+      ],
+      "documentation": {
+        "summary": "キーを取り除いた新しい Record を返す。ないキーを取り除こうとしたときは missingField を投影する——GET・TAKE・PUT が領域外を投影するのと同じ規律であり、綴り間違いを黙って通さない。",
+        "hover": "WITHOUT — a copy with one key removed",
+        "lookup": "キーを取り除いた新しい Record を返す。ないキーを取り除こうとしたときは missingField を投影する——GET・TAKE・PUT が領域外を投影するのと同じ規律であり、綴り間違いを黙って通さない。",
+        "syntax": "R 'a' WITHOUT",
+        "role": "Record primitive: a copy with one key removed.",
+        "stackEffect": "[ record ] [ key ] -> [ record' ]"
+      },
+      "executorKey": "Without",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "「ないキーの削除は恒等」案も検討したが、領域外アクセスを投影する既存規律（fca76d4 の TAKE/PUT 統一）に合わせた。"
+    },
+    {
+      "name": "HAS?",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonRecord"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT"
+      ],
+      "documentation": {
+        "summary": "キーがあるかどうかを答える。AT の投影に頼らずに存在を問えるようにする述語であり、`fallback R 'a' AT NIL? SELECT` の回復句と組で使う。",
+        "hover": "HAS? — whether a key is present",
+        "lookup": "キーがあるかどうかを答える。AT の投影に頼らずに存在を問えるようにする述語であり、`fallback R 'a' AT NIL? SELECT` の回復句と組で使う。",
+        "syntax": "R 'a' HAS?",
+        "role": "Record primitive: whether a key is present.",
+        "stackEffect": "[ record ] [ key ] -> [ TRUE | FALSE ]"
+      },
+      "executorKey": "Has",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "述語は ? で終える（命名規律）。NIL? HAS? DEFINED? の 3 語で規律が閉じる。"
+    },
+    {
+      "name": "MERGE",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonRecord"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT"
+      ],
+      "documentation": {
+        "summary": "二つの Record を合併する。同じキーがあれば右側が勝つ。左の順序を保ち、右にしかないキーを末尾に足す。既定値の上書きという頻出の形を一語にする。",
+        "hover": "MERGE — right-biased union of two records",
+        "lookup": "二つの Record を合併する。同じキーがあれば右側が勝つ。左の順序を保ち、右にしかないキーを末尾に足す。既定値の上書きという頻出の形を一語にする。",
+        "syntax": "R1 R2 MERGE",
+        "role": "Record primitive: right-biased union of two records.",
+        "stackEffect": "[ a ] [ b ] -> [ merged ]"
+      },
+      "executorKey": "Merge",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 5,
+      "draftNote": "右勝ちを既定にするのは「既定値に上書きを重ねる」向きが主要用途であるため。左勝ちが欲しければ引数を入れ替えればよい。"
+    },
+    {
+      "name": "GROUP",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "vectorLengthMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.VECTOR"
+      ],
+      "documentation": {
+        "summary": "同じキーを持つ値をまとめた Record を返す。現行は「UNIQUE 順のベクトルのベクトル」を返しており、キーは呼び出し側が UNIQUE で作り直さねばならなかった。Record 領域が入れば、その作り直しは不要になる。",
+        "hover": "GROUP — bundle values by key into a record",
+        "lookup": "同じキーを持つ値をまとめた Record を返す。現行は「UNIQUE 順のベクトルのベクトル」を返しており、キーは呼び出し側が UNIQUE で作り直さねばならなかった。Record 領域が入れば、その作り直しは不要になる。",
+        "syntax": "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP",
+        "role": "Record primitive: bundle values by key into a record.",
+        "stackEffect": "[ values ] [ keys ] -> [ record ]"
+      },
+      "executorKey": "Group",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "redefined",
+      "draftPhase": 5,
+      "draftNote": "再定義。現行の戻り値は VALUES を適用すれば得られるので、力は失われない。"
+    },
+    {
+      "name": "TALLY",
+      "aliases": [],
+      "family": "record",
+      "category": "record",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.RECORDS.STRUCTURE",
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.VECTOR"
+      ],
+      "documentation": {
+        "summary": "要素ごとの出現回数を Record で返す。現行は UNIQUE と位置で対応する件数ベクトルを返しており、利用者が UNIQUE を別に呼んで揃える必要があった。",
+        "hover": "TALLY — how many times each distinct element occurs",
+        "lookup": "要素ごとの出現回数を Record で返す。現行は UNIQUE と位置で対応する件数ベクトルを返しており、利用者が UNIQUE を別に呼んで揃える必要があった。",
+        "syntax": "[ 'a' 'b' 'a' ] TALLY",
+        "role": "Record primitive: how many times each distinct element occurs.",
+        "stackEffect": "[ vec ] -> [ record ]"
+      },
+      "executorKey": "Tally",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "redefined",
+      "draftPhase": 5,
+      "draftNote": "再定義。GROUP と同じ理由。現行の戻り値は VALUES で得られる。"
+    },
+    {
+      "name": "DEFINED?",
+      "aliases": [],
+      "family": "dictionary",
+      "category": "dictionary",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "notASymbol"
+      ],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.DICTIONARY.RESOLUTION",
+        "LANG.VALUES.DISJOINT"
+      ],
+      "documentation": {
+        "summary": "Symbol が Core または User の語として引けるかどうかを答える。引数は Symbol であって String ではない——テキストから語を引ける語を作ると、LANG.DICTIONARY.ACYCLIC の検査が依拠している「どの語もテキストをコードに変えない」が崩れる。",
+        "hover": "DEFINED? — whether a Symbol resolves to a Word",
+        "lookup": "Symbol が Core または User の語として引けるかどうかを答える。引数は Symbol であって String ではない——テキストから語を引ける語を作ると、LANG.DICTIONARY.ACYCLIC の検査が依拠している「どの語もテキストをコードに変えない」が崩れる。",
+        "syntax": "[ FOO ] 0 GET DEFINED?",
+        "role": "Dictionary primitive: whether a Symbol resolves to a Word.",
+        "stackEffect": "[ symbol ] -> [ TRUE | FALSE ]"
+      },
+      "executorKey": "Defined",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 6,
+      "draftNote": "禁止事項の直近にある語。String を受ける版を実装してはならない。"
+    },
+    {
+      "name": "DIGEST",
+      "aliases": [],
+      "family": "dictionary",
+      "category": "dictionary",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION",
+        "LANG.VALUES.DENOTATION"
+      ],
+      "documentation": {
+        "summary": "語の内容同一性（正規化された定義と依存先の同一性にわたるダイジェスト）または値の denotation のダイジェストをテキストで返す。辞書が既に内部で持っている内容アドレスを、言語から観測できるようにする。同じダイジェストは同じもの、違うダイジェストは何も意味しない——この非対称は LANG.DICTIONARY.MUTATION が既に述べている。",
+        "hover": "DIGEST — the content identity of a Word or a value",
+        "lookup": "語の内容同一性（正規化された定義と依存先の同一性にわたるダイジェスト）または値の denotation のダイジェストをテキストで返す。辞書が既に内部で持っている内容アドレスを、言語から観測できるようにする。同じダイジェストは同じもの、違うダイジェストは何も意味しない——この非対称は LANG.DICTIONARY.MUTATION が既に述べている。",
+        "syntax": "[ FOO ] 0 GET DIGEST",
+        "role": "Dictionary primitive: the content identity of a Word or a value.",
+        "stackEffect": "[ x ] -> [ digest ]"
+      },
+      "executorKey": "Digest",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 6,
+      "draftNote": "監査可能性の主張に直結する語。ハッシュ関数の選択は cost-discoverability-work-order-2026-08 の付録 A の判断に従う。"
+    },
+    {
+      "name": "CONTRACT",
+      "aliases": [],
+      "family": "control",
+      "category": "control",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "wordNotFound",
+        "reason": "missingField"
+      },
+      "errorWhen": [
+        "notASymbol"
+      ],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.CONTRACT.REGISTRY",
+        "LANG.CONTRACT.CHECK"
+      ],
+      "documentation": {
+        "summary": "語の登録済み契約（arity・消費・NIL 方針・投影理由・ERROR 条件・純粋性・コスト級）を Record で返す。機械可読契約という言語の中心資産を、初めて言語の中から読めるようにする。走らせる前に費用級を問えるという性質は、この語がなければ外部ツールだけのものだった。",
+        "hover": "CONTRACT — the registered contract of a Word, as a record",
+        "lookup": "語の登録済み契約（arity・消費・NIL 方針・投影理由・ERROR 条件・純粋性・コスト級）を Record で返す。機械可読契約という言語の中心資産を、初めて言語の中から読めるようにする。走らせる前に費用級を問えるという性質は、この語がなければ外部ツールだけのものだった。",
+        "syntax": "[ ADD ] 0 GET CONTRACT",
+        "role": "Control primitive: the registered contract of a Word, as a record.",
+        "stackEffect": "[ symbol ] -> [ record ]"
+      },
+      "executorKey": "Contract",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "kernel",
+      "draftStatus": "new",
+      "draftPhase": 6,
+      "draftNote": "COST を別語にしない理由がここにある——Record が返せるなら 'cost' AT で足りる。Record 導入が語を一つ節約した実例。"
+    },
+    {
+      "name": "PROBE",
+      "aliases": [],
+      "family": "control",
+      "category": "control",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "notExecutable"
+      ],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.SOURCE.CODE",
+        "LANG.CONTRACT.CHECK"
+      ],
+      "documentation": {
+        "summary": "コードを走らせずに、その契約を推論して Record で返す。現行は「knowledge」という名の構造を返しているが、CONTRACT と同じ形を返すべきである——同じ問いの静的な答えと登録済みの答えが違う形をしている理由はない。",
+        "hover": "PROBE — infer a contract without running the code",
+        "lookup": "コードを走らせずに、その契約を推論して Record で返す。現行は「knowledge」という名の構造を返しているが、CONTRACT と同じ形を返すべきである——同じ問いの静的な答えと登録済みの答えが違う形をしている理由はない。",
+        "syntax": "[ 1 2 ADD ] PROBE",
+        "role": "Control primitive: infer a contract without running the code.",
+        "stackEffect": "[ code ] -> [ record ]"
+      },
+      "executorKey": "Probe",
+      "effects": [],
+      "partiality": "partial",
+      "vocabularyTier": "kernel",
+      "draftStatus": "redefined",
+      "draftPhase": 6,
+      "draftNote": "再定義。CONTRACT と戻り値の形を揃える。検査三値（verified / cannot verify / violated）はその Record の一欄として表す。"
+    },
+    {
+      "name": "FORMAT",
+      "aliases": [],
+      "family": "output",
+      "category": "io",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "invalidCount"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.OBSERVATION.PROJECTIONS"
+      ],
+      "documentation": {
+        "summary": "厳密な値を、指定した桁数の十進テキストに整える。丸めが起きてよい唯一の場所を表示境界に確定させる語であり、「どこでも丸めない」という主張はこの語があって初めて閉じる——今は利用者が QUANTIZE で自前の丸めを値に対して行うしかない。",
+        "hover": "FORMAT — render an exact value as text at a stated precision",
+        "lookup": "厳密な値を、指定した桁数の十進テキストに整える。丸めが起きてよい唯一の場所を表示境界に確定させる語であり、「どこでも丸めない」という主張はこの語があって初めて閉じる——今は利用者が QUANTIZE で自前の丸めを値に対して行うしかない。",
+        "syntax": "1/3 5 FORMAT",
+        "role": "Output primitive: render an exact value as text at a stated precision.",
+        "stackEffect": "[ x ] [ digits ] -> [ text ]"
+      },
+      "executorKey": "Format",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 6,
+      "draftNote": "丸め方は half-even 固定。丸め方を選べるようにすると語が増える（QUANTIZE-* の 215 語時代の亡霊を繰り返さない）。"
+    },
+    {
+      "name": "JSON-DECODE",
+      "aliases": [],
+      "family": "text",
+      "category": "cast",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedJson",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.RECORDS.STRUCTURE"
+      ],
+      "documentation": {
+        "summary": "JSON テキストを値に変換する。オブジェクトは Record、配列は Vector、数は厳密な有理数になる。JSON の入れ子は深さが入力依存の再帰構造なので、この語はユーザー定義では絶対に書けない。壊れた入力は invalidEncoding を投影する。",
+        "hover": "JSON-DECODE — parse JSON text into values and records",
+        "lookup": "JSON テキストを値に変換する。オブジェクトは Record、配列は Vector、数は厳密な有理数になる。JSON の入れ子は深さが入力依存の再帰構造なので、この語はユーザー定義では絶対に書けない。壊れた入力は invalidEncoding を投影する。",
+        "syntax": "'{\"a\":1}' JSON-DECODE",
+        "role": "Text primitive: parse JSON text into values and records.",
+        "stackEffect": "[ text ] -> [ value ]"
+      },
+      "executorKey": "JsonDecode",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm",
+      "draftStatus": "new",
+      "draftPhase": 6,
+      "draftNote": "級A（書けない）。Record 領域（Phase 5）が前提。数は丸めずに厳密有理数へ——JSON の数値文法は Ajisai の数値文法の部分集合である。"
+    },
+    {
+      "name": "JSON-ENCODE",
+      "aliases": [],
+      "family": "text",
+      "category": "cast",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "noJsonImage",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.RECORDS.STRUCTURE"
+      ],
+      "documentation": {
+        "summary": "値を JSON テキストにする。十進で正確に書ける数（分母が 2^a·5^b）は JSON の数として、それ以外の厳密値は Ajisai の数値文法のテキストとして書く——1/3 を 0.333… に丸めて書くことはしない。Symbol のように JSON に像を持たない値は domainMiss を投影する。",
+        "hover": "JSON-ENCODE — render values and records as JSON text",
+        "lookup": "値を JSON テキストにする。十進で正確に書ける数（分母が 2^a·5^b）は JSON の数として、それ以外の厳密値は Ajisai の数値文法のテキストとして書く——1/3 を 0.333… に丸めて書くことはしない。Symbol のように JSON に像を持たない値は domainMiss を投影する。",
+        "syntax": "R JSON-ENCODE",
+        "role": "Text primitive: render values and records as JSON text.",
+        "stackEffect": "[ value ] -> [ text ]"
+      },
+      "executorKey": "JsonEncode",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm",
+      "draftStatus": "new",
+      "draftPhase": 6,
+      "draftNote": "この「厳密でない数は書かない」規則がないと、JSON 出力が言語唯一の黙った丸めになる。往復（DECODE∘ENCODE）が恒等になることを適合試験で押さえること。"
+    },
+    {
+      "name": "POW",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "domainExclusion",
+        "reason": [
+          "divisionByZero",
+          "domainMiss"
+        ]
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "厳密なべき乗。指数が整数なら結果は体の中に留まり、1/2 のときは SQRT と一致する。それ以外の有理指数・無理指数では Tier 2（計算可能実数）に落ちる。SQRT を特別扱いのまま残す理由はこれで消える。",
+        "hover": "POW — raise a base to an exact exponent",
+        "lookup": "厳密なべき乗。指数が整数なら結果は体の中に留まり、1/2 のときは SQRT と一致する。それ以外の有理指数・無理指数では Tier 2（計算可能実数）に落ちる。SQRT を特別扱いのまま残す理由はこれで消える。",
+        "syntax": "2 10 POW",
+        "role": "Math primitive: raise a base to an exact exponent.",
+        "stackEffect": "[ base ] [ exponent ] -> [ base^exponent ]"
+      },
+      "executorKey": "Pow",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "kernel",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "SQRT は体を作る語として残す（POW の糖衣にしない）。0 の負べきは divisionByZero、負の底に分数指数は domainMiss。"
+    },
+    {
+      "name": "GCD",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "nonInteger",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "二つの整数の最大公約数。ユークリッドの互除法は入力依存の反復であり、非再帰・全域の言語では書けない。整数でない引数には domainMiss を投影する。",
+        "hover": "GCD — greatest common divisor of two integers",
+        "lookup": "二つの整数の最大公約数。ユークリッドの互除法は入力依存の反復であり、非再帰・全域の言語では書けない。整数でない引数には domainMiss を投影する。",
+        "syntax": "12 18 GCD",
+        "role": "Math primitive: greatest common divisor of two integers.",
+        "stackEffect": "[ a ] [ b ] -> [ gcd ]"
+      },
+      "executorKey": "Gcd",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "級A（書けない）。厳密有理数の正規化で実装側は既に同じ計算を持っている——公開するだけで済む。"
+    },
+    {
+      "name": "RATIO",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "irrational",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "有理数を既約分数として分子・分母の 2 要素ベクトルに開く。厳密有理数を看板に掲げながら、その分子と分母を読む手段が今はない。無理数・Tier 2 の値には domainMiss を投影する。",
+        "hover": "RATIO — the numerator and denominator of a rational",
+        "lookup": "有理数を既約分数として分子・分母の 2 要素ベクトルに開く。厳密有理数を看板に掲げながら、その分子と分母を読む手段が今はない。無理数・Tier 2 の値には domainMiss を投影する。",
+        "syntax": "0.75 RATIO",
+        "role": "Math primitive: the numerator and denominator of a rational.",
+        "stackEffect": "[ x ] -> [ [ numerator denominator ] ]"
+      },
+      "executorKey": "Ratio",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "戻り値を Record にする案もあるが、2 要素ベクトルなら算術がそのまま持ち上がるのでベクトルを採る。"
+    },
+    {
+      "name": "EXP",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "自然指数関数。結果は Tier 2 の計算可能実数になる。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "hover": "EXP — the exponential function, as a budgeted computable real",
+        "lookup": "自然指数関数。結果は Tier 2 の計算可能実数になる。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "syntax": "1 EXP",
+        "role": "Math primitive: the exponential function, as a budgeted computable real.",
+        "stackEffect": "[ x ] -> [ y ]"
+      },
+      "executorKey": "Exp",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "Tier 2 の目撃者を PI 一つから増やす語。厳密エンクロージャ生成器（交代級数などの単調な包囲）と予算試験を語ごとに用意すること。"
+    },
+    {
+      "name": "LN",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "nonPositive",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "自然対数。0 以下の引数には domainMiss を投影する。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "hover": "LN — the natural logarithm, as a budgeted computable real",
+        "lookup": "自然対数。0 以下の引数には domainMiss を投影する。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "syntax": "10 LN",
+        "role": "Math primitive: the natural logarithm, as a budgeted computable real.",
+        "stackEffect": "[ x ] -> [ y ]"
+      },
+      "executorKey": "Ln",
+      "effects": [],
+      "partiality": "projecting",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "Tier 2 の目撃者を PI 一つから増やす語。厳密エンクロージャ生成器（交代級数などの単調な包囲）と予算試験を語ごとに用意すること。"
+    },
+    {
+      "name": "SIN",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "正弦。引数は radian。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "hover": "SIN — the sine, as a budgeted computable real",
+        "lookup": "正弦。引数は radian。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "syntax": "0 SIN",
+        "role": "Math primitive: the sine, as a budgeted computable real.",
+        "stackEffect": "[ x ] -> [ y ]"
+      },
+      "executorKey": "Sin",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "Tier 2 の目撃者を PI 一つから増やす語。厳密エンクロージャ生成器（交代級数などの単調な包囲）と予算試験を語ごとに用意すること。"
+    },
+    {
+      "name": "COS",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "余弦。引数は radian。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "hover": "COS — the cosine, as a budgeted computable real",
+        "lookup": "余弦。引数は radian。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "syntax": "0 COS",
+        "role": "Math primitive: the cosine, as a budgeted computable real.",
+        "stackEffect": "[ x ] -> [ y ]"
+      },
+      "executorKey": "Cos",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "Tier 2 の目撃者を PI 一つから増やす語。厳密エンクロージャ生成器（交代級数などの単調な包囲）と予算試験を語ごとに用意すること。"
+    },
+    {
+      "name": "ATAN",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "category": "math",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "逆正接。SIN/COS に逆関数を一つだけ添えるための語。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "hover": "ATAN — the arctangent, as a budgeted computable real",
+        "lookup": "逆正接。SIN/COS に逆関数を一つだけ添えるための語。 構築は定数時間で、費用は比較のときに予算として払う——Tier 2 の値は遅延した厳密包囲だからである。決められないときは UNKNOWN を返す（LANG.VALUES.EXACT）。",
+        "syntax": "1 ATAN",
+        "role": "Math primitive: the arctangent, as a budgeted computable real.",
+        "stackEffect": "[ x ] -> [ y ]"
+      },
+      "executorKey": "Atan",
+      "effects": [],
+      "partiality": "total",
+      "vocabularyTier": "standard",
+      "standardKind": "operational",
+      "draftStatus": "new",
+      "draftPhase": 7,
+      "draftNote": "Tier 2 の目撃者を PI 一つから増やす語。厳密エンクロージャ生成器（交代級数などの単調な包囲）と予算試験を語ごとに用意すること。"
+    }
+  ]
+}
