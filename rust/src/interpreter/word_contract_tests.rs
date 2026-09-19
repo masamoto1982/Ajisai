@@ -203,7 +203,7 @@ async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
         // literal, so `2 3 KEEP 4 ADD` leaves `2 3 4 7`.
         ("2 3 KEEP KEEP ADD", 0, 3),
         ("2 3 KEEP 4 ADD", 0, 4),
-        ("[ 1 2 ] KEEP SUM", 0, 2),
+        ("[ 1 2 ] KEEP LENGTH", 0, 2),
         // The modifier reaches exactly one Word: `2 3 KEEP ADD ADD` leaves `2 8`.
         ("2 3 KEEP ADD ADD", 0, 2),
         // Pending at the end of a body is a no-op, as it is at run time.

@@ -43,31 +43,30 @@ fn def_body_tokens_if_literal_precedes_def(
 /// leave identical `(value, role)` observations. A no-op for words not in the
 /// table (e.g. user words).
 pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
-    let hint: Option<Interpretation> = match word {
-        "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "QUANTIZE"
-        | "QUANTIZE-HALF-AWAY" | "QUANTIZE-FLOOR" | "QUANTIZE-CEIL" | "QUANTIZE-TRUNC" | "FOLD" => {
-            Some(Interpretation::RawNumber)
-        }
-        "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" => {
-            Some(Interpretation::Interval)
-        }
-        "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
-            Some(Interpretation::RawNumber)
-        }
-        "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT"
-        | "STARTS-WITH?" | "ENDS-WITH?" => Some(Interpretation::TruthValue),
-        "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
-        // `CONCAT` is deliberately absent: its result role depends on its
-        // operands (joining two Texts yields a Text), so `op_concat` pushes the
-        // slot role itself. Stamping `Unassigned` here is what made
-        // `'ab' 'c' CONCAT` render as `[ 97/1 98/1 99/1 ]` — the join was
-        // right, the role was thrown away.
-        "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "SORT" | "TAKE"
-        | "REORDER" | "SPLIT" | "COLLECT" | "FILL" | "TOKENIZE" | "CONSERVE" | "REFLECT" => {
-            Some(Interpretation::Unassigned)
-        }
-        _ => None,
-    };
+    let hint: Option<Interpretation> =
+        match word {
+            "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND"
+            | "QUANTIZE" | "QUANTIZE-HALF-AWAY" | "QUANTIZE-FLOOR" | "QUANTIZE-CEIL"
+            | "QUANTIZE-TRUNC" | "FOLD" => Some(Interpretation::RawNumber),
+            "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" => {
+                Some(Interpretation::Interval)
+            }
+            "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
+                Some(Interpretation::RawNumber)
+            }
+            "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT"
+            | "STARTS-WITH?" | "ENDS-WITH?" => Some(Interpretation::TruthValue),
+            "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
+            // `CONCAT` is deliberately absent: its result role depends on its
+            // operands (joining two Texts yields a Text), so `op_concat` pushes the
+            // slot role itself. Stamping `Unassigned` here is what made
+            // `'ab' 'c' CONCAT` render as `[ 97/1 98/1 99/1 ]` — the join was
+            // right, the role was thrown away.
+            "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "SORT" | "TAKE"
+            | "DROP" | "REORDER" | "SPLIT" | "COLLECT" | "FILL" | "TOKENIZE" | "CONSERVE"
+            | "REFLECT" => Some(Interpretation::Unassigned),
+            _ => None,
+        };
     if let Some(h) = hint {
         let len: usize = interp.stack.len();
         if len > 0 {

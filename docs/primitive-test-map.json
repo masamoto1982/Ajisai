@@ -7,7 +7,7 @@
     "primitives": 23,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 18,
-    "distinct_conformance_cases": 79
+    "distinct_conformance_cases": 88
   },
   "primitives": [
     {
@@ -133,17 +133,16 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 7,
+      "derived_word_count": 6,
       "law_test_count": 3,
-      "conformance_case_count": 7,
+      "conformance_case_count": 6,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
         "core.div",
         "core.mod",
         "core.mul",
-        "core.sub",
-        "core.sum"
+        "core.sub"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -156,8 +155,7 @@
         "core-exact-addition",
         "core-exact-division",
         "standard-mod",
-        "standard-sub",
-        "standard-sum"
+        "standard-sub"
       ]
     },
     {
@@ -213,10 +211,11 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
       "status": "accepted",
-      "derived_word_count": 6,
+      "derived_word_count": 7,
       "law_test_count": 5,
-      "conformance_case_count": 3,
+      "conformance_case_count": 6,
       "derived_words": [
+        "core.ceil",
         "core.exact-real.sqrt",
         "core.floor",
         "core.mod",
@@ -232,6 +231,9 @@
         "rust/tests/string_laws.rs"
       ],
       "conformance_cases": [
+        "standard-ceil",
+        "standard-ceil-lifts-over-a-vector",
+        "standard-ceil-of-an-integer-is-itself",
         "standard-mod",
         "standard-quantize",
         "standard-round"
@@ -350,12 +352,13 @@
       "algebraic_family": "bubble",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 15,
+      "derived_word_count": 16,
       "law_test_count": 4,
-      "conformance_case_count": 14,
+      "conformance_case_count": 17,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
+        "core.ceil",
         "core.div",
         "core.eq",
         "core.floor",
@@ -384,6 +387,9 @@
         "core-division-by-zero-is-nil",
         "core-exact-addition",
         "core-exact-division",
+        "standard-ceil",
+        "standard-ceil-lifts-over-a-vector",
+        "standard-ceil-of-an-integer-is-itself",
         "standard-gte",
         "standard-lte",
         "standard-mod",
@@ -400,12 +406,13 @@
       "status": "accepted",
       "derived_word_count": 23,
       "law_test_count": 6,
-      "conformance_case_count": 26,
+      "conformance_case_count": 32,
       "derived_words": [
         "core.all",
         "core.any",
         "core.collect",
         "core.concat",
+        "core.drop",
         "core.fill",
         "core.filter",
         "core.fold",
@@ -418,7 +425,6 @@
         "core.range",
         "core.reverse",
         "core.scan",
-        "core.sum",
         "core.take",
         "core.tally",
         "core.unique",
@@ -450,6 +456,12 @@
         "kernel-random",
         "standard-all",
         "standard-any",
+        "standard-drop",
+        "standard-drop-all-is-empty-vector",
+        "standard-drop-exceeds-length-projects",
+        "standard-drop-from-the-end",
+        "standard-drop-malformed-count-still-raises",
+        "standard-drop-zero-is-identity",
         "standard-fill",
         "standard-filter",
         "standard-group",
@@ -457,7 +469,7 @@
         "standard-order",
         "standard-put",
         "standard-sort",
-        "standard-sum",
+        "standard-take-and-drop-partition",
         "standard-tally",
         "standard-unique",
         "standard-zip"

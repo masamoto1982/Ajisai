@@ -116,6 +116,10 @@ async fn arithmetic_standards_have_kernel_only_witnesses() {
         ("7 3 MOD", "7 3 DIV FLOOR 3 MUL NEG 7 ADD"),
         ("-7 3 MOD", "-7 3 DIV FLOOR 3 MUL NEG -7 ADD"),
         ("5/2 ROUND", "5/2 1/2 ADD FLOOR"),
+        // CEIL is FLOOR reflected through zero: ceil(x) = -floor(-x).
+        ("7/3 CEIL", "7/3 NEG FLOOR NEG"),
+        ("-7/3 CEIL", "-7/3 NEG FLOOR NEG"),
+        ("3 CEIL", "3 NEG FLOOR NEG"),
         ("-5/2 ROUND", "-5/2 NEG 1/2 ADD FLOOR NEG"),
         // QUANTIZE is ROUND scaled by the denominator: round(x*d)/d. Written
         // in the Kernel the scaling is explicit, which is the point — the
@@ -170,6 +174,16 @@ async fn collection_standards_have_kernel_only_witnesses() {
             "[ 10 20 30 40 50 ] [ -2 ] TAKE",
             "[ 10 20 30 40 50 ] [ 3 ] GET [ 10 20 30 40 50 ] [ 4 ] GET 2 COLLECT",
         ),
+        // DROP is the other half of the same cut.
+        (
+            "[ 10 20 30 40 50 ] [ 3 ] DROP",
+            "[ 10 20 30 40 50 ] [ 3 ] GET [ 10 20 30 40 50 ] [ 4 ] GET 2 COLLECT",
+        ),
+        (
+            "[ 10 20 30 40 50 ] [ -2 ] DROP",
+            "[ 10 20 30 40 50 ] [ 0 ] GET [ 10 20 30 40 50 ] [ 1 ] GET \
+             [ 10 20 30 40 50 ] [ 2 ] GET 3 COLLECT",
+        ),
         // REVERSE reads the same indices in descending order.
         (
             "[ 1 2 3 ] REVERSE",
@@ -208,25 +222,6 @@ async fn text_standards_have_kernel_only_witnesses() {
             "'a,b,c' ',' TOKENIZE",
             "'a,b,c' CHARS [ 0 ] GET 'a,b,c' CHARS [ 2 ] GET \
              'a,b,c' CHARS [ 4 ] GET 3 COLLECT",
-        ),
-    ] {
-        equivalent(native, witness).await;
-    }
-}
-
-/// `SUM` is `0 { ADD } FOLD` — the same fold, given a name because it is the
-/// phrase every inner product, mean, variance, norm and loss is written with.
-/// Its Core slot is earned on frequency, not on power: the witness below is
-/// exactly the four tokens it replaces.
-#[tokio::test]
-async fn sum_is_the_addition_fold() {
-    for (native, witness) in [
-        ("[ 1 2 3 4 ] SUM", "[ 1 2 3 4 ] 0 [ ADD ] FOLD"),
-        ("[ ] SUM", "[ ] 0 [ ADD ] FOLD"),
-        ("[ 1/2 1/3 ] SUM", "[ 1/2 1/3 ] 0 [ ADD ] FOLD"),
-        (
-            "[ [ 1 2 ] [ 3 4 ] ] SUM",
-            "[ [ 1 2 ] [ 3 4 ] ] 0 [ ADD ] FOLD",
         ),
     ] {
         equivalent(native, witness).await;

@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **66 Words**, of which **36** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **67 Words**, of which **36** form the Semantic Kernel and **31** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -264,6 +264,20 @@ Round toward negative infinity.
 - **Syntax:** `[ 7/3 ] FLOOR`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
+## `CEIL`
+
+Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.
+
+- **Vocabulary tier:** Standard (`shorthand`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `[ 7/3 ] CEIL`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+
 ## `ROUND`
 
 Round to nearest integer (half-up).
@@ -431,6 +445,20 @@ Take the first N or last -N elements of a vector. A count larger than the vector
 - **Syntax:** `[ 1 2 3 4 5 ] [ 3 ] TAKE`
 - **ERROR conditions:** `nonVector`, `invalidCount`
 
+## `DROP`
+
+Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+
+- **Vocabulary tier:** Standard (`namedPattern`)
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: indexOutOfBounds → indexOutOfBounds
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 4 5 ] [ 2 ] DROP`
+- **ERROR conditions:** `nonVector`, `invalidCount`
+
 ## `CONCAT`
 
 Flatten and concatenate two vectors.
@@ -570,20 +598,6 @@ Bundle equal-length vectors position by position; a matrix transposes.
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] ZIP`
 - **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
-
-## `SUM`
-
-Fold the outermost axis with ADD; the empty vector sums to zero.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] SUM`
-- **ERROR conditions:** `nonVector`, `nonNumeric`
 
 ## `PUT`
 

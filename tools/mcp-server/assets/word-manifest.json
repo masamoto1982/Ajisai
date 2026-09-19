@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 66,
+    "canonicalWords": 67,
     "semanticKernelWords": 36,
-    "standardWords": 30,
-    "corewords": 66,
+    "standardWords": 31,
+    "corewords": 67,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 87
+    "manifestEntries": 88
   },
   "entries": [
     {
@@ -361,6 +361,24 @@
       "classification": "Core"
     },
     {
+      "id": "core.ceil",
+      "kind": "coreword",
+      "surface": "CEIL",
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "CEIL",
+      "coverage_entry_id": "core.ceil",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.round",
       "kind": "coreword",
       "surface": "ROUND",
@@ -573,6 +591,23 @@
       "classification": "Core"
     },
     {
+      "id": "core.drop",
+      "kind": "coreword",
+      "surface": "DROP",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "DROP",
+      "coverage_entry_id": "core.drop",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.concat",
       "kind": "coreword",
       "surface": "CONCAT",
@@ -745,24 +780,6 @@
       "derived_from": [
         "algebra.structure-lift.zip",
         "algebra.structure-lift.indexed-sequence"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.sum",
-      "kind": "coreword",
-      "surface": "SUM",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "SUM",
-      "coverage_entry_id": "core.sum",
-      "semantic_role": "Derived",
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.bihomographic"
       ],
       "classification": "Core"
     },

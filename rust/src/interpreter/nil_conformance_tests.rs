@@ -41,8 +41,6 @@ fn reason_of(v: &Value) -> Option<NilReason> {
 enum NilClass {
     /// Any NIL operand collapses the result to NIL (arithmetic, comparison).
     BinaryBlanket,
-    /// Unary word: NIL operand yields NIL.
-    UnaryNil,
     /// AND/OR/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
     ThreeValAnd,
     ThreeValOr,
@@ -61,8 +59,7 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
-    ("SUM", NilClass::UnaryNil),
-    // MOD / FLOOR / ROUND create NIL on a domain miss and are covered
+    // MOD / FLOOR / CEIL / ROUND create NIL on a domain miss and are covered
     // by projecting_word_set_matches_registry.
     // The comparison words (EQ/NEQ/LT/LTE/GT/GTE) are PassthroughThenProject,
     // not pure Passthrough — a Tier 2 pair can exhaust its comparison budget
@@ -109,7 +106,7 @@ fn core_passthrough_completeness() {
             .find(|m| &m.name == name)
             .unwrap_or_else(|| panic!("classified word `{name}` is not registered"));
         let want = match class {
-            NilClass::BinaryBlanket | NilClass::UnaryNil => NilPolicy::Passthrough,
+            NilClass::BinaryBlanket => NilPolicy::Passthrough,
             _ => NilPolicy::KleeneAbsorbing,
         };
         assert_eq!(
@@ -121,7 +118,7 @@ fn core_passthrough_completeness() {
 }
 
 #[tokio::test]
-async fn passthrough_blanket_and_unary_collapse_to_nil() {
+async fn passthrough_blanket_collapses_to_nil() {
     for (name, class) in CORE_PASSTHROUGH {
         match class {
             NilClass::BinaryBlanket => {
@@ -135,12 +132,6 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
                     assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
                     assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
                 }
-            }
-            NilClass::UnaryNil => {
-                let code = format!("NIL {name}");
-                let stack = run_ok(&code).await;
-                assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
-                assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
             }
             // Not a blanket collapse; see `kleene_truth_conformance_tests`.
             NilClass::ThreeValAnd
@@ -163,9 +154,9 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABS", "DIV", "EQ", "FILL", "FLOOR", "GET", "GT", "GTE", "INDEX-OF", "LT", "LTE", "MAX",
-    "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "PUT", "QUANTIZE", "RANDOM", "RANGE",
-    "ROUND", "SORT", "SQRT", "STR", "TAKE",
+    "ABS", "CEIL", "DIV", "DROP", "EQ", "FILL", "FLOOR", "GET", "GT", "GTE", "INDEX-OF", "LT",
+    "LTE", "MAX", "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "PUT", "QUANTIZE", "RANDOM",
+    "RANGE", "ROUND", "SORT", "SQRT", "STR", "TAKE",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a

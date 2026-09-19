@@ -68,7 +68,7 @@ fn changing_only_the_limit_profile_changes_the_receipt() {
 fn resource_usage_is_reproducible_across_repeated_runs() {
     for source in [
         "1 2 ADD",
-        "[ 1 2 3 4 5 ] SUM",
+        "[ 1 2 3 4 5 ] 0 [ ADD ] FOLD",
         "[ 1 2 3 ] [ 4 5 6 ] ADD",
         "2 SQRT 2 SQRT ADD",
         "1000000000000000000000 7 MUL",

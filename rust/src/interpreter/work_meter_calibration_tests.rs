@@ -105,7 +105,7 @@ mod work_meter_calibration_tests {
         for source in [
             "1 3 /",
             "0.1 0.2 +",
-            "[ 0 999 ] RANGE SUM",
+            "[ 0 999 ] RANGE 0 [ ADD ] FOLD",
             "[ 1 2 3 ] [ 4 5 6 ] *",
             "2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *",
         ] {

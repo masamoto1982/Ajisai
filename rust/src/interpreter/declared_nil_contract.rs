@@ -59,7 +59,7 @@ enum NilContract {
 /// the last two are about operand shape at all, and which of those two
 /// applies depends on *which* operand position is NIL). A new `rejectNil`
 /// Word needs an arm added here — `declared_nil_contract_tests` pins the
-/// current 13 so a missing arm is a compile error, not a silent fallback to
+/// current 14 so a missing arm is a compile error, not a silent fallback to
 /// `structureError`.
 fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
     match (word_name, offset) {
@@ -97,6 +97,13 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
         ),
         ("TAKE", 1) => {
             AjisaiError::declared("invalidCount", "TAKE: expected an integer count, got NIL")
+        }
+        ("DROP", 0) => AjisaiError::declared(
+            "nonVector",
+            "expected a Vector, got a non-vector value",
+        ),
+        ("DROP", 1) => {
+            AjisaiError::declared("invalidCount", "DROP: expected an integer count, got NIL")
         }
         ("TOKENIZE", 0) => {
             AjisaiError::declared("nonText", "TOKENIZE: expected String, got Nil")
@@ -271,12 +278,13 @@ mod declared_nil_contract_tests {
                 checked += 1;
             }
         }
-        // The 13 fixed-arity `rejectNil` Words this table was built against
-        // (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 1):
-        // LENGTH, REVERSE, CHARS, JOIN, TRIM, EXEC, PROBE, DEL (1 operand
-        // each) and RANDOM, CONCAT, TAKE, TOKENIZE, DEF (2 each) — 8 + 10.
+        // The 14 fixed-arity `rejectNil` Words this table was built against
+        // (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 1, plus
+        // DROP from the vocabulary-100 work order's Phase 1): LENGTH,
+        // REVERSE, CHARS, JOIN, TRIM, EXEC, PROBE, DEL (1 operand each) and
+        // RANDOM, CONCAT, TAKE, DROP, TOKENIZE, DEF (2 each) — 8 + 12.
         assert_eq!(
-            checked, 18,
+            checked, 20,
             "the set of fixed-arity rejectNil Words changed; update nil_rejection_error"
         );
     }
