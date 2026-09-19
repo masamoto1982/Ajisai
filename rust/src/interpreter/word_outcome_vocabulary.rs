@@ -370,15 +370,14 @@ pub(crate) fn outcome_vocabulary_for_word(
                 // check LANG.DICTIONARY.ACYCLIC's termination argument rests
                 // on. Every reachable Word is now named by a `Token::Symbol`
                 // somewhere, so the arm above carries the whole call graph.
-                Token::String(text) => {
+                Token::String(text)
                     if interp
                         .resolve_word_entry(&crate::core_word_aliases::canonicalize_core_word_name(
                             text,
                         ))
-                        .is_some()
-                    {
-                        outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
-                    }
+                        .is_some() =>
+                {
+                    outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
                 }
                 _ => {}
             }
