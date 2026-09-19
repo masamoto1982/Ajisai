@@ -24813,6 +24813,83 @@
       "outcome": "value"
     },
     {
+      "word": "CEIL",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "CEIL",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
       "word": "ROUND",
       "inputs": [
         "scalarOne"
@@ -31011,6 +31088,974 @@
       "outcome": "value"
     },
     {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarOne",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "nil:indexOutOfBounds"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "nil:indexOutOfBounds"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "nil:indexOutOfBounds"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "error:nonVector"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "nil:indexOutOfBounds"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "DROP",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
       "word": "CONCAT",
       "inputs": [
         "scalarOne",
@@ -32593,83 +33638,6 @@
         "codeBlock"
       ],
       "outcome": "error:nonVector"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "scalarOne"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "SUM",
-      "inputs": [
-        "codeBlock"
-      ],
-      "outcome": "value"
     },
     {
       "word": "PUT",

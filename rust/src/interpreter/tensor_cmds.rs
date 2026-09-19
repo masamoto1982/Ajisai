@@ -118,6 +118,15 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     apply_unary_math(interp, |f| f.floor(), |er| er.floor(), "FLOOR")
 }
 
+/// `CEIL` is `FLOOR`'s counterpart: the same integer projection, toward
+/// positive infinity. `Fraction::ceil` and `ExactReal::ceil` already existed
+/// beside their `floor`s, so the Word is the one line that names them; a
+/// Kernel-only `NEG FLOOR NEG` says the same thing in three tokens, which is
+/// why it is a Standard shorthand rather than a Kernel Word.
+pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
+    apply_unary_math(interp, |f| f.ceil(), |er| er.ceil(), "CEIL")
+}
+
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
 }

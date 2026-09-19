@@ -9,7 +9,7 @@ mod tests;
 mod tests_modes;
 
 pub use position::op_get;
-pub use quantity::{op_length, op_take};
+pub use quantity::{op_drop, op_length, op_take};
 pub use structure::{op_collect, op_concat, op_range, op_reverse};
 
 use crate::types::Value;

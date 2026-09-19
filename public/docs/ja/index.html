@@ -1186,7 +1186,7 @@
                         <li><strong>符号操作</strong>: <code>ABS</code>(絶対値)、<code>NEG</code>(符号反転)</li>
                         <li><strong>極値</strong>: <code>MIN</code>(最小値)、<code>MAX</code>(最大値)</li>
                         <li><strong>平方根</strong>: <code>SQRT</code></li>
-                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)</li>
+                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>CEIL</code>(切り上げ)、<code>ROUND</code>(四捨五入)</li>
                         <li><strong>量子化</strong>: <code>QUANTIZE</code>は<code>1/d</code>の最も近い倍数に丸めます。ループ処理や反復計算での使用に適したワードです。詳しくは<a href="#iterative">反復のコスト</a>を参照してください。</li>
                     </ul>
                     <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">NILの規則</a>を参照してください。</p>
@@ -1615,7 +1615,7 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。</p>
+                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。</p>
 
                     <h3 id="ordering">順序付け、計数、形状</h3>
                     <p>ベクトル全体を一度に見る必要がある操作は、7つのワードでカバーされます。そのそれぞれは、他の語彙だけを使って書き下すこともできますが、書き下すと漸近的に高いコストがかかります。それだけが、これらがワードとして存在する理由です。</p>
@@ -1629,7 +1629,6 @@
                                 <tr><td><code>UNIQUE</code></td><td><code>[ 'b' 'a' 'b' ] UNIQUE</code></td><td class="notes"><code>[ 'b' 'a' ]</code> — 重複のない値。最初の出現順</td></tr>
                                 <tr><td><code>TALLY</code></td><td><code>[ 'b' 'a' 'b' ] TALLY</code></td><td class="notes"><code>[ 2/1 1/1 ]</code> — 件数。<code>UNIQUE</code>の並びに揃う</td></tr>
                                 <tr><td><code>ZIP</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] ZIP</code></td><td class="notes"><code>[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]</code> — 位置ごとの束ね直し。これは転置でもある</td></tr>
-                                <tr><td><code>SUM</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] SUM</code></td><td class="notes"><code>[ 4/1 6/1 ]</code> — 外側の軸を<code>ADD</code>で畳み込む</td></tr>
                                 <tr><td><code>PUT</code></td><td><code>[ 1 2 3 ] 1 9 PUT</code></td><td class="notes"><code>[ 1/1 9/1 3/1 ]</code> — 1つの位置を置き換える。負のインデックスは末尾から数える</td></tr>
                                 <tr><td><code>GROUP</code></td><td><code>[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP</code></td><td class="notes"><code>[ [ 1/1 3/1 ] [ 2/1 ] ]</code> — キーごとに束ねた値。キーは<code>UNIQUE</code>の順序に従う</td></tr>
                             </tbody>
@@ -2444,8 +2443,8 @@ FILTER</code></td>
 
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は66個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この66個のワードは、<strong>37語のSemantic Kernel</strong>と<strong>29語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。66個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は67個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この67個のワードは、<strong>36語のSemantic Kernel</strong>と<strong>31語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。67個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -2552,7 +2551,7 @@ FILTER</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は66個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は67個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2563,15 +2562,15 @@ FILTER</code></td>
                                 <tr>
                                     <td><code>[ 1 2 3 4 ] 1 [ MUL ] FOLD</code></td>
                                     <td><code>24/1</code></td>
-                                    <td class="notes">積。和には専用のワード<code>SUM</code>があり、同じ<code>FOLD</code>の形で<code>MIN</code>や<code>MAX</code>を使えば極値になる。</td>
+                                    <td class="notes">積。和は<code>0 [ ADD ] FOLD</code>であり、同じ<code>FOLD</code>の形で<code>MIN</code>や<code>MAX</code>を使えば極値になる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] MUL SUM</code></td>
+                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] MUL 0 [ ADD ] FOLD</code></td>
                                     <td><code>32/1</code></td>
                                     <td class="notes">内積：要素ごとに掛けてから合計する。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A [ V MUL SUM ] MAP</code></td>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] 'A' BIND [ 5 6 ] 'V' BIND<br>A [ V MUL 0 [ ADD ] FOLD ] MAP</code></td>
                                     <td><code>[ 17/1 39/1 ]</code></td>
                                     <td class="notes">行列とベクトルの積：行ごとに1つの内積。</td>
                                 </tr>
@@ -2581,7 +2580,7 @@ FILTER</code></td>
                                     <td class="notes">argmin：昇順の最初の位置。代わりに<code>[ -1 ] GET</code>を使えばargmaxになる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS SUM XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL SUM XS LENGTH DIV</code></td>
+                                    <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS 0 [ ADD ] FOLD XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL 0 [ ADD ] FOLD XS LENGTH DIV</code></td>
                                     <td><code>2/1</code></td>
                                     <td class="notes">分散：中心化し、二乗し、平均する。標準偏差はさらに<code>SQRT</code>を1回。</td>
                                 </tr>

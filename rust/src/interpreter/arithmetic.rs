@@ -656,55 +656,6 @@ where
     Ok(())
 }
 
-/// `a + b` as a value, with no stack involved.
-///
-/// The same schema, NIL rule and broadcast the `ADD` Word applies, factored out
-/// so `SUM` folds with exactly the addition `0 { ADD } FOLD` would have used
-/// rather than a second, nearly-identical one.
-/// `a + b`, charged and bounded on the interpreter's meter.
-///
-/// `SUM` is a fold, so it is the one Word whose whole job is to accumulate —
-/// and it was the one route that could not be metered, because the value-level
-/// helper it folds with had no interpreter to charge against. A summation over
-/// a vector of wide rationals grew without any ceiling naming itself.
-pub(crate) fn add_values_metered(interp: &mut Interpreter, a: &Value, b: &Value) -> Result<Value> {
-    if a.is_nil() {
-        return Ok(a.clone());
-    }
-    if b.is_nil() {
-        return Ok(b.clone());
-    }
-    charge_binary_schema(
-        interp,
-        ExactArithmeticSchema::Add,
-        measure_operand(a),
-        measure_operand(b),
-    )?;
-    let result = add_values(a, b)?;
-    check_result_size(interp, &result)?;
-    Ok(result)
-}
-
-pub(crate) fn add_values(a: &Value, b: &Value) -> Result<Value> {
-    if a.is_nil() {
-        return Ok(a.clone());
-    }
-    if b.is_nil() {
-        return Ok(b.clone());
-    }
-    let schema = ExactArithmeticSchema::Add;
-    // Irrational lanes cannot cross the rational `FlatTensor` broadcast, so
-    // they take the exact-real route, exactly as the Word does.
-    if matches!(a.data, ValueData::ExactScalar(_))
-        || matches!(b.data, ValueData::ExactScalar(_))
-        || value_contains_exact_scalar(a)
-        || value_contains_exact_scalar(b)
-    {
-        return apply_exact_real_recursive_broadcast(a, b, schema);
-    }
-    apply_binary_broadcast_with_metrics(a, b, |x, y| schema.fraction(x, y), None)
-}
-
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
     apply_exact_arithmetic_schema(interp, ExactArithmeticSchema::Add)
 }

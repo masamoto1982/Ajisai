@@ -394,7 +394,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] SUM"
+    "source": "[ 1 2 3 4 ] 0 [ ADD ] FOLD"
    },
    "expect": {
     "/status": "ok",

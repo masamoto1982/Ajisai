@@ -2457,7 +2457,67 @@ W</pre>
 <section class="ajisai-case" id="standard-unique" data-category="core"><h3>UNIQUE</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] UNIQUE</pre><pre class="ajisai-expect-result">[ 'b' 'a' 'c' ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-tally" data-category="core"><h3>TALLY</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] TALLY</pre><pre class="ajisai-expect-result">[ 2/1 1/1 1/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-zip" data-category="core"><h3>ZIP</h3><pre class="ajisai-source">[ [ 1 2 3 ] [ 4 5 6 ] ] ZIP</pre><pre class="ajisai-expect-result">[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-sum" data-category="core"><h3>SUM</h3><pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] SUM</pre><pre class="ajisai-expect-result">[ 4/1 6/1 ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-ceil" data-category="core">
+  <h3>CEIL rounds toward positive infinity, from either side of zero</h3>
+  <pre class="ajisai-source">7/3 CEIL -7/3 CEIL</pre>
+  <pre class="ajisai-expect-result">3/1 -2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-ceil-of-an-integer-is-itself" data-category="core">
+  <h3>CEIL leaves an integer where it is</h3>
+  <pre class="ajisai-source">4 CEIL</pre>
+  <pre class="ajisai-expect-result">4/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-ceil-lifts-over-a-vector" data-category="core">
+  <h3>CEIL applies element-wise, as FLOOR does</h3>
+  <pre class="ajisai-source">[ 1/2 -1/2 ] CEIL</pre>
+  <pre class="ajisai-expect-result">[ 1/1 0/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-drop" data-category="core">
+  <h3>DROP answers everything after the first N</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 ] DROP</pre>
+  <pre class="ajisai-expect-result">[ 3/1 4/1 5/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-drop-from-the-end" data-category="core">
+  <h3>A negative count drops from the end</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ -2 ] DROP</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-drop-zero-is-identity" data-category="core">
+  <h3>DROP 0 is the vector itself, and does not project</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] DROP</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-drop-all-is-empty-vector" data-category="core">
+  <h3>Dropping the whole length leaves the empty vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 3 ] DROP</pre>
+  <pre class="ajisai-expect-result">[ ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-drop-exceeds-length-projects" data-category="core">
+  <h3>DROP beyond the vector length projects to NIL, as TAKE does</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] DROP NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-drop-malformed-count-still-raises" data-category="core">
+  <h3>A count that is not a count at all is still an error</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 'x' ] DROP</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">DROP: expected an integer count</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-take-and-drop-partition" data-category="core">
+  <h3>TAKE and DROP are the two halves of one cut</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 ] TAKE [ 1 2 3 4 5 ] [ 2 ] DROP CONCAT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 5/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 <section class="ajisai-case" id="standard-put" data-category="core"><h3>PUT</h3><pre class="ajisai-source">[ 1 2 3 ] 1 9 PUT</pre><pre class="ajisai-expect-result">[ 1/1 9/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="kernel-random" data-category="core"><h3>RANDOM draws the same exact rationals for the same seed</h3><pre class="ajisai-source">7 3 RANDOM</pre><pre class="ajisai-expect-result">[ 3344595609062871/9007199254740992 861149483440519/2251799813685248 3413160536610049/4503599627370496 ]</pre><div class="ajisai-expect-effects"></div></section>

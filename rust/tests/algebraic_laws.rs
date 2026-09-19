@@ -173,8 +173,14 @@ fn mod_floor_remainder_examples() {
 fn integer_projection_examples() {
     assert_law("floor-positive", "7 3 DIV FLOOR", "2");
     assert_law("floor-negative", "-7 3 DIV FLOOR", "-3");
-    assert_law("derived-ceil-positive", "7 3 DIV NEG FLOOR NEG", "3");
-    assert_law("derived-ceil-negative", "-7 3 DIV NEG FLOOR NEG", "-2");
+    assert_law("ceil-positive", "7 3 DIV CEIL", "3");
+    assert_law("ceil-negative", "-7 3 DIV CEIL", "-2");
+    assert_law(
+        "ceil-is-reflected-floor",
+        "7 3 DIV CEIL",
+        "7 3 DIV NEG FLOOR NEG",
+    );
+    assert_law("ceil-of-integer", "4 CEIL", "4");
     assert_law("round-positive-half", "5 2 DIV ROUND", "3");
     assert_law("round-negative-half", "-5 2 DIV ROUND", "-3");
 }

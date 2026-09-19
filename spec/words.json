@@ -969,6 +969,60 @@
       "vocabularyTier": "kernel"
     },
     {
+      "name": "CEIL",
+      "aliases": [],
+      "family": "exactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.",
+        "hover": "CEIL — round toward positive infinity",
+        "lookup": "Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.",
+        "syntax": "[ 7/3 ] CEIL",
+        "role": "Arithmetic primitive: Round toward positive infinity.",
+        "stackEffect": "[ x ] -> [ ceil x ]"
+      },
+      "executorKey": "Ceil",
+      "effects": [],
+      "partiality": "projecting",
+      "category": "arithmetic",
+      "vocabularyTier": "standard",
+      "standardKind": "shorthand"
+    },
+    {
       "name": "ROUND",
       "aliases": [],
       "family": "exactArithmetic",
@@ -1607,6 +1661,60 @@
       "standardKind": "namedPattern"
     },
     {
+      "name": "DROP",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "indexOutOfBounds",
+        "reason": "indexOutOfBounds"
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidCount"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "hover": "DROP — drop N elements from start or end",
+        "lookup": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "syntax": "[ 1 2 3 4 5 ] [ 2 ] DROP",
+        "role": "Vector primitive: Drop the first N or last -N elements of a vector.",
+        "stackEffect": "[ vec ] [ n ] -> [ rest ]"
+      },
+      "executorKey": "Drop",
+      "effects": [],
+      "partiality": "projecting",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "namedPattern"
+    },
+    {
       "name": "CONCAT",
       "aliases": [],
       "family": "collection",
@@ -2141,61 +2249,6 @@
       "category": "vector",
       "vocabularyTier": "standard",
       "standardKind": "operational"
-    },
-    {
-      "name": "SUM",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthrough",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "nonNumeric"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "linear",
-          "exact": true
-        },
-        "collection": {
-          "class": "const",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Fold the outermost axis with ADD; the empty vector sums to zero.",
-        "hover": "Fold the outermost axis with ADD; the empty vector sums to zero.",
-        "lookup": "Fold the outermost axis with ADD; the empty vector sums to zero.",
-        "syntax": "[ 1 2 3 ] SUM",
-        "role": "The reduction every inner product, mean, variance and loss is written with.",
-        "stackEffect": "[ vec ] -> [ total ]"
-      },
-      "executorKey": "Sum",
-      "effects": [],
-      "partiality": "total",
-      "acceptedDomain": "numeric",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "standardKind": "shorthand"
     },
     {
       "name": "PUT",

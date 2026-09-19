@@ -40,6 +40,56 @@ fn compute_take_bounds(len: usize, count: i64) -> Option<(usize, usize)> {
     }
 }
 
+/// The slice `DROP` answers with: everything `TAKE` would not have, on the
+/// same count over the same Vector. So the two agree about the one thing they
+/// share — when a count names a position past the end — because they read it
+/// from the same place.
+fn compute_drop_bounds(len: usize, count: i64) -> Option<(usize, usize)> {
+    compute_take_bounds(len, count).map(
+        |(start, end)| {
+            if count < 0 {
+                (0, start)
+            } else {
+                (end, len)
+            }
+        },
+    )
+}
+
+/// Which half of the split a count addresses: `TAKE` answers the addressed
+/// prefix (or suffix), `DROP` answers the rest.
+#[derive(Clone, Copy)]
+enum Split {
+    Take,
+    Drop,
+}
+
+impl Split {
+    fn name(self) -> &'static str {
+        match self {
+            Split::Take => "TAKE",
+            Split::Drop => "DROP",
+        }
+    }
+
+    fn bounds(self, len: usize, count: i64) -> Option<(usize, usize)> {
+        match self {
+            Split::Take => compute_take_bounds(len, count),
+            Split::Drop => compute_drop_bounds(len, count),
+        }
+    }
+
+    /// How many elements the answer copies out of a Vector of `len`: the
+    /// addressed count for `TAKE`, the remainder for `DROP`. Clamped here only
+    /// for pricing; `bounds` still decides whether an over-long count projects.
+    fn copied(self, len: usize, wanted: usize) -> usize {
+        match self {
+            Split::Take => wanted.min(len),
+            Split::Drop => len.saturating_sub(wanted),
+        }
+    }
+}
+
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -83,6 +133,18 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
+    split_by_count(interp, Split::Take)
+}
+
+pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
+    split_by_count(interp, Split::Drop)
+}
+
+/// `TAKE` and `DROP` are one Word up to which side of the cut they answer
+/// with, so they are one executor: same operand reading, same `invalidCount`
+/// on a count that is not an integer, same projection past the end.
+fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
+    let word = split.name();
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let count = match extract_integer_from_value(&count_val) {
@@ -93,7 +155,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(count_val);
             return Err(AjisaiError::declared(
                 "invalidCount",
-                format!("TAKE: expected an integer count, got {}", got),
+                format!("{word}: expected an integer count, got {got}"),
             ));
         }
         Err(e) => {
@@ -102,14 +164,13 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // Priced on the prefix `TAKE` will copy, not on the vector it was handed:
-    // taking 100 elements out of 100,000 copies 100 of them. The count is
-    // clamped here only for pricing; `compute_take_bounds` still decides
-    // whether an over-long count is an error.
+    // Priced on what the answer copies, not on the vector it was handed:
+    // taking 100 elements out of 100,000 copies 100 of them, and dropping 100
+    // copies the other 99,900.
     let wanted = count.unsigned_abs() as usize;
-    if let Err(e) =
-        crate::interpreter::collection_meter::charge_stacktop_copy(interp, |len| wanted.min(len))
-    {
+    if let Err(e) = crate::interpreter::collection_meter::charge_stacktop_copy(interp, |len| {
+        split.copied(len, wanted)
+    }) {
         interp.stack.push(count_val);
         return Err(e);
     }
@@ -117,7 +178,8 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     let result =
         with_stacktop_vector_target_with_arg(interp, &count_val, is_keep_mode, |vector_val| {
             let elements = extract_vector_elements(vector_val);
-            Ok(compute_take_bounds(elements.len(), count)
+            Ok(split
+                .bounds(elements.len(), count)
                 .map(|(start, end)| Value::from_vector(elements[start..end].to_vec()))
                 .unwrap_or_else(|| {
                     Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)

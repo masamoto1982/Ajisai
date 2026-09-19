@@ -18,14 +18,14 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 65 Words are:
+reaching for it exactly where it would have helped. The 67 Words are:
 
 | you need | Words |
 |---|---|
-| arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `SUM` `RANDOM` |
+| arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `CEIL` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `RANDOM` |
 | comparison and logic | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` · `AND` `OR` `NOT` `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
-| collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
+| collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `ANY` `ALL` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
 | absence | `NIL` `NIL?` `NIL-REASON` |

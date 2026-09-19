@@ -73,6 +73,34 @@ proptest! {
         assert_law("take-full", &format!("{v} {n} TAKE"), &v);
     }
 
+    /// `DROP 0` is the identity, and `DROP n` of the whole length is empty.
+    #[test]
+    fn drop_none_is_identity_and_drop_all_is_empty(xs in vec_ne()) {
+        let v = vlit(&xs);
+        let n = xs.len();
+        assert_law("drop-none", &format!("{v} 0 DROP"), &v);
+        assert_law("drop-all", &format!("{v} {n} DROP"), "[ ]");
+    }
+
+    /// `TAKE k` and `DROP k` are the two halves of one cut: joined back with
+    /// `CONCAT` they give the Vector they were cut from, for every `k` in
+    /// range and from either end.
+    #[test]
+    fn take_and_drop_partition_the_vector(xs in vec_ne(), k in 0usize..=6) {
+        let v = vlit(&xs);
+        let k = k.min(xs.len());
+        assert_law(
+            "take-drop-partition",
+            &format!("{v} {k} TAKE {v} {k} DROP CONCAT"),
+            &v,
+        );
+        assert_law(
+            "drop-take-partition-from-the-end",
+            &format!("{v} -{k} DROP {v} -{k} TAKE CONCAT"),
+            &v,
+        );
+    }
+
 }
 
 // ── Free-monoid laws of CONCAT / REVERSE (fixed operands) ──

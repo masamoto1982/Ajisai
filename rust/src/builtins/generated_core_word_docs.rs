@@ -174,6 +174,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 7/3 ] FLOOR",
     },
     GeneratedCoreWordDoc {
+        name: "CEIL",
+        category: "arithmetic",
+        summary: "Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.",
+        role: "Arithmetic primitive: Round toward positive infinity.",
+        stack_effect: "[ x ] -> [ ceil x ]",
+        hover_summary: "CEIL — round toward positive infinity",
+        hover_syntax: "[ 7/3 ] CEIL",
+    },
+    GeneratedCoreWordDoc {
         name: "ROUND",
         category: "arithmetic",
         summary: "Round to nearest integer (half-up).",
@@ -282,6 +291,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
     },
     GeneratedCoreWordDoc {
+        name: "DROP",
+        category: "vector",
+        summary: "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        role: "Vector primitive: Drop the first N or last -N elements of a vector.",
+        stack_effect: "[ vec ] [ n ] -> [ rest ]",
+        hover_summary: "DROP — drop N elements from start or end",
+        hover_syntax: "[ 1 2 3 4 5 ] [ 2 ] DROP",
+    },
+    GeneratedCoreWordDoc {
         name: "CONCAT",
         category: "vector",
         summary: "Flatten and concatenate two vectors.",
@@ -370,15 +388,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         stack_effect: "[ [ vec... ] ] -> [ [ tuple... ] ]",
         hover_summary: "Bundle equal-length vectors position by position; a matrix transposes.",
         hover_syntax: "[ [ 1 2 ] [ 3 4 ] ] ZIP",
-    },
-    GeneratedCoreWordDoc {
-        name: "SUM",
-        category: "arithmetic",
-        summary: "Fold the outermost axis with ADD; the empty vector sums to zero.",
-        role: "The reduction every inner product, mean, variance and loss is written with.",
-        stack_effect: "[ vec ] -> [ total ]",
-        hover_summary: "Fold the outermost axis with ADD; the empty vector sums to zero.",
-        hover_syntax: "[ 1 2 3 ] SUM",
     },
     GeneratedCoreWordDoc {
         name: "PUT",

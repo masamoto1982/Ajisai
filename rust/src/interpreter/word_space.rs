@@ -97,12 +97,12 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         True | False | Nil | Pi => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse => (Linear, true),
-        Take | Collect => (Linear, false),
+        Take | Drop | Collect => (Linear, false),
         // The value-driven materializers: a numeric operand's *value* sets the
         // materialized length (Phase 3 gives these the runtime water level).
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
-        Floor | Round | Quantize | Mod => (Linear, false),
+        Floor | Ceil | Round | Quantize | Mod => (Linear, false),
         Str | Num | Chars | Tokenize | Trim => (Linear, false),
         // Repetition can multiply sizes (k × separator).
         Join => (Superlinear, false),
@@ -117,9 +117,6 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // Ordering, grouping and shape Words: the result is bounded by the
         // operands' total size, and a vector operand attains the bound.
         Unique | Tally | Zip | Put | Group => (Linear, true),
-        // A fold to one value; the accumulator's digit count grows with the
-        // input, so linear rather than constant.
-        Sum => (Linear, false),
         // A value-driven materializer like RANGE and FILL: the *count*
         // operand's value sets the length, so it takes the runtime water level
         // rather than a static bound.

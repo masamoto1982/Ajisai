@@ -9,9 +9,12 @@ use ajisai_core::AjisaiError;
 /// a contract in `spec/words.json`, a law witness, a conformance case — so
 /// asserting it is unknown would assert the opposite of what the language now
 /// says. A retired name returning is a vocabulary decision, and this list
-/// records the decision rather than freezing the first one made.
+/// records the decision rather than freezing the first one made. `CEIL` came
+/// back the same way in the vocabulary-100 work order's Phase 1
+/// (docs/dev/vocabulary-100-work-order-2026-09.md §7): the closure of the
+/// rounding family, with a contract, a Kernel-only witness and conformance
+/// cases of its own.
 const REMOVED_WORDS: &[&str] = &[
-    "CEIL",
     "SIGN",
     "INSERT",
     "REPLACE",

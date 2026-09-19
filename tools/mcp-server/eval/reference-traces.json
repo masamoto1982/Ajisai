@@ -394,7 +394,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] SUM"
+    "source": "[ 1 2 3 4 ] 0 [ ADD ] FOLD"
    }
   },
   {
@@ -402,7 +402,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] SUM"
+    "source": "[ 1 2 3 4 ] 0 [ ADD ] FOLD"
    }
   },
   {

@@ -99,7 +99,7 @@ mod ordering_ops_tests {
             "TALLY and UNIQUE must report the same number of entries"
         );
         assert_eq!(
-            equals("[ 3 1 3 1 2 ] TALLY SUM", "5").await,
+            equals("[ 3 1 3 1 2 ] TALLY 0 [ ADD ] FOLD", "5").await,
             Some(true),
             "the counts must sum to the input length"
         );

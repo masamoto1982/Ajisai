@@ -1,6 +1,6 @@
 //! Past-the-end is one condition with one answer (LANG.FAILURE.PROJECT).
 //!
-//! `GET`, `TAKE` and `PUT` all address a position in a Vector, and all three
+//! `GET`, `TAKE`, `DROP` and `PUT` all address a position in a Vector, and all four
 //! can be handed a well-formed operand that names a position the Vector does
 //! not have. That is the trichotomy's middle case — data that did not work
 //! out, not a program that is wrong — so all three project NIL with the
@@ -41,8 +41,8 @@ async fn raises(code: &str) -> bool {
     Interpreter::new().execute(code).await.is_err()
 }
 
-/// `GET`, `TAKE` and `PUT` all project a position past the end, and all three
-/// name it `indexOutOfBounds`.
+/// `GET`, `TAKE`, `DROP` and `PUT` all project a position past the end, and all
+/// four name it `indexOutOfBounds`.
 ///
 /// `TAKE` and `PUT` used to raise instead, which made this the one condition
 /// the registry answered two ways and left a caller unable to ask "did this
@@ -57,6 +57,9 @@ async fn past_the_end_projects_the_same_reason_from_every_addressing_word() {
         "[ 1 2 3 ] [ 5 ] TAKE",
         "[ 1 2 3 ] [ -5 ] TAKE",
         "[ ] [ 1 ] TAKE",
+        "[ 1 2 3 ] [ 5 ] DROP",
+        "[ 1 2 3 ] [ -5 ] DROP",
+        "[ ] [ 1 ] DROP",
         "[ 1 2 3 ] 9 5 PUT",
         "[ 1 2 3 ] -9 5 PUT",
     ] {
@@ -76,6 +79,10 @@ async fn an_address_that_lands_is_untouched() {
         ("[ 1 2 3 ] [ 2 ] GET", "3/1"),
         ("[ 1 2 3 ] [ 2 ] TAKE", "[ 1/1 2/1 ]"),
         ("[ 1 2 3 ] [ -2 ] TAKE", "[ 2/1 3/1 ]"),
+        ("[ 1 2 3 ] [ 2 ] DROP", "[ 3/1 ]"),
+        ("[ 1 2 3 ] [ -2 ] DROP", "[ 1/1 ]"),
+        ("[ 1 2 3 ] [ 3 ] DROP", "[ ]"),
+        ("[ 1 2 3 ] [ 0 ] DROP", "[ 1/1 2/1 3/1 ]"),
         ("[ 1 2 3 ] -1 9 PUT", "[ 1/1 2/1 9/1 ]"),
     ] {
         assert_eq!(format!("{}", top_of(code).await), want, "`{code}`");
@@ -110,6 +117,7 @@ async fn a_projected_address_is_recovered_in_one_phrase() {
 async fn an_operand_that_is_not_an_address_still_raises() {
     for code in [
         "[ 1 2 3 ] [ 'x' ] TAKE",
+        "[ 1 2 3 ] [ 'x' ] DROP",
         "[ 1 2 3 ] 'x' 5 PUT",
         "1 [ 1 2 ] GET",
     ] {
