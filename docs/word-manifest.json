@@ -1261,10 +1261,12 @@
       "source": "spec/words.json",
       "canonical": "FAIL",
       "coverage_entry_id": "core.fail",
-      "semantic_role": "Primitive",
-      "algebraic_family": "control",
-      "core_tier": "identity",
-      "derived_from": [],
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow",
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
       "classification": "Core"
     },
     {
@@ -1328,10 +1330,12 @@
       "source": "spec/words.json",
       "canonical": "ABSENT",
       "coverage_entry_id": "core.absent",
-      "semantic_role": "Primitive",
-      "algebraic_family": "absence",
+      "semantic_role": "Derived",
+      "algebraic_family": "bubble",
       "core_tier": "identity",
-      "derived_from": [],
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
       "classification": "Core"
     },
     {

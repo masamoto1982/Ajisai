@@ -6,8 +6,8 @@
   "summary": {
     "primitives": 23,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 19,
-    "distinct_conformance_cases": 120
+    "distinct_law_test_files": 20,
+    "distinct_conformance_cases": 124
   },
   "primitives": [
     {
@@ -328,10 +328,11 @@
       "algebraic_family": "bubble",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 7,
-      "law_test_count": 9,
-      "conformance_case_count": 14,
+      "derived_word_count": 8,
+      "law_test_count": 10,
+      "conformance_case_count": 17,
       "derived_words": [
+        "core.absent",
         "core.bsearch",
         "core.get",
         "core.nil",
@@ -342,6 +343,7 @@
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/src/interpreter/declared_outcomes_tests.rs",
         "rust/src/interpreter/nil_diagnostics_tests.rs",
         "rust/tests/algebraic_laws.rs",
         "rust/tests/contract_modifier_laws.rs",
@@ -352,6 +354,9 @@
         "rust/tests/structural_laws.rs"
       ],
       "conformance_cases": [
+        "core-absent-declares-a-reasoned-nil",
+        "core-absent-is-recoverable",
+        "core-absent-text-is-identity",
         "core-division-by-zero-is-nil",
         "core-get-negative-index",
         "core-get-zero-index",
@@ -656,14 +661,15 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 12,
-      "law_test_count": 6,
-      "conformance_case_count": 20,
+      "derived_word_count": 13,
+      "law_test_count": 7,
+      "conformance_case_count": 21,
       "derived_words": [
         "core.bind",
         "core.def",
         "core.del",
         "core.exec",
+        "core.fail",
         "core.filter",
         "core.fold",
         "core.import.name-resolution",
@@ -674,6 +680,7 @@
         "exploratory.child-runtime"
       ],
       "law_tests": [
+        "rust/src/interpreter/declared_outcomes_tests.rs",
         "rust/src/interpreter/probe.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/naming_resolution_laws.rs",
@@ -684,6 +691,7 @@
       "conformance_cases": [
         "core-binding-does-not-cross-a-word-call",
         "core-binding-names-a-value",
+        "core-fail-raises-declared-error",
         "core-fold",
         "core-fold-word-name",
         "core-map",
