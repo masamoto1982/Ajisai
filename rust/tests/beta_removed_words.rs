@@ -13,11 +13,11 @@ use ajisai_core::AjisaiError;
 /// back the same way in the vocabulary-100 work order's Phase 1
 /// (docs/dev/vocabulary-100-work-order-2026-09.md §7): the closure of the
 /// rounding family, with a contract, a Kernel-only witness and conformance
-/// cases of its own.
+/// cases of its own. `REPLACE` came back in Phase 3, as INDEX-OF's
+/// substitution counterpart for Text, retained natively for cost.
 const REMOVED_WORDS: &[&str] = &[
     "SIGN",
     "INSERT",
-    "REPLACE",
     "REMOVE",
     "SPLIT",
     "REORDER",

@@ -111,6 +111,12 @@
       "source": "FROBNICATE",
       "expect": "error:unknownWord",
       "rationale": "The exhaustive table only ever runs a Word that exists, so no cell reaches a name that resolves to nothing. It used to reach this id indirectly: the higher-order Words took a String as their code operand, so a cell handing MAP the text domain looked up a Word named 'a' and answered unknownWord. That spelling is gone (LANG.SOURCE.CODE — code is a Vector, and a computed name defeated the acyclicity check LANG.DICTIONARY.ACYCLIC rests on), and those cells now answer notExecutable, which is what MAP's own contract declares. Writing an undefined name is the direct witness, and always was the honest one."
+    },
+    {
+      "id": "unsortedInput",
+      "source": "[ 3 1 2 ] [ 2 ] BSEARCH",
+      "expect": "error:unsortedInput",
+      "rationale": "The exhaustive table's vector representatives are one element long, so they are trivially in order and BSEARCH's order check never fires there. An out-of-order three-element vector is the whole witness."
     }
   ]
 }

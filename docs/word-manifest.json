@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 72,
+    "canonicalWords": 76,
     "semanticKernelWords": 41,
-    "standardWords": 31,
-    "corewords": 72,
+    "standardWords": 35,
+    "corewords": 76,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 93
+    "manifestEntries": 97
   },
   "entries": [
     {
@@ -910,6 +910,42 @@
       "classification": "Core"
     },
     {
+      "id": "core.member",
+      "kind": "coreword",
+      "surface": "MEMBER",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "MEMBER",
+      "coverage_entry_id": "core.member",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.bsearch",
+      "kind": "coreword",
+      "surface": "BSEARCH",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "BSEARCH",
+      "coverage_entry_id": "core.bsearch",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.map",
       "kind": "coreword",
       "surface": "MAP",
@@ -1103,6 +1139,40 @@
       "source": "spec/words.json",
       "canonical": "TOKENIZE",
       "coverage_entry_id": "core.tokenize",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.search",
+      "kind": "coreword",
+      "surface": "SEARCH",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "SEARCH",
+      "coverage_entry_id": "core.search",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.replace",
+      "kind": "coreword",
+      "surface": "REPLACE",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "REPLACE",
+      "coverage_entry_id": "core.replace",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
       "core_tier": "material",

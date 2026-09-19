@@ -59,7 +59,7 @@ enum NilContract {
 /// the last two are about operand shape at all, and which of those two
 /// applies depends on *which* operand position is NIL). A new `rejectNil`
 /// Word needs an arm added here — `declared_nil_contract_tests` pins the
-/// current 17 so a missing arm is a compile error, not a silent fallback to
+/// current 20 so a missing arm is a compile error, not a silent fallback to
 /// `structureError`.
 fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
     match (word_name, offset) {
@@ -120,6 +120,20 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
         ("RESHAPE", 1) => AjisaiError::declared(
             "invalidShape",
             "RESHAPE: expected a shape — a Vector of positive integers — got NIL",
+        ),
+        ("BSEARCH", _) => AjisaiError::declared(
+            "nonVector",
+            "BSEARCH: expected a Vector, got a non-vector value",
+        ),
+        ("SEARCH", _) => AjisaiError::declared(
+            "nonText",
+            "SEARCH: expected Strings, got Nil",
+        ),
+
+        // Arity 3, uniform across all positions.
+        ("REPLACE", _) => AjisaiError::declared(
+            "nonText",
+            "REPLACE: expected Strings, got Nil",
         ),
         ("TOKENIZE", 0) => {
             AjisaiError::declared("nonText", "TOKENIZE: expected String, got Nil")
@@ -294,14 +308,14 @@ mod declared_nil_contract_tests {
                 checked += 1;
             }
         }
-        // The 17 fixed-arity `rejectNil` Words this table was built against
+        // The 20 fixed-arity `rejectNil` Words this table was built against
         // (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 1, plus
-        // DROP, SHAPE, FLATTEN and RESHAPE from the vocabulary-100 work
-        // order's Phases 1 and 2): LENGTH, REVERSE, CHARS, JOIN, TRIM, EXEC,
-        // PROBE, DEL, SHAPE, FLATTEN (1 operand each) and RANDOM, CONCAT,
-        // TAKE, DROP, TOKENIZE, DEF, RESHAPE (2 each) — 10 + 14.
+        // the vocabulary-100 work order's Phases 1-3): LENGTH, REVERSE,
+        // CHARS, JOIN, TRIM, EXEC, PROBE, DEL, SHAPE, FLATTEN (1 operand
+        // each), RANDOM, CONCAT, TAKE, DROP, TOKENIZE, DEF, RESHAPE, BSEARCH,
+        // SEARCH (2 each) and REPLACE (3) — 10 + 18 + 3.
         assert_eq!(
-            checked, 24,
+            checked, 31,
             "the set of fixed-arity rejectNil Words changed; update nil_rejection_error"
         );
     }

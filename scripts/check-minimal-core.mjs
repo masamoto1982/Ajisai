@@ -7,8 +7,8 @@ GET LENGTH CONCAT COLLECT RANGE FOLD SHAPE RESHAPE FLATTEN DEPTH RANK
 CHARS JOIN NUM STR
 SELECT EXEC PROBE NIL NIL? NIL-REASON KEEP BIND DEF DEL PRINT RANDOM`.split(/\s+/));
 const STANDARD = new Set(`OR NEQ LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX
-TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MAP FILTER SCAN ANY ALL
-TRIM TOKENIZE`.split(/\s+/));
+TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER BSEARCH MAP FILTER SCAN ANY ALL
+TRIM TOKENIZE SEARCH REPLACE`.split(/\s+/));
 // The alpha Words retired in the phase-1 vocabulary freeze. `UNIQUE` is not
 // among them any more: it was cut as one of several overlapping collection
 // Words and has come back on its own terms, with a contract, a law witness and
@@ -16,7 +16,9 @@ TRIM TOKENIZE`.split(/\s+/));
 // back the same way in the vocabulary-100 work order's Phase 1
 // (docs/dev/vocabulary-100-work-order-2026-09.md §7), as the closure of the
 // rounding family rather than a convenience: `FLOOR` reflected through zero.
-const REMOVED = new Set(`SIGN INSERT REPLACE REMOVE SPLIT REORDER CONTAINS
+// `REPLACE` came back in Phase 3, as INDEX-OF's substitution counterpart for
+// Text, retained natively for cost.
+const REMOVED = new Set(`SIGN INSERT REMOVE SPLIT REORDER CONTAINS
 STARTS-WITH? ENDS-WITH? CHR EAT`.split(/\s+/));
 const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
@@ -24,7 +26,7 @@ const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
 const DERIVABLE = new Set(`OR NEQ LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX
 TAKE DROP REVERSE INDEX-OF TRIM TOKENIZE`.split(/\s+/));
-const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP'.split(/\s+/));
+const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP MEMBER BSEARCH SEARCH REPLACE'.split(/\s+/));
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
@@ -49,9 +51,9 @@ for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: une
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
 if (kernelWords.size !== 41) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 41`);
-if (standardWords.size !== 31) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 31`);
+if (standardWords.size !== 35) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 35`);
 
-if (words.length !== 72) errors.push(`canonical inventory has ${words.length} Words; expected 72`);
+if (words.length !== 76) errors.push(`canonical inventory has ${words.length} Words; expected 76`);
 for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 
 for (const word of words) {

@@ -18,16 +18,16 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 72 Words are:
+reaching for it exactly where it would have helped. The 76 Words are:
 
 | you need | Words |
 |---|---|
 | arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `CEIL` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `RANDOM` |
 | comparison and logic | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` · `AND` `OR` `NOT` `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
-| collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
+| collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` `RANK` |
-| text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
+| text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `SEARCH` `REPLACE` `NUM` `STR` |
 | absence | `NIL` `NIL?` `NIL-REASON` |
 | naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` · `PRINT` `KEEP` |
 

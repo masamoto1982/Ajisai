@@ -38,6 +38,9 @@ pub(crate) mod predict_program_outcomes;
 mod predict_program_outcomes_tests;
 mod probe;
 pub mod runtime_limits;
+mod search_ops;
+#[cfg(test)]
+mod search_words_tests;
 mod session_lifecycle;
 mod shape_ops;
 mod shape_words;

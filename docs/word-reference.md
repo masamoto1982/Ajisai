@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **72 Words**, of which **41** form the Semantic Kernel and **31** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **76 Words**, of which **41** form the Semantic Kernel and **35** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -696,6 +696,34 @@ Index of the first element equal to the value; Bubble/NIL if absent.
 - **Syntax:** `[ 1 2 ] 2 INDEX-OF`
 - **ERROR conditions:** `nonVector`
 
+## `MEMBER`
+
+Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] [ 2 5 ] MEMBER`
+- **ERROR conditions:** `nonVector`
+
+## `BSEARCH`
+
+The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write. A comparison that exhausts its budget (LANG.VALUES.EXACT) projects `undecidable`.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: keyAbsent,budgetExhausted → missingField, undecidable
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 3 5 7 ] [ 5 ] BSEARCH`
+- **ERROR conditions:** `nonVector`, `unsortedInput`, `nonComparableElement`
+
 ## `MAP`
 
 Apply a code block to each element of a vector.
@@ -849,6 +877,34 @@ Split a string into a vector of substrings using a separator.
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'a,b,c' ',' TOKENIZE`
 - **ERROR conditions:** `nonText`, `nonTextSeparator`
+
+## `SEARCH`
+
+The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(missingField). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `text`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: needleAbsent → missingField
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `'hello world' 'world' SEARCH`
+- **ERROR conditions:** `nonText`
+
+## `REPLACE`
+
+Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `'a+b+c'`. Occurrences are found left to right and do not overlap, and an empty `from` matches nothing, so the text comes back unchanged rather than growing without bound. Spelled over CHARS and JOIN this is a scan with a window at every position; the Word is the one pass.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `text`
+- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `'a-b-c' '-' '+' REPLACE`
+- **ERROR conditions:** `nonText`
 
 ## `NUM`
 

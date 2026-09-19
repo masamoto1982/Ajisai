@@ -2280,6 +2280,65 @@
       "standard_relation": "derivable"
     },
     {
+      "id": "core.search",
+      "kind": "coreword",
+      "surface": "SEARCH",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-search",
+        "standard-search-absent-projects",
+        "standard-search-empty-needle"
+      ],
+      "status": "Formalized",
+      "notes": "First occurrence of a codepoint sequence inside another, as a character position; absent projects missingField.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "One pass with a sliding window; spelled over CHARS the window is rebuilt and compared at every position."
+    },
+    {
+      "id": "core.replace",
+      "kind": "coreword",
+      "surface": "REPLACE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-replace",
+        "standard-replace-without-overlap",
+        "standard-replace-empty-from",
+        "standard-replace-non-text-error"
+      ],
+      "status": "Formalized",
+      "notes": "Every non-overlapping occurrence of a codepoint sequence substituted, left to right; an empty pattern matches nothing.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "One pass with a sliding window and a single rebuilt text; spelled over CHARS and JOIN it is a window at every position and a rebuild per match."
+    },
+    {
       "id": "core.num",
       "kind": "coreword",
       "surface": "NUM",
@@ -2762,6 +2821,67 @@
       "algebraic_family": "structure-lift",
       "core_tier": "material",
       "standard_relation": "derivable"
+    },
+    {
+      "id": "core.member",
+      "kind": "coreword",
+      "surface": "MEMBER",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-member",
+        "standard-member-single-probe",
+        "standard-member-over-text"
+      ],
+      "status": "Formalized",
+      "notes": "Membership over value equality, answered lane for lane from one index of the vector.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "One hash pass over the vector answers every probe in constant time; the Kernel-only route scans the vector once per probe, O(m·n)."
+    },
+    {
+      "id": "core.bsearch",
+      "kind": "coreword",
+      "surface": "BSEARCH",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-bsearch",
+        "standard-bsearch-first-of-equal-keys",
+        "standard-bsearch-absent-key-projects",
+        "standard-bsearch-unsorted-raises"
+      ],
+      "status": "Formalized",
+      "notes": "First index of each key in an ascending vector by halving, after one pass that checks the order; an absent key projects missingField, an undecidable comparison projects undecidable.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write; m keys cost O(n + m log n) against INDEX-OF's O(m·n)."
     },
     {
       "id": "module.math.abs",
