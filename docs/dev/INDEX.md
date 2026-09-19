@@ -29,6 +29,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | --- | --- | --- |
 | `spec-impl-alignment-methodology.md` | 仕様・実装整合化の4フェーズ手順とスイート裁定規則。`spec-impl-drift-tactic.md` の後継 | `[設計根拠]` |
 | `semantic-spine-migration-plan.md` | 整理後正典と整理前実装の乖離を収束させる Semantic Spine 移行計画（9 Phase） | `[方針記録]` |
+| `vocabulary-100-work-order-2026-09.md` | 語彙を 66 語から 100 語へ再設計する改修指示書。語を採る二つの級（書けないもの／族を閉じるもの）、三つの分岐（Tier 2 の払い切り・形と階の語彙化・第 7 の値領域 Record）、10 概念の組み替え、100 語の割り当て、Phase 1〜7。設計判断は本書で確定済み。添付 `_attachments/vocabulary-100-draft-contracts.json` に新語 35 件と再定義 3 件の契約スケルトン | `[設計根拠]` |
 | `ajisai-minimal-core-identity.md` | 何が変われば Ajisai でなくなるか——同一性の幹の切り分け | `[方針記録]` |
 | `vector-nesting-role-redefinition.md` | Vector ネストの役割（Lisp 的動機の廃止） | `[方針記録]` |
 | `ajisai-single-axis-proposal-2026-08.md` | 中心概念を「絞り込み（narrowing）」一本に定める提案。到達不能契約の実測と、七つの改修案。うちⅡ・Ⅲ・Ⅴ・Ⅵ・Ⅶは実施済み（PR #1563/#1564/#1567）、Ⅰは指示書のみ | `[観察ノート]` |
