@@ -5,7 +5,7 @@
 // originally chosen by type in docs/dev/competitive-advantage-work-order-2026-08.md
 // Phase 2).
 //
-// 76 Words in one flat dictionary with no imports means the language's whole
+// 78 Words in one flat dictionary with no imports means the language's whole
 // input/outcome surface is finite. Excluding the variable/control-arity Words
 // (COLLECT, EXEC, OR-NIL) and the KEEP modifier leaves the rest with a
 // fixed integer arity; every (Word, domain tuple) pair is run through the

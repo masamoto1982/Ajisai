@@ -68,6 +68,7 @@ impl AbsenceOrigin {
             AbsenceOrigin::DomainMiss => "domainMiss",
             AbsenceOrigin::NotAvailable => "notAvailable",
             AbsenceOrigin::HostEnvironment => "hostEnvironment",
+            AbsenceOrigin::UserDeclared => "userDeclared",
             AbsenceOrigin::Unknown => "unknown",
         }
     }

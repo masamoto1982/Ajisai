@@ -67,6 +67,9 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         // The source is missing a required following unit, not a value the
         // wrong shape — same family as a malformed delimiter.
         "missingFollowingSourceUnit" => CauseClass::SourceForm,
+        // The program raised it itself with FAIL: its own logic decided a
+        // call was wrong, and the repair is in the caller's logic.
+        "declaredFailure" => CauseClass::UserLogic,
         _ => CauseClass::Unknown,
     }
 }

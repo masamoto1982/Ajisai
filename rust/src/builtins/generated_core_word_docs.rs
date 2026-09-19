@@ -624,6 +624,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 1 2 ADD ] PROBE",
     },
     GeneratedCoreWordDoc {
+        name: "FAIL",
+        category: "control",
+        summary: "Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluation with category `declaredFailure` and that text as its message. This is the other half of what ABSENT gives a user Word — the trichotomy's third outcome, for a call that is wrong rather than data that did not work out. Like every ERROR it propagates and cannot be caught; a caller who wants a value to recover from asks for ABSENT instead. A non-text operand is `nonText`.",
+        role: "Control primitive: raise an ERROR of category declaredFailure with the program's text.",
+        stack_effect: "[ 'message' ] -> [ ]",
+        hover_summary: "FAIL — raise an ERROR the program states",
+        hover_syntax: "'width must be positive' FAIL",
+    },
+    GeneratedCoreWordDoc {
         name: "NIL",
         category: "constant",
         summary: "Push the NIL value onto the stack.",
@@ -649,6 +658,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         stack_effect: "[ x ] -> [ x ] [ text|NIL ]",
         hover_summary: "NIL-REASON — read the NIL reason protocol string",
         hover_syntax: "1 0 / NIL-REASON",
+    },
+    GeneratedCoreWordDoc {
+        name: "ABSENT",
+        category: "absence",
+        summary: "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
+        role: "Absence primitive: produce a NIL carrying a reason the program states.",
+        stack_effect: "[ 'reason' ] -> [ NIL ]",
+        hover_summary: "ABSENT — a NIL carrying a reason the program states",
+        hover_syntax: "'rate not quoted' ABSENT",
     },
     GeneratedCoreWordDoc {
         name: "KEEP",

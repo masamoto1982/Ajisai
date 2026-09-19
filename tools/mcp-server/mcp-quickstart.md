@@ -18,7 +18,7 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 76 Words are:
+reaching for it exactly where it would have helped. The 78 Words are:
 
 | you need | Words |
 |---|---|
@@ -28,8 +28,8 @@ reaching for it exactly where it would have helped. The 76 Words are:
 | collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` `RANK` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `SEARCH` `REPLACE` `NUM` `STR` |
-| absence | `NIL` `NIL?` `NIL-REASON` |
-| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` · `PRINT` `KEEP` |
+| absence | `NIL` `NIL?` `NIL-REASON` `ABSENT` (declare a reasoned NIL from your own text) |
+| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` `FAIL` (raise a declared ERROR) · `PRINT` `KEEP` |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
 invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that

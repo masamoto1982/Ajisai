@@ -238,7 +238,9 @@ impl PartialEq for Value {
     /// Two values with the same data and the same NIL reason are now the same
     /// value however they came to be displayed.
     fn eq(&self, other: &Self) -> bool {
-        self.data == other.data && self.nil_reason() == other.nil_reason()
+        self.data == other.data
+            && self.nil_reason() == other.nil_reason()
+            && self.absence_detail() == other.absence_detail()
     }
 }
 
@@ -246,7 +248,8 @@ impl PartialEq for Value {
 /// a true equivalence relation and this marker is safe.
 impl Eq for Value {}
 
-/// Hashes exactly what `PartialEq` compares — `data`, then the NIL reason —
+/// Hashes exactly what `PartialEq` compares — `data`, then the NIL reason and
+/// the detail a `userDeclared` reason carries —
 /// and nothing `PartialEq` does not (`hint` stays out of both). Required
 /// for `UNIQUE` / `TALLY` / `GROUP` to key a `HashMap<Value, _>` rather than
 /// re-scan the accumulated result for every element (CS5 collection-word
@@ -255,6 +258,7 @@ impl std::hash::Hash for Value {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.data.hash(state);
         self.nil_reason().hash(state);
+        self.absence_detail().hash(state);
     }
 }
 

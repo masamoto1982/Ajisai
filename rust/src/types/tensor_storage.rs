@@ -73,7 +73,10 @@ impl PartialEq for DenseTensor {
         // absent; only the reasons are left to compare, and only there.
         (0..self.len())
             .filter(|index| !self.is_valid(*index))
-            .all(|index| self.lane_reason(index) == other.lane_reason(index))
+            .all(|index| {
+                self.lane_reason(index) == other.lane_reason(index)
+                    && self.lane_detail(index) == other.lane_detail(index)
+            })
     }
 }
 
@@ -83,6 +86,12 @@ impl DenseTensor {
     /// an absence, as [`PartialEq`] and the `Value` hash both read it.
     pub fn lane_reason(&self, index: usize) -> Option<NilReason> {
         self.absence_at(index).and_then(|metadata| metadata.reason)
+    }
+
+    /// The text a `userDeclared` lane carries beside its reason.
+    pub fn lane_detail(&self, index: usize) -> Option<&str> {
+        self.absence_at(index)
+            .and_then(AbsenceMetadata::detail_text)
     }
 
     /// Assemble a tensor from already-separated columns.

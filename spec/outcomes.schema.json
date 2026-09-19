@@ -47,6 +47,10 @@
      "type": "boolean",
      "description": "true when a Word's own projection (spec/words.json's projection.reason) can answer with this reason. false for a reason a value carries for some other cause than a Word projecting it — currently only `literal`, which a NIL written in source or inside a vector literal carries, not a Word."
     },
+    "parameterized": {
+     "type": "boolean",
+     "description": "true for a reason whose observable content is more than its id: the value carries a text detail beside it (today only `userDeclared`, the reason ABSENT gives), which NIL-REASON answers and the protocol reports as `semantics.absence.detail`. The registry stays closed over ids; a parameterized reason is where it is open over texts."
+    },
     "documentation": {
      "type": "string",
      "description": "One sentence: what well-formed condition this reason names."

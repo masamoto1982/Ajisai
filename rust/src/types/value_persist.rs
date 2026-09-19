@@ -146,6 +146,11 @@ enum PersistData {
         /// with reasonless holes.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         absent: Vec<(usize, String)>,
+        /// The user-declared detail of each absent lane that has one, as
+        /// `(lane index, text)` — the text an `ABSENT` was given. Part of the
+        /// lane's identity (LANG.VALUES.NIL), so it must survive a save.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        absent_detail: Vec<(usize, String)>,
     },
     Nil {
         /// The NIL's reason as its protocol string. `None` decodes a payload
@@ -153,6 +158,10 @@ enum PersistData {
         /// none.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         r: Option<String>,
+        /// The text a `userDeclared` NIL was given by `ABSENT`. Absent for
+        /// every other reason.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ud: Option<String>,
     },
     /// A Symbol, persisted as its bare name.
     Symbol {
@@ -236,8 +245,12 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
                     Some((index, metadata.reason?.as_protocol_str().to_string()))
                 })
                 .collect(),
+            absent_detail: data
+                .absences()
+                .filter_map(|(index, metadata)| Some((index, metadata.detail_text()?.to_string())))
+                .collect(),
         },
-        ValueData::Nil => PersistData::Nil { r: None },
+        ValueData::Nil => PersistData::Nil { r: None, ud: None },
         ValueData::Symbol(name) => PersistData::Symbol {
             name: name.to_string(),
         },
@@ -280,6 +293,7 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             pure_int,
             shape,
             absent,
+            absent_detail,
         } => {
             if nums.len() != dens.len() {
                 return Err("tensor numerator/denominator length mismatch".to_string());
@@ -289,6 +303,12 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
                 let reason = NilReason::from_protocol_str(reason)
                     .ok_or_else(|| format!("unknown NIL reason: {reason}"))?;
                 absences.insert(*index, absence_from_reason(reason));
+            }
+            for (index, detail) in absent_detail {
+                let metadata = absences
+                    .get_mut(index)
+                    .ok_or_else(|| format!("detail for a lane without a reason: {index}"))?;
+                metadata.detail = Some(Arc::new(detail.clone()));
             }
             ValueData::Tensor {
                 data: Arc::new(DenseTensor::from_untrusted_columns(
@@ -310,10 +330,11 @@ fn encode_value(value: &Value) -> Result<PersistValue, String> {
     let mut d = encode_data(&value.data)?;
     // The reason lives on `Value`, not in `ValueData`, so it is attached here
     // rather than inside `encode_data`.
-    if let PersistData::Nil { r } = &mut d {
+    if let PersistData::Nil { r, ud } = &mut d {
         *r = value
             .nil_reason()
             .map(|reason| reason.as_protocol_str().to_string());
+        *ud = value.absence_detail().map(str::to_string);
     }
     Ok(PersistValue {
         h: hint_to_tag(value.hint).to_string(),
@@ -322,10 +343,17 @@ fn encode_value(value: &Value) -> Result<PersistValue, String> {
 }
 
 fn decode_value(value: &PersistValue) -> Result<Value, String> {
-    if let PersistData::Nil { r: Some(reason) } = &value.d {
+    if let PersistData::Nil {
+        r: Some(reason),
+        ud,
+    } = &value.d
+    {
         let reason = NilReason::from_protocol_str(reason)
             .ok_or_else(|| format!("unknown NIL reason: {}", reason))?;
-        let mut decoded = Value::nil_with_reason_unknown(reason);
+        let mut decoded = match (reason, ud) {
+            (NilReason::UserDeclared, Some(detail)) => Value::nil_user_declared(detail),
+            _ => Value::nil_with_reason_unknown(reason),
+        };
         decoded.hint = hint_from_tag(&value.h);
         return Ok(decoded);
     }

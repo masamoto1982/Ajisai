@@ -805,13 +805,40 @@
         "core-nil-reason-present-value-is-nil"
       ],
       "status": "Formalized",
-      "notes": "Reads the direct reason of an operational NIL as a lowerCamelCase protocol-string Text; retains the inspected value; NIL when there is no reason.",
+      "notes": "Reads the direct reason of an operational NIL as a lowerCamelCase protocol-string Text; retains the inspected value; NIL when there is no reason. For a userDeclared NIL it answers the declared text.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.bubble.domain"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.absent",
+      "kind": "coreword",
+      "surface": "ABSENT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.5.0",
+        "SPECIFICATION.html §7.15"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/declared_outcomes_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-absent-declares-a-reasoned-nil",
+        "core-absent-is-recoverable",
+        "core-absent-text-is-identity"
+      ],
+      "status": "Formalized",
+      "notes": "Consumes a Text and produces a NIL with reason userDeclared whose parameter is that Text; the Text is part of value identity and is what NIL-REASON answers. Non-text operand is an ERROR.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "bubble",
       "core_tier": "identity"
     },
     {
@@ -1466,6 +1493,30 @@
       "conformance_cases": [],
       "status": "Formalized",
       "notes": "Executes a code value by reflecting it into state-transformer composition.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
+    },
+    {
+      "id": "core.fail",
+      "kind": "coreword",
+      "surface": "FAIL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §9.2"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/declared_outcomes_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-fail-raises-declared-error"
+      ],
+      "status": "Formalized",
+      "notes": "Consumes a Text and raises an ERROR of category declaredFailure carrying that Text; evaluation halts and no Word catches it. Non-text operand is a nonText ERROR.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
