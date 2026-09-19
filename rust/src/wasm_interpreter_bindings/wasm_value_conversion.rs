@@ -109,6 +109,9 @@ fn absence_to_protocol_js(absence: &crate::semantic::AbsenceMetadata) -> JsValue
     if let Some(reason) = &absence.reason {
         set_prop(&obj, "reason", &reason.as_protocol_str().into());
     }
+    if let Some(detail) = &absence.detail {
+        set_prop(&obj, "detail", &detail.as_str().into());
+    }
     if let Some(diagnosis) = &absence.diagnosis {
         set_prop(&obj, "diagnosis", &diagnosis_to_protocol_js(diagnosis));
     }

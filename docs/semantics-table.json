@@ -104953,6 +104953,83 @@
       "outcome": "value"
     },
     {
+      "word": "FAIL",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:declaredFailure"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "FAIL",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
       "word": "NIL",
       "inputs": [],
       "outcome": "nil:literal"
@@ -105110,6 +105187,83 @@
         "codeBlock"
       ],
       "outcome": "nil:notAvailable"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "nil:userDeclared"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "ABSENT",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "error:nonText"
     },
     {
       "word": "BIND",

@@ -316,6 +316,8 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         // has passed through a dense lane, which carries presence but no
         // reason. Nothing is wrong; a NIL is simply flowing.
         NilReason::Literal => CauseClass::NilFlow,
+        // The program said so itself: the cause is in its own logic.
+        NilReason::UserDeclared => CauseClass::UserLogic,
     }
 }
 

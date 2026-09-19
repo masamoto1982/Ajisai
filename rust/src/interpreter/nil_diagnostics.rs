@@ -69,7 +69,7 @@ fn push_result(interp: &mut Interpreter, value: Value, hint: Interpretation) {
 /// produces "NIL with the reason its contract registers", and
 /// `LANG.VALUES.NIL` makes the reason a NIL's entire observable content — a
 /// reasonless projection would have no content to observe.
-fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&'static str>) {
+fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&str>) {
     match value {
         Some(protocol) => push_result(
             interp,
@@ -103,11 +103,19 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
 /// `NIL-REASON` — the direct reason as a lowerCamelCase protocol-string Text,
 /// or a `notAvailable` NIL when the value carries no reason or is not an
 /// operational NIL.
+///
+/// A `userDeclared` NIL (one `ABSENT` made) answers the text it was declared
+/// with rather than the reason id: that text is the reason's parameter and,
+/// under `LANG.VALUES.NIL`, the NIL's entire observable content.
 pub fn op_nil_reason(interp: &mut Interpreter) -> Result<()> {
     require_non_empty(interp)?;
-    let protocol = peek_operational_absence(interp)
-        .and_then(|absence| absence.reason.as_ref())
-        .map(|reason| reason.as_protocol_str());
-    push_protocol_string_or_nil(interp, protocol);
+    let protocol: Option<String> = peek_operational_absence(interp).and_then(|absence| {
+        let reason = absence.reason.as_ref()?;
+        Some(match (reason, absence.detail_text()) {
+            (NilReason::UserDeclared, Some(detail)) => detail.to_string(),
+            _ => reason.as_protocol_str().to_string(),
+        })
+    });
+    push_protocol_string_or_nil(interp, protocol.as_deref());
     Ok(())
 }

@@ -26,6 +26,7 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::DomainMiss => AbsenceOrigin::DomainMiss,
         NilReason::NotAvailable => AbsenceOrigin::NotAvailable,
         NilReason::Literal => AbsenceOrigin::Literal,
+        NilReason::UserDeclared => AbsenceOrigin::UserDeclared,
     }
 }
 
@@ -136,9 +137,21 @@ impl Value {
         Self::nil_with_absence(AbsenceMetadata::with_reason(reason, origin, recoverability))
     }
 
+    /// The NIL `ABSENT` produces: reason `userDeclared`, carrying `detail`.
+    #[inline]
+    pub fn nil_user_declared(detail: &str) -> Self {
+        Self::nil_with_absence(AbsenceMetadata::user_declared(detail))
+    }
+
     #[inline]
     pub fn absence_metadata(&self) -> Option<&AbsenceMetadata> {
         self.absence.as_ref()
+    }
+
+    /// The text a `userDeclared` absence carries beside its reason.
+    #[inline]
+    pub fn absence_detail(&self) -> Option<&str> {
+        self.absence.as_ref().and_then(AbsenceMetadata::detail_text)
     }
 
     #[inline]

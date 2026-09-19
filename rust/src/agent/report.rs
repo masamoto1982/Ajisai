@@ -181,6 +181,9 @@ fn absence_json(absence: &AbsenceMetadata) -> Json {
     if let Some(reason) = &absence.reason {
         obj.insert("reason".into(), json!(reason.as_protocol_str()));
     }
+    if let Some(detail) = &absence.detail {
+        obj.insert("detail".into(), json!(detail.as_str()));
+    }
     obj.insert("origin".into(), json!(absence.origin.as_protocol_str()));
     obj.insert(
         "recoverability".into(),

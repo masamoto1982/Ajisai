@@ -3626,6 +3626,58 @@
       "vocabularyTier": "kernel"
     },
     {
+      "name": "FAIL",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "declaredFailure"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.FAILURE.ERROR"
+      ],
+      "documentation": {
+        "summary": "Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluation with category `declaredFailure` and that text as its message. This is the other half of what ABSENT gives a user Word — the trichotomy's third outcome, for a call that is wrong rather than data that did not work out. Like every ERROR it propagates and cannot be caught; a caller who wants a value to recover from asks for ABSENT instead. A non-text operand is `nonText`.",
+        "hover": "FAIL — raise an ERROR the program states",
+        "lookup": "Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluation with category `declaredFailure` and that text as its message. This is the other half of what ABSENT gives a user Word — the trichotomy's third outcome, for a call that is wrong rather than data that did not work out. Like every ERROR it propagates and cannot be caught; a caller who wants a value to recover from asks for ABSENT instead. A non-text operand is `nonText`.",
+        "syntax": "'width must be positive' FAIL",
+        "role": "Control primitive: raise an ERROR of category declaredFailure with the program's text.",
+        "stackEffect": "[ 'message' ] -> [ ]"
+      },
+      "executorKey": "Fail",
+      "effects": [],
+      "partiality": "partial",
+      "category": "control",
+      "vocabularyTier": "kernel"
+    },
+    {
       "name": "NIL",
       "aliases": [],
       "family": "absence",
@@ -3769,6 +3821,58 @@
       "executorKey": "NilReason",
       "effects": [],
       "partiality": "total",
+      "category": "absence",
+      "vocabularyTier": "kernel"
+    },
+    {
+      "name": "ABSENT",
+      "aliases": [],
+      "family": "absence",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "always",
+        "reason": "userDeclared"
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "const",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
+        "hover": "ABSENT — a NIL carrying a reason the program states",
+        "lookup": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
+        "syntax": "'rate not quoted' ABSENT",
+        "role": "Absence primitive: produce a NIL carrying a reason the program states.",
+        "stackEffect": "[ 'reason' ] -> [ NIL ]"
+      },
+      "executorKey": "Absent",
+      "effects": [],
+      "partiality": "projecting",
       "category": "absence",
       "vocabularyTier": "kernel"
     },

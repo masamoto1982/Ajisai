@@ -377,7 +377,8 @@ Record リテラルの構文は**作らない**。Record は `RECORD`（キー�
 | 1 | **実施済み** | `CEIL` `DROP` を追加、`SUM` を削除。語数 67（Kernel 36 / Standard 31）。`CEIL` は alpha 期の退役語リスト（`scripts/check-minimal-core.mjs` の `REMOVED`）に載っていたので、そこから外して復帰させた——`UNIQUE` と同じ経路。`TAKE` と `DROP` は一つの実行器（`split_by_count`）を共有し、末尾越えの投影・不正カウントの ERROR を同じ場所で読む |
 | 2 | **実施済み** | `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` `RANK` を追加。語数 72（Kernel 41 / Standard 31）。添付からの逸脱が三つ: (a) 新クローズ `LANG.COLLECTIONS.RANK` は作らず、`LANG.COLLECTIONS.LIFT` と `LANG.COLLECTIONS.HIGHER` の既存段落に書き足した——`language-semantics.md` の行数予算（404 行）に新しい節を入れる余地がなく、規律も「節を足すより短くせよ」であるため。(b) 族 `shape` も作らず、4 語は `collection` 族に置いた——共有する法則は `collection` 族のそれと一致し、族 enum の拡張は `record` の要否と一緒に Phase 5 で判断する。(c) `RANK` のオペランド順は `[ vec ] n [ body ] RANK`（`FOLD` と同じく、ブロックを直前に置く）。契約推論の「直前の `[ ... ]` はコード」という判定にそのまま乗るためで、添付の `[ vec ] [ body ] n` は捨てた。ついでに、その判定表から漏れていた `SCAN` も足した |
 | 3 | **実施済み** | `MEMBER` `BSEARCH` `SEARCH` `REPLACE` を追加。語数 76（Kernel 41 / Standard 35）。四語とも Standard の `operational`（`INDEX-OF` で書ける答えを、費用のために核に残す）。`BSEARCH` は昇順検査を O(n) で先に行い、乱れていれば新しい ERROR 分類 `unsortedInput`（`spec/outcomes.json` に `declared` として登録、`spec/outcome-witnesses.json` に目撃者）。比較が予算を使い切れば `SORT` と同じく `undecidable` を投影する。`REPLACE` は alpha 期の退役語リストに載っていたので `CEIL` と同じ経路で復帰 |
-| 4〜7 | 未着手 | — |
+| 4 | **実施済み** | `ABSENT` `FAIL` を追加。語数 78（Kernel 43 / Standard 35）。§6.3 のとおり `spec/outcomes.json` に `userDeclared`（`parameterized: true`）と `declaredFailure`（`declared`）を登録し、目撃者は各 1 件。宣言テキストは `AbsenceMetadata.detail`（`Arc<String>`——値の封筒をポインタ 1 本分しか広げないための thin pointer）に載り、`Value` の同一性とハッシュに入る。`NIL-REASON` は `userDeclared` の NIL に対して識別子ではなくテキストを答える。プロトコルには `semantics.absence.detail`、永続化には `ud` / `absent_detail` を足した。`FAIL` は `AjisaiError::declared("declaredFailure", text)` で、オペランドを復元してから停止する |
+| 5〜7 | 未着手 | — |
 
 Phase 7 を最後に置くのは、ここだけが語彙と契約の仕事ではなく**数値カーネルの工事**
 だからである。Phase 1〜6 が終わった時点で語数は 92 であり、そこで止めても言語は

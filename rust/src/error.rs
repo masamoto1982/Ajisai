@@ -54,6 +54,12 @@ pub enum NilReason {
     /// NIL and the value had nothing to observe (audit finding D24). It names
     /// the only thing true of it: nothing failed, it was written down.
     Literal,
+    /// An absence the program declared itself with `ABSENT`. The reason the
+    /// registry closes over is this one id; the text the program gave lives
+    /// beside it as the value's `detail` (`AbsenceMetadata::detail`), is what
+    /// `NIL-REASON` answers, and is part of the value (LANG.VALUES.NIL) — the
+    /// first parameterized reason, recorded as such in `spec/outcomes.json`.
+    UserDeclared,
 }
 
 /// One named internal-computation ceiling from
@@ -228,6 +234,7 @@ impl NilReason {
             NilReason::DomainMiss => "domainMiss",
             NilReason::NotAvailable => "notAvailable",
             NilReason::Literal => "literal",
+            NilReason::UserDeclared => "userDeclared",
         }
     }
 
@@ -245,6 +252,7 @@ impl NilReason {
         NilReason::DomainMiss,
         NilReason::NotAvailable,
         NilReason::Literal,
+        NilReason::UserDeclared,
     ];
 
     /// The reason a protocol string names, or `None` when it names none.

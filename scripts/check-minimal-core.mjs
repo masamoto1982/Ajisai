@@ -5,7 +5,7 @@ const KERNEL = new Set(`TRUE FALSE AND NOT EQ LT GT
 ADD MUL DIV FLOOR NEG SQRT PI
 GET LENGTH CONCAT COLLECT RANGE FOLD SHAPE RESHAPE FLATTEN DEPTH RANK
 CHARS JOIN NUM STR
-SELECT EXEC PROBE NIL NIL? NIL-REASON KEEP BIND DEF DEL PRINT RANDOM`.split(/\s+/));
+SELECT EXEC PROBE FAIL NIL NIL? NIL-REASON ABSENT KEEP BIND DEF DEL PRINT RANDOM`.split(/\s+/));
 const STANDARD = new Set(`OR NEQ LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX
 TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER BSEARCH MAP FILTER SCAN ANY ALL
 TRIM TOKENIZE SEARCH REPLACE`.split(/\s+/));
@@ -50,10 +50,10 @@ for (const name of setDifference(KERNEL, kernelWords)) errors.push(`${name}: mis
 for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: unexpected Semantic Kernel classification`);
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
-if (kernelWords.size !== 41) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 41`);
+if (kernelWords.size !== 43) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 43`);
 if (standardWords.size !== 35) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 35`);
 
-if (words.length !== 76) errors.push(`canonical inventory has ${words.length} Words; expected 76`);
+if (words.length !== 78) errors.push(`canonical inventory has ${words.length} Words; expected 78`);
 for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 
 for (const word of words) {

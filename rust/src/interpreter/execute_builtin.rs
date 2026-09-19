@@ -5,10 +5,10 @@ use crate::types::{Interpretation, Token, Value};
 use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
-    algo_ops, arithmetic, bindings, cast, comparison, control, execute_def, execute_del,
-    higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, ordering_ops, probe,
-    search_ops, shape_ops, shape_words, sort, tensor_cmds, vector_ops, ConsumptionMode,
-    Interpreter,
+    algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
+    execute_del, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
+    ordering_ops, probe, search_ops, shape_ops, shape_words, sort, tensor_cmds, vector_ops,
+    ConsumptionMode, Interpreter,
 };
 
 impl Interpreter {
@@ -322,6 +322,8 @@ impl Interpreter {
             WordId::Put => shape_ops::op_put(self),
             WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
+            WordId::Absent => declared_outcomes::op_absent(self),
+            WordId::Fail => declared_outcomes::op_fail(self),
             WordId::Member => search_ops::op_member(self),
             WordId::Bsearch => search_ops::op_bsearch(self),
             // The one modifier (LANG.MODIFIERS.CONSUMPTION). The execution

@@ -45,6 +45,12 @@
       "id": "undecidable",
       "projectable": true,
       "documentation": "Comparison-budget exhaustion: two lazy continued-fraction streams agreed on every emitted partial quotient up to the budget without resolving the order of the two operands."
+    },
+    {
+      "id": "userDeclared",
+      "projectable": true,
+      "parameterized": true,
+      "documentation": "An absence the program declared itself with ABSENT. The registered reason is this one id; the text the program gave is carried on the value as its detail and is what NIL-REASON answers, so the reason space is closed here and open there — the first parameterized reason, recorded as such."
     }
   ],
   "errorCategories": [
@@ -58,6 +64,11 @@
       "kind": "structural",
       "attribution": "operand",
       "documentation": "An operation tried to redefine or delete a Core Word."
+    },
+    {
+      "id": "declaredFailure",
+      "kind": "declared",
+      "documentation": "An ERROR the program raised itself with FAIL: a user Word saying that a call to it is wrong, with the program's own text as the message. The category is this one id; the text is a message, and like every message it is not a machine-readable surface."
     },
     {
       "id": "definitionConflict",

@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **76 Words**, of which **41** form the Semantic Kernel and **35** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **78 Words**, of which **43** form the Semantic Kernel and **35** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -961,6 +961,20 @@ Infer a code block's contract against the current dictionary, without evaluating
 - **Syntax:** `[ 1 2 ADD ] PROBE`
 - **ERROR conditions:** `notExecutable`
 
+## `FAIL`
+
+Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluation with category `declaredFailure` and that text as its message. This is the other half of what ABSENT gives a user Word — the trichotomy's third outcome, for a call that is wrong rather than data that did not work out. Like every ERROR it propagates and cannot be caught; a caller who wants a value to recover from asks for ABSENT instead. A non-text operand is `nonText`.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `control`
+- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.ERROR`
+- **Syntax:** `'width must be positive' FAIL`
+- **ERROR conditions:** `nonText`, `declaredFailure`
+
 ## `NIL`
 
 Push the NIL value onto the stack.
@@ -999,6 +1013,20 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
 - **Syntax:** `1 0 / NIL-REASON`
+
+## `ABSENT`
+
+A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `absence`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: always → userDeclared
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.RECOVERY`
+- **Syntax:** `'rate not quoted' ABSENT`
+- **ERROR conditions:** `nonText`
 
 ## `KEEP`
 

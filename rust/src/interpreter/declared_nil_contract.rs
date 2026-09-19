@@ -59,7 +59,7 @@ enum NilContract {
 /// the last two are about operand shape at all, and which of those two
 /// applies depends on *which* operand position is NIL). A new `rejectNil`
 /// Word needs an arm added here — `declared_nil_contract_tests` pins the
-/// current 20 so a missing arm is a compile error, not a silent fallback to
+/// current 21 so a missing arm is a compile error, not a silent fallback to
 /// `structureError`.
 fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
     match (word_name, offset) {
@@ -81,6 +81,10 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
         ),
         ("PROBE", 0) => AjisaiError::declared("notExecutable", "PROBE requires a CodeBlock"),
         ("DEL", 0) => AjisaiError::declared("nonText", "expected a name (String), got Nil"),
+        ("FAIL", 0) => AjisaiError::declared(
+            "nonText",
+            "FAIL: expected a String message, got Nil",
+        ),
         ("SHAPE", 0) => AjisaiError::declared(
             "nonVector",
             "SHAPE: expected a Vector, got Nil",
@@ -308,14 +312,14 @@ mod declared_nil_contract_tests {
                 checked += 1;
             }
         }
-        // The 20 fixed-arity `rejectNil` Words this table was built against
+        // The 21 fixed-arity `rejectNil` Words this table was built against
         // (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 1, plus
-        // the vocabulary-100 work order's Phases 1-3): LENGTH, REVERSE,
-        // CHARS, JOIN, TRIM, EXEC, PROBE, DEL, SHAPE, FLATTEN (1 operand
-        // each), RANDOM, CONCAT, TAKE, DROP, TOKENIZE, DEF, RESHAPE, BSEARCH,
-        // SEARCH (2 each) and REPLACE (3) — 10 + 18 + 3.
+        // the vocabulary-100 work order's Phases 1-4): LENGTH, REVERSE,
+        // CHARS, JOIN, TRIM, EXEC, PROBE, DEL, SHAPE, FLATTEN, FAIL (1
+        // operand each), RANDOM, CONCAT, TAKE, DROP, TOKENIZE, DEF, RESHAPE,
+        // BSEARCH, SEARCH (2 each) and REPLACE (3) — 11 + 18 + 3.
         assert_eq!(
-            checked, 31,
+            checked, 32,
             "the set of fixed-arity rejectNil Words changed; update nil_rejection_error"
         );
     }

@@ -15,6 +15,9 @@ pub mod debug_diagnosis;
 mod debug_limit_checks;
 mod debug_next_checks;
 pub(crate) mod declared_nil_contract;
+mod declared_outcomes;
+#[cfg(test)]
+mod declared_outcomes_tests;
 pub mod epoch;
 pub mod error_flow_trace;
 pub mod execute_def;

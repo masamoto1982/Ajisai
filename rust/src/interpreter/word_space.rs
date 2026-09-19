@@ -93,7 +93,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // its output scales with the block's own size rather than with
         // anything unbounded.
         Get | Length | Probe => (Const, false),
-        NilCheck | NilReason => (Const, false),
+        NilCheck | NilReason | Absent | Fail => (Const, false),
         True | False | Nil | Pi => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse | Flatten | Reshape => (Linear, true),

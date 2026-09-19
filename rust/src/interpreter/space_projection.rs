@@ -58,6 +58,7 @@ pub(crate) fn space_exhausted_nil(word: &str, limit: usize, observed: Option<u12
     });
     Value::nil_with_absence(AbsenceMetadata {
         reason: Some(NilReason::SpaceExhausted),
+        detail: None,
         origin: AbsenceOrigin::SpaceBudget,
         recoverability: Recoverability::Unknown,
         diagnosis: Some(Box::new(diagnosis)),

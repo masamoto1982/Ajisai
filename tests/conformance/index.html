@@ -168,6 +168,35 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-absent-declares-a-reasoned-nil" data-category="core">
+  <h3>ABSENT makes a NIL whose reason is the program's own text, and NIL-REASON answers that text (LANG.VALUES.NIL)</h3>
+  <pre class="ajisai-source">'rate not quoted' ABSENT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'rate not quoted'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-absent-is-recoverable" data-category="core">
+  <h3>A declared absence is an ordinary NIL: NIL? sees it and SELECT recovers it (LANG.FAILURE.RECOVERY)</h3>
+  <pre class="ajisai-source">0 'rate not quoted' ABSENT NIL? SELECT</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-absent-text-is-identity" data-category="core">
+  <h3>The declared text is part of the NIL's identity: two ABSENTs with different texts are two values (LANG.VALUES.NIL)</h3>
+  <pre class="ajisai-source">'a' ABSENT 'b' ABSENT 2 COLLECT UNIQUE LENGTH</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-fail-raises-declared-error" data-category="core">
+  <h3>FAIL raises a declared ERROR that halts evaluation; the message operand stays on the stack (LANG.FAILURE.TRICHOTOMY)</h3>
+  <pre class="ajisai-source">1 'width must be positive' FAIL 2</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">width must be positive</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-map" data-category="core">
   <h3>MAP applies a user block element-wise</h3>
   <pre class="ajisai-source">[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</pre>

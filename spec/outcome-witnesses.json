@@ -117,6 +117,18 @@
       "source": "[ 3 1 2 ] [ 2 ] BSEARCH",
       "expect": "error:unsortedInput",
       "rationale": "The exhaustive table's vector representatives are one element long, so they are trivially in order and BSEARCH's order check never fires there. An out-of-order three-element vector is the whole witness."
+    },
+    {
+      "id": "userDeclared",
+      "source": "'rate not quoted' ABSENT",
+      "expect": "nil:userDeclared",
+      "rationale": "The exhaustive table reaches this through ABSENT's text representative too; this witness pins the reason a program states, with the text it states."
+    },
+    {
+      "id": "declaredFailure",
+      "source": "'width must be positive' FAIL",
+      "expect": "error:declaredFailure",
+      "rationale": "The one Word that raises this category, with the text a program would give."
     }
   ]
 }

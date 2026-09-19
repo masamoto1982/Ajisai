@@ -74,7 +74,7 @@ Superseded designs, migration history, and the reasoning behind a change are rec
 Ajisai identity is the correspondence from normalized source to the ordered observation of stack, output, dictionary state, and structured diagnosis. Two implementations are semantically equivalent when that correspondence agrees for every conforming program.
 </p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>76</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>11</td><td>Alias spellings — the 11 symbolic surface forms of those Words, none counted as vocabulary</td></tr><tr><td>41</td><td>Semantic Kernel Words, within the 76 — carry the language's semantic identity</td></tr><tr><td>35</td><td>Standard Words, within the 76 — carry its practical surface</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>78</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>11</td><td>Alias spellings — the 11 symbolic surface forms of those Words, none counted as vocabulary</td></tr><tr><td>43</td><td>Semantic Kernel Words, within the 78 — carry the language's semantic identity</td></tr><tr><td>35</td><td>Standard Words, within the 78 — carry its practical surface</td></tr></tbody></table></div>
 
 <p>
 Kernel and Standard are both ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
@@ -190,10 +190,10 @@ Being read in truth position adds an observation; it takes none away. UNKNOWN is
 <h3 id="lang-values-nil">LANG.VALUES.NIL — Diagnostic absence</h3>
 
 <p>
-NIL is a value representing absence from a well-formed partial operation. It carries a <strong>reason</strong>: a stable, machine-readable identifier for why production failed. The reason is observable through <code>NIL-REASON</code> and through the protocol.
+NIL is a value representing absence from a well-formed partial operation. It carries a <strong>reason</strong>: a stable, machine-readable identifier for why production failed. The reason is observable through <code>NIL-REASON</code> and through the protocol. The reason space has two layers: the closed set of identifiers <code>spec/outcomes.json</code> registers, and one of them, <code>userDeclared</code>, which a program reaches by <code>ABSENT</code> and which carries the Text the program gave as its parameter — that Text is what <code>NIL-REASON</code> answers for it.
 </p>
 
-<p>The reason is the entire observable content of a NIL. An implementation may emit richer diagnostics on the host channel, and no program behavior may depend on them.</p>
+<p>The reason is the entire observable content of a NIL, the declared Text of a <code>userDeclared</code> NIL included; so two <code>ABSENT</code> NILs are the same value exactly when their Texts are equal. An implementation may emit richer diagnostics on the host channel, and no program behavior may depend on them.</p>
 
 <h3 id="lang-values-vector">LANG.VALUES.VECTOR — Vectors</h3>
 
@@ -267,7 +267,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Category</th><th>Outcome</th></tr></thead><tbody><tr><td>Success</td><td>Its registered outputs</td></tr><tr><td>Well-formed partial failure</td><td>NIL with a reason</td></tr><tr><td>Malformed use</td><td>ERROR</td></tr></tbody></table></div>
 
-<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. Recovery operates on absence alone: a program can choose a fallback in place of a NIL, while an ERROR propagates and halts evaluation.</p>
+<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. Recovery operates on absence alone: a program can choose a fallback in place of a NIL, while an ERROR propagates and halts evaluation. A program declares either outcome itself: <code>ABSENT</code> makes a NIL whose reason is the Text it is given, and <code>FAIL</code> raises an ERROR (category <code>declaredFailure</code>) whose message is the Text it is given. A declared ERROR is an ERROR in full — no Word catches it — so the trichotomy is closed against the program as well as against the implementation.</p>
 
 <h3 id="lang-failure-project">LANG.FAILURE.PROJECT — Projection</h3>
 
@@ -319,7 +319,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 76 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. The host's lookup, hover, the Reference, and execution must identify the same canonical entry.</p>
+<p>The dictionary has two tiers, and those two are the whole of it. <strong>Core</strong> holds the 78 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core. The host's lookup, hover, the Reference, and execution must identify the same canonical entry.</p>
 
 <h3 id="lang-dictionary-mutation">LANG.DICTIONARY.MUTATION — User Words</h3>
 

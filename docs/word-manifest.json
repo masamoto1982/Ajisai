@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 76,
-    "semanticKernelWords": 41,
+    "canonicalWords": 78,
+    "semanticKernelWords": 43,
     "standardWords": 35,
-    "corewords": 76,
+    "corewords": 78,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 97
+    "manifestEntries": 99
   },
   "entries": [
     {
@@ -1253,6 +1253,21 @@
       "classification": "Core"
     },
     {
+      "id": "core.fail",
+      "kind": "coreword",
+      "surface": "FAIL",
+      "category": "control",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "FAIL",
+      "coverage_entry_id": "core.fail",
+      "semantic_role": "Primitive",
+      "algebraic_family": "control",
+      "core_tier": "identity",
+      "derived_from": [],
+      "classification": "Core"
+    },
+    {
       "id": "core.nil",
       "kind": "coreword",
       "surface": "NIL",
@@ -1302,6 +1317,21 @@
       "derived_from": [
         "algebra.bubble.domain"
       ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.absent",
+      "kind": "coreword",
+      "surface": "ABSENT",
+      "category": "absence",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "ABSENT",
+      "coverage_entry_id": "core.absent",
+      "semantic_role": "Primitive",
+      "algebraic_family": "absence",
+      "core_tier": "identity",
+      "derived_from": [],
       "classification": "Core"
     },
     {

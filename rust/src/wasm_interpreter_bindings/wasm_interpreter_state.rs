@@ -331,6 +331,9 @@ impl AjisaiInterpreter {
                 if let Some(reason) = &absence.reason {
                     set_js_prop(&absence_obj, "reason", &(reason.as_protocol_str().into()));
                 }
+                if let Some(detail) = &absence.detail {
+                    set_js_prop(&absence_obj, "detail", &(detail.as_str().into()));
+                }
                 set_js_prop(
                     &absence_obj,
                     "origin",

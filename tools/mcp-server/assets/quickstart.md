@@ -18,7 +18,7 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 76 Words are:
+reaching for it exactly where it would have helped. The 78 Words are:
 
 | you need | Words |
 |---|---|
@@ -28,8 +28,8 @@ reaching for it exactly where it would have helped. The 76 Words are:
 | collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` `RANK` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `SEARCH` `REPLACE` `NUM` `STR` |
-| absence | `NIL` `NIL?` `NIL-REASON` |
-| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` · `PRINT` `KEEP` |
+| absence | `NIL` `NIL?` `NIL-REASON` `ABSENT` (declare a reasoned NIL from your own text) |
+| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` `FAIL` (raise a declared ERROR) · `PRINT` `KEEP` |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
 invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that
@@ -432,8 +432,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-76 canonical Words in one flat Core dictionary, of which
-41 form the Semantic Kernel and 35 are Standard Words. Both are
+78 canonical Words in one flat Core dictionary, of which
+43 form the Semantic Kernel and 35 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -508,9 +508,11 @@ no module system and nothing to import.
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
 | `EXEC` | control | Evaluate a code block. — e.g. `[ 1 2 ADD ] EXEC` |
 | `PROBE` | control | Infer a code block's contract against the current dictionary, without evaluating it. — e.g. `[ 1 2 ADD ] PROBE` |
+| `FAIL` | control | Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluation with category `declaredFailure` and that text as its message. This is the other half of what ABSENT gives a user Word — the trichotomy's third outcome, for a call that is wrong rather than data that did not work out. Like every ERROR it propagates and cannot be caught; a caller who wants a value to recover from asks for ABSENT instead. A non-text operand is `nonText`. — e.g. `'width must be positive' FAIL` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
+| `ABSENT` | absence | A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong. — e.g. `'rate not quoted' ABSENT` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |

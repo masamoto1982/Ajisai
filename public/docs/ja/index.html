@@ -986,6 +986,38 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3 id="declared-outcomes">自分で結末を宣言する: <code>ABSENT</code>と<code>FAIL</code></h3>
+                    <p>不在もエラーも、組み込みワードだけのものではありません。プログラム自身が「ここには値がない」「ここは誤用だ」と宣言できます。<code>ABSENT</code>は文字列を1つ受け取り、<strong>その文字列を理由にした<code>NIL</code></strong>を積みます。理由の識別子は<code>userDeclared</code>ですが、<code>NIL-REASON</code>が答えるのは渡した文字列そのものです。文字列は値の一部なので、違う文字列で作った2つの<code>ABSENT</code>は別の値です。</p>
+                    <p><code>FAIL</code>も文字列を1つ受け取り、その文字列をメッセージにした<strong>ERROR</strong>を起こします(分類は<code>declaredFailure</code>)。ERRORなので評価はそこで止まり、どのワードにも捕まえられません。<code>FAIL</code>は<code>ABSENT</code>の「強い版」ではなく、<a href="#nil">不在と誤用</a>の区別をプログラムの側から引くためのワードです。回復させたいなら<code>ABSENT</code>、呼び出し側の誤りとして止めたいなら<code>FAIL</code>を使ってください。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'rate not quoted' ABSENT NIL-REASON</code></td>
+                                    <td><code>NIL 'rate not quoted'</code></td>
+                                    <td class="notes">宣言した文字列がそのまま理由になる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>0 'rate not quoted' ABSENT NIL? SELECT</code></td>
+                                    <td><code>0/1</code></td>
+                                    <td class="notes">普通の<code>NIL</code>なので、下の回復の書き方がそのまま効く。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1 'width must be positive' FAIL 2</code></td>
+                                    <td>error</td>
+                                    <td class="notes">メッセージは<code>width must be positive</code>。評価は止まり、後続の<code>2</code>は実行されない。オペランドの<code>1</code>と文字列はスタックに残る。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
                     <h3 id="recovery">代わりの値を与える: <code>NIL?</code>と<code>SELECT</code></h3>
                     <p>不在の回復に専用の構文はありません。<a href="#cond"><code>SELECT</code></a>と<code>NIL?</code>を並べるだけです。</p>
                     <p><code>NIL?</code>は<strong>調べた値をそのまま残したうえで</strong>、それが不在かどうかの真偽値を積みます(<code>[ x ] -&gt; [ x ] [ bool ]</code>)。積まれる順番が<code>SELECT</code>の求める順番とちょうど一致するので、<code>代わりの値 調べる値 NIL? SELECT</code>と書けば「値があればその値、なければ代わりの値」になります。<strong>名前を付ける必要も、同じ式を2度書く必要もありません。</strong></p>
@@ -2482,8 +2514,8 @@ FILTER</code></td>
 
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は76個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この76個のワードは、<strong>41語のSemantic Kernel</strong>と<strong>35語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。76個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は78個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この78個のワードは、<strong>43語のSemantic Kernel</strong>と<strong>35語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。78個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -2590,7 +2622,7 @@ FILTER</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は76個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は78個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

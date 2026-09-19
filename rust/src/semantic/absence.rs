@@ -36,6 +36,8 @@ pub enum AbsenceOrigin {
     /// `NilReason::NotAvailable`.
     NotAvailable,
     HostEnvironment,
+    /// The program declared the absence itself (`ABSENT`).
+    UserDeclared,
     Unknown,
 }
 
@@ -50,6 +52,11 @@ pub enum Recoverability {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AbsenceMetadata {
     pub reason: Option<NilReason>,
+    /// The text a program gave `ABSENT`, for a `userDeclared` reason. Part
+    /// of the value: `Value`'s equality compares it beside the reason. Held
+    /// behind a *thin* pointer (`Arc<String>`, not `Arc<str>`) so the
+    /// envelope stays within `value_layout_tests`' pointer-sized budget.
+    pub detail: Option<std::sync::Arc<String>>,
     pub origin: AbsenceOrigin,
     pub recoverability: Recoverability,
     /// Boxed, not inlined. A [`DebugDiagnosis`] is 256 bytes — a summary
@@ -65,9 +72,16 @@ pub struct AbsenceMetadata {
 }
 
 impl AbsenceMetadata {
+    /// The declared text, when this absence carries one.
+    #[inline]
+    pub fn detail_text(&self) -> Option<&str> {
+        self.detail.as_deref().map(String::as_str)
+    }
+
     pub fn literal() -> Self {
         Self {
             reason: Some(NilReason::Literal),
+            detail: None,
             origin: AbsenceOrigin::Literal,
             recoverability: Recoverability::Unknown,
             diagnosis: None,
@@ -77,6 +91,7 @@ impl AbsenceMetadata {
     pub fn with_reasonless_unknown() -> Self {
         Self {
             reason: None,
+            detail: None,
             origin: AbsenceOrigin::Unknown,
             recoverability: Recoverability::Unknown,
             diagnosis: None,
@@ -90,8 +105,22 @@ impl AbsenceMetadata {
     ) -> Self {
         Self {
             reason: Some(reason),
+            detail: None,
             origin,
             recoverability,
+            diagnosis: None,
+        }
+    }
+
+    /// The absence `ABSENT` produces: reason `userDeclared`, with the
+    /// program's text as its detail. Recoverable, because a caller can choose
+    /// a fallback for it exactly as for a projected absence.
+    pub fn user_declared(detail: &str) -> Self {
+        Self {
+            reason: Some(NilReason::UserDeclared),
+            detail: Some(std::sync::Arc::new(detail.to_string())),
+            origin: AbsenceOrigin::UserDeclared,
+            recoverability: Recoverability::Recoverable,
             diagnosis: None,
         }
     }
