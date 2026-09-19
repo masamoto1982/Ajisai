@@ -178,6 +178,16 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) -> Option<()> {
             bytes.push(b'Y');
             write_str(bytes, name);
         }
+        // A Record digests as its two sequences under its own tag, so a
+        // Record and the Vector of its pairs never collide.
+        ValueData::Record(record) => {
+            bytes.push(b'R');
+            write_u64(bytes, record.len() as u64);
+            for (key, value) in record.entries() {
+                encode_value(bytes, key)?;
+                encode_value(bytes, value)?;
+            }
+        }
         ValueData::Scalar(f) => encode_rational(bytes, f),
         ValueData::ExactScalar(exact) => match exact {
             ExactReal::Rational(f) => encode_rational(bytes, f),

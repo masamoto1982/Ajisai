@@ -219,6 +219,20 @@ fn protocol_to_js(node: &ProtocolNode) -> JsValue {
             }
             set_prop(&obj, "value", &arr.into());
         }
+        ProtocolValue::Record { keys, values } => {
+            let record_obj = js_sys::Object::new();
+            let key_arr = js_sys::Array::new();
+            for key in keys {
+                key_arr.push(&protocol_to_js(key));
+            }
+            let value_arr = js_sys::Array::new();
+            for value in values {
+                value_arr.push(&protocol_to_js(value));
+            }
+            set_prop(&record_obj, "keys", &key_arr.into());
+            set_prop(&record_obj, "values", &value_arr.into());
+            set_prop(&obj, "value", &record_obj.into());
+        }
     }
     obj.into()
 }

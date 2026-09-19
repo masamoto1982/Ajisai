@@ -180,7 +180,7 @@ pub(crate) fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
         // LANG.COLLECTIONS.LIFT forbids ("a scalar combines with every element
         // of a vector"), and one that contradicts a singleton Vector not being
         // its element (LANG.VALUES.DISJOINT).
-        ValueData::Vector(_) | ValueData::Tensor { .. } => Err(
+        ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record(_) => Err(
             AjisaiError::create_structure_error("scalar value", "non-scalar value"),
         ),
         ValueData::Nil => Err(AjisaiError::create_structure_error(

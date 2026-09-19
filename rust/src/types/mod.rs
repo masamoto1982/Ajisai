@@ -5,6 +5,7 @@ pub mod fraction;
 mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_mcdc_tests;
+pub mod record;
 pub mod stack;
 mod value_absence;
 mod value_children;
@@ -37,6 +38,7 @@ mod tensor_storage;
 mod tensor_storage_tests;
 
 use self::fraction::Fraction;
+pub use self::record::{RecordBuildError, RecordData};
 pub use self::stack::Stack;
 pub use self::tensor_storage::{DenseTensor, SparseTensor};
 use self::value_identity::{dense_flatten, dense_lane_reasons, tensor_eq_vector};
@@ -110,6 +112,11 @@ pub enum ValueData {
     /// Holding the content directly settles both: the domain is the tag, and
     /// nothing has to be inferred from the elements.
     Text(Arc<str>),
+    /// A Record: an insertion-ordered keyed correspondence, the seventh
+    /// disjoint domain (LANG.RECORDS.STRUCTURE). It is not a Vector — no
+    /// Vector Word accepts it and no Record Word accepts a Vector — and it
+    /// has no literal: `RECORD` is its only constructor.
+    Record(Arc<RecordData>),
 }
 
 impl PartialEq for ValueData {
@@ -144,6 +151,9 @@ impl PartialEq for ValueData {
             // `[ 65 ]` now fall to the catch-all and answer false, as
             // LANG.VALUES.DISJOINT requires.
             (ValueData::Text(a), ValueData::Text(b)) => a == b,
+            // A Record equals a Record with the same key sequence and the
+            // same value sequence (LANG.VALUES.DENOTATION), and nothing else.
+            (ValueData::Record(a), ValueData::Record(b)) => a == b,
             _ => false,
         }
     }
@@ -163,6 +173,7 @@ const HASH_TAG_STRUCT_VECTOR: u8 = 4;
 const HASH_TAG_NIL: u8 = 5;
 const HASH_TAG_SYMBOL: u8 = 6;
 const HASH_TAG_TEXT: u8 = 7;
+const HASH_TAG_RECORD: u8 = 8;
 
 impl std::hash::Hash for ValueData {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -206,6 +217,10 @@ impl std::hash::Hash for ValueData {
             ValueData::Text(s) => {
                 state.write_u8(HASH_TAG_TEXT);
                 s.hash(state);
+            }
+            ValueData::Record(record) => {
+                state.write_u8(HASH_TAG_RECORD);
+                record.hash(state);
             }
         }
     }

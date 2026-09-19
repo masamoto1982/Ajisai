@@ -7,6 +7,7 @@ impl SemanticKind {
             SemanticKind::Collection => "collection",
             SemanticKind::Code => "code",
             SemanticKind::Absence => "absence",
+            SemanticKind::Record => "record",
         }
     }
 }
@@ -19,6 +20,7 @@ impl ValueShape {
             ValueShape::Tensor => "tensor",
             ValueShape::CodeBlock => "codeBlock",
             ValueShape::Absence => "absence",
+            ValueShape::Record => "record",
         }
     }
 }

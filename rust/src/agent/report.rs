@@ -274,6 +274,10 @@ pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
             denominator,
         } => json!({ "numerator": numerator, "denominator": denominator }),
         ProtocolValue::Children(kids) => Json::Array(kids.iter().map(protocol_node_json).collect()),
+        ProtocolValue::Record { keys, values } => json!({
+            "keys": keys.iter().map(protocol_node_json).collect::<Vec<_>>(),
+            "values": values.iter().map(protocol_node_json).collect::<Vec<_>>(),
+        }),
     };
     obj.insert("value".into(), value);
     Json::Object(obj)

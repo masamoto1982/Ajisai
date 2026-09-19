@@ -194,10 +194,11 @@ async fn order_is_the_stable_permutation_sort_applies() {
     assert_eq!(rendered_stack(&malformed), ["[ 3/1 'x' 2/1 ]"]);
 }
 
-/// `UNIQUE` and `TALLY` are one pass read two ways: same order, aligned
-/// lengths, whatever the element domain. Written out, each is an O(n²) scan
-/// with `INDEX-OF`, and they are the counting step of a majority vote, a class
-/// prior, a histogram, a Gini and a naive-Bayes tally.
+/// `UNIQUE` and `TALLY` are one pass read two ways: `TALLY`'s keys are
+/// `UNIQUE`'s answer, in the same order, and its values the aligned counts
+/// (LANG.RECORDS.STRUCTURE), whatever the element domain. Written out, each
+/// is an O(n²) scan with `INDEX-OF`, and they are the counting step of a
+/// majority vote, a class prior, a histogram, a Gini and a naive-Bayes tally.
 #[tokio::test]
 async fn unique_and_tally_agree_on_order_and_length() {
     let mut unique = Interpreter::new();
@@ -211,7 +212,7 @@ async fn unique_and_tally_agree_on_order_and_length() {
         .await
         .unwrap();
     assert_eq!(rendered_stack(&unique), ["[ 'b' 'a' 'c' ]"]);
-    assert_eq!(rendered_stack(&tally), ["[ 3/1 1/1 1/1 ]"]);
+    assert_eq!(rendered_stack(&tally), ["{ 'b': 3/1 'a': 1/1 'c': 1/1 }"]);
 }
 
 /// `ZIP` transposes, and transposing twice is the identity on a rectangular
@@ -259,8 +260,9 @@ async fn put_replaces_exactly_one_position() {
     assert_eq!(rendered_stack(&past_end), ["NIL"]);
 }
 
-/// `GROUP` bundles by key in `UNIQUE` key order and keeps every value exactly
-/// once, so a grouping never loses or duplicates data.
+/// `GROUP` bundles by key into a Record, keys in `UNIQUE` key order, and keeps
+/// every value exactly once, so a grouping never loses or duplicates data and
+/// a group is read back by its key.
 #[tokio::test]
 async fn group_partitions_without_loss() {
     let mut interpreter = Interpreter::new();
@@ -270,7 +272,7 @@ async fn group_partitions_without_loss() {
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]"]
+        ["{ 'b': [ 1/1 3/1 ] 'a': [ 2/1 4/1 ] }"]
     );
 
     let mut mismatched = Interpreter::new();

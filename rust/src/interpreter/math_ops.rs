@@ -1,4 +1,5 @@
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, nil_passthrough_unary, push_result,
 };
@@ -104,6 +105,9 @@ pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
     if nil_passthrough_unary(interp) {
         return Ok(());
     }
+    if record_lift::lift_unary(interp, &op_neg)? {
+        return Ok(());
+    }
     let operands = extract_operands(interp, 1)?;
     match lift_unary_numeric(&operands[0], &neg_scalar) {
         Ok(result) => {
@@ -130,6 +134,9 @@ pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
 pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
     require_stack_top(interp, "ABS")?;
     if nil_passthrough_unary(interp) {
+        return Ok(());
+    }
+    if record_lift::lift_unary(interp, &op_abs)? {
         return Ok(());
     }
     let operands = extract_operands(interp, 1)?;
@@ -312,11 +319,17 @@ where
 }
 
 pub(crate) fn op_min(interp: &mut Interpreter) -> Result<()> {
+    if record_lift::lift_binary(interp, &op_min)? {
+        return Ok(());
+    }
     // Keep the left operand when it is less-or-equal to the right.
     apply_selecting(interp, "MIN", |ord| ord != std::cmp::Ordering::Greater)
 }
 
 pub(crate) fn op_max(interp: &mut Interpreter) -> Result<()> {
+    if record_lift::lift_binary(interp, &op_max)? {
+        return Ok(());
+    }
     // Keep the left operand when it is greater-or-equal to the right.
     apply_selecting(interp, "MAX", |ord| ord != std::cmp::Ordering::Less)
 }
@@ -338,6 +351,9 @@ fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
 /// Element-wise over a vector, by [`lift_unary_numeric`]: a per-element
 /// standard deviation is `variances SQRT`, not a `MAP` around a block.
 pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
+    if record_lift::lift_unary(interp, &op_sqrt)? {
+        return Ok(());
+    }
     let value = if interp.consumption_mode == ConsumptionMode::Keep {
         interp
             .stack

@@ -24,7 +24,7 @@ use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{DenseTensor, Interpretation, Value, ValueData};
+use crate::types::{DenseTensor, Interpretation, RecordData, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use serde::{Deserialize, Serialize};
@@ -122,6 +122,12 @@ enum PersistData {
     },
     Vector {
         items: Vec<PersistValue>,
+    },
+    /// A Record, persisted as its two aligned sequences; decoding rebuilds the
+    /// key index and refuses a payload whose keys are not distinct.
+    Record {
+        keys: Vec<PersistValue>,
+        values: Vec<PersistValue>,
     },
     /// A String, persisted as its content. The old encoding was a `Vector` of
     /// codepoint scalars plus a `"text"` role tag, which made `''` decode as
@@ -251,6 +257,18 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
                 .collect(),
         },
         ValueData::Nil => PersistData::Nil { r: None, ud: None },
+        ValueData::Record(record) => PersistData::Record {
+            keys: record
+                .keys()
+                .iter()
+                .map(encode_value)
+                .collect::<Result<Vec<_>, _>>()?,
+            values: record
+                .values()
+                .iter()
+                .map(encode_value)
+                .collect::<Result<Vec<_>, _>>()?,
+        },
         ValueData::Symbol(name) => PersistData::Symbol {
             name: name.to_string(),
         },
@@ -322,6 +340,19 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             }
         }
         PersistData::Nil { .. } => ValueData::Nil,
+        PersistData::Record { keys, values } => {
+            let keys = keys
+                .iter()
+                .map(decode_value)
+                .collect::<Result<Vec<_>, _>>()?;
+            let values = values
+                .iter()
+                .map(decode_value)
+                .collect::<Result<Vec<_>, _>>()?;
+            ValueData::Record(Arc::new(
+                RecordData::new(keys, values).map_err(|e| format!("malformed record: {e:?}"))?,
+            ))
+        }
         PersistData::Symbol { name } => ValueData::Symbol(Arc::from(name.as_str())),
     })
 }

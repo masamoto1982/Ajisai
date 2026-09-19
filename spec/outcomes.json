@@ -76,6 +76,11 @@
       "documentation": "DEF named a word the dictionary already binds in a way this definition cannot resolve."
     },
     {
+      "id": "duplicateKey",
+      "kind": "declared",
+      "documentation": "RECORD was given a key Vector in which some key appears twice. A Record holds each key once (LANG.RECORDS.STRUCTURE), and which of two values should win is a decision the program has not made, so the Word raises rather than keeping either."
+    },
+    {
       "id": "executionLimitExceeded",
       "kind": "structural",
       "attribution": "machine",
@@ -132,6 +137,11 @@
       "id": "negativeCount",
       "kind": "declared",
       "documentation": "RANDOM (or another count-taking Word) received a negative count."
+    },
+    {
+      "id": "nonRecord",
+      "kind": "declared",
+      "documentation": "A Record Word (KEYS, VALUES, AT, WITH, WITHOUT, HAS?, MERGE) was given something other than a Record where one is required. A Record is its own domain (LANG.VALUES.DISJOINT): a Vector of pairs is not a Record and nothing converts one implicitly."
     },
     {
       "id": "nonComparableElement",

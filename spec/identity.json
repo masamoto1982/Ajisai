@@ -70,6 +70,35 @@
       ]
     },
     {
+      "id": "recordDenotation",
+      "subject": "Two Records",
+      "procedure": "Compare the key sequences position by position, then the value sequences, each pair by the procedure its own domain provides.",
+      "decides": ["same", "different", "unknown"],
+      "total": false,
+      "unknownArrivesAs": {
+        "kind": "nilReason",
+        "reason": "undecidable"
+      },
+      "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by WITH in one order is different from one built in another, and construction history beyond that is unobservable. Where a key or a value is a computable real the pair inherits scalarComputableReal's `unknown`, and one undecided pair with every other pair equal makes the whole comparison UNKNOWN — never `different`.",
+      "witnesses": [
+        {
+          "source": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD EQ",
+          "expect": "TRUE",
+          "note": "Two constructions, one value."
+        },
+        {
+          "source": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'x' ] [ 2 1 ] RECORD EQ",
+          "expect": "FALSE",
+          "note": "The same correspondence in a different key order is a different Record: order is observable structure, as it is for a Vector."
+        },
+        {
+          "source": "[ 'x' ] PI 1 COLLECT RECORD [ 'x' ] PI 1 COLLECT RECORD EQ",
+          "expect": "nil:undecidable",
+          "note": "The one undecided pair is a computable real, so the Record comparison answers what that pair answers."
+        }
+      ]
+    },
+    {
       "id": "userWordContentIdentity",
       "subject": "Two User Word definitions",
       "procedure": "Compare content identities — a digest over the normalized body with every reference replaced by the identity of its target.",

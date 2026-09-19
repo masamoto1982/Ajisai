@@ -1,5 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::lane_lift::lift_lanes;
+use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
@@ -186,18 +187,30 @@ fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result
 }
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
+    if record_lift::lift_binary(interp, &op_lt)? {
+        return Ok(());
+    }
     apply_ordering_schema(interp, OrderingKind::Lt)
 }
 
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
+    if record_lift::lift_binary(interp, &op_le)? {
+        return Ok(());
+    }
     apply_ordering_schema(interp, OrderingKind::Le)
 }
 
 pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
+    if record_lift::lift_binary(interp, &op_gt)? {
+        return Ok(());
+    }
     apply_ordering_schema(interp, OrderingKind::Gt)
 }
 
 pub fn op_gte(interp: &mut Interpreter) -> Result<()> {
+    if record_lift::lift_binary(interp, &op_gte)? {
+        return Ok(());
+    }
     apply_ordering_schema(interp, OrderingKind::Ge)
 }
 
@@ -243,6 +256,21 @@ fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
         | (ValueData::ExactScalar(_), ValueData::Scalar(_))
         | (ValueData::Scalar(_), ValueData::ExactScalar(_)) => scalar_pair_eq(a_val, b_val),
         (ValueData::Vector(x), ValueData::Vector(y)) if tier2 => vector_pair_eq(x, y),
+        // Two Records are one value when their key sequences and their value
+        // sequences are (LANG.RECORDS.STRUCTURE); a Tier 2 value in either
+        // sequence makes the answer as undecidable as it is for Vectors.
+        (ValueData::Record(x), ValueData::Record(y)) if tier2 => {
+            match vector_pair_eq(x.keys(), y.keys()) {
+                ScalarCmp::Decided(false) => ScalarCmp::Decided(false),
+                keys => match (keys, vector_pair_eq(x.values(), y.values())) {
+                    (_, ScalarCmp::Decided(false)) => ScalarCmp::Decided(false),
+                    (ScalarCmp::Decided(true), ScalarCmp::Decided(true)) => {
+                        ScalarCmp::Decided(true)
+                    }
+                    _ => ScalarCmp::Undecided,
+                },
+            }
+        }
         // Disjoint domains are unequal whatever they carry
         // (LANG.VALUES.DISJOINT), so Tier 2 does not make them undecidable.
         _ => ScalarCmp::Decided(false),

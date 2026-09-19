@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 78,
-    "semanticKernelWords": 43,
+    "canonicalWords": 86,
+    "semanticKernelWords": 51,
     "standardWords": 35,
-    "corewords": 78,
+    "corewords": 86,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 99
+    "manifestEntries": 107
   },
   "entries": [
     {
@@ -824,7 +824,7 @@
       "id": "core.tally",
       "kind": "coreword",
       "surface": "TALLY",
-      "category": "vector",
+      "category": "record",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "TALLY",
@@ -833,7 +833,8 @@
       "algebraic_family": "structure-lift",
       "core_tier": "material",
       "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.record.keyed-correspondence"
       ],
       "classification": "Core"
     },
@@ -876,7 +877,7 @@
       "id": "core.group",
       "kind": "coreword",
       "surface": "GROUP",
-      "category": "vector",
+      "category": "record",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
       "canonical": "GROUP",
@@ -886,7 +887,8 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.reshape-group",
-        "algebra.structure-lift.indexed-sequence"
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.record.keyed-correspondence"
       ],
       "classification": "Core"
     },
@@ -942,6 +944,142 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.budgeted-order",
         "algebra.bubble.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.record",
+      "kind": "coreword",
+      "surface": "RECORD",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "RECORD",
+      "coverage_entry_id": "core.record",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.keys",
+      "kind": "coreword",
+      "surface": "KEYS",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "KEYS",
+      "coverage_entry_id": "core.keys",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.values",
+      "kind": "coreword",
+      "surface": "VALUES",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "VALUES",
+      "coverage_entry_id": "core.values",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.at",
+      "kind": "coreword",
+      "surface": "AT",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "AT",
+      "coverage_entry_id": "core.at",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.with",
+      "kind": "coreword",
+      "surface": "WITH",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "WITH",
+      "coverage_entry_id": "core.with",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.without",
+      "kind": "coreword",
+      "surface": "WITHOUT",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "WITHOUT",
+      "coverage_entry_id": "core.without",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.has",
+      "kind": "coreword",
+      "surface": "HAS?",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "HAS?",
+      "coverage_entry_id": "core.has",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.merge",
+      "kind": "coreword",
+      "surface": "MERGE",
+      "category": "record",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "MERGE",
+      "coverage_entry_id": "core.merge",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
       ],
       "classification": "Core"
     },

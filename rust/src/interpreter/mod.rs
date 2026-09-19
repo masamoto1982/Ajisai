@@ -40,6 +40,11 @@ pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
 mod probe;
+mod quantize_ops;
+mod record_lift;
+mod record_ops;
+#[cfg(test)]
+mod record_words_tests;
 pub mod runtime_limits;
 mod search_ops;
 #[cfg(test)]

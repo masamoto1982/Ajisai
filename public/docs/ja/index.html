@@ -1659,10 +1659,10 @@
                             <tbody>
                                 <tr><td><code>ORDER</code></td><td><code>[ 30 10 20 ] ORDER</code></td><td class="notes"><code>[ 1/1 2/1 0/1 ]</code> — 昇順の位置。同点は元の位置のまま残る</td></tr>
                                 <tr><td><code>UNIQUE</code></td><td><code>[ 'b' 'a' 'b' ] UNIQUE</code></td><td class="notes"><code>[ 'b' 'a' ]</code> — 重複のない値。最初の出現順</td></tr>
-                                <tr><td><code>TALLY</code></td><td><code>[ 'b' 'a' 'b' ] TALLY</code></td><td class="notes"><code>[ 2/1 1/1 ]</code> — 件数。<code>UNIQUE</code>の並びに揃う</td></tr>
+                                <tr><td><code>TALLY</code></td><td><code>[ 'b' 'a' 'b' ] TALLY</code></td><td class="notes"><code>{ 'b': 2/1 'a': 1/1 }</code> — 要素ごとの件数を<a href="#records">Record</a>で返す。キーは<code>UNIQUE</code>の並び、<code>VALUES</code>を取れば件数だけのベクトル</td></tr>
                                 <tr><td><code>ZIP</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] ZIP</code></td><td class="notes"><code>[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]</code> — 位置ごとの束ね直し。これは転置でもある</td></tr>
                                 <tr><td><code>PUT</code></td><td><code>[ 1 2 3 ] 1 9 PUT</code></td><td class="notes"><code>[ 1/1 9/1 3/1 ]</code> — 1つの位置を置き換える。負のインデックスは末尾から数える</td></tr>
-                                <tr><td><code>GROUP</code></td><td><code>[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP</code></td><td class="notes"><code>[ [ 1/1 3/1 ] [ 2/1 ] ]</code> — キーごとに束ねた値。キーは<code>UNIQUE</code>の順序に従う</td></tr>
+                                <tr><td><code>GROUP</code></td><td><code>[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP</code></td><td class="notes"><code>{ 'a': [ 1/1 3/1 ] 'b': [ 2/1 ] }</code> — キーごとに束ねた値を<a href="#records">Record</a>で返す。キーは<code>UNIQUE</code>の順序に従い、<code>'a' AT</code>で1つの組を取り出せる</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1702,6 +1702,113 @@
                         </div>
                     </div>
                     <p class="ref-note"><code>UNIQUE</code>と<code>TALLY</code>は数だけでなくあらゆる値に対して働きます。ラベルは通常テキストなので、これは実用上の違いになります。一方<code>ORDER</code>と<code>SORT</code>はフラットな数のベクトルを必要とします。厳密な順序関係が定義されているのはそこだからです。<code>GROUP</code>は値とキーを位置によって対応付けるので、2つのオペランドは同じ長さでなければなりません。</p>
+                </section>
+
+                <section id="records" class="ref-page">
+                    <h2>キーによる対応(<code>RECORD</code>, <code>AT</code>)</h2>
+                    <p>名前の付いたデータ——価格表、設定、1行のレコード——を、Ajisaiは<strong>Record</strong>という第7の値領域で持ちます。Recordは<em>キー列</em>と<em>値列</em>を位置で対応付けたもので、キーは与えた順序を保ち、同じキーは一度しか現れません。キーには任意の値を使えます(ふつうは文字列)。ベクトルではないので、ベクトルのワードはRecordを受け取らず、Recordのワードはベクトルを受け取りません。暗黙の変換はどちら向きにもありません。</p>
+                    <p>Recordの字面(リテラル)はありません。<code>RECORD</code>がキー列と値列から組み立てる唯一の入口で、表示は<code>{ 'x': 1/1 'y': 2/1 }</code>の形です。<code>{</code> <code>}</code>はAjisaiの字句として退役しているので、この表示をリテラルと取り違えることはできません。</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>ワード</th><th>例</th><th>結果</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>RECORD</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD</code></td><td class="notes"><code>{ 'x': 1/1 'y': 2/1 }</code> — キー列と値列を位置で対応付ける。長さが違えばエラー、同じキーが2回あれば<code>duplicateKey</code>のエラー(後勝ちで黙って捨てない)</td></tr>
+                                <tr><td><code>KEYS</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD KEYS</code></td><td class="notes"><code>[ 'x' 'y' ]</code> — キー列。与えた順序のまま</td></tr>
+                                <tr><td><code>VALUES</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD VALUES</code></td><td class="notes"><code>[ 1/1 2/1 ]</code> — 値列。<code>KEYS</code>と位置が揃う。ここから先はベクトルの語彙がそのまま使える</td></tr>
+                                <tr><td><code>AT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'y' AT</code></td><td class="notes"><code>2/1</code> — キーの下の値。<code>GET</code>が位置に対して行うことをキーに対して行う。ないキーは<code>NIL</code>(<code>missingField</code>)</td></tr>
+                                <tr><td><code>WITH</code></td><td><code>[ 'x' ] [ 1 ] RECORD 'y' 2 WITH</code></td><td class="notes"><code>{ 'x': 1/1 'y': 2/1 }</code> — 1つのキーに値を与えた新しいRecord。既にあるキーは位置を動かさず値だけ替わり、ないキーは末尾に足される</td></tr>
+                                <tr><td><code>WITHOUT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT</code></td><td class="notes"><code>{ 'y': 2/1 }</code> — 1つのキーを除いた新しいRecord。ないキーを除こうとすると<code>NIL</code>(<code>missingField</code>)</td></tr>
+                                <tr><td><code>HAS?</code></td><td><code>[ 'x' ] [ 1 ] RECORD 'x' HAS?</code></td><td class="notes"><code>TRUE</code> — キーがあるかどうか。値を読まずに答えるので、「キーがない」と「値が<code>NIL</code>」を区別できる</td></tr>
+                                <tr><td><code>MERGE</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE</code></td><td class="notes"><code>{ 'x': 1/1 'y': 9/1 'z': 3/1 }</code> — 2つのRecordの合併。同じキーは右が勝ち、左の順序を保ち、右にしかないキーは末尾に足される。既定値に上書きを重ねる形</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h3 id="record-identity">Recordの同一性と順序</h3>
+                    <p>Recordの見分けは<strong>キー列と値列</strong>だけで付きます(<a href="#identity-model">同一性モデル</a>)。同じキーを同じ順序で持ち、対応する値が同じなら、どう組み立てたかによらず同じ値です。順序は観測できる構造なので、<code>[ 'x' 'y' ] [ 1 2 ] RECORD</code>と<code>[ 'y' 'x' ] [ 2 1 ] RECORD</code>は別の値です。<code>EQ</code>はこの同一性を答え、<code>UNIQUE</code>や<code>TALLY</code>はRecordを要素として数えられます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">2度組み立てても1つの値。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'x' ] [ 2 1 ] RECORD EQ</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">キーの順序が違えば別の値。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3 id="record-lifting">算術と比較だけが値の側へ持ち上がる</h3>
+                    <p>Recordに対して働く既存のワードは<a href="#arithmetic">算術</a>と<a href="#comparison">比較</a>だけです。数やベクトルをRecordと組み合わせると、キーはそのままで、値のそれぞれに演算が及びます。2つのRecord同士は<strong>キー列が等しいときだけ</strong>値ごとに組み合わさり、違えば<code>shapeMismatch</code>のエラーです。それ以外のワード——<code>LENGTH</code>、<code>MAP</code>、<code>AND</code>、<code>CHARS</code>など——は、Recordを受け取るとそのワード自身のオペランドエラーを起こします。Recordをベクトルとして扱いたいなら<code>VALUES</code>で明示的に渡ってください。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 10 MUL</code></td>
+                                    <td><code>{ 'x': 10/1 'y': 20/1 }</code></td>
+                                    <td class="notes">キーは変わらず、値だけが10倍される。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 1 GT</code></td>
+                                    <td><code>{ 'x': FALSE 'y': TRUE }</code></td>
+                                    <td class="notes">比較も同じ規則で、真偽値のRecordになる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD ADD</code></td>
+                                    <td><code>{ 'x': 2/1 'y': 4/1 }</code></td>
+                                    <td class="notes">キー列が等しい2つのRecordは値ごとに足される。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3 id="record-recovery">ないキーの扱い</h3>
+                    <p>ないキーを<code>AT</code>で読むのは、形は正しいが答えのない問いです。ですからエラーではなく、理由<code>missingField</code>を持つ<code>NIL</code>が返り、<a href="#recovery">回復の書き方</a>がそのまま効きます。存在そのものを問いたいときは<code>HAS?</code>を使ってください。<code>WITHOUT</code>も同じ規律で、ないキーを除こうとすると<code>NIL</code>を返します。<code>GET</code>・<code>TAKE</code>・<code>PUT</code>が範囲外の位置を投影するのと同じで、綴り間違いが黙って通ることはありません。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>0 [ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL? SELECT</code></td>
+                                    <td><code>0/1</code></td>
+                                    <td class="notes">ないキーには代わりの値<code>0</code>が選ばれる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL-REASON</code></td>
+                                    <td><code>NIL 'missingField'</code></td>
+                                    <td class="notes">理由はプロトコル文字列なので分岐できる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note"><a href="#ordering"><code>TALLY</code>と<code>GROUP</code></a>はRecordを返します。<code>TALLY</code>は「要素→件数」、<code>GROUP</code>は「キー→そのキーの値のベクトル」で、どちらもキーは最初の出現順です。<code>KEYS</code>を取れば<code>UNIQUE</code>の答えそのもの、<code>VALUES</code>を取れば以前の件数ベクトル・グループのベクトルが得られるので、失われた力はありません。表(table)は「列名→列ベクトル」のRecordとして持てば、<code>'price' AT</code>で1列を取り出し、算術で列ごとに計算できます。</p>
                 </section>
 
                 <section id="strings-ops" class="ref-page">
@@ -2514,8 +2621,8 @@ FILTER</code></td>
 
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は78個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この78個のワードは、<strong>43語のSemantic Kernel</strong>と<strong>35語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。78個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は86個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この86個のワードは、<strong>51語のSemantic Kernel</strong>と<strong>35語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。86個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -2622,7 +2729,7 @@ FILTER</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は78個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は86個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2712,6 +2819,7 @@ FILTER</code></td>
                     <li><a href="#stack">スタックと修飾子</a></li>
                     <li><a href="#operators">演算子</a></li>
                     <li><a href="#vector-ops">ベクトル操作</a></li>
+                    <li><a href="#records">キーによる対応</a></li>
                     <li><a href="#strings-ops">文字列操作</a></li>
                     <li><a href="#control">制御構文</a></li>
                     <li><a href="#words">ワードと名前</a></li>

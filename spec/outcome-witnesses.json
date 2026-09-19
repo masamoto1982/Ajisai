@@ -129,6 +129,18 @@
       "source": "'width must be positive' FAIL",
       "expect": "error:declaredFailure",
       "rationale": "The one Word that raises this category, with the text a program would give."
+    },
+    {
+      "id": "duplicateKey",
+      "source": "[ 'a' 'a' ] [ 1 2 ] RECORD",
+      "expect": "error:duplicateKey",
+      "rationale": "No domain representative is a Vector with a repeated element, so the exhaustive table never hands RECORD two equal keys. A two-key Vector naming one key twice is the witness."
+    },
+    {
+      "id": "nonRecord",
+      "source": "5 KEYS",
+      "expect": "error:nonRecord",
+      "rationale": "Stated explicitly beside its registry entry even though the exhaustive table also reaches it: no domain representative is a Record, so every Record Word cell the table runs answers nonRecord, and a reader of this file should not have to infer that."
     }
   ]
 }

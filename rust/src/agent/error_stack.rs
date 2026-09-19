@@ -188,6 +188,13 @@ fn node_payload_bytes(node: &ProtocolNode) -> usize {
             .iter()
             .map(|child| NODE_ENVELOPE_BYTES / 2 + node_payload_bytes(child))
             .sum(),
+        ProtocolValue::Record { keys, values } => {
+            keys.iter()
+                .chain(values.iter())
+                .map(|child| NODE_ENVELOPE_BYTES / 2 + node_payload_bytes(child))
+                .sum::<usize>()
+                + 24
+        }
     };
     // An algebraic value's `value` is its *approximate* rational — small — while
     // the number itself lives in `semantics.exactTerms`, which is the opposite
