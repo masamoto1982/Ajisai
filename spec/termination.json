@@ -157,6 +157,14 @@
       "decreases": "remainingElements",
       "why": "As ANY.",
       "witness": "[ 1 2 3 ] [ 0 GT ] ALL"
+    },
+    {
+      "id": "RANK",
+      "kind": "word",
+      "descendsInto": "the code block, once per value reached at the stated depth",
+      "decreases": "remainingElements",
+      "why": "As MAP, one level at a time: the depth falls by one per level, each level's children are a finite, already materialized collection, and the walk stops early at a leaf. The block runs once per value reached, which is a fixed number decided before the first run.",
+      "witness": "[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK"
     }
   ],
 

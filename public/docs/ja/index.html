@@ -1634,6 +1634,21 @@
                             </tbody>
                         </table>
                     </div>
+                    <p>ベクトルの<strong>形</strong>——各軸の長さを外側から並べたもの——は、要素ごとの持ち上げがオペランドを揃えるときに使っている概念です。次の5語がそれをプログラムから読み、書き換えます。<code>FLATTEN</code>と<code>DEPTH</code>は自分で書くことができません。入れ子の深さは前もって分からず、再帰も無限ループもない言語は深さの分からない構造を辿れないからです。</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>ワード</th><th>例</th><th>結果</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>SHAPE</code></td><td><code>[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ] SHAPE</code></td><td class="notes"><code>[ 3/1 2/1 ]</code> — 矩形の入れ子の各軸の長さ。<code>[ [ 1 2 ] [ 3 ] ]</code>のように不揃いなベクトルには形がないので<code>NIL</code>(<code>domainMiss</code>)</td></tr>
+                                <tr><td><code>RESHAPE</code></td><td><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></td><td class="notes"><code>[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]</code> — 葉を順に、新しい形に組み直す。形の積が葉の数と違えばエラー。大きすぎる形は<code>NIL</code>(<code>spaceExhausted</code>)</td></tr>
+                                <tr><td><code>FLATTEN</code></td><td><code>[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN</code></td><td class="notes"><code>[ 1/1 2/1 3/1 4/1 ]</code> — どれだけ深くてもすべての軸を1本に畳む。<code>CONCAT</code>は1段だけ</td></tr>
+                                <tr><td><code>DEPTH</code></td><td><code>[ 1 [ 2 [ 3 ] ] ] DEPTH</code></td><td class="notes"><code>3/1</code> — 入れ子の深さ。数やテキストは<code>0</code>、平坦なベクトルは<code>1</code></td></tr>
+                                <tr><td><code>RANK</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK</code></td><td class="notes"><code>[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]</code> — 指定した深さの値それぞれにブロックを適用する。深さ<code>1</code>は<code>MAP</code>そのもの、<code>0</code>はベクトル全体に一度</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <p>まず手を伸ばすべきは<code>ORDER</code>です。<code>SORT</code>はソート後の値が<em>何であるか</em>を返し、<em>どこから来たか</em>は捨ててしまいます。<code>ORDER</code>は位置を保持します。そのためk近傍、上位kスコア、中央値の位置、ランキングのように、キーのほかにペイロードを運ぶ必要があるものは、いずれも<code>ORDER</code>に続けて<code>GET</code>という形になります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -2443,8 +2458,8 @@ FILTER</code></td>
 
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は67個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この67個のワードは、<strong>36語のSemantic Kernel</strong>と<strong>31語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。67個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は72個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この72個のワードは、<strong>41語のSemantic Kernel</strong>と<strong>31語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。72個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -2551,7 +2566,7 @@ FILTER</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は67個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は72個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

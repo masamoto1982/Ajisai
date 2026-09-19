@@ -83,7 +83,7 @@ impl LiteralContext {
 fn consumes_preceding_as_code(canonical_name: &str) -> bool {
     matches!(
         canonical_name,
-        "MAP" | "FILTER" | "FOLD" | "ANY" | "ALL" | "EXEC" | "PROBE"
+        "MAP" | "FILTER" | "FOLD" | "SCAN" | "ANY" | "ALL" | "RANK" | "EXEC" | "PROBE"
     )
 }
 

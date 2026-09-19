@@ -1978,6 +1978,213 @@
       "standardKind": "operational"
     },
     {
+      "name": "SHAPE",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "raggedNesting",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT"
+      ],
+      "documentation": {
+        "summary": "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
+        "hover": "SHAPE — the axis lengths of a rectangular vector",
+        "lookup": "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
+        "syntax": "[ [ 1 2 ] [ 3 4 ] ] SHAPE",
+        "role": "Shape primitive: the lengths of a rectangular vector's axes, outermost first.",
+        "stackEffect": "[ vec ] -> [ shape ]"
+      },
+      "executorKey": "Shape",
+      "effects": [],
+      "partiality": "projecting",
+      "acceptedDomain": "vector",
+      "category": "shape",
+      "vocabularyTier": "kernel"
+    },
+    {
+      "name": "RESHAPE",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "spaceExhausted",
+        "reason": "spaceExhausted"
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidShape"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.COLLECTIONS.BUDGET",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).",
+        "hover": "RESHAPE — regroup a vector's leaves under a new shape",
+        "lookup": "Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).",
+        "syntax": "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE",
+        "role": "Shape primitive: regroup a vector's leaves under a new shape.",
+        "stackEffect": "[ vec ] [ shape ] -> [ reshaped ]"
+      },
+      "executorKey": "Reshape",
+      "effects": [],
+      "partiality": "projecting",
+      "category": "shape",
+      "vocabularyTier": "kernel"
+    },
+    {
+      "name": "FLATTEN",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.DICTIONARY.ACYCLIC"
+      ],
+      "documentation": {
+        "summary": "Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`, the leaves in index order however deeply they were nested. CONCAT joins two vectors and flattens one level; FLATTEN takes one vector and flattens all of them. It cannot be written as a user definition: the depth is not known in advance, and a language with no recursion and no unbounded loop cannot walk a structure of unknown depth (LANG.DICTIONARY.ACYCLIC).",
+        "hover": "FLATTEN — collapse every axis into one",
+        "lookup": "Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`, the leaves in index order however deeply they were nested. CONCAT joins two vectors and flattens one level; FLATTEN takes one vector and flattens all of them. It cannot be written as a user definition: the depth is not known in advance, and a language with no recursion and no unbounded loop cannot walk a structure of unknown depth (LANG.DICTIONARY.ACYCLIC).",
+        "syntax": "[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN",
+        "role": "Shape primitive: collapse every axis of a vector into one.",
+        "stackEffect": "[ vec ] -> [ flat ]"
+      },
+      "executorKey": "Flatten",
+      "effects": [],
+      "partiality": "total",
+      "acceptedDomain": "vector",
+      "category": "shape",
+      "vocabularyTier": "kernel"
+    },
+    {
+      "name": "DEPTH",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.DICTIONARY.ACYCLIC"
+      ],
+      "documentation": {
+        "summary": "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes.",
+        "hover": "DEPTH — how deeply a value nests",
+        "lookup": "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes.",
+        "syntax": "[ 1 [ 2 [ 3 ] ] ] DEPTH",
+        "role": "Shape primitive: the nesting depth of a value.",
+        "stackEffect": "[ x ] -> [ n ]"
+      },
+      "executorKey": "Depth",
+      "effects": [],
+      "partiality": "total",
+      "category": "shape",
+      "vocabularyTier": "kernel"
+    },
+    {
       "name": "SORT",
       "aliases": [],
       "family": "collection",
@@ -2732,6 +2939,61 @@
       "category": "higher-order",
       "vocabularyTier": "standard",
       "standardKind": "operational"
+    },
+    {
+      "name": "RANK",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidCount",
+        "notExecutable",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "cost": {
+        "steps": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "numeric": {
+          "class": "unbounded",
+          "exact": false
+        },
+        "collection": {
+          "class": "unbounded",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.DICTIONARY.ACYCLIC"
+      ],
+      "documentation": {
+        "summary": "MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis.",
+        "hover": "RANK — apply a block at a stated depth",
+        "lookup": "MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis.",
+        "syntax": "[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK",
+        "role": "Higher-order primitive: evaluate a block on every value at a stated depth of a vector.",
+        "stackEffect": "[ vec ] [ n ] [ body ] -> [ result ]"
+      },
+      "executorKey": "Rank",
+      "effects": [],
+      "partiality": "partial",
+      "category": "higher-order",
+      "vocabularyTier": "kernel"
     },
     {
       "name": "CHARS",

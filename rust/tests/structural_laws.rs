@@ -2,10 +2,9 @@
 //!
 //! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 5: the
 //! vector vocabulary of LANG.COLLECTIONS.LIFT is a free monoid under `CONCAT` with an
-//! involutive `REVERSE`, and the tensor vocabulary of LANG.COLLECTIONS.LIFT is the reshape group
-//! acting on `Tensor ≅ (data: V*, shape)` — `TRANSPOSE` is an involution on 2-D
-//! tensors, `RESHAPE` round-trips, and `SHAPE`/`RANK` read off the index
-//! structure. `SORT` (canonical home `ALGO`, LANG.DICTIONARY.RESOLUTION) is idempotent and
+//! involutive `REVERSE`, and the shape vocabulary of LANG.COLLECTIONS.LIFT reads and
+//! rewrites the index structure — `SHAPE` reads it, `RESHAPE` round-trips
+//! through it, `FLATTEN` collapses it and `DEPTH` measures it. `SORT` (canonical home `ALGO`, LANG.DICTIONARY.RESOLUTION) is idempotent and
 //! permutation-invariant on the decidable rational sub-domain (LANG.VALUES.TRUTH).
 //!
 //! Observation matches the conformance runner: whole-stack `Value::to_string`.
@@ -71,6 +70,31 @@ proptest! {
         let v = vlit(&xs);
         let n = xs.len();
         assert_law("take-full", &format!("{v} {n} TAKE"), &v);
+    }
+
+    /// `SHAPE` of a flat Vector is its length; `RESHAPE` through that shape is
+    /// the identity; `FLATTEN` of a flat Vector is itself and has depth 1.
+    #[test]
+    fn shape_words_agree_on_a_flat_vector(xs in vec_ne()) {
+        let v = vlit(&xs);
+        let n = xs.len();
+        assert_law("shape-is-length", &format!("{v} SHAPE"), &format!("[ {n} ]"));
+        assert_law("reshape-through-own-shape", &format!("{v} {v} SHAPE RESHAPE"), &v);
+        assert_law("flatten-flat", &format!("{v} FLATTEN"), &v);
+        assert_law("depth-flat", &format!("{v} DEPTH"), "1");
+        assert_law("rank-1-is-map", &format!("{v} 1 [ 2 MUL ] RANK"), &format!("{v} [ 2 MUL ] MAP"));
+    }
+
+    /// Nesting a Vector inside another raises its depth by one, prefixes its
+    /// shape with 1, and leaves its leaves — so FLATTEN undoes the nesting.
+    #[test]
+    fn nesting_adds_one_axis(xs in vec_ne()) {
+        let v = vlit(&xs);
+        let n = xs.len();
+        assert_law("depth-nested", &format!("[ {v} ] DEPTH"), "2");
+        assert_law("shape-nested", &format!("[ {v} ] SHAPE"), &format!("[ 1 {n} ]"));
+        assert_law("flatten-nested", &format!("[ {v} ] FLATTEN"), &v);
+        assert_law("reshape-nested", &format!("{v} [ 1 {n} ] RESHAPE"), &format!("[ {v} ]"));
     }
 
     /// `DROP 0` is the identity, and `DROP n` of the whole length is empty.
