@@ -289,9 +289,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-failure-recovery">LANG.FAILURE.RECOVERY — Recovery</h3>
 
-<p>Recovery is a phrase, not a form of its own. <code>NIL?</code> answers its subject together with whether that subject is absent, which is exactly what <code>SELECT</code> reads as its truth operand, so <code>fallback subject NIL? SELECT</code> chooses the subject when it is present and the fallback when it is not — with nothing named and nothing written twice. The question is asked of the whole value: a Vector holding an absent lane is present, so a lane recovered inside a Vector is recovered there rather than around it.</p>
-
-<p>The fallback is an ordinary operand, computed before the choice like every other operand. A retired Word, <code>OR-NIL</code>, made the same choice lazily by skipping the following source unit unevaluated; it was the last construct in the language whose meaning depended on source position, and the last one whose stack height a reader of the contract could not predict.</p>
+<p>Recovery is a phrase, not a form of its own. <code>NIL?</code> answers its subject together with whether that subject is absent, which is exactly what <code>SELECT</code> reads as its truth operand, so <code>fallback subject NIL? SELECT</code> chooses the subject when it is present and the fallback when it is not — with nothing named, nothing written twice, and the fallback an ordinary operand computed before the choice like every other operand. The question is asked of the whole value: a Vector holding an absent lane is present, so a lane recovered inside a Vector is recovered there rather than around it. A retired Word, <code>OR-NIL</code>, made the same choice lazily by skipping the following source unit unevaluated; it was the last construct in the language whose meaning depended on source position, and the last one whose stack height a reader of the contract could not predict.</p>
 
 <p>Recovery does not erase absence from already emitted output.</p>
 

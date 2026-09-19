@@ -265,7 +265,6 @@ impl CauseClass {
             ErrorCategory::StructureError => CauseClass::ValueShape,
             ErrorCategory::UnknownWord => CauseClass::TypoOrUnknownName,
             ErrorCategory::DivisionByZero => CauseClass::Domain,
-            ErrorCategory::IndexOutOfBounds => CauseClass::Index,
             ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
             ErrorCategory::ShapeMismatch => CauseClass::ShapeMismatch,
             ErrorCategory::MalformedSource => CauseClass::SourceForm,
@@ -484,7 +483,6 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
     match category {
         Some(ErrorCategory::DivisionByZero)
         | Some(ErrorCategory::StructureError)
-        | Some(ErrorCategory::IndexOutOfBounds)
         | Some(ErrorCategory::ShapeMismatch)
         | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
         Some(ErrorCategory::UnknownWord)

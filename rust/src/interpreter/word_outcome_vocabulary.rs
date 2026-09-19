@@ -68,12 +68,11 @@ const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 /// `DivisionByZero` is excluded: it is not a registered outcome category at
 /// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
 /// diagnostic-trace-only, Phase 2 of this work order).
-fn structural_error_categories() -> [ErrorCategory; 13] {
+fn structural_error_categories() -> [ErrorCategory; 12] {
     [
         ErrorCategory::StackUnderflow,
         ErrorCategory::StructureError,
         ErrorCategory::UnknownWord,
-        ErrorCategory::IndexOutOfBounds,
         ErrorCategory::VectorLengthMismatch,
         ErrorCategory::ShapeMismatch,
         ErrorCategory::MalformedSource,
@@ -280,11 +279,11 @@ impl Reachability {
 /// User-Word activation, since `execute_builtin` raises it on `call_depth`),
 /// so it is handled separately rather than forced into this table.
 ///
-/// Everything not listed stays unconditional. `structureError`,
-/// `indexOutOfBounds` and `vectorLengthMismatch` are spread across the
-/// arithmetic and collection modules, and narrowing them would mean modelling
-/// which of those a program reaches — a different and much larger claim than
-/// "this program contains no `DEF`".
+/// Everything not listed stays unconditional. `structureError` and
+/// `vectorLengthMismatch` are spread across the arithmetic and collection
+/// modules, and narrowing them would mean modelling which of those a program
+/// reaches — a different and much larger claim than "this program contains no
+/// `DEF`".
 const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 3] = [
     ("error:nameConflict", &["DEF"]),
     ("error:selfReferentialDefinition", &["DEF"]),

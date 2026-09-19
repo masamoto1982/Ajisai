@@ -251,9 +251,12 @@ async fn put_replaces_exactly_one_position() {
     from_end.execute("[ 1 2 3 ] -1 9 PUT").await.unwrap();
     assert_eq!(rendered_stack(&from_end), ["[ 1/1 2/1 9/1 ]"]);
 
+    // A well-formed index that names no slot is data that did not work out,
+    // so it projects rather than raising, and the operands are consumed as on
+    // any other answer.
     let mut past_end = Interpreter::new();
-    assert!(past_end.execute("[ 1 2 3 ] 5 9 PUT").await.is_err());
-    assert_eq!(rendered_stack(&past_end), ["[ 1/1 2/1 3/1 ]", "5/1", "9/1"]);
+    past_end.execute("[ 1 2 3 ] 5 9 PUT").await.unwrap();
+    assert_eq!(rendered_stack(&past_end), ["NIL"]);
 }
 
 /// `GROUP` bundles by key in `UNIQUE` key order and keeps every value exactly

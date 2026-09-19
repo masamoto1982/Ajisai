@@ -97,12 +97,15 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
 fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
     match reason {
         NilReason::DivisionByZero => Some(ErrorCategory::DivisionByZero),
-        NilReason::IndexOutOfBounds => Some(ErrorCategory::IndexOutOfBounds),
-        // No `ErrorCategory` names a domain miss or an unavailable diagnostic,
-        // and inventing one would add a category with no `AjisaiError` behind
-        // it — `None` here means the trace's `category` evidence is simply
-        // absent, not a catch-all category standing in for it.
-        NilReason::MissingField
+        // No `ErrorCategory` names a domain miss, an unavailable diagnostic,
+        // or an index past the end, and inventing one would add a category
+        // with no `AjisaiError` behind it — `None` here means the trace's
+        // `category` evidence is simply absent, not a catch-all category
+        // standing in for it. `indexOutOfBounds` joined this group when `TAKE`
+        // and `PUT` stopped raising it: no Word raises past-the-end any more,
+        // so the reason names a projection and nothing else.
+        NilReason::IndexOutOfBounds
+        | NilReason::MissingField
         | NilReason::InvalidEncoding
         | NilReason::Undecidable
         | NilReason::SpaceExhausted

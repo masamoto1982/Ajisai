@@ -5,9 +5,10 @@
 //! costs asymptotically more, or (for `RANDOM`) is not expressible at all
 //! because the language has no bit mixing to build a generator out of.
 
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 use num_bigint::BigInt;
@@ -241,10 +242,10 @@ pub fn op_sum(interp: &mut Interpreter) -> Result<()> {
 /// element at `idx` replaced. A negative index counts from the end, as
 /// everywhere else.
 ///
-/// The alternative was rebuilding the whole vector through a `MAP` and a
-/// `COND` per element, or the `TAKE`/`CONCAT` surgery that spells the same
-/// thing in three phrases. Updating one position is what a parameter step, a
-/// centroid move, a confusion-matrix increment and a histogram bin all do.
+/// The alternative was rebuilding the whole vector from an index mask and a
+/// `SELECT`, or the `TAKE`/`CONCAT` surgery that spells the same thing in
+/// three phrases. Updating one position is what a parameter step, a centroid
+/// move, a confusion-matrix increment and a histogram bin all do.
 pub fn op_put(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 3 {
         return Err(AjisaiError::StackUnderflow);
@@ -309,15 +310,19 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
         raw_index
     };
     if position < 0 || position as usize >= length {
-        if !keep {
-            interp.stack.push(target);
-            interp.stack.push(index_value);
-            interp.stack.push(replacement);
-        }
-        return Err(AjisaiError::IndexOutOfBounds {
-            index: raw_index,
-            length,
-        });
+        // A well-formed index over a well-formed Vector that names no slot is
+        // the question `GET` already projects for, and `TAKE` now projects for
+        // too: data that did not work out, not a malformed program
+        // (LANG.FAILURE.PROJECT). `PUT` used to raise here on the grounds that
+        // it answers with the whole Vector and so has no single slot to empty
+        // — but the absence is of the *answer*, not of a slot, and that is
+        // what a reasoned NIL says.
+        restore_all(interp, target, index_value, replacement);
+        interp.stack.push(Value::nil_with_reason(
+            NilReason::IndexOutOfBounds,
+            Recoverability::Recoverable,
+        ));
+        return Ok(());
     }
 
     items[position as usize] = replacement.clone();

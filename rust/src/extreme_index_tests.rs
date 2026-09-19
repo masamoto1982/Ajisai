@@ -6,7 +6,9 @@
 //! Index normalization additionally narrowed positive indices with a bare
 //! `index as usize`, which truncates out-of-range values on 32-bit wasm. Every
 //! case below must resolve to a clean error or `NIL` rather than crash or
-//! silently alias an in-range slot.
+//! silently alias an in-range slot. A well-formed count or index that simply
+//! names a position past the end is `NIL`, whatever its magnitude: `TAKE`
+//! projects it the way `GET` always has (LANG.FAILURE.PROJECT).
 
 #[cfg(test)]
 mod extreme_index_tests {
@@ -15,14 +17,15 @@ mod extreme_index_tests {
     const I64_MIN: &str = "-9223372036854775808";
 
     #[tokio::test]
-    async fn take_rejects_i64_min_count_without_panicking() {
+    async fn take_projects_i64_min_count_without_panicking() {
         let mut interp = Interpreter::new();
-        let result = interp.execute(&format!("[ 1 2 3 ] {} TAKE", I64_MIN)).await;
-        assert!(result.is_err(), "i64::MIN TAKE count must error, not panic");
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("exceeds vector length"));
+        interp
+            .execute(&format!("[ 1 2 3 ] {} TAKE", I64_MIN))
+            .await
+            .expect("i64::MIN TAKE count must project to NIL, not panic or error");
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil(), "a count past the end projects to NIL");
     }
 
     #[tokio::test]

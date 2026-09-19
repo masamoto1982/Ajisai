@@ -30600,7 +30600,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "TAKE",
@@ -30688,7 +30688,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "TAKE",
@@ -30776,7 +30776,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "TAKE",
@@ -30952,7 +30952,7 @@
         "codeBlock",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "TAKE",
@@ -39509,7 +39509,7 @@
         "scalarLarge",
         "scalarOne"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39518,7 +39518,7 @@
         "scalarLarge",
         "scalarZero"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39527,7 +39527,7 @@
         "scalarLarge",
         "scalarNegative"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39536,7 +39536,7 @@
         "scalarLarge",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39545,7 +39545,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39554,7 +39554,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39563,7 +39563,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39572,7 +39572,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39581,7 +39581,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -39599,7 +39599,7 @@
         "scalarLarge",
         "codeBlock"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40598,7 +40598,7 @@
         "scalarLarge",
         "scalarOne"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40607,7 +40607,7 @@
         "scalarLarge",
         "scalarZero"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40616,7 +40616,7 @@
         "scalarLarge",
         "scalarNegative"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40625,7 +40625,7 @@
         "scalarLarge",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40634,7 +40634,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40643,7 +40643,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40652,7 +40652,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40661,7 +40661,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40670,7 +40670,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -40688,7 +40688,7 @@
         "scalarLarge",
         "codeBlock"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41687,7 +41687,7 @@
         "scalarLarge",
         "scalarOne"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41696,7 +41696,7 @@
         "scalarLarge",
         "scalarZero"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41705,7 +41705,7 @@
         "scalarLarge",
         "scalarNegative"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41714,7 +41714,7 @@
         "scalarLarge",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41723,7 +41723,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41732,7 +41732,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41741,7 +41741,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41750,7 +41750,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41759,7 +41759,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -41777,7 +41777,7 @@
         "scalarLarge",
         "codeBlock"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43568,7 +43568,7 @@
         "scalarOne",
         "scalarOne"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43577,7 +43577,7 @@
         "scalarOne",
         "scalarZero"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43586,7 +43586,7 @@
         "scalarOne",
         "scalarNegative"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43595,7 +43595,7 @@
         "scalarOne",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43604,7 +43604,7 @@
         "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43613,7 +43613,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43622,7 +43622,7 @@
         "scalarOne",
         "vectorPair"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43631,7 +43631,7 @@
         "scalarOne",
         "vectorTriple"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43640,7 +43640,7 @@
         "scalarOne",
         "vectorHuge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43658,7 +43658,7 @@
         "scalarOne",
         "codeBlock"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43865,7 +43865,7 @@
         "scalarLarge",
         "scalarOne"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43874,7 +43874,7 @@
         "scalarLarge",
         "scalarZero"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43883,7 +43883,7 @@
         "scalarLarge",
         "scalarNegative"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43892,7 +43892,7 @@
         "scalarLarge",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43901,7 +43901,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43910,7 +43910,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43919,7 +43919,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43928,7 +43928,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43937,7 +43937,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -43955,7 +43955,7 @@
         "scalarLarge",
         "codeBlock"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44558,7 +44558,7 @@
         "codeBlock",
         "scalarOne"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44567,7 +44567,7 @@
         "codeBlock",
         "scalarZero"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44576,7 +44576,7 @@
         "codeBlock",
         "scalarNegative"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44585,7 +44585,7 @@
         "codeBlock",
         "scalarLarge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44594,7 +44594,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44603,7 +44603,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44612,7 +44612,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44621,7 +44621,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44630,7 +44630,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "PUT",
@@ -44648,7 +44648,7 @@
         "codeBlock",
         "codeBlock"
       ],
-      "outcome": "error:indexOutOfBounds"
+      "outcome": "nil:indexOutOfBounds"
     },
     {
       "word": "GROUP",

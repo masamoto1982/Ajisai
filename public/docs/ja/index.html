@@ -896,6 +896,45 @@
                             </thead>
                             <tbody>
                                 <tr>
+                                    <td><code>[ 1 2 3 ] [ 5 ] TAKE</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">あるだけより多く要求するのも「末尾を越えた位置」を指す同じ問いであり、<code>GET</code>と同じ答えになる(理由：indexOutOfBounds)。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] 9 5 PUT</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes"><code>PUT</code>も同様。範囲外のインデックスは、プログラムの誤りではなくデータの都合なので<code>NIL</code>になる。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">1つの条件には1つの答えがあります。「末尾を越えた位置」は<code>GET</code>・<code>TAKE</code>・<code>PUT</code>のどれでも<code>NIL</code>であり、語彙全体で同じ扱いです。一方、整数ですらないカウントやインデックス(<code>[ 1 2 3 ] [ 'x' ] TAKE</code>)は今もエラーです——そちらは使い方が違うからです。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
                                     <td><code>'ABC' NUM</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">数としてパースできないテキストは<code>NIL</code>になる(理由：invalidEncoding)。</td>

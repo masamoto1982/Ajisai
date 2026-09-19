@@ -154,7 +154,6 @@ pub enum ErrorCategory {
     StructureError,
     UnknownWord,
     DivisionByZero,
-    IndexOutOfBounds,
     VectorLengthMismatch,
     ShapeMismatch,
     MalformedSource,
@@ -181,7 +180,6 @@ impl ErrorCategory {
             ErrorCategory::StructureError => "structureError",
             ErrorCategory::UnknownWord => "unknownWord",
             ErrorCategory::DivisionByZero => "divisionByZero",
-            ErrorCategory::IndexOutOfBounds => "indexOutOfBounds",
             ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
             ErrorCategory::ShapeMismatch => "shapeMismatch",
             ErrorCategory::MalformedSource => "malformedSource",
@@ -201,9 +199,7 @@ impl ErrorCategory {
             AjisaiError::StructureError { .. } => ErrorCategory::StructureError,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
             AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
-            AjisaiError::IndexOutOfBounds { .. } => ErrorCategory::IndexOutOfBounds,
             AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
-            AjisaiError::CountExceedsLength { .. } => ErrorCategory::IndexOutOfBounds,
             AjisaiError::ShapeMismatch { .. } => ErrorCategory::ShapeMismatch,
             AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
             AjisaiError::NameConflict(_) => ErrorCategory::NameConflict,
@@ -274,22 +270,9 @@ pub enum AjisaiError {
     },
     UnknownWord(String),
     DivisionByZero,
-    IndexOutOfBounds {
-        index: i64,
-        length: usize,
-    },
     VectorLengthMismatch {
         len1: usize,
         len2: usize,
-    },
-    /// A count named more elements than the operand has: `[ 1 2 3 ] 5 TAKE`.
-    /// An index question rather than a shape one — the count reaches a position
-    /// past the end — so it is categorized with `IndexOutOfBounds` and carries
-    /// both numbers, which the bare "exceeds vector length" never did.
-    CountExceedsLength {
-        count: i64,
-        length: usize,
-        target: String,
     },
     /// Two operands of an element-wise Word have shapes that do not broadcast:
     /// on some axis they disagree and neither extent is 1.
@@ -402,27 +385,9 @@ impl fmt::Display for AjisaiError {
             }
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
-            AjisaiError::IndexOutOfBounds { index, length } => {
-                write!(
-                    f,
-                    "Index {} out of bounds for vector of length {}",
-                    index, length
-                )
-            }
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
             }
-            AjisaiError::CountExceedsLength {
-                count,
-                length,
-                target,
-            } => write!(
-                f,
-                "Take count exceeds {} length: {} requested, {} available",
-                target,
-                count.unsigned_abs(),
-                length
-            ),
             AjisaiError::ShapeMismatch { left, right, axis } => {
                 write!(
                     f,

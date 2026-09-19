@@ -135,6 +135,8 @@ mod higher_order_fold_tests;
 #[cfg(test)]
 mod higher_order_map_tests;
 #[cfg(test)]
+mod index_projection_tests;
+#[cfg(test)]
 mod interpreter_definition_tests;
 #[cfg(test)]
 mod interpreter_execution_tests;

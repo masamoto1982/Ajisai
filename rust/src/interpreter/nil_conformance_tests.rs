@@ -158,12 +158,14 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
 // `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`NEQ`/`ORDER`/`SORT` are probed
 // in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
 // exhausts its comparison budget. `RANDOM`/`RANGE`/`SQRT`/`STR` are probed in
-// `shape_ops`, beside the Word itself.
+// `shape_ops`, beside the Word itself. `GET`/`TAKE`/`PUT` are probed together
+// in `index_projection_tests`: what they must agree on is one condition
+// answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
     "ABS", "DIV", "EQ", "FILL", "FLOOR", "GET", "GT", "GTE", "INDEX-OF", "LT", "LTE", "MAX",
-    "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "QUANTIZE", "RANDOM", "RANGE", "ROUND",
-    "SORT", "SQRT", "STR",
+    "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "PUT", "QUANTIZE", "RANDOM", "RANGE",
+    "ROUND", "SORT", "SQRT", "STR", "TAKE",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a
@@ -395,18 +397,15 @@ async fn projecting_arithmetic_nil_input_passes_through() {
 #[tokio::test]
 async fn malformed_use_raises_error_not_a_projected_nil() {
     // LANG.FAILURE.ERROR: "そもそも使い方が違う -> エラー". A non-numeric DIV operand
-    // and a malformed GET index are structural misuse, not domain misses.
+    // is structural misuse, not a domain miss. The addressing Words' half of
+    // the same rule is in `index_projection_tests`.
     assert!(
         run("'x' 1 DIV").await.is_err(),
         "non-numeric DIV operand must raise an error, not project onto NIL"
     );
-    assert!(
-        run("1 [ 1 2 ] GET").await.is_err(),
-        "malformed GET index must raise an error, not a projected NIL"
-    );
 }
 
-// --- OR-NIL replaces a reasoned NIL with a fallback (LANG.FAILURE.RECOVERY) ---
+// --- `NIL?` and `SELECT` replace a reasoned NIL with a fallback (LANG.FAILURE.RECOVERY) ---
 
 #[tokio::test]
 async fn a_chosen_fallback_replaces_a_reasoned_nil() {

@@ -1,36 +1,42 @@
 use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_with_arg;
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, extract_integer_from_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 
-fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, usize)> {
-    // Compare the magnitude in u64 before narrowing to usize. `(-count) as
-    // usize` overflowed and panicked on i64::MIN (reachable via
-    // `[ .. ] -9223372036854775808 TAKE`), and a bare `count as usize` would
-    // silently truncate a huge count on 32-bit wasm. Working in u64 keeps both
-    // the over-length rejection and the eventual narrowing exact.
+/// The slice `TAKE` answers with, or `None` when the count names a position
+/// past the end.
+///
+/// Asking for more than there is, is an index question — the same question
+/// `GET` answers past the end, and it is answered the same way: with a
+/// reasoned absence rather than a raise. A well-formed count over a
+/// well-formed Vector is data that did not work out, not a malformed program,
+/// and LANG.FAILURE.PROJECT is what the trichotomy reserves for that. `TAKE`
+/// raising where `GET` projected was the standing example of the two
+/// disagreeing (`spec/words.schema.json`'s note on `errorWhen`); they now
+/// agree.
+///
+/// Compare the magnitude in u64 before narrowing to usize. `(-count) as
+/// usize` overflowed and panicked on i64::MIN (reachable via
+/// `[ .. ] -9223372036854775808 TAKE`), and a bare `count as usize` would
+/// silently truncate a huge count on 32-bit wasm. Working in u64 keeps both
+/// the past-the-end test and the eventual narrowing exact.
+fn compute_take_bounds(len: usize, count: i64) -> Option<(usize, usize)> {
     let magnitude: u64 = count.unsigned_abs();
     if magnitude > len as u64 {
-        // Asking for more than there is, is an index question: the count names
-        // a position past the end. Categorized as one so it lands in the same
-        // family as `GET` past the end and carries the same next checks.
-        return Err(AjisaiError::CountExceedsLength {
-            count,
-            length: len,
-            target: target.to_string(),
-        });
+        return None;
     }
     let take = magnitude as usize;
 
     if count < 0 {
-        Ok((len - take, len))
+        Some((len - take, len))
     } else {
-        Ok((0, take))
+        Some((0, take))
     }
 }
 
@@ -111,13 +117,16 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     let result =
         with_stacktop_vector_target_with_arg(interp, &count_val, is_keep_mode, |vector_val| {
             let elements = extract_vector_elements(vector_val);
-            let (start, end) = compute_take_bounds(elements.len(), count, "vector")?;
-            Ok(elements[start..end].to_vec())
+            Ok(compute_take_bounds(elements.len(), count)
+                .map(|(start, end)| Value::from_vector(elements[start..end].to_vec()))
+                .unwrap_or_else(|| {
+                    Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
+                }))
         })?;
 
     if is_keep_mode {
         interp.stack.push(count_val);
     }
-    interp.stack.push(Value::from_vector(result));
+    interp.stack.push(result);
     Ok(())
 }

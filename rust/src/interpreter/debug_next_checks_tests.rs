@@ -249,7 +249,6 @@ mod diagnosis_vocabulary_is_real {
             Some(ErrorCategory::StructureError),
             Some(ErrorCategory::UnknownWord),
             Some(ErrorCategory::DivisionByZero),
-            Some(ErrorCategory::IndexOutOfBounds),
             Some(ErrorCategory::VectorLengthMismatch),
             Some(ErrorCategory::ShapeMismatch),
             Some(ErrorCategory::MalformedSource),
