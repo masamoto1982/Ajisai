@@ -105,7 +105,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
         Floor | Ceil | Round | Quantize | Mod => (Linear, false),
-        Str | Num | Chars | Tokenize | Trim => (Linear, false),
+        Str | Num | Chars | Tokenize | Trim | Search | Replace => (Linear, false),
         // Repetition can multiply sizes (k × separator).
         Join => (Superlinear, false),
         // Dictionary registration copies bounded structure.
@@ -115,7 +115,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // The Words promoted out of the deleted MATH and ALGO modules.
         Abs | Neg | Min | Max | Sqrt => (Linear, false),
         Sort | Order => (Linear, true),
-        IndexOf => (Linear, false),
+        IndexOf | Member | Bsearch => (Linear, false),
         // Ordering, grouping and shape Words: the result is bounded by the
         // operands' total size, and a vector operand attains the bound.
         Unique | Tally | Zip | Put | Group => (Linear, true),

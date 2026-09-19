@@ -45,7 +45,7 @@ enum SortAttempt {
 /// zero-check in `math_ops.rs`) declare `nonNumeric` instead, so the shared
 /// function cannot make this remap itself (the same shared-helper lesson as
 /// Phase 2's tensor-conversion helpers and Phase 4's `nonInteger` fix).
-fn compare_for_sort(a: &Value, b: &Value) -> Result<OrderOutcome> {
+pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<OrderOutcome> {
     match three_way_compare(a, b) {
         Err(AjisaiError::StructureError { expected, .. }) if expected == "scalar value" => {
             Err(AjisaiError::declared(

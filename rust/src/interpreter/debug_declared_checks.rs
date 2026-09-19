@@ -46,6 +46,7 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "invalidShape"
         | "invalidClauseShape"
         | "invalidCount"
+        | "unsortedInput"
         | "negativeCount"
         | "invalidRange"
         | "invalidName"

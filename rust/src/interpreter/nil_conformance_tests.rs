@@ -150,14 +150,15 @@ async fn passthrough_blanket_collapses_to_nil() {
 // in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
 // exhausts its comparison budget. `RANDOM`/`RANGE`/`SQRT`/`STR` are probed in
 // `shape_ops`, beside the Word itself; `SHAPE` (a ragged operand) and `RESHAPE`
-// (the materialization ceiling) in `shape_words_tests`. `GET`/`TAKE`/`PUT` are probed together
+// (the materialization ceiling) in `shape_words_tests`; `BSEARCH` and `SEARCH`
+// (an absent key or needle, and BSEARCH's undecidable order) in `search_words_tests`. `GET`/`TAKE`/`PUT` are probed together
 // in `index_projection_tests`: what they must agree on is one condition
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABS", "CEIL", "DIV", "DROP", "EQ", "FILL", "FLOOR", "GET", "GT", "GTE", "INDEX-OF", "LT",
-    "LTE", "MAX", "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "PUT", "QUANTIZE", "RANDOM",
-    "RANGE", "RESHAPE", "ROUND", "SHAPE", "SORT", "SQRT", "STR", "TAKE",
+    "ABS", "BSEARCH", "CEIL", "DIV", "DROP", "EQ", "FILL", "FLOOR", "GET", "GT", "GTE", "INDEX-OF",
+    "LT", "LTE", "MAX", "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "PUT", "QUANTIZE",
+    "RANDOM", "RANGE", "RESHAPE", "ROUND", "SEARCH", "SHAPE", "SORT", "SQRT", "STR", "TAKE",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a

@@ -1,9 +1,11 @@
 mod cast_chars_join;
 mod cast_conversion_tests;
 pub(crate) mod cast_conversions;
+mod cast_search_ops;
 mod cast_text_ops;
 pub(crate) mod cast_value_helpers;
 
 pub use cast_chars_join::{op_chars, op_join};
 pub use cast_conversions::{op_num, op_str};
+pub use cast_search_ops::{op_replace, op_search};
 pub use cast_text_ops::{op_tokenize, op_trim};

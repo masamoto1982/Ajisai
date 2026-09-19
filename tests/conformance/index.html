@@ -2629,6 +2629,92 @@ W</pre>
   <pre class="ajisai-expect-result">NIL TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
+<section class="ajisai-case" id="standard-member" data-category="core">
+  <h3>MEMBER answers which probes occur, lane for lane</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 2 5 ] MEMBER</pre>
+  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-member-single-probe" data-category="core">
+  <h3>A single probe answers a single truth</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 2 MEMBER</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-member-over-text" data-category="core">
+  <h3>Membership is value equality, so texts work too</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 'b' 'c' ] MEMBER</pre>
+  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-bsearch" data-category="core">
+  <h3>BSEARCH answers the index of each key in an ascending vector</h3>
+  <pre class="ajisai-source">[ 1 3 5 7 ] [ 5 1 ] BSEARCH</pre>
+  <pre class="ajisai-expect-result">[ 2/1 0/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-bsearch-first-of-equal-keys" data-category="core">
+  <h3>Equal keys answer the first of them, as INDEX-OF does</h3>
+  <pre class="ajisai-source">[ 1 3 3 3 7 ] 3 BSEARCH</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-bsearch-absent-key-projects" data-category="core">
+  <h3>An absent key is a missingField lane, not an error</h3>
+  <pre class="ajisai-source">[ 1 3 5 7 ] 4 BSEARCH NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-bsearch-unsorted-raises" data-category="core">
+  <h3>An unsorted operand is the program being wrong: BSEARCH refuses rather than answering</h3>
+  <pre class="ajisai-source">[ 3 1 2 ] 2 BSEARCH</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">BSEARCH: expected an ascending Vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-search" data-category="core">
+  <h3>SEARCH answers the character position of the first occurrence</h3>
+  <pre class="ajisai-source">'hello world' 'world' SEARCH</pre>
+  <pre class="ajisai-expect-result">6/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-search-absent-projects" data-category="core">
+  <h3>A needle that does not occur projects missingField</h3>
+  <pre class="ajisai-source">'hello' 'z' SEARCH NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-search-empty-needle" data-category="core">
+  <h3>An empty needle is found at 0</h3>
+  <pre class="ajisai-source">'hello' '' SEARCH</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-replace" data-category="core">
+  <h3>REPLACE substitutes every occurrence</h3>
+  <pre class="ajisai-source">'a-b-c' '-' '+' REPLACE</pre>
+  <pre class="ajisai-expect-result">'a+b+c'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-replace-without-overlap" data-category="core">
+  <h3>Occurrences are found left to right and do not overlap</h3>
+  <pre class="ajisai-source">'aaa' 'aa' 'b' REPLACE</pre>
+  <pre class="ajisai-expect-result">'ba'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-replace-empty-from" data-category="core">
+  <h3>An empty from matches nothing, so the text is unchanged</h3>
+  <pre class="ajisai-source">'hello' '' 'x' REPLACE</pre>
+  <pre class="ajisai-expect-result">'hello'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="standard-replace-non-text-error" data-category="core">
+  <h3>A non-text operand is the program being wrong</h3>
+  <pre class="ajisai-source">'a' 'b' 3 REPLACE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">REPLACE: expected Strings</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 <section class="ajisai-case" id="standard-put" data-category="core"><h3>PUT</h3><pre class="ajisai-source">[ 1 2 3 ] 1 9 PUT</pre><pre class="ajisai-expect-result">[ 1/1 9/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="kernel-random" data-category="core"><h3>RANDOM draws the same exact rationals for the same seed</h3><pre class="ajisai-source">7 3 RANDOM</pre><pre class="ajisai-expect-result">[ 3344595609062871/9007199254740992 861149483440519/2251799813685248 3413160536610049/4503599627370496 ]</pre><div class="ajisai-expect-effects"></div></section>

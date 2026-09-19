@@ -7,7 +7,8 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, execute_def, execute_del,
     higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, ordering_ops, probe,
-    shape_ops, shape_words, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
+    search_ops, shape_ops, shape_words, sort, tensor_cmds, vector_ops, ConsumptionMode,
+    Interpreter,
 };
 
 impl Interpreter {
@@ -302,6 +303,8 @@ impl Interpreter {
             WordId::Join => cast::op_join(self),
             WordId::Trim => cast::op_trim(self),
             WordId::Tokenize => cast::op_tokenize(self),
+            WordId::Search => cast::op_search(self),
+            WordId::Replace => cast::op_replace(self),
             WordId::NilCheck => nil_diagnostics::op_nil_check(self),
             WordId::NilReason => nil_diagnostics::op_nil_reason(self),
             WordId::Abs => math_ops::op_abs(self),
@@ -319,6 +322,8 @@ impl Interpreter {
             WordId::Put => shape_ops::op_put(self),
             WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
+            WordId::Member => search_ops::op_member(self),
+            WordId::Bsearch => search_ops::op_bsearch(self),
             // The one modifier (LANG.MODIFIERS.CONSUMPTION). The execution
             // loop interprets it against the source stream — it sets the
             // non-default consumption mode for the Word that follows — so it

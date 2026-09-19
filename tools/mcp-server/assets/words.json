@@ -2621,6 +2621,121 @@
       "standardKind": "namedPattern"
     },
     {
+      "name": "MEMBER",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time.",
+        "hover": "MEMBER — which probes occur in the vector",
+        "lookup": "Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time.",
+        "syntax": "[ 1 2 3 ] [ 2 5 ] MEMBER",
+        "role": "Vector primitive: which of the probes occur in the vector, element-wise.",
+        "stackEffect": "[ vec ] [ probes ] -> [ truths ]"
+      },
+      "executorKey": "Member",
+      "effects": [],
+      "partiality": "total",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
+    },
+    {
+      "name": "BSEARCH",
+      "aliases": [],
+      "family": "collection",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": [
+          "keyAbsent",
+          "budgetExhausted"
+        ],
+        "reason": [
+          "missingField",
+          "undecidable"
+        ]
+      },
+      "errorWhen": [
+        "nonVector",
+        "unsortedInput",
+        "nonComparableElement"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.VECTOR",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write. A comparison that exhausts its budget (LANG.VALUES.EXACT) projects `undecidable`.",
+        "hover": "BSEARCH — index of each key in an ascending vector",
+        "lookup": "The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write. A comparison that exhausts its budget (LANG.VALUES.EXACT) projects `undecidable`.",
+        "syntax": "[ 1 3 5 7 ] [ 5 ] BSEARCH",
+        "role": "Vector primitive: the index of each key in an ascending vector, by binary search.",
+        "stackEffect": "[ sorted ] [ keys ] -> [ indices ]"
+      },
+      "executorKey": "Bsearch",
+      "effects": [],
+      "partiality": "projecting",
+      "acceptedDomain": "flatNumericVector",
+      "category": "vector",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
+    },
+    {
       "name": "MAP",
       "aliases": [],
       "family": "higherOrder",
@@ -3199,6 +3314,110 @@
       "executorKey": "Tokenize",
       "effects": [],
       "partiality": "partial",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
+    },
+    {
+      "name": "SEARCH",
+      "aliases": [],
+      "family": "text",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "needleAbsent",
+        "reason": "missingField"
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(missingField). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.",
+        "hover": "SEARCH — where a text first occurs in another",
+        "lookup": "The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(missingField). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.",
+        "syntax": "'hello world' 'world' SEARCH",
+        "role": "Text primitive: the character position at which a text first occurs in another.",
+        "stackEffect": "[ text ] [ needle ] -> [ index ]"
+      },
+      "executorKey": "Search",
+      "effects": [],
+      "partiality": "projecting",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
+    },
+    {
+      "name": "REPLACE",
+      "aliases": [],
+      "family": "text",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": false
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `'a+b+c'`. Occurrences are found left to right and do not overlap, and an empty `from` matches nothing, so the text comes back unchanged rather than growing without bound. Spelled over CHARS and JOIN this is a scan with a window at every position; the Word is the one pass.",
+        "hover": "REPLACE — every occurrence of one text replaced by another",
+        "lookup": "Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `'a+b+c'`. Occurrences are found left to right and do not overlap, and an empty `from` matches nothing, so the text comes back unchanged rather than growing without bound. Spelled over CHARS and JOIN this is a scan with a window at every position; the Word is the one pass.",
+        "syntax": "'a-b-c' '-' '+' REPLACE",
+        "role": "Text primitive: every occurrence of one text replaced by another.",
+        "stackEffect": "[ text ] [ from ] [ to ] -> [ text' ]"
+      },
+      "executorKey": "Replace",
+      "effects": [],
+      "partiality": "total",
       "category": "cast",
       "vocabularyTier": "standard",
       "standardKind": "algorithm"

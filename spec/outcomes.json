@@ -214,6 +214,11 @@
       "documentation": "A value's structure did not match what the operation expected, outside the more specific shape/vector-length categories."
     },
     {
+      "id": "unsortedInput",
+      "kind": "declared",
+      "documentation": "A Word that assumes its vector operand is in ascending order (BSEARCH) was given one that is not. The order is checked before the search, because a binary search over unordered data would answer something rather than nothing; that the vector is unsorted is the program being wrong about its own data, not data that did not work out."
+    },
+    {
       "id": "unknownWord",
       "kind": "structural",
       "attribution": "machine",

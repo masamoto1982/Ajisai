@@ -280,6 +280,63 @@ async fn group_partitions_without_loss() {
         .is_err());
 }
 
+/// `MEMBER` indexes the vector once and answers every probe from that index,
+/// so a probe set of any size costs one pass over the vector; the Kernel-only
+/// spelling scans the vector once per probe. Same answer, lane for lane.
+#[tokio::test]
+async fn member_is_one_pass_and_agrees_with_index_of_per_probe() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute(
+            "[ 5 7 9 ] [ 7 4 9 ] MEMBER \
+             [ 5 7 9 ] 7 INDEX-OF NIL? NOT [ 5 7 9 ] 4 INDEX-OF NIL? NOT [ 5 7 9 ] 9 INDEX-OF NIL? NOT",
+        )
+        .await
+        .unwrap();
+    let stack = rendered_stack(&interpreter);
+    assert_eq!(stack[0], "[ TRUE FALSE TRUE ]");
+    // `NIL?` answers its subject together with the truth, so each probe leaves
+    // INDEX-OF's answer and the negated absence beside it.
+    assert_eq!(&stack[1..], ["1/1", "TRUE", "NIL", "FALSE", "2/1", "TRUE"]);
+}
+
+/// `BSEARCH` answers what `INDEX-OF` answers on an ascending vector — the
+/// first index of the key, or a `missingField` absence — and refuses an
+/// unsorted operand rather than answering from it.
+#[tokio::test]
+async fn bsearch_agrees_with_index_of_on_ascending_input_and_refuses_unsorted() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute("[ 1 3 3 7 ] [ 3 7 4 ] BSEARCH [ 1 3 3 7 ] 3 INDEX-OF [ 1 3 3 7 ] 7 INDEX-OF [ 1 3 3 7 ] 4 INDEX-OF NIL-REASON")
+        .await
+        .unwrap();
+    assert_eq!(
+        rendered_stack(&interpreter),
+        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "NIL", "'missingField'"]
+    );
+
+    let mut interpreter = Interpreter::new();
+    let result = interpreter.execute("[ 3 1 2 ] 2 BSEARCH").await;
+    assert!(
+        result.is_err(),
+        "an unsorted operand must raise, not answer"
+    );
+    assert_eq!(rendered_stack(&interpreter), ["[ 3/1 1/1 2/1 ]", "2/1"]);
+}
+
+/// `SEARCH` and `REPLACE` answer what a window compared at every position
+/// over `CHARS` answers, in one pass: positions count characters, and
+/// replacement is left to right without overlap.
+#[tokio::test]
+async fn search_and_replace_are_the_one_pass_forms_of_the_window_scan() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute("'abcabc' 'ca' SEARCH 'abcabc' 'ca' 'X' REPLACE 'aaaa' 'aa' 'b' REPLACE")
+        .await
+        .unwrap();
+    assert_eq!(rendered_stack(&interpreter), ["2/1", "'abXbc'", "'bb'"]);
+}
+
 /// `RANDOM` is a function of its operands: the same seed draws the same
 /// rationals, every time, in any interpreter. That is what lets it into a
 /// language with no hidden state — and the draws are exact rationals in
