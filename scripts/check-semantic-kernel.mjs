@@ -76,7 +76,14 @@ for (const family of familyIds) {
 // count is a budget rather than a fixed inventory: shrinking is free, growing is
 // a deliberate specification change.
 const aliases = words.entries.reduce((total, word) => total + word.aliases.length, 0);
-if (words.entries.length > 70) fail(`${words.entries.length} canonical Words (maximum 70)`);
+// Raised from 70 to 100 for the vocabulary-100 work order
+// (docs/dev/vocabulary-100-work-order-2026-09.md): the owner's decision to
+// remake the vocabulary as ten concepts and 100 Words, each admitted on one of
+// two grounds the work order states (inexpressible in a total, non-recursive
+// language, or the closure of a small symmetric family). The number is the
+// work order's ceiling, not a target — its §1 forbids padding to reach it —
+// so this is the deliberate raise the comment above asks for.
+if (words.entries.length > 100) fail(`${words.entries.length} canonical Words (maximum 100)`);
 if (aliases > 16) fail(`${aliases} aliases (maximum 16)`);
 
 if (!process.exitCode) {

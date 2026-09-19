@@ -86,7 +86,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Eq | Lt | Le | Gt | Gte | Neq | And | Or | Not | Select => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
-        Map | Filter | Fold | Scan | Any | All => (Unbounded, false),
+        Map | Filter | Fold | Scan | Any | All | Rank => (Unbounded, false),
         Exec => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
         // `Probe` walks the block's tokens once without evaluating them, so
@@ -96,7 +96,9 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         NilCheck | NilReason => (Const, false),
         True | False | Nil | Pi => (Const, false),
         // Structure builders bounded by their operands' total size.
-        Concat | Reverse => (Linear, true),
+        Concat | Reverse | Flatten | Reshape => (Linear, true),
+        // Shape observations: an answer bounded by the operand's rank.
+        Shape | Depth => (Linear, false),
         Take | Drop | Collect => (Linear, false),
         // The value-driven materializers: a numeric operand's *value* sets the
         // materialized length (Phase 3 gives these the runtime water level).

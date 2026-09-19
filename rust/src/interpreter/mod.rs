@@ -40,6 +40,9 @@ mod probe;
 pub mod runtime_limits;
 mod session_lifecycle;
 mod shape_ops;
+mod shape_words;
+#[cfg(test)]
+mod shape_words_tests;
 pub(crate) mod simd_ops;
 pub mod sort;
 #[cfg(test)]

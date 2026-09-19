@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **67 Words**, of which **36** form the Semantic Kernel and **31** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **72 Words**, of which **41** form the Semantic Kernel and **31** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -529,6 +529,61 @@ Fill a target shape with a constant value.
 - **Syntax:** `[ 2 2 0 ] FILL`
 - **ERROR conditions:** `invalidShape`
 
+## `SHAPE`
+
+The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: raggedNesting → domainMiss
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`
+- **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] SHAPE`
+- **ERROR conditions:** `nonVector`
+
+## `RESHAPE`
+
+Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: spaceExhausted → spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE`
+- **ERROR conditions:** `nonVector`, `invalidShape`
+
+## `FLATTEN`
+
+Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`, the leaves in index order however deeply they were nested. CONCAT joins two vectors and flattens one level; FLATTEN takes one vector and flattens all of them. It cannot be written as a user definition: the depth is not known in advance, and a language with no recursion and no unbounded loop cannot walk a structure of unknown depth (LANG.DICTIONARY.ACYCLIC).
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.DICTIONARY.ACYCLIC`
+- **Syntax:** `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN`
+- **ERROR conditions:** `nonVector`
+
+## `DEPTH`
+
+How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `consumeNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.DICTIONARY.ACYCLIC`
+- **Syntax:** `[ 1 [ 2 [ 3 ] ] ] DEPTH`
+
 ## `SORT`
 
 Return a copy of a vector sorted in ascending order.
@@ -724,6 +779,20 @@ TRUE if every element satisfies the predicate.
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 2 4 ] [ 2 MOD 0 = ] ALL`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
+
+## `RANK`
+
+MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `higherOrder`
+- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `consumeNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Effects:** none
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.COLLECTIONS.LIFT`, `LANG.DICTIONARY.ACYCLIC`
+- **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK`
+- **ERROR conditions:** `nonVector`, `invalidCount`, `notExecutable`, `blockContractViolation`
 
 ## `CHARS`
 

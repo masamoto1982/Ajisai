@@ -18,15 +18,15 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 67 Words are:
+reaching for it exactly where it would have helped. The 72 Words are:
 
 | you need | Words |
 |---|---|
 | arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `CEIL` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `RANDOM` |
 | comparison and logic | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` · `AND` `OR` `NOT` `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
-| collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
-| blocks over a collection | `MAP` `FILTER` `FOLD` `ANY` `ALL` |
+| collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
+| blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` `RANK` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
 | absence | `NIL` `NIL?` `NIL-REASON` |
 | naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` · `PRINT` `KEEP` |
@@ -432,8 +432,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-67 canonical Words in one flat Core dictionary, of which
-36 form the Semantic Kernel and 31 are Standard Words. Both are
+72 canonical Words in one flat Core dictionary, of which
+41 form the Semantic Kernel and 31 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -477,6 +477,10 @@ no module system and nothing to import.
 | `COLLECT` | vector | Collect N items off the stack into a new vector. — e.g. `1 2 3 3 COLLECT` |
 | `RANGE` | vector | Generate a numeric sequence from a [start, end] pair. — e.g. `[ 0 5 ] RANGE` |
 | `FILL` | vector | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
+| `SHAPE` | shape | The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone. — e.g. `[ [ 1 2 ] [ 3 4 ] ] SHAPE` |
+| `RESHAPE` | shape | Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET). — e.g. `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` |
+| `FLATTEN` | shape | Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`, the leaves in index order however deeply they were nested. CONCAT joins two vectors and flattens one level; FLATTEN takes one vector and flattens all of them. It cannot be written as a user definition: the depth is not known in advance, and a language with no recursion and no unbounded loop cannot walk a structure of unknown depth (LANG.DICTIONARY.ACYCLIC). — e.g. `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` |
+| `DEPTH` | shape | How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes. — e.g. `[ 1 [ 2 [ 3 ] ] ] DEPTH` |
 | `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
 | `ORDER` | vector | The indices that would sort a vector ascending; ties keep their original order. — e.g. `[ 30 10 20 ] ORDER` |
 | `UNIQUE` | vector | The distinct elements of a vector, in first-occurrence order. — e.g. `[ 'a' 'b' 'a' ] UNIQUE` |
@@ -491,6 +495,7 @@ no module system and nothing to import.
 | `SCAN` | higher-order | Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence. — e.g. `[ 1 2 3 4 ] 0 [ ADD ] SCAN` |
 | `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] [ 2 = ] ANY` |
 | `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] [ 2 MOD 0 = ] ALL` |
+| `RANK` | higher-order | MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis. — e.g. `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |

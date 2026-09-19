@@ -12,8 +12,8 @@
 //! miss of the generative words — a well-formed input whose materialized result
 //! exceeds the ceiling — into a diagnosable projected NIL (reason
 //! `SpaceExhausted`) that a pipeline can recover with a chosen fallback, rather than
-//! a channel error. `RESHAPE`'s over-limit case is a shape *mismatch*
-//! (malformed), so it remains an ordinary error.
+//! a channel error. `RESHAPE` (back since the vocabulary-100 work order's
+//! Phase 2) projects the same way; its probe lives in `shape_words_tests`.
 
 #[cfg(test)]
 mod materialization_limit_tests {

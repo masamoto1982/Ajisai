@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 67,
-    "semanticKernelWords": 36,
+    "canonicalWords": 72,
+    "semanticKernelWords": 41,
     "standardWords": 31,
-    "corewords": 67,
+    "corewords": 72,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 88
+    "manifestEntries": 93
   },
   "entries": [
     {
@@ -694,6 +694,78 @@
       "classification": "Core"
     },
     {
+      "id": "core.shape",
+      "kind": "coreword",
+      "surface": "SHAPE",
+      "category": "shape",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "SHAPE",
+      "coverage_entry_id": "core.shape",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.reshape",
+      "kind": "coreword",
+      "surface": "RESHAPE",
+      "category": "shape",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "RESHAPE",
+      "coverage_entry_id": "core.reshape",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.flatten",
+      "kind": "coreword",
+      "surface": "FLATTEN",
+      "category": "shape",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "FLATTEN",
+      "coverage_entry_id": "core.flatten",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.depth",
+      "kind": "coreword",
+      "surface": "DEPTH",
+      "category": "shape",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "DEPTH",
+      "coverage_entry_id": "core.depth",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.sort",
       "kind": "coreword",
       "surface": "SORT",
@@ -950,6 +1022,25 @@
         "algebra.k3.domain"
       ],
       "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection",
+      "classification": "Core"
+    },
+    {
+      "id": "core.rank",
+      "kind": "coreword",
+      "surface": "RANK",
+      "category": "higher-order",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "RANK",
+      "coverage_entry_id": "core.rank",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.structure-lift.applicative",
+        "algebra.state-transformer.composition"
+      ],
+      "implementation_schema": "traversal_scheme(rank) -> depth_descent -> block_application -> structure_lift",
       "classification": "Core"
     },
     {

@@ -7,7 +7,7 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, execute_def, execute_del,
     higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, ordering_ops, probe,
-    shape_ops, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
+    shape_ops, shape_words, sort, tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
 
 impl Interpreter {
@@ -253,6 +253,7 @@ impl Interpreter {
             WordId::Scan => higher_order_fold::op_scan(self),
             WordId::Any => higher_order::op_any(self),
             WordId::All => higher_order::op_all(self),
+            WordId::Rank => higher_order::op_rank(self),
             WordId::Get => vector_ops::op_get(self),
             WordId::Length => vector_ops::op_length(self),
             WordId::Concat => vector_ops::op_concat(self),
@@ -280,6 +281,10 @@ impl Interpreter {
             WordId::Def => execute_def::op_def(self),
             WordId::Del => execute_del::op_del(self),
             WordId::Print => io::op_print(self),
+            WordId::Shape => shape_words::op_shape(self),
+            WordId::Reshape => shape_words::op_reshape(self),
+            WordId::Flatten => shape_words::op_flatten(self),
+            WordId::Depth => shape_words::op_depth(self),
             WordId::Take => vector_ops::op_take(self),
             WordId::Drop => vector_ops::op_drop(self),
             WordId::Reverse => vector_ops::op_reverse(self),

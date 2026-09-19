@@ -2518,6 +2518,117 @@ W</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
+<section class="ajisai-case" id="core-shape" data-category="core">
+  <h3>SHAPE answers a rectangular vector's axis lengths, outermost first</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ] SHAPE</pre>
+  <pre class="ajisai-expect-result">[ 3/1 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-shape-flat" data-category="core">
+  <h3>SHAPE of a flat vector is its length alone</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] SHAPE</pre>
+  <pre class="ajisai-expect-result">[ 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-shape-ragged-projects" data-category="core">
+  <h3>A ragged vector has no shape: SHAPE projects domainMiss, not an error</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 ] ] SHAPE NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'domainMiss'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-shape-non-vector-error" data-category="core">
+  <h3>SHAPE of a non-vector is the program being wrong</h3>
+  <pre class="ajisai-source">5 SHAPE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">SHAPE: expected a Vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-reshape" data-category="core">
+  <h3>RESHAPE regroups the leaves, in order, under the shape</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</pre>
+  <pre class="ajisai-expect-result">[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-reshape-round-trips-through-shape" data-category="core">
+  <h3>RESHAPE through a vector's own SHAPE is the identity</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] [ [ 1 2 ] [ 3 4 ] ] SHAPE RESHAPE</pre>
+  <pre class="ajisai-expect-result">[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-reshape-mismatch-error" data-category="core">
+  <h3>A shape whose product is not the leaf count raises: nothing is padded or dropped</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 3 ] RESHAPE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">RESHAPE: the shape holds 6 element(s) but the Vector has 5 leaf value(s)</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-flatten" data-category="core">
+  <h3>FLATTEN collapses every axis, however deep</h3>
+  <pre class="ajisai-source">[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-flatten-flat-is-identity" data-category="core">
+  <h3>FLATTEN of a flat vector is itself</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] FLATTEN</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-depth" data-category="core">
+  <h3>DEPTH is one more than the deepest element</h3>
+  <pre class="ajisai-source">[ 1 [ 2 [ 3 ] ] ] DEPTH</pre>
+  <pre class="ajisai-expect-result">3/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-depth-of-a-leaf-is-zero" data-category="core">
+  <h3>A leaf has depth 0</h3>
+  <pre class="ajisai-source">7 DEPTH</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-depth-of-empty-vector-is-one" data-category="core">
+  <h3>The empty vector is a vector: depth 1</h3>
+  <pre class="ajisai-source">[ ] DEPTH</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-rank" data-category="core">
+  <h3>RANK applies the block at the stated depth</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK</pre>
+  <pre class="ajisai-expect-result">[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-rank-1-is-map" data-category="core">
+  <h3>RANK at depth 1 is MAP</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 1 [ 2 MUL ] RANK</pre>
+  <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-rank-0-sees-the-whole-vector" data-category="core">
+  <h3>RANK at depth 0 evaluates the block once on the whole vector</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] 0 [ LENGTH ] RANK</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-rank-stops-at-a-leaf" data-category="core">
+  <h3>A leaf met before the depth is reached is what the block gets</h3>
+  <pre class="ajisai-source">[ 1 [ 2 3 ] ] 2 [ 10 MUL ] RANK</pre>
+  <pre class="ajisai-expect-result">[ 10/1 [ 20/1 30/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-rank-negative-depth-error" data-category="core">
+  <h3>A depth that is not a non-negative integer is the program being wrong</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] -1 [ 2 MUL ] RANK</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">RANK: expected a non-negative integer depth</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+<section class="ajisai-case" id="core-rank-nil-target" data-category="core">
+  <h3>RANK passes an absent collection through, as MAP does</h3>
+  <pre class="ajisai-source">NIL 1 [ 2 MUL ] RANK NIL?</pre>
+  <pre class="ajisai-expect-result">NIL TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 <section class="ajisai-case" id="standard-put" data-category="core"><h3>PUT</h3><pre class="ajisai-source">[ 1 2 3 ] 1 9 PUT</pre><pre class="ajisai-expect-result">[ 1/1 9/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">[ [ 1/1 3/1 ] [ 2/1 4/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="kernel-random" data-category="core"><h3>RANDOM draws the same exact rationals for the same seed</h3><pre class="ajisai-source">7 3 RANDOM</pre><pre class="ajisai-expect-result">[ 3344595609062871/9007199254740992 861149483440519/2251799813685248 3413160536610049/4503599627370496 ]</pre><div class="ajisai-expect-effects"></div></section>

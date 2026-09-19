@@ -14,7 +14,7 @@ use crate::types::{Interpretation, Value, ValueData};
 /// when the running product would wrap, so callers can reject pathological
 /// shapes with a structured error instead of panicking (debug) or silently
 /// computing a wrong size (release).
-fn checked_shape_product(shape: &[usize]) -> Option<usize> {
+pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
     shape
         .iter()
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
