@@ -252,7 +252,7 @@ fn comparison_words_have_uniform_stack_effect() {
 
 #[test]
 fn lookup_output_is_utf8_plain_text() {
-    for name in ["ADD", "MAP", "LOOKUP", "DEF", "OR-NIL", "TOP", "PRINT"] {
+    for name in ["ADD", "MAP", "LOOKUP", "DEF", "TOP", "PRINT"] {
         let body = lookup_builtin_detail(name);
         assert!(
             !body.chars().any(|c| c.is_control() && c != '\n'),

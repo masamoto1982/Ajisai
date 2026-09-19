@@ -6,31 +6,6 @@ use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::{create_number_value, is_vector_value};
 use super::{ConsumptionMode, Interpreter};
 
-/// Index just past the single *source unit* that begins at `start` in `tokens`:
-/// either one ordinary token, or one balanced `[ ]` group (nesting
-/// respected). This is the one, canonical definition of the unit that a non-NIL
-/// `OR-NIL` (the sole spelling — `Token::NilCoalesce`) skips
-/// unevaluated (LANG.FAILURE.RECOVERY). `start` at or past the end is returned unchanged, so
-/// a directive with no following unit is a no-op skip.
-pub(crate) fn end_of_source_unit(tokens: &[Token], start: usize) -> usize {
-    match tokens.get(start) {
-        Some(Token::VectorStart) => {}
-        Some(_) => return start + 1,
-        None => return start,
-    };
-    let mut depth = 1usize;
-    let mut i = start + 1;
-    while i < tokens.len() && depth > 0 {
-        if tokens[i] == Token::VectorStart {
-            depth += 1;
-        } else if tokens[i] == Token::VectorEnd {
-            depth -= 1;
-        }
-        i += 1;
-    }
-    i
-}
-
 /// If the bracketed literal spanning `tokens[start..start+consumed)` is
 /// immediately followed (no tokens between) by `<name-string> [KEEP] DEF`,
 /// return its inner tokens (brackets excluded) — the body `DEF` is about to
@@ -122,12 +97,15 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
 fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
     match reason {
         NilReason::DivisionByZero => Some(ErrorCategory::DivisionByZero),
-        NilReason::IndexOutOfBounds => Some(ErrorCategory::IndexOutOfBounds),
-        // No `ErrorCategory` names a domain miss or an unavailable diagnostic,
-        // and inventing one would add a category with no `AjisaiError` behind
-        // it — `None` here means the trace's `category` evidence is simply
-        // absent, not a catch-all category standing in for it.
-        NilReason::MissingField
+        // No `ErrorCategory` names a domain miss, an unavailable diagnostic,
+        // or an index past the end, and inventing one would add a category
+        // with no `AjisaiError` behind it — `None` here means the trace's
+        // `category` evidence is simply absent, not a catch-all category
+        // standing in for it. `indexOutOfBounds` joined this group when `TAKE`
+        // and `PUT` stopped raising it: no Word raises past-the-end any more,
+        // so the reason names a projection and nothing else.
+        NilReason::IndexOutOfBounds
+        | NilReason::MissingField
         | NilReason::InvalidEncoding
         | NilReason::Undecidable
         | NilReason::SpaceExhausted
@@ -382,37 +360,6 @@ impl Interpreter {
                             }
                         }
                     }
-                }
-                Token::NilCoalesce => {
-                    // OR-NIL (LANG.FAILURE.RECOVERY): inspect the top.
-                    let (value, hint) = self.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
-
-                    if !value.is_nil() {
-                        // Non-NIL: keep it and skip the following source unit
-                        // unevaluated (one token or one balanced group). Nothing
-                        // following is a no-op skip here — the kept value already
-                        // satisfies OR-NIL's `(x -- x)` contract on its own.
-                        self.stack.push_with_role(value, hint);
-                        i = end_of_source_unit(execute_tokens, i + 1);
-                        continue;
-                    }
-                    // NIL: a fallback must follow for `(x -- x)` to hold — nothing
-                    // left to evaluate here would mean discarding the operand and
-                    // producing no replacement. `LineBreak` tokens don't count as
-                    // a fallback (see the `LineBreak => {}` arm below), so the
-                    // check looks past them, not just at the very next token.
-                    if execute_tokens[i + 1..]
-                        .iter()
-                        .all(|t| matches!(t, Token::LineBreak))
-                    {
-                        self.stack.push_with_role(value, hint);
-                        return Err(AjisaiError::declared(
-                            "missingFollowingSourceUnit",
-                            "OR-NIL: a NIL top has no following source unit to evaluate as the fallback",
-                        ));
-                    }
-                    // Discard it and let the trailing `i += 1` fall through so the
-                    // following source unit is evaluated as the fallback.
                 }
                 Token::LineBreak => {}
                 Token::VectorEnd => {

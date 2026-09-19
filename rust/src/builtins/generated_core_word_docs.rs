@@ -257,7 +257,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "GET",
         category: "vector",
-        summary: "Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and \"nothing\" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. Contrast `PUT`, which raises on the same condition.",
+        summary: "Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and \"nothing\" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. `TAKE` and `PUT` answer the same condition the same way, so past-the-end is one outcome across the whole vocabulary.",
         role: "Random access into vectors and tensors, one position or many.",
         stack_effect: "[ vec ] [ idx.. ] -> [ elem | elems ]",
         hover_summary: "GET — select elements at indices",
@@ -275,7 +275,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "TAKE",
         category: "vector",
-        summary: "Take the first N or last -N elements of a vector.",
+        summary: "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 1 2 3 ] [ 9 ] TAKE NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
         role: "Vector primitive: Take the first N or last -N elements of a vector.",
         stack_effect: "[ vec ] [ n ] -> [ prefix ]",
         hover_summary: "TAKE — take N elements from start or end",
@@ -383,7 +383,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "PUT",
         category: "vector",
-        summary: "A copy of a vector with the element at one index replaced. An out-of-range index is an error here, where `GET` projects it to NIL on the same condition, because the two answer with different things. `GET` returns the element asked for, so a missing one empties its own slot and nothing else; `PUT` returns the whole vector, so it has no slot to empty — projecting would have to answer NIL for the entire collection because one index was wrong, discarding data the Word was asked to preserve. There is nothing to write and nothing partial to hand back, so it raises.",
+        summary: "A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT` hands it back.",
         role: "Single-position update, without rebuilding the vector by hand.",
         stack_effect: "[ vec ] [ idx ] [ x ] -> [ vec ]",
         hover_summary: "A copy of a vector with the element at one index replaced.",
@@ -559,15 +559,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         stack_effect: "[ x ] -> [ x ] [ text|NIL ]",
         hover_summary: "NIL-REASON — read the NIL reason protocol string",
         hover_syntax: "1 0 / NIL-REASON",
-    },
-    GeneratedCoreWordDoc {
-        name: "OR-NIL",
-        category: "control-directive",
-        summary: "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
-        role: "Control directive that inspects the stack top. If the top is non-NIL it is kept and the following source unit is skipped UNEVALUATED. If the top is NIL it is discarded and the following source unit is evaluated as the fallback. The fallback is the source that follows the directive, not a value already on the stack.",
-        stack_effect: "top non-NIL: keeps top, skips next source unit unevaluated; top NIL: discards top, evaluates next source unit as fallback",
-        hover_summary: "OR-NIL — lazy NIL-coalescing fallback",
-        hover_syntax: "NIL OR-NIL [ 0 ]",
     },
     GeneratedCoreWordDoc {
         name: "KEEP",

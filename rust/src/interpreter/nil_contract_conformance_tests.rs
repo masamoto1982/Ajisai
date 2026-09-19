@@ -100,7 +100,7 @@ fn required(policy: NilPolicy) -> Option<Outcome> {
             Some(Outcome::NilWithReason)
         }
         NilPolicy::RejectNil => Some(Outcome::Error),
-        NilPolicy::CreatesNil | NilPolicy::ConsumeNil | NilPolicy::InspectNil => None,
+        NilPolicy::CreatesNil | NilPolicy::ConsumeNil => None,
         // `kleeneAbsorbing` (strong-Kleene `AND`/`OR`) only decides to a
         // definite value when a dominating operand (FALSE/TRUE) is present;
         // this blanket probe fills every operand position with NIL, so no

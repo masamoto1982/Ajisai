@@ -256,12 +256,11 @@ impl CostSim {
     pub(crate) fn feed_literal(&mut self) {}
 
     pub(crate) fn feed_structural(&mut self, token: &Token) {
-        // `OR-NIL` branches along a path this linear walk cannot follow,
-        // exactly as `SpaceSim::feed_structural` treats it. It is the only
-        // such token left: `|` was the other, and it went with `COND`.
-        if matches!(token, Token::NilCoalesce) {
-            self.bound.join(CostBound::CONSERVATIVE);
-        }
+        // Nothing structural changes the bound any more. `|` went with
+        // `COND` and `OR-NIL`'s lazy fallback unit went with `OR-NIL`; both
+        // branched along a path this linear walk could not follow, and no
+        // token does now.
+        let _ = token;
     }
 
     pub(crate) fn feed_unresolved(&mut self) {

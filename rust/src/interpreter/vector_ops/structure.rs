@@ -210,7 +210,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         // range whose materialized length exceeds the space water level is a
         // well-formed operation that cannot produce a value within budget. The
         // NIL Projection Rule projects it onto a diagnosable NIL (reason
-        // `spaceExhausted`) so a pipeline can recover it with `OR-NIL`,
+        // `spaceExhausted`) so a pipeline can recover it with a chosen fallback,
         // instead of a channel error that halts evaluation. The malformed cases
         // above (zero step, infinite direction) remain ordinary errors.
         interp

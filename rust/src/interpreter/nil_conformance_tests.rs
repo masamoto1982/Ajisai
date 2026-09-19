@@ -158,12 +158,14 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
 // `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`NEQ`/`ORDER`/`SORT` are probed
 // in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
 // exhausts its comparison budget. `RANDOM`/`RANGE`/`SQRT`/`STR` are probed in
-// `shape_ops`, beside the Word itself.
+// `shape_ops`, beside the Word itself. `GET`/`TAKE`/`PUT` are probed together
+// in `index_projection_tests`: what they must agree on is one condition
+// answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
     "ABS", "DIV", "EQ", "FILL", "FLOOR", "GET", "GT", "GTE", "INDEX-OF", "LT", "LTE", "MAX",
-    "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "QUANTIZE", "RANDOM", "RANGE", "ROUND",
-    "SORT", "SQRT", "STR",
+    "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "PUT", "QUANTIZE", "RANDOM", "RANGE",
+    "ROUND", "SORT", "SQRT", "STR", "TAKE",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a
@@ -395,32 +397,32 @@ async fn projecting_arithmetic_nil_input_passes_through() {
 #[tokio::test]
 async fn malformed_use_raises_error_not_a_projected_nil() {
     // LANG.FAILURE.ERROR: "そもそも使い方が違う -> エラー". A non-numeric DIV operand
-    // and a malformed GET index are structural misuse, not domain misses.
+    // is structural misuse, not a domain miss. The addressing Words' half of
+    // the same rule is in `index_projection_tests`.
     assert!(
         run("'x' 1 DIV").await.is_err(),
         "non-numeric DIV operand must raise an error, not project onto NIL"
     );
-    assert!(
-        run("1 [ 1 2 ] GET").await.is_err(),
-        "malformed GET index must raise an error, not a projected NIL"
-    );
 }
 
-// --- OR-NIL replaces a reasoned NIL with a fallback (LANG.FAILURE.RECOVERY) ---
+// --- `NIL?` and `SELECT` replace a reasoned NIL with a fallback (LANG.FAILURE.RECOVERY) ---
 
 #[tokio::test]
-async fn or_nil_supplies_fallback_and_clears_reason() {
+async fn a_chosen_fallback_replaces_a_reasoned_nil() {
     // bare NIL replaced by the fallback
-    let stack = run_ok("NIL OR-NIL [ 0 ]").await;
+    let stack = run_ok("[ 0 ] NIL NIL? SELECT").await;
     assert_eq!(format!("{}", stack[0]), "[ 0/1 ]");
 
     // non-NIL value passes through unchanged
-    let stack = run_ok("[ 42 ] OR-NIL [ 0 ]").await;
+    let stack = run_ok("[ 0 ] [ 42 ] NIL? SELECT").await;
     assert_eq!(format!("{}", stack[0]), "[ 42/1 ]");
 
     // a reasoned NIL (division by zero) is replaced; no NIL survives
-    let stack = run_ok("1 0 DIV OR-NIL [ 7 ]").await;
-    assert!(!is_nil(&stack[0]), "OR-NIL must consume the reasoned NIL");
+    let stack = run_ok("[ 7 ] 1 0 DIV NIL? SELECT").await;
+    assert!(
+        !is_nil(&stack[0]),
+        "the fallback must replace the reasoned NIL"
+    );
     assert_eq!(format!("{}", stack[0]), "[ 7/1 ]");
 }
 

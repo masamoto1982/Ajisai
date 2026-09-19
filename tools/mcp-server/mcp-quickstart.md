@@ -28,7 +28,7 @@ reaching for it exactly where it would have helped. The 65 Words are:
 | collections | `SORT` `ORDER` `UNIQUE` `TALLY` `GROUP` `ZIP` `RANGE` `FILL` `TAKE` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `COLLECT` |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `ANY` `ALL` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `NUM` `STR` |
-| absence | `NIL` `NIL?` `NIL-REASON` `OR-NIL` |
+| absence | `NIL` `NIL?` `NIL-REASON` |
 | naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` · `PRINT` `KEEP` |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
@@ -95,16 +95,18 @@ call still succeeds:
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
 and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with
-`OR-NIL`, whose fallback is the source unit written after it:
+`NIL?` and `SELECT`. `NIL?` answers its subject *and* whether it is absent,
+which is exactly where `SELECT` reads its truth operand, so the phrase needs
+no name and no repetition:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-1 0 / OR-NIL [ 99 ]
+[ 99 ] 1 0 / NIL? SELECT
 ```
 
-`OR-NIL` inspects the stack top, and a vector holding an absent lane is not
+`NIL?` asks about the whole value, and a vector holding an absent lane is not
 itself absent. Lifted over a vector the same division projects lane by lane
 (`LANG.COLLECTIONS.LIFT`) — the zero divisor empties its own lane and leaves
-the others — so the top is still a vector and `OR-NIL` would keep it as-is.
+the others — so the top is still a vector and the fallback is not chosen.
 Recover such a result per lane (`MAP`), not around it:
 
 ```ajisai tool=compute status=ok stack="[ 6/1 NIL ]"

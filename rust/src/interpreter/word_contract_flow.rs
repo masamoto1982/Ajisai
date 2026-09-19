@@ -112,13 +112,6 @@ impl FlowSim {
         match token {
             Token::VectorStart => self.vector_depth += 1,
             Token::VectorEnd => self.close(),
-            // Both select between paths of differing height; see the module
-            // comment. Inside a literal they are content, not control.
-            Token::NilCoalesce => {
-                if !self.in_literal() {
-                    self.unmodelled = true;
-                }
-            }
             Token::LineBreak | Token::Number(_) | Token::String(_) | Token::Symbol(_) => {}
         }
     }

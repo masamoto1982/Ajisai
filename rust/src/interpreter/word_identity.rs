@@ -68,7 +68,6 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
         }
         Token::VectorStart => bytes.push(b'['),
         Token::VectorEnd => bytes.push(b']'),
-        Token::NilCoalesce => bytes.push(b'^'),
         Token::LineBreak => bytes.push(b'\n'),
     }
 }
@@ -284,7 +283,6 @@ impl Interpreter {
                     }
                     Token::VectorStart => structural_atom(b'['),
                     Token::VectorEnd => structural_atom(b']'),
-                    Token::NilCoalesce => structural_atom(b'^'),
                     Token::LineBreak => structural_atom(b'\n'),
                 };
                 atoms.push(atom);

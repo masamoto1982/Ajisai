@@ -19,11 +19,11 @@ use crate::kernel::generated::GENERATED_WORDS;
 mod contract;
 
 use contract::mass_from_arity;
+pub use contract::{mass_contract, MassContract};
 pub(crate) use contract::{
-    execution_form_from_contract, partiality_from_contract, safe_preview_from_contract,
-    safety_from_contract, stability_from_contract,
+    partiality_from_contract, safe_preview_from_contract, safety_from_contract,
+    stability_from_contract,
 };
-pub use contract::{mass_contract, ExecutionForm, MassContract};
 use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;

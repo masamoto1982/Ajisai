@@ -71,15 +71,9 @@
       "documentation": "The total execution-step budget was exhausted before the program finished."
     },
     {
-      "id": "indexOutOfBounds",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "A well-formed index or count outside the addressed collection's bounds, raised rather than projected — TAKE asking for more elements than the vector holds."
-    },
-    {
       "id": "invalidCount",
       "kind": "declared",
-      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that cannot be honored structurally (distinct from negativeCount and from the indexOutOfBounds projection)."
+      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that is not a well-formed count at all (distinct from negativeCount, and from a well-formed count past the end, which TAKE projects as indexOutOfBounds)."
     },
     {
       "id": "invalidDefinitionBody",
@@ -111,11 +105,6 @@
       "kind": "structural",
       "attribution": "machine",
       "documentation": "Program text that does not parse — an unclosed block, a | outside a clause, a mismatched delimiter."
-    },
-    {
-      "id": "missingFollowingSourceUnit",
-      "kind": "declared",
-      "documentation": "OR-NIL's top was NIL and no source unit follows it to evaluate as the fallback."
     },
     {
       "id": "nameConflict",

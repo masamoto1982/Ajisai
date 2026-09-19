@@ -44,7 +44,6 @@
     { "id": "Symbol", "carries": "the lexeme as written" },
     { "id": "VectorStart", "carries": null },
     { "id": "VectorEnd", "carries": null },
-    { "id": "NilCoalesce", "carries": null },
     { "id": "LineBreak", "carries": null }
   ],
 
@@ -140,13 +139,6 @@
       "condition": "retiredCondSeparator",
       "surface": "|",
       "note": "A whole-lexeme rule rather than a rejected character, so only a bare '|' is refused and a name that merely contains one is not. It separated a COND clause's guard from its body; COND was replaced by SELECT, which chooses between two values that already exist."
-    },
-    {
-      "id": "nilCoalesce",
-      "match": { "literalAsciiCaseInsensitive": "OR-NIL" },
-      "emits": "NilCoalesce",
-      "surface": "OR-NIL",
-      "note": "Emitted as its own token rather than resolved through the dictionary, because the execution loop reads the following source unit positionally. A qualified name such as MATH@OR-NIL is one lexeme containing '@' and never compares equal, so it is unaffected; the same directness is what makes this name unshadowable by a user definition."
     },
     {
       "id": "symbol",

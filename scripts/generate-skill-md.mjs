@@ -386,8 +386,8 @@ function verifiedNilSection() {
   if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
   const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk('1 0 DIV OR-NIL [ 99 ]');
-  if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('OR-NIL fallback must replace NIL');
+  const fallback = expectOk('[ 99 ] 1 0 DIV NIL? SELECT');
+  if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('the fallback must replace NIL');
   // Lifted over a vector the same law projects lane by lane, so the top stays
   // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
   // taught the collapse rather than the lane law.
@@ -474,9 +474,9 @@ pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`OR-NIL\`: \`1 0 DIV OR-NIL [ 99 ]\` → stack \`${nil.fallbackStack}\`.
+- Provide a fallback with \`NIL?\` and \`SELECT\`: \`[ 99 ] 1 0 DIV NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` answers its subject *and* whether it is absent, which is exactly where \`SELECT\` wants the truth — so the phrase reads "X, or the fallback if X is absent" with nothing named and nothing repeated.
 - Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
-- That makes the top a vector, not a NIL, so \`OR-NIL\` — which inspects the stack top — keeps it as-is. Recover a lifted result inside the vector, not around it.
+- That makes the top a vector, not a NIL, so \`NIL?\` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field

@@ -29,7 +29,6 @@
     },
     {
      "enum": [
-      "control",
       "variable"
      ]
     }
@@ -237,8 +236,7 @@
      "enum": [
       "none",
       "eat",
-      "retain",
-      "conditional"
+      "retain"
      ]
     },
     "nilPolicy": {
@@ -247,7 +245,6 @@
       "consumeNil",
       "rejectNil",
       "passthrough",
-      "inspectNil",
       "createsNil",
       "passthroughThenProject",
       "kleeneAbsorbing"
@@ -263,7 +260,7 @@
       "minLength": 1
      },
      "uniqueItems": true,
-     "description": "The conditions under which the Word raises. A condition names a state of the *input* — \"the divisor is zero\", \"the index is outside the vector\" — and not an outcome, so the same name may appear in one Word's `errorWhen` and another's `projection.when`. Which field it appears in is what decides the outcome, per Word, and the two are never both declared for one condition on one Word. `indexOutOfBounds` is the standing example: `GET` projects it and `PUT` raises it, and both are right — see those entries."
+     "description": "The conditions under which the Word raises. A condition names a state of the *input* — \"the divisor is zero\", \"the index is outside the vector\" — and not an outcome, so the schema permits the same name in one Word's `errorWhen` and another's `projection.when`. Which field it appears in is what decides the outcome, per Word, and the two are never both declared for one condition on one Word. No condition is currently declared both ways anywhere in the registry: `indexOutOfBounds` was the last one that was — `GET` projected it while `TAKE` and `PUT` raised it — and those two now project it too, so every condition in the registry has one outcome across the whole vocabulary."
     },
     "partiality": {
      "type": "string",

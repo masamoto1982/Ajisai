@@ -124,10 +124,9 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // operand's value sets the length, so it takes the runtime water level
         // rather than a static bound.
         Random => (Unbounded, true),
-        // The positional control directives (LANG.FAILURE.RECOVERY) never reach a
-        // primitive: the execution loop interprets them against the source
-        // stream, so they materialize nothing.
-        LazyNextUnitFallback | SetConsumptionKeep => (Const, false),
+        // `KEEP` never reaches a primitive: the execution loop interprets it
+        // against the source stream, so it materializes nothing.
+        SetConsumptionKeep => (Const, false),
     }
 }
 
@@ -321,7 +320,6 @@ impl SpaceSim {
             }
             // `OR-NIL`'s lazy fallback unit changes heights along a path the
             // linear walk cannot follow.
-            Token::NilCoalesce => self.degrade(),
             _ => {}
         }
     }

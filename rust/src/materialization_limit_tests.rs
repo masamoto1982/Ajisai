@@ -11,7 +11,7 @@
 //! Phase 3 of the structural-memory-safety roadmap turns the *space-budget*
 //! miss of the generative words — a well-formed input whose materialized result
 //! exceeds the ceiling — into a diagnosable projected NIL (reason
-//! `SpaceExhausted`) that a pipeline can recover with `OR-NIL`, rather than
+//! `SpaceExhausted`) that a pipeline can recover with a chosen fallback, rather than
 //! a channel error. `RESHAPE`'s over-limit case is a shape *mismatch*
 //! (malformed), so it remains an ordinary error.
 
@@ -44,21 +44,21 @@ mod materialization_limit_tests {
     }
 
     #[tokio::test]
-    async fn range_space_projection_is_or_nil_recoverable() {
+    async fn range_space_projection_is_recoverable() {
         // The whole point of a projected NIL over an error: a pipeline can
         // recover it.
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("[ 0 9999999999999 ] RANGE OR-NIL [ 42 ]")
+            .execute("[ 42 ] [ 0 9999999999999 ] RANGE NIL? SELECT")
             .await;
         assert!(
             result.is_ok(),
-            "OR-NIL must recover the space-exhausted NIL: {result:?}"
+            "the space-exhausted NIL must be recoverable: {result:?}"
         );
         assert_eq!(
             top_nil_reason(&interp),
             None,
-            "after OR-NIL the fallback value, not a NIL, is on top"
+            "the fallback value, not a NIL, is on top"
         );
     }
 

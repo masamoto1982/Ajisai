@@ -4,10 +4,10 @@
     "docs/formalization-coverage.json"
   ],
   "summary": {
-    "primitives": 24,
+    "primitives": 23,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 18,
-    "distinct_conformance_cases": 80
+    "distinct_conformance_cases": 79
   },
   "primitives": [
     {
@@ -311,16 +311,15 @@
       "algebraic_family": "bubble",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 7,
+      "derived_word_count": 6,
       "law_test_count": 8,
-      "conformance_case_count": 11,
+      "conformance_case_count": 10,
       "derived_words": [
         "core.get",
         "core.nil",
         "core.nil-p",
         "core.nil-reason",
         "core.num",
-        "core.or-nil",
         "module.algo.index-of"
       ],
       "law_tests": [
@@ -343,7 +342,6 @@
         "core-nil-reason-division-by-zero",
         "core-nil-reason-present-value-is-nil",
         "core-nil-spelling",
-        "core-or-nil-fallback",
         "standard-index-of"
       ]
     },
@@ -393,24 +391,6 @@
         "standard-quantize",
         "standard-round",
         "standard-sub"
-      ]
-    },
-    {
-      "id": "algebra.bubble.handler",
-      "algebraic_family": "bubble",
-      "kind": "operation",
-      "status": "accepted",
-      "derived_word_count": 1,
-      "law_test_count": 1,
-      "conformance_case_count": 1,
-      "derived_words": [
-        "core.or-nil"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-or-nil-fallback"
       ]
     },
     {

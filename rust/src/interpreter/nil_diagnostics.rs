@@ -2,7 +2,7 @@
 //!
 //! `NIL?` and `NIL-REASON` let a program read what a reasoned NIL carries
 //! (LANG.VALUES.NIL, `NilReason`) instead of collapsing every absence with a single
-//! `OR-NIL` fallback. They are the whole set: `NIL-ORIGIN`,
+//! chosen fallback. They are the whole set: `NIL-ORIGIN`,
 //! `NIL-RECOVERABLE?` and `NIL-DIAGNOSIS` named the origin / recoverability /
 //! diagnosis metadata that the canonical minimal-NIL model does not have, and
 //! are not in `spec/words.json`.

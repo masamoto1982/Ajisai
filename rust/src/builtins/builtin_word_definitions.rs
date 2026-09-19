@@ -1,4 +1,4 @@
-use crate::coreword_registry::{ExecutionForm, Partiality};
+use crate::coreword_registry::Partiality;
 
 /// Runtime view of a canonical Core Word.
 ///
@@ -18,7 +18,6 @@ pub struct BuiltinSpec {
     pub stack_effect: &'static str,
     pub stability: &'static str,
     pub partiality: Partiality,
-    pub execution_form: ExecutionForm,
 }
 
 /// Complete projected Core Word view.
@@ -44,7 +43,6 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
                     stack_effect: doc.stack_effect,
                     stability: crate::coreword_registry::stability_from_contract(word),
                     partiality: crate::coreword_registry::partiality_from_contract(word),
-                    execution_form: crate::coreword_registry::execution_form_from_contract(word),
                 }
             })
             .collect()
@@ -92,7 +90,7 @@ mod tests {
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
             "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "KEEP",
-            "OR-NIL", "SQRT", "SORT",
+            "SQRT", "SORT",
         ];
 
         for name in required {
@@ -150,12 +148,6 @@ mod tests {
                 "{} partiality",
                 spec.name
             );
-            assert_eq!(
-                spec.execution_form,
-                crate::coreword_registry::execution_form_from_contract(word),
-                "{} execution_form",
-                spec.name
-            );
         }
     }
 
@@ -182,13 +174,6 @@ mod tests {
     #[test]
     fn builtin_specs_stack_effect_grammar() {
         for spec in super::builtin_specs() {
-            // Control directives (LANG.FAILURE.RECOVERY) act positionally on the source
-            // stream, not as a stack `X -> Y` transformation, so the arrow
-            // grammar does not apply to them; their contract is carried by
-            // `execution_form` and a prose stack-effect note.
-            if spec.execution_form != crate::coreword_registry::ExecutionForm::RuntimeWord {
-                continue;
-            }
             let s = spec.stack_effect;
             let is_literal_no_op =
                 s == "no values popped or pushed" || s == "operands preserved; result pushed";

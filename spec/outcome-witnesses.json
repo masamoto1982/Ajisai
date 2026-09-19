@@ -74,12 +74,6 @@
       "rationale": "MAP's element block runs with control arity of its own — the table's domain tuples only ever supply MAP's own two declared operands (a vector and a block), never a block whose *body* violates the ( x -- x ) contract MAP requires of it, since the block bodies the table writes are never anything but its own placeholder-free structure."
     },
     {
-      "id": "missingFollowingSourceUnit",
-      "source": "NIL OR-NIL",
-      "expect": "error:missingFollowingSourceUnit",
-      "rationale": "OR-NIL has control arity (it reads the following source unit, not a stack operand) and is excluded from the domain table entirely. A NIL subject with no following unit to fall back on is the declared condition itself."
-    },
-    {
       "id": "structureError",
       "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n'A' DEL",
       "expect": "error:structureError",

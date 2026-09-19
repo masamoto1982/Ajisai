@@ -68,12 +68,11 @@ const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 /// `DivisionByZero` is excluded: it is not a registered outcome category at
 /// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
 /// diagnostic-trace-only, Phase 2 of this work order).
-fn structural_error_categories() -> [ErrorCategory; 13] {
+fn structural_error_categories() -> [ErrorCategory; 12] {
     [
         ErrorCategory::StackUnderflow,
         ErrorCategory::StructureError,
         ErrorCategory::UnknownWord,
-        ErrorCategory::IndexOutOfBounds,
         ErrorCategory::VectorLengthMismatch,
         ErrorCategory::ShapeMismatch,
         ErrorCategory::MalformedSource,
@@ -262,10 +261,6 @@ impl Reachability {
         self.calls_user_word |= !is_builtin;
     }
 
-    pub(crate) fn saw_word(&mut self, name: &str) {
-        self.names.insert(name.to_uppercase());
-    }
-
     fn reaches_any(&self, words: &[&str]) -> bool {
         self.unresolved || words.iter().any(|w| self.names.contains(*w))
     }
@@ -284,11 +279,11 @@ impl Reachability {
 /// User-Word activation, since `execute_builtin` raises it on `call_depth`),
 /// so it is handled separately rather than forced into this table.
 ///
-/// Everything not listed stays unconditional. `structureError`,
-/// `indexOutOfBounds` and `vectorLengthMismatch` are spread across the
-/// arithmetic and collection modules, and narrowing them would mean modelling
-/// which of those a program reaches — a different and much larger claim than
-/// "this program contains no `DEF`".
+/// Everything not listed stays unconditional. `structureError` and
+/// `vectorLengthMismatch` are spread across the arithmetic and collection
+/// modules, and narrowing them would mean modelling which of those a program
+/// reaches — a different and much larger claim than "this program contains no
+/// `DEF`".
 const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 3] = [
     ("error:nameConflict", &["DEF"]),
     ("error:selfReferentialDefinition", &["DEF"]),
@@ -375,23 +370,14 @@ pub(crate) fn outcome_vocabulary_for_word(
                 // check LANG.DICTIONARY.ACYCLIC's termination argument rests
                 // on. Every reachable Word is now named by a `Token::Symbol`
                 // somewhere, so the arm above carries the whole call graph.
-                Token::String(text) => {
+                Token::String(text)
                     if interp
                         .resolve_word_entry(&crate::core_word_aliases::canonicalize_core_word_name(
                             text,
                         ))
-                        .is_some()
-                    {
-                        outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
-                    }
-                }
-                // `OR-NIL` desugars to this token rather than a Symbol, but
-                // is a real Word with its own declared vocabulary — see
-                // `structural_ceiling_ids`'s doc for why it needs this
-                // separate case.
-                Token::NilCoalesce => {
-                    reach.saw_word("OR-NIL");
-                    outcomes.extend(builtin_outcomes_for("OR-NIL"));
+                        .is_some() =>
+                {
+                    outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
                 }
                 _ => {}
             }

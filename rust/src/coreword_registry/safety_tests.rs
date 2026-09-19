@@ -71,8 +71,8 @@ fn aq_ver_007_b2_conditional_words_borrow_their_purity_from_their_block() {
         .collect();
     assert_eq!(
         conditional,
-        vec!["MAP", "FILTER", "FOLD", "SCAN", "ANY", "ALL", "EXEC", "OR-NIL"],
-        "the conditional Words are the higher-order ones plus EXEC/OR-NIL"
+        vec!["MAP", "FILTER", "FOLD", "SCAN", "ANY", "ALL", "EXEC"],
+        "the conditional Words are the higher-order ones plus EXEC"
     );
     for word in get_builtin_word_registry()
         .iter()

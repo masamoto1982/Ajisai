@@ -47,8 +47,7 @@ use super::word_contract::ContractFlow;
 use super::word_contract_flow::FlowSim;
 use super::word_contract_widen::classify_vector_positions;
 use super::word_outcome_vocabulary::{
-    builtin_outcomes_for, close_over_nil_reason_loss, resolve_and_collect, structural_ceiling_ids,
-    Reachability,
+    close_over_nil_reason_loss, resolve_and_collect, structural_ceiling_ids, Reachability,
 };
 use super::Interpreter;
 
@@ -114,13 +113,6 @@ impl Interpreter {
                     // may be executed anywhere later. See
                     // `word_outcome_vocabulary`'s module doc.
                     outcomes.extend(resolve_and_collect(self, symbol, &mut visiting, &mut reach));
-                }
-                // `OR-NIL` desugars to this token rather than a Symbol; see
-                // `word_outcome_vocabulary::structural_ceiling_ids`'s doc.
-                Token::NilCoalesce => {
-                    flow.feed_structural(token);
-                    reach.saw_word("OR-NIL");
-                    outcomes.extend(builtin_outcomes_for("OR-NIL"));
                 }
                 Token::VectorStart | Token::VectorEnd | Token::LineBreak => {
                     flow.feed_structural(token)

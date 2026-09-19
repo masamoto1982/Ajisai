@@ -312,9 +312,9 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-or-nil-fallback" data-category="core">
-  <h3>OR-NIL turns a division-by-zero Bubble into a fallback</h3>
-  <pre class="ajisai-source">1 0 / OR-NIL 99</pre>
+<section class="ajisai-case" id="core-absence-fallback" data-category="core">
+  <h3>A chosen fallback turns a division-by-zero Bubble into a value</h3>
+  <pre class="ajisai-source">99 1 0 / NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -552,36 +552,31 @@
      here. Categorized hosted: the Core-only reference interpreter does not
      implement the (Quarantined) child-runtime words. -->
 
-<!-- OR-NIL is a lazy control directive (Section 6.4): a non-NIL top is kept
-     and the following source unit is skipped unevaluated; a NIL top is discarded
-     and the following unit is evaluated as the fallback. It has no symbol or
-     legacy-name sugar: OR-NIL is the sole spelling. -->
+<!-- Recovering an absence is `NIL?` and `SELECT`, not a construct of its own.
+     `NIL?` answers its subject and whether it is absent, which puts the truth
+     exactly where `SELECT` wants it, so `fallback X NIL? SELECT` reads as
+     "X, or the fallback if X is absent" with nothing named and nothing
+     repeated. The retired `OR-NIL` did the same job lazily, by skipping the
+     following source unit. -->
 
-<section class="ajisai-case" id="core-or-nil-nonnil-keeps-top" data-category="core">
-  <h3>OR-NIL keeps a non-NIL top and skips the fallback token</h3>
-  <pre class="ajisai-source">5 OR-NIL 99</pre>
+<section class="ajisai-case" id="core-absence-present-value-is-kept" data-category="core">
+  <h3>A present value is kept and the fallback is not chosen</h3>
+  <pre class="ajisai-source">99 5 NIL? SELECT</pre>
   <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-or-nil-nonnil-fallback-unevaluated" data-category="core">
-  <h3>OR-NIL does not evaluate the fallback when the top is non-NIL</h3>
-  <pre class="ajisai-source">5 OR-NIL UNDEFINED-FALLBACK</pre>
-  <pre class="ajisai-expect-result">5/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-or-nil-one-token-skip-trap" data-category="core">
-  <h3>OR-NIL skips exactly one source token (multi-token fallback trap)</h3>
-  <pre class="ajisai-source">1 OR-NIL 2 3 ADD</pre>
-  <pre class="ajisai-expect-result">4/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-or-nil-nil-fallback" data-category="core">
-  <h3>OR-NIL evaluates the fallback on a NIL top</h3>
-  <pre class="ajisai-source">NIL OR-NIL 99</pre>
+<section class="ajisai-case" id="core-absence-written-nil-takes-the-fallback" data-category="core">
+  <h3>A written NIL takes the fallback, as a computed one does</h3>
+  <pre class="ajisai-source">99 NIL NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-absence-fallback-is-an-ordinary-operand" data-category="core">
+  <h3>The fallback is an ordinary operand: a phrase computes it like any other</h3>
+  <pre class="ajisai-source">2 3 ADD NIL NIL? SELECT</pre>
+  <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -975,9 +970,9 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-logic-unknown-is-or-niled" data-category="core">
-  <h3>OR-NIL recovers an UNKNOWN, like any other absence</h3>
-  <pre class="ajisai-source">TRUE NIL AND OR-NIL 99</pre>
+<section class="ajisai-case" id="core-logic-unknown-takes-a-fallback" data-category="core">
+  <h3>An UNKNOWN takes a fallback, like any other absence</h3>
+  <pre class="ajisai-source">99 TRUE NIL AND NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1527,19 +1522,32 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-put-out-of-bounds-error" data-category="core">
-  <h3>PUT raises on an out-of-range index, where GET projects: it answers with the whole vector and has no slot to empty</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] 9 5 PUT</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Index 9 out of bounds for vector of length 3</pre>
+<section class="ajisai-case" id="core-put-out-of-bounds-projects" data-category="core">
+  <h3>PUT projects an out-of-range index to NIL, the same answer GET gives on the same condition</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 9 5 PUT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-take-exceeds-length-error" data-category="core">
-  <h3>TAKE beyond the vector length is an error, not a shorter vector</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] TAKE</pre>
+<section class="ajisai-case" id="core-put-out-of-bounds-recovered" data-category="core">
+  <h3>A projected PUT is recovered with the vector the caller already wrote — no data is lost by projecting</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-take-exceeds-length-projects" data-category="core">
+  <h3>TAKE beyond the vector length projects to NIL, not a shorter vector and not an error</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] TAKE NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-take-malformed-count-still-raises" data-category="core">
+  <h3>A count that is not a count at all is still an error: the program is wrong, not the data</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 'x' ] TAKE</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Take count exceeds vector length</pre>
+  <pre class="ajisai-expect-error">TAKE: expected an integer count</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1589,12 +1597,19 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ================== CORE: OR-NIL GROUP SKIP (LANG.FAILURE.RECOVERY) ==================== -->
+<!-- ============ CORE: A FALLBACK IS A VALUE (LANG.FAILURE.RECOVERY) ============ -->
 
-<section class="ajisai-case" id="core-or-nil-group-skip-atomic" data-category="core">
-  <h3>OR-NIL skips one balanced [ ] group atomically on a non-NIL top (LANG.FAILURE.RECOVERY example)</h3>
-  <pre class="ajisai-source">1 OR-NIL [ 2 3 ADD ]</pre>
-  <pre class="ajisai-expect-result">1/1</pre>
+<section class="ajisai-case" id="core-absence-vector-fallback" data-category="core">
+  <h3>A Vector is a fallback like any other value</h3>
+  <pre class="ajisai-source">[ 5 ] NIL NIL? SELECT</pre>
+  <pre class="ajisai-expect-result">[ 5/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-absence-is-asked-of-the-whole-value" data-category="core">
+  <h3>NIL? asks about the whole value: a Vector holding an absent lane is present</h3>
+  <pre class="ajisai-source">[ 0 0 ] [ 1 NIL ] NIL? SELECT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

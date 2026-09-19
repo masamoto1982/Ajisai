@@ -5,9 +5,10 @@
 //! costs asymptotically more, or (for `RANDOM`) is not expressible at all
 //! because the language has no bit mixing to build a generator out of.
 
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 use num_bigint::BigInt;
@@ -241,10 +242,10 @@ pub fn op_sum(interp: &mut Interpreter) -> Result<()> {
 /// element at `idx` replaced. A negative index counts from the end, as
 /// everywhere else.
 ///
-/// The alternative was rebuilding the whole vector through a `MAP` and a
-/// `COND` per element, or the `TAKE`/`CONCAT` surgery that spells the same
-/// thing in three phrases. Updating one position is what a parameter step, a
-/// centroid move, a confusion-matrix increment and a histogram bin all do.
+/// The alternative was rebuilding the whole vector from an index mask and a
+/// `SELECT`, or the `TAKE`/`CONCAT` surgery that spells the same thing in
+/// three phrases. Updating one position is what a parameter step, a centroid
+/// move, a confusion-matrix increment and a histogram bin all do.
 pub fn op_put(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 3 {
         return Err(AjisaiError::StackUnderflow);
@@ -309,15 +310,19 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
         raw_index
     };
     if position < 0 || position as usize >= length {
-        if !keep {
-            interp.stack.push(target);
-            interp.stack.push(index_value);
-            interp.stack.push(replacement);
-        }
-        return Err(AjisaiError::IndexOutOfBounds {
-            index: raw_index,
-            length,
-        });
+        // A well-formed index over a well-formed Vector that names no slot is
+        // the question `GET` already projects for, and `TAKE` now projects for
+        // too: data that did not work out, not a malformed program
+        // (LANG.FAILURE.PROJECT). `PUT` used to raise here on the grounds that
+        // it answers with the whole Vector and so has no single slot to empty
+        // — but the absence is of the *answer*, not of a slot, and that is
+        // what a reasoned NIL says.
+        restore_all(interp, target, index_value, replacement);
+        interp.stack.push(Value::nil_with_reason(
+            NilReason::IndexOutOfBounds,
+            Recoverability::Recoverable,
+        ));
+        return Ok(());
     }
 
     items[position as usize] = replacement.clone();
@@ -397,7 +402,7 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
 
     // The same space water level `RANGE` and `FILL` observe: a well-formed
     // request that cannot be materialized within budget projects onto NIL
-    // with reason `spaceExhausted`, recoverable with `OR-NIL`, rather than driving
+    // with reason `spaceExhausted`, recoverable with a chosen fallback, rather than driving
     // the host into an allocation failure.
     if count as usize > interp.runtime_limits.max_materialized_elements {
         if keep {
@@ -451,7 +456,7 @@ mod tests {
     /// requires of every Word that declares a projection condition. `RANDOM`
     /// projects past the space water level, as `RANGE` and `FILL` do: a count
     /// the host cannot materialize is a well-formed request rather than a
-    /// malformed one, so it projects onto NIL and stays recoverable with `OR-NIL`.
+    /// malformed one, so it projects onto NIL and stays recoverable with a chosen fallback.
     #[tokio::test]
     async fn random_projects_past_the_space_water_level() {
         let mut interp = Interpreter::new();

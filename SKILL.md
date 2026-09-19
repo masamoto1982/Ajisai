@@ -48,9 +48,9 @@ pushes `NIL` (reason: `divisionByZero`). The projection is recorded in
 `errorFlowTrace` as a `nilProduced` event with a full diagnosis, and the NIL
 value itself carries `semantics.absence.reason` on the stack.
 
-- Provide a fallback with `OR-NIL`: `1 0 DIV OR-NIL [ 99 ]` → stack `[ 99/1 ]`.
+- Provide a fallback with `NIL?` and `SELECT`: `[ 99 ] 1 0 DIV NIL? SELECT` → stack `[ 99/1 ]`. `NIL?` answers its subject *and* whether it is absent, which is exactly where `SELECT` wants the truth — so the phrase reads "X, or the fallback if X is absent" with nothing named and nothing repeated.
 - Over a vector the projection is **per lane, not per value**: `[ 6 6 ] [ 1 0 ] DIV` → stack `[ 6/1 NIL ]`. The lane that could not divide is the only one emptied.
-- That makes the top a vector, not a NIL, so `OR-NIL` — which inspects the stack top — keeps it as-is. Recover a lifted result inside the vector, not around it.
+- That makes the top a vector, not a NIL, so `NIL?` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field
@@ -188,8 +188,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-67 canonical Words in one flat Core dictionary, of which
-37 form the Semantic Kernel and 30 are Standard Words. Both are
+66 canonical Words in one flat Core dictionary, of which
+36 form the Semantic Kernel and 30 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -223,9 +223,9 @@ no module system and nothing to import.
 | `SQRT` | math | Exact square root of a non-negative rational, element-wise over a vector. — e.g. `2 SQRT` |
 | `PI` | constant | The Tier 2 computable real π. — e.g. `PI` |
 | `RANDOM` | math | Count exact rationals in [0,1), determined entirely by the seed. — e.g. `7 3 RANDOM` |
-| `GET` | vector | Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. Contrast `PUT`, which raises on the same condition. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
+| `GET` | vector | Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. `TAKE` and `PUT` answer the same condition the same way, so past-the-end is one outcome across the whole vocabulary. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
-| `TAKE` | vector | Take the first N or last -N elements of a vector. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
+| `TAKE` | vector | Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 1 2 3 ] [ 9 ] TAKE NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
 | `CONCAT` | vector | Flatten and concatenate two vectors. — e.g. `[ 1 2 ] [ 3 4 ] CONCAT` |
 | `REVERSE` | vector | Reverse the order of vector elements. — e.g. `[ 1 2 3 ] REVERSE` |
 | `COLLECT` | vector | Collect N items off the stack into a new vector. — e.g. `1 2 3 3 COLLECT` |
@@ -237,7 +237,7 @@ no module system and nothing to import.
 | `TALLY` | vector | How many times each distinct element occurs, in UNIQUE order. — e.g. `[ 'a' 'b' 'a' ] TALLY` |
 | `ZIP` | vector | Bundle equal-length vectors position by position; a matrix transposes. — e.g. `[ [ 1 2 ] [ 3 4 ] ] ZIP` |
 | `SUM` | arithmetic | Fold the outermost axis with ADD; the empty vector sums to zero. — e.g. `[ 1 2 3 ] SUM` |
-| `PUT` | vector | A copy of a vector with the element at one index replaced. An out-of-range index is an error here, where `GET` projects it to NIL on the same condition, because the two answer with different things. `GET` returns the element asked for, so a missing one empties its own slot and nothing else; `PUT` returns the whole vector, so it has no slot to empty — projecting would have to answer NIL for the entire collection because one index was wrong, discarding data the Word was asked to preserve. There is nothing to write and nothing partial to hand back, so it raises. — e.g. `[ 1 2 3 ] 1 9 PUT` |
+| `PUT` | vector | A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT` hands it back. — e.g. `[ 1 2 3 ] 1 9 PUT` |
 | `GROUP` | vector | Bundle values by the key at the same position, in UNIQUE key order. — e.g. `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] [ 2 MUL ] MAP` |
@@ -257,7 +257,6 @@ no module system and nothing to import.
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
-| `OR-NIL` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL OR-NIL [ 0 ]` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |

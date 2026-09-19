@@ -105,7 +105,7 @@ impl Interpreter {
                     }
                     i += 1;
                 }
-                Token::LineBreak | Token::NilCoalesce => {
+                Token::LineBreak => {
                     i += 1;
                 }
             }

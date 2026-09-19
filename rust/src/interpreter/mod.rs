@@ -111,8 +111,6 @@ mod collection_meter_tests;
 #[cfg(test)]
 mod control_exec_eval_tests;
 #[cfg(test)]
-mod control_or_else_tests;
-#[cfg(test)]
 mod debug_next_checks_tests;
 #[cfg(test)]
 mod declared_condition_tests;
@@ -136,6 +134,8 @@ mod higher_order_block_plan_tests;
 mod higher_order_fold_tests;
 #[cfg(test)]
 mod higher_order_map_tests;
+#[cfg(test)]
+mod index_projection_tests;
 #[cfg(test)]
 mod interpreter_definition_tests;
 #[cfg(test)]
