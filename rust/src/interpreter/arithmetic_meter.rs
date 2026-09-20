@@ -50,6 +50,14 @@ pub(crate) fn measure_operand(value: &Value) -> OperandWork {
             .map(measure_operand)
             .reduce(OperandWork::join)
             .unwrap_or(OperandWork::leaf(1)),
+        // A Record lifts arithmetic over its values (LANG.COLLECTIONS.LIFT),
+        // so its work is theirs.
+        ValueData::Record(record) => record
+            .values()
+            .iter()
+            .map(measure_operand)
+            .reduce(OperandWork::join)
+            .unwrap_or(OperandWork::leaf(1)),
         // No arithmetic happens on these; the structure error they raise is
         // not work.
         ValueData::Boolean(_) | ValueData::Nil | ValueData::Text(_) | ValueData::Symbol(_) => {
@@ -117,6 +125,10 @@ fn measure_result(value: &Value) -> (u64, usize) {
         ValueData::ExactScalar(er) => (er.max_coefficient_bits(), er.algebraic_term_count()),
         ValueData::Tensor { data, .. } => (dense_tensor_result_bits(data), 0),
         ValueData::Vector(children) => children.iter().fold((0, 0), |(bits, terms), child| {
+            let (child_bits, child_terms) = measure_result(child);
+            (bits.max(child_bits), terms.max(child_terms))
+        }),
+        ValueData::Record(record) => record.values().iter().fold((0, 0), |(bits, terms), child| {
             let (child_bits, child_terms) = measure_result(child);
             (bits.max(child_bits), terms.max(child_terms))
         }),

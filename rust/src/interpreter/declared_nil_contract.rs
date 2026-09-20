@@ -133,6 +133,22 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
             "nonText",
             "SEARCH: expected Strings, got Nil",
         ),
+        ("RECORD", _) => AjisaiError::declared(
+            "nonVector",
+            "RECORD: expected a Vector of keys and a Vector of values, got Nil",
+        ),
+        ("MERGE", _) => AjisaiError::declared(
+            "nonRecord",
+            "MERGE: expected two Records, got Nil",
+        ),
+        ("WITHOUT", 0) => AjisaiError::declared(
+            "nonRecord",
+            "WITHOUT: expected a Record as the first operand, got Nil",
+        ),
+        ("WITHOUT", 1) => AjisaiError::declared(
+            "nonRecord",
+            "WITHOUT: expected a key, got Nil",
+        ),
 
         // Arity 3, uniform across all positions.
         ("REPLACE", _) => AjisaiError::declared(
@@ -318,8 +334,9 @@ mod declared_nil_contract_tests {
         // CHARS, JOIN, TRIM, EXEC, PROBE, DEL, SHAPE, FLATTEN, FAIL (1
         // operand each), RANDOM, CONCAT, TAKE, DROP, TOKENIZE, DEF, RESHAPE,
         // BSEARCH, SEARCH (2 each) and REPLACE (3) — 11 + 18 + 3.
+        // Phase 5 added RECORD, MERGE and WITHOUT (2 operands each): 32 + 6.
         assert_eq!(
-            checked, 32,
+            checked, 38,
             "the set of fixed-arity rejectNil Words changed; update nil_rejection_error"
         );
     }

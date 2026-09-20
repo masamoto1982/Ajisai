@@ -1,4 +1,5 @@
 //! Ordering and grouping Words: `ORDER`, `UNIQUE`, `TALLY`, `GROUP`.
+//! `TALLY` and `GROUP` answer Records (LANG.RECORDS.STRUCTURE).
 //!
 //! Every one of these is expressible in the existing vocabulary — and every
 //! one of them, written that way, costs asymptotically more than the same work
@@ -14,7 +15,7 @@ use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Interpretation, RecordData, Value, ValueData};
 use std::collections::HashMap;
 
 /// Take the Word's single operand, honouring `KEEP`.
@@ -263,12 +264,13 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// `TALLY ( [ vec ] -> [ counts ] )`: how many times each distinct element
-/// occurs, in the same order `UNIQUE` reports them.
+/// `TALLY ( [ vec ] -> [ record ] )`: a Record from each distinct element to
+/// how many times it occurs, keys in the order `UNIQUE` reports them.
 ///
-/// Designed as `UNIQUE`'s pair rather than as a map from value to count: two
-/// vectors that line up positionally compose with everything else here, and a
-/// map would be a new value domain for one Word to own.
+/// It answered a bare count Vector aligned with `UNIQUE` while a map "would
+/// be a new value domain for one Word to own"; the Record domain exists now
+/// (LANG.RECORDS.STRUCTURE), so the counts carry what they count. `VALUES`
+/// recovers the old answer exactly, and `KEYS` is `UNIQUE`.
 pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
     let value = take_operand(interp)?;
     if value.is_nil() {
@@ -277,13 +279,11 @@ pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
     }
     match dense_integer_distinct_with_counts(interp, &value) {
         Ok(Some(distinct)) => {
-            let counts: Vec<i64> = distinct
+            let (keys, counts): (Vec<Value>, Vec<Value>) = distinct
                 .into_iter()
-                .map(|(_, count)| count as i64)
-                .collect();
-            interp
-                .stack
-                .push_with_role(Value::from_int_tensor(counts), Interpretation::Unassigned);
+                .map(|(lane, count)| (Value::from_int(lane), Value::from_int(count as i64)))
+                .unzip();
+            push_tally(interp, keys, counts);
             return Ok(());
         }
         Ok(None) => {}
@@ -302,13 +302,11 @@ pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
     };
     match distinct_with_counts(interp, &items) {
         Ok(distinct) => {
-            let out: Vec<Value> = distinct
+            let (keys, counts): (Vec<Value>, Vec<Value>) = distinct
                 .into_iter()
-                .map(|(_, count)| Value::from_int(count as i64))
-                .collect();
-            interp
-                .stack
-                .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
+                .map(|(key, count)| (key, Value::from_int(count as i64)))
+                .unzip();
+            push_tally(interp, keys, counts);
             Ok(())
         }
         Err(e) => {
@@ -318,8 +316,19 @@ pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// `GROUP ( [ values ] [ keys ] -> [ [ group... ] ] )`: bundle `values` by the
-/// key at the same position, groups in the order `UNIQUE keys` reports them.
+/// The Record `TALLY` answers. The keys are distinct by construction — they
+/// are the survivors of one hash-keyed scan — so building the Record cannot
+/// fail and charges nothing the scan has not already charged.
+fn push_tally(interp: &mut Interpreter, keys: Vec<Value>, counts: Vec<Value>) {
+    let record = RecordData::new(keys, counts).expect("distinct_with_counts yields distinct keys");
+    interp
+        .stack
+        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
+}
+
+/// `GROUP ( [ values ] [ keys ] -> [ record ] )`: a Record from each key to
+/// the Vector of the `values` at its positions, keys in the order
+/// `UNIQUE keys` reports them.
 ///
 /// The core of a centroid update, a decision-tree split, a per-class tally and
 /// a stratified partition. Written out, each of those was a nested scan over
@@ -396,12 +405,13 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(values_value);
         interp.stack.push(keys_value);
     }
-    let out: Vec<Value> = groups
+    let (keys, buckets): (Vec<Value>, Vec<Value>) = groups
         .into_iter()
-        .map(|(_, bucket)| Value::from_vector(bucket))
-        .collect();
+        .map(|(key, bucket)| (key, Value::from_vector(bucket)))
+        .unzip();
+    let record = RecordData::new(keys, buckets).expect("group keys are distinct by construction");
     interp
         .stack
-        .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
+        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
     Ok(())
 }

@@ -43,4 +43,10 @@ pub enum KernelValue {
     /// domain is the Symbol a Vector element can be rather than the block a
     /// Vector could never be.
     Symbol(Arc<str>),
+    /// A keyed correspondence: the seventh domain (LANG.RECORDS.STRUCTURE).
+    /// `keys` and `values` are aligned and the keys are distinct.
+    Record {
+        keys: Arc<[KernelValue]>,
+        values: Arc<[KernelValue]>,
+    },
 }

@@ -5,6 +5,7 @@ use crate::interpreter::arithmetic_division::{
 use crate::interpreter::arithmetic_meter::{
     charge_binary_schema, check_result_size, measure_operand,
 };
+use crate::interpreter::record_lift;
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_lane_ops::lane_nil_passthrough;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
@@ -305,6 +306,12 @@ fn apply_exact_arithmetic_schema(
     if nil_passthrough_binary(interp) {
         return Ok(());
     }
+    // A Record operand lifts the Word over its values (LANG.COLLECTIONS.LIFT).
+    if record_lift::lift_binary(interp, &|interp| {
+        apply_exact_arithmetic_schema(interp, schema)
+    })? {
+        return Ok(());
+    }
 
     // Charged once, here, before a route is chosen. Which route runs is an
     // optimization decision and unobservable by LANG.AUTHORITY.FREEDOM; a
@@ -368,7 +375,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
         ValueData::Nil => None,
-        ValueData::Boolean(_) | ValueData::Symbol(_) => None,
+        ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
     }
 }
 

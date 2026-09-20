@@ -4,10 +4,10 @@
     "docs/formalization-coverage.json"
   ],
   "summary": {
-    "primitives": 23,
+    "primitives": 24,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 20,
-    "distinct_conformance_cases": 124
+    "distinct_law_test_files": 21,
+    "distinct_conformance_cases": 138
   },
   "primitives": [
     {
@@ -800,6 +800,49 @@
         "core-pi-pi-eq-is-unknown",
         "core-pi-pi-lt-is-unknown",
         "core-pi-pi-min-is-nil"
+      ]
+    },
+    {
+      "id": "algebra.record.keyed-correspondence",
+      "algebraic_family": "record",
+      "kind": "domain",
+      "status": "accepted",
+      "derived_word_count": 10,
+      "law_test_count": 2,
+      "conformance_case_count": 16,
+      "derived_words": [
+        "core.at",
+        "core.group",
+        "core.has",
+        "core.keys",
+        "core.merge",
+        "core.record",
+        "core.tally",
+        "core.values",
+        "core.with",
+        "core.without"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs",
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-at-answers-by-key",
+        "core-at-missing-key-projects-missing-field",
+        "core-has-asks-presence",
+        "core-keys-in-order",
+        "core-merge-is-right-biased",
+        "core-record-builds-a-keyed-correspondence",
+        "core-record-duplicate-key-is-an-error",
+        "core-record-length-mismatch-is-an-error",
+        "core-record-roundtrips-through-keys-and-values",
+        "core-values-aligned-with-keys",
+        "core-with-appends-a-new-key",
+        "core-with-replaces-in-place",
+        "core-without-missing-key-projects-missing-field",
+        "core-without-removes-a-key",
+        "standard-group",
+        "standard-tally"
       ]
     }
   ]

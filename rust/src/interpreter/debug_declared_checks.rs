@@ -47,6 +47,8 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "invalidClauseShape"
         | "invalidCount"
         | "unsortedInput"
+        | "nonRecord"
+        | "duplicateKey"
         | "negativeCount"
         | "invalidRange"
         | "invalidName"

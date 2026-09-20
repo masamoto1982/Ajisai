@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **78 Words**, of which **43** form the Semantic Kernel and **35** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **86 Words**, of which **51** form the Semantic Kernel and **35** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -628,15 +628,15 @@ The distinct elements of a vector, in first-occurrence order.
 
 ## `TALLY`
 
-How many times each distinct element occurs, in UNIQUE order.
+How many times each distinct element occurs, as a Record from element to count: `[ 'b' 'a' 'b' ] TALLY` is `{ 'b': 2/1 'a': 1/1 }`, keys in order of first appearance. `KEYS` is exactly what `UNIQUE` answers and `VALUES` is the aligned count Vector, so nothing the earlier Vector-of-counts form could do is lost, and the caller no longer has to call `UNIQUE` separately to learn what each count counts. Works for every value, not only numbers. A non-Vector operand is an ERROR.
 
 - **Vocabulary tier:** Standard (`operational`)
-- **Family:** `collection`
+- **Family:** `record`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 'a' 'b' 'a' ] TALLY`
 - **ERROR conditions:** `nonVector`
 
@@ -670,15 +670,15 @@ A copy of a vector with the element at one index replaced. An out-of-range index
 
 ## `GROUP`
 
-Bundle values by the key at the same position, in UNIQUE key order.
+Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `{ 'a': [ 1/1 3/1 ] 'b': [ 2/1 ] }`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length.
 
 - **Vocabulary tier:** Standard (`operational`)
-- **Family:** `collection`
+- **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP`
 - **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
 
@@ -723,6 +723,118 @@ The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 3 5 7 ] [ 5 ] BSEARCH`
 - **ERROR conditions:** `nonVector`, `unsortedInput`, `nonComparableElement`
+
+## `RECORD`
+
+Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. There is no Record literal: this Word is the only way a Record comes to exist.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.VALUES.VECTOR`
+- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD`
+- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`, `duplicateKey`
+
+## `KEYS`
+
+The keys of a Record as a Vector, in the Record's own order, so that `KEYS` and `VALUES` line up position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD KEYS` is `[ 'x' 'y' ]`. Key order is part of a Record's observable structure, so this Vector is one exact thing, not a set in some arbitrary order. A Vector or any other non-Record operand is an ERROR: a Record is not a Vector and nothing converts between them implicitly.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
+- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD KEYS`
+- **ERROR conditions:** `nonRecord`
+
+## `VALUES`
+
+The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES` is `[ 1/1 2/1 ]`. This is the bridge from the Record domain back to the Vector domain — from here every Vector Word applies — and `RECORD` is the bridge the other way, so `R KEYS R VALUES RECORD` rebuilds `R`. A non-Record operand is an ERROR.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
+- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES`
+- **ERROR conditions:** `nonRecord`
+
+## `AT`
+
+The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `fallback R 'x' AT NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: keyAbsent → missingField
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' AT`
+- **ERROR conditions:** `nonRecord`
+
+## `WITH`
+
+A copy of a Record with one key set: `R 'z' 3 WITH`. A key already present keeps its position and takes the new value; a key not yet present is appended, so the Record's key order records the order in which keys arrived. This is `PUT` for keys, and like `PUT` it never changes the operand it was given — Records are values. The value may be anything, a NIL included, since a NIL under a key is a stored absence; a NIL where the Record or the key should be is an ERROR.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `consumeNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
+- **Syntax:** `[ 'x' ] [ 1 ] RECORD 'y' 2 WITH`
+- **ERROR conditions:** `nonRecord`
+
+## `WITHOUT`
+
+A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Record does not hold is not an identity but the absence `missingField` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: keyAbsent → missingField
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
+- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT`
+- **ERROR conditions:** `nonRecord`
+
+## `HAS?`
+
+Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `AT` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
+- **Syntax:** `[ 'x' ] [ 1 ] RECORD 'x' HAS?`
+- **ERROR conditions:** `nonRecord`
+
+## `MERGE`
+
+The union of two Records, the right one winning: `defaults overrides MERGE`. The left Record's keys keep their order and take the right Record's value wherever both hold the key; keys only the right holds are appended in the right's order. Layering overrides on defaults is the shape this Word is for; swap the operands for the left to win. Either operand not a Record is an ERROR.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `record`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
+- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE`
+- **ERROR conditions:** `nonRecord`
 
 ## `MAP`
 

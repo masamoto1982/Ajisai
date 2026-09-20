@@ -47,6 +47,12 @@ impl FlatTensor {
                 "nonNumeric",
                 "expected a number or vector, got a string",
             )),
+            // A Record never reaches the flat kernels: `record_lift` peels
+            // it value by value first, so one here is a route error.
+            ValueData::Record(_) => Err(AjisaiError::declared(
+                "nonNumeric",
+                "expected a number or vector, got a record",
+            )),
             ValueData::Scalar(f) => Ok(Self {
                 data: vec![f.clone()],
                 shape: Vec::new(),
@@ -279,7 +285,7 @@ pub(crate) fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
         // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
         // has no dedicated variant, so it takes the `Nil` arm above too and
         // is a rectangular nil lane, same as an operational NIL.
-        ValueData::Boolean(_) | ValueData::Symbol(_) => None,
+        ValueData::Boolean(_) | ValueData::Symbol(_) | ValueData::Record(_) => None,
     }
 }
 

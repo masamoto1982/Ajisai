@@ -38,16 +38,16 @@ As it happens, a flower takes its scientific name from the Greek for "water vess
 
 Ajisai is built from ten concepts and nothing else.
 
-1. Exact rational arithmetic, closed under square roots, with no rounding.
-2. Three outcomes: a value, a reasoned absence, or an error.
-3. A stack of values and vectors of values.
-4. Code blocks, evaluated only when a Word asks for it — and branching is not one of those Words.
-5. One modifier axis: consume or keep.
-6. A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity.
-7. A machine-readable contract for every Word.
-8. A pre-execution check of user declarations against those contracts.
-9. One host protocol, which is the only way anything outside the language observes it.
-10. An executable conformance corpus that decides whether an implementation is Ajisai.
+1. Exact real arithmetic with no rounding: an algebraic field closed under square roots, and beyond it computable reals compared under a budget.
+2. Three outcomes: a value, a reasoned absence, or an error — with three-valued truth, and a program may declare either failing outcome itself.
+3. A stack of values, and vectors of values, text included.
+4. Shape and rank: element-wise lifting follows a vector's shape, which a program can read and rewrite.
+5. Keyed correspondence: Records, and tables as Records of columns.
+6. Code is a vector, evaluated only when a Word asks for it — and branching is not one of those Words.
+7. One modifier axis: consume or keep.
+8. A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity.
+9. A machine-readable contract for every Word, and a pre-execution check of user declarations against those contracts.
+10. One host protocol, the only way anything outside the language observes it, and an executable conformance corpus that decides whether an implementation is Ajisai.
 
 ## Documentation
 

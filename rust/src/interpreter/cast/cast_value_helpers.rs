@@ -135,6 +135,9 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
                 .collect(),
             ValueData::Text(s) => vec![s.to_string()],
             ValueData::Symbol(name) => vec![name.to_string()],
+            // A Record casts as its display form, whole: it is not a sequence
+            // of lanes to join.
+            ValueData::Record(_) => vec![val.to_string()],
         }
     }
 

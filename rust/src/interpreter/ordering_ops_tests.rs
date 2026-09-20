@@ -42,12 +42,7 @@ mod ordering_ops_tests {
 
     #[tokio::test]
     async fn a_dense_scan_keeps_its_result_dense() {
-        for source in [
-            "[ 3 1 3 1 2 ] UNIQUE",
-            "[ 3 1 3 1 2 ] TALLY",
-            "[ 0 7 ] RANGE UNIQUE",
-            "[ 0 7 ] RANGE TALLY",
-        ] {
+        for source in ["[ 3 1 3 1 2 ] UNIQUE", "[ 0 7 ] RANGE UNIQUE"] {
             assert!(
                 top_is_dense(source).await,
                 "`{source}` must keep its result in columns"
@@ -75,15 +70,15 @@ mod ordering_ops_tests {
         }
     }
 
-    /// `TALLY` counts in the order `UNIQUE` reports, so the two line up
-    /// positionally — that pairing is the whole reason it is not a map.
+    /// `TALLY` counts in the order `UNIQUE` reports: its `KEYS` are `UNIQUE`'s
+    /// answer and its `VALUES` the aligned counts (LANG.RECORDS.STRUCTURE).
     #[tokio::test]
     async fn a_dense_scan_counts_in_the_order_unique_reports() {
         for (source, expected) in [
-            ("[ 3 1 3 1 2 ] TALLY", "[ 2 2 1 ]"),
-            ("[ 9 5 9 1 5 ] TALLY", "[ 2 2 1 ]"),
-            ("[ 7 7 7 ] TALLY", "[ 3 ]"),
-            ("[ 0 4 ] RANGE TALLY", "[ 1 1 1 1 1 ]"),
+            ("[ 3 1 3 1 2 ] TALLY", "[ 3 1 2 ] [ 2 2 1 ] RECORD"),
+            ("[ 9 5 9 1 5 ] TALLY", "[ 9 5 1 ] [ 2 2 1 ] RECORD"),
+            ("[ 7 7 7 ] TALLY", "[ 7 ] [ 3 ] RECORD"),
+            ("[ 0 4 ] RANGE TALLY", "[ 0 1 2 3 4 ] [ 1 1 1 1 1 ] RECORD"),
         ] {
             assert_eq!(
                 equals(source, expected).await,
@@ -94,12 +89,12 @@ mod ordering_ops_tests {
         // The pairing itself: as many counts as distinct values, and they sum
         // back to the input length.
         assert_eq!(
-            equals("[ 3 1 3 1 2 ] TALLY LENGTH", "[ 3 1 3 1 2 ] UNIQUE LENGTH").await,
+            equals("[ 3 1 3 1 2 ] TALLY KEYS", "[ 3 1 3 1 2 ] UNIQUE").await,
             Some(true),
-            "TALLY and UNIQUE must report the same number of entries"
+            "TALLY's keys must be exactly what UNIQUE reports"
         );
         assert_eq!(
-            equals("[ 3 1 3 1 2 ] TALLY 0 [ ADD ] FOLD", "5").await,
+            equals("[ 3 1 3 1 2 ] TALLY VALUES 0 [ ADD ] FOLD", "5").await,
             Some(true),
             "the counts must sum to the input length"
         );
@@ -171,8 +166,8 @@ mod ordering_ops_tests {
             ("[ 1 NIL 1 ] UNIQUE", "[ 1 NIL ]"),
             ("[ 'b' 'a' 'b' ] UNIQUE", "[ 'b' 'a' ]"),
             ("[ [ 1 2 ] [ 1 2 ] [ 3 4 ] ] UNIQUE", "[ [ 1 2 ] [ 3 4 ] ]"),
-            ("[ 1 NIL 1 ] TALLY", "[ 2 1 ]"),
-            ("[ 'b' 'a' 'b' ] TALLY", "[ 2 1 ]"),
+            ("[ 1 NIL 1 ] TALLY", "[ 1 NIL ] [ 2 1 ] RECORD"),
+            ("[ 'b' 'a' 'b' ] TALLY", "[ 'b' 'a' ] [ 2 1 ] RECORD"),
         ] {
             assert_eq!(
                 equals(source, expected).await,

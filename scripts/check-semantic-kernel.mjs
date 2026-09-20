@@ -37,7 +37,14 @@ const fail = (message) => {
 // before (every evaluation is structurally finite, not merely
 // resource-bounded) — so this is the deliberate raise the comment above asks
 // for, not a reflex.
-const LINE_BUDGET = 404;
+//
+// Raised to 408 for LANG.RECORDS.STRUCTURE: the vocabulary-100 work order
+// (docs/dev/vocabulary-100-work-order-2026-09.md §2.3) admitted a seventh
+// value domain, the keyed correspondence, and a domain needs its own clause —
+// its structure, its identity, its containment rule — where the earlier
+// phases of that work order fit into existing clauses. Four lines: the
+// heading, the paragraph, and their separators. Net new content again.
+const LINE_BUDGET = 408;
 const lines = language.split('\n').length;
 if (lines > LINE_BUDGET) {
   fail(

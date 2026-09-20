@@ -181,8 +181,9 @@ export const TOOLS = [
     // of leaving "out of domain" to be inferred.
     description:
       "Execute a bounded Ajisai program and return its stack. Ajisai is postfix (RPN) and its numbers are exact rationals closed under square root — no floats, so results are reproducible and comparisons decide. " +
-      "Its 78 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT), comparison (EQ NEQ LT LTE GT GTE), boolean logic (AND OR NOT), " +
-      "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE TALLY GROUP ZIP RANGE FILL TAKE DROP CONCAT REVERSE LENGTH GET PUT INDEX-OF MEMBER BSEARCH SHAPE RESHAPE FLATTEN DEPTH), " +
+      "Its 86 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT), comparison (EQ NEQ LT LTE GT GTE), boolean logic (AND OR NOT), " +
+      "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE ZIP RANGE FILL TAKE DROP CONCAT REVERSE LENGTH GET PUT INDEX-OF MEMBER BSEARCH SHAPE RESHAPE FLATTEN DEPTH), " +
+      "records — keyed data, built by RECORD from a key vector and a value vector, read by AT/KEYS/VALUES/HAS?, rewritten by WITH/WITHOUT/MERGE; TALLY and GROUP answer Records — " +
       "higher-order blocks (MAP FILTER FOLD SCAN ANY ALL RANK), text (CHARS JOIN TOKENIZE TRIM SEARCH REPLACE NUM STR), absence (NIL NIL? NIL-REASON ABSENT), and control (SELECT EXEC PROBE FAIL), plus DEF to name your own. " +
       "Word names are exact and case-sensitive; the full list is the ajisai://vocabulary resource and word_contract answers a near-miss with suggestions, so look a name up rather than guessing it. " +
       "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: transcendentals, floats, I/O, and general-purpose programming. " +
@@ -527,7 +528,7 @@ const RESOURCES = [
   // The whole contract registry in one read. `word_contract` answers one name
   // at a time, which is the wrong shape for the question cost exists to answer:
   // bounding a phrase means joining the bounds of every Word in it, and a
-  // caller cannot do that from 78 separate probes.
+  // caller cannot do that from 86 separate probes.
   { uri: "ajisai://contracts", name: "Ajisai canonical Word contracts", mimeType: "application/json" },
   { uri: "ajisai://schema/result", name: "Ajisai MCP result contract", mimeType: "application/json" },
   { uri: "ajisai://limits", name: "Ajisai MCP host profile limits", mimeType: "application/json" },

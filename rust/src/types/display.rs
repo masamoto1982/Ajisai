@@ -182,6 +182,26 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
+        // A Record renders as `{ key: value … }`. Braces are retired lexemes
+        // (`spec/grammar.json`, `retiredForm`), so this display can never be
+        // read back as a literal — a Record has none (LANG.RECORDS.STRUCTURE)
+        // — and can never be mistaken for the Vector it is not.
+        ValueData::Record(record) => {
+            if record.is_empty() {
+                return "{ }".to_string();
+            }
+            let inner: Vec<String> = record
+                .entries()
+                .map(|(key, value)| {
+                    format!(
+                        "{}: {}",
+                        format_value_recursive(&key.data, depth + 1),
+                        format_value_recursive(&value.data, depth + 1)
+                    )
+                })
+                .collect();
+            format!("{{ {} }}", inner.join(" "))
+        }
         ValueData::Vector(v) => {
             if v.is_empty() {
                 return "[ ]".to_string();
@@ -338,7 +358,7 @@ fn boolean_element_label(child: &Value) -> &'static str {
         // A String is not a truth value, so it has no boolean label; it can
         // only reach here inside a `TruthValue`-role vector, where rendering
         // it as `NIL` matches the other non-numeric arms.
-        ValueData::Text(_) => "NIL",
+        ValueData::Text(_) | ValueData::Record(_) => "NIL",
         ValueData::Boolean(b) => {
             if *b {
                 "TRUE"
@@ -380,7 +400,7 @@ fn format_as_boolean(value: &Value) -> String {
         // no dedicated variant) takes this same arm and renders as `NIL`,
         // same as an operational NIL.
         ValueData::Nil => "NIL".to_string(),
-        ValueData::Text(_) => format_value_recursive(&value.data, 0),
+        ValueData::Text(_) | ValueData::Record(_) => format_value_recursive(&value.data, 0),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         // ExactScalar values are always non-zero positive irrationals → TRUE
         ValueData::ExactScalar(_) => "TRUE".to_string(),
@@ -433,9 +453,10 @@ fn format_as_boolean(value: &Value) -> String {
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
-        ValueData::Text(_) | ValueData::Boolean(_) | ValueData::Symbol(_) => {
-            format_value_recursive(data, 0)
-        }
+        ValueData::Text(_)
+        | ValueData::Boolean(_)
+        | ValueData::Symbol(_)
+        | ValueData::Record(_) => format_value_recursive(data, 0),
         ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
         ValueData::Vector(_) | ValueData::Tensor { .. } => format_value_recursive(data, 0),

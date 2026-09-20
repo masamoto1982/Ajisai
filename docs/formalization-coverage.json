@@ -676,6 +676,39 @@
         "PI"
       ],
       "status": "accepted"
+    },
+    {
+      "id": "algebra.record.keyed-correspondence",
+      "algebraic_family": "record",
+      "core_tier": "identity",
+      "kind": "domain",
+      "description": "The Record domain (LANG.RECORDS.STRUCTURE): an insertion-ordered correspondence from distinct keys to values, identified by its two aligned sequences, lifting under arithmetic and comparison in the value direction only.",
+      "admission_reason": "Accepted as the seventh value domain by the vocabulary-100 work order (docs/dev/vocabulary-100-work-order-2026-09.md §2.3): keyed lookup is asymptotically inexpressible with the Vector vocabulary (INDEX-OF then GET scans), and structured host data arrives keyed.",
+      "introduced_by": [
+        "RECORD",
+        "KEYS",
+        "VALUES",
+        "AT",
+        "WITH",
+        "WITHOUT",
+        "HAS?",
+        "MERGE",
+        "TALLY",
+        "GROUP"
+      ],
+      "can_derive": [
+        "RECORD",
+        "KEYS",
+        "VALUES",
+        "AT",
+        "WITH",
+        "WITHOUT",
+        "HAS?",
+        "MERGE",
+        "TALLY",
+        "GROUP"
+      ],
+      "status": "accepted"
     }
   ],
   "entries": [
@@ -2725,11 +2758,12 @@
         "standard-tally"
       ],
       "status": "Formalized",
-      "notes": "The occurrence counts aligned positionally with UNIQUE, produced by the same pass so the two cannot disagree.",
+      "notes": "A Record from each distinct element to its count, keys in UNIQUE order, produced by the same pass so the two cannot disagree; VALUES is the aligned count Vector the earlier form answered.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.record.keyed-correspondence"
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material",
@@ -2807,12 +2841,13 @@
         "standard-group"
       ],
       "status": "Formalized",
-      "notes": "Partition of values by a positionally-aligned key, groups in UNIQUE key order.",
+      "notes": "A Record from each key to the Vector of its values, keys in UNIQUE order, every value kept exactly once; a group is read back by its key with AT.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.reshape-group",
-        "algebra.structure-lift.indexed-sequence"
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.record.keyed-correspondence"
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material",
@@ -2933,6 +2968,212 @@
       "core_tier": "material",
       "standard_relation": "operational",
       "native_retention_reason": "Halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write; m keys cost O(n + m log n) against INDEX-OF's O(m·n)."
+    },
+    {
+      "id": "core.record",
+      "kind": "coreword",
+      "surface": "RECORD",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-record-builds-a-keyed-correspondence",
+        "core-record-duplicate-key-is-an-error",
+        "core-record-length-mismatch-is-an-error"
+      ],
+      "status": "Formalized",
+      "notes": "Builds a Record from a key Vector and a value Vector paired by position; keys keep their order; a repeated key or unequal lengths is an ERROR. The domain's only constructor.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.keys",
+      "kind": "coreword",
+      "surface": "KEYS",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-keys-in-order"
+      ],
+      "status": "Formalized",
+      "notes": "The key Vector of a Record in its own order, aligned with VALUES.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.values",
+      "kind": "coreword",
+      "surface": "VALUES",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-values-aligned-with-keys",
+        "core-record-roundtrips-through-keys-and-values"
+      ],
+      "status": "Formalized",
+      "notes": "The value Vector of a Record aligned with KEYS; RECORD over KEYS and VALUES rebuilds the Record.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.at",
+      "kind": "coreword",
+      "surface": "AT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-at-answers-by-key",
+        "core-at-missing-key-projects-missing-field"
+      ],
+      "status": "Formalized",
+      "notes": "The value under a key in constant expected time; an absent key projects missingField.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.with",
+      "kind": "coreword",
+      "surface": "WITH",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-with-replaces-in-place",
+        "core-with-appends-a-new-key"
+      ],
+      "status": "Formalized",
+      "notes": "A copy with one key set: in place when present, appended when not; a NIL value is stored, a NIL key or Record is an ERROR.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.without",
+      "kind": "coreword",
+      "surface": "WITHOUT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-without-removes-a-key",
+        "core-without-missing-key-projects-missing-field"
+      ],
+      "status": "Formalized",
+      "notes": "A copy with one key removed; an absent key projects missingField, as GET/TAKE/PUT project a position outside the Vector.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.has",
+      "kind": "coreword",
+      "surface": "HAS?",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-has-asks-presence"
+      ],
+      "status": "Formalized",
+      "notes": "Whether a key is present, without reading the value, so a stored NIL and an absent key are told apart.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
+    },
+    {
+      "id": "core.merge",
+      "kind": "coreword",
+      "surface": "MERGE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/record_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-merge-is-right-biased"
+      ],
+      "status": "Formalized",
+      "notes": "Right-biased union: left order kept, right values win on shared keys, right-only keys appended.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "identity"
     },
     {
       "id": "module.math.abs",

@@ -21,6 +21,9 @@ impl Value {
             // the Vector domain explicit; LENGTH raises `nonVector` on it.
             ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
+            // A Record's extent is its number of keys — what a cost meter
+            // scans — though it is not a sequence: `get_child` answers `None`.
+            ValueData::Record(record) => record.len(),
             ValueData::Vector(v) => v.len(),
             ValueData::Tensor { data, shape } => {
                 if shape.is_empty() {
@@ -47,7 +50,8 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Symbol(_) => None,
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => None,
         }
     }
 
@@ -69,7 +73,8 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Symbol(_) => None,
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => None,
         }
     }
 
@@ -85,7 +90,10 @@ impl Value {
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(self),
             ValueData::Nil => None,
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => None,
+            ValueData::Boolean(_)
+            | ValueData::Text(_)
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => None,
         }
     }
 
@@ -126,7 +134,8 @@ impl Value {
             ValueData::Boolean(_)
             | ValueData::Text(_)
             | ValueData::Tensor { .. }
-            | ValueData::Symbol(_) => {}
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => {}
         }
     }
 
@@ -140,7 +149,8 @@ impl Value {
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
             | ValueData::Nil
-            | ValueData::Symbol(_) => None,
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => None,
         }
     }
 
@@ -164,7 +174,8 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Symbol(_) => None,
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => None,
         }
     }
 
@@ -199,7 +210,10 @@ impl Value {
             // A Boolean/Text/Symbol flattens to no fraction lane. Kept in
             // lock-step with `count_fractions` below so buffer sizing stays
             // exact.
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => {}
+            ValueData::Boolean(_)
+            | ValueData::Text(_)
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => {}
         }
     }
 
@@ -213,6 +227,7 @@ impl Value {
             // (see `collect_fractions_flat_into`); a Boolean/Text/Symbol
             // contributes none.
             ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => 0,
+            ValueData::Record(_) => 0,
         }
     }
 
@@ -237,7 +252,10 @@ impl Value {
                 }
             }
             ValueData::Tensor { shape, .. } => (**shape).clone(),
-            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Symbol(_) => vec![],
+            ValueData::Boolean(_)
+            | ValueData::Text(_)
+            | ValueData::Symbol(_)
+            | ValueData::Record(_) => vec![],
         }
     }
 

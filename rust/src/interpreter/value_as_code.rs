@@ -46,6 +46,22 @@ fn push_value_as_tokens(value: &Value, out: &mut Vec<Token>) -> Result<()> {
         ValueData::Boolean(true) => out.push(Token::Symbol("TRUE".into())),
         ValueData::Boolean(false) => out.push(Token::Symbol("FALSE".into())),
         ValueData::Nil => out.push(Token::Symbol("NIL".into())),
+        // A Record has no literal (LANG.RECORDS.STRUCTURE), so it is carried
+        // into a block as the phrase that rebuilds it: its keys, its values,
+        // and `RECORD`. Executing the block therefore yields the same value.
+        ValueData::Record(record) => {
+            out.push(Token::VectorStart);
+            for key in record.keys() {
+                push_value_as_tokens(key, out)?;
+            }
+            out.push(Token::VectorEnd);
+            out.push(Token::VectorStart);
+            for value in record.values() {
+                push_value_as_tokens(value, out)?;
+            }
+            out.push(Token::VectorEnd);
+            out.push(Token::Symbol("RECORD".into()));
+        }
         ValueData::Vector(children) => {
             out.push(Token::VectorStart);
             for child in children.iter() {

@@ -38,6 +38,11 @@ pub(crate) enum ProtocolValue {
         denominator: String,
     },
     Children(Vec<ProtocolNode>),
+    /// A Record's two aligned sequences (wire type `record`).
+    Record {
+        keys: Vec<ProtocolNode>,
+        values: Vec<ProtocolNode>,
+    },
 }
 
 /// One canonical term of an algebraic value's multiquadratic normal form.
@@ -335,6 +340,24 @@ pub(crate) fn value_to_protocol(
         // crosses this boundary as its own bare name, the only thing there
         // is to show.
         ValueData::Symbol(name) => ("symbol", ProtocolValue::Text(name.to_string())),
+        // A Record crosses the boundary as its two observable sequences,
+        // each an array of nodes, so a host reads keys and values without
+        // guessing a key's type (LANG.RECORDS.STRUCTURE).
+        ValueData::Record(record) => (
+            "record",
+            ProtocolValue::Record {
+                keys: record
+                    .keys()
+                    .iter()
+                    .map(|key| value_to_protocol(key, None))
+                    .collect(),
+                values: record
+                    .values()
+                    .iter()
+                    .map(|value| value_to_protocol(value, None))
+                    .collect(),
+            },
+        ),
     };
     ProtocolNode {
         type_str,

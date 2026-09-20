@@ -7,8 +7,8 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
     execute_del, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
-    ordering_ops, probe, search_ops, shape_ops, shape_words, sort, tensor_cmds, vector_ops,
-    ConsumptionMode, Interpreter,
+    ordering_ops, probe, quantize_ops, record_ops, search_ops, shape_ops, shape_words, sort,
+    tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
 
 impl Interpreter {
@@ -295,7 +295,7 @@ impl Interpreter {
             WordId::Floor => tensor_cmds::op_floor(self),
             WordId::Ceil => tensor_cmds::op_ceil(self),
             WordId::Round => tensor_cmds::op_round(self),
-            WordId::Quantize => tensor_cmds::op_quantize(self),
+            WordId::Quantize => quantize_ops::op_quantize(self),
             WordId::Mod => tensor_cmds::op_mod(self),
             WordId::Str => cast::op_str(self),
             WordId::Num => cast::op_num(self),
@@ -326,6 +326,14 @@ impl Interpreter {
             WordId::Fail => declared_outcomes::op_fail(self),
             WordId::Member => search_ops::op_member(self),
             WordId::Bsearch => search_ops::op_bsearch(self),
+            WordId::Record => record_ops::op_record(self),
+            WordId::Keys => record_ops::op_keys(self),
+            WordId::Values => record_ops::op_values(self),
+            WordId::At => record_ops::op_at(self),
+            WordId::With => record_ops::op_with(self),
+            WordId::Without => record_ops::op_without(self),
+            WordId::Has => record_ops::op_has(self),
+            WordId::Merge => record_ops::op_merge(self),
             // The one modifier (LANG.MODIFIERS.CONSUMPTION). The execution
             // loop interprets it against the source stream — it sets the
             // non-default consumption mode for the Word that follows — so it
