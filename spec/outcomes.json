@@ -89,7 +89,7 @@
     {
       "id": "invalidCount",
       "kind": "declared",
-      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that is not a well-formed count at all (distinct from negativeCount, and from a well-formed count past the end, which TAKE projects as indexOutOfBounds)."
+      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that is not a well-formed count at all (distinct from negativeCount, and from a well-formed count past the end, which TAKE projects as indexOutOfBounds); FORMAT given a digit count that is not a non-negative integer."
     },
     {
       "id": "invalidDefinitionBody",
@@ -156,12 +156,12 @@
     {
       "id": "nonNumeric",
       "kind": "declared",
-      "documentation": "An arithmetic Word (ADD/SUB/MUL/DIV) met an operand that is not a number."
+      "documentation": "An arithmetic Word (ADD/SUB/MUL/DIV), or FORMAT, met an operand that is not a number."
     },
     {
       "id": "nonText",
       "kind": "declared",
-      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/NUM), or a name operand (DEF/DEL/BIND), met an operand that is not Text."
+      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/NUM/JSON-DECODE), or a name operand (DEF/DEL/BIND), met an operand that is not Text."
     },
     {
       "id": "nonTextElement",
@@ -187,6 +187,11 @@
       "id": "nonVector",
       "kind": "declared",
       "documentation": "A collection Word (GET/LENGTH/TAKE/CONCAT) met an operand that is not a Vector."
+    },
+    {
+      "id": "notASymbol",
+      "kind": "declared",
+      "documentation": "DEFINED? or CONTRACT was given something other than a Symbol. A name is a Symbol, never a String: no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so a String asking about a Word is malformed use rather than a lookup that failed."
     },
     {
       "id": "notExecutable",

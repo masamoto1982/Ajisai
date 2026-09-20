@@ -1834,9 +1834,9 @@ W</pre>
      infers as pure, deterministic, and complete with no gaps. -->
 
 <section class="ajisai-case" id="core-probe-pure-block" data-category="core">
-  <h3>PROBE infers a pure block as pure, with no gaps</h3>
+  <h3>PROBE infers a pure block as pure, with no gaps, as a contract Record</h3>
   <pre class="ajisai-source">[ 1 2 ADD ] PROBE</pre>
-  <pre class="ajisai-expect-result">[ [ 'purity' 'pure' ] [ 'determinism' 'deterministic' ] [ 'nil' 'propagates' ] [ 'effects' [ ] ] [ 'confidence' 'complete' ] [ 'gaps' [ ] ] ]</pre>
+  <pre class="ajisai-expect-result">{ 'inputs': 0/1 'outputs': 1/1 'nil': 'propagates' 'purity': 'pure' 'determinism': 'deterministic' 'cost': { 'steps': 'const' 'numeric': 'const' 'collection': 'const' } 'effects': [ ] 'confidence': 'complete' 'gaps': [ ] }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1846,8 +1846,8 @@ W</pre>
 
 <section class="ajisai-case" id="core-probe-never-runs-the-block" data-category="core">
   <h3>PROBE reports an effect without ever performing it</h3>
-  <pre class="ajisai-source">[ 42 PRINT ] PROBE</pre>
-  <pre class="ajisai-expect-result">[ [ 'purity' 'effectful' ] [ 'determinism' 'nonDeterministic' ] [ 'nil' 'propagates' ] [ 'effects' [ 'consoleWrite' ] ] [ 'confidence' 'complete' ] [ 'gaps' [ ] ] ]</pre>
+  <pre class="ajisai-source">[ 42 PRINT ] PROBE 'effects' AT</pre>
+  <pre class="ajisai-expect-result">[ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1858,8 +1858,8 @@ W</pre>
 
 <section class="ajisai-case" id="core-probe-unresolved-word-is-a-gap" data-category="core">
   <h3>PROBE reports an unresolved dependency as a gap, not an error</h3>
-  <pre class="ajisai-source">[ UNDEFINED-WORD ] PROBE</pre>
-  <pre class="ajisai-expect-result">[ [ 'purity' 'pure' ] [ 'determinism' 'deterministic' ] [ 'nil' 'neverCreates' ] [ 'effects' [ ] ] [ 'confidence' 'conservative' ] [ 'gaps' [ 'gap.unresolvedWord' ] ] ]</pre>
+  <pre class="ajisai-source">[ UNDEFINED-WORD ] PROBE 'confidence' AT [ UNDEFINED-WORD ] PROBE 'gaps' AT</pre>
+  <pre class="ajisai-expect-result">'conservative' [ 'gap.unresolvedWord' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1868,6 +1868,76 @@ W</pre>
   <pre class="ajisai-source">5 PROBE</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">PROBE requires a CodeBlock</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- Reflection (Phase 6 of the vocabulary-100 work order): DEFINED? asks
+     the resolution execution itself performs (LANG.DICTIONARY.RESOLUTION),
+     of a Symbol — a String is not a name (LANG.DICTIONARY.ACYCLIC). -->
+
+<section class="ajisai-case" id="core-defined-resolves-either-tier" data-category="core">
+  <h3>DEFINED? answers whether a Symbol resolves in Core or in User</h3>
+  <pre class="ajisai-source">[ ADD ] 0 GET DEFINED? [ TWICE ] 0 GET DEFINED? [ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-defined-string-is-not-a-name" data-category="core">
+  <h3>DEFINED? refuses a String: no Word turns text into a name</h3>
+  <pre class="ajisai-source">'ADD' DEFINED?</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected a Symbol naming a Word</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- DIGEST exposes the content identity the dictionary already keeps
+     (LANG.DICTIONARY.MUTATION) and, for a value, the digest of its
+     denotation (LANG.VALUES.DENOTATION): equal values digest alike whatever
+     built them, and a computable real has no finite form to digest. -->
+
+<section class="ajisai-case" id="core-digest-word-identity" data-category="core">
+  <h3>DIGEST is a Word's content identity: content, not spelling</h3>
+  <pre class="ajisai-source">[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ 3 MUL ] 'THRICE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ [ TWICE ] 0 GET DIGEST [ THRICE ] 0 GET DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-digest-value-denotation" data-category="core">
+  <h3>DIGEST of a value is the digest of its denotation</h3>
+  <pre class="ajisai-source">8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ [ 1 2 ] DIGEST [ 2 1 ] DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-digest-computable-real" data-category="core">
+  <h3>DIGEST projects undecidable for a computable real</h3>
+  <pre class="ajisai-source">PI DIGEST NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'undecidable'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- CONTRACT reads the registry from inside the language
+     (LANG.CONTRACT.REGISTRY); for a User Word it is PROBE of the body
+     (LANG.CONTRACT.CHECK), in one shape. -->
+
+<section class="ajisai-case" id="core-contract-core-word-record" data-category="core">
+  <h3>CONTRACT answers a Core Word's registered record as a Record</h3>
+  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' AT [ DIV ] 0 GET CONTRACT 'projection' AT [ SORT ] 0 GET CONTRACT 'tier' AT</pre>
+  <pre class="ajisai-expect-result">2/1 [ 'divisionByZero' ] 'standard'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contract-user-word-is-probe" data-category="core">
+  <h3>CONTRACT of a User Word is PROBE of its body, and runs nothing</h3>
+  <pre class="ajisai-source">[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] PROBE EQ [ SHOUT ] 0 GET CONTRACT 'effects' AT</pre>
+  <pre class="ajisai-expect-result">TRUE [ 'consoleWrite' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contract-unknown-name" data-category="core">
+  <h3>CONTRACT projects missingField for a Symbol naming no Word</h3>
+  <pre class="ajisai-source">[ NOPE ] 0 GET CONTRACT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2864,6 +2934,90 @@ W</pre>
 </section>
 <section class="ajisai-case" id="standard-put" data-category="core"><h3>PUT</h3><pre class="ajisai-source">[ 1 2 3 ] 1 9 PUT</pre><pre class="ajisai-expect-result">[ 1/1 9/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">{ 'b': [ 1/1 3/1 ] 'a': [ 2/1 4/1 ] }</pre><div class="ajisai-expect-effects"></div></section>
+
+<!-- FORMAT is the one rounding boundary (LANG.VALUES.EXACT): a scalar
+     becomes decimal text at a stated digit count, half to even, exact at
+     every tier; the last digit of a computable real is settled under the
+     comparison budget or projected, never guessed. -->
+
+<section class="ajisai-case" id="standard-format-half-even" data-category="core">
+  <h3>FORMAT renders decimal text at a stated precision, half to even</h3>
+  <pre class="ajisai-source">1/3 5 FORMAT 5/2 0 FORMAT 7/2 0 FORMAT -1/8 2 FORMAT</pre>
+  <pre class="ajisai-expect-result">'0.33333' '2' '4' '-0.12'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-format-irrational" data-category="core">
+  <h3>FORMAT settles an irrational's last digit exactly, and PI's under budget</h3>
+  <pre class="ajisai-source">2 SQRT 3 FORMAT PI 4 FORMAT</pre>
+  <pre class="ajisai-expect-result">'1.414' '3.1416'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-format-rejects-bad-count" data-category="core">
+  <h3>FORMAT refuses a digit count that is not a non-negative integer</h3>
+  <pre class="ajisai-source">1/3 -1 FORMAT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected a non-negative integer digit count</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- JSON-DECODE lands each JSON kind on its own domain, numbers exact
+     (LANG.RECORDS.STRUCTURE, LANG.VALUES.EXACT); text that is not one JSON
+     value projects invalidEncoding. -->
+
+<section class="ajisai-case" id="standard-json-decode-object" data-category="core">
+  <h3>JSON-DECODE reads an object as a Record and an array as a Vector</h3>
+  <pre class="ajisai-source">'{"a": 1, "b": [true, null, "x"]}' JSON-DECODE</pre>
+  <pre class="ajisai-expect-result">{ 'a': 1/1 'b': [ TRUE NIL 'x' ] }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-json-decode-number-exact" data-category="core">
+  <h3>JSON-DECODE reads a number as the exact rational it spells</h3>
+  <pre class="ajisai-source">'0.1' JSON-DECODE 10 MUL 1 EQ '-2.5e1' JSON-DECODE</pre>
+  <pre class="ajisai-expect-result">TRUE -25/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-json-decode-invalid-encoding" data-category="core">
+  <h3>JSON-DECODE projects invalidEncoding for text that is not one JSON value</h3>
+  <pre class="ajisai-source">'[1,' JSON-DECODE NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- JSON-ENCODE writes only what JSON can spell exactly: a finite decimal
+     as a number, any other rational as its lexeme in a string, and no image
+     at all (domainMiss) for a Symbol or an irrational. -->
+
+<section class="ajisai-case" id="standard-json-encode-exact" data-category="core">
+  <h3>JSON-ENCODE writes a Record as an object, spelling finite decimals exactly</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD JSON-ENCODE</pre>
+  <pre class="ajisai-expect-result">'{"a":0.25,"b":[true,null,"x"]}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-json-encode-lexeme-string" data-category="core">
+  <h3>JSON-ENCODE writes a rational with no finite decimal as its lexeme, never rounded</h3>
+  <pre class="ajisai-source">1/3 JSON-ENCODE KEEP JSON-DECODE NUM</pre>
+  <pre class="ajisai-expect-result">'"1/3"' 1/3</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-json-encode-no-image" data-category="core">
+  <h3>JSON-ENCODE projects domainMiss for a value with no JSON image</h3>
+  <pre class="ajisai-source">2 SQRT JSON-ENCODE NIL-REASON [ ADD ] 0 GET JSON-ENCODE NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'domainMiss' NIL 'domainMiss'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-json-round-trip" data-category="core">
+  <h3>JSON-DECODE after JSON-ENCODE is the identity on the JSON image</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 <section class="ajisai-case" id="kernel-random" data-category="core"><h3>RANDOM draws the same exact rationals for the same seed</h3><pre class="ajisai-source">7 3 RANDOM</pre><pre class="ajisai-expect-result">[ 3344595609062871/9007199254740992 861149483440519/2251799813685248 3413160536610049/4503599627370496 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-index-of" data-category="core"><h3>INDEX-OF</h3><pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-abs" data-category="core"><h3>ABS</h3><pre class="ajisai-source">-2 ABS</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>

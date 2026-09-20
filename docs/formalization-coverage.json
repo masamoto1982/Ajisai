@@ -1576,11 +1576,39 @@
         "core-probe-rejects-non-codeblock"
       ],
       "status": "Formalized",
-      "notes": "PROBE runs the same word-contract inference ajisai check --contract and ajisai contract already expose from outside the language (word_contract.rs, infer_word_contract), over an anonymous CodeBlock instead of a named dictionary Word. It examines a state-transformer composition's structure without composing/running it, and reports what inference could not resolve as structured diagnostic data (the gap ids trichotomy-unification.md derives as the check-time counterpart of a NIL reason) rather than as an opaque failure.",
+      "notes": "PROBE runs the same word-contract inference ajisai check --contract and ajisai contract already expose from outside the language (word_contract.rs, infer_word_contract), over an anonymous CodeBlock instead of a named dictionary Word. It examines a state-transformer composition's structure without composing/running it, and reports what inference could not resolve as structured diagnostic data (the gap ids trichotomy-unification.md derives as the check-time counterpart of a NIL reason) rather than as an opaque failure. Since Phase 6 of the vocabulary-100 work order the answer is a Record in the one contract shape CONTRACT also answers (contract_record.rs).",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.state-transformer.composition",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
+    },
+    {
+      "id": "core.contract",
+      "kind": "coreword",
+      "surface": "CONTRACT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §9.2"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/reflection_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-contract-core-word-record",
+        "core-contract-user-word-is-probe",
+        "core-contract-unknown-name"
+      ],
+      "status": "Formalized",
+      "notes": "Answers a Core Word's registered contract from the generated registry as a Record, and a User Word's inferred contract through the same inference PROBE runs (word_contract.rs, infer_word_contract), in one shape (contract_record.rs). A Symbol naming nothing projects missingField; a non-Symbol is notASymbol.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
         "algebra.observation.structured-diagnostic"
       ],
       "algebraic_family": "state-transformer",
@@ -2471,6 +2499,99 @@
       "core_tier": "material"
     },
     {
+      "id": "core.format",
+      "kind": "coreword",
+      "surface": "FORMAT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.1",
+        "SPECIFICATION.html §7.6"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-format-half-even",
+        "standard-format-irrational",
+        "standard-format-rejects-bad-count"
+      ],
+      "status": "Formalized",
+      "notes": "The one rounding boundary: a scalar rendered as decimal text at a stated digit count, half to even, exact at every tier; a computable real whose last digit does not settle under the comparison budget projects undecidable rather than guess.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Written out it is QUANTIZE followed by digit surgery on STR's text, which scatters the language's one permitted rounding over two Words and a user definition; kept native so the boundary is one place."
+    },
+    {
+      "id": "core.json-decode",
+      "kind": "coreword",
+      "surface": "JSON-DECODE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.6"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-json-decode-object",
+        "standard-json-decode-number-exact",
+        "standard-json-decode-invalid-encoding"
+      ],
+      "status": "Formalized",
+      "notes": "An iterative JSON reader (json_decode.rs) that lands objects on Records, arrays on Vectors and numbers on exact rationals; malformed text projects invalidEncoding, nesting past the machine's bound projects spaceExhausted.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Nesting is input-dependent repetition; the language repeats only over a Vector that already exists, so no definition can write this Word at all."
+    },
+    {
+      "id": "core.json-encode",
+      "kind": "coreword",
+      "surface": "JSON-ENCODE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §3.7",
+        "SPECIFICATION.html §7.6"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-json-encode-exact",
+        "standard-json-encode-lexeme-string",
+        "standard-json-encode-no-image",
+        "standard-json-round-trip"
+      ],
+      "status": "Formalized",
+      "notes": "The inverse writer (json_encode.rs): finite decimals as JSON numbers, every other rational as its lexeme in a string so nothing is rounded, and domainMiss for a value with no JSON image; decoding what it writes gives back the value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.record.keyed-correspondence",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "record",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "The recursive walk over nested Records and Vectors is the same input-dependent repetition the decoder needs; a definition cannot write it."
+    },
+    {
       "id": "core.import.name-resolution",
       "kind": "semantic-area",
       "surface": "IMPORT / DEF / dictionary resolution",
@@ -2625,6 +2746,60 @@
       ],
       "algebraic_family": "dictionary",
       "core_tier": "flow"
+    },
+    {
+      "id": "core.defined",
+      "kind": "coreword",
+      "surface": "DEFINED?",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §8.1",
+        "SPECIFICATION.html §8.4"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/reflection_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-defined-resolves-either-tier",
+        "core-defined-string-is-not-a-name"
+      ],
+      "status": "Formalized",
+      "notes": "Asks the same deterministic lookup execution performs, of a Symbol: TRUE when the name resolves in Core or User. A String is refused (notASymbol) so that no Word turns text into a name, which is what keeps the DEF-time acyclicity check complete.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
+    },
+    {
+      "id": "core.digest",
+      "kind": "coreword",
+      "surface": "DIGEST",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §8.2",
+        "SPECIFICATION.html §3.1"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/reflection_words_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-digest-word-identity",
+        "core-digest-value-denotation",
+        "core-digest-computable-real"
+      ],
+      "status": "Formalized",
+      "notes": "Exposes the content identity the dictionary already keeps (word_identity.rs) for a Symbol naming a Word, and the denotation digest of any other value through the observation digest's own value encoder (observation_digest.rs, value_digest), so equal values digest alike whatever built them. A computable real has no finite form and projects undecidable.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "identity"
     },
     {
       "id": "exploratory.child-runtime",

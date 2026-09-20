@@ -6,9 +6,10 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
-    execute_del, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics,
-    ordering_ops, probe, quantize_ops, record_ops, search_ops, shape_ops, shape_words, sort,
-    tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
+    execute_del, format_ops, higher_order, higher_order_fold, io, json_decode, json_encode, logic,
+    math_ops, nil_diagnostics, ordering_ops, probe, quantize_ops, record_ops, reflection_ops,
+    search_ops, shape_ops, shape_words, sort, tensor_cmds, vector_ops, ConsumptionMode,
+    Interpreter,
 };
 
 impl Interpreter {
@@ -278,6 +279,9 @@ impl Interpreter {
             }
             WordId::Exec => control::op_exec(self),
             WordId::Probe => probe::op_probe(self),
+            WordId::Contract => reflection_ops::op_contract(self),
+            WordId::Defined => reflection_ops::op_defined(self),
+            WordId::Digest => reflection_ops::op_digest(self),
             WordId::Bind => bindings::op_bind(self),
             WordId::Def => execute_def::op_def(self),
             WordId::Del => execute_del::op_del(self),
@@ -299,6 +303,9 @@ impl Interpreter {
             WordId::Mod => tensor_cmds::op_mod(self),
             WordId::Str => cast::op_str(self),
             WordId::Num => cast::op_num(self),
+            WordId::Format => format_ops::op_format(self),
+            WordId::JsonDecode => json_decode::op_json_decode(self),
+            WordId::JsonEncode => json_encode::op_json_encode(self),
             WordId::Chars => cast::op_chars(self),
             WordId::Join => cast::op_join(self),
             WordId::Trim => cast::op_trim(self),

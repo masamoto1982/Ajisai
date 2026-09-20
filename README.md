@@ -45,8 +45,8 @@ Ajisai is built from ten concepts and nothing else.
 5. Keyed correspondence: Records, and tables as Records of columns.
 6. Code is a vector, evaluated only when a Word asks for it — and branching is not one of those Words.
 7. One modifier axis: consume or keep.
-8. A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity.
-9. A machine-readable contract for every Word, and a pre-execution check of user declarations against those contracts.
+8. A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity that a program can ask for.
+9. A machine-readable contract for every Word, and a pre-execution check of user declarations against those contracts — both readable from inside the language.
 10. One host protocol, the only way anything outside the language observes it, and an executable conformance corpus that decides whether an implementation is Ajisai.
 
 ## Documentation

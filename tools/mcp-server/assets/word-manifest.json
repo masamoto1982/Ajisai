@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 86,
-    "semanticKernelWords": 51,
-    "standardWords": 35,
-    "corewords": 86,
+    "canonicalWords": 92,
+    "semanticKernelWords": 54,
+    "standardWords": 38,
+    "corewords": 92,
     "aliases": 11,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 107
+    "manifestEntries": 113
   },
   "entries": [
     {
@@ -1356,6 +1356,62 @@
       "classification": "Core"
     },
     {
+      "id": "core.format",
+      "kind": "coreword",
+      "surface": "FORMAT",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "FORMAT",
+      "coverage_entry_id": "core.format",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.json-decode",
+      "kind": "coreword",
+      "surface": "JSON-DECODE",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "JSON-DECODE",
+      "coverage_entry_id": "core.json-decode",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.record.keyed-correspondence",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.json-encode",
+      "kind": "coreword",
+      "surface": "JSON-ENCODE",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "JSON-ENCODE",
+      "coverage_entry_id": "core.json-encode",
+      "semantic_role": "Derived",
+      "algebraic_family": "record",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.record.keyed-correspondence",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.exec",
       "kind": "coreword",
       "surface": "EXEC",
@@ -1386,6 +1442,24 @@
       "core_tier": "flow",
       "derived_from": [
         "algebra.state-transformer.composition",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.contract",
+      "kind": "coreword",
+      "surface": "CONTRACT",
+      "category": "control",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "CONTRACT",
+      "coverage_entry_id": "core.contract",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow",
+      "derived_from": [
+        "algebra.dictionary.lookup",
         "algebra.observation.structured-diagnostic"
       ],
       "classification": "Core"
@@ -1545,6 +1619,41 @@
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.defined",
+      "kind": "coreword",
+      "surface": "DEFINED?",
+      "category": "dictionary",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "DEFINED?",
+      "coverage_entry_id": "core.defined",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "core_tier": "flow",
+      "derived_from": [
+        "algebra.dictionary.lookup"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.digest",
+      "kind": "coreword",
+      "surface": "DIGEST",
+      "category": "dictionary",
+      "vocabularyTier": "kernel",
+      "source": "spec/words.json",
+      "canonical": "DIGEST",
+      "coverage_entry_id": "core.digest",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.observation.structured-diagnostic"
       ],
       "classification": "Core"
     },

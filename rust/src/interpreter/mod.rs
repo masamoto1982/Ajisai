@@ -9,6 +9,7 @@ pub mod comparison;
 pub(crate) mod comparison_scalar;
 pub(crate) mod compiled_call;
 pub mod compiled_plan;
+mod contract_record;
 pub mod control;
 mod debug_declared_checks;
 pub mod debug_diagnosis;
@@ -22,12 +23,17 @@ pub mod epoch;
 pub mod error_flow_trace;
 pub mod execute_def;
 pub mod execute_del;
+#[cfg(test)]
+mod format_json_tests;
+mod format_ops;
 pub mod higher_order;
 pub mod higher_order_fold;
 pub mod host;
 pub mod host_lookup;
 mod host_profile_defaults;
 pub mod io;
+mod json_decode;
+mod json_encode;
 pub(crate) mod lane_lift;
 pub(crate) mod limit_profile;
 pub mod logic;
@@ -45,6 +51,9 @@ mod record_lift;
 mod record_ops;
 #[cfg(test)]
 mod record_words_tests;
+mod reflection_ops;
+#[cfg(test)]
+mod reflection_words_tests;
 pub mod runtime_limits;
 mod search_ops;
 #[cfg(test)]

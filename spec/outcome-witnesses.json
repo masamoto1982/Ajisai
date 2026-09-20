@@ -141,6 +141,12 @@
       "source": "5 KEYS",
       "expect": "error:nonRecord",
       "rationale": "Stated explicitly beside its registry entry even though the exhaustive table also reaches it: no domain representative is a Record, so every Record Word cell the table runs answers nonRecord, and a reader of this file should not have to infer that."
+    },
+    {
+      "id": "notASymbol",
+      "source": "'ADD' DEFINED?",
+      "expect": "error:notASymbol",
+      "rationale": "The exhaustive table hands DEFINED? every domain representative, so the category is reached there too; stated beside its registry entry because the String case is the one a reader will try first, and the one LANG.DICTIONARY.ACYCLIC forbids answering."
     }
   ]
 }

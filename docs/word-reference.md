@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **86 Words**, of which **51** form the Semantic Kernel and **35** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **92 Words**, of which **54** form the Semantic Kernel and **38** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -1045,6 +1045,47 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `42 STR`
 
+## `FORMAT`
+
+Render an exact scalar as decimal text with a stated number of digits after the point, rounding half to even: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'2'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `text`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: lastDigitUndecidable → undecidable
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `1/3 5 FORMAT`
+- **ERROR conditions:** `nonNumeric`, `invalidCount`
+
+## `JSON-DECODE`
+
+Read JSON text into a value: an object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1'` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past what the machine holds projects `spaceExhausted`, the outcome of every materialization past a ceiling. A non-String operand is an ERROR (`nonText`).
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `text`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: textIsNotJson,nestingDeeperThanTheMachineHolds → invalidEncoding, spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`
+- **Syntax:** `'{"a": 1, "b": [true, null]}' JSON-DECODE`
+- **ERROR conditions:** `nonText`
+
+## `JSON-ENCODE`
+
+Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other rational is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. Decoding what this Word writes gives back the value it was given, and a rational written as a lexeme comes back as that String, from which `NUM` recovers the number.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `text`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `consumeNil`; projection: valueHasNoJsonImage → domainMiss
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`
+- **Syntax:** `[ 'a' ] [ 1 ] RECORD JSON-ENCODE`
+
 ## `EXEC`
 
 Evaluate a code block.
@@ -1061,7 +1102,7 @@ Evaluate a code block.
 
 ## `PROBE`
 
-Infer a code block's contract against the current dictionary, without evaluating it. The result is a Vector of key/value pairs — purity, determinism, NIL behavior, effects, confidence, and any gap reasons inference could not resolve — the same inference `ajisai check --contract` runs from outside the language, reached from inside it. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.
+Infer a code block's contract against the current dictionary, without evaluating it. The answer is a Record — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps` — the same shape `CONTRACT` answers for a User Word, and the same inference `ajisai check --contract` runs from outside the language, reached from inside it: `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data, so an unresolved dependency is a gap in the answer, not an ERROR. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
@@ -1072,6 +1113,20 @@ Infer a code block's contract against the current dictionary, without evaluating
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`, `LANG.CONTRACT.CHECK`
 - **Syntax:** `[ 1 2 ADD ] PROBE`
 - **ERROR conditions:** `notExecutable`
+
+## `CONTRACT`
+
+The contract of the Word a Symbol names, as a Record. For a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a User Word it is the contract inferred from its body without running it — the same inference `PROBE` runs over a block and `ajisai check --contract` runs from outside — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`. A Symbol that names no Word projects `missingField`; a non-Symbol operand is an ERROR (`notASymbol`).
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `control`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: symbolNamesNoWord → missingField
+- **Purity / determinism:** `pure` / `stateRelative`
+- **Effects:** none
+- **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`
+- **Syntax:** `[ ADD ] 0 GET CONTRACT`
+- **ERROR conditions:** `notASymbol`
 
 ## `FAIL`
 
@@ -1194,6 +1249,33 @@ Delete a user word from the dictionary.
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
 - **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
 - **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`
+
+## `DEFINED?`
+
+Whether a Symbol names a Word: TRUE when the name resolves in Core or in User under the same deterministic lookup execution uses, FALSE otherwise. `[ ADD ] 0 GET DEFINED?` is TRUE; a name `DEF` has not bound is FALSE, and becomes TRUE the moment it is. The operand is a Symbol, never a String: a String is text, not a name, and no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so `'ADD' DEFINED?` is an ERROR (`notASymbol`) rather than a lookup. A BIND name is a value's name, not a Word's, and answers FALSE.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `dictionary`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `stateRelative`
+- **Effects:** none
+- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.ACYCLIC`, `LANG.VALUES.DISJOINT`
+- **Syntax:** `[ ADD ] 0 GET DEFINED?`
+- **ERROR conditions:** `notASymbol`
+
+## `DIGEST`
+
+The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. A computable real (`PI`) has no finite canonical form to digest, so a value carrying one projects `undecidable`.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `dictionary`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `consumeNil`; projection: operandCarriesAComputableReal → undecidable
+- **Purity / determinism:** `pure` / `stateRelative`
+- **Effects:** none
+- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.VALUES.DENOTATION`, `LANG.VALUES.EXACT`
+- **Syntax:** `[ ADD ] 0 GET DIGEST`
 
 ## `PRINT`
 

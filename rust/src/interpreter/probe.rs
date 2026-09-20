@@ -5,16 +5,17 @@
 //! Word, from outside the language. `PROBE` is the same operation reached
 //! from inside it: narrowing a description (any Vector, since the CodeBlock/
 //! Vector unification) into what can be known about it without running it,
-//! over `Interpreter::infer_contract_for_block`. Narrowing is total here — a
-//! well-formed operand always yields a knowledge Vector, never NIL — because
-//! the trichotomy this check reports (`LANG.CONTRACT.CHECK`: verified /
-//! cannot verify / violated) lives inside the returned value, as
+//! over `Interpreter::infer_contract_for_block`. The answer is a Record in the
+//! one contract shape `CONTRACT` also answers (`contract_record`). Narrowing
+//! is total here — a well-formed operand always yields that Record, never
+//! NIL — because the trichotomy this check reports (`LANG.CONTRACT.CHECK`:
+//! verified / cannot verify / violated) lives inside the returned value, as
 //! `confidence` and `gaps`, not in PROBE's own outcome category.
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::word_contract::WordContract;
+use crate::interpreter::contract_record::inferred_contract_record;
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::{Interpretation, Value};
+use crate::types::Interpretation;
 
 pub(crate) fn op_probe(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
@@ -49,112 +50,25 @@ pub(crate) fn op_probe(interp: &mut Interpreter) -> Result<()> {
     };
 
     let contract = interp.infer_contract_for_block(&tokens);
-    let result = knowledge_vector(&contract);
+    let result = inferred_contract_record(&contract);
     interp
         .stack
         .push_with_role(result, Interpretation::Unassigned);
     Ok(())
 }
 
-fn purity_str(purity: crate::interpreter::word_contract::ContractPurity) -> &'static str {
-    use crate::interpreter::word_contract::ContractPurity::*;
-    match purity {
-        Pure => "pure",
-        Observable => "observable",
-        Effectful => "effectful",
-    }
-}
-
-fn determinism_str(
-    determinism: crate::interpreter::word_contract::ContractDeterminism,
-) -> &'static str {
-    use crate::interpreter::word_contract::ContractDeterminism::*;
-    match determinism {
-        Deterministic => "deterministic",
-        NonDeterministic => "nonDeterministic",
-    }
-}
-
-fn nil_str(nil: crate::interpreter::word_contract::NilBehavior) -> &'static str {
-    use crate::interpreter::word_contract::NilBehavior::*;
-    match nil {
-        NeverCreates => "neverCreates",
-        Propagates => "propagates",
-        MayCreate => "mayCreate",
-        RejectsNil => "rejectsNil",
-        ConsumesNil => "consumesNil",
-    }
-}
-
-fn confidence_str(
-    confidence: crate::interpreter::word_contract::ContractConfidence,
-) -> &'static str {
-    use crate::interpreter::word_contract::ContractConfidence::*;
-    match confidence {
-        Complete => "complete",
-        Conservative => "conservative",
-    }
-}
-
-fn pair(key: &str, value: Value) -> Value {
-    Value::from_vector(vec![Value::from_string(key), value])
-}
-
-/// Six entries, chosen as the checkable subset `#:contract` declarations
-/// verify against (purity, nil behavior) plus what makes "cannot verify"
-/// readable as data rather than as an opaque failure (confidence, gaps):
-/// arity and cost are deliberately not included in this first surface — see
-/// docs/dev/ajisai-single-axis-proposal-2026-08.md §8 for why.
-fn knowledge_vector(contract: &WordContract) -> Value {
-    Value::from_vector(vec![
-        pair("purity", Value::from_string(purity_str(contract.purity))),
-        pair(
-            "determinism",
-            Value::from_string(determinism_str(contract.determinism)),
-        ),
-        pair("nil", Value::from_string(nil_str(contract.nil_behavior))),
-        pair(
-            "effects",
-            Value::from_vector(
-                contract
-                    .effects
-                    .iter()
-                    .map(|effect| Value::from_string(effect))
-                    .collect(),
-            ),
-        ),
-        pair(
-            "confidence",
-            Value::from_string(confidence_str(contract.confidence)),
-        ),
-        pair(
-            "gaps",
-            Value::from_vector(
-                contract
-                    .gaps
-                    .iter()
-                    .map(|gap| Value::from_string(gap.as_str()))
-                    .collect(),
-            ),
-        ),
-    ])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::Value;
 
-    /// Reads PROBE's `[ 'key' value ]`-pair Vector into a lookup by key, so
-    /// tests read as assertions about facts rather than about Vector shape.
+    /// Reads one field of PROBE's contract Record, so tests read as
+    /// assertions about facts rather than about Record shape.
     fn field<'a>(result: &'a Value, key: &str) -> &'a Value {
         result
-            .as_vector()
-            .expect("PROBE result is a Vector")
-            .iter()
-            .find_map(|pair| {
-                let pair = pair.as_vector()?;
-                (pair.first()?.as_text()? == key).then(|| &pair[1])
-            })
+            .as_record()
+            .expect("PROBE result is a Record")
+            .get(&Value::from_string(key))
             .unwrap_or_else(|| panic!("PROBE result has no `{key}` field"))
     }
 
@@ -227,7 +141,7 @@ mod tests {
         interp.execute("[ 1 ] KEEP PROBE").await.unwrap();
         assert_eq!(interp.stack.len(), 2);
         assert!(interp.stack.first().unwrap().as_vector_view().is_some());
-        assert!(interp.stack.last().unwrap().as_vector().is_some());
+        assert!(interp.stack.last().unwrap().as_record().is_some());
     }
 
     #[test]

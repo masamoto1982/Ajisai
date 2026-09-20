@@ -42,6 +42,7 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "nonInteger"
         | "nonComparableElement"
         | "notExecutable"
+        | "notASymbol"
         | "unsupportedComparison"
         | "invalidShape"
         | "invalidClauseShape"
