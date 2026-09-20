@@ -380,7 +380,9 @@ async fn random_is_a_pure_function_of_its_seed() {
 async fn format_agrees_with_quantize_and_rounds_half_to_even() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("2/3 2 FORMAT 2/3 100 QUANTIZE 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT PI 2 FORMAT")
+        .execute(
+            "2/3 2 FORMAT 2/3 100 QUANTIZE 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT PI 2 FORMAT",
+        )
         .await
         .unwrap();
     assert_eq!(
