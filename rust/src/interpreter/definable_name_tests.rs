@@ -44,7 +44,7 @@ mod tests {
     /// rather than a comment now that whitespace is the sole delimiter.
     #[tokio::test]
     async fn an_ordinary_name_is_still_definable_and_callable() {
-        for name in ["DOUBLE", "lower", "合計", "a#b", "x^y", "1ST"] {
+        for name in ["DOUBLE", "gentle", "合計", "a#b", "x^y", "1ST"] {
             def(name)
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be definable, got: {e}"));
@@ -66,10 +66,10 @@ mod tests {
     /// definition answers to either spelling. The rule must not disturb that.
     #[tokio::test]
     async fn a_lowercase_name_still_answers_to_both_spellings() {
-        for call in ["lower", "LOWER"] {
+        for call in ["gentle", "GENTLE"] {
             let mut interp = Interpreter::new();
             interp
-                .execute(&format!("[ [ 7 ] ] 'lower' DEF {}", call))
+                .execute(&format!("[ [ 7 ] ] 'gentle' DEF {}", call))
                 .await
                 .unwrap_or_else(|e| panic!("`{call}` should reach the word, got: {e}"));
             assert_eq!(interp.stack.len(), 1);

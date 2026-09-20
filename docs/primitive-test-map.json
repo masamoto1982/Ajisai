@@ -7,7 +7,7 @@
     "primitives": 24,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 24,
-    "distinct_conformance_cases": 167
+    "distinct_conformance_cases": 168
   },
   "primitives": [
     {
@@ -15,9 +15,9 @@
       "algebraic_family": "boolean-truth",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 18,
+      "derived_word_count": 17,
       "law_test_count": 10,
-      "conformance_case_count": 20,
+      "conformance_case_count": 19,
       "derived_words": [
         "core.all",
         "core.any",
@@ -29,7 +29,6 @@
         "core.gte",
         "core.lt",
         "core.lte",
-        "core.neq",
         "core.nil-p",
         "core.order",
         "core.select",
@@ -68,7 +67,6 @@
         "standard-lte",
         "standard-max",
         "standard-min",
-        "standard-neq",
         "standard-order",
         "standard-sort"
       ]
@@ -174,9 +172,9 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 20,
+      "derived_word_count": 19,
       "law_test_count": 10,
-      "conformance_case_count": 25,
+      "conformance_case_count": 24,
       "derived_words": [
         "core.atan",
         "core.bsearch",
@@ -190,7 +188,6 @@
         "core.ln",
         "core.lt",
         "core.lte",
-        "core.neq",
         "core.order",
         "core.sin",
         "module.algo.index-of",
@@ -222,9 +219,9 @@
         "standard-bsearch-first-of-equal-keys",
         "standard-bsearch-unsorted-raises",
         "standard-exp",
-        "standard-format-half-even",
         "standard-format-irrational",
         "standard-format-rejects-bad-count",
+        "standard-format-ties-away-from-zero",
         "standard-gte",
         "standard-index-of",
         "standard-ln",
@@ -232,7 +229,6 @@
         "standard-lte",
         "standard-max",
         "standard-min",
-        "standard-neq",
         "standard-order",
         "standard-sin-cos",
         "standard-sort",
@@ -318,15 +314,16 @@
       "algebraic_family": "exact-scalar",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 13,
+      "derived_word_count": 15,
       "law_test_count": 4,
-      "conformance_case_count": 19,
+      "conformance_case_count": 21,
       "derived_words": [
         "core.chars",
         "core.format",
         "core.join",
         "core.json-decode",
         "core.json-encode",
+        "core.lower",
         "core.num",
         "core.print",
         "core.replace",
@@ -334,7 +331,8 @@
         "core.str",
         "core.structural.string",
         "core.tokenize",
-        "core.trim"
+        "core.trim",
+        "core.upper"
       ],
       "law_tests": [
         "rust/src/interpreter/io.rs",
@@ -343,9 +341,9 @@
         "rust/tests/string_laws.rs"
       ],
       "conformance_cases": [
-        "standard-format-half-even",
         "standard-format-irrational",
         "standard-format-rejects-bad-count",
+        "standard-format-ties-away-from-zero",
         "standard-json-decode-invalid-encoding",
         "standard-json-decode-number-exact",
         "standard-json-decode-object",
@@ -361,7 +359,9 @@
         "standard-search-absent-projects",
         "standard-search-empty-needle",
         "standard-tokenize",
-        "standard-trim"
+        "standard-trim",
+        "standard-upper-lower",
+        "standard-upper-rejects-non-text"
       ]
     },
     {
@@ -419,9 +419,9 @@
       "algebraic_family": "bubble",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 16,
+      "derived_word_count": 15,
       "law_test_count": 4,
-      "conformance_case_count": 17,
+      "conformance_case_count": 16,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
@@ -435,7 +435,6 @@
         "core.lte",
         "core.mod",
         "core.mul",
-        "core.neq",
         "core.quantize",
         "core.round",
         "core.sub"
@@ -460,7 +459,6 @@
         "standard-gte",
         "standard-lte",
         "standard-mod",
-        "standard-neq",
         "standard-quantize",
         "standard-round",
         "standard-sub"
@@ -714,9 +712,9 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 13,
-      "law_test_count": 7,
-      "conformance_case_count": 21,
+      "derived_word_count": 12,
+      "law_test_count": 6,
+      "conformance_case_count": 17,
       "derived_words": [
         "core.bind",
         "core.def",
@@ -727,14 +725,12 @@
         "core.fold",
         "core.import.name-resolution",
         "core.map",
-        "core.probe",
         "core.rank",
         "core.scan",
         "exploratory.child-runtime"
       ],
       "law_tests": [
         "rust/src/interpreter/declared_outcomes_tests.rs",
-        "rust/src/interpreter/probe.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/naming_resolution_laws.rs",
         "rust/tests/standard_operational_laws.rs",
@@ -748,10 +744,6 @@
         "core-fold",
         "core-fold-word-name",
         "core-map",
-        "core-probe-never-runs-the-block",
-        "core-probe-pure-block",
-        "core-probe-rejects-non-codeblock",
-        "core-probe-unresolved-word-is-a-gap",
         "core-rank",
         "core-rank-0-sees-the-whole-vector",
         "core-rank-1-is-map",
@@ -771,8 +763,8 @@
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 5,
-      "law_test_count": 2,
-      "conformance_case_count": 9,
+      "law_test_count": 3,
+      "conformance_case_count": 13,
       "derived_words": [
         "core.contract",
         "core.defined",
@@ -782,12 +774,17 @@
       ],
       "law_tests": [
         "rust/src/interpreter/reflection_words_tests.rs",
+        "rust/src/interpreter/word_contract_tests.rs",
         "rust/tests/naming_resolution_laws.rs"
       ],
       "conformance_cases": [
+        "core-contract-block-gap",
+        "core-contract-block-never-runs",
+        "core-contract-block-pure",
         "core-contract-core-word-record",
+        "core-contract-rejects-scalar",
         "core-contract-unknown-name",
-        "core-contract-user-word-is-probe",
+        "core-contract-user-word-is-its-body",
         "core-defined-resolves-either-tier",
         "core-defined-string-is-not-a-name",
         "core-digest-computable-real",
@@ -824,32 +821,31 @@
       "algebraic_family": "observation",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 5,
+      "derived_word_count": 4,
       "law_test_count": 3,
       "conformance_case_count": 10,
       "derived_words": [
         "core.contract",
         "core.digest",
-        "core.probe",
         "host.lookup",
         "hosted.missing-capability.diagnostics"
       ],
       "law_tests": [
-        "rust/src/interpreter/probe.rs",
         "rust/src/interpreter/reflection_words_tests.rs",
+        "rust/src/interpreter/word_contract_tests.rs",
         "rust/tests/naming_resolution_laws.rs"
       ],
       "conformance_cases": [
+        "core-contract-block-gap",
+        "core-contract-block-never-runs",
+        "core-contract-block-pure",
         "core-contract-core-word-record",
+        "core-contract-rejects-scalar",
         "core-contract-unknown-name",
-        "core-contract-user-word-is-probe",
+        "core-contract-user-word-is-its-body",
         "core-digest-computable-real",
         "core-digest-value-denotation",
-        "core-digest-word-identity",
-        "core-probe-never-runs-the-block",
-        "core-probe-pure-block",
-        "core-probe-rejects-non-codeblock",
-        "core-probe-unresolved-word-is-a-gap"
+        "core-digest-word-identity"
       ]
     },
     {

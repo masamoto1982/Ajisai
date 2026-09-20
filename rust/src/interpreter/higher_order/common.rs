@@ -66,7 +66,7 @@ pub(crate) fn extract_executable_code(
 /// other Word shared — `[ 1 2 3 ] [ 1 ] FILTER` silently kept every element
 /// instead of raising `nonTruthValue`, the same declared condition
 /// `AND`/`OR`/`NOT` raise for the identical fault. A caller that wants a
-/// numeric condition writes the comparison it means, e.g. `0 NEQ`.
+/// numeric condition writes the comparison it means, e.g. `0 EQ NOT`.
 pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
     if let Some(b) = condition_result.as_truth() {
         return Ok(b);

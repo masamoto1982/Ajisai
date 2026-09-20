@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **100 Words**, of which **55** form the Semantic Kernel and **45** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **100 Words**, of which **54** form the Semantic Kernel and **46** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -100,20 +100,6 @@ Test equality of two values.
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
 - **Syntax:** `1 1 =`
 - **Aliases:** `=`
-
-## `NEQ`
-
-Test inequality of two values.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
-- **Syntax:** `1 2 NEQ`
-- **Aliases:** `!=`
 
 ## `LT`
 
@@ -1088,6 +1074,34 @@ Remove whitespace from both ends of a string.
 - **Syntax:** `'  hi  ' TRIM`
 - **ERROR conditions:** `nonText`
 
+## `UPPER`
+
+The String with every character mapped to its upper form under Unicode's default, locale-independent case mapping: `'Ajisai' UPPER` is `'AJISAI'`, `'straße' UPPER` is `'STRASSE'`. A character with no upper-case form is kept as it is, so the answer may be longer than the operand but never shorter. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `text`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `'Ajisai' UPPER`
+- **ERROR conditions:** `nonText`
+
+## `LOWER`
+
+The String with every character mapped to its lower form under Unicode's default, locale-independent case mapping: `'Ajisai' LOWER` is `'ajisai'`, `'ΣΑΣ' LOWER` is `'σασ'`. The final-sigma rule and every other language-specific rule are not applied: the same text lowers the same way wherever it is run. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native.
+
+- **Vocabulary tier:** Standard (`algorithm`)
+- **Family:** `text`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `'Ajisai' LOWER`
+- **ERROR conditions:** `nonText`
+
 ## `TOKENIZE`
 
 Split a string into a vector of substrings using a separator.
@@ -1159,7 +1173,7 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 
 ## `FORMAT`
 
-Render an exact scalar as decimal text with a stated number of digits after the point, rounding half to even: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'2'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.
+Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `text`
@@ -1212,23 +1226,9 @@ Evaluate a code block.
 - **Syntax:** `[ 1 2 ADD ] EXEC`
 - **ERROR conditions:** `notExecutable`
 
-## `PROBE`
-
-Infer a code block's contract against the current dictionary, without evaluating it. The answer is a Record — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps` — the same shape `CONTRACT` answers for a User Word, and the same inference `ajisai check --contract` runs from outside the language, reached from inside it: `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data, so an unresolved dependency is a gap in the answer, not an ERROR. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `control`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`, `LANG.CONTRACT.CHECK`
-- **Syntax:** `[ 1 2 ADD ] PROBE`
-- **ERROR conditions:** `notExecutable`
-
 ## `CONTRACT`
 
-The contract of the Word a Symbol names, as a Record. For a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a User Word it is the contract inferred from its body without running it — the same inference `PROBE` runs over a block and `ajisai check --contract` runs from outside — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`. A Symbol that names no Word projects `missingField`; a non-Symbol operand is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
@@ -1236,7 +1236,7 @@ The contract of the Word a Symbol names, as a Record. For a Core Word it is the 
 - **NIL policy:** `rejectNil`; projection: symbolNamesNoWord → missingField
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
-- **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`
+- **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`, `LANG.SOURCE.CODE`
 - **Syntax:** `[ ADD ] 0 GET CONTRACT`
 - **ERROR conditions:** `notASymbol`
 

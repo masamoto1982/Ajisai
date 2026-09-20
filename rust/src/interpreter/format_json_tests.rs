@@ -29,14 +29,19 @@ mod format_json_tests {
     }
 
     #[tokio::test]
-    async fn format_rounds_half_to_even_at_the_stated_digit() {
+    async fn format_rounds_a_tie_away_from_zero_like_round() {
         assert_eq!(top("1/3 5 FORMAT").await, "'0.33333'");
         assert_eq!(top("2/3 2 FORMAT").await, "'0.67'");
-        assert_eq!(top("5/2 0 FORMAT").await, "'2'");
+        assert_eq!(top("5/2 0 FORMAT").await, "'3'");
         assert_eq!(top("7/2 0 FORMAT").await, "'4'");
-        assert_eq!(top("1/8 2 FORMAT").await, "'0.12'");
+        assert_eq!(top("1/8 2 FORMAT").await, "'0.13'");
         assert_eq!(top("3/8 2 FORMAT").await, "'0.38'");
-        assert_eq!(top("-1/8 2 FORMAT").await, "'-0.12'");
+        assert_eq!(top("-1/8 2 FORMAT").await, "'-0.13'");
+        // One rule in the language: FORMAT agrees with ROUND and QUANTIZE.
+        assert_eq!(
+            top("5/2 ROUND -5/2 ROUND 1/8 100 QUANTIZE").await,
+            "3/1 -3/1 13/100"
+        );
         assert_eq!(top("-1/1000 2 FORMAT").await, "'0.00'");
         assert_eq!(top("12345 2 FORMAT").await, "'12345.00'");
         assert_eq!(top("0 3 FORMAT").await, "'0.000'");

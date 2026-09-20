@@ -12,13 +12,13 @@
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "canonicalWords": 100,
-    "semanticKernelWords": 55,
-    "standardWords": 45,
+    "semanticKernelWords": 54,
+    "standardWords": 46,
     "corewords": 100,
-    "aliases": 11,
+    "aliases": 10,
     "inputHelpers": 1,
     "surface_forms": 9,
-    "manifestEntries": 121
+    "manifestEntries": 120
   },
   "entries": [
     {
@@ -145,26 +145,6 @@
         "algebra.bubble.passthrough"
       ],
       "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq",
-      "classification": "Core"
-    },
-    {
-      "id": "core.neq",
-      "kind": "coreword",
-      "surface": "NEQ",
-      "category": "comparison",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "NEQ",
-      "coverage_entry_id": "core.neq",
-      "semantic_role": "Derived",
-      "algebraic_family": "observation",
-      "core_tier": "identity",
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain",
-        "algebra.bubble.passthrough"
-      ],
-      "implementation_schema": "budgeted_order_projection(NEQ) via pairwise_eq/scalar_pair_eq",
       "classification": "Core"
     },
     {
@@ -1412,6 +1392,40 @@
       "classification": "Core"
     },
     {
+      "id": "core.upper",
+      "kind": "coreword",
+      "surface": "UPPER",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "UPPER",
+      "coverage_entry_id": "core.upper",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.lower",
+      "kind": "coreword",
+      "surface": "LOWER",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "source": "spec/words.json",
+      "canonical": "LOWER",
+      "coverage_entry_id": "core.lower",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
+    },
+    {
       "id": "core.tokenize",
       "kind": "coreword",
       "surface": "TOKENIZE",
@@ -1568,24 +1582,6 @@
       "core_tier": "flow",
       "derived_from": [
         "algebra.state-transformer.composition"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.probe",
-      "kind": "coreword",
-      "surface": "PROBE",
-      "category": "control",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "PROBE",
-      "coverage_entry_id": "core.probe",
-      "semantic_role": "Derived",
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
-      "derived_from": [
-        "algebra.state-transformer.composition",
-        "algebra.observation.structured-diagnostic"
       ],
       "classification": "Core"
     },
@@ -1958,20 +1954,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "GTE",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.not-equal",
-      "kind": "symbol_alias",
-      "surface": "!=",
-      "canonical": "NEQ",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.not-equal",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "NEQ",
       "classification": "Surface"
     },
     {

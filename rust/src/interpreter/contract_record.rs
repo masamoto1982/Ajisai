@@ -1,4 +1,4 @@
-//! A Word's contract as a Record — the one shape `CONTRACT` and `PROBE` answer
+//! A Word's contract as a Record — the one shape `CONTRACT` answers for a Word and for a block
 //! (LANG.CONTRACT.REGISTRY, LANG.CONTRACT.CHECK).
 //!
 //! Two sources feed it. A Core Word's contract is *registered*: the record in

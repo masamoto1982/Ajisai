@@ -239,7 +239,7 @@ fn comparison_words_have_uniform_stack_effect() {
     // notation so the four-section template is consistent across the
     // comparison category.
     const EXPECTED: &str = "[ a ] [ b ] -> [ TRUE | FALSE ]";
-    for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+    for name in &["EQ", "LT", "LTE", "GT", "GTE"] {
         let spec = crate::builtins::builtin_word_definitions::lookup_builtin_spec(name)
             .unwrap_or_else(|| panic!("{} must have a BuiltinSpec", name));
         assert_eq!(

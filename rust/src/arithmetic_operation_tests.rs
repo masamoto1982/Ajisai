@@ -264,7 +264,7 @@ mod nil_passthrough_tests {
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("3 NIL GTE").await;
         assert!(interp.get_stack()[0].is_nil());
-        let interp = run("NIL 3 NEQ").await;
+        let interp = run("NIL 3 EQ NOT").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
@@ -315,7 +315,7 @@ mod nil_passthrough_tests {
 #[cfg(test)]
 mod ai_first_comparison_tests {
     use crate::interpreter::Interpreter;
-    // Tests for the AI-first comparison primitives GT, GTE, NEQ. These mirror
+    // Tests for the AI-first comparison primitives GT and GTE. These mirror
     // LT / LTE / EQ and exist so an automated producer can emit the relation
     // that matches its intent directly rather than rewriting it as a
     // negation or operand swap.
@@ -365,14 +365,14 @@ mod ai_first_comparison_tests {
     }
 
     #[tokio::test]
-    async fn neq_canonical_name_returns_true_when_different() {
-        let interp = run("1 2 NEQ").await;
+    async fn eq_not_canonical_name_returns_true_when_different() {
+        let interp = run("1 2 EQ NOT").await;
         assert!(bool_of(&interp));
     }
 
     #[tokio::test]
-    async fn neq_returns_false_when_equal() {
-        let interp = run("3 3 NEQ").await;
+    async fn eq_not_returns_false_when_equal() {
+        let interp = run("3 3 EQ NOT").await;
         assert!(!bool_of(&interp));
     }
 
@@ -390,12 +390,6 @@ mod ai_first_comparison_tests {
         assert!(bool_of(&interp));
     }
 
-    #[tokio::test]
-    async fn neq_symbol_alias_matches_canonical() {
-        let interp = run("1 2 NEQ").await;
-        assert!(bool_of(&interp));
-    }
-
     // ── exact rational comparison ────────────────────────────────────────
 
     #[tokio::test]
@@ -405,17 +399,17 @@ mod ai_first_comparison_tests {
         assert!(bool_of(&interp));
     }
 
-    // ── NEQ structural equality on vectors ───────────────────────────────
+    // ── EQ NOT structural equality on vectors ───────────────────────────────
 
     #[tokio::test]
-    async fn neq_returns_false_for_structurally_equal_vectors() {
-        let interp = run("[ 1 2 3 ] [ 1 2 3 ] NEQ").await;
+    async fn eq_not_returns_false_for_structurally_equal_vectors() {
+        let interp = run("[ 1 2 3 ] [ 1 2 3 ] EQ NOT").await;
         assert!(!bool_of(&interp));
     }
 
     #[tokio::test]
-    async fn neq_returns_true_for_structurally_different_vectors() {
-        let interp = run("[ 1 2 3 ] [ 1 2 4 ] NEQ").await;
+    async fn eq_not_returns_true_for_structurally_different_vectors() {
+        let interp = run("[ 1 2 3 ] [ 1 2 4 ] EQ NOT").await;
         assert!(bool_of(&interp));
     }
     // ── NIL passthrough for the new ops (contract: nil_policy = Passthrough)
@@ -433,10 +427,10 @@ mod ai_first_comparison_tests {
     }
 
     #[tokio::test]
-    async fn neq_with_two_nils_yields_nil() {
-        // NEQ is NIL-passthrough, so NIL NEQ NIL is NIL — *not* FALSE.
+    async fn eq_not_with_two_nils_yields_nil() {
+        // EQ is NIL-passthrough and NOT keeps UNKNOWN, so NIL NIL EQ NOT is NIL — *not* FALSE.
         // (NIL is an absence value, not a member of an equivalence class.)
-        let interp = run("NIL NIL NEQ").await;
+        let interp = run("NIL NIL EQ NOT").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
@@ -542,11 +536,11 @@ mod comparison_budget_infrastructure_tests {
     }
 }
 
-/// Phase 7 — EQ / NEQ Undecidable-NIL plumbing.
+/// Phase 7 — EQ Undecidable-NIL plumbing.
 ///
 /// Phase 6 (PR #904) wired the `Undecidable` / `ComparisonBudget`
 /// projection through the ordering path (`LT` / `LTE` / `GT` /
-/// `GTE`) and explicitly left `EQ` / `NEQ` for Phase 7. This module
+/// `GTE`) and explicitly left `EQ` for Phase 7. This module
 /// pins the new dispatch shape:
 ///
 /// 1. `pairwise_eq` is three-valued (`Option<bool>`): rational
@@ -554,14 +548,14 @@ mod comparison_budget_infrastructure_tests {
 ///    through `ExactReal::eq_with_budget` and may surface `None`.
 /// 2. `apply_equality` projects `None` to the LANG.VALUES.EXACT Undecidable
 ///    NIL via the existing `push_undecidable_nil` helper.
-/// 3. A vector-lifted `EQ` / `NEQ` short-circuits on the first
+/// 3. A vector-lifted `EQ` short-circuits on the first
 ///    NIL-producing pair (LANG.VALUES.EXACT).
 ///
 /// We can't yet construct a non-Rational `ExactReal` scalar value
 /// from Ajisai source — `ValueData::Scalar` is still `Fraction`-
 /// backed — so these tests:
 ///
-/// * regress the rational-operand fast path through EQ / NEQ for
+/// * regress the rational-operand fast path through EQ for
 ///   value equality, reduced-form equality, and structural fallback;
 /// * pin the dispatch helpers (`ExactReal::eq_with_budget`) so the
 ///   non-Rational branch is exercised at the type-level boundary
@@ -592,7 +586,7 @@ mod phase_seven_eq_budget_tests {
         }
     }
 
-    // ── Regression: EQ / NEQ still decide on rationals ───────────────────
+    // ── Regression: EQ still decides on rationals ───────────────────
 
     #[tokio::test]
     async fn eq_decides_value_equal_reduced_rationals() {
@@ -607,14 +601,14 @@ mod phase_seven_eq_budget_tests {
     }
 
     #[tokio::test]
-    async fn neq_decides_unequal_rationals() {
-        let interp = run("1/2 2/3 NEQ").await;
+    async fn eq_not_decides_unequal_rationals() {
+        let interp = run("1/2 2/3 EQ NOT").await;
         assert!(bool_of(&interp));
     }
 
     #[tokio::test]
-    async fn neq_decides_equal_reduced_rationals() {
-        let interp = run("2/4 1/2 NEQ").await;
+    async fn eq_not_decides_equal_reduced_rationals() {
+        let interp = run("2/4 1/2 EQ NOT").await;
         assert!(!bool_of(&interp));
     }
 
@@ -639,8 +633,8 @@ mod phase_seven_eq_budget_tests {
     }
 
     #[tokio::test]
-    async fn neq_with_right_nil_passes_nil_through() {
-        let interp = run("1 NIL NEQ").await;
+    async fn eq_not_with_right_nil_passes_nil_through() {
+        let interp = run("1 NIL EQ NOT").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
@@ -688,7 +682,7 @@ mod phase_seven_eq_budget_tests {
     // `apply_equality` projects the `None` branch through
     // `push_undecidable_nil` — the same helper the ordering path
     // already uses. The contract is identical, so any future EQ /
-    // NEQ Undecidable NIL surfaces the LANG.VALUES.EXACT metadata.
+    // EQ Undecidable NIL surfaces the LANG.VALUES.EXACT metadata.
 
     #[tokio::test]
     async fn eq_undecidable_nil_carries_comparison_budget_origin() {

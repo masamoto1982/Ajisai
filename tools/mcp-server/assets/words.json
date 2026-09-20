@@ -358,59 +358,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "NEQ",
-      "aliases": [
-        "!="
-      ],
-      "family": "comparison",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "budgetExhausted",
-        "reason": "undecidable"
-      },
-      "errorWhen": [],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT",
-        "LANG.VALUES.DENOTATION"
-      ],
-      "documentation": {
-        "summary": "Test inequality of two values.",
-        "hover": "NEQ — test inequality",
-        "lookup": "Test inequality of two values.",
-        "syntax": "1 2 NEQ",
-        "role": "Comparison primitive: Test inequality of two values.",
-        "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "Neq",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "comparison",
-      "vocabularyTier": "standard",
-      "standardKind": "shorthand"
-    },
-    {
       "name": "LT",
       "aliases": [
         "<"
@@ -4140,6 +4087,112 @@
       "standardKind": "algorithm"
     },
     {
+      "name": "UPPER",
+      "aliases": [],
+      "family": "text",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "The String with every character mapped to its upper form under Unicode's default, locale-independent case mapping: `'Ajisai' UPPER` is `'AJISAI'`, `'straße' UPPER` is `'STRASSE'`. A character with no upper-case form is kept as it is, so the answer may be longer than the operand but never shorter. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native.",
+        "hover": "UPPER — the upper-case form of a String",
+        "lookup": "The String with every character mapped to its upper form under Unicode's default, locale-independent case mapping: `'Ajisai' UPPER` is `'AJISAI'`, `'straße' UPPER` is `'STRASSE'`. A character with no upper-case form is kept as it is, so the answer may be longer than the operand but never shorter. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native.",
+        "syntax": "'Ajisai' UPPER",
+        "role": "Text primitive: the upper-case form of a String.",
+        "stackEffect": "[ str ] -> [ str' ]"
+      },
+      "executorKey": "Upper",
+      "effects": [],
+      "partiality": "partial",
+      "acceptedDomain": "text",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
+    },
+    {
+      "name": "LOWER",
+      "aliases": [],
+      "family": "text",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "cost": {
+        "steps": {
+          "class": "const",
+          "exact": true
+        },
+        "numeric": {
+          "class": "const",
+          "exact": false
+        },
+        "collection": {
+          "class": "linear",
+          "exact": true
+        }
+      },
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "The String with every character mapped to its lower form under Unicode's default, locale-independent case mapping: `'Ajisai' LOWER` is `'ajisai'`, `'ΣΑΣ' LOWER` is `'σασ'`. The final-sigma rule and every other language-specific rule are not applied: the same text lowers the same way wherever it is run. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native.",
+        "hover": "LOWER — the lower-case form of a String",
+        "lookup": "The String with every character mapped to its lower form under Unicode's default, locale-independent case mapping: `'Ajisai' LOWER` is `'ajisai'`, `'ΣΑΣ' LOWER` is `'σασ'`. The final-sigma rule and every other language-specific rule are not applied: the same text lowers the same way wherever it is run. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native.",
+        "syntax": "'Ajisai' LOWER",
+        "role": "Text primitive: the lower-case form of a String.",
+        "stackEffect": "[ str ] -> [ str' ]"
+      },
+      "executorKey": "Lower",
+      "effects": [],
+      "partiality": "partial",
+      "acceptedDomain": "text",
+      "category": "cast",
+      "vocabularyTier": "standard",
+      "standardKind": "algorithm"
+    },
+    {
       "name": "TOKENIZE",
       "aliases": [],
       "family": "text",
@@ -4436,11 +4489,11 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding half to even: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'2'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
+        "summary": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
         "hover": "FORMAT — render an exact scalar as decimal text at a stated precision",
-        "lookup": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding half to even: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'2'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
+        "lookup": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
         "syntax": "1/3 5 FORMAT",
-        "role": "Text primitive: render an exact scalar as decimal text at a stated precision, half to even.",
+        "role": "Text primitive: render an exact scalar as decimal text at a stated precision, ties away from zero.",
         "stackEffect": "[ x ] [ digits ] -> [ text ]"
       },
       "executorKey": "Format",
@@ -4614,58 +4667,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "PROBE",
-      "aliases": [],
-      "family": "control",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "notExecutable"
-      ],
-      "purity": "pure",
-      "determinism": "stateRelative",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "linear",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.MACHINE.TRANSFORMERS",
-        "LANG.SOURCE.CODE",
-        "LANG.CONTRACT.CHECK"
-      ],
-      "documentation": {
-        "summary": "Infer a code block's contract against the current dictionary, without evaluating it, and answer it as a Record.",
-        "hover": "PROBE — infer a contract without running it",
-        "lookup": "Infer a code block's contract against the current dictionary, without evaluating it. The answer is a Record — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps` — the same shape `CONTRACT` answers for a User Word, and the same inference `ajisai check --contract` runs from outside the language, reached from inside it: `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data, so an unresolved dependency is a gap in the answer, not an ERROR. Unlike EXEC, PROBE never evaluates its operand, so it is unconditionally pure: a block that would PRINT if run reports that fact under `effects` without ever printing.",
-        "syntax": "[ 1 2 ADD ] PROBE",
-        "role": "Control primitive: narrow a description into what can be known about it without running it.",
-        "stackEffect": "[ code ] -> [ record ]"
-      },
-      "executorKey": "Probe",
-      "effects": [],
-      "partiality": "partial",
-      "category": "control",
-      "vocabularyTier": "kernel"
-    },
-    {
       "name": "CONTRACT",
       "aliases": [],
       "family": "control",
@@ -4701,15 +4702,16 @@
       "clauses": [
         "LANG.CONTRACT.REGISTRY",
         "LANG.CONTRACT.CHECK",
-        "LANG.DICTIONARY.RESOLUTION"
+        "LANG.DICTIONARY.RESOLUTION",
+        "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "The contract of the Word a Symbol names, as a Record. For a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a User Word it is the contract inferred from its body without running it — the same inference `PROBE` runs over a block and `ajisai check --contract` runs from outside — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`. A Symbol that names no Word projects `missingField`; a non-Symbol operand is an ERROR (`notASymbol`).",
-        "hover": "CONTRACT — the contract of a Word, as a Record",
-        "lookup": "The contract of the Word a Symbol names, as a Record. For a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a User Word it is the contract inferred from its body without running it — the same inference `PROBE` runs over a block and `ajisai check --contract` runs from outside — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`. A Symbol that names no Word projects `missingField`; a non-Symbol operand is an ERROR (`notASymbol`).",
+        "summary": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
+        "hover": "CONTRACT — the contract of a Word or a block, as a Record",
+        "lookup": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
         "syntax": "[ ADD ] 0 GET CONTRACT",
-        "role": "Control primitive: the registered or inferred contract of a Word, as a Record.",
-        "stackEffect": "[ symbol ] -> [ record ]"
+        "role": "Control primitive: the registered or inferred contract of a Word or a block, as a Record.",
+        "stackEffect": "[ symbol | code ] -> [ record ]"
       },
       "executorKey": "Contract",
       "effects": [],

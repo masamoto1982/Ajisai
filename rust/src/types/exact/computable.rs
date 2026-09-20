@@ -64,7 +64,7 @@ impl PartialEq for Computable {
 /// allocation identity for a Tier 2 element — `PI PI 2 COLLECT UNIQUE` keeps
 /// two, the same π bound once and used twice keeps one. Making them project
 /// the undecidable NIL that `SORT`/`ORDER` project is the open follow-up;
-/// the comparison family (`EQ`/`NEQ`) no longer reads this impl at all.
+/// the comparison family (`EQ` and the orderings) no longer reads this impl at all.
 impl std::hash::Hash for Computable {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         (Arc::as_ptr(&self.gen) as *const ()).hash(state);

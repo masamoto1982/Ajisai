@@ -54,8 +54,8 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
             "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
                 Some(Interpretation::RawNumber)
             }
-            "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT"
-            | "STARTS-WITH?" | "ENDS-WITH?" => Some(Interpretation::TruthValue),
+            "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "AND" | "OR" | "NOT" | "STARTS-WITH?"
+            | "ENDS-WITH?" => Some(Interpretation::TruthValue),
             "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
             // `CONCAT` is deliberately absent: its result role depends on its
             // operands (joining two Texts yields a Text), so `op_concat` pushes the

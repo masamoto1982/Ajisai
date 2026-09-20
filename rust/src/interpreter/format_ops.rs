@@ -6,8 +6,9 @@
 //! places without first rounding the *value* (`QUANTIZE`) and then spelling
 //! the rounded number. `FORMAT` is that place, and it is the only one: what
 //! leaves it is text, so the rounded quantity never re-enters arithmetic as
-//! if it were exact. The rule is fixed — half to even — because a choice of
-//! rounding mode is a family of Words, and the vocabulary has room for one.
+//! if it were exact. The rule is fixed — a tie rounds away from zero, the
+//! one rule `ROUND` and `QUANTIZE` already apply — because a choice of
+//! rounding mode is a family of Words, and the language keeps one rule.
 //!
 //! The decision is exact at every tier. A rational scales and rounds
 //! outright. An algebraic irrational compares its scaled fraction part against
@@ -17,7 +18,7 @@
 //! already reach when refinement runs out — rather than guess a digit.
 
 use num_bigint::BigInt;
-use num_traits::{One, Signed, Zero};
+use num_traits::{One, Signed};
 use std::cmp::Ordering;
 
 use crate::error::{AjisaiError, NilReason, Result};
@@ -65,11 +66,11 @@ enum Rounded {
     Undecidable,
 }
 
-/// `x * 10^digits`, rounded half to even to an integer.
+/// `x * 10^digits`, rounded to an integer with a tie away from zero.
 fn round_scaled(x: &ExactReal, digits: u64) -> Rounded {
     let scale = Fraction::new(BigInt::from(10).pow(digits as u32), BigInt::one());
     if let Some(f) = x.as_rational() {
-        let rounded = f.mul(&scale).round_half_even();
+        let rounded = f.mul(&scale).round();
         return Rounded::Integer(rounded.numerator());
     }
     let scaled = x.mul(&ExactReal::from_fraction(scale));
@@ -85,10 +86,13 @@ fn round_scaled(x: &ExactReal, digits: u64) -> Rounded {
     match fraction_part.cmp_within(&half, DEFAULT_COMPARISON_WATER) {
         ExactCmp::Decided(Ordering::Less) => Rounded::Integer(floor_int),
         ExactCmp::Decided(Ordering::Greater) => Rounded::Integer(floor_int + 1),
-        ExactCmp::Decided(Ordering::Equal) => {
-            let even = (&floor_int % 2u8).is_zero();
-            Rounded::Integer(if even { floor_int } else { floor_int + 1 })
-        }
+        // A tie cannot occur for an irrational, but the rule is stated all
+        // the same: away from zero.
+        ExactCmp::Decided(Ordering::Equal) => Rounded::Integer(if floor_int.is_negative() {
+            floor_int
+        } else {
+            floor_int + 1
+        }),
         ExactCmp::Starved { .. } | ExactCmp::Absent => Rounded::Undecidable,
     }
 }

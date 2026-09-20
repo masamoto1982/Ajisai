@@ -74,7 +74,7 @@ Superseded designs, migration history, and the reasoning behind a change are rec
 Ajisai identity is the correspondence from normalized source to the ordered observation of stack, output, dictionary state, and structured diagnosis. Two implementations are semantically equivalent when that correspondence agrees for every conforming program.
 </p>
 
-<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>100</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>11</td><td>Alias spellings — the 11 symbolic surface forms of those Words, none counted as vocabulary</td></tr><tr><td>55</td><td>Semantic Kernel Words, within the 100 — carry the language's semantic identity</td></tr><tr><td>45</td><td>Standard Words, within the 100 — carry its practical surface</td></tr></tbody></table></div>
+<div class="ref-table-wrap"><table class="ref-table"><thead><tr><th>Count</th><th>What</th></tr></thead><tbody><tr><td>100</td><td>Canonical Words — the vocabulary (<code>docs/word-manifest.json</code> is the count of record)</td></tr><tr><td>10</td><td>Alias spellings — the 10 symbolic surface forms of those Words, none counted as vocabulary</td></tr><tr><td>54</td><td>Semantic Kernel Words, within the 100 — carry the language's semantic identity</td></tr><tr><td>46</td><td>Standard Words, within the 100 — carry its practical surface</td></tr></tbody></table></div>
 
 <p>
 Kernel and Standard are both ordinary Core Words in one flat dictionary, reached by their plain names, with contracts, laws, and conformance held to the same standard. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core — unless expressing it that way costs asymptotically more than the same work done in the kernel, in which case what the definition demonstrates is a gap in the vocabulary rather than the absence of one.
@@ -137,7 +137,7 @@ Code is a Vector holding source for later evaluation — not a distinct domain f
 </p>
 
 <p>
-Producing, storing, displaying, and evaluating a Vector as code are distinct operations. Quoted code is not eagerly executed: evaluation occurs only through a Word whose contract requests it — <code>EXEC</code>, <code>PROBE</code>, and the higher-order family — never merely by building or holding the value. Branching is not among them: <code>SELECT</code> chooses between two values the program has already built, so a branch evaluates nothing and skips nothing. A bare name written where a Vector element is being collected denotes a Symbol (LANG.VALUES.VECTOR) — data until something executes it — so a name is not resolved merely by appearing inside a literal.
+Producing, storing, displaying, and evaluating a Vector as code are distinct operations. Quoted code is not eagerly executed: evaluation occurs only through a Word whose contract requests it — <code>EXEC</code> and the higher-order family — never merely by building or holding the value; <code>CONTRACT</code> reads a block without evaluating it. Branching is not among them: <code>SELECT</code> chooses between two values the program has already built, so a branch evaluates nothing and skips nothing. A bare name written where a Vector element is being collected denotes a Symbol (LANG.VALUES.VECTOR) — data until something executes it — so a name is not resolved merely by appearing inside a literal.
 </p>
 
 <h3 id="lang-source-frame">LANG.SOURCE.FRAME — What a block sees</h3>
@@ -351,11 +351,11 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>Every Core Word's contract is a machine-readable record in <code>spec/words.json</code>, conforming to <code>spec/words.schema.json</code>. The record is the single place a Word's arity, consumption, NIL policy, projection reason, error conditions, purity, and documentation are stated.</p>
 
-<p>Prose that restates a contract is a projection of that record and carries no independent authority. <code>CONTRACT</code> answers the record from inside the language, as a Record keyed by those fields, for a Symbol naming a Core Word; for a User Word it answers the inferred contract of LANG.CONTRACT.CHECK in the shape <code>PROBE</code> answers, and for a Symbol naming nothing it projects <code>missingField</code>.</p>
+<p>Prose that restates a contract is a projection of that record and carries no independent authority. <code>CONTRACT</code> answers the record from inside the language, as a Record keyed by those fields, for a Symbol naming a Core Word; for a User Word, or for a block of code, it answers the inferred contract of LANG.CONTRACT.CHECK in one shape, and for a Symbol naming nothing it projects <code>missingField</code>.</p>
 
 <h3 id="lang-contract-check">LANG.CONTRACT.CHECK — Pre-execution check</h3>
 
-<p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>. <code>PROBE</code> reaches the same inference from inside the language, over a Vector of code (LANG.SOURCE.CODE) rather than a named declaration: it never evaluates its operand, so calling it carries none of the operand's own effects. Its answer is a Record whose <code>confidence</code> and <code>gaps</code> carry the three outcomes below as data.</p>
+<p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>. <code>CONTRACT</code> reaches the same inference from inside the language, over a Vector of code (LANG.SOURCE.CODE) or the name of a User Word: it never evaluates its operand, so calling it carries none of the operand's own effects. Its answer is a Record whose <code>confidence</code> and <code>gaps</code> carry the three outcomes below as data.</p>
 
 <p>The check is deliberately <strong>conservative and partial</strong>. It reports exactly three outcomes per declaration, each the trichotomy of LANG.FAILURE.TRICHOTOMY applied at check time rather than at run time:</p>
 

@@ -81,12 +81,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Compare greater-than-or-equal",
     },
     CoreWordAlias {
-        alias: "!=",
-        canonical: Some("NEQ"),
-        kind: CoreWordAliasKind::SymbolAlias,
-        summary: "Compare inequality",
-    },
-    CoreWordAlias {
         alias: "'",
         canonical: None,
         kind: CoreWordAliasKind::InputHelper,

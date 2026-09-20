@@ -8,4 +8,4 @@ pub(crate) mod cast_value_helpers;
 pub use cast_chars_join::{op_chars, op_join};
 pub use cast_conversions::{op_num, op_str};
 pub use cast_search_ops::{op_replace, op_search};
-pub use cast_text_ops::{op_tokenize, op_trim};
+pub use cast_text_ops::{op_lower, op_tokenize, op_trim, op_upper};

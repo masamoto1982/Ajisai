@@ -1,5 +1,5 @@
 //! Inferred contracts for user-defined words. `word_contract_probe.rs`
-//! reuses `infer_word_contract_inner` for `PROBE`'s anonymous-CodeBlock case.
+//! reuses `infer_word_contract_inner` for `CONTRACT`'s anonymous-block case.
 //!
 //! A word's contract is inferred from its body and resolved dependency
 //! contracts without executing Ajisai code. Built-in contracts are projected

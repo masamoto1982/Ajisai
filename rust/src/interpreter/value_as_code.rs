@@ -4,7 +4,7 @@
 //! unmodified after the CodeBlock/Vector unification
 //! (docs/dev/type-unification-work-order-2026-08.md).
 //!
-//! `EXEC`, `PROBE`, `DEF`, and the higher-order words (`MAP`/`FILTER`/
+//! `EXEC`, `CONTRACT`, `DEF`, and the higher-order words (`MAP`/`FILTER`/
 //! `FOLD`/`ANY`/`ALL`) all reach a Vector value that needs to run as
 //! instructions. Rather than a second execution loop keyed on `&[Value]`,
 //! this converts the elements back to tokens and hands them to the existing,

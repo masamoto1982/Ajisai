@@ -536,9 +536,7 @@ fn semantic_area_for(word: Option<&str>, why: &CauseClass) -> &'static str {
         Some("ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "SQRT" | "FLOOR" | "CEIL" | "ROUND") => {
             "exact-real-arithmetic"
         }
-        Some("EQ" | "NEQ" | "LT" | "LTE" | "GT" | "GTE" | "COMPARE-WITHIN") => {
-            "exact-real-comparison"
-        }
+        Some("EQ" | "LT" | "LTE" | "GT" | "GTE" | "COMPARE-WITHIN") => "exact-real-comparison",
         Some("AND" | "OR" | "NOT") => "k3-truth",
         Some(word) if word.contains('@') => "hosted-effect",
         Some("PRINT") => "hosted-effect",

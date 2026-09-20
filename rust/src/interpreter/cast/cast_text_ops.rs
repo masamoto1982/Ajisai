@@ -46,6 +46,29 @@ pub fn op_trim(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// `UPPER`: Unicode's default, locale-independent upper-case mapping,
+/// applied character by character — the table is Unicode's own, which no
+/// definition over `CHARS` and `JOIN` could carry, so the Word is native.
+/// `'straße' UPPER` is `'STRASSE'`.
+pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
+    let s = pop_string(interp, "UPPER")?;
+    let mapped: String = s.chars().flat_map(char::to_uppercase).collect();
+    interp.stack.push(Value::from_string(&mapped));
+    Ok(())
+}
+
+/// `LOWER`: the default lower-case mapping, character by character. No
+/// context- or language-specific rule (final sigma, Turkish dotless i) is
+/// applied — `str::to_lowercase` would apply the final-sigma rule — so the
+/// same text lowers the same way wherever it is run, and `CHARS LOWER` per
+/// character agrees with `LOWER` of the whole.
+pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
+    let s = pop_string(interp, "LOWER")?;
+    let mapped: String = s.chars().flat_map(char::to_lowercase).collect();
+    interp.stack.push(Value::from_string(&mapped));
+    Ok(())
+}
+
 pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     let sep_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let src_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow);

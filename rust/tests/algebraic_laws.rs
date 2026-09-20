@@ -138,7 +138,6 @@ proptest! {
     fn comparison_dualities(a in small(), b in small()) {
         assert_law("lt-gt-dual", &format!("{a} {b} LT"), &format!("{b} {a} GT"));
         assert_law("lte-gte-dual", &format!("{a} {b} LTE"), &format!("{b} {a} GTE"));
-        assert_law("neq-eq-not", &format!("{a} {b} NEQ"), &format!("{a} {b} EQ NOT"));
     }
 
     // ─────────────────── NIL-projection monad (§5) ───────────────────

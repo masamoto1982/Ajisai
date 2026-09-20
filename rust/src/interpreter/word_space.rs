@@ -83,18 +83,17 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Add | Sub | Mul | Div => (Linear, true),
         // Comparisons and logic may produce elementwise results; O(input),
         // not audited as tight.
-        Eq | Lt | Le | Gt | Gte | Neq | And | Or | Not | Select => (Linear, false),
+        Eq | Lt | Le | Gt | Gte | And | Or | Not | Select => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
         Map | Filter | Fold | Scan | Any | All | Rank => (Unbounded, false),
         Exec => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
-        // `Probe` walks the block's tokens once without evaluating them, so
-        // its output scales with the block's own size rather than with
-        // anything unbounded.
-        Get | Length | Probe => (Const, false),
-        // `Contract` answers one fixed-shape Record; `Defined` a truth value;
-        // `Digest` a fixed-length text after walking its operand once.
+        Get | Length => (Const, false),
+        // `Contract` walks a block's tokens once without evaluating them, or
+        // reads one registry entry, and answers one fixed-shape Record;
+        // `Defined` a truth value; `Digest` a fixed-length text after walking
+        // its operand once.
         Contract | Defined | Digest => (Const, false),
         NilCheck | NilReason | Absent | Fail => (Const, false),
         True | False | Nil | Pi => (Const, false),
@@ -108,7 +107,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
         Floor | Ceil | Round | Quantize | Mod => (Linear, false),
-        Str | Num | Chars | Tokenize | Trim | Search | Replace => (Linear, false),
+        Str | Num | Chars | Tokenize | Trim | Upper | Lower | Search | Replace => (Linear, false),
         // Text out of a value, or a value out of text: both O(input).
         Format => (Linear, false),
         JsonDecode | JsonEncode => (Linear, true),

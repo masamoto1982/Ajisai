@@ -65,7 +65,7 @@ async fn a_named_condition_is_one_the_word_declares() {
         ("[ 1 2 ] [ 'X' BIND ] FILTER", "FILTER"),
         ("[ 1 2 ] [ 'X' BIND ] ALL", "ALL"),
         ("[ 1 2 ] [ 'X' BIND ] ANY", "ANY"),
-        ("42 PROBE", "PROBE"),
+        ("42 CONTRACT", "CONTRACT"),
         ("[ 1 2 ] 5 MAP", "MAP"),
         ("TRUE NUM", "NUM"),
         ("NIL NUM", "NUM"),
@@ -128,11 +128,11 @@ async fn the_named_condition_is_the_protocol_category() {
     );
 }
 
-/// `notExecutable` is a wrong operand and `blockContractViolation` a broken
+/// `notASymbol` is a wrong operand and `blockContractViolation` a broken
 /// promise, so they must not answer the caller with the same repair.
 #[tokio::test]
 async fn a_wrong_operand_and_a_broken_block_get_different_repairs() {
-    let operand = raise_diagnosis("42 PROBE").await;
+    let operand = raise_diagnosis("42 CONTRACT").await;
     let block = raise_diagnosis("[ 1 2 ] [ 'X' BIND ] MAP").await;
     assert_eq!(operand.why, CauseClass::ValueShape);
     assert_eq!(block.why, CauseClass::ContractViolation);
