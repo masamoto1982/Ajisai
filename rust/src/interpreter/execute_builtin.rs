@@ -7,9 +7,9 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
     execute_del, format_ops, higher_order, higher_order_fold, io, json_decode, json_encode, logic,
-    math_ops, nil_diagnostics, ordering_ops, probe, quantize_ops, record_ops, reflection_ops,
-    search_ops, shape_ops, shape_words, sort, tensor_cmds, vector_ops, ConsumptionMode,
-    Interpreter,
+    math_ops, nil_diagnostics, ordering_ops, power_ops, probe, quantize_ops, record_ops,
+    reflection_ops, search_ops, shape_ops, shape_words, sort, tensor_cmds, transcendental_ops,
+    vector_ops, ConsumptionMode, Interpreter,
 };
 
 impl Interpreter {
@@ -319,6 +319,14 @@ impl Interpreter {
             WordId::Min => math_ops::op_min(self),
             WordId::Max => math_ops::op_max(self),
             WordId::Sqrt => math_ops::op_sqrt(self),
+            WordId::Pow => power_ops::op_pow(self),
+            WordId::Gcd => power_ops::op_gcd(self),
+            WordId::Ratio => power_ops::op_ratio(self),
+            WordId::Exp => transcendental_ops::op_exp(self),
+            WordId::Ln => transcendental_ops::op_ln(self),
+            WordId::Sin => transcendental_ops::op_sin(self),
+            WordId::Cos => transcendental_ops::op_cos(self),
+            WordId::Atan => transcendental_ops::op_atan(self),
             WordId::Pi => math_ops::op_pi(self),
             WordId::Sort => sort::op_sort(self),
             WordId::Order => ordering_ops::op_order(self),

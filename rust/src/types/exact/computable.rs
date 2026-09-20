@@ -101,6 +101,27 @@ impl Computable {
     pub fn enclosure_at(&self, step: u64) -> RatInterval {
         (self.gen)(step)
     }
+
+    /// Build from one rigorous base enclosure computed lazily, the way `PI`
+    /// is built: the generator outward-rounds the base bounds to the `2^-step`
+    /// dyadic grid, so its enclosures nest and shrink toward the base one
+    /// and plateau there once the grid is finer than `BASE_BITS`. The base is
+    /// computed at most once, on the first observation, and every step after
+    /// that costs one rounding — the cost profile π already has, shared by
+    /// every transcendental value (`exp`, `ln`, `sin`, `cos`, `atan`, `POW`).
+    pub(crate) fn from_base_bounds(
+        tag: &'static str,
+        base: impl Fn() -> RatInterval + Send + Sync + 'static,
+    ) -> Computable {
+        let cell: Arc<std::sync::OnceLock<RatInterval>> = Arc::new(std::sync::OnceLock::new());
+        Self::from_enclosures(tag, move |step| {
+            let bounds = cell.get_or_init(&base);
+            if step >= crate::types::exact::series::BASE_BITS {
+                return bounds.clone();
+            }
+            crate::types::exact::series::outward(bounds, step)
+        })
+    }
 }
 
 /// A `Computable` paired with its refinement progress: the stateful

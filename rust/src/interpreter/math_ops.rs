@@ -38,7 +38,10 @@ fn compare_for_numeric(
 /// was an ERROR while `[ -1 2 ] 1 MUL` lifted happily — the same clause read
 /// two ways depending on arity. A NIL lane passes through, as it does for the
 /// scalar law.
-fn lift_unary_numeric(value: &Value, scalar_op: &dyn Fn(&Value) -> Result<Value>) -> Result<Value> {
+pub(crate) fn lift_unary_numeric(
+    value: &Value,
+    scalar_op: &dyn Fn(&Value) -> Result<Value>,
+) -> Result<Value> {
     match value.as_vector_view() {
         Some(items) => {
             let lanes = items
@@ -187,7 +190,7 @@ pub(crate) fn op_pi(interp: &mut Interpreter) -> Result<()> {
 /// most ordinary thing anyone writes with `MAX` — was an ERROR while
 /// `[ -1 2 -3 ] 0 ADD` lifted happily. Same clause, same family, two answers.
 /// A NIL lane passes through, as it does for the scalar law.
-fn lift_binary_numeric(
+pub(crate) fn lift_binary_numeric(
     a: &Value,
     b: &Value,
     leaf_op: &dyn Fn(&Value, &Value) -> Result<Value>,

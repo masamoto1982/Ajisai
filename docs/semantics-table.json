@@ -28102,6 +28102,2404 @@
       "outcome": "value"
     },
     {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarOne",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "nil:divisionByZero"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "POW",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarOne",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "GCD",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RATIO",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "EXP",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "nil:domainMiss"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "nil:domainMiss"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "LN",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "SIN",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "COS",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "ATAN",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
       "word": "PI",
       "inputs": [],
       "outcome": "value"

@@ -18,11 +18,12 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 92 Words are:
+reaching for it exactly where it would have helped. The 100 Words are:
 
 | you need | Words |
 |---|---|
-| arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `CEIL` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `RANDOM` |
+| arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `CEIL` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `POW` `GCD` `RATIO` `RANDOM` |
+| transcendental (computable reals, compared under a budget) | `EXP` `LN` `SIN` `COS` `ATAN` `PI` · render with `FORMAT`; `1 EXP 1 EXP EQ` is `NIL`, never a wrong answer |
 | comparison and logic | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` · `AND` `OR` `NOT` `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
 | collections | `SORT` `ORDER` `UNIQUE` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |

@@ -181,12 +181,12 @@ export const TOOLS = [
     // of leaving "out of domain" to be inferred.
     description:
       "Execute a bounded Ajisai program and return its stack. Ajisai is postfix (RPN) and its numbers are exact rationals closed under square root — no floats, so results are reproducible and comparisons decide. " +
-      "Its 92 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT), comparison (EQ NEQ LT LTE GT GTE), boolean logic (AND OR NOT), " +
+      "Its 100 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT POW GCD RATIO), transcendentals as computable reals compared under a budget (EXP LN SIN COS ATAN PI — render them with FORMAT), comparison (EQ NEQ LT LTE GT GTE), boolean logic (AND OR NOT), " +
       "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE ZIP RANGE FILL TAKE DROP CONCAT REVERSE LENGTH GET PUT INDEX-OF MEMBER BSEARCH SHAPE RESHAPE FLATTEN DEPTH), " +
       "records — keyed data, built by RECORD from a key vector and a value vector, read by AT/KEYS/VALUES/HAS?, rewritten by WITH/WITHOUT/MERGE; TALLY and GROUP answer Records — " +
       "higher-order blocks (MAP FILTER FOLD SCAN ANY ALL RANK), text (CHARS JOIN TOKENIZE TRIM SEARCH REPLACE NUM STR FORMAT), JSON (JSON-DECODE JSON-ENCODE — objects are Records, numbers exact, nothing rounded), absence (NIL NIL? NIL-REASON ABSENT), control (SELECT EXEC PROBE FAIL), reflection (DEFINED? DIGEST CONTRACT — a Word's contract as a Record, from inside the language), plus DEF to name your own. " +
       "Word names are exact and case-sensitive; the full list is the ajisai://vocabulary resource and word_contract answers a near-miss with suggestions, so look a name up rather than guessing it. " +
-      "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: transcendentals, floats, I/O, and general-purpose programming. " +
+      "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: floats, I/O, and general-purpose programming. " +
       "Ajisai also has no external or real-world reference data of its own — no exchange rates, no calendars, no reading speeds, no other language's syntax semantics. Do not invent a plausible-looking number for one of those and run it through this tool to dress a guess up as an exact answer; if the question needs a real-world fact rather than a value already given or derivable from first principles inside this domain, answer directly without a call, or say you don't know.",
     inputSchema: sourceSchema,
     outputSchema: envelopeSchema,
@@ -528,7 +528,7 @@ const RESOURCES = [
   // The whole contract registry in one read. `word_contract` answers one name
   // at a time, which is the wrong shape for the question cost exists to answer:
   // bounding a phrase means joining the bounds of every Word in it, and a
-  // caller cannot do that from 92 separate probes.
+  // caller cannot do that from 100 separate probes.
   { uri: "ajisai://contracts", name: "Ajisai canonical Word contracts", mimeType: "application/json" },
   { uri: "ajisai://schema/result", name: "Ajisai MCP result contract", mimeType: "application/json" },
   { uri: "ajisai://limits", name: "Ajisai MCP host profile limits", mimeType: "application/json" },
