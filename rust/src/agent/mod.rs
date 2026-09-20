@@ -21,7 +21,7 @@ mod error_stack_tests;
 pub(crate) mod execution_receipt;
 #[cfg(test)]
 mod execution_receipt_tests;
-mod observation_digest;
+pub(crate) mod observation_digest;
 #[cfg(test)]
 mod observation_digest_tests;
 pub(crate) mod outcome_report;

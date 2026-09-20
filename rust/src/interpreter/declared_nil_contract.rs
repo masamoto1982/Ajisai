@@ -80,6 +80,14 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
             "EXEC: expected a Vector ([ ... ]) as the code operand, got Nil",
         ),
         ("PROBE", 0) => AjisaiError::declared("notExecutable", "PROBE requires a CodeBlock"),
+        ("CONTRACT", 0) => AjisaiError::declared(
+            "notASymbol",
+            "CONTRACT: expected a Symbol naming a Word, got NIL",
+        ),
+        ("DEFINED?", 0) => AjisaiError::declared(
+            "notASymbol",
+            "DEFINED?: expected a Symbol naming a Word, got NIL",
+        ),
         ("DEL", 0) => AjisaiError::declared("nonText", "expected a name (String), got Nil"),
         ("FAIL", 0) => AjisaiError::declared(
             "nonText",
@@ -124,6 +132,14 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
         ("RESHAPE", 1) => AjisaiError::declared(
             "invalidShape",
             "RESHAPE: expected a shape — a Vector of positive integers — got NIL",
+        ),
+        ("FORMAT", 0) => AjisaiError::declared(
+            "nonNumeric",
+            "FORMAT: expected an exact scalar as the value, got NIL",
+        ),
+        ("FORMAT", 1) => AjisaiError::declared(
+            "invalidCount",
+            "FORMAT: expected a non-negative integer digit count, got NIL",
         ),
         ("BSEARCH", _) => AjisaiError::declared(
             "nonVector",
@@ -335,8 +351,9 @@ mod declared_nil_contract_tests {
         // operand each), RANDOM, CONCAT, TAKE, DROP, TOKENIZE, DEF, RESHAPE,
         // BSEARCH, SEARCH (2 each) and REPLACE (3) — 11 + 18 + 3.
         // Phase 5 added RECORD, MERGE and WITHOUT (2 operands each): 32 + 6.
+        // Phase 6 added DEFINED? and CONTRACT (1 each) and FORMAT (2): 38 + 4.
         assert_eq!(
-            checked, 38,
+            checked, 42,
             "the set of fixed-arity rejectNil Words changed; update nil_rejection_error"
         );
     }

@@ -93,6 +93,9 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // its output scales with the block's own size rather than with
         // anything unbounded.
         Get | Length | Probe => (Const, false),
+        // `Contract` answers one fixed-shape Record; `Defined` a truth value;
+        // `Digest` a fixed-length text after walking its operand once.
+        Contract | Defined | Digest => (Const, false),
         NilCheck | NilReason | Absent | Fail => (Const, false),
         True | False | Nil | Pi => (Const, false),
         // Structure builders bounded by their operands' total size.
@@ -106,6 +109,9 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // Rounding/number casts: output bounded by operand digit count.
         Floor | Ceil | Round | Quantize | Mod => (Linear, false),
         Str | Num | Chars | Tokenize | Trim | Search | Replace => (Linear, false),
+        // Text out of a value, or a value out of text: both O(input).
+        Format => (Linear, false),
+        JsonDecode | JsonEncode => (Linear, true),
         // Repetition can multiply sizes (k × separator).
         Join => (Superlinear, false),
         // Dictionary registration copies bounded structure.

@@ -370,3 +370,63 @@ async fn random_is_a_pure_function_of_its_seed() {
     assert!(value.is_nil());
     assert_eq!(value.nil_reason(), Some(&NilReason::SpaceExhausted));
 }
+
+/// `FORMAT` answers what `QUANTIZE` to `10^digits` followed by a decimal
+/// spelling of the result would answer — the same rounded quantity — in one
+/// place, as text, so the rounding never re-enters arithmetic. Half rounds to
+/// even at every tier, and the last digit of a computable real is settled
+/// under the comparison budget or projected, never guessed.
+#[tokio::test]
+async fn format_agrees_with_quantize_and_rounds_half_to_even() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute(
+            "2/3 2 FORMAT 2/3 100 QUANTIZE 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT PI 2 FORMAT",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        rendered_stack(&interpreter),
+        ["'0.67'", "67/100", "'2'", "'4'", "'1.414'", "'3.14'"]
+    );
+
+    let mut interpreter = Interpreter::new();
+    let result = interpreter.execute("1/3 -1 FORMAT").await;
+    assert!(result.is_err(), "a negative digit count must raise");
+    assert_eq!(rendered_stack(&interpreter), ["1/3", "-1/1"]);
+}
+
+/// `JSON-DECODE` lands each JSON kind on its own domain with numbers exact,
+/// `JSON-ENCODE` writes only what JSON can spell exactly, and the two compose
+/// to the identity on the JSON image; a rational with no finite decimal
+/// travels as its lexeme in a string, so decoding gives the String `NUM`
+/// recovers the number from, and nothing is rounded on the way.
+#[tokio::test]
+async fn json_decode_and_encode_are_exact_and_compose_to_the_identity() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute(
+            "'{\"a\": 0.1, \"b\": [true, null, \"x\"]}' JSON-DECODE 'a' AT 10 MUL \
+             [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD JSON-ENCODE \
+             [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ \
+             1/3 JSON-ENCODE KEEP JSON-DECODE NUM \
+             2 SQRT JSON-ENCODE NIL-REASON \
+             '[1,' JSON-DECODE NIL-REASON",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        rendered_stack(&interpreter),
+        [
+            "1/1",
+            "'{\"a\":0.25,\"b\":[true,null,\"x\"]}'",
+            "TRUE",
+            "'\"1/3\"'",
+            "1/3",
+            "NIL",
+            "'domainMiss'",
+            "NIL",
+            "'invalidEncoding'",
+        ]
+    );
+}

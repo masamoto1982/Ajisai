@@ -1956,6 +1956,94 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3 id="format">桁数を決めて描く: <code>FORMAT</code></h3>
+                    <p>算術はどこでも丸めず、<code>STR</code>は厳密な字句を持たない数を断ります。それでも<code>1/3</code>を小数3桁で見たいことはあります。<code>FORMAT</code>がその唯一の場所です。値と桁数を受け、<strong>half-even</strong>（端数がちょうど半分なら偶数側へ）で丸めた十進テキストを返します。出てくるのはテキストであって数ではないので、丸めた量が算術に戻ることはありません。丸め方は固定です——選べるようにすると語が増えるだけだからです。桁数は非負の整数でなければならず（<code>invalidCount</code>）、値はスカラーでなければなりません（<code>nonNumeric</code>）。<code>PI</code>のような計算可能実数で最後の桁が予算内に決まらなければ、<code>undecidable</code>の<code>NIL</code>を投影します。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1/3 5 FORMAT</code></td>
+                                    <td><code>'0.33333'</code></td>
+                                    <td class="notes">丸めは表示境界でだけ起きる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>5/2 0 FORMAT</code></td>
+                                    <td><code>'2'</code></td>
+                                    <td class="notes">ちょうど半分は偶数側へ（<code>7/2 0 FORMAT</code>は<code>'4'</code>）。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>2 SQRT 3 FORMAT</code></td>
+                                    <td><code>'1.414'</code></td>
+                                    <td class="notes">無理数も体の全順序で最終桁が決まる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PI 4 FORMAT</code></td>
+                                    <td><code>'3.1416'</code></td>
+                                    <td class="notes">計算可能実数は比較予算の下で決める。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1/3 2 FORMAT 1 ADD</code></td>
+                                    <td>error</td>
+                                    <td class="notes">答えはテキスト。数に戻すなら<code>NUM</code>を通す。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
+                    <h3 id="json">JSONとの相互変換: <code>JSON-DECODE</code>と<code>JSON-ENCODE</code></h3>
+                    <p>ホストから届く構造化データはJSONで来ます。<code>JSON-DECODE</code>はJSONテキストを値にします。オブジェクトはメンバー名をその順に鍵とするRecord、配列はベクトル、文字列は文字列、数はそれが綴る<strong>厳密な有理数</strong>（<code>0.1</code>は<code>1/10</code>であって、最も近い浮動小数点数ではない）、<code>true</code>/<code>false</code>は真偽値、<code>null</code>は<code>NIL</code>です。ひとつのJSON値になっていないテキスト（壊れている、空、末尾に余分がある、同じ名前のメンバーが二度ある）は<code>invalidEncoding</code>の<code>NIL</code>を投影します。入れ子の深さはテキストだけが決めるので、この語はユーザー定義では書けません——言語の反復は、すでにあるベクトルの上でしか回らないからです。</p>
+                    <p><code>JSON-ENCODE</code>はその逆です。文字列を鍵とするRecordはオブジェクト、ベクトルは配列、<code>NIL</code>は<code>null</code>になります。有限の十進表記を持つ数（分母が2と5の積）だけがJSONの数として書かれ、それ以外の有理数は<code>"1/3"</code>のようにAjisaiの字句を文字列に入れて書きます。<code>1/3</code>を<code>0.333</code>と書けば、それは別の数だからです。Symbolや無理数、文字列でない鍵を持つRecordのようにJSONに像を持たない値は<code>domainMiss</code>の<code>NIL</code>を投影します。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'{"a": 1, "b": [true, null]}' JSON-DECODE</code></td>
+                                    <td><code>{ 'a': 1/1 'b': [ TRUE NIL ] }</code></td>
+                                    <td class="notes">オブジェクトはRecord、配列はベクトル。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'0.1' JSON-DECODE 10 MUL</code></td>
+                                    <td><code>1/1</code></td>
+                                    <td class="notes">数は厳密な有理数として読まれる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 'a' ] [ 1/4 ] RECORD JSON-ENCODE</code></td>
+                                    <td><code>'{"a":0.25}'</code></td>
+                                    <td class="notes">有限の十進表記を持つ数はJSONの数として書かれる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1/3 JSON-ENCODE</code></td>
+                                    <td><code>'"1/3"'</code></td>
+                                    <td class="notes">そうでない数は字句を文字列に入れて書く。丸めない。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>2 SQRT JSON-ENCODE NIL-REASON</code></td>
+                                    <td><code>NIL 'domainMiss'</code></td>
+                                    <td class="notes">JSONに像を持たない値は理由付きの<code>NIL</code>。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 'a' ] [ 1/4 ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">像を持つ値は往復で元に戻る。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="control" class="ref-page">
@@ -2621,8 +2709,8 @@ FILTER</code></td>
 
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は86個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この86個のワードは、<strong>51語のSemantic Kernel</strong>と<strong>35語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。86個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は92個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この92個のワードは、<strong>54語のSemantic Kernel</strong>と<strong>38語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。92個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -2661,6 +2749,68 @@ FILTER</code></td>
 
                     <h3>ワードの同一性</h3>
                     <p>すべてのワードは<strong>コンテンツ同一性</strong>を持ちます。これは、正規化された定義と、それが呼び出すワードたちの同一性にわたるダイジェストです。同じ同一性を持つ2つの定義は、名前が何であれ同じワードであり、定義を変更すると、それに依存するすべてのものの同一性が変わります。これが、<code>DEF</code>と<code>DEL</code>が、他の何かがまだ参照しているワードを乱すことを拒否する理由です。依存しているのはワードに対してであって、綴りに対してではないからです。</p>
+                    <h3 id="reflection">辞書を言語の中から読む: <code>DEFINED?</code>・<code>DIGEST</code>・<code>CONTRACT</code></h3>
+                    <p>3つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。どれもオペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません。<code>'ADD' DEFINED?</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
+                    <p><code>DEFINED?</code>は、Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかを答えます。<code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>consumption</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約——<code>PROBE</code>がコードブロックについて答えるのと同じ形——です。走らせる前に費用級を問える、という性質はここから来ます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ ADD ] 0 GET DEFINED?</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">Coreワードは解決する。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">定義したワードも同じ問いで答える。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ TWICE ] 0 GET DEFINED?</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">未定義の名前は<code>FALSE</code>。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'ADD' DEFINED?</code></td>
+                                    <td>error</td>
+                                    <td class="notes">文字列は名前ではない（<code>notASymbol</code>）。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">同一性は内容に対して、綴りに対してではない。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">値は意味内容でダイジェストされる。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ DIV ] 0 GET CONTRACT 'projection' AT</code></td>
+                                    <td><code>[ 'divisionByZero' ]</code></td>
+                                    <td class="notes">登録済みの契約を、走らせずに読む。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ 42 PRINT ] PROBE 'effects' AT</code></td>
+                                    <td><code>[ 'consoleWrite' ]</code></td>
+                                    <td class="notes"><code>PROBE</code>はブロックを走らせずに契約を推論する。何も出力されない。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>
+                                    <td><code>NIL 'missingField'</code></td>
+                                    <td class="notes">ワードでない名前は理由付きの<code>NIL</code>。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="output" class="ref-page">
@@ -2729,7 +2879,7 @@ FILTER</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は86個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は92個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

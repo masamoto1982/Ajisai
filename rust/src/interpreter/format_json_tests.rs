@@ -1,0 +1,165 @@
+//! Behavioral probes for `FORMAT`, `JSON-DECODE` and `JSON-ENCODE`: the
+//! boundary Words, where a value becomes text under a stated rule and text
+//! becomes a value without a guess (LANG.VALUES.EXACT, LANG.RECORDS.STRUCTURE).
+
+#[cfg(test)]
+mod format_json_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn top(code: &str) -> String {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(code)
+            .await
+            .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+        interp
+            .get_stack()
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    async fn error_of(code: &str) -> String {
+        let mut interp = Interpreter::new();
+        let err = interp.execute(code).await.expect_err("must raise an ERROR");
+        crate::error::ErrorCategory::from_error(&err)
+            .as_protocol_str()
+            .to_string()
+    }
+
+    #[tokio::test]
+    async fn format_rounds_half_to_even_at_the_stated_digit() {
+        assert_eq!(top("1/3 5 FORMAT").await, "'0.33333'");
+        assert_eq!(top("2/3 2 FORMAT").await, "'0.67'");
+        assert_eq!(top("5/2 0 FORMAT").await, "'2'");
+        assert_eq!(top("7/2 0 FORMAT").await, "'4'");
+        assert_eq!(top("1/8 2 FORMAT").await, "'0.12'");
+        assert_eq!(top("3/8 2 FORMAT").await, "'0.38'");
+        assert_eq!(top("-1/8 2 FORMAT").await, "'-0.12'");
+        assert_eq!(top("-1/1000 2 FORMAT").await, "'0.00'");
+        assert_eq!(top("12345 2 FORMAT").await, "'12345.00'");
+        assert_eq!(top("0 3 FORMAT").await, "'0.000'");
+        assert_eq!(top("2 SQRT 3 FORMAT").await, "'1.414'");
+        assert_eq!(top("2 SQRT NEG 3 FORMAT").await, "'-1.414'");
+        assert_eq!(top("PI 4 FORMAT").await, "'3.1416'");
+        // Text, not a number: the rounded quantity never re-enters arithmetic.
+        assert_eq!(error_of("1/3 2 FORMAT 1 ADD").await, "nonNumeric");
+    }
+
+    #[tokio::test]
+    async fn format_refuses_malformed_use_and_restores_operands() {
+        assert_eq!(error_of("'x' 2 FORMAT").await, "nonNumeric");
+        assert_eq!(error_of("[ 1 2 ] 2 FORMAT").await, "nonNumeric");
+        assert_eq!(error_of("1 -1 FORMAT").await, "invalidCount");
+        assert_eq!(error_of("1 1/2 FORMAT").await, "invalidCount");
+        assert_eq!(error_of("1 'x' FORMAT").await, "invalidCount");
+        assert_eq!(error_of("NIL 2 FORMAT").await, "nonNumeric");
+        assert_eq!(error_of("1 NIL FORMAT").await, "invalidCount");
+        let mut interp = Interpreter::new();
+        let _ = interp.execute("1 -1 FORMAT").await;
+        assert_eq!(interp.stack.len(), 2);
+        assert_eq!(top("1/3 2 KEEP FORMAT").await, "1/3 2/1 '0.33'");
+    }
+
+    #[tokio::test]
+    async fn json_decode_lands_each_json_kind_on_its_domain() {
+        assert_eq!(
+            top("'{\"a\": 1, \"b\": [true, null, \"x\"]}' JSON-DECODE").await,
+            "{ 'a': 1/1 'b': [ TRUE NIL 'x' ] }"
+        );
+        assert_eq!(top("'0.1' JSON-DECODE").await, "1/10");
+        assert_eq!(top("'0.1' JSON-DECODE 10 MUL 1 EQ").await, "TRUE");
+        assert_eq!(top("'-1.5e2' JSON-DECODE").await, "-150/1");
+        assert_eq!(top("'[]' JSON-DECODE").await, "[ ]");
+        assert_eq!(top("'{}' JSON-DECODE").await, "{ }");
+        assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "NIL 'literal'");
+        assert_eq!(top("'\"caf\\u00e9\"' JSON-DECODE").await, "'café'");
+        assert_eq!(
+            top("'{\"k\": {\"n\": [1, [2]]}}' JSON-DECODE 'k' AT 'n' AT 1 GET").await,
+            "[ 2/1 ]"
+        );
+    }
+
+    #[tokio::test]
+    async fn json_decode_projects_invalid_encoding_and_refuses_non_text() {
+        for bad in [
+            "''",
+            "'[1,'",
+            "'{\"a\":1,\"a\":2}'",
+            "'[1] 2'",
+            "'nul'",
+            "'{a:1}'",
+        ] {
+            assert_eq!(
+                top(&format!("{bad} JSON-DECODE NIL-REASON")).await,
+                "NIL 'invalidEncoding'",
+                "{bad}"
+            );
+        }
+        assert_eq!(error_of("5 JSON-DECODE").await, "nonText");
+        assert_eq!(error_of("NIL JSON-DECODE").await, "nonText");
+        assert_eq!(top("'[1]' KEEP JSON-DECODE").await, "'[1]' [ 1/1 ]");
+    }
+
+    #[tokio::test]
+    async fn json_encode_writes_exactly_or_not_at_all() {
+        assert_eq!(
+            top("[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD JSON-ENCODE").await,
+            "'{\"a\":0.25,\"b\":[true,null,\"x\"]}'"
+        );
+        assert_eq!(top("1/3 JSON-ENCODE").await, "'\"1/3\"'");
+        assert_eq!(top("-7/2 JSON-ENCODE").await, "'-3.5'");
+        assert_eq!(top("100 JSON-ENCODE").await, "'100'");
+        assert_eq!(top("NIL JSON-ENCODE").await, "'null'");
+        assert_eq!(top("'a\"b' JSON-ENCODE").await, "'\"a\\\"b\"'");
+        assert_eq!(
+            top("[ [ 1 2 ] [ 3 4 ] ] JSON-ENCODE").await,
+            "'[[1,2],[3,4]]'"
+        );
+        assert_eq!(top("[ ] JSON-ENCODE").await, "'[]'");
+        for no_image in [
+            "2 SQRT",
+            "PI",
+            "[ ADD ] 0 GET",
+            "[ 1 ] [ 2 ] RECORD",
+            "[ 1 2 SQRT ]",
+        ] {
+            assert_eq!(
+                top(&format!("{no_image} JSON-ENCODE NIL-REASON")).await,
+                "NIL 'domainMiss'",
+                "{no_image}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn decode_after_encode_is_the_identity_on_the_json_image() {
+        for value in [
+            "[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD",
+            "-7/2",
+            "'quote \" and \\ and newline\n'",
+            "[ [ 1 2 ] [ 3 4 ] ]",
+            "[ ]",
+            "{ }",
+        ] {
+            let value = if value == "{ }" {
+                "[ ] [ ] RECORD"
+            } else {
+                value
+            };
+            // KEEP holds the value under its text; DECODE rebuilds it beside
+            // it, and EQ takes both.
+            assert_eq!(
+                top(&format!("{value} KEEP JSON-ENCODE JSON-DECODE EQ")).await,
+                "TRUE",
+                "{value}"
+            );
+        }
+        // A rational with no finite decimal travels as its lexeme in a
+        // string, and comes back as that String: NUM recovers the number,
+        // and no digit was rounded on the way.
+        assert_eq!(top("1/3 JSON-ENCODE JSON-DECODE").await, "'1/3'");
+        assert_eq!(top("1/3 KEEP JSON-ENCODE JSON-DECODE NUM EQ").await, "TRUE");
+    }
+}

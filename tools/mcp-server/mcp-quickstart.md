@@ -18,7 +18,7 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 86 Words are:
+reaching for it exactly where it would have helped. The 92 Words are:
 
 | you need | Words |
 |---|---|
@@ -28,9 +28,11 @@ reaching for it exactly where it would have helped. The 86 Words are:
 | collections | `SORT` `ORDER` `UNIQUE` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
 | records (keyed data) | `RECORD` `KEYS` `VALUES` `AT` `WITH` `WITHOUT` `HAS?` `MERGE` · `TALLY` `GROUP` answer Records |
 | blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` `RANK` |
-| text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `SEARCH` `REPLACE` `NUM` `STR` |
+| text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `SEARCH` `REPLACE` `NUM` `STR` · `FORMAT` (decimal text at a stated precision, the one place rounding happens) |
+| JSON in and out | `JSON-DECODE` (object → Record, array → Vector, numbers exact) `JSON-ENCODE` (no rounding: `1/3` travels as `"1/3"`) |
 | absence | `NIL` `NIL?` `NIL-REASON` `ABSENT` (declare a reasoned NIL from your own text) |
 | naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `PROBE` `FAIL` (raise a declared ERROR) · `PRINT` `KEEP` |
+| reflection | `DEFINED?` (does a Symbol name a Word) `DIGEST` (content identity of a Word, denotation digest of a value) `CONTRACT` (a Word's contract as a Record; `'cost' AT` before running it) |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
 invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that

@@ -191,6 +191,14 @@ const projection = (when) => {
   return rustStrSlice(conditions);
 };
 
+// The NIL reason each projection condition answers with, aligned with
+// `projection` position by position; the ids `NIL-REASON` reports.
+const projectionReasons = (reason) => {
+  if (reason === null || reason === undefined) return '&[]';
+  const reasons = Array.isArray(reason) ? reason : [reason];
+  return rustStrSlice(reasons);
+};
+
 const variants = entries.map((word) => `    ${word.executorKey},`).join('\n');
 
 const rows = entries
@@ -205,6 +213,7 @@ const rows = entries
         consumption: ${enumRef('Consumption', word.consumption)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
+        projection_reasons: ${projectionReasons(word.projection.reason)},
         partiality: ${enumRef('Partiality', word.partiality)},
         accepted_domain: ${word.acceptedDomain ? `Some(AcceptedDomain::${pascal(word.acceptedDomain)})` : 'None'},
         purity: ${enumRef('Purity', word.purity)},
@@ -307,6 +316,10 @@ pub struct GeneratedWord {
     /// more than one reason: \`MOD\` answers NIL both for a zero divisor and
     /// for an integer projection it cannot decide.
     pub projection: &'static [&'static str],
+    /// The NIL reason each condition in \`projection\` answers with, aligned
+    /// with it position by position: the ids \`NIL-REASON\` reports, and what
+    /// \`CONTRACT\` hands a program that asks what a Word can project.
+    pub projection_reasons: &'static [&'static str],
     pub partiality: Partiality,
     /// The operand shape the Word accepts, where the specification narrows it,
     /// and \`None\` where the Word takes whatever its family takes.

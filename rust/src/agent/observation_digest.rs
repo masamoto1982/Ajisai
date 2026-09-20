@@ -117,6 +117,23 @@ pub(crate) fn observation_digest(input: ObservationDigestInput<'_>) -> Option<St
     Some(content_digest(&bytes))
 }
 
+/// Version tag for a single value's digest — the `DIGEST` Word's answer for
+/// anything that is not a Word (LANG.VALUES.DENOTATION). A separate tag from
+/// the observation grammar so a value's digest can never collide with the
+/// digest of a whole observation that happens to hold that value alone.
+pub(crate) const VALUE_DIGEST_SCHEMA_TAG: &[u8] = b"AJISAI-VAL-1";
+
+/// The digest of one value's denotation, or `None` when the value carries a
+/// Tier 2 `ExactReal::Computable` scalar anywhere inside it. Equal values
+/// digest alike whatever built them, by the same encoding the observation
+/// digest uses for its stack.
+pub(crate) fn value_digest(value: &Value) -> Option<String> {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(VALUE_DIGEST_SCHEMA_TAG);
+    encode_value(&mut bytes, value)?;
+    Some(content_digest(&bytes))
+}
+
 fn write_section(bytes: &mut Vec<u8>, id: u8) {
     bytes.push(0x1D);
     bytes.push(id);

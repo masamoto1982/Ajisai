@@ -63,6 +63,10 @@ const EXAMPLE_NAMES = new Set([
   'P', 'M', 'D',
   // the seed and count of the RANDOM clause, written as names to show the shape
   'SEED', 'N',
+  // the reflection clause's worked example: TWICE is defined and asked about
+  // by DEFINED?, DIGEST and CONTRACT; NOPE is written precisely because it is
+  // never defined, to show CONTRACT projecting missingField for it.
+  'TWICE', 'NOPE',
 ]);
 
 // Names the *host* allocates rather than the language: shortcut-only GUI
