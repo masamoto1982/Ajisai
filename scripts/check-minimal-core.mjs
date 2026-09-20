@@ -6,10 +6,10 @@ ADD MUL DIV FLOOR NEG SQRT POW PI
 GET LENGTH CONCAT COLLECT RANGE FOLD SHAPE RESHAPE FLATTEN DEPTH RANK
 RECORD KEYS VALUES AT WITH WITHOUT HAS? MERGE
 CHARS JOIN NUM STR
-SELECT EXEC PROBE CONTRACT FAIL NIL NIL? NIL-REASON ABSENT KEEP BIND DEF DEL DEFINED? DIGEST PRINT RANDOM`.split(/\s+/));
-const STANDARD = new Set(`OR NEQ LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX GCD RATIO EXP LN SIN COS ATAN
+SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT KEEP BIND DEF DEL DEFINED? DIGEST PRINT RANDOM`.split(/\s+/));
+const STANDARD = new Set(`OR LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX GCD RATIO EXP LN SIN COS ATAN
 TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER BSEARCH MAP FILTER SCAN ANY ALL
-TRIM TOKENIZE SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
+TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
 // The alpha Words retired in the phase-1 vocabulary freeze. `UNIQUE` is not
 // among them any more: it was cut as one of several overlapping collection
 // Words and has come back on its own terms, with a contract, a law witness and
@@ -19,13 +19,17 @@ TRIM TOKENIZE SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
 // rounding family rather than a convenience: `FLOOR` reflected through zero.
 // `REPLACE` came back in Phase 3, as INDEX-OF's substitution counterpart for
 // Text, retained natively for cost.
+// `NEQ` and `PROBE` were retired after the vocabulary-100 work order's
+// review (docs/dev/vocabulary-100-work-order-2026-09.md §7.2): `NEQ` is
+// `EQ NOT` at the same cost, and `PROBE` was `CONTRACT` over a block. The
+// two slots went to `UPPER` and `LOWER`, the top of the waiting list.
 const REMOVED = new Set(`SIGN INSERT REMOVE SPLIT REORDER CONTAINS
-STARTS-WITH? ENDS-WITH? CHR EAT`.split(/\s+/));
+STARTS-WITH? ENDS-WITH? CHR EAT NEQ PROBE`.split(/\s+/));
 const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
-const DERIVABLE = new Set(`OR NEQ LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX
+const DERIVABLE = new Set(`OR LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX
 TAKE DROP REVERSE INDEX-OF TRIM TOKENIZE`.split(/\s+/));
 // `FORMAT` and the JSON pair are Phase 6 of the vocabulary-100 work order:
 // `FORMAT` is the one rounding boundary (a QUANTIZE-and-STR spelling would
@@ -35,7 +39,7 @@ TAKE DROP REVERSE INDEX-OF TRIM TOKENIZE`.split(/\s+/));
 // (Euclid), `RATIO` reads representation the language otherwise hides, and
 // the five transcendental Words are enclosure generators no definition can
 // write; all operational.
-const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP MEMBER BSEARCH SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE GCD RATIO EXP LN SIN COS ATAN'.split(/\s+/));
+const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP MEMBER BSEARCH SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE GCD RATIO EXP LN SIN COS ATAN UPPER LOWER'.split(/\s+/));
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
@@ -59,8 +63,8 @@ for (const name of setDifference(KERNEL, kernelWords)) errors.push(`${name}: mis
 for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: unexpected Semantic Kernel classification`);
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
-if (kernelWords.size !== 55) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 55`);
-if (standardWords.size !== 45) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 45`);
+if (kernelWords.size !== 54) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 54`);
+if (standardWords.size !== 46) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 46`);
 
 if (words.length !== 100) errors.push(`canonical inventory has ${words.length} Words; expected 100`);
 for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);

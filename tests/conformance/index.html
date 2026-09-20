@@ -792,20 +792,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-neq-distinct-true" data-category="core">
-  <h3>NEQ is TRUE for distinct exact values</h3>
-  <pre class="ajisai-source">1 2 NEQ</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-neq-equal-false" data-category="core">
-  <h3>NEQ is FALSE for equal exact values</h3>
-  <pre class="ajisai-source">1 1 NEQ</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-add-underflow-error" data-category="core">
   <h3>ADD with one operand raises stackUnderflow (requires violated, LANG.CONFORMANCE.FAMILIES)</h3>
   <pre class="ajisai-source">1 ADD</pre>
@@ -1074,13 +1060,6 @@
 <section class="ajisai-case" id="core-nil-passthrough-eq" data-category="core">
   <h3>EQ of NIL and NIL is NIL, not TRUE (comparison is passthrough)</h3>
   <pre class="ajisai-source">NIL NIL EQ</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-nil-passthrough-neq" data-category="core">
-  <h3>NEQ passes a NIL operand through</h3>
-  <pre class="ajisai-source">NIL 1 NEQ</pre>
   <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1829,45 +1808,45 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- LANG.CONTRACT.CHECK: PROBE reaches the same pre-execution inference
-     `ajisai check --contract` runs from outside the language. A pure block
-     infers as pure, deterministic, and complete with no gaps. -->
+<!-- LANG.CONTRACT.CHECK: CONTRACT over a block reaches the same pre-execution
+     inference `ajisai check --contract` runs from outside the language. A
+     pure block infers as pure, deterministic, and complete with no gaps. -->
 
-<section class="ajisai-case" id="core-probe-pure-block" data-category="core">
-  <h3>PROBE infers a pure block as pure, with no gaps, as a contract Record</h3>
-  <pre class="ajisai-source">[ 1 2 ADD ] PROBE</pre>
+<section class="ajisai-case" id="core-contract-block-pure" data-category="core">
+  <h3>CONTRACT infers a pure block as pure, with no gaps, as a contract Record</h3>
+  <pre class="ajisai-source">[ 1 2 ADD ] CONTRACT</pre>
   <pre class="ajisai-expect-result">{ 'inputs': 0/1 'outputs': 1/1 'nil': 'propagates' 'purity': 'pure' 'determinism': 'deterministic' 'cost': { 'steps': 'const' 'numeric': 'const' 'collection': 'const' } 'effects': [ ] 'confidence': 'complete' 'gaps': [ ] }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- Unlike EXEC, PROBE never evaluates its operand, so an effectful block's
-     effect is reported as data (LANG.CONTRACT.CHECK) without ever firing:
-     the block would PRINT if run, but PROBE does not run it. -->
+<!-- Unlike EXEC, CONTRACT never evaluates its operand, so an effectful
+     block's effect is reported as data (LANG.CONTRACT.CHECK) without ever
+     firing: the block would PRINT if run, but CONTRACT does not run it. -->
 
-<section class="ajisai-case" id="core-probe-never-runs-the-block" data-category="core">
-  <h3>PROBE reports an effect without ever performing it</h3>
-  <pre class="ajisai-source">[ 42 PRINT ] PROBE 'effects' AT</pre>
+<section class="ajisai-case" id="core-contract-block-never-runs" data-category="core">
+  <h3>CONTRACT reports a block's effect without ever performing it</h3>
+  <pre class="ajisai-source">[ 42 PRINT ] CONTRACT 'effects' AT</pre>
   <pre class="ajisai-expect-result">[ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <!-- An unresolved dependency is the checker's own "cannot verify" outcome
      carried as data (LANG.CONTRACT.CHECK, trichotomy-unification.md): a gap
-     id, not an ERROR — PROBE itself is total over any well-formed
-     CodeBlock. -->
+     id, not an ERROR — CONTRACT itself is total over any well-formed
+     block. -->
 
-<section class="ajisai-case" id="core-probe-unresolved-word-is-a-gap" data-category="core">
-  <h3>PROBE reports an unresolved dependency as a gap, not an error</h3>
-  <pre class="ajisai-source">[ UNDEFINED-WORD ] PROBE 'confidence' AT [ UNDEFINED-WORD ] PROBE 'gaps' AT</pre>
+<section class="ajisai-case" id="core-contract-block-gap" data-category="core">
+  <h3>CONTRACT reports an unresolved dependency as a gap, not an error</h3>
+  <pre class="ajisai-source">[ UNDEFINED-WORD ] CONTRACT 'confidence' AT [ UNDEFINED-WORD ] CONTRACT 'gaps' AT</pre>
   <pre class="ajisai-expect-result">'conservative' [ 'gap.unresolvedWord' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-probe-rejects-non-codeblock" data-category="core">
-  <h3>PROBE rejects a Scalar: only a CodeBlock can be probed</h3>
-  <pre class="ajisai-source">5 PROBE</pre>
+<section class="ajisai-case" id="core-contract-rejects-scalar" data-category="core">
+  <h3>CONTRACT rejects a Scalar: only a Symbol or a block has a contract</h3>
+  <pre class="ajisai-source">5 CONTRACT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">PROBE requires a CodeBlock</pre>
+  <pre class="ajisai-expect-error">expected a Symbol naming a Word or a block</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1917,8 +1896,8 @@ W</pre>
 </section>
 
 <!-- CONTRACT reads the registry from inside the language
-     (LANG.CONTRACT.REGISTRY); for a User Word it is PROBE of the body
-     (LANG.CONTRACT.CHECK), in one shape. -->
+     (LANG.CONTRACT.REGISTRY); for a User Word it is the contract inferred
+     from the body (LANG.CONTRACT.CHECK), in one shape. -->
 
 <section class="ajisai-case" id="core-contract-core-word-record" data-category="core">
   <h3>CONTRACT answers a Core Word's registered record as a Record</h3>
@@ -1927,9 +1906,9 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-contract-user-word-is-probe" data-category="core">
-  <h3>CONTRACT of a User Word is PROBE of its body, and runs nothing</h3>
-  <pre class="ajisai-source">[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] PROBE EQ [ SHOUT ] 0 GET CONTRACT 'effects' AT</pre>
+<section class="ajisai-case" id="core-contract-user-word-is-its-body" data-category="core">
+  <h3>CONTRACT of a User Word is CONTRACT of its body, and runs nothing</h3>
+  <pre class="ajisai-source">[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT EQ [ SHOUT ] 0 GET CONTRACT 'effects' AT</pre>
   <pre class="ajisai-expect-result">TRUE [ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2566,9 +2545,7 @@ W</pre>
 <section class="ajisai-case" id="core-get-projects-per-position" data-category="core"><h3>A gathered index that names nothing projects where it stands</h3><pre class="ajisai-source">[ 10 20 ] [ 0 9 ] GET</pre><pre class="ajisai-expect-result">[ 10/1 NIL ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-quantize" data-category="core"><h3>QUANTIZE</h3><pre class="ajisai-source">[ 119/125 32/125 ] 10 QUANTIZE</pre><pre class="ajisai-expect-result">[ 1/1 3/10 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-quantize-bounds-the-denominator" data-category="core"><h3>QUANTIZE bounds the denominator of an irrational</h3><pre class="ajisai-source">2 SQRT 10000 QUANTIZE</pre><pre class="ajisai-expect-result">7071/5000</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-quantize-domain-miss" data-category="core"><h3>A denominator that is not a positive integer projects</h3><pre class="ajisai-source">7 0 QUANTIZE</pre><pre class="ajisai-expect-result">NIL</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-neq" data-category="core"><h3>NEQ</h3><pre class="ajisai-source">1 2 NEQ</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-lte" data-category="core"><h3>LTE</h3><pre class="ajisai-source">1 2 LTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-quantize-domain-miss" data-category="core"><h3>A denominator that is not a positive integer projects</h3><pre class="ajisai-source">7 0 QUANTIZE</pre><pre class="ajisai-expect-result">NIL</pre><div class="ajisai-expect-effects"></div></section><section class="ajisai-case" id="standard-lte" data-category="core"><h3>LTE</h3><pre class="ajisai-source">1 2 LTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-gte" data-category="core"><h3>GTE</h3><pre class="ajisai-source">2 1 GTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-filter" data-category="core"><h3>FILTER</h3><pre class="ajisai-source">[ 1 2 3 ] [ 1 GT ] FILTER</pre><pre class="ajisai-expect-result">[ 2/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-any" data-category="core"><h3>ANY</h3><pre class="ajisai-source">[ 1 2 3 ] [ 2 EQ ] ANY</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
@@ -2962,14 +2939,34 @@ W</pre>
 <section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">{ 'b': [ 1/1 3/1 ] 'a': [ 2/1 4/1 ] }</pre><div class="ajisai-expect-effects"></div></section>
 
 <!-- FORMAT is the one rounding boundary (LANG.VALUES.EXACT): a scalar
-     becomes decimal text at a stated digit count, half to even, exact at
-     every tier; the last digit of a computable real is settled under the
-     comparison budget or projected, never guessed. -->
+     becomes decimal text at a stated digit count, a tie away from zero as
+     ROUND and QUANTIZE round, exact at every tier; the last digit of a
+     computable real is settled under the comparison budget or projected,
+     never guessed. -->
 
-<section class="ajisai-case" id="standard-format-half-even" data-category="core">
-  <h3>FORMAT renders decimal text at a stated precision, half to even</h3>
-  <pre class="ajisai-source">1/3 5 FORMAT 5/2 0 FORMAT 7/2 0 FORMAT -1/8 2 FORMAT</pre>
-  <pre class="ajisai-expect-result">'0.33333' '2' '4' '-0.12'</pre>
+<section class="ajisai-case" id="standard-format-ties-away-from-zero" data-category="core">
+  <h3>FORMAT renders decimal text at a stated precision, a tie away from zero like ROUND</h3>
+  <pre class="ajisai-source">1/3 5 FORMAT 5/2 0 FORMAT 7/2 0 FORMAT -1/8 2 FORMAT 5/2 ROUND</pre>
+  <pre class="ajisai-expect-result">'0.33333' '3' '4' '-0.13' 3/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- UPPER and LOWER apply Unicode's default case mapping, locale-independent
+     (LANG.VALUES.DISJOINT): the one table no definition over CHARS and JOIN
+     could carry. -->
+
+<section class="ajisai-case" id="standard-upper-lower" data-category="core">
+  <h3>UPPER and LOWER map case by Unicode's default table</h3>
+  <pre class="ajisai-source">'Ajisai' UPPER 'Ajisai' LOWER 'straße' UPPER 'ΣΑΣ' LOWER '' UPPER</pre>
+  <pre class="ajisai-expect-result">'AJISAI' 'ajisai' 'STRASSE' 'σασ' ''</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-upper-rejects-non-text" data-category="core">
+  <h3>UPPER refuses a non-String operand</h3>
+  <pre class="ajisai-source">42 UPPER</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">UPPER: expected String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

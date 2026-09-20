@@ -97,8 +97,6 @@ async fn truth_standards_have_kernel_only_witnesses() {
     for (native, witness) in [
         ("TRUE FALSE OR", "TRUE NOT FALSE NOT AND NOT"),
         ("FALSE FALSE OR", "FALSE NOT FALSE NOT AND NOT"),
-        ("2 3 NEQ", "2 3 EQ NOT"),
-        ("2 2 NEQ", "2 2 EQ NOT"),
         ("2 3 LTE", "2 3 GT NOT"),
         ("3 2 LTE", "3 2 GT NOT"),
         ("3 2 GTE", "3 2 LT NOT"),

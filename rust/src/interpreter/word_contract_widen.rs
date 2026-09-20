@@ -14,7 +14,7 @@
 //! longer be read off which character opened the group. It is still
 //! answerable, from the fixed-position-operand convention the higher-order
 //! Words share: a `[ ... ]` immediately followed by one of
-//! `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL` (or `EXEC`/`PROBE`) *is* that Word's
+//! `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL` (or `EXEC`/`CONTRACT`) *is* that Word's
 //! code operand, and that Word will run it. Any other `[ ... ]` is
 //! inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]`, PRINT never
 //! resolves or runs, so widening the accumulator with it would be a false
@@ -75,7 +75,7 @@ impl LiteralContext {
 
 /// Canonical names of Words whose immediately preceding fixed-position
 /// operand is code they actually execute — the higher-order Words, with
-/// `EXEC`/`PROBE` taking their sole operand the same way.
+/// `EXEC`/`CONTRACT` taking their sole operand the same way.
 ///
 /// `SELECT` is deliberately absent: its operands are values, not code. That
 /// is the whole of the difference between it and the `COND` it replaced, and
@@ -83,7 +83,7 @@ impl LiteralContext {
 fn consumes_preceding_as_code(canonical_name: &str) -> bool {
     matches!(
         canonical_name,
-        "MAP" | "FILTER" | "FOLD" | "SCAN" | "ANY" | "ALL" | "RANK" | "EXEC" | "PROBE"
+        "MAP" | "FILTER" | "FOLD" | "SCAN" | "ANY" | "ALL" | "RANK" | "EXEC" | "CONTRACT"
     )
 }
 

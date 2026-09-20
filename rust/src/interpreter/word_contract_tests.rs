@@ -225,7 +225,7 @@ async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
 //
 // `{ }` no longer exists, so a `[ ... ]` alone cannot say whether its
 // interior is inert data or a fixed-position code operand a higher-order
-// Word (`MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`/`EXEC`/`PROBE`/`COND`) will
+// Word (`MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`/`EXEC`/`CONTRACT`/`COND`) will
 // actually run. `classify_vector_positions` answers this positionally: a
 // `[ ... ]` immediately followed by one of those Words is code, everything
 // else is data, and a `Data` ancestor forces `Data` all the way down. Every

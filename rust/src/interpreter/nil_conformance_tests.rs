@@ -61,7 +61,7 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("MUL", NilClass::BinaryBlanket),
     // MOD / FLOOR / CEIL / ROUND create NIL on a domain miss and are covered
     // by projecting_word_set_matches_registry.
-    // The comparison words (EQ/NEQ/LT/LTE/GT/GTE) are PassthroughThenProject,
+    // The comparison words (EQ/LT/LTE/GT/GTE) are PassthroughThenProject,
     // not pure Passthrough — a Tier 2 pair can exhaust its comparison budget
     // and project to Unknown (LANG.VALUES.EXACT) — so they belong to
     // PROJECTING_WORDS / tier2_undecidable_conformance_tests, not here.
@@ -146,7 +146,7 @@ async fn passthrough_blanket_collapses_to_nil() {
 
 /// Projecting words: a well-formed domain miss yields a reasoned NIL with a
 /// reason; malformed use raises an ordinary error.
-// `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`NEQ`/`ORDER`/`SORT` are probed
+// `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`ORDER`/`SORT` are probed
 // in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
 // exhausts its comparison budget. `RANDOM`/`RANGE`/`SQRT`/`STR` are probed in
 // `shape_ops`, beside the Word itself; `SHAPE` (a ragged operand) and `RESHAPE`
@@ -159,7 +159,7 @@ async fn passthrough_blanket_collapses_to_nil() {
 const PROJECTING_WORDS: &[&str] = &[
     "ABS", "ABSENT", "AT", "BSEARCH", "CEIL", "CONTRACT", "COS", "DIGEST", "DIV", "DROP", "EQ",
     "EXP", "FILL", "FLOOR", "FORMAT", "GCD", "GET", "GT", "GTE", "INDEX-OF", "JSON-DECODE",
-    "JSON-ENCODE", "LN", "LT", "LTE", "MAX", "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER",
+    "JSON-ENCODE", "LN", "LT", "LTE", "MAX", "MIN", "MOD", "NIL-REASON", "NUM", "ORDER",
     "POW", "PUT", "QUANTIZE", "RANDOM", "RANGE", "RATIO", "RESHAPE", "ROUND", "SEARCH", "SHAPE",
     "SIN", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
 ];
@@ -354,7 +354,7 @@ async fn nil_projection_comparison_nil_input() {
     // NIL operand propagates as NIL output via the passthrough rule
     // (LANG.FAILURE.PROJECT, LANG.FAILURE.PASSTHROUGH). (Budget exhaustion instead yields Unknown, a NIL
     // tagged TruthValue — covered by `tier2_undecidable_conformance_tests`.)
-    for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+    for name in &["EQ", "LT", "LTE", "GT", "GTE"] {
         for code in [
             format!("NIL 1 {name}"),
             format!("1 NIL {name}"),
@@ -475,7 +475,7 @@ mod properties {
         // op total and NIL — never an error, never a definite value.
         #[test]
         fn binary_passthrough_with_nil_is_nil(a in -50i64..50) {
-            for op in ["ADD", "SUB", "MUL", "MOD", "LT", "LTE", "GT", "GTE", "EQ", "NEQ"] {
+            for op in ["ADD", "SUB", "MUL", "MOD", "LT", "LTE", "GT", "GTE", "EQ"] {
                 let stack = block_on(run(&format!("{a} NIL {op}")))
                     .unwrap_or_else(|e| panic!("`{a} NIL {op}` errored: {e}"));
                 prop_assert_eq!(stack.len(), 1);

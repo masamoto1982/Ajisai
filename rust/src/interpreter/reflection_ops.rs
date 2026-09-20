@@ -1,5 +1,6 @@
 //! The reflection Words: `DEFINED?`, `DIGEST`, `CONTRACT`
-//! (LANG.DICTIONARY.RESOLUTION, LANG.DICTIONARY.MUTATION, LANG.CONTRACT.REGISTRY).
+//! (LANG.DICTIONARY.RESOLUTION, LANG.DICTIONARY.MUTATION, LANG.CONTRACT.REGISTRY,
+//! LANG.CONTRACT.CHECK).
 //!
 //! Each reads what the machine already knows about its dictionary from inside
 //! the language — the resolution execution itself performs, the content
@@ -9,6 +10,10 @@
 //! name up from text would turn text into a call, and the acyclicity check
 //! (LANG.DICTIONARY.ACYCLIC) is complete only because no Word does. So a
 //! String is malformed use, `notASymbol`, rather than a lookup that failed.
+//! `CONTRACT` also takes a block, whose contract it infers the way
+//! `ajisai check --contract` does — the pre-execution check reached from
+//! inside the language (LANG.CONTRACT.CHECK) — never evaluating it, so the
+//! call carries none of the block's own effects.
 
 use super::ordering_ops::{restore, take_operand};
 use crate::agent::observation_digest::value_digest;
@@ -28,9 +33,14 @@ use crate::types::{Interpretation, Value, ValueData};
 const CORE_WORD_IDENTITY_TAG: &[u8] = b"AJISAI-CORE-WORD-1";
 
 fn not_a_symbol(word: &str, got: &str) -> AjisaiError {
+    let accepted = if word == "CONTRACT" {
+        "a Symbol naming a Word or a block"
+    } else {
+        "a Symbol naming a Word"
+    };
     AjisaiError::declared(
         "notASymbol",
-        format!("{word}: expected a Symbol naming a Word, got {got}; a String is text, not a name"),
+        format!("{word}: expected {accepted}, got {got}; a String is text, not a name"),
     )
 }
 
@@ -119,11 +129,28 @@ pub(crate) fn op_digest(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// `CONTRACT ( [ symbol ] -> [ record ] )`: the registered contract of a Core
-/// Word, the inferred contract of a User Word; `missingField` for a Symbol
-/// naming neither.
+/// `CONTRACT ( [ symbol | code ] -> [ record ] )`: the registered contract of
+/// a Core Word, the inferred contract of a User Word or of a block (never
+/// evaluated); `missingField` for a Symbol naming neither.
 pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
+    if let Some(elements) = operand.as_vector_view() {
+        // A block: the same inference `ajisai check --contract` runs, over
+        // the block's tokens, without running one of them.
+        let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements) {
+            Ok(tokens) => tokens,
+            Err(e) => {
+                restore(interp, operand);
+                return Err(e);
+            }
+        };
+        let contract = interp.infer_contract_for_block(&tokens);
+        interp.stack.push_with_role(
+            inferred_contract_record(&contract),
+            Interpretation::Unassigned,
+        );
+        return Ok(());
+    }
     let Some(name) = symbol_name(&operand) else {
         let got = describe(&operand);
         restore(interp, operand);

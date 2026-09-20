@@ -1289,37 +1289,6 @@
       "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq"
     },
     {
-      "id": "core.neq",
-      "kind": "coreword",
-      "surface": "NEQ",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.4",
-        "SPECIFICATION.html §7.4.1"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs",
-        "rust/src/arithmetic_operation_tests.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-neq"
-      ],
-      "status": "Formalized",
-      "notes": "Inequality is the K3-domain complement of budgeted equality when decided, with UNKNOWN and NIL preserved by projection/passthrough.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity",
-      "implementation_schema": "budgeted_order_projection(NEQ) via pairwise_eq/scalar_pair_eq",
-      "standard_relation": "derivable"
-    },
-    {
       "id": "core.lt",
       "kind": "coreword",
       "surface": "LT",
@@ -1797,52 +1766,30 @@
       "core_tier": "flow"
     },
     {
-      "id": "core.probe",
-      "kind": "coreword",
-      "surface": "PROBE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §9.2"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/probe.rs"
-      ],
-      "conformance_cases": [
-        "core-probe-pure-block",
-        "core-probe-never-runs-the-block",
-        "core-probe-unresolved-word-is-a-gap",
-        "core-probe-rejects-non-codeblock"
-      ],
-      "status": "Formalized",
-      "notes": "PROBE runs the same word-contract inference ajisai check --contract and ajisai contract already expose from outside the language (word_contract.rs, infer_word_contract), over an anonymous CodeBlock instead of a named dictionary Word. It examines a state-transformer composition's structure without composing/running it, and reports what inference could not resolve as structured diagnostic data (the gap ids trichotomy-unification.md derives as the check-time counterpart of a NIL reason) rather than as an opaque failure. Since Phase 6 of the vocabulary-100 work order the answer is a Record in the one contract shape CONTRACT also answers (contract_record.rs).",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.state-transformer.composition",
-        "algebra.observation.structured-diagnostic"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow"
-    },
-    {
       "id": "core.contract",
       "kind": "coreword",
       "surface": "CONTRACT",
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §9.2"
+        "SPECIFICATION.html §9.2",
+        "SPECIFICATION.html §7.7"
       ],
       "law_tests": [
-        "rust/src/interpreter/reflection_words_tests.rs"
+        "rust/src/interpreter/reflection_words_tests.rs",
+        "rust/src/interpreter/word_contract_tests.rs"
       ],
       "conformance_cases": [
         "core-contract-core-word-record",
-        "core-contract-user-word-is-probe",
-        "core-contract-unknown-name"
+        "core-contract-user-word-is-its-body",
+        "core-contract-unknown-name",
+        "core-contract-block-pure",
+        "core-contract-block-never-runs",
+        "core-contract-block-gap",
+        "core-contract-rejects-scalar"
       ],
       "status": "Formalized",
-      "notes": "Answers a Core Word's registered contract from the generated registry as a Record, and a User Word's inferred contract through the same inference PROBE runs (word_contract.rs, infer_word_contract), in one shape (contract_record.rs). A Symbol naming nothing projects missingField; a non-Symbol is notASymbol.",
+      "notes": "Answers a Core Word's registered contract from the generated registry as a Record, and a User Word's or a bare block's inferred contract through the one inference ajisai check --contract runs (word_contract.rs, infer_word_contract / infer_contract_for_block), in one shape (contract_record.rs). A block is never evaluated. A Symbol naming nothing projects missingField; an operand that is neither a Symbol nor a block is notASymbol. Absorbed PROBE after the vocabulary-100 review.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2603,6 +2550,60 @@
       "standard_relation": "derivable"
     },
     {
+      "id": "core.upper",
+      "kind": "coreword",
+      "surface": "UPPER",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.6"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-upper-lower",
+        "standard-upper-rejects-non-text"
+      ],
+      "status": "Formalized",
+      "notes": "The upper-case form of a String under Unicode's default, locale-independent case mapping (cast_text_ops.rs); no language-specific rule is applied, so the same text maps the same way wherever it runs.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "The mapping table is Unicode's own, which no definition over CHARS and JOIN could carry; the top of the work order's waiting list, admitted when NEQ and PROBE freed two slots."
+    },
+    {
+      "id": "core.lower",
+      "kind": "coreword",
+      "surface": "LOWER",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.6"
+      ],
+      "law_tests": [
+        "rust/tests/standard_operational_laws.rs"
+      ],
+      "conformance_cases": [
+        "standard-upper-lower",
+        "standard-upper-rejects-non-text"
+      ],
+      "status": "Formalized",
+      "notes": "The lower-case form of a String under Unicode's default, locale-independent case mapping (cast_text_ops.rs); no language-specific rule is applied, so the same text maps the same way wherever it runs.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "The mapping table is Unicode's own, which no definition over CHARS and JOIN could carry; the top of the work order's waiting list, admitted when NEQ and PROBE freed two slots."
+    },
+    {
       "id": "core.tokenize",
       "kind": "coreword",
       "surface": "TOKENIZE",
@@ -2749,12 +2750,12 @@
         "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
-        "standard-format-half-even",
+        "standard-format-ties-away-from-zero",
         "standard-format-irrational",
         "standard-format-rejects-bad-count"
       ],
       "status": "Formalized",
-      "notes": "The one rounding boundary: a scalar rendered as decimal text at a stated digit count, half to even, exact at every tier; a computable real whose last digit does not settle under the comparison budget projects undecidable rather than guess.",
+      "notes": "The one rounding boundary: a scalar rendered as decimal text at a stated digit count, a tie away from zero as ROUND and QUANTIZE round, exact at every tier; a computable real whose last digit does not settle under the comparison budget projects undecidable rather than guess.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2764,7 +2765,7 @@
       "algebraic_family": "exact-scalar",
       "core_tier": "material",
       "standard_relation": "operational",
-      "native_retention_reason": "Written out it is QUANTIZE followed by digit surgery on STR's text, which scatters the language's one permitted rounding over two Words and a user definition; kept native so the boundary is one place."
+      "native_retention_reason": "Written out it is QUANTIZE followed by digit surgery on STR's text, which scatters the language's one rounding rule over two Words and a user definition; kept native so the boundary is one place."
     },
     {
       "id": "core.json-decode",

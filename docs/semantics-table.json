@@ -15056,974 +15056,6 @@
       "outcome": "value"
     },
     {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarOne",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarZero",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarNegative",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "scalarLarge",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "booleanTrue",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "textShort",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorPair",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorTriple",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "vectorHuge",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "scalarOne"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "scalarZero"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "scalarNegative"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "scalarLarge"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "booleanTrue"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "textShort"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "vectorPair"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "vectorTriple"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "vectorHuge"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "nilLiteral",
-        "codeBlock"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "scalarLarge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "booleanTrue"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "textShort"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "NEQ",
-      "inputs": [
-        "codeBlock",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
       "word": "LT",
       "inputs": [
         "scalarOne",
@@ -110101,6 +109133,160 @@
       "outcome": "error:nonText"
     },
     {
+      "word": "UPPER",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "UPPER",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "scalarOne"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "scalarZero"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "vectorTriple"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "vectorHuge"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "nilLiteral"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
+      "word": "LOWER",
+      "inputs": [
+        "codeBlock"
+      ],
+      "outcome": "error:nonText"
+    },
+    {
       "word": "TOKENIZE",
       "inputs": [
         "scalarOne",
@@ -125369,83 +124555,6 @@
       "outcome": "value"
     },
     {
-      "word": "PROBE",
-      "inputs": [
-        "scalarOne"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "scalarZero"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "scalarNegative"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "scalarLarge"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "booleanTrue"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "textShort"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "vectorTriple"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "vectorHuge"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "nilLiteral"
-      ],
-      "outcome": "error:notExecutable"
-    },
-    {
-      "word": "PROBE",
-      "inputs": [
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
       "word": "CONTRACT",
       "inputs": [
         "scalarOne"
@@ -125492,21 +124601,21 @@
       "inputs": [
         "vectorPair"
       ],
-      "outcome": "error:notASymbol"
+      "outcome": "value"
     },
     {
       "word": "CONTRACT",
       "inputs": [
         "vectorTriple"
       ],
-      "outcome": "error:notASymbol"
+      "outcome": "value"
     },
     {
       "word": "CONTRACT",
       "inputs": [
         "vectorHuge"
       ],
-      "outcome": "error:notASymbol"
+      "outcome": "value"
     },
     {
       "word": "CONTRACT",
@@ -125520,7 +124629,7 @@
       "inputs": [
         "codeBlock"
       ],
-      "outcome": "error:notASymbol"
+      "outcome": "value"
     },
     {
       "word": "FAIL",

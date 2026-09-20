@@ -372,10 +372,10 @@ async fn random_is_a_pure_function_of_its_seed() {
 }
 
 /// `FORMAT` answers what `QUANTIZE` to `10^digits` followed by a decimal
-/// spelling of the result would answer — the same rounded quantity — in one
-/// place, as text, so the rounding never re-enters arithmetic. Half rounds to
-/// even at every tier, and the last digit of a computable real is settled
-/// under the comparison budget or projected, never guessed.
+/// spelling of the result would answer — the same rounded quantity, under the
+/// same tie rule — in one place, as text, so the rounding never re-enters
+/// arithmetic. The last digit of a computable real is settled under the
+/// comparison budget or projected, never guessed.
 #[tokio::test]
 async fn format_agrees_with_quantize_and_rounds_half_to_even() {
     let mut interpreter = Interpreter::new();
@@ -387,7 +387,7 @@ async fn format_agrees_with_quantize_and_rounds_half_to_even() {
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["'0.67'", "67/100", "'2'", "'4'", "'1.414'", "'3.14'"]
+        ["'0.67'", "67/100", "'3'", "'4'", "'1.414'", "'3.14'"]
     );
 
     let mut interpreter = Interpreter::new();
@@ -484,4 +484,23 @@ async fn transcendentals_decide_against_rationals_and_starve_against_themselves(
             "NIL", "2/1", "TRUE",
         ]
     );
+}
+
+/// `UPPER` and `LOWER` apply Unicode's default case mapping and nothing
+/// language-specific, so the same text maps the same way wherever it runs;
+/// a mapping that changes length (`ß` → `SS`) is applied whole.
+#[tokio::test]
+async fn upper_and_lower_apply_the_default_unicode_mapping() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute("'Ajisai' UPPER 'Ajisai' LOWER 'straße' UPPER 'ΣΑΣ' LOWER 'İ' LOWER CHARS LENGTH 'a1-' UPPER")
+        .await
+        .unwrap();
+    assert_eq!(
+        rendered_stack(&interpreter),
+        ["'AJISAI'", "'ajisai'", "'STRASSE'", "'σασ'", "2/1", "'A1-'"]
+    );
+    let mut interpreter = Interpreter::new();
+    assert!(interpreter.execute("42 UPPER").await.is_err());
+    assert_eq!(rendered_stack(&interpreter), ["42/1"]);
 }

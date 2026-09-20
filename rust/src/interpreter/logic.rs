@@ -25,7 +25,7 @@ use crate::types::{Interpretation, Value};
 /// ("FALSE is not scalar zero, TRUE is not scalar one"). The numeric path also
 /// returned a Scalar that the display rendered as `TRUE`, so `1 1 AND` printed
 /// `TRUE` while `1 1 AND TRUE EQ` decided FALSE. A caller who means a numeric
-/// test writes it: `0 NEQ`.
+/// test writes it: `0 EQ NOT`.
 fn operand_truth(value: &Value) -> Result<bool> {
     value.as_truth().ok_or_else(|| {
         AjisaiError::declared(

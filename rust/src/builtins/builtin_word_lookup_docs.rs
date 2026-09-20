@@ -170,7 +170,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes TRUE.",
         }],
         failure_note: "",
-        related: &["NEQ", "LT", "LTE", "GT", "GTE"],
+        related: &["NOT", "LT", "LTE", "GT", "GTE"],
     },
     BuiltinLookupDoc {
         word: "LT",

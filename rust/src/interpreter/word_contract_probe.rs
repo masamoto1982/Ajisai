@@ -1,4 +1,4 @@
-//! `PROBE`'s inference entry point, split from `word_contract.rs` to keep
+//! `CONTRACT`'s block-inference entry point, split from `word_contract.rs` to keep
 //! that file under the per-file line budget (the file-size budget in docs/dev/specification-implementation-rules.md). The algorithm itself is
 //! unchanged: this is a thin adapter that lets `infer_word_contract_inner`
 //! walk an anonymous CodeBlock's tokens the same way it already walks a
@@ -17,7 +17,7 @@ impl Interpreter {
     /// run instead over an anonymous CodeBlock's own tokens. The block is
     /// wrapped in a throwaway `WordDefinition` that is never inserted into
     /// the dictionary — probing resolves the names the block calls but
-    /// writes nothing back, matching `PROBE`'s declared purity.
+    /// writes nothing back, matching `CONTRACT`'s declared purity.
     ///
     /// The synthetic definition's `registration_order` is freshly drawn from
     /// the interpreter's own counter (`next_registration_order`) on every

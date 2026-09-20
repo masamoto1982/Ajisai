@@ -212,7 +212,7 @@ const commonErrors = [
   {
     title: 'SELECT needs a truth value, not a number',
     code: "[ 'y' ] [ 'n' ] 1 SELECT",
-    fix: 'The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] NEQ`.',
+    fix: 'The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] EQ NOT`.',
   },
   {
     title: 'Broadcast shape mismatch',

@@ -58,7 +58,6 @@ proptest! {
         // are two characters, which costs the lexer nothing — a token ends only
         // at whitespace or a structural delimiter.
         assert_law("alias-eq", &format!("{a} {b} ="), &format!("{a} {b} EQ"));
-        assert_law("alias-neq", &format!("{a} {b} !="), &format!("{a} {b} NEQ"));
         assert_law("alias-lt", &format!("{a} {b} <"), &format!("{a} {b} LT"));
         assert_law("alias-lte", &format!("{a} {b} <="), &format!("{a} {b} LTE"));
         assert_law("alias-gt", &format!("{a} {b} >"), &format!("{a} {b} GT"));

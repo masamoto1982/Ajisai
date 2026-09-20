@@ -37,13 +37,13 @@ async fn pi_is_a_computable_real_decisive_against_separated_rationals() {
     }
 }
 
-/// `EQ`/`NEQ`/`LT`/`LTE`/`GT`/`GTE`: a `PI PI` pair never separates, so the
+/// `EQ`/`LT`/`LTE`/`GT`/`GTE`: a `PI PI` pair never separates, so the
 /// comparison's budget exhausts and the result is the logical Unknown (U) —
 /// a NIL tagged `TruthValue` so `truthValue()` reports `unknown`, not an
 /// ordinary absence and never an error.
 #[tokio::test]
 async fn comparison_family_projects_undecidable_pi_pair_to_unknown() {
-    for name in ["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+    for name in ["EQ", "LT", "LTE", "GT", "GTE"] {
         let code = format!("PI PI {name}");
         let stack = run_ok(&code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
@@ -105,7 +105,7 @@ async fn ordering_words_project_undecidable_pi_pair_to_plain_nil() {
 /// while `X X GTE` — which equality entails — still answered UNKNOWN.
 #[tokio::test]
 async fn equality_reads_the_value_not_the_allocation() {
-    for op in ["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+    for op in ["EQ", "LT", "LTE", "GT", "GTE"] {
         let fresh = run_ok(&format!("PI PI {op}")).await;
         let shared = run_ok(&format!("PI 'X' BIND X X {op}")).await;
         assert!(
@@ -139,7 +139,7 @@ async fn equality_reads_the_value_not_the_allocation() {
 async fn tier2_equality_still_decides_what_it_can() {
     for (code, expect) in [
         ("PI 3 EQ", false),
-        ("PI 3 NEQ", true),
+        ("PI 3 EQ NOT", true),
         // Disjoint domains are unequal whatever they carry.
         ("PI 'a' EQ", false),
         // A length difference settles a Vector pair without an element.

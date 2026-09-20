@@ -161,7 +161,7 @@
     {
       "id": "nonText",
       "kind": "declared",
-      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/NUM/JSON-DECODE), or a name operand (DEF/DEL/BIND), met an operand that is not Text."
+      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/UPPER/LOWER/NUM/JSON-DECODE), or a name operand (DEF/DEL/BIND), met an operand that is not Text."
     },
     {
       "id": "nonTextElement",
@@ -191,7 +191,7 @@
     {
       "id": "notASymbol",
       "kind": "declared",
-      "documentation": "DEFINED? or CONTRACT was given something other than a Symbol. A name is a Symbol, never a String: no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so a String asking about a Word is malformed use rather than a lookup that failed."
+      "documentation": "DEFINED? or CONTRACT was given something other than a Symbol (for CONTRACT, other than a Symbol or a block). A name is a Symbol, never a String: no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so a String asking about a Word is malformed use rather than a lookup that failed."
     },
     {
       "id": "notExecutable",
@@ -253,7 +253,7 @@
     {
       "id": "unsupportedComparison",
       "kind": "declared",
-      "documentation": "EQ/NEQ/LT/LTE met a pair of operands whose types have no defined comparison law."
+      "documentation": "EQ/LT/LTE met a pair of operands whose types have no defined comparison law."
     },
     {
       "id": "vectorLengthMismatch",

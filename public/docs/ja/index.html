@@ -585,7 +585,7 @@
                     <p class="ref-note">角括弧<code>[</code> <code>]</code>も同じです。それ自体で1つのワードであり、前後に空白が必要です。<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>という不正なトークンとして拒否されるため、<code>[ 1 2 ] LENGTH</code>と書いてください。</p>
                     <p class="ref-note">Playgroundの<strong>Format</strong>ボタンは、この足りない空白を補います(実行前にも同じ整形が走るため、<code>[1 2 3]</code>はPlaygroundでは<code>[ 1 2 3 ]</code>として実行されます)。整形されるのは編集中のソースだけで、言語の規則がゆるむわけではありません。CLIやMCPに同じソースをそのまま渡せばエラーになります。</p>
                     <h3>記号ワードとトークン判定</h3>
-                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ほとんどの記号は1文字ですが、比較系のワードには2文字の記号が3つあります。<code>&lt;=</code>が<code>LTE</code>、<code>&gt;=</code>が<code>GTE</code>、<code>!=</code>が<code>NEQ</code>にあたります。トークンが終わるのは空白のときだけで、途中で終わることは決してないため、2文字の記号があっても上の規則は何も複雑になりません。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
+                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ほとんどの記号は1文字ですが、比較系のワードには2文字の記号が2つあります。<code>&lt;=</code>が<code>LTE</code>、<code>&gt;=</code>が<code>GTE</code>にあたります。トークンが終わるのは空白のときだけで、途中で終わることは決してないため、2文字の記号があっても上の規則は何も複雑になりません。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
                     <h3>コメント</h3>
                     <p><code>#</code>は行末まで続くコメントを開始します。<code>#</code>からその行の末尾までの文字は、トークン化される前に破棄されます。なお、文字列リテラルの中にある<code>#</code>は通常のテキストとして扱われるため、<code>'a # b'</code>は全体で1つの文字列です。</p>
                     <h3>具体例</h3>
@@ -830,7 +830,7 @@
                     <h3 id="nil">NILの規則</h3>
                     <p>失敗のモデルは一言でまとめられます。<strong>値を作れなかったなら<code>NIL</code>、そもそも使い方が違うならエラー</strong>です。正しい形の操作が結果を作れない場合は、構造化された理由を伴う<code>NIL</code>に写像されます。一方、型違いやオペランド不足といった誤った使い方は、通常のエラーを送出します。</p>
                     <h3>NILは伝播する</h3>
-                    <p>算術と比較はどちらも<code>NIL</code>をそのまま通します。<code>NIL</code>のオペランドが入っても、パイプラインをクラッシュさせることなく結果が<code>NIL</code>になるだけです。<code>EQ</code>や<code>NEQ</code>も例外ではなく、<code>NIL 1 EQ</code>は<code>FALSE</code>ではなく<code>NIL</code>になります。</p>
+                    <p>算術と比較はどちらも<code>NIL</code>をそのまま通します。<code>NIL</code>のオペランドが入っても、パイプラインをクラッシュさせることなく結果が<code>NIL</code>になるだけです。<code>EQ</code>も例外ではなく、<code>NIL 1 EQ</code>は<code>FALSE</code>ではなく<code>NIL</code>になります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1351,7 +1351,6 @@
                             </thead>
                             <tbody>
                                 <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">等しい</td></tr>
-                                <tr><td><code>NEQ</code></td><td><code>!=</code></td><td class="notes">等しくない</td></tr>
                                 <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">より小さい</td></tr>
                                 <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">以下</td></tr>
                                 <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">より大きい</td></tr>
@@ -1388,7 +1387,7 @@
                                 <tr>
                                     <td><code>1 1 LTE</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes"><code>LTE</code>、<code>GTE</code>、<code>NEQ</code>は2文字の名前として使う。</td>
+                                    <td class="notes"><code>LTE</code>、<code>GTE</code>は2文字の名前として使う。「等しくない」は<code>EQ NOT</code>と書く。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2070,8 +2069,44 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
+                    <h3 id="case">大文字と小文字: <code>UPPER</code>と<code>LOWER</code></h3>
+                    <p>Unicodeの既定の大小文字対応で、文字列全体を大文字・小文字にします。ロケールに依存する規則（トルコ語の点なしi、ギリシャ語の語末シグマ）は適用しないので、同じテキストはどこで走らせても同じ答えになります。対応表はUnicodeのものであり、<code>CHARS</code>と<code>JOIN</code>で自分の定義として書けるものではないので、語として持ちます。<code>ß</code>のように長さの変わる対応もそのまま適用されます。</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'Ajisai' UPPER</code></td>
+                                    <td><code>'AJISAI'</code></td>
+                                    <td class="notes">大文字へ。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'Ajisai' LOWER</code></td>
+                                    <td><code>'ajisai'</code></td>
+                                    <td class="notes">小文字へ。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'straße' UPPER</code></td>
+                                    <td><code>'STRASSE'</code></td>
+                                    <td class="notes">長さの変わる対応もUnicodeどおり。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>42 UPPER</code></td>
+                                    <td>error</td>
+                                    <td class="notes">文字列以外は<code>nonText</code>。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
+                        </div>
+                    </div>
                     <h3 id="format">桁数を決めて描く: <code>FORMAT</code></h3>
-                    <p>算術はどこでも丸めず、<code>STR</code>は厳密な字句を持たない数を断ります。それでも<code>1/3</code>を小数3桁で見たいことはあります。<code>FORMAT</code>がその唯一の場所です。値と桁数を受け、<strong>half-even</strong>（端数がちょうど半分なら偶数側へ）で丸めた十進テキストを返します。出てくるのはテキストであって数ではないので、丸めた量が算術に戻ることはありません。丸め方は固定です——選べるようにすると語が増えるだけだからです。桁数は非負の整数でなければならず（<code>invalidCount</code>）、値はスカラーでなければなりません（<code>nonNumeric</code>）。<code>PI</code>のような計算可能実数で最後の桁が予算内に決まらなければ、<code>undecidable</code>の<code>NIL</code>を投影します。</p>
+                    <p>算術はどこでも丸めず、<code>STR</code>は厳密な字句を持たない数を断ります。それでも<code>1/3</code>を小数3桁で見たいことはあります。<code>FORMAT</code>がその唯一の場所です。値と桁数を受け、<code>ROUND</code>や<code>QUANTIZE</code>と同じ規則（端数がちょうど半分なら0から遠い側へ）で丸めた十進テキストを返します。丸め規則は言語に一つです。出てくるのはテキストであって数ではないので、丸めた量が算術に戻ることはありません。丸め方は固定です——選べるようにすると語が増えるだけだからです。桁数は非負の整数でなければならず（<code>invalidCount</code>）、値はスカラーでなければなりません（<code>nonNumeric</code>）。<code>PI</code>のような計算可能実数で最後の桁が予算内に決まらなければ、<code>undecidable</code>の<code>NIL</code>を投影します。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2086,8 +2121,8 @@
                                 </tr>
                                 <tr>
                                     <td><code>5/2 0 FORMAT</code></td>
-                                    <td><code>'2'</code></td>
-                                    <td class="notes">ちょうど半分は偶数側へ（<code>7/2 0 FORMAT</code>は<code>'4'</code>）。</td>
+                                    <td><code>'3'</code></td>
+                                    <td class="notes">ちょうど半分は0から遠い側へ。<code>ROUND</code>・<code>QUANTIZE</code>と同じ、言語に一つの丸め規則。</td>
                                 </tr>
                                 <tr>
                                     <td><code>2 SQRT 3 FORMAT</code></td>
@@ -2276,7 +2311,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">真偽値の位置に裸の数値は書けません(<code>nonTruthValue</code>)。<code>1</code>や<code>0</code>は真偽値ではないからです(<a href="#disjoint">領域は互いに素</a>)。数値で判定したいなら比較を書いてください。<code>[ 1 ] [ 0 ] NEQ</code>のようにです。</p>
+                    <p class="ref-note">真偽値の位置に裸の数値は書けません(<code>nonTruthValue</code>)。<code>1</code>や<code>0</code>は真偽値ではないからです(<a href="#disjoint">領域は互いに素</a>)。数値で判定したいなら比較を書いてください。<code>[ 1 ] [ 0 ] EQ NOT</code>のようにです。</p>
 
                     <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>SCAN</code>・<code>ANY</code>・<code>ALL</code>)</h3>
                     <p>コードブロック<code>[ ]</code>は第一級の値です。高階ワードは、ブロックや、定義済みワードの引用された名前を、ベクトルの各要素に適用します。</p>
@@ -2824,7 +2859,7 @@ FILTER</code></td>
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
                     <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は100個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この100個のワードは、<strong>55語のSemantic Kernel</strong>と<strong>45語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。100個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>この100個のワードは、<strong>54語のSemantic Kernel</strong>と<strong>46語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。100個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -2863,9 +2898,9 @@ FILTER</code></td>
 
                     <h3>ワードの同一性</h3>
                     <p>すべてのワードは<strong>コンテンツ同一性</strong>を持ちます。これは、正規化された定義と、それが呼び出すワードたちの同一性にわたるダイジェストです。同じ同一性を持つ2つの定義は、名前が何であれ同じワードであり、定義を変更すると、それに依存するすべてのものの同一性が変わります。これが、<code>DEF</code>と<code>DEL</code>が、他の何かがまだ参照しているワードを乱すことを拒否する理由です。依存しているのはワードに対してであって、綴りに対してではないからです。</p>
-                    <h3 id="reflection">辞書を言語の中から読む: <code>DEFINED?</code>・<code>DIGEST</code>・<code>CONTRACT</code></h3>
-                    <p>3つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。どれもオペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません。<code>'ADD' DEFINED?</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
-                    <p><code>DEFINED?</code>は、Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかを答えます。<code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>consumption</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約——<code>PROBE</code>がコードブロックについて答えるのと同じ形——です。走らせる前に費用級を問える、という性質はここから来ます。</p>
+                    <h3 id="reflection">辞書と契約を言語の中から読む: <code>DEFINED?</code>・<code>DIGEST</code>・<code>CONTRACT</code></h3>
+                    <p>3つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。オペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません（<code>CONTRACT</code>だけはコードブロックも受けます）。<code>'ADD' DEFINED?</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
+                    <p><code>DEFINED?</code>は、Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかを答えます。<code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>consumption</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約です。コードブロックをそのまま渡せば、その契約を<strong>走らせずに</strong>推論します——実行前検査（<code>ajisai check --contract</code>）を言語の中から呼ぶ形であり、<code>confidence</code>と<code>gaps</code>が「検証できた／できない」を値として運びます。走らせる前に費用級を問える、という性質はここから来ます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2909,9 +2944,9 @@ FILTER</code></td>
                                     <td class="notes">登録済みの契約を、走らせずに読む。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 42 PRINT ] PROBE 'effects' AT</code></td>
+                                    <td><code>[ 42 PRINT ] CONTRACT 'effects' AT</code></td>
                                     <td><code>[ 'consoleWrite' ]</code></td>
-                                    <td class="notes"><code>PROBE</code>はブロックを走らせずに契約を推論する。何も出力されない。</td>
+                                    <td class="notes">ブロックを渡すと走らせずに契約を推論する。何も出力されない。</td>
                                 </tr>
                                 <tr>
                                     <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>

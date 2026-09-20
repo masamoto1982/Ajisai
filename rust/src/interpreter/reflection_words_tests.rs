@@ -1,5 +1,5 @@
 //! Behavioral probes for the reflection Words `DEFINED?`, `DIGEST`,
-//! `CONTRACT` and the Record shape `PROBE` shares with them
+//! `CONTRACT` — over a Symbol and over a block
 //! (LANG.DICTIONARY.RESOLUTION, LANG.DICTIONARY.MUTATION,
 //! LANG.CONTRACT.REGISTRY, LANG.CONTRACT.CHECK).
 
@@ -144,33 +144,64 @@ mod reflection_words_tests {
     }
 
     #[tokio::test]
-    async fn contract_infers_a_user_word_in_probes_shape() {
-        let code = "[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] PROBE";
+    async fn contract_infers_a_user_word_and_a_block_in_one_shape() {
+        let code = "[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT";
         let interp = run(code).await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 2);
         assert_eq!(
             stack[0], stack[1],
-            "CONTRACT of a User Word is PROBE of its body"
+            "CONTRACT of a User Word is CONTRACT of its body"
         );
         assert_eq!(
-            top("[ SHOUT ] 0 GET DEFINED? [ 42 PRINT ] PROBE KEYS").await,
+            top("[ SHOUT ] 0 GET DEFINED? [ 42 PRINT ] CONTRACT KEYS").await,
             "FALSE [ 'inputs' 'outputs' 'nil' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
         );
-        assert_eq!(top("[ 1 2 ADD ] PROBE 'purity' AT").await, "'pure'");
-        assert_eq!(top("[ 1 2 ADD ] PROBE 'inputs' AT").await, "0/1");
-        assert_eq!(top("[ ADD ] PROBE 'inputs' AT").await, "2/1");
+        assert_eq!(top("[ 1 2 ADD ] CONTRACT 'purity' AT").await, "'pure'");
         assert_eq!(
-            top("[ 42 PRINT ] PROBE 'effects' AT").await,
+            top("[ 1 2 ADD ] CONTRACT 'confidence' AT").await,
+            "'complete'"
+        );
+        assert_eq!(top("[ 1 2 ADD ] CONTRACT 'inputs' AT").await, "0/1");
+        assert_eq!(top("[ ADD ] CONTRACT 'inputs' AT").await, "2/1");
+        assert_eq!(top("[ ] CONTRACT 'purity' AT").await, "'pure'");
+        assert_eq!(
+            top("[ 42 PRINT ] CONTRACT 'effects' AT").await,
             "[ 'consoleWrite' ]"
         );
         assert_eq!(
-            top("[ NOPE ] PROBE 'gaps' AT").await,
-            "[ 'gap.unresolvedWord' ]"
+            top("[ 42 PRINT ] CONTRACT 'purity' AT").await,
+            "'effectful'"
         );
-        // Nothing ran: the effect was reported, not performed.
-        let interp = run("[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT").await;
+        assert_eq!(
+            top("[ NOPE ] CONTRACT 'confidence' AT [ NOPE ] CONTRACT 'gaps' AT").await,
+            "'conservative' [ 'gap.unresolvedWord' ]"
+        );
+        // Nothing ran: the effect was reported, not performed, for the
+        // named body and for the bare block alike.
+        let interp =
+            run("[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT").await;
         assert!(interp.host_effects().is_empty());
+        // Inferring never mutates the dictionary.
+        let before = run("[ 2 MUL ] 'TWICE' DEF").await;
+        let after = run("[ 2 MUL ] 'TWICE' DEF [ TWICE 1 ADD ] CONTRACT").await;
+        assert_eq!(before.dictionary_epoch, after.dictionary_epoch);
+        assert_eq!(before.user_words.len(), after.user_words.len());
+    }
+
+    #[tokio::test]
+    async fn contract_keeps_the_block_and_restores_a_bad_operand() {
+        assert_eq!(top("[ 1 ] KEEP CONTRACT 'inputs' AT").await, "[ 1/1 ] 0/1");
+        for source in [
+            "1 CONTRACT",
+            "1 KEEP CONTRACT",
+            "NIL CONTRACT",
+            "NIL KEEP CONTRACT",
+        ] {
+            let mut interp = Interpreter::new();
+            assert!(interp.execute(source).await.is_err(), "accepted {source}");
+            assert_eq!(interp.stack.len(), 1, "operand was not restored: {source}");
+        }
     }
 
     #[tokio::test]

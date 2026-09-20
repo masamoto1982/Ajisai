@@ -218,10 +218,6 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
     apply_equality(interp, false)
 }
 
-pub fn op_neq(interp: &mut Interpreter) -> Result<()> {
-    apply_equality(interp, true)
-}
-
 /// Pairwise equality. Every pair decides: the structural Vector / Tensor paths
 /// are total, as is scalar comparison.
 ///

@@ -75,11 +75,12 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
         ("CHARS", 0) => AjisaiError::declared("nonText", "CHARS: expected String, got Nil"),
         ("JOIN", 0) => AjisaiError::declared("nonTextVector", "JOIN: expected Vector, got Nil"),
         ("TRIM", 0) => AjisaiError::declared("nonText", "TRIM: expected String, got Nil"),
+        ("UPPER", 0) => AjisaiError::declared("nonText", "UPPER: expected String, got Nil"),
+        ("LOWER", 0) => AjisaiError::declared("nonText", "LOWER: expected String, got Nil"),
         ("EXEC", 0) => AjisaiError::declared(
             "notExecutable",
             "EXEC: expected a Vector ([ ... ]) as the code operand, got Nil",
         ),
-        ("PROBE", 0) => AjisaiError::declared("notExecutable", "PROBE requires a CodeBlock"),
         ("CONTRACT", 0) => AjisaiError::declared(
             "notASymbol",
             "CONTRACT: expected a Symbol naming a Word, got NIL",
@@ -347,13 +348,15 @@ mod declared_nil_contract_tests {
         // The 21 fixed-arity `rejectNil` Words this table was built against
         // (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 1, plus
         // the vocabulary-100 work order's Phases 1-4): LENGTH, REVERSE,
-        // CHARS, JOIN, TRIM, EXEC, PROBE, DEL, SHAPE, FLATTEN, FAIL (1
+        // CHARS, JOIN, TRIM, EXEC, DEL, SHAPE, FLATTEN, FAIL (1
         // operand each), RANDOM, CONCAT, TAKE, DROP, TOKENIZE, DEF, RESHAPE,
         // BSEARCH, SEARCH (2 each) and REPLACE (3) — 11 + 18 + 3.
         // Phase 5 added RECORD, MERGE and WITHOUT (2 operands each): 32 + 6.
         // Phase 6 added DEFINED? and CONTRACT (1 each) and FORMAT (2): 38 + 4.
+        // The post-work-order adjustment folded PROBE into CONTRACT (−1) and
+        // added UPPER and LOWER (+2): 42 + 1.
         assert_eq!(
-            checked, 42,
+            checked, 43,
             "the set of fixed-arity rejectNil Words changed; update nil_rejection_error"
         );
     }

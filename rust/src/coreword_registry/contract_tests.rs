@@ -66,7 +66,7 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
     // reads as U rather than as an ordinary absence. They are
     // PassthroughThenProject because they still pass a NIL operand through
     // first (LANG.FAILURE.PASSTHROUGH), and only then may project the budget-exhaustion case.
-    for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+    for name in &["EQ", "LT", "LTE", "GT", "GTE"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
         assert_eq!(

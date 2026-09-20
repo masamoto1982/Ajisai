@@ -7,9 +7,9 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
     execute_del, format_ops, higher_order, higher_order_fold, io, json_decode, json_encode, logic,
-    math_ops, nil_diagnostics, ordering_ops, power_ops, probe, quantize_ops, record_ops,
-    reflection_ops, search_ops, shape_ops, shape_words, sort, tensor_cmds, transcendental_ops,
-    vector_ops, ConsumptionMode, Interpreter,
+    math_ops, nil_diagnostics, ordering_ops, power_ops, quantize_ops, record_ops, reflection_ops,
+    search_ops, shape_ops, shape_words, sort, tensor_cmds, transcendental_ops, vector_ops,
+    ConsumptionMode, Interpreter,
 };
 
 impl Interpreter {
@@ -248,7 +248,6 @@ impl Interpreter {
             WordId::Le => comparison::op_le(self),
             WordId::Gt => comparison::op_gt(self),
             WordId::Gte => comparison::op_gte(self),
-            WordId::Neq => comparison::op_neq(self),
             WordId::Map => higher_order::op_map(self),
             WordId::Filter => higher_order::op_filter(self),
             WordId::Fold => higher_order_fold::op_fold(self),
@@ -278,7 +277,6 @@ impl Interpreter {
                 Ok(())
             }
             WordId::Exec => control::op_exec(self),
-            WordId::Probe => probe::op_probe(self),
             WordId::Contract => reflection_ops::op_contract(self),
             WordId::Defined => reflection_ops::op_defined(self),
             WordId::Digest => reflection_ops::op_digest(self),
@@ -309,6 +307,8 @@ impl Interpreter {
             WordId::Chars => cast::op_chars(self),
             WordId::Join => cast::op_join(self),
             WordId::Trim => cast::op_trim(self),
+            WordId::Upper => cast::op_upper(self),
+            WordId::Lower => cast::op_lower(self),
             WordId::Tokenize => cast::op_tokenize(self),
             WordId::Search => cast::op_search(self),
             WordId::Replace => cast::op_replace(self),
