@@ -1941,6 +1941,32 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- POW (Phase 7 of the vocabulary-100 work order): the cheapest tier that
+     holds the answer (LANG.VALUES.EXACT). Integer exponents stay in the
+     base's tier, p/2 stays in the field through SQRT, an exact root answers
+     the rational, and everything else is exp(y·ln x), a computable real. -->
+
+<section class="ajisai-case" id="core-pow-exact-tiers" data-category="core">
+  <h3>POW stays exact where the field holds the answer</h3>
+  <pre class="ajisai-source">2 10 POW 2 -2 POW 8 1/3 POW 2 1/2 POW 2 SQRT EQ 2 SQRT 2 POW [ 1 2 3 ] 2 POW</pre>
+  <pre class="ajisai-expect-result">1024/1 1/4 2/1 TRUE 2/1 [ 1/1 4/1 9/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-pow-computable-real" data-category="core">
+  <h3>POW answers a computable real elsewhere, compared under a budget</h3>
+  <pre class="ajisai-source">2 1/3 POW 6 FORMAT PI 2 POW 6 FORMAT 2 1/3 POW 3 POW 2 EQ</pre>
+  <pre class="ajisai-expect-result">'1.259921' '9.869604' NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-pow-projections" data-category="core">
+  <h3>POW projects what has no real value, by the declared reason</h3>
+  <pre class="ajisai-source">0 -1 POW NIL-REASON -8 1/3 POW NIL-REASON PI PI SUB 1/3 POW NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero' NIL 'domainMiss' NIL 'undecidable'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- Observable staging contract of PRECOMPUTE (Section 7.7). -->
 
 <!-- DEF-time acyclicity check (Section 8.7): the User dictionary's reference
@@ -3016,6 +3042,70 @@ W</pre>
   <h3>JSON-DECODE after JSON-ENCODE is the identity on the JSON image</h3>
   <pre class="ajisai-source">[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- GCD and RATIO read the rationals (LANG.VALUES.EXACT): the reduction the
+     machine performs on every rational, and the two parts it keeps. -->
+
+<section class="ajisai-case" id="standard-gcd" data-category="core">
+  <h3>GCD of two integers, non-negative; a non-integer projects domainMiss</h3>
+  <pre class="ajisai-source">12 18 GCD -12 18 GCD 0 0 GCD [ 12 9 ] 6 GCD 1/2 4 GCD NIL-REASON</pre>
+  <pre class="ajisai-expect-result">6/1 6/1 0/1 [ 6/1 3/1 ] NIL 'domainMiss'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-ratio" data-category="core">
+  <h3>RATIO opens a rational into its reduced numerator and denominator</h3>
+  <pre class="ajisai-source">6/4 RATIO -3 RATIO 2 SQRT RATIO NIL-REASON PI RATIO NIL-REASON</pre>
+  <pre class="ajisai-expect-result">[ 3/1 2/1 ] [ -3/1 1/1 ] NIL 'domainMiss' NIL 'undecidable'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- The transcendental Words answer computable reals (LANG.VALUES.EXACT):
+     exact at the arguments that make them rational, decisive against
+     separated rationals, and honestly UNKNOWN against what the budget cannot
+     tell them from. -->
+
+<section class="ajisai-case" id="standard-exp" data-category="core">
+  <h3>EXP is exact at 0 and a computable real elsewhere</h3>
+  <pre class="ajisai-source">0 EXP 1 EXP 10 FORMAT 1 EXP 2 GT 1 EXP 3 LT</pre>
+  <pre class="ajisai-expect-result">1/1 '2.7182818285' TRUE TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-transcendental-starves-honestly" data-category="core">
+  <h3>Two computable reals are never proven equal: the comparison starves to UNKNOWN</h3>
+  <pre class="ajisai-source">1 EXP 1 EXP EQ 1 ATAN 4 MUL PI EQ PI SIN 0 EQ</pre>
+  <pre class="ajisai-expect-result">NIL NIL NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-ln" data-category="core">
+  <h3>LN is exact at 1 and a computable real elsewhere</h3>
+  <pre class="ajisai-source">1 LN 10 LN 6 FORMAT 10 LN 2 LN DIV 3 GT</pre>
+  <pre class="ajisai-expect-result">0/1 '2.302585' TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-ln-domain" data-category="core">
+  <h3>LN projects domainMiss outside the positive reals, undecidable for an unseparated sign</h3>
+  <pre class="ajisai-source">0 LN NIL-REASON -1 LN NIL-REASON PI PI SUB LN NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'domainMiss' NIL 'domainMiss' NIL 'undecidable'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-sin-cos" data-category="core">
+  <h3>SIN and COS take radians, reduce through π, and are exact at 0</h3>
+  <pre class="ajisai-source">0 SIN 0 COS 1 SIN 6 FORMAT PI 3 DIV SIN 6 FORMAT PI 4 DIV COS 6 FORMAT 100 SIN 6 FORMAT</pre>
+  <pre class="ajisai-expect-result">0/1 1/1 '0.841471' '0.866025' '0.707107' '-0.506366'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="standard-atan" data-category="core">
+  <h3>ATAN is total; four times atan 1 encloses π</h3>
+  <pre class="ajisai-source">0 ATAN 1 ATAN 4 MUL 8 FORMAT 1000 ATAN 6 FORMAT -1/3 ATAN 6 FORMAT</pre>
+  <pre class="ajisai-expect-result">0/1 '3.14159265' '1.569796' '-0.321751'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="kernel-random" data-category="core"><h3>RANDOM draws the same exact rationals for the same seed</h3><pre class="ajisai-source">7 3 RANDOM</pre><pre class="ajisai-expect-result">[ 3344595609062871/9007199254740992 861149483440519/2251799813685248 3413160536610049/4503599627370496 ]</pre><div class="ajisai-expect-effects"></div></section>

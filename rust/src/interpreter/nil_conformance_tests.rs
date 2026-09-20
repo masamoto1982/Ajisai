@@ -157,10 +157,11 @@ async fn passthrough_blanket_collapses_to_nil() {
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABS", "ABSENT", "AT", "BSEARCH", "CEIL", "CONTRACT", "DIGEST", "DIV", "DROP", "EQ", "FILL",
-    "FLOOR", "FORMAT", "GET", "GT", "GTE", "INDEX-OF", "JSON-DECODE", "JSON-ENCODE", "LT", "LTE",
-    "MAX", "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER", "PUT", "QUANTIZE", "RANDOM", "RANGE",
-    "RESHAPE", "ROUND", "SEARCH", "SHAPE", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
+    "ABS", "ABSENT", "AT", "BSEARCH", "CEIL", "CONTRACT", "COS", "DIGEST", "DIV", "DROP", "EQ",
+    "EXP", "FILL", "FLOOR", "FORMAT", "GCD", "GET", "GT", "GTE", "INDEX-OF", "JSON-DECODE",
+    "JSON-ENCODE", "LN", "LT", "LTE", "MAX", "MIN", "MOD", "NEQ", "NIL-REASON", "NUM", "ORDER",
+    "POW", "PUT", "QUANTIZE", "RANDOM", "RANGE", "RATIO", "RESHAPE", "ROUND", "SEARCH", "SHAPE",
+    "SIN", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a

@@ -70,7 +70,7 @@ fn arctan_enclosure(m: u32, terms: u32) -> (Fraction, Fraction) {
 }
 
 /// Base rigorous rational bounds `(lo, hi)` with `lo ≤ π ≤ hi`, computed once.
-fn pi_bounds() -> &'static (Fraction, Fraction) {
+pub(crate) fn pi_bounds() -> &'static (Fraction, Fraction) {
     static BOUNDS: OnceLock<(Fraction, Fraction)> = OnceLock::new();
     BOUNDS.get_or_init(|| {
         // Term counts make each arctangent's width « 2^-PI_PRECISION_BITS:

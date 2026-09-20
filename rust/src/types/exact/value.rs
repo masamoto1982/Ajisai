@@ -232,9 +232,10 @@ impl ExactReal {
 
     /// Reciprocal `1/x`. `Rational(nil)` for nil; `None` for an exactly
     /// zero operand — decided algebraically, with no budget, because an
-    /// `Algebraic` is never zero. A Tier 2 operand also returns `None`:
-    /// its zero-ness is not decidable, and no vocabulary word reaches
-    /// this arm until the Tier 2 zero-separation protocol exists.
+    /// `Algebraic` is never zero. A Tier 2 operand answers the reciprocal of
+    /// its enclosure once the internal budget has separated it from zero
+    /// (`transcendental::tier2_reciprocal`), and `None` when it could not:
+    /// a value that may be zero has no reciprocal the machine can vouch for.
     pub fn reciprocal(&self) -> Option<Self> {
         match self {
             Self::Rational(f) => {
@@ -248,7 +249,7 @@ impl ExactReal {
                 Some(Self::Rational(Fraction::new(d, n)))
             }
             Self::Algebraic(a) => Some(Self::from_result(a.reciprocal())),
-            Self::Computable(_) => None,
+            Self::Computable(c) => Self::tier2_reciprocal(c),
         }
     }
 
@@ -318,8 +319,9 @@ impl ExactReal {
 
     /// Division `self / other`. `Rational(nil)` for nil operands; `None`
     /// for a zero divisor — exact over Tier ≤ 1, where zero-ness is
-    /// decidable. A Tier 2 divisor returns `None` until the Tier 2
-    /// zero-separation protocol exists (no vocabulary reaches it).
+    /// decidable. A Tier 2 divisor divides through its reciprocal, so the
+    /// answer is `None` only when the internal budget could not separate
+    /// the divisor from zero.
     pub fn div(&self, other: &Self) -> Option<Self> {
         if self.is_nil() || other.is_nil() {
             return Some(Self::Rational(Fraction::nil()));
@@ -335,8 +337,7 @@ impl ExactReal {
                 Some(Self::from_result(a.mul_fraction(&inv)))
             }
             (Self::Algebraic(a), Self::Algebraic(b)) => Some(Self::from_result(a.div(b))),
-            (_, Self::Computable(_)) => None,
-            (Self::Computable(_), _) => {
+            (_, Self::Computable(_)) | (Self::Computable(_), _) => {
                 let inv = other.reciprocal()?;
                 Some(self.mul(&inv))
             }
@@ -390,7 +391,7 @@ impl ExactReal {
     /// a point for rationals, the doubling algebraic bounds for Tier 1,
     /// the generator's interval for Tier 2. Nested and shrinking in
     /// `step` for every tier.
-    fn enclosure_at(&self, step: u64) -> RatInterval {
+    pub(crate) fn enclosure_at(&self, step: u64) -> RatInterval {
         match self {
             Self::Rational(f) => RatInterval::point(f.clone()),
             Self::Algebraic(a) => {

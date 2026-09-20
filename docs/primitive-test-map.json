@@ -6,8 +6,8 @@
   "summary": {
     "primitives": 24,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 22,
-    "distinct_conformance_cases": 156
+    "distinct_law_test_files": 24,
+    "distinct_conformance_cases": 167
   },
   "primitives": [
     {
@@ -133,28 +133,39 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 6,
-      "law_test_count": 3,
-      "conformance_case_count": 6,
+      "derived_word_count": 9,
+      "law_test_count": 6,
+      "conformance_case_count": 11,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
         "core.div",
+        "core.gcd",
         "core.mod",
         "core.mul",
+        "core.pow",
+        "core.ratio",
         "core.sub"
       ],
       "law_tests": [
+        "rust/src/interpreter/power_words_tests.rs",
+        "rust/src/types/exact/transcendental_tests.rs",
         "rust/tests/algebraic_laws.rs",
         "rust/tests/desugar_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
+        "rust/tests/standard_derivation_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
         "core-bignum-does-not-fall-to-float",
         "core-division-by-zero-is-nil",
         "core-exact-addition",
         "core-exact-division",
+        "core-pow-computable-real",
+        "core-pow-exact-tiers",
+        "core-pow-projections",
+        "standard-gcd",
         "standard-mod",
+        "standard-ratio",
         "standard-sub"
       ]
     },
@@ -163,20 +174,25 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 15,
-      "law_test_count": 8,
-      "conformance_case_count": 19,
+      "derived_word_count": 20,
+      "law_test_count": 10,
+      "conformance_case_count": 25,
       "derived_words": [
+        "core.atan",
         "core.bsearch",
         "core.comparison",
+        "core.cos",
         "core.eq",
+        "core.exp",
         "core.format",
         "core.gt",
         "core.gte",
+        "core.ln",
         "core.lt",
         "core.lte",
         "core.neq",
         "core.order",
+        "core.sin",
         "module.algo.index-of",
         "module.algo.sort",
         "module.math.abs",
@@ -187,6 +203,8 @@
         "rust/src/arithmetic_operation_tests.rs",
         "rust/src/interpreter/algo_ops_tests.rs",
         "rust/src/interpreter/math_ops_tests.rs",
+        "rust/src/interpreter/power_words_tests.rs",
+        "rust/src/types/exact/transcendental_tests.rs",
         "rust/tests/algebraic_laws.rs",
         "rust/tests/observation_laws.rs",
         "rust/tests/standard_derivation_laws.rs",
@@ -198,21 +216,27 @@
         "core-decided-comparison-false",
         "core-decided-comparison-true",
         "standard-abs",
+        "standard-atan",
         "standard-bsearch",
         "standard-bsearch-absent-key-projects",
         "standard-bsearch-first-of-equal-keys",
         "standard-bsearch-unsorted-raises",
+        "standard-exp",
         "standard-format-half-even",
         "standard-format-irrational",
         "standard-format-rejects-bad-count",
         "standard-gte",
         "standard-index-of",
+        "standard-ln",
+        "standard-ln-domain",
         "standard-lte",
         "standard-max",
         "standard-min",
         "standard-neq",
         "standard-order",
-        "standard-sort"
+        "standard-sin-cos",
+        "standard-sort",
+        "standard-transcendental-starves-honestly"
       ]
     },
     {
@@ -447,9 +471,9 @@
       "algebraic_family": "structure-lift",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 31,
-      "law_test_count": 6,
-      "conformance_case_count": 58,
+      "derived_word_count": 32,
+      "law_test_count": 7,
+      "conformance_case_count": 59,
       "derived_words": [
         "core.all",
         "core.any",
@@ -472,6 +496,7 @@
         "core.put",
         "core.random",
         "core.range",
+        "core.ratio",
         "core.reshape",
         "core.reverse",
         "core.scan",
@@ -485,6 +510,7 @@
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/src/interpreter/power_words_tests.rs",
         "rust/tests/contract_modifier_laws.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/standard_derivation_laws.rs",
@@ -545,6 +571,7 @@
         "standard-member-single-probe",
         "standard-order",
         "standard-put",
+        "standard-ratio",
         "standard-sort",
         "standard-take-and-drop-partition",
         "standard-tally",
@@ -830,14 +857,23 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
       "status": "accepted",
-      "derived_word_count": 1,
-      "law_test_count": 1,
-      "conformance_case_count": 7,
+      "derived_word_count": 7,
+      "law_test_count": 4,
+      "conformance_case_count": 16,
       "derived_words": [
-        "core.pi"
+        "core.atan",
+        "core.cos",
+        "core.exp",
+        "core.ln",
+        "core.pi",
+        "core.pow",
+        "core.sin"
       ],
       "law_tests": [
-        "rust/src/interpreter/tier2_undecidable_conformance_tests.rs"
+        "rust/src/interpreter/power_words_tests.rs",
+        "rust/src/interpreter/tier2_undecidable_conformance_tests.rs",
+        "rust/src/types/exact/transcendental_tests.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
         "core-pi-decides-against-a-separated-rational",
@@ -846,7 +882,16 @@
         "core-pi-is-a-computable-real",
         "core-pi-pi-eq-is-unknown",
         "core-pi-pi-lt-is-unknown",
-        "core-pi-pi-min-is-nil"
+        "core-pi-pi-min-is-nil",
+        "core-pow-computable-real",
+        "core-pow-exact-tiers",
+        "core-pow-projections",
+        "standard-atan",
+        "standard-exp",
+        "standard-ln",
+        "standard-ln-domain",
+        "standard-sin-cos",
+        "standard-transcendental-starves-honestly"
       ]
     },
     {

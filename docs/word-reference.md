@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **92 Words**, of which **54** form the Semantic Kernel and **38** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **100 Words**, of which **55** form the Semantic Kernel and **45** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -374,6 +374,118 @@ Exact square root of a non-negative rational, element-wise over a vector. The re
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `2 SQRT`
+- **ERROR conditions:** `nonNumeric`
+
+## `POW`
+
+Exact power `x y POW`, element-wise over Vectors. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `PI 2 POW` is π² as a computable real. An exponent `p/2` stays in the field — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2√2` — and a rational exponent whose root the base takes exactly answers the rational (`8 1/3 POW` is `2`). Every other exponent, an irrational one included, is `exp(y·ln x)`: a computable real compared under a budget. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under a fractional exponent has no real value and projects `domainMiss`; a Tier 2 base or exponent whose sign the budget cannot settle projects `undecidable`; an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.
+
+- **Vocabulary tier:** Semantic Kernel
+- **Family:** `exactArithmetic`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: zeroBaseNegativeExponent,negativeBaseFractionalExponent,tier2SignUndecidable,exponentTooLargeToMaterialize → divisionByZero, domainMiss, undecidable, spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `2 10 POW`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+
+## `GCD`
+
+The greatest common divisor of two integers, non-negative, element-wise over Vectors: `12 18 GCD` is `6`, `0 0 GCD` is `0`. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every rational reduced, so the Word only exposes it. A non-integer operand — a fraction or an irrational — projects `domainMiss`; a computable real, whose integrality the budget cannot decide, projects `undecidable`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `exactArithmetic`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: nonIntegerOperand,tier2Operand → domainMiss, undecidable
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `12 18 GCD`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+
+## `RATIO`
+
+A rational opened into its reduced numerator and denominator, as a two-element Vector with the denominator positive: `6/4 RATIO` is `[ 3 2 ]`, `-3 RATIO` is `[ -3 1 ]`, element-wise over Vectors. The language advertises exact rationals; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (`2 SQRT`) has no numerator and projects `domainMiss`; a computable real, which the budget cannot prove rational, projects `undecidable`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: irrationalOperand,tier2Operand → domainMiss, undecidable
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `6/4 RATIO`
+- **ERROR conditions:** `nonNumeric`
+
+## `EXP`
+
+The natural exponential `eˣ`, element-wise over Vectors. `0 EXP` is exactly `1`; every other result is a computable real (LANG.VALUES.EXACT): construction is constant-time, and the cost is paid when the value is observed — a comparison refines a rigorous rational enclosure and answers UNKNOWN when its budget runs out, never a wrong order. `1 EXP 20 FORMAT` shows twenty correct digits of e; `1 EXP 1 EXP EQ` is `NIL`, because two computable reals are never proven equal. An argument so large that the enclosure would not fit the machine projects `spaceExhausted`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `1 EXP 5 FORMAT`
+- **ERROR conditions:** `nonNumeric`
+
+## `LN`
+
+The natural logarithm, element-wise over Vectors. `1 LN` is exactly `0`; every other result is a computable real compared under a budget (LANG.VALUES.EXACT). Zero and negative arguments have no real logarithm and project `domainMiss`; a computable real argument whose sign the budget cannot separate from zero projects `undecidable`. `10 LN 2 LN DIV` is `log₂ 10`, and `x LN y MUL EXP` is `x y POW` written out.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: nonPositiveArgument,tier2SignUndecidable → domainMiss, undecidable
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `10 LN 5 FORMAT`
+- **ERROR conditions:** `nonNumeric`
+
+## `SIN`
+
+The sine of an angle in radians, element-wise over Vectors. `0 SIN` is exactly `0`; every other result is a computable real (LANG.VALUES.EXACT), so `PI SIN` is a value enclosing 0 that no budget proves to be 0: `PI SIN 0 EQ` is `NIL`, and even `PI SIN 10 FORMAT` projects `undecidable`, because no digit count settles a value that may lie on either side of zero. `PI 3 DIV SIN 6 FORMAT` is `'0.866025'`. The argument is reduced by multiples of 2π through π's own 512-bit enclosure; an argument so large that the reduction would leave nothing projects `spaceExhausted`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `1 SIN 5 FORMAT`
+- **ERROR conditions:** `nonNumeric`
+
+## `COS`
+
+The cosine of an angle in radians, element-wise over Vectors. `0 COS` is exactly `1`; every other result is a computable real (LANG.VALUES.EXACT) compared under a budget, so `PI COS` encloses −1 without ever proving it: `PI COS -1 EQ` and `PI COS -1 LT` are both `NIL`, while `PI 4 DIV COS 6 FORMAT` is `'0.707107'`. The argument is reduced by multiples of 2π through π's own 512-bit enclosure; an argument so large that the reduction would leave nothing projects `spaceExhausted`.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `1 COS 5 FORMAT`
+- **ERROR conditions:** `nonNumeric`
+
+## `ATAN`
+
+The arctangent, in radians, element-wise over Vectors: the one inverse that accompanies `SIN` and `COS`, total over every real. `0 ATAN` is exactly `0`; every other result is a computable real (LANG.VALUES.EXACT), so `1 ATAN 4 MUL` is a value enclosing π that no budget proves equal to `PI`. `y x DIV ATAN` gives the angle of a point in the right half-plane.
+
+- **Vocabulary tier:** Standard (`operational`)
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Effects:** none
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `1 ATAN 4 MUL 6 FORMAT`
 - **ERROR conditions:** `nonNumeric`
 
 ## `PI`

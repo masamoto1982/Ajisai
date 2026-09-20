@@ -42,6 +42,9 @@ pub(crate) mod naming_convention_checker;
 mod ordering_ops;
 #[cfg(test)]
 mod ordering_ops_tests;
+mod power_ops;
+#[cfg(test)]
+mod power_words_tests;
 pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
@@ -71,6 +74,7 @@ mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
+mod transcendental_ops;
 pub mod upstream_nil_link;
 #[cfg(test)]
 mod upstream_nil_link_tests;

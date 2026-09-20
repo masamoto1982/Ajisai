@@ -16,6 +16,11 @@ mod cf_budget_tests;
 pub mod computable;
 pub mod observation;
 pub mod pi;
+mod power;
+mod series;
+mod transcendental;
+#[cfg(test)]
+mod transcendental_tests;
 pub mod value;
 mod value_approx;
 
@@ -23,4 +28,6 @@ pub use algebraic::{Algebraic, AlgebraicResult};
 pub use algebraic_floor::AlgebraicObservation;
 pub use computable::{Computable, ComputableObservation};
 pub use observation::{Observation, RatInterval, Refine, Water};
+pub use power::PowOutcome;
+pub use transcendental::Transcendental;
 pub use value::{ExactCmp, ExactReal, DEFAULT_COMPARISON_WATER};

@@ -430,3 +430,58 @@ async fn json_decode_and_encode_are_exact_and_compose_to_the_identity() {
         ]
     );
 }
+
+/// `GCD` answers what Euclid's algorithm written over a fixed number of
+/// steps answers on operands that terminate within them, and `RATIO` reads
+/// back the two parts `DIV` rebuilds the rational from: both expose what the
+/// machine already does to keep every rational reduced.
+#[tokio::test]
+async fn gcd_and_ratio_agree_with_the_kernel_spellings() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute(
+            "12 18 GCD 18 12 MOD 12 GCD \
+             6/4 RATIO 0 GET 6/4 RATIO 1 GET DIV 3/2 EQ \
+             2 SQRT RATIO NIL-REASON PI 4 GCD NIL-REASON",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        rendered_stack(&interpreter),
+        [
+            "6/1",
+            "6/1",
+            "TRUE",
+            "NIL",
+            "'domainMiss'",
+            "NIL",
+            "'undecidable'"
+        ]
+    );
+}
+
+/// The transcendental Words answer computable reals whose enclosures a
+/// comparison refines under the water budget: decisive against separated
+/// rationals, honestly UNKNOWN against values they cannot be told from, and
+/// exact where the argument makes the answer rational.
+#[tokio::test]
+async fn transcendentals_decide_against_rationals_and_starve_against_themselves() {
+    let mut interpreter = Interpreter::new();
+    interpreter
+        .execute(
+            "1 EXP 2 GT 1 EXP 3 LT 1 EXP 1 EXP EQ 0 EXP \
+             10 LN 2 LN DIV 3 GT 1 LN \
+             PI 2 DIV SIN 1 LT 0 SIN 0 COS PI COS -1 LT \
+             1 ATAN 4 MUL PI EQ 0 ATAN \
+             2 1/3 POW 3 POW 2 EQ 8 1/3 POW 2 1/2 POW 2 SQRT EQ",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        rendered_stack(&interpreter),
+        [
+            "TRUE", "TRUE", "NIL", "1/1", "TRUE", "0/1", "NIL", "0/1", "1/1", "NIL", "NIL", "0/1",
+            "NIL", "2/1", "TRUE",
+        ]
+    );
+}
