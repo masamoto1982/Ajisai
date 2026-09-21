@@ -1,8 +1,20 @@
 //! Test suite for `crate::interpreter::debug_next_checks`.
 
-use crate::error::ErrorCategory;
-use crate::interpreter::debug_diagnosis::CauseClass;
+use crate::error::{ErrorCategory, NilReason};
+use crate::interpreter::debug_diagnosis::{CauseClass, DebugCheck};
 use crate::interpreter::debug_next_checks::build_next_checks;
+
+/// The checks for a case, holding the two inputs this suite does not vary: no
+/// spelling candidates, and an empty stack beneath the failing Word. Cases
+/// that are *about* either of those call `build_next_checks` directly.
+fn checks_for(
+    why: &CauseClass,
+    word: Option<&str>,
+    category: Option<&ErrorCategory>,
+    nil_reason: Option<&NilReason>,
+) -> Vec<DebugCheck> {
+    build_next_checks(why, word, category, nil_reason, &[], 0)
+}
 
 /// Hiragana, katakana or CJK ideographs — enough to catch a Japanese
 /// sentence that leaked into the English locale.
@@ -41,7 +53,7 @@ fn every_check_carries_a_code_and_both_locales() {
     ];
     for why in &classes {
         for category in &categories {
-            for check in build_next_checks(why, Some("MAP"), category.as_ref(), None) {
+            for check in checks_for(why, Some("MAP"), category.as_ref(), None) {
                 assert!(
                     !check.code.is_empty(),
                     "{why:?} produced a check with no code"
@@ -67,13 +79,13 @@ fn every_check_carries_a_code_and_both_locales() {
 
 #[test]
 fn a_size_ceiling_and_a_step_budget_get_different_advice() {
-    let sizes = build_next_checks(
+    let sizes = checks_for(
         &CauseClass::ResourceLimit,
         None,
         Some(&ErrorCategory::ResourceLimitExceeded),
         None,
     );
-    let steps = build_next_checks(
+    let steps = checks_for(
         &CauseClass::ResourceLimit,
         None,
         Some(&ErrorCategory::ExecutionLimitExceeded),
@@ -85,7 +97,7 @@ fn a_size_ceiling_and_a_step_budget_get_different_advice() {
 
 #[test]
 fn a_stack_underflow_names_the_declared_arity_and_a_correct_call() {
-    let checks = build_next_checks(&CauseClass::StackShape, Some("TOKENIZE"), None, None);
+    let checks = checks_for(&CauseClass::StackShape, Some("TOKENIZE"), None, None);
     let codes: Vec<&str> = checks.iter().map(|c| c.code).collect();
     assert_eq!(codes.first(), Some(&"checkDeclaredArity"));
     assert_eq!(codes.get(1), Some(&"checkDeclaredSyntax"));
@@ -102,10 +114,85 @@ fn a_stack_underflow_names_the_declared_arity_and_a_correct_call() {
 }
 
 #[test]
+fn a_stack_underflow_says_how_many_values_are_missing() {
+    // `1 ADD`: the arity line and the locus line each held half of "push one
+    // more", four lines apart, and the reader was left to subtract.
+    let checks = build_next_checks(&CauseClass::StackShape, Some("ADD"), None, None, &[], 1);
+    let arity = &checks[0];
+    assert_eq!(arity.code, "checkDeclaredArity");
+    for fragment in [
+        "( 2 -- 1 )",
+        "needs 2 values",
+        "the stack held 1",
+        "Push 1 more",
+    ] {
+        assert!(
+            arity.detail.en.contains(fragment),
+            "expected {fragment:?} in {}",
+            arity.detail.en
+        );
+    }
+    assert!(
+        arity.detail.ja.contains("あと 1 個積む"),
+        "{}",
+        arity.detail.ja
+    );
+}
+
+#[test]
+fn an_arity_the_depth_already_meets_keeps_the_plain_declaration() {
+    // A Word that underflowed with its operands apparently present failed for
+    // a reason this sentence would misdescribe, so it is not said.
+    let checks = build_next_checks(&CauseClass::StackShape, Some("ADD"), None, None, &[], 5);
+    assert_eq!(checks[0].detail.en, "ADD declares ( 2 -- 1 ).");
+}
+
+#[test]
+fn the_spelling_check_names_the_candidates_it_has() {
+    let named = build_next_checks(
+        &CauseClass::TypoOrUnknownName,
+        Some("MAPP"),
+        None,
+        None,
+        &["MAP".to_string()],
+        0,
+    );
+    let spelling = named
+        .iter()
+        .find(|c| c.code == "checkSpelling")
+        .expect("an unresolved name gets a spelling check");
+    assert!(spelling.detail.en.contains("MAP"), "{}", spelling.detail.en);
+}
+
+#[test]
+fn the_spelling_check_promises_no_list_when_there_is_none() {
+    // `^`, `FOO` and `=` all suggest nothing: a symbol is never a typo of an
+    // alphabetic name, and the distance ceiling is deliberately tight. The
+    // check used to send the reader to `diagnosis.candidates` regardless —
+    // a field no host prints, holding nothing.
+    let checks = checks_for(&CauseClass::TypoOrUnknownName, Some("FOO"), None, None);
+    let spelling = checks
+        .iter()
+        .find(|c| c.code == "checkSpelling")
+        .expect("an unresolved name gets a spelling check");
+    assert!(
+        !spelling.detail.en.contains("diagnosis.candidates")
+            && !spelling.detail.ja.contains("diagnosis.candidates"),
+        "no check may point at a protocol field the reader cannot see: {}",
+        spelling.detail.en
+    );
+    assert!(
+        spelling.detail.en.contains("never defined"),
+        "say what an empty list means: {}",
+        spelling.detail.en
+    );
+}
+
+#[test]
 fn an_unclassified_raise_lists_the_declared_conditions_and_a_classified_one_does_not() {
     // `why: unknown` is where the alternative is "read the message", which is
     // what the caller had already read.
-    let unclassified = build_next_checks(&CauseClass::Unknown, Some("NUM"), None, None);
+    let unclassified = checks_for(&CauseClass::Unknown, Some("NUM"), None, None);
     assert_eq!(
         unclassified.first().map(|c| c.code),
         Some("checkDeclaredErrorConditions")
@@ -114,7 +201,7 @@ fn an_unclassified_raise_lists_the_declared_conditions_and_a_classified_one_does
 
     // Where the class *is* decided, its own checks are more specific than a
     // list of every condition the Word declares, so the list stays out.
-    let classified = build_next_checks(
+    let classified = checks_for(
         &CauseClass::ShapeMismatch,
         Some("ADD"),
         Some(&ErrorCategory::ShapeMismatch),
@@ -127,7 +214,7 @@ fn an_unclassified_raise_lists_the_declared_conditions_and_a_classified_one_does
 
 #[test]
 fn a_projection_names_the_condition_the_registry_declares_for_it() {
-    let checks = build_next_checks(
+    let checks = checks_for(
         &CauseClass::Domain,
         Some("SQRT"),
         // No `ErrorCategory` names a domain miss (`error_category_for_nil_reason`
@@ -150,7 +237,7 @@ fn a_projection_names_the_condition_the_registry_declares_for_it() {
 fn a_word_with_no_registry_entry_still_gets_its_class_level_checks() {
     // A user Word is not declared, so nothing is derived — but the class-level
     // table must still answer, or an undeclared Word would get no advice at all.
-    let checks = build_next_checks(&CauseClass::StackShape, Some("MY-WORD"), None, None);
+    let checks = checks_for(&CauseClass::StackShape, Some("MY-WORD"), None, None);
     assert!(checks.iter().all(|c| !c.code.starts_with("checkDeclared")));
     assert_eq!(checks.first().map(|c| c.code), Some("checkArity"));
 }
@@ -278,8 +365,7 @@ mod diagnosis_vocabulary_is_real {
         for why in &classes {
             for category in &categories {
                 for reason in &reasons {
-                    let checks =
-                        build_next_checks(why, Some("DIV"), category.as_ref(), reason.as_ref());
+                    let checks = checks_for(why, Some("DIV"), category.as_ref(), reason.as_ref());
                     for check in checks {
                         for text in [
                             &check.detail.en,
@@ -310,7 +396,7 @@ mod diagnosis_vocabulary_is_real {
     /// actually recover a NIL, so the fix is not merely "stopped saying SAFE".
     #[test]
     fn zero_division_advice_names_the_recovery_words() {
-        let checks = build_next_checks(
+        let checks = checks_for(
             &CauseClass::Domain,
             Some("DIV"),
             Some(&ErrorCategory::DivisionByZero),

@@ -185,13 +185,13 @@
       }
     },
     {
-      "name": "a stack underflow names the Word's declared arity and a correct call",
+      "name": "a stack underflow names the Word's declared arity, what was missing, and a correct call",
       "source": "'hello world' TOKENIZE",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "stackShape",
         "/diagnosis/nextChecks/0/code": "checkDeclaredArity",
-        "/diagnosis/nextChecks/0/detail/en": "TOKENIZE declares ( 2 -- 1 ).",
+        "/diagnosis/nextChecks/0/detail/en": "TOKENIZE declares ( 2 -- 1 ): it needs 2 values, the stack held 1. Push 1 more before calling it.",
         "/diagnosis/nextChecks/1/code": "checkDeclaredSyntax",
         "/diagnosis/nextChecks/1/detail/en": "One correct call is `'a,b,c' ',' TOKENIZE`."
       }

@@ -31,17 +31,59 @@ fn check(code: &'static str, title: (&str, &str), detail: (&str, &str)) -> Debug
     }
 }
 
+/// The spelling check for a name that did not resolve, written against the
+/// suggestions the same diagnosis carries.
+///
+/// It used to say the closest known names were in `diagnosis.candidates`
+/// whether or not any were: `^`, `FOO` and `=` each produce an empty list (a
+/// symbol is never a typo of an alphabetic name, and the distance ceiling is
+/// deliberately tight), so the reader was sent to a list that was not there
+/// under a field name no host prints. Both halves are fixed here — the
+/// sentence names what the host actually renders, and says something true
+/// when there is nothing to name.
+pub(super) fn spelling_check(candidates: &[String]) -> DebugCheck {
+    if candidates.is_empty() {
+        return check(
+            "checkSpelling",
+            ("Check spelling", "スペルを確認する"),
+            (
+                "Check the spelling of the Word name. No known name is close enough to be a likely \
+                 misspelling of it, so this is more likely a Word that was never defined.",
+                "word 名のスペルを確認する。綴り間違いと見なせるほど近い既知の名前はないので、\
+                 未定義の word である可能性が高い",
+            ),
+        );
+    }
+    check(
+        "checkSpelling",
+        ("Check spelling", "スペルを確認する"),
+        (
+            &format!(
+                "Check the spelling of the Word name; the closest known names are {} \
+                 (also shown on the \"did you mean\" line).",
+                candidates.join(", "),
+            ),
+            &format!(
+                "word 名のスペルを確認する。最も近い既知の名前は {}（\"did you mean\" の行にも出る）",
+                candidates.join(", "),
+            ),
+        ),
+    )
+}
+
 pub(crate) fn build_next_checks(
     why: &CauseClass,
     word: Option<&str>,
     category: Option<&ErrorCategory>,
     nil_reason: Option<&NilReason>,
+    candidates: &[String],
+    stack_len_before: usize,
 ) -> Vec<DebugCheck> {
     let fired_condition = match category {
         Some(ErrorCategory::Declared(condition)) => Some(*condition),
         _ => None,
     };
-    let mut out = declared_checks(why, word, nil_reason, fired_condition);
+    let mut out = declared_checks(why, word, nil_reason, fired_condition, stack_len_before);
 
     match why {
         CauseClass::Domain => {
@@ -143,14 +185,7 @@ pub(crate) fn build_next_checks(
                     ),
                 ));
             }
-            out.push(check(
-                "checkSpelling",
-                ("Check spelling", "スペルを確認する"),
-                (
-                    "Check the spelling of the Word name; diagnosis.candidates lists the closest known names.",
-                    "word 名のスペルを確認する。diagnosis.candidates に近い既知の名前が並ぶ",
-                ),
-            ));
+            out.push(spelling_check(candidates));
             out.push(check(
                 "checkAliasCanonicalization",
                 ("Check alias canonicalization", "別名の正規化を確認する"),
