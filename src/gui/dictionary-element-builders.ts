@@ -1,15 +1,3 @@
-export const DEFAULT_WORD_INFO_MESSAGE =
-    'What the selected word does, and an example of how to use it, will be displayed here.';
-
-export const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
-    element.textContent = text;
-    element.classList.toggle('is-placeholder', isPlaceholder);
-};
-
-export const resetWordInfoDisplay = (element: HTMLElement): void => {
-    renderWordInfo(element, DEFAULT_WORD_INFO_MESSAGE, true);
-};
-
 export const compareWordName = (a: string, b: string): number => {
     const aIsAlpha = /^[A-Za-z]/.test(a);
     const bIsAlpha = /^[A-Za-z]/.test(b);
@@ -139,8 +127,17 @@ export const createWordButtonElement = (
     text: string,
     className: string,
     onClick: () => void,
-    onHover?: () => void,
-    onLeave?: () => void,
+    /**
+     * What the word does and an example of using it, shown as the browser's
+     * own tooltip. This used to be a line of text above the list that a
+     * `mouseenter`/`mouseleave` pair wrote into and cleared — a hover display
+     * built by hand, reserving a row of the surface whether or not anything
+     * was being hovered, and re-flowing the list under the pointer every time
+     * its height changed. `title` is the same idea with none of that: the
+     * browser owns the timing, the placement and the dismissal, and the
+     * surface gets its row back.
+     */
+    title?: string,
     onContextMenu?: (event: MouseEvent) => void,
     onLongPress?: () => void
 ): HTMLButtonElement => {
@@ -148,6 +145,7 @@ export const createWordButtonElement = (
     button.type = 'button';
     button.textContent = text;
     button.className = className;
+    if (title) button.title = title;
 
     // Long-press must be wired before the click handler so its capture of a
     // fired long-press (via stopImmediatePropagation) runs first.
@@ -155,8 +153,6 @@ export const createWordButtonElement = (
 
     button.addEventListener('click', onClick);
 
-    if (onHover) button.addEventListener('mouseenter', onHover);
-    if (onLeave) button.addEventListener('mouseleave', onLeave);
     if (onContextMenu) {
         button.addEventListener('contextmenu', (e) => {
             e.preventDefault();

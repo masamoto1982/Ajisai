@@ -14,8 +14,6 @@ export interface GUIElements {
     readonly stackDisplay: HTMLElement;
     readonly builtInWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
-    readonly builtInWordInfo: HTMLElement;
-    readonly userWordInfo: HTMLElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
     readonly dictionarySheetSelect: DictionarySheetSelectElement;
@@ -79,8 +77,6 @@ export const cacheElements = (): GUIElements => ({
     stackDisplay: requireElementById('stack-display', HTMLElement),
     builtInWordsDisplay: requireElementById('core-words-display', HTMLElement),
     userWordsDisplay: requireElementById('user-words-display', HTMLElement),
-    builtInWordInfo: requireElementById('core-word-info', HTMLElement),
-    userWordInfo: requireElementById('user-word-info', HTMLElement),
     dictionarySearch: requireElementById('dictionary-search', HTMLInputElement),
     dictionarySearchClearBtn: requireElementById('dictionary-search-clear-btn', HTMLButtonElement),
     // A custom selector component installs a `value` accessor on this element
@@ -107,9 +103,7 @@ export const extractDisplayElements = (elements: GUIElements): DisplayElements =
 
 export const extractVocabularyElements = (elements: GUIElements): VocabularyElements => ({
     builtInWordsDisplay: elements.builtInWordsDisplay,
-    userWordsDisplay: elements.userWordsDisplay,
-    builtInWordInfo: elements.builtInWordInfo,
-    userWordInfo: elements.userWordInfo
+    userWordsDisplay: elements.userWordsDisplay
 });
 
 export const extractMobileElements = (elements: GUIElements): MobileElements => ({

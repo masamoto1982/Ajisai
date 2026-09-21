@@ -529,35 +529,6 @@
     gap: 0.5rem;
 }
 
-/* What the selected word does, and one example of using it. It used to be one
-   `nowrap` line with `text-overflow: ellipsis`, which at a phone's width cut a
-   479px example off inside a 275px box — the line is there to show how the
-   word is used, and the part that showed was the part before the interesting
-   bit. It wraps now, up to four lines (a summary that wraps, above an
-   example), keeping a one-line floor so the word list does not jump as the
-   selection moves between a long entry and none at all. */
-.dictionary-sheet .word-info-display {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
-    flex: 0 0 auto;
-    min-height: 1.25rem;
-    line-height: 1.25rem;
-    max-width: 100%;
-    color: var(--color-text);
-    overflow: hidden;
-    overflow-wrap: anywhere;
-    /* Two authored lines: what the word does, then one example of using it.
-       The break between them is a real newline, so it has to survive; the
-       clamp allows for a summary that wraps above a one-line example. */
-    white-space: pre-line;
-}
-
-.dictionary-sheet .word-info-display.is-placeholder {
-    color: var(--color-text-light);
-}
-
 .words-display {
     display: flex;
     flex-wrap: wrap;
@@ -711,9 +682,12 @@
         );
     }
 
-    /* Container query: in a narrow panel (the mobile column, or a slim desktop
-       one) grow the chips into comfortable touch targets. Responds to the panel
-       width, so it follows a resized desktop column without a viewport rule. */
+    /* Container query: in a slim *desktop* column, grow the chips into
+       comfortable click targets — there a word button types its name into the
+       editor, so it is a control and is worth the room. The mobile block below
+       restates all three of these properties to opt out: a container query
+       cannot tell a phone from a narrow desktop column, and on a phone the
+       chip types nothing and the room is the vocabulary's. */
     @container panel (max-width: 26rem) {
         margin: 3px;
         padding: calc(0.4rem + var(--control-text-y-adjust)) 0.6rem calc(0.4rem - var(--control-text-y-adjust));
@@ -1079,12 +1053,46 @@
         font-size: 0.95rem;
     }
 
-    /* Dictionary words are packed shoulder to shoulder, so a short button is
-       not only hard to hit, it is hard to hit *instead of its neighbour*. The
-       list scrolls either way. */
+    /* ── Dictionary words are a catalogue here, not a keyboard ─────────────
+       On desktop a word button types its name into the editor, so it is a
+       control and is sized like one. On a phone it is not: `onWordClick` is a
+       no-op there (gui-application.ts), and tapping a word only brings up its
+       one-line summary and example. That leaves the list two jobs — show what
+       vocabulary exists, and be tappable enough to read a hint — and the first
+       one is the one a 44px floor was breaking. At 44px the 100 Core Words
+       stood 1108px tall inside a 395px box: two thirds of the vocabulary was
+       off-screen, and the only way to learn what Ajisai has was to scroll and
+       remember.
+
+       Sized to fit instead — and note what is *not* smaller. The text stays at
+       the desktop 0.75rem; what the floor was inflating was the box around it,
+       so the padding and margin come in and the type does not. 100 words land
+       in 15 rows at 360px wide and 14 at 390px, with about two rows to spare,
+       so the whole vocabulary is one glance and a little growth does not undo
+       that. A User dictionary past 100 words will still scroll, which is as it
+       should be — that one is as long as its author made it. */
     .word-button {
-        min-height: 2.75rem;
+        min-height: 0;
+        /* All three restated, not inherited: the `@container panel` rule above
+           sets each of them and would otherwise keep the chip at 0.85rem. */
+        font-size: 0.75rem;
+        padding: 0.1rem 0.25rem;
+        margin: 1px;
+        /* Matched to the size above. The chips skip rendering off-screen, and
+           this is the height the scrollbar assumes for one that has not been
+           laid out yet — left at the old 1.75rem it would overstate the list
+           by a third of its length. */
+        contain-intrinsic-height: auto 1.25rem;
         touch-action: manipulation;
+    }
+
+    /* The Core/User switch is inside the surface whose room this is, and it is
+       touched once a session. Its 44px floor is 14px the word list wanted more.
+       The panel selector above keeps its floor: that one is how every surface
+       is reached, on all four of them. */
+    .dictionary-sheet-select,
+    .sheet-selector-native-trigger {
+        min-height: 0;
     }
 
     /* ── The symbol palette is an overlay, pinned to the bottom edge ───────
@@ -1101,6 +1109,19 @@
     .editor-suggestions--symbols {
         max-width: none;
         border-top: var(--border-main);
+    }
+}
+
+
+/* Narrow phones (320px-class hardware), where the list box is 341px rather
+   than 411px and tightening the box is no longer enough. This is the one place
+   the type itself steps down: at 0.75rem the 100 Core Words run six words past
+   the bottom edge here, and six words missing is the thing this whole size is
+   for. At 0.65rem they fit in 16 rows. Only the dictionary chips change —
+   every other control keeps its size. */
+@media (max-width: 340px) {
+    .word-button {
+        font-size: 0.65rem;
     }
 }
 
