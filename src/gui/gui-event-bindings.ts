@@ -24,7 +24,7 @@ const MULTI_TAP_INTERVAL_MS = 500;
 const TAP_MOVEMENT_TOLERANCE_PX = 24;
 
 // Reset is the one operation that throws away the stack *and* the dictionary,
-// so both of its triggers — the shortcut and the mobile button — ask first.
+// so it asks first.
 const RESET_CONFIRM_MESSAGE = 'Are you sure you want to reset the system?';
 
 export type GuiEventBindingContext = {
@@ -190,29 +190,6 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
     elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
-
-    // The touch action bar under the editor. Every operation on it also has a
-    // keyboard shortcut, and on a device with no hardware keyboard the shortcut
-    // is not a route to anything — Run, Step, Abort, Lookup and Reset had no
-    // on-screen control at all, so a program could be typed on a phone and then
-    // neither stepped nor reset. These buttons are that route; the shortcuts and
-    // the triple-tap keep working unchanged.
-    elements.touchRunBtn.addEventListener('click', () => runEditorCode());
-    elements.touchStepBtn.addEventListener('click', () => { void executionController.executeStep(); });
-    // The same pair the Escape branch below runs, and equally harmless with
-    // nothing in flight.
-    elements.touchAbortBtn.addEventListener('click', () => {
-        WORKER_MANAGER.abortAll();
-        executionController.abortExecution();
-    });
-    elements.touchLookupBtn.addEventListener('click', () => {
-        executionController.lookupWord(editor.getWordAtCursor());
-    });
-    elements.touchResetBtn.addEventListener('click', () => {
-        if (confirm(RESET_CONFIRM_MESSAGE)) {
-            void executionController.executeReset();
-        }
-    });
 
 
 

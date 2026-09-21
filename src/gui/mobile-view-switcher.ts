@@ -1,7 +1,6 @@
 
 
 import {
-    checkIsSwipeExempt,
     detectSwipeDirection,
     type GesturePoint
 } from './touch-gestures';
@@ -72,9 +71,9 @@ export const createMobileHandler = (
     options: MobileHandlerOptions = {}
 ): MobileHandler => {
     let currentMode: ViewMode = 'input';
-    // `null` means the gesture in progress is not a candidate swipe: it started
-    // on an element that owns its own horizontal drag, or it grew a second
-    // finger (a pinch ends two touches, each with a delta of its own).
+    // `null` means the gesture in progress is not a candidate swipe: it grew a
+    // second finger (a pinch ends two touches, each with a delta of its own).
+    // Where it started is not a disqualifier — see touch-gestures.ts.
     let swipeOrigin: GesturePoint | null = null;
 
     const updateView = (mode: ViewMode): void => {
@@ -101,7 +100,7 @@ export const createMobileHandler = (
                 return;
             }
             const touch = e.changedTouches[0];
-            if (!touch || checkIsSwipeExempt(e.target)) {
+            if (!touch) {
                 swipeOrigin = null;
                 return;
             }
