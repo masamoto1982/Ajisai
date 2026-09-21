@@ -107,13 +107,12 @@ export const detectSwipeDirection = (
     return deltaX > 0 ? 'right' : 'left';
 };
 
-// Elements whose own drag gesture belongs to them rather than to the layout.
-// A horizontal drag inside the editor is a text selection, inside a search
-// field a caret move, over the suggestion panel a scroll through the list —
-// none of them is a request to leave the surface, and the panel-cycling swipe
-// used to take all three because it listened on `document.body` and never
-// looked at where the touch started.
-export const SWIPE_EXEMPT_SELECTOR = 'textarea, input, select, option, [contenteditable="true"], .editor-suggestions';
-
-export const checkIsSwipeExempt = (target: EventTarget | null): boolean =>
-    target instanceof Element && target.closest(SWIPE_EXEMPT_SELECTOR) !== null;
+// There is deliberately no exemption list here. One was tried: a horizontal
+// drag that started on a textarea, an input or the suggestion panel was read
+// as that element's own gesture and withheld from the layout, on the reasoning
+// that dragging sideways across an editor is a text selection. On a touch
+// screen it is not — selecting text there takes a long-press and then the
+// selection handles, which are a separate gesture entirely. What the exemption
+// actually did was kill the swipe over the editor, which is most of the Input
+// surface, so the one gesture that reaches all four surfaces stopped working
+// on the surface the app opens on. The swipe belongs to the layout everywhere.

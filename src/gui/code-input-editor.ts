@@ -235,10 +235,37 @@ export const createEditor = (
             return;
         }
 
-        const { top, left } = computeCursorCoords(element);
-        suggestionPanel.style.top = `${top}px`;
-        suggestionPanel.style.left = `${left + 8}px`;
-        suggestionPanel.style.bottom = 'auto';
+        // Two panels, two anchors, and the symbol palette switches between them
+        // on whether there is anything written yet.
+        //
+        // Word completions belong to the text being typed, so they always
+        // follow the caret. The symbol palette opens at any token boundary,
+        // which includes an empty editor — and there the caret is on line one,
+        // so a caret anchor puts the palette square over the first lines of
+        // the placeholder cheat sheet. On a phone that sheet is the only place
+        // the touch gestures are written down, so tapping in to read how to
+        // run something hid how to run something. Pinned to the bottom edge
+        // the sheet reads from the top down into the palette instead, and the
+        // corner buttons it would otherwise cover are themselves hidden while
+        // the placeholder shows (`:placeholder-shown` in components.css).
+        //
+        // Once something *is* written those corner buttons are live, and the
+        // bottom edge is where Format sits — so from the first character on,
+        // the palette goes back to the caret.
+        const anchorToBottomEdge = isSymbolMode && element.value.length === 0;
+
+        if (anchorToBottomEdge) {
+            suggestionPanel.style.top = 'auto';
+            suggestionPanel.style.bottom = '0';
+            suggestionPanel.style.left = '0';
+            suggestionPanel.style.right = '0';
+        } else {
+            const { top, left } = computeCursorCoords(element);
+            suggestionPanel.style.top = `${top}px`;
+            suggestionPanel.style.left = `${left + 8}px`;
+            suggestionPanel.style.right = 'auto';
+            suggestionPanel.style.bottom = 'auto';
+        }
 
         suggestionPanel.classList.toggle('editor-suggestions--symbols', isSymbolMode);
 

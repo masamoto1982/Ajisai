@@ -65,21 +65,46 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     'double-click that space        → take back the last word'
 ].join('\n');
 
-// The mobile sheet names the controls first and the gestures after, because
-// that is the order in which they can be found: a control is on screen, a
-// gesture has to be told to you. It also names the swipe, which cycles all
-// four surfaces and went unmentioned here while two double-taps that cover
-// two of those transitions were spelled out. It is deliberately shorter than
-// the desktop sheet: the symbol palette opens under it and the editor gives up
-// the room, so the lines that survive have to be the ones worth keeping.
+// The mobile sheet carries the whole touch vocabulary, because on a phone this
+// is the only place it is written down. A bar of labelled buttons was tried
+// instead and cost more than it taught: five controls and an in-flow symbol
+// palette left a 180px editor on a 740px phone, and the editor is the thing
+// the page is for. Prose in the placeholder costs nothing — the editor is
+// empty whenever it shows — so the sheet is where the teaching goes, and it is
+// allowed to be long. It scrolls, and its first four lines are the ones a
+// first-time reader needs.
+//
+// Ordered by what a reader reaches for: run it, move between surfaces, fix the
+// text, then what types for you, then the stack's own control. The last block
+// is the honest one — four operations have a shortcut and no touch control,
+// and saying so beats letting someone hunt for a button that is not there.
+//
+// Every line is kept under 27 characters on purpose. A textarea placeholder
+// wraps on width, and a hand-aligned continuation (`'    or the list above'`)
+// lands wherever the wrap leaves it, which on a 360px phone turned a tidy
+// two-column sheet into ragged prose. Short whole lines wrap nowhere, so the
+// sheet reads the same on every phone from 320px up.
 const MOBILE_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
-    'Run, Step, Stop, Look up, Reset → Buttons below',
-    'Format, clear → Corner buttons',
-    'Change surface → Swipe, or the list above',
-    'Run shortcut → Triple-tap here',
-    'Symbols and words below tap into the editor'
+    'run it → triple-tap here',
+    'change surface → swipe',
+    '',
+    'format → lower-right icon',
+    'clear  → × upper right',
+    '',
+    'tap a symbol below to type',
+    'tap a Dictionary word too',
+    'two letters → suggestions',
+    '',
+    'the stack survives reload',
+    '× on Stack empties it',
+    '',
+    'keyboard only, for now:',
+    'step    Ctrl+Enter',
+    'stop    Escape',
+    'look up Ctrl+Alt+L',
+    'reset   Ctrl+Alt+Enter'
 ].join('\n');
 
 export interface LayoutState {
