@@ -1,4 +1,4 @@
-use super::debug_next_checks::build_next_checks;
+use super::debug_next_checks::{build_next_checks, spelling_check};
 use super::word_candidates::suggest_words;
 use crate::error::{AjisaiError, ErrorCategory, NilReason};
 
@@ -202,6 +202,17 @@ impl DebugDiagnosis {
             return;
         };
         self.candidates = suggest_words(word, names);
+        // The spelling check names the candidates, so it has to be rebuilt
+        // against the list that won: a user Word found here can turn an empty
+        // list into a suggestion, and the check would otherwise still say
+        // nothing was close.
+        if let Some(existing) = self
+            .next_checks
+            .iter_mut()
+            .find(|check| check.code == "checkSpelling")
+        {
+            *existing = spelling_check(&self.candidates);
+        }
     }
 }
 
@@ -321,7 +332,7 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
     }
 }
 
-fn classify_locus(word: Option<&str>) -> ErrorLocus {
+pub(super) fn classify_locus(word: Option<&str>) -> ErrorLocus {
     let (kind, dictionary) = match word {
         None => (ErrorLocusKind::Unknown, None),
         Some(name) => {
@@ -403,11 +414,21 @@ impl DebugDiagnosis {
             message.as_deref(),
         );
         let evidence = build_evidence(category, nil_reason, stack_len_before, stack_len_after);
-        let next_checks = build_next_checks(&why, word, category, nil_reason);
+        // Candidates first: the spelling check is written against them, and a
+        // check that promises a list there is none is the failure this order
+        // prevents.
         let candidates = match (&why, word) {
             (CauseClass::TypoOrUnknownName, Some(name)) => suggest_words(name, std::iter::empty()),
             _ => Vec::new(),
         };
+        let next_checks = build_next_checks(
+            &why,
+            word,
+            category,
+            nil_reason,
+            &candidates,
+            stack_len_before,
+        );
 
         DebugDiagnosis {
             when,
@@ -602,16 +623,4 @@ fn build_evidence(
     out.push(format!("stackLenBefore={}", stack_len_before));
     out.push(format!("stackLenAfter={}", stack_len_after));
     out
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{classify_locus, ErrorLocusKind};
-
-    #[test]
-    fn qualified_word_is_classified_as_a_user_dictionary_word() {
-        let locus = classify_locus(Some("EXAMPLE@DOUBLE"));
-        assert_eq!(locus.kind, ErrorLocusKind::UserWord);
-        assert_eq!(locus.dictionary.as_deref(), Some("EXAMPLE"));
-    }
 }

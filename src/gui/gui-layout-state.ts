@@ -46,10 +46,23 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
     '',
     'clear the stack, keep your words   → Ctrl+Alt+S',
     'clear this editor, keep everything → Ctrl+Alt+E',
-    'reset: erase the stack, your words, everything → Ctrl+Alt+Enter',
+    // "everything" was not true, and it is the one line here a reader acts on
+    // expecting an empty dictionary: a reset clears the stack and the words you
+    // defined, then seeds the Example Words back (`fullReset` → `loadExampleWords`).
+    // Reading them as leftovers of your own work is the mistake this names.
+    'reset: erase the stack and your words, keep the example words → Ctrl+Alt+Enter',
     '',
     'bring back your last program → Ctrl+Up / Ctrl+Down',
-    'stop a running step          → Escape'
+    'stop a running step          → Escape',
+    '',
+    // The dictionary panel writes into this editor, and the space *between* its
+    // buttons is a control of its own: a click there types a space, a
+    // double-click takes the last word back. Undocumented, it reads as a
+    // misfired click on a word button — which is exactly how it was first
+    // reported.
+    'click a word in the dictionary → write it here',
+    'click the space around them    → write a space',
+    'double-click that space        → take back the last word'
 ].join('\n');
 
 // The mobile sheet names the controls first and the gestures after, because

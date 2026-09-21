@@ -116,6 +116,58 @@ fn arity_notation(declared: &GeneratedWord) -> String {
     )
 }
 
+/// `1 value` / `2 values`, so a count reads as a sentence rather than as a
+/// number with a fixed plural bolted to it.
+fn values(n: usize) -> String {
+    if n == 1 {
+        format!("{} value", n)
+    } else {
+        format!("{} values", n)
+    }
+}
+
+/// What the declared arity and the stack depth together say about an
+/// underflow: how many operands the Word wanted, how many were there, and how
+/// many are missing.
+///
+/// Both halves were already in the diagnosis and neither answered the
+/// question. The arity line said `ADD declares ( 2 -- 1 )` and the locus line
+/// said `stack depth 1`, leaving the one fact the caller needs — push one more
+/// — to be worked out from two numbers printed four lines apart. It is only
+/// said where it is knowable: an arity the specification leaves variable or
+/// marks as control has no count to fall short of, and a depth that already
+/// meets the declared count means the underflow happened somewhere this
+/// sentence would misdescribe (inside a block, or after the Word consumed
+/// part of its input), so the plain declaration is what those get.
+fn underflow_shortfall(
+    declared: &GeneratedWord,
+    arity: &str,
+    stack_len_before: usize,
+) -> Option<(String, String)> {
+    let Arity::Fixed(needed) = declared.stack_inputs else {
+        return None;
+    };
+    let needed = usize::from(needed);
+    if stack_len_before >= needed {
+        return None;
+    }
+    let missing = needed - stack_len_before;
+    Some((
+        format!(
+            "{} declares {}: it needs {}, the stack held {}. Push {} more before calling it.",
+            declared.name,
+            arity,
+            values(needed),
+            stack_len_before,
+            missing,
+        ),
+        format!(
+            "{} の宣言は {}。{} 個必要で、スタックには {} 個しかなかった。呼ぶ前にあと {} 個積む。",
+            declared.name, arity, needed, stack_len_before, missing,
+        ),
+    ))
+}
+
 /// Checks a Word's own registry entry answers, ahead of the class-level ones.
 ///
 /// The registry declares, for every Core Word, the condition under which it
@@ -131,6 +183,7 @@ pub(super) fn declared_checks(
     word: Option<&str>,
     nil_reason: Option<&NilReason>,
     fired_condition: Option<&str>,
+    stack_len_before: usize,
 ) -> Vec<DebugCheck> {
     let Some(name) = word else {
         return Vec::new();
@@ -145,13 +198,17 @@ pub(super) fn declared_checks(
     // what the caller got wrong. Both are declared.
     if matches!(why, CauseClass::StackShape) {
         let arity = arity_notation(declared);
+        let (en, ja) =
+            underflow_shortfall(declared, &arity, stack_len_before).unwrap_or_else(|| {
+                (
+                    format!("{} declares {}.", declared.name, arity),
+                    format!("{} の宣言は {}。", declared.name, arity),
+                )
+            });
         out.push(check(
             "checkDeclaredArity",
             ("Check the declared arity", "宣言されたアリティを確認する"),
-            (
-                &format!("{} declares {}.", declared.name, arity),
-                &format!("{} の宣言は {}。", declared.name, arity),
-            ),
+            (&en, &ja),
         ));
         if let Some(syntax) = declared.syntax {
             out.push(check(
