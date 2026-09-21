@@ -1,15 +1,12 @@
 
 
 import {
-    DEFAULT_WORD_INFO_MESSAGE,
     checkWordMatchesFilter,
     compareWordName,
     createEmptyWordsElement,
     createNoResultsElement,
     createWordButtonElement,
     registerBackgroundClickListeners,
-    renderWordInfo,
-    resetWordInfoDisplay,
 } from './dictionary-element-builders';
 import { isCanonicalCoreWordName } from './core-word-name';
 
@@ -21,8 +18,6 @@ export interface WordInfo {
 export interface VocabularyElements {
     readonly builtInWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
-    readonly builtInWordInfo: HTMLElement;
-    readonly userWordInfo: HTMLElement;
 }
 
 export interface VocabularyCallbacks {
@@ -58,6 +53,15 @@ const createWordInfoFromTuple = (wordData: [string, string, boolean]): WordInfo 
 
 const clearElement = (element: HTMLElement): void => {
     element.innerHTML = '';
+};
+
+/// The tooltip text for a User Word: what its author wrote for a reader, or
+/// its source when nothing was written. Empty when the interpreter has neither,
+/// which leaves the button with no `title` rather than one that says nothing.
+const lookupUserWordTooltip = (name: string): string => {
+    const description = window.ajisaiInterpreter?.lookup_word_description(name) ?? '';
+    if (description) return description;
+    return window.ajisaiInterpreter?.lookup_word_definition(name) ?? '';
 };
 
 // See core-word-name.ts: the predicate lives beside its spec-driven test so a
@@ -157,7 +161,6 @@ export const createVocabularyManager = (
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
     });
 
-    [elements.builtInWordInfo, elements.userWordInfo].forEach(resetWordInfoDisplay);
 
 
     let searchFilter = '';
@@ -253,8 +256,7 @@ export const createVocabularyManager = (
                 name,
                 `word-button core`,
                 () => onWordClick(name),
-                () => { renderWordInfo(elements.builtInWordInfo, hoverText || DEFAULT_WORD_INFO_MESSAGE, !hoverText); },
-                () => { resetWordInfoDisplay(elements.builtInWordInfo); }
+                hoverText
             );
 
             fragment.appendChild(button);
@@ -272,7 +274,6 @@ export const createVocabularyManager = (
         words: WordInfo[]
     ): void => {
         clearElement(container);
-        resetWordInfoDisplay(elements.userWordInfo);
 
 
         const filteredWords = words.filter(wordInfo =>
@@ -299,24 +300,19 @@ export const createVocabularyManager = (
                 // uncallable code into the editor, and looking a word up under
                 // it showed no definition.
                 () => onWordClick(wordInfo.name),
-                () => {
-                    // A `#:contract` description is what the word's author
-                    // wrote for a reader (SPEC: host affordance, not language
-                    // semantics) — prefer it over echoing the body back, the
-                    // way a Core Word's hover shows a summary rather than its
-                    // own source. Fall back to the raw definition when there
-                    // is none, so a word with no description reads as it
-                    // always has.
-                    const description = window.ajisaiInterpreter?.lookup_word_description(wordInfo.name) ?? '';
-                    const definition = window.ajisaiInterpreter?.lookup_word_definition(wordInfo.name) ?? '';
-                    const text = description || definition;
-                    renderWordInfo(
-                        elements.userWordInfo,
-                        text || DEFAULT_WORD_INFO_MESSAGE,
-                        !text
-                    );
-                },
-                () => { resetWordInfoDisplay(elements.userWordInfo); },
+                // A `#:contract` description is what the word's author wrote
+                // for a reader (SPEC: host affordance, not language semantics)
+                // — prefer it over echoing the body back, the way a Core
+                // Word's tooltip shows a summary rather than its own source.
+                // Fall back to the raw definition when there is none, so a
+                // word with no description reads as it always has.
+                //
+                // Read here rather than on hover, which is where it used to
+                // sit: a tooltip has to carry its text before the pointer
+                // arrives. That is two interpreter lookups per User Word per
+                // render — the Core sheet pays nothing, its text arrives in
+                // the same payload as the name.
+                lookupUserWordTooltip(wordInfo.name),
                 (event) => renderDeleteContextMenu(event, wordInfo.name)
             );
 

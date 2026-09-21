@@ -529,35 +529,6 @@
     gap: 0.5rem;
 }
 
-/* What the selected word does, and one example of using it. It used to be one
-   `nowrap` line with `text-overflow: ellipsis`, which at a phone's width cut a
-   479px example off inside a 275px box — the line is there to show how the
-   word is used, and the part that showed was the part before the interesting
-   bit. It wraps now, up to four lines (a summary that wraps, above an
-   example), keeping a one-line floor so the word list does not jump as the
-   selection moves between a long entry and none at all. */
-.dictionary-sheet .word-info-display {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
-    flex: 0 0 auto;
-    min-height: 1.25rem;
-    line-height: 1.25rem;
-    max-width: 100%;
-    color: var(--color-text);
-    overflow: hidden;
-    overflow-wrap: anywhere;
-    /* Two authored lines: what the word does, then one example of using it.
-       The break between them is a real newline, so it has to survive; the
-       clamp allows for a summary that wraps above a one-line example. */
-    white-space: pre-line;
-}
-
-.dictionary-sheet .word-info-display.is-placeholder {
-    color: var(--color-text-light);
-}
-
 .words-display {
     display: flex;
     flex-wrap: wrap;
