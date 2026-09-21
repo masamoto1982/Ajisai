@@ -435,6 +435,15 @@ fn emit(report: &Report, opts: &Opts) {
         if let Some(inside) = evidence_value(&diagnosis.evidence, "insideWords") {
             eprintln!("  inside {}", inside.replace(',', ", "));
         }
+        // The alias the program was written with. Everything else here names
+        // the Word by the name it resolved to, which for `1 + 2` is a name the
+        // reader never typed.
+        if let (Some(alias), Some(word)) = (
+            evidence_value(&diagnosis.evidence, "sourceWord"),
+            diagnosis.where_.word.as_deref(),
+        ) {
+            eprintln!("  written as {}, an alias of {}", alias, word);
+        }
         for line in &diagnosis.evidence {
             if line.starts_with("stackLen") {
                 eprintln!("  {}", line);

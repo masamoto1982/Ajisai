@@ -23,6 +23,7 @@ export interface ExecutionCallbacks {
     readonly clearEditor: (switchView?: boolean) => void;
     readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
+    readonly showFoldedInfo: (label: string, text: string) => void;
     readonly highlightSourceRange: (start: number, end: number) => void;
     readonly showDocumentation: (text: string) => void;
     readonly showError: (error: Error | string, precedingOutput?: string) => void;
@@ -55,6 +56,7 @@ export const createExecutionController = (
         clearEditor,
         insertEditorText,
         showInfo,
+        showFoldedInfo,
         highlightSourceRange,
         showDocumentation,
         showError,
@@ -108,13 +110,22 @@ export const createExecutionController = (
     // Selecting the diagnosis is this controller's job; presenting one belongs
     // to `renderDiagnosisReport`, which every diagnosis in the playground goes
     // through (see that module's header).
-    const describeDiagnosis = (result: ExecuteResult): string | null => {
+    const describeDiagnosis = (
+        result: ExecuteResult
+    ): { readonly text: string; readonly aboutNil: boolean } | null => {
         const event = result.errorFlowTrace
             ?.filter((candidate) => Boolean(candidate.diagnosis))
             .at(-1);
         const diagnosis: ProtocolDiagnosis | undefined = event?.diagnosis;
         if (!diagnosis) return null;
-        return renderDiagnosisReport(diagnosis, { stackLenBefore: event?.stackLenBefore });
+        return {
+            text: renderDiagnosisReport(diagnosis, { stackLenBefore: event?.stackLenBefore }),
+            // A reasoned NIL is one of the three outcomes, not a failure. The
+            // trace says which this was, so the presentation can follow the
+            // language instead of reporting every NIL as though something
+            // went wrong.
+            aboutNil: event?.kind === 'nilProduced'
+        };
     };
 
     const applyExecutionResult = (result: ExecuteResult): void => {
@@ -139,10 +150,16 @@ export const createExecutionController = (
             // Keep whatever the run printed before it failed: the host reports
             // it on the error path, and the error is written below it.
             showError(result.message || 'Unknown error', describeFailedRunOutput(result));
-            if (diagnosis) showInfo(diagnosis, true);
+            // A run that failed: its diagnosis is the report, so it is open.
+            if (diagnosis) showInfo(diagnosis.text, true);
             return;
         }
-        if (diagnosis) showInfo(diagnosis, true);
+        if (!diagnosis) return;
+        if (diagnosis.aboutNil) {
+            showFoldedInfo('Why NIL', diagnosis.text);
+        } else {
+            showInfo(diagnosis.text, true);
+        }
     };
 
     const executeCode = async (code: string): Promise<void> => {

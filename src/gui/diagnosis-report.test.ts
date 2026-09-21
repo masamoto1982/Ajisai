@@ -37,6 +37,23 @@ describe('renderDiagnosisReport', () => {
         );
     });
 
+    // `1 + 2`: the failure is `ADD`'s, and `ADD` is not what the reader wrote.
+    it('names the alias the program was written with, in front of the Word it resolved to', () => {
+        const diagnosis: ProtocolDiagnosis = {
+            when: 'wordExecution',
+            where: { kind: 'coreWord', word: 'ADD' },
+            why: 'stackShape',
+            summary: 'wordExecution / ADD (coreWord) / stackShape',
+            evidence: ['sourceLine=1', 'sourceColumn=3', 'sourceWord=+'],
+            candidates: [],
+            nextChecks: []
+        };
+
+        expect(renderDiagnosisReport(diagnosis, { stackLenBefore: 1 })).toContain(
+            'Q2 where: + (alias of ADD, coreWord) at line 1, column 3, stack depth 1'
+        );
+    });
+
     it('omits the position, the depth and the hints it was given nothing for', () => {
         const diagnosis: ProtocolDiagnosis = {
             when: 'nameResolution',

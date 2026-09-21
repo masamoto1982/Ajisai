@@ -325,4 +325,25 @@ mod source_position_tests {
             "{evidence:?}"
         );
     }
+
+    /// The spelling the program was written with, from the one place it still
+    /// exists: the token. Dispatch canonicalizes an alias before anything
+    /// downstream sees it, so `1 + 2` reported a failure in `ADD` with
+    /// nothing tying it to the `+` that was typed. It is recorded beside the
+    /// position because it answers the same question: what the reader wrote.
+    #[tokio::test]
+    async fn a_failure_reached_through_an_alias_records_the_alias() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("1 + 2").await.is_err());
+        assert_eq!(evidence_of(&mut interp, "sourceWord").as_deref(), Some("+"));
+    }
+
+    /// A program written under the Word's own name has no second spelling to
+    /// report, and the diagnosis says nothing rather than repeating itself.
+    #[tokio::test]
+    async fn a_failure_written_under_the_words_own_name_records_no_spelling() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("1 ADD").await.is_err());
+        assert_eq!(evidence_of(&mut interp, "sourceWord"), None);
+    }
 }
