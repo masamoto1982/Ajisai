@@ -252,6 +252,7 @@ export const createGUI = (): GUI => {
             clearEditor: (switchView) => { editor.clear(switchView); },
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
+            showFoldedInfo: (label, text) => display.renderFoldedInfo(label, text),
             highlightSourceRange: (start, end) => editor.revealRange(start, end),
             showDocumentation: (text) => display.renderDocumentation(text),
             showError: (error, precedingOutput) => display.renderError(error, precedingOutput),

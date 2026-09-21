@@ -1,5 +1,5 @@
 export const DEFAULT_WORD_INFO_MESSAGE =
-    'An example of how to use the specified word will be displayed here.';
+    'What the selected word does, and an example of how to use it, will be displayed here.';
 
 export const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
     element.textContent = text;

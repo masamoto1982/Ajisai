@@ -136,6 +136,7 @@ mod arithmetic_meter_tests;
 mod collection_meter_tests;
 #[cfg(test)]
 mod control_exec_eval_tests;
+mod debug_diagnosis_annotations;
 #[cfg(test)]
 mod debug_diagnosis_tests;
 #[cfg(test)]

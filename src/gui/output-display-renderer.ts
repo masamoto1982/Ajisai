@@ -28,6 +28,7 @@ export interface Display {
         precedingOutput?: string
     ) => void;
     readonly renderInfo: (text: string, append?: boolean) => void;
+    readonly renderFoldedInfo: (label: string, text: string) => void;
     readonly renderDocumentation: (text: string) => void;
     readonly renderStack: (stack: Value[]) => void;
     readonly extractState: () => DisplayState;
@@ -649,6 +650,33 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
+    // A report that belongs in the record but not in the reader's way, folded
+    // the way the cost summary is.
+    //
+    // A reasoned NIL is a value, not a failure: `1 0 DIV` answered what the
+    // language says it answers. Its diagnosis was printed in full anyway, so
+    // a correct ten-line answer arrived under a heading that reads like an
+    // error report. Folding it puts the reason one click away and leaves the
+    // stance of the language visible in the output. `mainOutput` still gets
+    // the text, so Copy copies what was said whether or not it was opened.
+    const renderFoldedInfo = (label: string, text: string): void => {
+        mainOutput = mainOutput ? `${mainOutput}\n${text}` : text;
+
+        const details = document.createElement('details');
+        details.className = 'folded-info';
+
+        const summary = document.createElement('summary');
+        summary.textContent = label;
+        details.appendChild(summary);
+
+        const body = document.createElement('div');
+        body.className = 'folded-info-body';
+        body.textContent = text;
+        details.appendChild(body);
+
+        appendToElement(elements.outputDisplay, details);
+    };
+
     /// A Core Word's reference entry, as the host's lookup answered it.
     /// Reference text is read rather than run, so
     /// it is shown here instead of being written into the editor over whatever
@@ -713,6 +741,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         renderOutput,
         renderError,
         renderInfo,
+        renderFoldedInfo,
         renderDocumentation,
         renderStack,
         extractState

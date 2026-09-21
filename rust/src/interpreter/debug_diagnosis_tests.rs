@@ -51,3 +51,71 @@ fn a_user_word_found_late_reaches_the_spelling_check_too() {
         .en;
     assert!(after.contains("TWICE"), "{after}");
 }
+
+/// `1 + 2` fails inside `ADD`, a name the program never wrote. The canonical
+/// name stays the answer to "which Word failed" — the diagnosis classifies on
+/// it — so the spelling is recorded beside it.
+#[test]
+fn an_alias_spelling_is_recorded_beside_the_word_it_resolved_to() {
+    let diagnosis = DebugDiagnosis::from_error_category(
+        ErrorPhase::ExecuteWord,
+        Some("ADD"),
+        Some(&ErrorCategory::StackUnderflow),
+        None,
+        1,
+        1,
+        None,
+    )
+    .with_source_word(Some("+"));
+
+    assert_eq!(diagnosis.where_.word.as_deref(), Some("ADD"));
+    assert!(
+        diagnosis.evidence.iter().any(|e| e == "sourceWord=+"),
+        "{:?}",
+        diagnosis.evidence
+    );
+}
+
+/// A spelling that is not an alias of *this* Word says nothing. The alias
+/// table is one-directional and a name that merely differs in case is not an
+/// alias, so neither may put words in the reader's mouth.
+#[test]
+fn only_an_alias_of_the_failing_word_is_recorded() {
+    let unrelated = DebugDiagnosis::from_error_category(
+        ErrorPhase::ExecuteWord,
+        Some("ADD"),
+        Some(&ErrorCategory::StackUnderflow),
+        None,
+        1,
+        1,
+        None,
+    )
+    .with_source_word(Some("-"));
+    assert!(
+        !unrelated
+            .evidence
+            .iter()
+            .any(|e| e.starts_with("sourceWord=")),
+        "{:?}",
+        unrelated.evidence
+    );
+
+    let case_only = DebugDiagnosis::from_error_category(
+        ErrorPhase::ExecuteWord,
+        Some("ADD"),
+        Some(&ErrorCategory::StackUnderflow),
+        None,
+        1,
+        1,
+        None,
+    )
+    .with_source_word(Some("add"));
+    assert!(
+        !case_only
+            .evidence
+            .iter()
+            .any(|e| e.starts_with("sourceWord=")),
+        "{:?}",
+        case_only.evidence
+    );
+}

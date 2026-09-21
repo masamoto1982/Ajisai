@@ -237,6 +237,14 @@ pub struct Interpreter {
     /// is attributed here, which is what turns "Stack underflow" into
     /// "Stack underflow at line 4, column 12, in SELECT".
     pub(crate) current_source_span: Option<crate::tokenizer::SourceSpan>,
+    /// How that same top-level token was *spelled*, kept only when the
+    /// spelling differs from the name it resolved to. Dispatch canonicalizes
+    /// an alias before anything downstream sees it, so a failure in `1 + 2`
+    /// was reported against `ADD` — a name the reader never wrote, with
+    /// nothing tying it to the `+` they did. The canonical name stays the
+    /// answer to "which Word failed" (the diagnosis classifies on it); this is
+    /// the spelling that reached it.
+    pub(crate) current_source_word: Option<std::sync::Arc<str>>,
 
     /// When true (default), `compile_word_definition` lowers fully-literal
     /// vectors into a prebuilt `CompiledOp::PushVectorLiteral` instead of
@@ -303,6 +311,7 @@ impl Interpreter {
             source_spans: Vec::new(),
             section_depth: 0,
             current_source_span: None,
+            current_source_word: None,
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
         };
@@ -408,7 +417,8 @@ impl Interpreter {
         let stack_len_after = self.stack.len();
         let mut diagnosis =
             DebugDiagnosis::from_error(err, Some(word), stack_len_before, stack_len_after)
-                .with_source_position(self.current_source_span);
+                .with_source_position(self.current_source_span)
+                .with_source_word(self.current_source_word.as_deref());
         // The compiled-in registry cannot know a user Word, and a misspelled
         // user Word is exactly the case a fresh vocabulary lookup misses. This
         // is the one place that holds the live dictionary.

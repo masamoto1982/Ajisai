@@ -72,7 +72,8 @@ impl crate::interpreter::Interpreter {
         // wrote.
         let mut diagnosis =
             DebugDiagnosis::from_error(err, Some(word), stack_len_before, self.stack.len())
-                .with_source_position(self.current_source_span);
+                .with_source_position(self.current_source_span)
+                .with_source_word(self.current_source_word.as_deref());
         // A misspelled *user* Word is only knowable here: the compiled-in
         // registry has never heard of it, and this is the frame that holds the
         // live dictionary.

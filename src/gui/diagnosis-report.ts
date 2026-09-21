@@ -44,8 +44,15 @@ export const renderDiagnosisReport = (
     diagnosis: ProtocolDiagnosis,
     context: DiagnosisReportContext = {}
 ): string => {
+    // The alias the program was written with, when it is not the name the
+    // Word answers to. `1 + 2` reported `ADD (coreWord)`, which is true and
+    // names nothing the reader typed; the spelling they typed goes in front of
+    // it, and the canonical name stays where every other line refers to it.
+    const sourceWord = evidenceValue(diagnosis.evidence, 'sourceWord');
     const where = diagnosis.where.word
-        ? `${diagnosis.where.word} (${diagnosis.where.kind})`
+        ? sourceWord
+            ? `${sourceWord} (alias of ${diagnosis.where.word}, ${diagnosis.where.kind})`
+            : `${diagnosis.where.word} (${diagnosis.where.kind})`
         : diagnosis.where.kind;
     const depth =
         typeof context.stackLenBefore === 'number'

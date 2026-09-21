@@ -289,6 +289,9 @@ impl Interpreter {
         while i < execute_tokens.len() {
             if track_source_position {
                 self.current_source_span = self.source_spans.get(start_index + i).copied();
+                // Cleared per token, so a spelling recorded for one token can
+                // never be read against another one's position.
+                self.current_source_word = None;
             }
             match &execute_tokens[i] {
                 Token::Number(literal) => {
@@ -329,6 +332,14 @@ impl Interpreter {
                 }
                 Token::Symbol(s) => {
                     let canonical = crate::core_word_aliases::canonicalize_core_word_name(s);
+                    // The one place the surface spelling still exists. Kept
+                    // only where it differs from the canonical name and only
+                    // for a top-level token, which is the token the recorded
+                    // position describes; an `Arc` clone, so a dispatch that
+                    // writes the name as it resolves pays nothing.
+                    if track_source_position && canonical.as_ref() != s.as_ref() {
+                        self.current_source_word = Some(std::sync::Arc::clone(s));
+                    }
                     match canonical.as_ref() {
                         "KEEP" => {
                             self.update_consumption_mode(ConsumptionMode::Keep);
@@ -433,6 +444,7 @@ impl Interpreter {
             crate::tokenizer::tokenize_with_spans(code).map_err(AjisaiError::MalformedSource)?;
         self.source_spans = spans;
         self.current_source_span = None;
+        self.current_source_word = None;
         self.check_source_numeric_literals(&tokens)?;
         let lines: Vec<ExecutionLine> = self.split_tokens_to_lines(&tokens)?;
         self.execute_guard_structure(&lines)?;
