@@ -219,21 +219,17 @@ export const createGUI = (): GUI => {
         });
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
-            onWordClick: (word) => {
-                if (!mobile.isMobile()) {
-                    editor.insertWord(word);
-                }
-            },
-            onBackgroundClick: () => {
-                if (!mobile.isMobile()) {
-                    editor.insertWord(' ');
-                }
-            },
-            onBackgroundDoubleClick: () => {
-                if (!mobile.isMobile()) {
-                    editor.removeLastWord();
-                }
-            },
+            // One behaviour in both presentations. These three used to be
+            // withheld on mobile, on the reading that a Dictionary tap there is
+            // only ever a lookup: you cannot see the editor from the Dictionary
+            // surface, so inserting into it is not much use. True, but not a
+            // reason to branch — it makes the tap useless, not harmful, and the
+            // guard bought a mode-specific rule in exchange for nothing. The
+            // mobile placeholder has advertised `tap a Dictionary word too`
+            // since it was written.
+            onWordClick: (word) => editor.insertWord(word),
+            onBackgroundClick: () => editor.insertWord(' '),
+            onBackgroundDoubleClick: () => editor.removeLastWord(),
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
             showInfo: (text, append) => display.renderInfo(text, append)
