@@ -907,7 +907,17 @@
         width: 100%;
         min-height: 0;
         overflow: hidden;
-        padding: 0.75rem;
+        /* Top padding is 0.5rem, not the 0.75rem of the other three sides,
+           because on mobile the panel selector is a *sibling* above this panel
+           rather than a child of it (`.area-selector-mobile` — desktop keeps
+           its selector inside the panel). Its own padding stops at the sides,
+           so the space below it was this panel's 0.75rem padding-top: 12px
+           between the selector and the surface, against the 8px that separates
+           everything else stacked inside one. Desktop, where the selector is a
+           child, has always been 8px at that seam. The other three sides stay
+           at 0.75rem — those are the page gutter, not a gap between two
+           stacked things. */
+        padding: 0.5rem 0.75rem 0.75rem;
         gap: 0;
     }
 
