@@ -41,6 +41,26 @@ TAKE DROP REVERSE INDEX-OF TRIM TOKENIZE`.split(/\s+/));
 // write; all operational.
 const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP MEMBER BSEARCH SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE GCD RATIO EXP LN SIN COS ATAN UPPER LOWER'.split(/\s+/));
 
+// The ten Words held as the alpha's room to grow, cheapest to lose first.
+//
+// The vocabulary is full at 100 and stays there, so an addition has to take a
+// slot from something. Rather than cut ten Words now on the chance that ten
+// candidates appear, the ten that *would* go are named here in the order they
+// would go, and a candidate takes the head of this list. The room is the same
+// either way; the difference is that nobody writes `X Y X Y LT SELECT` in
+// place of `MIN` until a Word worth the trade actually arrives.
+//
+// Every entry is a derivable Standard, checked below: an operational Word
+// cannot be written in the language at all (LANG.AUTHORITY.FREEDOM's
+// consequence for a total, non-recursive language), so retiring one would cut
+// capability rather than spelling, and a Kernel Word is not on the table.
+// `ROUND` is deliberately absent though it is derivable: its Kernel phrase
+// branches on the sign of its operand, which is the one of these a reader is
+// likely to write wrongly by hand.
+//
+// See docs/dev/vocabulary-100-work-order-2026-09.md §7.4.
+const RETIREMENT_QUEUE = 'LTE GTE SUB CEIL OR QUANTIZE ABS MIN MAX MOD'.split(/\s+/);
+
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
 const coverage = JSON.parse(readFileSync('docs/formalization-coverage.json', 'utf8'));
@@ -128,6 +148,26 @@ if (operationalWords.size !== OPERATIONAL.size) {
   errors.push(`${operationalWords.size} operational Standards declared; expected ${OPERATIONAL.size}`);
 }
 
+// The retirement queue has to stay the thing it claims to be: ten Words that
+// are still here, each one a spelling of a Kernel phrase rather than a
+// capability. A queue naming a Word that has already gone, or one whose
+// relation drifted to operational, would promise room it cannot give.
+if (RETIREMENT_QUEUE.length !== 10) {
+  errors.push(`retirement queue holds ${RETIREMENT_QUEUE.length} Words; expected 10`);
+}
+if (new Set(RETIREMENT_QUEUE).size !== RETIREMENT_QUEUE.length) {
+  errors.push('retirement queue names the same Word twice');
+}
+for (const name of RETIREMENT_QUEUE) {
+  if (!wordNames.has(name)) {
+    errors.push(`${name}: queued for retirement but not in the canonical inventory`);
+    continue;
+  }
+  if (!DERIVABLE.has(name)) {
+    errors.push(`${name}: queued for retirement but not a derivable Standard`);
+  }
+}
+
 for (const entry of coverage.entries.filter((entry) => entry.kind === 'coreword')) {
   if (!wordNames.has(entry.surface)) errors.push(`${entry.surface}: witness has no canonical Word`);
 }
@@ -146,4 +186,8 @@ console.log(
 console.log(
   `[minimal-core] ${DERIVABLE.size}/${DERIVABLE.size} derivable Standards carry a Kernel-only witness; ` +
     `${OPERATIONAL.size}/${OPERATIONAL.size} operational Standards state a native retention reason.`,
+);
+console.log(
+  `[minimal-core] room for ${RETIREMENT_QUEUE.length} more Words, first out ${RETIREMENT_QUEUE[0]}: ` +
+    RETIREMENT_QUEUE.join(' '),
 );
