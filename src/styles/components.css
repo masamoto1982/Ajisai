@@ -536,7 +536,15 @@
     align-items: flex-start;
     align-content: flex-start;
     overflow-y: auto;
-    padding: 4px;
+    /* The same 0.75rem the other three content boxes hold their contents at
+       (`#code-input`, `#output-display`, `#stack-display`). This was 4px, a
+       figure belonging to neither of the two spacings the layout keeps — the
+       0.75rem inside a box and around the page, and the 0.5rem between two
+       stacked boxes — so the word list sat its chips 6px from its frame while
+       every box beside it sat its content at 13px. The chips keep their own
+       1px margins: those are the spacing between chips, which is a denser
+       thing than the frame around all of them and is meant to look it. */
+    padding: 0.75rem;
     border: var(--border-main);
     border-radius: var(--radius-panel);
     background: #fff;
