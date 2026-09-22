@@ -57,20 +57,29 @@
 }
 
 
+/* The two selectors that can host Dictionary mode — the desktop right column's
+   and the mobile one — are the same control in the same arrangement: the mode
+   select and the word search side by side, the select taking the larger share.
+   One rule lays out both, over identical markup, because only *which of the two
+   is shown* differs between the modes (the media queries below). Nothing here
+   sizes them either: the base rule above is the single place a selector's
+   height is decided, on every viewport. */
+.area-selector-right,
 .area-selector-mobile {
-    display: none;
-}
-
-.area-selector-right {
-    display: flex;
     align-items: center;
     gap: 0.5rem;
 
-    & .right-mode-selector {
+    /* The mode select takes the golden share of the row and the word search the
+       rest. The select is the flex item itself in both modes — it used to be
+       wrapped in a div on desktop and bare on mobile, which is why the two rows
+       divided their width slightly differently: a zero flex-basis on a
+       border-box control floors at that control's own padding and border, and a
+       wrapper div has neither. Sharing the markup shares the proportion. */
+    & select {
         flex: 1.618 1 0%;
     }
 
-    & #right-panel-dictionary-search {
+    & .search-wrapper {
         flex: 1 1 0%;
         min-width: 0;
     }
@@ -78,35 +87,49 @@
     & .vocabulary-search-input {
         width: 100%;
         max-width: none;
+        /* The 120px floor the base rule gives this field is wider than the
+           share it gets in a 300px-class selector row, and the row cannot grow
+           to take it: the page would overflow by the difference, silently (the
+           body clips), with the field's clear button half off the screen. */
+        min-width: 0;
     }
 
-    /* Container query: when the right column is too narrow to seat the mode
-       selector and the word search side by side, stack them. Keyed on the panel
+    /* Container query: when the column is too narrow to seat the mode selector
+       and the word search side by side, stack them. Keyed on the panel
        container (not the viewport) so a slim desktop column reflows on its own,
-       without inventing another global breakpoint. */
+       without inventing another global breakpoint. The mobile selector sits
+       *above* the panel rather than inside it, so it has no panel container to
+       answer and keeps its single row. */
     @container panel (max-width: 18rem) {
         flex-wrap: wrap;
 
-        & .right-mode-selector,
-        & #right-panel-dictionary-search {
+        & select,
+        & .search-wrapper {
             flex-basis: 100%;
         }
     }
 }
 
+.area-selector-right {
+    display: flex;
+}
 
-/* Dictionary word-search visibility, driven declaratively from the native
-   <select> state with :has() instead of an imperative .hidden toggle in TS.
-   The parent selector (.area-selector-right / .area-selector-mobile) is already
-   shown or hidden per desktop/mobile mode by the media queries, so this only
-   has to gate the search box on the chosen mode being "Dictionary". */
-#right-panel-dictionary-search,
-#mobile-panel-dictionary-search {
+/* Desktop reaches its surfaces through the two in-panel selectors; the mobile
+   block below swaps in the single one. */
+.area-selector-mobile {
     display: none;
 }
 
-.area-selector-right:has(#right-panel-select option[value="dictionary"]:checked) #right-panel-dictionary-search,
-.area-selector-mobile:has(#mobile-panel-select option[value="dictionary"]:checked) #mobile-panel-dictionary-search {
+
+/* Dictionary word-search visibility, driven declaratively from the native
+   <select> state with :has() instead of an imperative .hidden toggle in TS.
+   Each selector answers for its own select, so one rule covers both modes; the
+   left selector has no search box to gate, never hosting Dictionary mode. */
+.area-selector .search-wrapper {
+    display: none;
+}
+
+.area-selector:has(option[value="dictionary"]:checked) .search-wrapper {
     display: flex;
 }
 
@@ -879,26 +902,14 @@
         display: none;
     }
 
+    /* The row itself is laid out by the shared rule above, together with the
+       desktop selector it is the other half of. What is mobile-only is that it
+       stands outside the panel: it has to carry the page gutter and the surface
+       colour that the panel provides to its own children. */
     .area-selector-mobile {
         display: flex;
-        align-items: center;
-        gap: 0.5rem;
         padding: 0.75rem 0.75rem 0;
         background: #fff;
-    }
-
-    .area-selector-mobile select {
-        flex: 1.618 1 0%;
-    }
-
-    .area-selector-mobile #mobile-panel-dictionary-search {
-        flex: 1 1 0%;
-        min-width: 0;
-    }
-
-    .area-selector-mobile .vocabulary-search-input {
-        width: 100%;
-        max-width: none;
     }
 
     .main-layout {
@@ -978,23 +989,21 @@
        Two rules run through this block. Anything meant to be tapped gets at
        least 2.75rem (44px, the smaller of the two platform floors) in its
        short axis — measured on the hit area, which for an icon button is
-       padding around a glyph that keeps its drawn size. And anything with a
-       caret gets at least 1rem of text: iOS Safari zooms the page when a field
-       under 16px takes focus, and it does not zoom back out, so the editor at
-       0.95rem meant the layout shifted under the user the moment they started
-       typing. */
+       padding around a glyph that keeps its drawn size, so the floor costs the
+       layout nothing. And anything with a caret gets at least 1rem of text:
+       iOS Safari zooms the page when a field under 16px takes focus, and it
+       does not zoom back out, so the editor at 0.95rem meant the layout shifted
+       under the user the moment they started typing.
+
+       The controls that switch surfaces are deliberately not among them. The
+       panel selector took the floor and the dictionary sheet selector did not,
+       and the two are the same part doing the same job — one 44px and one 30px,
+       one above the other in the Dictionary. A floor that has to be granted to
+       one member of a set and withheld from another is not a rule; both keep
+       the size the base rule gives every selector, on every viewport. */
 
     #code-input,
     .vocabulary-search-input {
-        font-size: 1rem;
-    }
-
-    /* The same trio the base rule sizes together: the panel selector, the
-       dictionary sheet selector, and the sheet selector's native trigger. */
-    .area-selector select,
-    .dictionary-sheet-select,
-    .sheet-selector-native-trigger {
-        min-height: 2.75rem;
         font-size: 1rem;
     }
 
@@ -1016,29 +1025,6 @@
 
     #editor-format-btn {
         bottom: 0;
-        right: 0;
-    }
-
-    /* The search field's own clear button sits inside the field, so it is
-       sized against the field rather than squared off: full height to hit,
-       and the field reserves exactly its width as right padding so the search
-       text never runs underneath it. */
-    .vocabulary-search-input {
-        min-height: 2.75rem;
-        padding-right: 2.5rem;
-        /* The desktop 120px floor is wider than the share this field gets in a
-           300px selector row, so the row measured 313px against a 300px
-           viewport and the field — with its clear button — ran off the right
-           edge. The page never grew a scrollbar for it (the body clips), which
-           is why the overflow reads as "nothing is cut off" from the document
-           and as a half-visible × on the screen. The field shrinks here
-           instead. */
-        min-width: 0;
-    }
-
-    .vocabulary-search-clear-btn {
-        width: 2.5rem;
-        height: 2.75rem;
         right: 0;
     }
 
@@ -1102,15 +1088,6 @@
            by a third of its length. */
         contain-intrinsic-height: auto 1.25rem;
         touch-action: manipulation;
-    }
-
-    /* The Core/User switch is inside the surface whose room this is, and it is
-       touched once a session. Its 44px floor is 14px the word list wanted more.
-       The panel selector above keeps its floor: that one is how every surface
-       is reached, on all four of them. */
-    .dictionary-sheet-select,
-    .sheet-selector-native-trigger {
-        min-height: 0;
     }
 
     /* ── The symbol palette is an overlay, pinned to the bottom edge ───────
