@@ -166,6 +166,11 @@ const canonicalExamples = [
   { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ + ] FOLD' },
   { title: 'ANY / ALL take predicate blocks', code: '[ 1 2 3 ] [ 1 > ] ANY' },
   {
+    id: 'record-literal',
+    title: 'A Record literal: each key beside the value under it',
+    code: "{ 'x' 1 'y' 2 }",
+  },
+  {
     id: 'def-basic',
     title: 'Define a user word: [ body ] then name, then DEF',
     code: "[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
@@ -454,7 +459,8 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
 - Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar — **except where a Word takes an *element*** (\`PUT\`, \`GET\`, \`INDEX-OF\`): there \`[ 9 ]\` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
-- Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and \`{\` / \`}\` are not valid Ajisai source characters. SELECT is not among them: it takes values, not code.
+- Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
+- Named data is a Record, written \`{ key value … }\`: \`${canonicalExampleCode('record-literal')}\`. It is not a Vector and is never code — \`{ }\` builds a value, \`[ ]\` builds a value that may also be run (§6).
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
 - One modifier, prefixing the *next word only*: \`KEEP\` (do not consume operands). Consumption is the default.
@@ -544,19 +550,41 @@ ${wordRows.join('\n')}
 
 const content = buildSkillMd();
 
-// `{`/`}` were retired from Ajisai source (docs/dev/type-unification-work-
-// order-2026-08.md) and the tokenizer now rejects them outright — but the
-// hand-typed prose in §2/§3 (syntax explained in *prose*, not run through
-// `runSnippet` the way §6/§7/§8's curated examples are) had drifted back
-// into showing `{ }` as a live block bracket without anything here
-// noticing. Scoped to §2/§3, not the whole file: §7's "Common errors"
-// section legitimately embeds JSON diagnostic output (`{ when: ..., why:
-// ... }`), which is not Ajisai source and has no reason to avoid braces.
+// The hand-typed prose in §2/§3 explains syntax in *prose*, not through
+// `runSnippet` the way §6/§7/§8's curated examples are, and it had drifted
+// into showing `{ }` as a live block bracket while §9 listed it as a
+// delimiter — then, when braces were freed and later allocated to the Record
+// literal, into calling them invalid source characters. Both readings were
+// wrong in the same place, so what is checked here is neither: every braced
+// fragment in §2/§3 must be Ajisai source that builds a Record, run to find
+// out. A `{ ... }` presented as a block would have to answer a Record to
+// survive this, and a claim that braces are not source cannot survive it at
+// all. Scoped to §2/§3: §7's "Common errors" section legitimately embeds JSON
+// diagnostic output (`{ when: ..., why: ... }`), which is not Ajisai source.
 const syntaxSections = content.slice(content.indexOf('## 2. Minimal syntax'), content.indexOf('## 4. NIL'));
+for (const fragment of syntaxSections.matchAll(/`([^`]*[{}][^`]*)`/g)) {
+  const code = fragment[1];
+  // A fragment carrying the ellipsis is a schema, not a program: `{ key value
+  // … }` names the shape a reader fills in, so there is nothing to run. The
+  // rule still bites, because a schema cannot be the only braced fragment —
+  // the executed example beside it is what proves the shape is real.
+  if (code.includes('…')) continue;
+  const { exit, json } = runSnippet(code);
+  if (exit !== 0) {
+    fail(`SKILL.md §2/§3 shows ${JSON.stringify(code)}, which is not Ajisai source: ${json?.message}`);
+  }
+  const shown = (json.stack ?? []).map((node) => node.type).join(',');
+  if (!shown.includes('record')) {
+    fail(`SKILL.md §2/§3 shows ${JSON.stringify(code)} with braces, but it answers [${shown}] rather than a Record`);
+  }
+}
+if (!/`[^`…]*[{}][^`…]*`/.test(syntaxSections)) {
+  fail('SKILL.md §2/§3 shows no braced fragment that runs, so the Record literal it documents is unchecked');
+}
 for (const [index, line] of syntaxSections.split('\n').entries()) {
-  if (!/[{}]/.test(line)) continue;
-  if (/retired|not valid Ajisai source character/.test(line)) continue;
-  fail(`SKILL.md §2/§3 (relative line ${index + 1}) contains '{' or '}' outside a line documenting them as retired: ${line}`);
+  if (/[{}]/.test(line) && !/`[^`]*[{}]/.test(line)) {
+    fail(`SKILL.md §2/§3 (relative line ${index + 1}) mentions a brace outside a code fragment, so nothing ran it: ${line}`);
+  }
 }
 
 if (process.argv.includes('--check')) {

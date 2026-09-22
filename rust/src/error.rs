@@ -295,10 +295,10 @@ pub enum AjisaiError {
         right: Vec<usize>,
         axis: usize,
     },
-    /// Program text that does not parse: an unclosed `{ }` block, a `|` outside
-    /// a clause, a mismatched delimiter. The fault is in the writing, not in
-    /// any value, so it belongs to neither the value-shape nor the user-logic
-    /// families.
+    /// Program text that does not parse: an unclosed or crossed delimiter, a
+    /// delimiter glued to a name, an unclosed string. The fault is in the
+    /// writing, not in any value, so it belongs to neither the value-shape nor
+    /// the user-logic families.
     MalformedSource(String),
     /// A name was asked to mean two things at once — `BIND` to a name a Word
     /// already holds, or `DEF` to a name a live binding holds. The two name

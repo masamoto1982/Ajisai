@@ -410,7 +410,11 @@ impl Interpreter {
                         cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
                         acc.widen_with(&dep_contract);
                     }
-                    Token::VectorStart | Token::VectorEnd | Token::LineBreak => {
+                    Token::VectorStart
+                    | Token::VectorEnd
+                    | Token::RecordStart
+                    | Token::RecordEnd
+                    | Token::LineBreak => {
                         flow.feed_structural(token);
                         sim.feed_structural(token);
                         cost_sim.feed_structural(token);

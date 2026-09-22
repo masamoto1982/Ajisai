@@ -264,20 +264,21 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_brace_lexes_as_a_name() {
-        // The retired block syntax is no longer refused by the lexer: `{` and
-        // `}` are ordinary names. What stops the old form working is that
-        // nothing defines those names — see
+    fn test_brace_delimits_a_record_literal() {
+        // `{` and `}` are the Record literal's delimiters
+        // (LANG.RECORDS.STRUCTURE), so the retired block syntax lexes as one
+        // — a Record of one pair. What stops the old form working is that a
+        // Record is not a definition body: see
         // `retired_brace_block_syntax_still_does_not_define_a_word`.
         let result = tokenize("{ [ 2 ] * }").unwrap();
-        assert_eq!(result.first(), Some(&Token::Symbol("{".into())));
-        assert_eq!(result.last(), Some(&Token::Symbol("}".into())));
+        assert_eq!(result.first(), Some(&Token::RecordStart));
+        assert_eq!(result.last(), Some(&Token::RecordEnd));
     }
 
     #[test]
-    fn test_brace_in_def_syntax_lexes_as_a_name() {
+    fn test_record_literal_in_def_position_still_lexes() {
         let result = tokenize("{ [ 2 ] * } 'DOUBLE' DEF").unwrap();
-        assert_eq!(result.first(), Some(&Token::Symbol("{".into())));
+        assert_eq!(result.first(), Some(&Token::RecordStart));
     }
 
     #[test]

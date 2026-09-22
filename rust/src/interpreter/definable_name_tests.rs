@@ -62,9 +62,9 @@ mod tests {
         }
     }
 
-    /// The retired block syntax lexes now that `{` and `}` are ordinary name
-    /// characters, so what refuses it has moved from the lexer to the
-    /// dictionary. It must still be refused: `{` names nothing.
+    /// The retired block syntax lexes, `{ ... }` now being the Record literal
+    /// (LANG.RECORDS.STRUCTURE), so what refuses it has moved from the lexer
+    /// to `DEF`: a definition body is a Vector, and a Record is not one.
     ///
     /// This is the property `test_brace_is_rejected_as_source` used to hold at
     /// the tokenizer, kept where the refusal now lives.
@@ -77,8 +77,8 @@ mod tests {
             .expect_err("the retired brace-block form must not define a Word")
             .to_string();
         assert!(
-            err.contains('{'),
-            "the failure should name the `{{` that resolves to nothing, got: {err}"
+            err.contains("definition body"),
+            "the failure should name the body `DEF` wanted, got: {err}"
         );
         assert!(
             !interp.user_words.contains_key("DOUBLE"),
@@ -86,12 +86,28 @@ mod tests {
         );
     }
 
+    /// A delimiter is not a name, so it cannot be one a Word is defined
+    /// under — the half of the allocation that reaches the dictionary.
+    #[tokio::test]
+    async fn a_delimiter_is_not_a_definable_name() {
+        for name in ["{", "}", "[", "]"] {
+            let err = def(name)
+                .await
+                .expect_err("a delimiter must not be definable")
+                .to_string();
+            assert!(
+                err.contains("it is not a name"),
+                "`{name}` should be refused for not being a name, got: {err}"
+            );
+        }
+    }
+
     /// A freed character is a perfectly ordinary name, so a Word may be
     /// defined under one and called by writing it. This is the other half of
     /// the rule above: nothing is reserved, so nothing is refused.
     #[tokio::test]
     async fn a_freed_character_is_a_definable_name() {
-        for name in ["(", "}", "|", "f(x)"] {
+        for name in ["(", ")", "|", "f(x)"] {
             def(name)
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be definable, got: {e}"));

@@ -28,7 +28,8 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
 - Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar — **except where a Word takes an *element*** (`PUT`, `GET`, `INDEX-OF`): there `[ 9 ]` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: `'single quotes'` (a value domain of its own, not a vector of codepoints). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
-- Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket, and `{` / `}` are not valid Ajisai source characters. SELECT is not among them: it takes values, not code.
+- Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
+- Named data is a Record, written `{ key value … }`: `{ 'x' 1 'y' 2 }`. It is not a Vector and is never code — `{ }` builds a value, `[ ]` builds a value that may also be run (§6).
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
 - One modifier, prefixing the *next word only*: `KEEP` (do not consume operands). Consumption is the default.
@@ -110,6 +111,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 1 2 3 ] [ 0 ] [ + ] FOLD` → stack: `[ 6/1 ]`
 - ANY / ALL take predicate blocks
   `[ 1 2 3 ] [ 1 > ] ANY` → stack: `TRUE`
+- A Record literal: each key beside the value under it
+  `{ 'x' 1 'y' 2 }` → stack: `{ 'x' 1/1 'y' 2/1 }`
 - Define a user word: [ body ] then name, then DEF
   `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
 - SELECT: the two candidates, then the truth that chooses between them
@@ -254,7 +257,7 @@ no module system and nothing to import.
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `MEMBER` | vector | Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time. — e.g. `[ 1 2 3 ] [ 2 5 ] MEMBER` |
 | `BSEARCH` | vector | The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write. A comparison that exhausts its budget (LANG.VALUES.EXACT) projects `undecidable`. — e.g. `[ 1 3 5 7 ] [ 5 ] BSEARCH` |
-| `RECORD` | record | Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. There is no Record literal: this Word is the only way a Record comes to exist. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD` |
+| `RECORD` | record | Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. The literal `{ 'x' 1 'y' 2 }` builds the same Record from the same values, pairing its elements as it reads them; this Word is what builds one from sequences a program computed. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD` |
 | `KEYS` | record | The keys of a Record as a Vector, in the Record's own order, so that `KEYS` and `VALUES` line up position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD KEYS` is `[ 'x' 'y' ]`. Key order is part of a Record's observable structure, so this Vector is one exact thing, not a set in some arbitrary order. A Vector or any other non-Record operand is an ERROR: a Record is not a Vector and nothing converts between them implicitly. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD KEYS` |
 | `VALUES` | record | The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES` is `[ 1/1 2/1 ]`. This is the bridge from the Record domain back to the Vector domain — from here every Vector Word applies — and `RECORD` is the bridge the other way, so `R KEYS R VALUES RECORD` rebuilds `R`. A non-Record operand is an ERROR. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES` |
 | `AT` | record | The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `fallback R 'x' AT NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' AT` |
@@ -310,4 +313,6 @@ no module system and nothing to import.
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
 | `[` | delimiter sugar | BEGIN-VECTOR — structural delimiter, not a Word |
 | `]` | delimiter sugar | END-VECTOR — structural delimiter, not a Word |
+| `{` | delimiter sugar | BEGIN-RECORD — structural delimiter, not a Word |
+| `}` | delimiter sugar | END-RECORD — structural delimiter, not a Word |
 | `'` | literal sugar | STRING-QUOTE — literal delimiter, not a Word |

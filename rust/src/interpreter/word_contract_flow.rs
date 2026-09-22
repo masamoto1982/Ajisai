@@ -110,8 +110,11 @@ impl FlowSim {
     /// never closes it pushes nothing and is caught by `finish`.
     pub(crate) fn feed_structural(&mut self, token: &Token) {
         match token {
-            Token::VectorStart => self.vector_depth += 1,
-            Token::VectorEnd => self.close(),
+            // One depth over both literals: what matters to the flow is that
+            // a literal's interior pushes nothing and its close pushes one
+            // value, which is as true of `{ ... }` as of `[ ... ]`.
+            Token::VectorStart | Token::RecordStart => self.vector_depth += 1,
+            Token::VectorEnd | Token::RecordEnd => self.close(),
             Token::LineBreak | Token::Number(_) | Token::String(_) | Token::Symbol(_) => {}
         }
     }

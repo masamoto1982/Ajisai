@@ -334,11 +334,10 @@ mod tokenizer_regression_tests {
                 .map(|t| format!("{t:?}"))
                 .collect()
         };
-        assert_eq!(symbols("{ a b c }").len(), 5);
         assert_eq!(symbols("( x y z )").len(), 5);
         assert_eq!(
-            tokenize("{ a b c }").unwrap().first(),
-            Some(&Token::Symbol("{".into()))
+            tokenize("( x y z )").unwrap().first(),
+            Some(&Token::Symbol("(".into()))
         );
         assert_eq!(
             tokenize("( x y z )").unwrap().last(),

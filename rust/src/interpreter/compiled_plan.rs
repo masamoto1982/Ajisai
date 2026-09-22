@@ -118,6 +118,11 @@ fn try_collect_literal_vector(
                 has_other = true;
                 i += consumed;
             }
+            // A Record literal is a constant too, but lowering it would have
+            // to carry the constructor's own ERRORs (`vectorLengthMismatch`,
+            // `duplicateKey`) into compile time. It stays on the interpreted
+            // path until there is a measurement asking for it.
+            Token::RecordStart | Token::RecordEnd => return None,
             Token::VectorEnd => {
                 if values.is_empty() {
                     // The interpreter rejects `[ ]`; leave it as a fallback so
@@ -205,7 +210,9 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
                 }
                 _ => CompiledOp::FallbackToken(token.clone()),
             },
-            Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
+            Token::VectorEnd | Token::RecordStart | Token::RecordEnd => {
+                CompiledOp::FallbackToken(token.clone())
+            }
             Token::LineBreak => CompiledOp::LineBreak,
             Token::Symbol(s) => {
                 let upper = crate::core_word_aliases::canonicalize_core_word_name(s);

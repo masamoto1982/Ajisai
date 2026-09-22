@@ -47,6 +47,30 @@ fn a_fully_supplied_call_does_not_predict_stack_underflow() {
     assert!(!predict("1 2 ADD").contains(&"error:stackUnderflow".to_string()));
 }
 
+/// A Record literal is a constant, so prediction answers exactly rather than
+/// widening: building it at prediction time is the whole decision. A literal
+/// that builds contributes no ERROR of its own, and one that cannot build
+/// contributes the ERROR it will raise every time it is reached.
+///
+/// Read on `duplicateKey`, which is declared rather than structural: the
+/// length mismatch a literal with an unpaired key raises is in the structural
+/// ceiling every non-empty program already carries (see the module doc), so
+/// it cannot show the difference this arm makes.
+#[test]
+fn a_record_literal_predicts_only_the_failure_it_actually_has() {
+    let good = predict("{ 'a' 1 'b' 2 }");
+    assert!(good.contains(&"value".to_string()), "{good:?}");
+    assert!(
+        !good.contains(&"error:duplicateKey".to_string()),
+        "{good:?}"
+    );
+
+    assert!(predict("{ 'a' 1 'a' 2 }").contains(&"error:duplicateKey".to_string()));
+    assert!(predict("{ 'a' 1 'b' }").contains(&"error:vectorLengthMismatch".to_string()));
+    // A Record nested in a Vector literal is reached through the same walk.
+    assert!(predict("[ { 'a' 1 'a' 2 } ]").contains(&"error:duplicateKey".to_string()));
+}
+
 #[test]
 fn a_called_user_word_contributes_its_bodys_vocabulary() {
     assert!(predict("[ 1 ADD ] 'INC' DEF 5 INC").contains(&"error:nonNumeric".to_string()));

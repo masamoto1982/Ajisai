@@ -166,6 +166,12 @@ export function makeLexer(grammar) {
     );
   };
 
+  const pairs = grammar.delimiterPairs ?? [];
+  const openerOf = new Map(pairs.map((pair) => [pair.open, pair]));
+  const closerOf = new Map(pairs.map((pair) => [pair.close, pair]));
+  const openTokenOf = new Map(pairs.map((pair) => [pair.openToken, pair]));
+  const closeTokenOf = new Map(pairs.map((pair) => [pair.closeToken, pair]));
+
   // The second pass the grammar documents as deliberately partial: it may miss
   // an imbalance, never invent one, because structural validation below has the
   // final say. Reproduced here rather than skipped, because it is what decides
@@ -196,23 +202,32 @@ export function makeLexer(grammar) {
         continue;
       }
       if (inString) continue;
-      if (c === '[') stack.push(c);
-      else if (c === ']') {
-        if (stack.pop() === undefined) return 'unexpectedCloseBracket';
+      const opener = openerOf.get(c);
+      if (opener) {
+        stack.push(opener);
+        continue;
+      }
+      const closer = closerOf.get(c);
+      if (closer) {
+        const open = stack.pop();
+        if (open === undefined) return closer.precheck.unexpectedClose;
+        // A crossed pair is structural validation's verdict, not this pass's:
+        // the stack has lost an opener, so every later reading of it would be
+        // a guess. Stopping is how the pass stays incapable of inventing.
+        if (open !== closer) return null;
       }
     }
-    return stack.length > 0 ? 'unclosedBracket' : null;
+    const unclosed = stack[stack.length - 1];
+    return unclosed ? unclosed.precheck.unclosed : null;
   };
 
   const structuralValidation = (tokens) => {
     const delimiters = [];
     for (const token of tokens) {
-      if (token.id === 'VectorStart') delimiters.push(token.id);
-      else if (token.id === 'VectorEnd') {
-        if (delimiters.pop() !== 'VectorStart') return 'mismatchedCodeDelimiter';
-      } else if (token.id === 'CondClauseSep') {
-        if (delimiters[delimiters.length - 1] !== 'VectorStart') {
-          return 'condSeparatorOutsideBlock';
+      if (openTokenOf.has(token.id)) delimiters.push(openTokenOf.get(token.id));
+      else if (closeTokenOf.has(token.id)) {
+        if (delimiters.pop() !== closeTokenOf.get(token.id)) {
+          return 'mismatchedCodeDelimiter';
         }
       }
     }

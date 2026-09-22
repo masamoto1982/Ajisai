@@ -367,6 +367,8 @@ pub enum Token {
     Symbol(Arc<str>),
     VectorStart,
     VectorEnd,
+    RecordStart,
+    RecordEnd,
     LineBreak,
 }
 

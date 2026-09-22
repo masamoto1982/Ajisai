@@ -7,11 +7,14 @@
 //! tokenizer) and some are parser-level structural delimiters.
 //!
 //! Every form listed here is live. There is no entry for a character the
-//! tokenizer refuses, because it refuses none: `(`, `)`, `{`, `}` and a bare
-//! `|` were once carried here as reserved markers and retired forms, and are
-//! now ordinary name characters with no per-character rule of their own
+//! tokenizer refuses, because it refuses none: `(`, `)` and a bare `|` were
+//! once carried here as reserved markers and retired forms, and are now
+//! ordinary name characters with no per-character rule of their own
 //! (`spec/grammar.json`, characterClasses.nameCharacter). A form earns a place
-//! in this table by *doing* something the word rule does not.
+//! in this table by *doing* something the word rule does not — which is what
+//! `{` and `}` came back for: they were freed with those three and then
+//! allocated as the Record literal's delimiters (LANG.RECORDS.STRUCTURE),
+//! the second of the grammar's two delimiter pairs.
 //!
 //! This module classifies the lexical / structural surface forms that
 //! are **not** runtime-canonicalizable words. The runtime *word* aliases
@@ -71,6 +74,20 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         // Vector end
     },
     SurfaceForm {
+        surface: "{",
+        concept: "BEGIN-RECORD",
+        kind: SurfaceFormKind::DelimiterSugar,
+        runtime_word: false,
+        // Record literal start
+    },
+    SurfaceForm {
+        surface: "}",
+        concept: "END-RECORD",
+        kind: SurfaceFormKind::DelimiterSugar,
+        runtime_word: false,
+        // Record literal end
+    },
+    SurfaceForm {
         surface: "'",
         concept: "STRING-QUOTE",
         kind: SurfaceFormKind::LiteralSugar,
@@ -90,14 +107,18 @@ mod tests {
     use crate::core_word_aliases::canonicalize_core_word_name;
 
     /// The characters that used to be carried here as reserved markers and
-    /// retired forms, and are now ordinary name characters.
-    const FREED: [&str; 5] = ["(", ")", "{", "}", "|"];
+    /// retired forms, and are now ordinary name characters. `{` and `}` were
+    /// freed with them and are back in the table as the Record literal's
+    /// delimiters, so they are not among them.
+    const FREED: [&str; 3] = ["(", ")", "|"];
 
     #[test]
     fn lookup_returns_named_concepts() {
         assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
         assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
         assert_eq!(lookup_surface_form("]").unwrap().concept, "END-VECTOR");
+        assert_eq!(lookup_surface_form("{").unwrap().concept, "BEGIN-RECORD");
+        assert_eq!(lookup_surface_form("}").unwrap().concept, "END-RECORD");
         assert_eq!(lookup_surface_form("'").unwrap().concept, "STRING-QUOTE");
     }
 
@@ -139,10 +160,12 @@ mod tests {
     ///
     /// The table is generated into the word manifest, SKILL.md and the
     /// quickstart, so an entry here is a claim that the character does
-    /// something the word rule does not. `(`, `)`, `{`, `}` and `|` no longer
-    /// do: they lex as ordinary Symbols. Re-adding one would put a dead
-    /// concept name back into every generated reading surface, which is the
-    /// same defect as before with the sign flipped.
+    /// something the word rule does not. `(`, `)` and `|` no longer do: they
+    /// lex as ordinary Symbols. Re-adding one would put a dead concept name
+    /// back into every generated reading surface, which is the same defect as
+    /// before with the sign flipped — the test that a form in the table is
+    /// live (above) is what tells that apart from allocating a character, as
+    /// `{` and `}` were allocated for the Record literal.
     #[test]
     fn a_freed_character_is_an_ordinary_name_and_is_not_listed() {
         for surface in FREED {
@@ -172,7 +195,7 @@ mod tests {
     /// half of its removal that the single-character cases above cannot see.
     #[test]
     fn a_freed_character_is_ordinary_inside_a_word() {
-        for name in ["f(x)", "a{b}", "x|y", "(", "}"] {
+        for name in ["f(x)", "a;b", "x|y", "(", ")"] {
             let tokens = crate::tokenizer::tokenize(name)
                 .unwrap_or_else(|e| panic!("`{name}` should lex as a name, got: {e}"));
             assert!(

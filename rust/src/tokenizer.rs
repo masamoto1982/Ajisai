@@ -119,24 +119,22 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
 
         let token_str: String = chars[start..i].iter().collect();
 
-        // `[` and `]` are reserved structural words: like every other Ajisai
-        // word (and like Forth's own `[` and `]`), they must stand alone,
-        // separated by whitespace. A bracket glued to anything else — `[1`,
-        // `2]`, `[[1]]` — is a source error asking for the space, rather than
-        // a silently accepted (and meaningless) name containing a bracket.
-        if token_str == "[" {
-            tokens.push(Token::VectorStart);
+        // The four structural words, one pair per delimiter pair of
+        // `spec/grammar.json`: like every other Ajisai word (and like Forth's
+        // own `[` and `]`), they must stand alone, separated by whitespace. A
+        // delimiter glued to anything else — `[1`, `2]`, `[[1]]`, `{1`, `a}`
+        // — is a source error asking for the space, rather than a silently
+        // accepted (and meaningless) name containing a delimiter. This is a
+        // whole-lexeme rule, not a per-character one: no character is checked
+        // on the way in, and a lexeme either *is* one delimiter or holds none.
+        if let Some(token) = delimiter_token(&token_str) {
+            tokens.push(token);
             spans.push(span_at(start));
             continue;
         }
-        if token_str == "]" {
-            tokens.push(Token::VectorEnd);
-            spans.push(span_at(start));
-            continue;
-        }
-        if token_str.contains('[') || token_str.contains(']') {
+        if token_str.contains(DELIMITERS) {
             return Err(format!(
-                "'{}' is not a valid token: '[' and ']' must stand alone, separated by whitespace, like every other Ajisai word (LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
+                "'{}' is not a valid token: '[', ']', '{{' and '}}' must stand alone, separated by whitespace, like every other Ajisai word (LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
                 token_str
             ));
         }
@@ -173,14 +171,45 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
     Ok((tokens, spans))
 }
 
+/// The delimiter characters, in the pairs `spec/grammar.json` declares.
+const DELIMITERS: [char; 4] = ['[', ']', '{', '}'];
+
+/// The token a lexeme that is exactly one delimiter emits.
+fn delimiter_token(lexeme: &str) -> Option<Token> {
+    match lexeme {
+        "[" => Some(Token::VectorStart),
+        "]" => Some(Token::VectorEnd),
+        "{" => Some(Token::RecordStart),
+        "}" => Some(Token::RecordEnd),
+        _ => None,
+    }
+}
+
+/// The opener a closing delimiter token must find on the stack, if the token
+/// is a closer at all.
+fn opener_of(token: &Token) -> Option<Token> {
+    match token {
+        Token::VectorEnd => Some(Token::VectorStart),
+        Token::RecordEnd => Some(Token::RecordStart),
+        _ => None,
+    }
+}
+
 /// Validate the structural grammar of an already-tokenized code value.
+///
+/// One stack over both pairs, so a crossed `[ }` is mismatched rather than
+/// accepted — the property a pair-per-counter version cannot see.
 pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
     let mut delimiters = Vec::new();
     for token in tokens {
         match token {
-            Token::VectorStart => delimiters.push(Token::VectorStart),
-            Token::VectorEnd if delimiters.pop() == Some(Token::VectorStart) => {}
-            Token::VectorEnd => return Err("mismatched code delimiter".into()),
+            Token::VectorStart | Token::RecordStart => delimiters.push(token.clone()),
+            Token::VectorEnd | Token::RecordEnd => {
+                let innermost = delimiters.pop();
+                if innermost != opener_of(token) {
+                    return Err("mismatched code delimiter".into());
+                }
+            }
             _ => {}
         }
     }
@@ -204,6 +233,10 @@ pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
     matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
 }
 
+/// The text-level precheck the grammar documents as deliberately partial: it
+/// may miss an imbalance, never invent one, because [`validate_code_tokens`]
+/// runs afterwards on the real tokens and has the final say. It is kept for
+/// its message, which names the pair and the character.
 fn check_bracket_matching(input: &str) -> Result<(), String> {
     let mut stack: Vec<char> = Vec::new();
     let mut in_string = false;
@@ -249,24 +282,33 @@ fn check_bracket_matching(input: &str) -> Result<(), String> {
         }
 
         match c {
-            '[' => stack.push(c),
-            ']' => match stack.pop() {
-                Some('[') => {}
-                None => {
-                    return Err("Unexpected ']' without matching '['".to_string());
+            '[' | '{' => stack.push(c),
+            ']' | '}' => {
+                let expected = if c == ']' { '[' } else { '{' };
+                match stack.pop() {
+                    Some(open) if open == expected => {}
+                    None => {
+                        return Err(format!("Unexpected '{c}' without matching '{expected}'"));
+                    }
+                    // A crossed pair: the fault is `mismatched code delimiter`,
+                    // which the token-level validator reports. This pass has
+                    // just lost an opener, so every later reading of its stack
+                    // would be a guess — stopping is how it stays incapable of
+                    // inventing a condition.
+                    Some(_) => return Ok(()),
                 }
-                Some(_) => unreachable!("only '[' is ever pushed"),
-            },
+            }
             _ => {}
         }
         i += 1;
     }
 
-    if stack.last().is_some() {
-        return Err("Unclosed '[': expected ']'".to_string());
+    match stack.last() {
+        Some('[') => Err("Unclosed '[': expected ']'".to_string()),
+        Some('{') => Err("Unclosed '{': expected '}'".to_string()),
+        Some(other) => unreachable!("only an opener is ever pushed, got {other:?}"),
+        None => Ok(()),
     }
-
-    Ok(())
 }
 
 enum QuoteParseResult {

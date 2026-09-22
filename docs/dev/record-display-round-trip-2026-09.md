@@ -2,6 +2,12 @@
 
 Status: 非正典。正典は `spec/language-semantics.md` と `SPECIFICATION.html`。
 
+> **一部被覆（2026-09-22）**: 本書が採った表示形 `[ keys ] [ values ] RECORD` と、
+> Record を含む Vector の `COLLECT` 形は、`record-literal-2026-09.md` が Record の
+> 字面 `{ key value … }` を与えたことで置き換わった。§2 の観察（往復性にリテラルは
+> 要らない）と §3 の制約（ブラケットリテラルは中身を評価しない）は今も真であり、
+> §5 の代償はリテラルによって解消された。要求とその探索の記録として残す。
+
 ## 1. 何をしたか
 
 Record の表示を、それを組み立てる呼び出しそのものに変えた。

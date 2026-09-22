@@ -119,8 +119,9 @@ mod execution_loop;
 mod execution_loop_tests;
 #[cfg(test)]
 mod execution_step_parity_tests;
+mod record_literal;
 mod value_as_code;
-mod vector_literal;
+pub(crate) mod vector_literal;
 
 mod execute_builtin;
 
