@@ -6,7 +6,7 @@ The house style for **all authoritative writing about Ajisai** — the specifica
 
 - **Non-canonical.** This document governs **how** Ajisai is written about, not **what** is true of it. It defines no language semantics.
 - **Canonical source remains `SPECIFICATION.html`.** If this document ever appears to constrain meaning, the specification wins.
-- **The authority model itself is specified.** Section 2 of the specification (Specification Authority) defines the responsibilities of, and the order of trust among, the mathematical formalization, the specification, the Reference, and this authoring discipline; this document supplies the notation rules that model requires.
+- **The authority model itself is specified.** LANG.AUTHORITY.SOURCES names the authoritative sources and what each is authoritative for, and LANG.AUTHORITY.PRESENT requires the three reading surfaces to describe the language as it currently is; this document supplies the notation rules that model requires. (The specification publishes stable `LANG.*` clause ids, so a citation survives reorganization — the numbered sections this document used to cite are gone.)
 - **Scope:** the specification, the README (`README.md`), the Reference (`public/docs/`), and any other authoritative text that names Ajisai words, symbols, or formulas.
 - Sibling conventions: `docs/dev/reference-writing-style.md` (the Reference site and `?`/LOOKUP text) and `docs/dev/three-layer-documentation-model.md` (user-facing guidance structure). This document is the shared notation discipline both of those, and the specification, adhere to.
 
@@ -21,16 +21,20 @@ Two consistency problems dominate, and the rest of this document addresses them:
 
 ## 2. The symbol-as-word hazard
 
-The tokenizer maps symbol forms to canonical English names; the master map is the surface-syntax table in Section 3 of the specification, and the modifiers are defined in Sections 6.1–6.2. The marks most easily mistaken for ordinary punctuation are the modifiers:
+The tokenizer maps symbol forms to canonical English names, and two registries hold the whole inventory: the `aliases` field of `spec/words.json` (symbol spellings of Words) and `SURFACE_FORMS` in `rust/src/surface_forms.rs` (the lexical and structural forms that are not Words). `docs/word-manifest.json` is generated from both, so the count of record is one file. Everything in either is a mark that must carry the gray background of Section 3:
 
-| Symbol | Canonical word | Kind | Role |
-|--------|----------------|------|------|
-| `.` | `TOP` | Target modifier | The word operates on the top value(s) of the stack (default) |
-| `..` | `STAK` | Target modifier | The entire stack is treated as the operand |
-| `,` | `EAT` | Consumption modifier | Operands are consumed after the operation (default) |
-| `,,` | `KEEP` | Consumption modifier | Operands are retained; the result is also pushed |
+| Symbol | Canonical word or concept | Kind |
+|--------|---------------------------|------|
+| `+` `-` `*` `/` `%` | `ADD` `SUB` `MUL` `DIV` `MOD` | Word alias |
+| `=` `<` `<=` `>` `>=` | `EQ` `LT` `LTE` `GT` `GTE` | Word alias |
+| `[` `]` | `BEGIN-VECTOR` `END-VECTOR` | Structural delimiter, not a Word |
+| `{` `}` | `BEGIN-RECORD` `END-RECORD` | Structural delimiter, not a Word |
+| `'` | `STRING-QUOTE` | Literal delimiter, not a Word |
+| `#` | `COMMENT-LINE` | Source directive, not a Word |
 
-So `.` is the sugar for the word that selects the **operation-target mode**, and `,` is the sugar for the word that selects **operand consumption**. Both look exactly like English punctuation. Other word-aliases (`+` `-` `*` `/` `%` `=` `<` `>` `&` `~` `^` `?` `!`) carry the same risk to a smaller degree. A casual comma-separated list written near Ajisai code invites the misreading "is that `,` part of the program?".
+Ten alias spellings, six lexical forms, and nothing else: **a mark not in that table is ordinary punctuation, in prose and in source alike.** That is a narrower hazard than this section once described, and the narrowing is worth stating, because the rules below were written against the wider one. `.` `,` `..` `,,` were the target and consumption modifiers; the language now has one modifier axis, spelled `KEEP` as a word with no punctuation sugar (LANG.MODIFIERS.CONSUMPTION). `(` `)` and a bare `|` were a reserved pair and a retired separator; they are ordinary name characters (`docs/dev/source-character-liberation-2026-09.md`). So a comma in running prose is no longer an Ajisai word, and the question "is that `,` part of the program?" no longer has a bad answer.
+
+What remains is sharper for being smaller. `/` is `DIV` and shares its glyph with the division bar; `=` `<` `>` collide with mathematics; `[` `]` `{` `}` `'` `#` do structural work no word does. Those are the marks the channel rules protect.
 
 ## 3. Primary technique: the gray code background, reserved for Ajisai
 
@@ -52,7 +56,7 @@ Because a formula and an Ajisai snippet share glyphs (`/` is both a division bar
 Rules for the mathematics channel:
 
 1. **Do not put mathematics in the gray Ajisai code span.** That background belongs to Ajisai tokens; sharing it destroys the signal of Section 3.
-2. **Use the delimiters of the surface.** The HTML surfaces typeset LaTeX through KaTeX using backslash delimiters — `\(…\)` inline, `\[…\]` display (Section 4.1); `\` is not an Ajisai token, so those delimiters collide with nothing. Markdown surfaces may use the `$…$` / `$$…$$` delimiters their renderers support (Section 4.2): since the `COND` clause separator moved from `$` to `|`, `$` is no longer an Ajisai token and the historical collision is gone. (`|` **is** now an Ajisai token — see Sections 6 and 8.)
+2. **Use the delimiters of the surface.** The HTML surfaces typeset LaTeX through KaTeX using backslash delimiters — `\(…\)` inline, `\[…\]` display (Section 4.1); `\` is not an Ajisai token, so those delimiters collide with nothing. Markdown surfaces may use the `$…$` / `$$…$$` delimiters their renderers support (Section 4.2): `$` is not an Ajisai token either, so that pair is equally free.
 3. **Set display formulas off from prose** in their own block, the way the specification writes the continued-fraction forms.
 4. **A glyph shared by both channels is disambiguated by channel alone.** When the same expression is shown both as mathematics and as the Ajisai that realizes it, present them as two distinct things — for example a math display beside an Ajisai snippet, or two columns — never blended into one run of text.
 
@@ -69,7 +73,7 @@ The specification (`SPECIFICATION.html`) and the Reference (`public/docs/`) type
 | Library | KaTeX with its auto-render extension, **self-hosted** at `public/vendor/katex/` — no CDN, matching the repository's no-external-services stance |
 | Refreshing the vendored copy | `npm run vendor:katex` (copies from the `katex` devDependency; woff2 fonts only) |
 | Ajisai channel exclusion | auto-render is configured with `ignoredTags` covering `code` and `pre`, so the gray Ajisai channel is structurally unreachable by math rendering — the channel separation is enforced by tooling, not just by discipline |
-| Continued fractions | use `\cfrac` for the nested display forms; the NICF formula in specification Section 4.2.5 is the model |
+| Continued fractions | use `\cfrac` for a nested display form rather than a flat Unicode transcription. The Reference writes the canonical *display* of a continued fraction as the flat `[ 1; 2, 2, 2, … ]` (LANG.OBSERVATION.PROTOCOL): that is stack text, not mathematics, so it stays in the Ajisai channel and a formula about it goes in this one |
 | Variables and names | single letters italic by default (`\(a_0\)`, `\(b_i\)`, `\(\varepsilon_i\)`); multi-letter names as `\mathit{…}` (`\(\mathit{num}/\mathit{den}\)`) |
 | No-JS degradation | without JavaScript the raw `\(…\)` LaTeX source remains visible; this is acceptable — LaTeX source is itself a precise, AI-readable notation |
 
@@ -77,9 +81,9 @@ The LaTeX source inside the HTML is part of the artifact: it must state exactly 
 
 ### 4.2 Markdown surfaces use GitHub math
 
-The README and the `docs/dev/` working documents are Markdown and get no KaTeX runtime, but GitHub renders `$…$` (inline) and `$$…$$` (display) LaTeX natively. Use it: with the `COND` clause separator moved from `$` to `|`, the dollar sign is no longer an Ajisai token and the historical collision is gone. Two cautions remain:
+The README and the `docs/dev/` working documents are Markdown and get no KaTeX runtime, but GitHub renders `$…$` (inline) and `$$…$$` (display) LaTeX natively. Use it: the dollar sign is not an Ajisai token, so there is nothing to collide with. Two cautions remain:
 
-- **Code spans win.** An Ajisai snippet containing `|` (or any other token) is always inside `` `…` ``, where Markdown math does not reach — the channel rule of Section 3 already guarantees this.
+- **Code spans win.** An Ajisai snippet is always inside `` `…` ``, where Markdown math does not reach — the channel rule of Section 3 already guarantees this.
 - **Unicode text math is still acceptable** for a stray `≤` or `√` in running prose where a full math span would be noise. Heavy mathematics belongs on the HTML surfaces anyway (three-layer model); if a Markdown document accumulates formulas, that is a sign the content belongs in the specification or the Reference.
 
 ## 5. Tables for enumerable structure
@@ -101,7 +105,7 @@ Keep paragraphs for the definition of a single concept, the rationale behind a r
 
 1. **Mark every Ajisai-meaningful token as code** so it carries the gray background (Section 3). Non-negotiable baseline.
 2. **Keep mathematics in its own channel** (Section 4); never give it the gray Ajisai background. On the HTML surfaces, typeset it as LaTeX via KaTeX with `\(…\)` / `\[…\]` (Section 4.1); on Markdown surfaces, GitHub's `$…$` math is available (Section 4.2).
-3. **Never use a bare Ajisai token as prose punctuation.** A symbol that is a word or sugar (`.` `..` `,` `,,` `+` `-` `*` `/` `%` `=` `<` `>` `<=` `>=` `<>` `&` `~` `^` `?` `!` `|`) appears only as marked-up code, never as the separator, bullet, or delimiter of running text.
+3. **Never use a bare Ajisai token as prose punctuation.** A mark in Section 2's table (`+` `-` `*` `/` `%` `=` `<` `<=` `>` `>=` `[` `]` `{` `}` `'` `#`) appears only as marked-up code, never as the separator, bullet, or delimiter of running text. A mark outside that table is ordinary punctuation and needs no marking — which is a fact to check against the registries, not to recall.
 4. **Promote an inline list of three or more code tokens to a table.**
 5. **One concept axis per column.**
 6. **Do not encode results with inline comment arrows.** `# → [ 1 ]` blurs code and result; use separate columns or blocks.
@@ -111,20 +115,20 @@ Keep paragraphs for the definition of a single concept, the rationale behind a r
 
 The hazard, then the fix.
 
-**Before** — an inline list whose separators are themselves Ajisai words:
+**Before** — an inline list long enough that its separators do the structural work:
 
-> The logic words are `AND`, `OR`, and `NOT`; the control-flow words are `COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, and `SCAN`.
+> The logic words are `AND` / `OR` / `NOT` / `SELECT`; the higher-order words are `EXEC` / `MAP` / `FILTER` / `FOLD` / `SCAN` / `ANY` / `ALL`.
 
-Every separating comma there is a `,`, the sugar for `EAT`. The reader leans on the gray backgrounds of the words alone to know the commas between them are English.
+Every separator there is a `/`, the alias for `DIV`, sitting unmarked between marked tokens — the one reading a gray background cannot help with, because the slash carries no background of its own. A comma would not have this problem today (Section 2), and would still leave eleven tokens for the reader to group by eye.
 
 **After** — the same content as structure:
 
 | Category | Members |
 |----------|---------|
-| Logic | `AND` and `OR` and `NOT` |
-| Control flow | `COND` `EXEC` `MAP` `FILTER` `FOLD` `UNFOLD` `ANY` `ALL` `COUNT` `SCAN` |
+| Logic | `AND` and `OR` and `NOT` and `SELECT` |
+| Higher-order | `EXEC` `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` |
 
-The cell boundaries carry the separation, and no comma is left adrift between two words.
+The cell boundaries carry the separation, and nothing ambiguous is left adrift between two words.
 
 ## 8. In-cell separators
 
@@ -134,7 +138,7 @@ When a single cell must hold more than one token, separate them with something t
 - a middle dot `·`, which is not an Ajisai token; or
 - a single space between adjacent code spans (`` `MAP` `FILTER` ``).
 
-Never separate in-cell tokens with `,`, `/`, or `|` — all three are Ajisai words or sugar (`|` is the `COND` clause separator), and `|` additionally collides with Markdown table syntax.
+Never separate in-cell tokens with `/`: it is the `DIV` alias, so it reads as part of the program. Never use `|` either — not because the language claims it (it does not; it is an ordinary name character) but because it is the Markdown table delimiter, and a cell separator that ends the cell is its own kind of wrong. `,` is no longer an Ajisai token, so it is no longer forbidden here; the preferences above still stand on their own, because a spelled-out "and" survives every renderer and a comma between two code spans still reads as a list of two things rather than one phrase.
 
 ## 9. Surfaces and required formats: the specification is HTML, the README is Markdown
 
@@ -148,7 +152,7 @@ Each surface applies this style with its own tooling:
 - **README** (`README.md`) — GitHub-flavored Markdown. Inline code gives the gray background; tables are native. Worked examples live in sample tables (sample code, expected value, notes), never as code comments with inline result arrows. Tech-stack badges are homemade, uniform SVGs kept in the repository (`docs/assets/badges/`) — no borrowed third-party badge images.
 - **Reference** (`public/docs/`) — hand-authored HTML. The gray background is supplied by the page's `code` styling, and examples already live in tables (sample code, expected value, notes); mathematics is LaTeX rendered by the self-hosted KaTeX (Section 4.1). New pages follow the same channels.
 
-Representative specification candidates for table promotion (illustrative, not exhaustive): the Core-word category lists, the NIL-passthrough word enumerations in the Bubble Rule section, and any sentence that names four or more words in a row.
+Representative specification candidates for table promotion (illustrative, not exhaustive): the Core-word category lists, the Word enumerations in LANG.FAILURE.PASSTHROUGH, and any sentence that names four or more Words in a row.
 
 Legacy references to `SPECIFICATION.md` in older commits and archived notes are obsolete; they denote the same document, now `SPECIFICATION.html`. A short-lived `README.html` existed during the 2026-06 migration and is likewise obsolete; the README is `README.md`.
 
