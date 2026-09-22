@@ -3723,28 +3723,6 @@
       "desugars_to": "COMMENT-LINE"
     },
     {
-      "id": "surface.pipe",
-      "kind": "retired_form",
-      "surface": "|",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Retired: it separated a COND clause's guard from its body. COND was replaced by SELECT, which chooses between two values that already exist, so there is no clause to separate. The tokenizer still answers the form by name.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "RETIRED-COND-CLAUSE"
-    },
-    {
       "id": "surface.left-bracket",
       "kind": "delimiter_sugar",
       "surface": "[",
@@ -3789,50 +3767,6 @@
       "desugars_to": "END-VECTOR"
     },
     {
-      "id": "surface.left-brace",
-      "kind": "retired_form",
-      "surface": "{",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Retired block opening delimiter. Code blocks and vectors were unified onto '[' ']', and the tokenizer has rejected '{' since; recorded so a reader who meets it in older material is told what replaced it, not offered it as a delimiter.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "RETIRED-BEGIN-BLOCK"
-    },
-    {
-      "id": "surface.right-brace",
-      "kind": "retired_form",
-      "surface": "}",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Retired block closing delimiter. Code blocks and vectors were unified onto '[' ']', and the tokenizer has rejected '}' since; recorded so a reader who meets it in older material is told what replaced it, not offered it as a delimiter.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "RETIRED-END-BLOCK"
-    },
-    {
       "id": "surface.quote",
       "kind": "literal_sugar",
       "surface": "'",
@@ -3853,50 +3787,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "STRING-QUOTE"
-    },
-    {
-      "id": "surface.left-paren",
-      "kind": "reserved_marker",
-      "surface": "(",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Reserved continued-fraction serialization marker; invalid in source and classified as lexical reserved marker rather than runtime vocabulary.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "RESERVED-BEGIN"
-    },
-    {
-      "id": "surface.right-paren",
-      "kind": "reserved_marker",
-      "surface": ")",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Reserved continued-fraction serialization marker; invalid in source and classified as lexical reserved marker rather than runtime vocabulary.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "RESERVED-END"
     },
     {
       "id": "alias.plus",

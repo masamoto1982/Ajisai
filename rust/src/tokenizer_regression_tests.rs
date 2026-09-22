@@ -324,32 +324,38 @@ mod tokenizer_regression_tests {
             ]
         );
 
-        let result2 = tokenize("{ a b c }");
-        assert!(result2.is_err());
-        assert!(result2
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
-
-        let result3 = tokenize("( x y z )");
-        assert!(result3.is_err());
-        assert!(result3
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+        // `[` and `]` are the only bracket the lexer knows. The other three
+        // pairs are names: they lex, and what happens next is the dictionary's
+        // business, not the lexer's.
+        let symbols = |src: &str| -> Vec<String> {
+            tokenize(src)
+                .unwrap_or_else(|e| panic!("{src:?} should lex, got: {e}"))
+                .iter()
+                .map(|t| format!("{t:?}"))
+                .collect()
+        };
+        assert_eq!(symbols("{ a b c }").len(), 5);
+        assert_eq!(symbols("( x y z )").len(), 5);
+        assert_eq!(
+            tokenize("{ a b c }").unwrap().first(),
+            Some(&Token::Symbol("{".into()))
+        );
+        assert_eq!(
+            tokenize("( x y z )").unwrap().last(),
+            Some(&Token::Symbol(")".into()))
+        );
     }
 
     #[test]
-    fn test_paren_rejected_in_vector_position() {
-        let result = tokenize("[ ( [ 1 ] ) ]");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
-
-        let result2 = tokenize("[ ( X ) ( Y ) ]");
-        assert!(result2.is_err());
-        assert!(result2
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+    fn test_paren_is_a_name_in_vector_position() {
+        // The parens contribute names; only the brackets are structure.
+        for src in ["[ ( [ 1 ] ) ]", "[ ( X ) ( Y ) ]"] {
+            let tokens = tokenize(src).unwrap_or_else(|e| panic!("{src:?} should lex, got: {e}"));
+            assert_eq!(tokens.first(), Some(&Token::VectorStart));
+            assert_eq!(tokens.last(), Some(&Token::VectorEnd));
+            assert!(tokens.contains(&Token::Symbol("(".into())));
+            assert!(tokens.contains(&Token::Symbol(")".into())));
+        }
     }
 
     #[test]

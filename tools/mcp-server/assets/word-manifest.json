@@ -17,8 +17,8 @@
     "corewords": 100,
     "aliases": 10,
     "inputHelpers": 1,
-    "surface_forms": 9,
-    "manifestEntries": 120
+    "surface_forms": 4,
+    "manifestEntries": 115
   },
   "entries": [
     {
@@ -1987,22 +1987,6 @@
       "classification": "Surface"
     },
     {
-      "id": "surface.pipe",
-      "kind": "retired_form",
-      "surface": "|",
-      "concept": "RETIRED-COND-CLAUSE",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "RETIRED-COND-CLAUSE",
-      "coverage_entry_id": "surface.pipe",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "RETIRED-COND-CLAUSE",
-      "classification": "Surface"
-    },
-    {
       "id": "surface.left-bracket",
       "kind": "delimiter_sugar",
       "surface": "[",
@@ -2035,38 +2019,6 @@
       "classification": "Surface"
     },
     {
-      "id": "surface.left-brace",
-      "kind": "retired_form",
-      "surface": "{",
-      "concept": "RETIRED-BEGIN-BLOCK",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "RETIRED-BEGIN-BLOCK",
-      "coverage_entry_id": "surface.left-brace",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "RETIRED-BEGIN-BLOCK",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.right-brace",
-      "kind": "retired_form",
-      "surface": "}",
-      "concept": "RETIRED-END-BLOCK",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "RETIRED-END-BLOCK",
-      "coverage_entry_id": "surface.right-brace",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "RETIRED-END-BLOCK",
-      "classification": "Surface"
-    },
-    {
       "id": "surface.quote",
       "kind": "literal_sugar",
       "surface": "'",
@@ -2080,38 +2032,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "STRING-QUOTE",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.left-paren",
-      "kind": "reserved_marker",
-      "surface": "(",
-      "concept": "RESERVED-BEGIN",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "RESERVED-BEGIN",
-      "coverage_entry_id": "surface.left-paren",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "RESERVED-BEGIN",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.right-paren",
-      "kind": "reserved_marker",
-      "surface": ")",
-      "concept": "RESERVED-END",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "RESERVED-END",
-      "coverage_entry_id": "surface.right-paren",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "RESERVED-END",
       "classification": "Surface"
     }
   ]

@@ -579,7 +579,7 @@
                         <li><code>[</code>と<code>]</code>は、他のどのワードとも同じく単独で立たなければなりません。<code>[ 1 2 3 ]</code>は正しく、<code>[1 2 3]</code>は空白の不足を指摘するソースエラーになります。</li>
                         <li><code>#</code>がコメントを開始するのは、それがトークンの先頭にあるときだけです。直前のトークンに密着した<code>#</code>はその名前の一部になるため、<code>ADD# メモ</code>はコメント付きの<code>ADD</code>ではなく、<code>ADD#</code>という未定義のワードです。</li>
                     </ul>
-                    <p class="ref-note"><code>(</code>と<code>)</code>はソースコードの中では使えません。書けば必ずエラーになる予約済みの記号(<code>RESERVED-BEGIN</code> / <code>RESERVED-END</code>)です。Ajisaiで使う括弧は<code>[</code> <code>]</code>だけであり、コードブロックにも、連分数の表示形式にも同じ<code>[</code> <code>]</code>を使います。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
+                    <p class="ref-note">Ajisaiが意味を与える括弧は<code>[</code> <code>]</code>だけであり、コードブロックにも、連分数の表示形式にも同じ<code>[</code> <code>]</code>を使います。<code>(</code>と<code>)</code>に構文上の役割はありません。これらは名前を構成するただの文字なので、単独で書けば「そんなワードは無い」という結果になります。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
                     <h3>演算子と空白の必要性</h3>
                     <p>一般的な演算記号もワード(名前)の一種であるため、前後に空白が必要です。<code>2 +</code>は<code>2</code>と<code>+</code>の2つのトークンとして正しく解釈されます。<code>2+</code>は「2+」という1つの名前とみなされ、加算ではなく未定義ワードとしてエラーになります。</p>
                     <p class="ref-note">角括弧<code>[</code> <code>]</code>も同じです。それ自体で1つのワードであり、前後に空白が必要です。<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>という不正なトークンとして拒否されるため、<code>[ 1 2 ] LENGTH</code>と書いてください。</p>
@@ -801,7 +801,7 @@
                         <li><strong>Playgroundのスタック領域</strong>は、値の正規形をそのまま根号で描きます。<code>2 SQRT</code>は<code>√2</code>、<code>8 SQRT 1 ADD 2 DIV</code>は<code>1/2 + 1/2√8</code>です(<code>√8</code>は<code>2√2</code>へ簡約されません)。正規形を持たない値、すなわち<code>PI</code>のような一般の計算可能実数は、有理数による近似であることを示す<code>≈</code>を付けて描かれます。</li>
                         <li><strong>連分数形式</strong>は、値そのものから導出される正準表示です。古典的な記法どおり<code>[ 1; 2, 2, 2, … ]</code>のように平坦な形で書かれ、表示用の予算で打ち切られた場合は末尾に<code>…</code>が付きます。CLIやMCPホストの<code>stackDisplay</code>がこの形式です。</li>
                     </ul>
-                    <p class="ref-note">どちらも表示専用の出力であり、ソースコードの構文ではありません。連分数形式が使う括弧も<code>[</code> <code>]</code>です。プログラム中で<code>(</code> <code>)</code>を直接書くと、予約記号のため構文エラーとして拒否されます。</p>
+                    <p class="ref-note">どちらも表示専用の出力であり、ソースコードの構文ではありません。連分数形式が使う括弧も<code>[</code> <code>]</code>です。<code>(</code> <code>)</code>は構文ではなく名前の文字なので、プログラム中に書いても括弧としては働きません。</p>
 
                     <h3 id="strings">文字列(<code>' '</code>)</h3>
                     <p>文字列は<code>'</code>で引用され、スタック上では引用符付きで表示されます。この引用符は表示上の便宜であって、値の一部ではありません。<code>PRINT</code>は生のテキストを書き出すので、<code>'TEST'</code>は<code>TEST</code>として出力されます。詳しくは<a href="#output">出力</a>を参照してください。ただしコレクションの中に入れ子になった文字列は引用符を保ったままで、<code>[ 'AB' 'CD' ]</code>はそのままの形で表示されます。文字列と数や文字との相互変換については、<a href="#strings-ops">文字列操作</a>にまとめてあります。</p>
@@ -1820,7 +1820,7 @@
                 <section id="records" class="ref-page">
                     <h2>キーによる対応(<code>RECORD</code>, <code>AT</code>)</h2>
                     <p>名前の付いたデータ——価格表、設定、1行のレコード——を、Ajisaiは<strong>Record</strong>という第7の値領域で持ちます。Recordは<em>キー列</em>と<em>値列</em>を位置で対応付けたもので、キーは与えた順序を保ち、同じキーは一度しか現れません。キーには任意の値を使えます(ふつうは文字列)。ベクトルではないので、ベクトルのワードはRecordを受け取らず、Recordのワードはベクトルを受け取りません。暗黙の変換はどちら向きにもありません。</p>
-                    <p>Recordの字面(リテラル)はありません。<code>RECORD</code>がキー列と値列から組み立てる唯一の入口で、表示は<code>{ 'x': 1/1 'y': 2/1 }</code>の形です。<code>{</code> <code>}</code>はAjisaiの字句として退役しているので、この表示をリテラルと取り違えることはできません。</p>
+                    <p>Recordの字面(リテラル)はありません。<code>RECORD</code>がキー列と値列から組み立てる唯一の入口で、表示は<code>{ 'x': 1/1 'y': 2/1 }</code>の形です。これは読むための表示であってソースではありません。中括弧はベクトルと見間違えないための目印で、それ自体に構文上の働きはありません。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>

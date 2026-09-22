@@ -182,10 +182,26 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
-        // A Record renders as `{ key: value … }`. Braces are retired lexemes
-        // (`spec/grammar.json`, `retiredForm`), so this display can never be
-        // read back as a literal — a Record has none (LANG.RECORDS.STRUCTURE)
-        // — and can never be mistaken for the Vector it is not.
+        // A Record renders as `{ key: value … }`, which is display text and
+        // not source: a Record has no literal, and `RECORD` is the only way
+        // one comes to exist (LANG.RECORDS.STRUCTURE). The braces keep it
+        // from being mistaken for the Vector it is not.
+        //
+        // This used to claim the form "can never be read back as a literal"
+        // because braces were retired lexemes the tokenizer refused. That
+        // reasoning was wrong twice over. It is no longer true — `{` and `}`
+        // are ordinary name characters now — and it was never what did the
+        // work: `'a':` glues a colon to a closing quote, and a quote closes a
+        // literal only before whitespace or end of input, so a Record with
+        // any Text key lexes as `unclosedLiteral` whatever the braces do.
+        // What remains readable is `{ }` and a Record whose keys are not
+        // Text, which lex as ordinary Symbols and resolve as unknown words.
+        //
+        // Nothing here rests on that. An agent never reads this string:
+        // LANG.OBSERVATION.PROTOCOL hands a Record over as a `record` node
+        // carrying its aligned key and value sequences, and
+        // LANG.OBSERVATION.FIREWALL forbids inferring semantics from display
+        // text. This form is for the human reading the Stack surface.
         ValueData::Record(record) => {
             if record.is_empty() {
                 return "{ }".to_string();

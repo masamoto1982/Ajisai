@@ -62,6 +62,53 @@ mod tests {
         }
     }
 
+    /// The retired block syntax lexes now that `{` and `}` are ordinary name
+    /// characters, so what refuses it has moved from the lexer to the
+    /// dictionary. It must still be refused: `{` names nothing.
+    ///
+    /// This is the property `test_brace_is_rejected_as_source` used to hold at
+    /// the tokenizer, kept where the refusal now lives.
+    #[tokio::test]
+    async fn retired_brace_block_syntax_still_does_not_define_a_word() {
+        let mut interp = Interpreter::new();
+        let err = interp
+            .execute("{ [ 2 ] * } 'DOUBLE' DEF")
+            .await
+            .expect_err("the retired brace-block form must not define a Word")
+            .to_string();
+        assert!(
+            err.contains('{'),
+            "the failure should name the `{{` that resolves to nothing, got: {err}"
+        );
+        assert!(
+            !interp.user_words.contains_key("DOUBLE"),
+            "the retired form must not have defined DOUBLE"
+        );
+    }
+
+    /// A freed character is a perfectly ordinary name, so a Word may be
+    /// defined under one and called by writing it. This is the other half of
+    /// the rule above: nothing is reserved, so nothing is refused.
+    #[tokio::test]
+    async fn a_freed_character_is_a_definable_name() {
+        for name in ["(", "}", "|", "f(x)"] {
+            def(name)
+                .await
+                .unwrap_or_else(|e| panic!("`{name}` should be definable, got: {e}"));
+
+            let mut interp = Interpreter::new();
+            interp
+                .execute(&format!("[ [ 7 ] ] '{}' DEF {}", name, name))
+                .await
+                .unwrap_or_else(|e| panic!("`{name}` should be callable, got: {e}"));
+            assert_eq!(
+                interp.stack.len(),
+                1,
+                "`{name}` should have pushed its body"
+            );
+        }
+    }
+
     /// Names are matched through the canonical normalization, so a lowercase
     /// definition answers to either spelling. The rule must not disturb that.
     #[tokio::test]

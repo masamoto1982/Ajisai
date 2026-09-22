@@ -33,8 +33,8 @@
       "note": "ASCII only. A full-width digit such as U+FF11 is an ordinary name character, so it never enters the numeric grammar."
     },
     "nameCharacter": {
-      "definition": "Any scalar value that is neither whitespace nor a rejected character",
-      "note": "Ajisai allocates no identifier character class. A name is whatever survives to the lexeme rules, which is why Japanese names, '.', '==', '^', '~', ';' and '<=' are all ordinary names with no per-character rule of their own."
+      "definition": "Any scalar value that is not whitespace",
+      "note": "Ajisai allocates no identifier character class, and no rejected character either. A name is whatever survives to the lexeme rules, which is why Japanese names, '.', '==', '^', '~', ';', '<=', '(', ')', '{', '}' and '|' are all ordinary names with no per-character rule of their own. Those five were the last exceptions: '(' and ')' were held in reserve, and '{', '}' and a bare '|' were retired forms the tokenizer answered by name. Nothing selected them but habit from other languages — '<', '>' and every other punctuation mark was always an ordinary name character — and the reservation was held for a structural role the language had already foreclosed by unifying every bracket onto '[' and ']'."
     }
   },
 
@@ -76,14 +76,9 @@
           "id": "word",
           "guard": { "otherwise": true },
           "action": "scanToWhitespace",
-          "note": "Consumes to the next whitespace or end of input. Every character is checked for validity as it is consumed, so a rejected character is reported wherever in the word it sits — that is a character-validity rule, not a delimiter rule. The completed lexeme is then classified by lexemeRules."
+          "note": "Consumes to the next whitespace or end of input. No character is checked for validity on the way, because none is invalid: every scalar value that is not whitespace is a name character, so the completed lexeme is always classified by lexemeRules rather than refused mid-word."
         }
       ],
-      "rejectedCharacters": [
-        { "chars": ["(", ")"], "condition": "reservedMarker" },
-        { "chars": ["{", "}"], "condition": "retiredForm" }
-      ],
-      "rejectedCharacterNote": "Checked per character during the word rule only, left to right, so the leftmost offender is the one reported. These characters are unreachable inside a string or a comment, because both are consumed by earlier position rules.",
       "postScan": [
         {
           "id": "popTrailingLineBreak",
@@ -132,13 +127,6 @@
       "match": { "pattern": "numeric" },
       "emits": "Number",
       "note": "The whole lexeme must be accepted. This is why no character needs a rule of its own: '1/2' is a number because the entire token parses as one, and '/' is the DIV name for exactly the same reason."
-    },
-    {
-      "id": "retiredCondClauseSep",
-      "match": { "literal": "|" },
-      "condition": "retiredCondSeparator",
-      "surface": "|",
-      "note": "A whole-lexeme rule rather than a rejected character, so only a bare '|' is refused and a name that merely contains one is not. It separated a COND clause's guard from its body; COND was replaced by SELECT, which chooses between two values that already exist."
     },
     {
       "id": "symbol",
@@ -201,22 +189,6 @@
       "witness": "'foo"
     },
     {
-      "id": "reservedMarker",
-      "phase": "scan",
-      "errorCategory": "malformedSource",
-      "summary": "'(' or ')' appeared in a word. They are reserved markers and are not valid Ajisai source characters.",
-      "messageContains": "reserved marker",
-      "witness": "("
-    },
-    {
-      "id": "retiredForm",
-      "phase": "scan",
-      "errorCategory": "malformedSource",
-      "summary": "'{' or '}' appeared in a word. They were retired when code blocks and vectors were unified onto one bracket.",
-      "messageContains": "retired",
-      "witness": "{"
-    },
-    {
       "id": "bracketMustStandAlone",
       "phase": "scan",
       "errorCategory": "malformedSource",
@@ -257,14 +229,6 @@
       "messageContains": "unclosed code delimiter",
       "witness": "a'b [",
       "witnessNote": "Same mechanism as mismatchedCodeDelimiter: bracketPrecheck is blinded by the interior quote, so structural validation is the phase that reports."
-    },
-    {
-      "id": "retiredCondSeparator",
-      "phase": "scan",
-      "errorCategory": "malformedSource",
-      "summary": "'|' appeared as a whole lexeme. It separated a COND clause's guard from its body, and COND was replaced by SELECT, which chooses between two values that already exist and needs no separator.",
-      "messageContains": "retired",
-      "witness": "|"
     }
   ],
 

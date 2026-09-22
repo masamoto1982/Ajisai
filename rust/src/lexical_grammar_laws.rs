@@ -136,11 +136,16 @@ fn every_source_error_condition_has_a_reachable_witness() {
     }
 }
 
-/// Every character the grammar declares rejected is rejected wherever it sits
-/// in a word — that is the character-validity rule, as distinct from the
-/// delimiter rule.
+/// The grammar declares no rejected character, and the scan phase must not
+/// reintroduce one.
+///
+/// This replaces the law that held the declared `rejectedCharacters` to the
+/// tokenizer. There are none left to hold: `(`, `)`, `{` and `}` were the last
+/// group, and a bare `|` the last whole-lexeme refusal. The character-validity
+/// rule they formed is gone, so what has to be pinned now is its absence —
+/// the same drift, caught from the other side.
 #[test]
-fn rejected_characters_are_refused_anywhere_in_a_word() {
+fn the_grammar_declares_no_rejected_character() {
     let g = grammar();
     let scan = g["phases"]
         .as_array()
@@ -149,22 +154,32 @@ fn rejected_characters_are_refused_anywhere_in_a_word() {
         .find(|p| p["id"] == "scan")
         .expect("a scan phase");
 
-    for group in scan["rejectedCharacters"]
-        .as_array()
-        .expect("rejectedCharacters")
-    {
-        for ch in strings(&group["chars"]) {
-            for source in [
-                ch.clone(),
-                format!("a{ch}"),
-                format!("{ch}a"),
-                format!("a{ch}b"),
-            ] {
-                assert!(
-                    tokenize(&source).is_err(),
-                    "{ch:?} is declared a rejected character, so {source:?} must be refused",
-                );
-            }
+    assert!(
+        scan.get("rejectedCharacters").is_none(),
+        "the scan phase declares rejected characters again: {:?}. Every scalar \
+         value that is not whitespace is a name character; a character that \
+         must not stand alone belongs in lexemeRules, as `[` and `]` do.",
+        scan.get("rejectedCharacters"),
+    );
+}
+
+/// The characters that per-character rule used to refuse now lex as ordinary
+/// names wherever they sit in a word — the delimiter rule is the only rule.
+#[test]
+fn a_freed_character_is_an_ordinary_name_anywhere_in_a_word() {
+    for ch in ["(", ")", "{", "}", "|"] {
+        for source in [
+            ch.to_string(),
+            format!("a{ch}"),
+            format!("{ch}a"),
+            format!("a{ch}b"),
+        ] {
+            let tokens = tokenize(&source)
+                .unwrap_or_else(|e| panic!("{source:?} should lex as a name, got: {e}"));
+            assert!(
+                matches!(&tokens[..], [Token::Symbol(value)] if value.as_ref() == source),
+                "{source:?} should be one Symbol carrying its own lexeme, got {tokens:?}",
+            );
         }
     }
 }

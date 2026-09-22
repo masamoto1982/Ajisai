@@ -1,14 +1,19 @@
 //! Surface-form metadata: the named, English-based concept behind every visible
-//! source form that is *not* a runtime word — the symbolic ones, and the one
-//! retired one (`|`) the tokenizer still answers by name.
+//! source form that is *not* a runtime word.
 //!
 //! Ajisai source is word-based. Visible symbols are **surface forms** — aliases
 //! or sugar for named, English-based canonical concepts. Crucially, not every
 //! surface form is a runtime word: some are purely lexical (resolved by the
-//! tokenizer), some are parser-level structural delimiters, and a few are
-//! reserved markers that never appear as runtime tokens at all.
+//! tokenizer) and some are parser-level structural delimiters.
 //!
-//! This module classifies the lexical / structural / reserved surface forms that
+//! Every form listed here is live. There is no entry for a character the
+//! tokenizer refuses, because it refuses none: `(`, `)`, `{`, `}` and a bare
+//! `|` were once carried here as reserved markers and retired forms, and are
+//! now ordinary name characters with no per-character rule of their own
+//! (`spec/grammar.json`, characterClasses.nameCharacter). A form earns a place
+//! in this table by *doing* something the word rule does not.
+//!
+//! This module classifies the lexical / structural surface forms that
 //! are **not** runtime-canonicalizable words. The runtime *word* aliases
 //! (`+` -> `ADD`, `<=` -> `LTE`, ...) live in [`crate::core_word_aliases`], which
 //! remains the single source of truth for runtime name canonicalization. The two
@@ -19,25 +24,12 @@
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SurfaceFormKind {
-    /// Parser-level structural delimiter, e.g. `[` `]` `{` `}`.
+    /// Parser-level structural delimiter, e.g. `[` `]`.
     DelimiterSugar,
     /// String-literal delimiter, e.g. `'`.
     LiteralSugar,
     /// Source-level directive consumed by the tokenizer, e.g. `#`.
     SourceDirective,
-    /// Reserved marker that is never a runtime token, e.g. `(` `)`.
-    ReservedMarker,
-    /// A form that *was* valid source and no longer is, e.g. `{` `}`.
-    ///
-    /// Distinct from [`SurfaceFormKind::ReservedMarker`] on purpose. A reserved
-    /// marker was never writable and is held back for future use; a retired
-    /// form is one a reader may have met in older material, and the tokenizer
-    /// answers it with its own message saying so. Collapsing the two would make
-    /// the classification contradict that message — and classifying a retired
-    /// form as live `DelimiterSugar`, which is what these two were until this
-    /// kind existed, made every generated surface advertise `{` and `}` as
-    /// usable delimiters while the same documents' prose said they were not.
-    RetiredForm,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -52,7 +44,7 @@ pub struct SurfaceForm {
     pub runtime_word: bool,
 }
 
-/// The lexical / structural / reserved surface forms.
+/// The lexical / structural surface forms.
 ///
 /// Runtime word aliases are intentionally absent here; see
 /// [`crate::core_word_aliases::CORE_WORD_ALIASES`].
@@ -63,20 +55,6 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         kind: SurfaceFormKind::SourceDirective,
         runtime_word: false,
         // Line comment: characters from `#` to end of line are ignored
-    },
-    // `|` separated a `COND` clause's guard from its body, and `IDLE` was that
-    // clause set's else-guard. Both went with `COND`: `SELECT` chooses between
-    // two values a program already built, so there is no clause to separate and
-    // no clause set to fall off the end of. `|` stays registered as a retired
-    // form because a reader may still meet it in older material and the
-    // tokenizer answers it by name; `IDLE` needed no such entry, being an
-    // ordinary word-shaped name that now resolves like any other unknown word.
-    SurfaceForm {
-        surface: "|",
-        concept: "RETIRED-COND-CLAUSE",
-        kind: SurfaceFormKind::RetiredForm,
-        runtime_word: false,
-        // Retired: separated a COND clause's guard from its body
     },
     SurfaceForm {
         surface: "[",
@@ -92,47 +70,12 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         runtime_word: false,
         // Vector end
     },
-    // Retired, not sugar. Code blocks and vectors were unified onto `[` `]`,
-    // and the tokenizer has rejected `{` and `}` ever since. They stayed
-    // classified as live `DelimiterSugar` here, and because the word manifest
-    // and SKILL.md §9 are generated from this table, both went on listing them
-    // as usable structural delimiters — directly contradicting SKILL.md §2,
-    // which says in the same document that they are not valid source
-    // characters.
-    SurfaceForm {
-        surface: "{",
-        concept: "RETIRED-BEGIN-BLOCK",
-        kind: SurfaceFormKind::RetiredForm,
-        runtime_word: false,
-        // Retired block start: use '[' — vectors and code blocks are one bracket
-    },
-    SurfaceForm {
-        surface: "}",
-        concept: "RETIRED-END-BLOCK",
-        kind: SurfaceFormKind::RetiredForm,
-        runtime_word: false,
-        // Retired block end: use ']' — vectors and code blocks are one bracket
-    },
     SurfaceForm {
         surface: "'",
         concept: "STRING-QUOTE",
         kind: SurfaceFormKind::LiteralSugar,
         runtime_word: false,
         // String literal delimiter (serves as both open and close)
-    },
-    SurfaceForm {
-        surface: "(",
-        concept: "RESERVED-BEGIN",
-        kind: SurfaceFormKind::ReservedMarker,
-        runtime_word: false,
-        // Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)
-    },
-    SurfaceForm {
-        surface: ")",
-        concept: "RESERVED-END",
-        kind: SurfaceFormKind::ReservedMarker,
-        runtime_word: false,
-        // Reserved; not valid in source ('[' ']' is the sole bracket, including for continued-fraction display)
     },
 ];
 
@@ -146,26 +89,16 @@ mod tests {
     use super::*;
     use crate::core_word_aliases::canonicalize_core_word_name;
 
+    /// The characters that used to be carried here as reserved markers and
+    /// retired forms, and are now ordinary name characters.
+    const FREED: [&str; 5] = ["(", ")", "{", "}", "|"];
+
     #[test]
     fn lookup_returns_named_concepts() {
         assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
-        assert_eq!(
-            lookup_surface_form("|").unwrap().concept,
-            "RETIRED-COND-CLAUSE"
-        );
         assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
         assert_eq!(lookup_surface_form("]").unwrap().concept, "END-VECTOR");
-        assert_eq!(
-            lookup_surface_form("{").unwrap().concept,
-            "RETIRED-BEGIN-BLOCK"
-        );
-        assert_eq!(
-            lookup_surface_form("}").unwrap().concept,
-            "RETIRED-END-BLOCK"
-        );
         assert_eq!(lookup_surface_form("'").unwrap().concept, "STRING-QUOTE");
-        assert_eq!(lookup_surface_form("(").unwrap().concept, "RESERVED-BEGIN");
-        assert_eq!(lookup_surface_form(")").unwrap().concept, "RESERVED-END");
     }
 
     /// A form's classification must agree with what the tokenizer does to it.
@@ -181,62 +114,70 @@ mod tests {
     /// of the generated prose: comparing §2's wording with §9's table would pin
     /// the sentences, and the thing that must not drift is the classification
     /// against the tokenizer.
+    ///
+    /// Every entry is now a live form, so the whole table is held to the live
+    /// reading. A bare `[` is an unclosed vector and a bare `'` an unterminated
+    /// string, so what is pinned is that the refusal is about *context* — the
+    /// form is one the tokenizer knows — not that the character is invalid.
     #[test]
     fn a_forms_kind_agrees_with_what_the_tokenizer_accepts() {
         for form in SURFACE_FORMS {
-            let tokenized = crate::tokenizer::tokenize(form.surface);
-            match form.kind {
-                // Never valid on its own or anywhere else.
-                SurfaceFormKind::ReservedMarker | SurfaceFormKind::RetiredForm => {
-                    assert!(
-                        tokenized.is_err(),
-                        "'{}' is classified {:?}, so the tokenizer must refuse it.                          A form the tokenizer accepts is a live form, and every                          generated reading surface will present it as one.",
-                        form.surface,
-                        form.kind
-                    );
-                }
-                // Live lexical or structural forms. A bare `[` is an unclosed
-                // vector and a bare `'` an unterminated string, so what is
-                // pinned is that the refusal is about *context* — the form is
-                // one the tokenizer knows — not that the character is invalid.
-                SurfaceFormKind::DelimiterSugar
-                | SurfaceFormKind::LiteralSugar
-                | SurfaceFormKind::SourceDirective => {
-                    if let Err(message) = tokenized {
-                        assert!(
-                            !message.contains("not a valid Ajisai source character")
-                                && !message.contains("is not a valid token"),
-                            "'{}' is classified {:?} — a live form — but the tokenizer                              rejects the character itself: {message}",
-                            form.surface,
-                            form.kind
-                        );
-                    }
-                }
+            if let Err(message) = crate::tokenizer::tokenize(form.surface) {
+                assert!(
+                    !message.contains("not a valid Ajisai source character")
+                        && !message.contains("is not a valid token"),
+                    "'{}' is classified {:?} — a live form — but the tokenizer \
+                     rejects the character itself: {message}",
+                    form.surface,
+                    form.kind
+                );
             }
         }
     }
 
-    /// The retired forms specifically: the message a reader gets must send them
-    /// to the bracket that replaced them, since that is the whole reason a
-    /// retired form is recorded rather than deleted.
+    /// The replacement for the retired-form gate this table used to carry.
+    ///
+    /// The table is generated into the word manifest, SKILL.md and the
+    /// quickstart, so an entry here is a claim that the character does
+    /// something the word rule does not. `(`, `)`, `{`, `}` and `|` no longer
+    /// do: they lex as ordinary Symbols. Re-adding one would put a dead
+    /// concept name back into every generated reading surface, which is the
+    /// same defect as before with the sign flipped.
     #[test]
-    fn a_retired_form_is_refused_by_name_and_points_at_its_replacement() {
-        for form in SURFACE_FORMS {
-            if form.kind != SurfaceFormKind::RetiredForm {
-                continue;
-            }
-            let message = crate::tokenizer::tokenize(form.surface)
-                .expect_err("a retired form is refused")
-                .to_string();
+    fn a_freed_character_is_an_ordinary_name_and_is_not_listed() {
+        for surface in FREED {
             assert!(
-                message.contains("retired"),
-                "'{}' should be refused as retired, not as merely invalid: {message}",
-                form.surface
+                lookup_surface_form(surface).is_none(),
+                "'{surface}' is an ordinary name character and must not be \
+                 carried as a surface form"
+            );
+
+            let tokens = crate::tokenizer::tokenize(surface)
+                .unwrap_or_else(|e| panic!("'{surface}' should lex as a name, got: {e}"));
+            assert_eq!(
+                tokens.len(),
+                1,
+                "'{surface}' should be exactly one token, got {tokens:?}"
             );
             assert!(
-                message.contains('[') && message.contains(']'),
-                "'{}' should name the bracket that replaced it: {message}",
-                form.surface
+                matches!(&tokens[0], crate::types::Token::Symbol(name) if name.as_ref() == surface),
+                "'{surface}' should be a Symbol carrying its own lexeme, got {:?}",
+                tokens[0]
+            );
+        }
+    }
+
+    /// A freed character is ordinary *inside* a word too, not merely on its
+    /// own: the rule that refused them was a per-character one, so this is the
+    /// half of its removal that the single-character cases above cannot see.
+    #[test]
+    fn a_freed_character_is_ordinary_inside_a_word() {
+        for name in ["f(x)", "a{b}", "x|y", "(", "}"] {
+            let tokens = crate::tokenizer::tokenize(name)
+                .unwrap_or_else(|e| panic!("`{name}` should lex as a name, got: {e}"));
+            assert!(
+                matches!(&tokens[..], [crate::types::Token::Symbol(value)] if value.as_ref() == name),
+                "`{name}` should be one Symbol, got {tokens:?}"
             );
         }
     }
@@ -259,8 +200,7 @@ mod tests {
     fn canonicalize_does_not_leak_surface_concepts() {
         assert_ne!(canonicalize_core_word_name("#"), "COMMENT-LINE");
         assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
-        assert_ne!(canonicalize_core_word_name("{"), "RETIRED-BEGIN-BLOCK");
+        assert_ne!(canonicalize_core_word_name("]"), "END-VECTOR");
         assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
-        assert_ne!(canonicalize_core_word_name("|"), "RETIRED-COND-CLAUSE");
     }
 }
