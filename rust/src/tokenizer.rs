@@ -205,7 +205,8 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
         match token {
             Token::VectorStart | Token::RecordStart => delimiters.push(token.clone()),
             Token::VectorEnd | Token::RecordEnd => {
-                if delimiters.pop() != opener_of(token) {
+                let innermost = delimiters.pop();
+                if innermost != opener_of(token) {
                     return Err("mismatched code delimiter".into());
                 }
             }
