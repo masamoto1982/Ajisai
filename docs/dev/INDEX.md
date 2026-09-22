@@ -19,6 +19,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `structured-prose-style.md` | 情報の形の選び方（文 vs label:value vs 表 vs 図）。多言語対応を理由とする | `[執筆規約]` |
 | `reference-writing-style.md` | Reference 表面の執筆規約 | `[執筆規約]` |
 | `specification-implementation-rules.md` | 実装の工学規律（命名、500行予算、制御フロー、コメント）。1件目は `check-file-size-budget.mjs` が強制 | `[執筆規約]` |
+| `character-allocation-and-prose-2026-09.md` | 字句に文字を取ってよいかの規準——その文字が文書側で区切りとして稼働しているかを見る。空いている枠を消費するのと、使われている文字を取り上げる交換は別の判断である、という切り分け。`ajisai-authoring-style.md` §2・§8（散文は言語の字面を避けよ）の対として、言語が散文の区切りを避ける側を述べる。損失が現れる3つの形（実行で検査される読み物が例外を必要とする・`#:contract` と `#@` でコロンが既に稼働・`label:value` は執筆規約が指定した形）。実例は `{ }`（空いていた→取った）と `:`（稼働中→見送った） | `[方針記録]` |
 | `dry-criterion-2026-09.md` | DRY を形ではなく知識で測る判断基準と、その基準による一回の点検結果（既定ステップ予算の言い直し、診断形式の二重化、永続化レコード形の言い直し） | `[方針記録]` |
 | `three-layer-documentation-model.md` | ワードヘルプの三層モデル（Reference / LOOKUP / hover） | `[執筆規約]` |
 | `devlog-format.md` | Blogger 開発ログ記事の形式（目的/手段/結果/課題の四項目・約500字）と誠実性の規律 | `[執筆規約]` |
