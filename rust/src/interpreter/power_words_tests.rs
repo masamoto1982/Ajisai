@@ -172,19 +172,16 @@ mod power_words_tests {
     async fn the_numeric_words_lift_over_records() {
         assert_eq!(
             top("[ 'a' 'b' ] [ 2 3 ] RECORD 2 POW").await,
-            "[ 'a' 'b' ] [ 4/1 9/1 ] RECORD"
+            "{ 'a' 4/1 'b' 9/1 }"
         );
         assert_eq!(
             top("[ 'a' 'b' ] [ 12 9 ] RECORD 6 GCD").await,
-            "[ 'a' 'b' ] [ 6/1 3/1 ] RECORD"
+            "{ 'a' 6/1 'b' 3/1 }"
         );
         assert_eq!(
             top("[ 'a' ] [ 1/2 ] RECORD RATIO").await,
-            "[ 'a' ] [ [ 1/1 2/1 ] ] RECORD"
+            "{ 'a' [ 1/1 2/1 ] }"
         );
-        assert_eq!(
-            top("[ 'a' ] [ 0 ] RECORD EXP").await,
-            "[ 'a' ] [ 1/1 ] RECORD"
-        );
+        assert_eq!(top("[ 'a' ] [ 0 ] RECORD EXP").await, "{ 'a' 1/1 }");
     }
 }

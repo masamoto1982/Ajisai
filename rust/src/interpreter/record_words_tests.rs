@@ -46,15 +46,44 @@ mod record_words_tests {
 
     #[tokio::test]
     async fn record_builds_and_reads_back_in_order() {
-        assert_eq!(top(R).await, "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD");
+        assert_eq!(top(R).await, "{ 'x' 1/1 'y' 2/1 }");
         assert_eq!(top(&format!("{R} KEYS")).await, "[ 'x' 'y' ]");
         assert_eq!(top(&format!("{R} VALUES")).await, "[ 1/1 2/1 ]");
-        assert_eq!(top("[ ] [ ] RECORD").await, "[ ] [ ] RECORD");
+        assert_eq!(top("[ ] [ ] RECORD").await, "{ }");
         // The two bridges compose to the identity.
         assert_eq!(
             top(&format!("{R} {R} KEYS {R} VALUES RECORD EQ")).await,
             "TRUE"
         );
+    }
+
+    /// The literal and the constructor are one construction
+    /// (LANG.RECORDS.STRUCTURE): the same value, and the same ERRORs.
+    #[tokio::test]
+    async fn a_record_literal_builds_what_the_constructor_builds() {
+        assert_eq!(top("{ 'x' 1 'y' 2 }").await, "{ 'x' 1/1 'y' 2/1 }");
+        assert_eq!(top(&format!("{R} {{ 'x' 1 'y' 2 }} EQ")).await, "TRUE");
+        assert_eq!(top("{ }").await, "{ }");
+        assert_eq!(top("{ } [ ] [ ] RECORD EQ").await, "TRUE");
+        // Key order is observable in the literal too.
+        assert_eq!(top("{ 'x' 1 'y' 2 } { 'y' 2 'x' 1 } EQ").await, "FALSE");
+        // The constructor's two ERRORs, raised by the literal.
+        assert_eq!(error_of("{ 'a' 1 'a' 2 }").await, "duplicateKey");
+        assert_eq!(error_of("{ 'a' 1 'b' }").await, "vectorLengthMismatch");
+        // A literal evaluates nothing, so a bare name inside one is a Symbol
+        // (LANG.VALUES.VECTOR's rule, over the same elements) and a key may be
+        // any value, not only Text.
+        assert_eq!(top("{ 'a' ADD }").await, "{ 'a' ADD }");
+        assert_eq!(
+            top("{ 1 'one' TRUE 'yes' }").await,
+            "{ 1/1 'one' TRUE 'yes' }"
+        );
+        // Either literal nests inside the other.
+        assert_eq!(
+            top("{ 'v' [ 1 2 ] 'r' { 'k' 3 } }").await,
+            "{ 'v' [ 1/1 2/1 ] 'r' { 'k' 3/1 } }"
+        );
+        assert_eq!(top("[ { 'a' 1 } ] LENGTH").await, "1/1");
     }
 
     #[tokio::test]
@@ -87,10 +116,7 @@ mod record_words_tests {
 
     #[tokio::test]
     async fn with_replaces_in_place_or_appends() {
-        assert_eq!(
-            top(&format!("{R} 'x' 9 WITH")).await,
-            "[ 'x' 'y' ] [ 9/1 2/1 ] RECORD"
-        );
+        assert_eq!(top(&format!("{R} 'x' 9 WITH")).await, "{ 'x' 9/1 'y' 2/1 }");
         assert_eq!(
             top(&format!("{R} 'z' 3 WITH KEYS")).await,
             "[ 'x' 'y' 'z' ]"
@@ -99,17 +125,14 @@ mod record_words_tests {
         // all three operands beside the answer.
         assert_eq!(
             top(&format!("{R} 'z' 3 KEEP WITH")).await,
-            "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD 'z' 3/1 [ 'x' 'y' 'z' ] [ 1/1 2/1 3/1 ] RECORD"
+            "{ 'x' 1/1 'y' 2/1 } 'z' 3/1 { 'x' 1/1 'y' 2/1 'z' 3/1 }"
         );
         assert_eq!(error_of(&format!("{R} NIL 1 WITH")).await, "nonRecord");
     }
 
     #[tokio::test]
     async fn without_removes_or_projects() {
-        assert_eq!(
-            top(&format!("{R} 'x' WITHOUT")).await,
-            "[ 'y' ] [ 2/1 ] RECORD"
-        );
+        assert_eq!(top(&format!("{R} 'x' WITHOUT")).await, "{ 'y' 2/1 }");
         assert_eq!(
             reason(&format!("{R} 'z' WITHOUT")).await.as_deref(),
             Some("missingField")
@@ -120,7 +143,7 @@ mod record_words_tests {
     async fn merge_is_right_biased_and_order_preserving() {
         assert_eq!(
             top(&format!("{R} [ 'y' 'z' ] [ 9 3 ] RECORD MERGE")).await,
-            "[ 'x' 'y' 'z' ] [ 1/1 9/1 3/1 ] RECORD"
+            "{ 'x' 1/1 'y' 9/1 'z' 3/1 }"
         );
         assert_eq!(error_of(&format!("{R} [ 1 ] MERGE")).await, "nonRecord");
     }
@@ -151,34 +174,16 @@ mod record_words_tests {
     /// Containment rule 1: arithmetic and comparison lift over the values.
     #[tokio::test]
     async fn arithmetic_and_comparison_lift_over_values() {
-        assert_eq!(
-            top(&format!("{R} 10 MUL")).await,
-            "[ 'x' 'y' ] [ 10/1 20/1 ] RECORD"
-        );
-        assert_eq!(
-            top(&format!("10 {R} SUB")).await,
-            "[ 'x' 'y' ] [ 9/1 8/1 ] RECORD"
-        );
-        assert_eq!(
-            top(&format!("{R} NEG")).await,
-            "[ 'x' 'y' ] [ -1/1 -2/1 ] RECORD"
-        );
-        assert_eq!(
-            top(&format!("{R} {R} ADD")).await,
-            "[ 'x' 'y' ] [ 2/1 4/1 ] RECORD"
-        );
-        assert_eq!(
-            top(&format!("{R} 1 GT")).await,
-            "[ 'x' 'y' ] [ FALSE TRUE ] RECORD"
-        );
-        assert_eq!(
-            top(&format!("{R} 1 MAX")).await,
-            "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD"
-        );
+        assert_eq!(top(&format!("{R} 10 MUL")).await, "{ 'x' 10/1 'y' 20/1 }");
+        assert_eq!(top(&format!("10 {R} SUB")).await, "{ 'x' 9/1 'y' 8/1 }");
+        assert_eq!(top(&format!("{R} NEG")).await, "{ 'x' -1/1 'y' -2/1 }");
+        assert_eq!(top(&format!("{R} {R} ADD")).await, "{ 'x' 2/1 'y' 4/1 }");
+        assert_eq!(top(&format!("{R} 1 GT")).await, "{ 'x' FALSE 'y' TRUE }");
+        assert_eq!(top(&format!("{R} 1 MAX")).await, "{ 'x' 1/1 'y' 2/1 }");
         // A Vector value lifts on inside the Record.
         assert_eq!(
             top("[ 'v' ] [ [ 1 2 ] ] RECORD 2 MUL").await,
-            "[ 'v' ] [ [ 2/1 4/1 ] ] RECORD"
+            "{ 'v' [ 2/1 4/1 ] }"
         );
         // Division by zero empties the lane, not the Record.
         assert_eq!(
@@ -191,7 +196,7 @@ mod record_words_tests {
         );
         assert_eq!(
             top(&format!("{R} 2 KEEP MUL")).await,
-            "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD 2/1 [ 'x' 'y' ] [ 2/1 4/1 ] RECORD"
+            "{ 'x' 1/1 'y' 2/1 } 2/1 { 'x' 2/1 'y' 4/1 }"
         );
     }
 
@@ -207,18 +212,12 @@ mod record_words_tests {
 
     #[tokio::test]
     async fn tally_and_group_answer_records() {
-        assert_eq!(
-            top("[ 'b' 'a' 'b' ] TALLY").await,
-            "[ 'b' 'a' ] [ 2/1 1/1 ] RECORD"
-        );
-        assert_eq!(
-            top("[ 3 1 3 ] TALLY").await,
-            "[ 3/1 1/1 ] [ 2/1 1/1 ] RECORD"
-        );
+        assert_eq!(top("[ 'b' 'a' 'b' ] TALLY").await, "{ 'b' 2/1 'a' 1/1 }");
+        assert_eq!(top("[ 3 1 3 ] TALLY").await, "{ 3/1 2/1 1/1 1/1 }");
         assert_eq!(top("[ 3 1 3 ] TALLY VALUES").await, "[ 2/1 1/1 ]");
         assert_eq!(
             top("[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP").await,
-            "[ 'b' 'a' ] [ [ 1/1 3/1 ] [ 2/1 4/1 ] ] RECORD"
+            "{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }"
         );
         assert_eq!(
             top("[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP 'a' AT").await,
@@ -228,7 +227,7 @@ mod record_words_tests {
 
     #[tokio::test]
     async fn a_record_survives_a_block_and_the_protocol() {
-        // Carried into a block as the phrase that rebuilds it.
+        // Carried into a block as its own literal.
         assert_eq!(
             top(&format!("{R} 1 COLLECT [ 'x' AT ] MAP")).await,
             "[ 1/1 ]"

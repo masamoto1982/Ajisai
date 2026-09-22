@@ -7,9 +7,10 @@
 //! # A Symbol inside `[ ... ]` may or may not be a call
 //!
 //! Before the CodeBlock/Vector unification (`docs/dev/type-unification-
-//! work-order-2026-08.md`) and `{ }`'s later retirement, bracket spelling
-//! told data from code directly: `[ ... ]` never ran, `{ ... }` always could.
-//! `[ ]` is now the only bracket, used for both, so the question this module
+//! work-order-2026-08.md`), bracket spelling told data from code directly:
+//! `[ ... ]` never ran, `{ ... }` always could. `[ ]` is now the only bracket
+//! code is written in, used for data as well (and `{ ... }` spells a Record,
+//! which is never code), so the question this module
 //! answers — "does the Symbol at this position ever actually run?" — can no
 //! longer be read off which character opened the group. It is still
 //! answerable, from the fixed-position-operand convention the higher-order
@@ -118,8 +119,8 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
     let mut open_stack: Vec<usize> = Vec::new();
     for (i, t) in tokens.iter().enumerate() {
         match t {
-            Token::VectorStart => open_stack.push(i),
-            Token::VectorEnd => {
+            Token::VectorStart | Token::RecordStart => open_stack.push(i),
+            Token::VectorEnd | Token::RecordEnd => {
                 if let Some(open) = open_stack.pop() {
                     close_of[open] = Some(i);
                 }
@@ -154,7 +155,13 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
                 contexts[i] = enclosing;
                 level_stack.push(this_level);
             }
-            Token::VectorEnd => {
+            // A Record is never executed, so its interior is `Data` whatever
+            // follows its close — the one group whose context needs no lookahead.
+            Token::RecordStart => {
+                contexts[i] = enclosing;
+                level_stack.push(LiteralContext::Data);
+            }
+            Token::VectorEnd | Token::RecordEnd => {
                 contexts[i] = level_stack.pop().unwrap_or(LiteralContext::TopLevel);
             }
             _ => {

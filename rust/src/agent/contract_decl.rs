@@ -275,6 +275,11 @@ fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
                 }
                 depth += 1;
             }
+            // A Record literal counts as depth without opening a span: a
+            // `[ ... ]` written inside one is an element of that Record, not
+            // a `DEF` body at the top level.
+            Token::RecordStart => depth += 1,
+            Token::RecordEnd => depth -= 1,
             Token::VectorEnd => {
                 depth -= 1;
                 if depth == 0 {

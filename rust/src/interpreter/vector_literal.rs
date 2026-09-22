@@ -1,22 +1,53 @@
-//! Building a bracketed literal (`[ ... ]`) from source tokens.
+//! Building a literal (`[ ... ]`, `{ ... }`) from source tokens.
 //!
 //! Split out of `execution_loop` when that file outgrew the the file-size budget in docs/dev/specification-implementation-rules.md size budget.
 //! The two concerns are genuinely separate: the execution loop decides *which*
-//! token runs next, and this decides what a bracketed token sequence denotes.
+//! token runs next, and this decides what a delimited token sequence denotes.
 //!
-//! `[ ... ]` builds a `Value::Vector` whose elements are literal values, with
-//! a bare name (other than `TRUE`/`FALSE`/`NIL`, which still denote their
-//! values) becoming a `Value::Symbol` rather than a `Value::Text`. `{ }` was
-//! a second spelling of the identical construction (the CodeBlock/Vector
-//! unification, docs/dev/type-unification-work-order-2026-08.md) and was
-//! later retired outright, leaving `[ ]` as the only bracket, for both data
-//! and code. This function is dictionary-independent — no name lookup ever
-//! occurs here.
+//! Both literals are built from the one element scan below, because what an
+//! *element* denotes is one piece of knowledge: a literal value, with a bare
+//! name (other than `TRUE`/`FALSE`/`NIL`, which still denote their values)
+//! becoming a `Value::Symbol` rather than a `Value::Text`. The two kinds
+//! differ only in what closes them and what they build out of the elements —
+//! a Vector in order, or the paired key and value sequences of a Record
+//! (`record_literal.rs`). Neither looks anything up: a literal denotes the
+//! same value under every dictionary state.
 
 use crate::error::{AjisaiError, Result};
 use crate::types::{Interpretation, Token, Value};
 
 use super::Interpreter;
+
+/// Which literal is being collected. The scan is shared; the delimiter that
+/// closes it and the diagnosis for one that never closes are not.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum LiteralKind {
+    Vector,
+    Record,
+}
+
+impl LiteralKind {
+    fn opener(self) -> Token {
+        match self {
+            LiteralKind::Vector => Token::VectorStart,
+            LiteralKind::Record => Token::RecordStart,
+        }
+    }
+
+    fn closes(self, token: &Token) -> bool {
+        match self {
+            LiteralKind::Vector => matches!(token, Token::VectorEnd),
+            LiteralKind::Record => matches!(token, Token::RecordEnd),
+        }
+    }
+
+    fn unclosed(self) -> &'static str {
+        match self {
+            LiteralKind::Vector => "Unclosed bracketed literal",
+            LiteralKind::Record => "Unclosed Record literal",
+        }
+    }
+}
 
 impl Interpreter {
     pub(crate) fn collect_bracketed_with_depth(
@@ -24,14 +55,29 @@ impl Interpreter {
         start_index: usize,
         depth: usize,
     ) -> Result<(Vec<Value>, usize, Interpretation)> {
-        if !matches!(tokens.get(start_index), Some(Token::VectorStart)) {
+        Self::collect_literal_elements(tokens, start_index, depth, LiteralKind::Vector)
+    }
+
+    /// The elements of one literal, and how many tokens it spans.
+    ///
+    /// Recursion goes through the *element's own* kind, so a Record nested in
+    /// a Vector and a Vector nested in a Record both fall out of one walk
+    /// rather than two mirrored ones.
+    pub(crate) fn collect_literal_elements(
+        tokens: &[Token],
+        start_index: usize,
+        depth: usize,
+        kind: LiteralKind,
+    ) -> Result<(Vec<Value>, usize, Interpretation)> {
+        if tokens.get(start_index) != Some(&kind.opener()) {
             return Err(AjisaiError::MalformedSource(
-                "Expected a bracketed literal start".to_string(),
+                "Expected a literal start".to_string(),
             ));
         }
 
         // Guard against unbounded nesting before recursing. Without this, a few
-        // thousand levels of `[ [ [ ... ] ] ]` from plain source build a value
+        // thousand levels of `[ [ [ ... ] ] ]` (or of `{ 'k' { ... } }`, which
+        // shares the counter because it shares the recursion) from plain source build a value
         // so deeply nested that recursively displaying or dropping it overflows
         // the native stack and aborts the process (a WASM trap). Rejecting here
         // keeps the value — and every later traversal of it — within a depth the
@@ -61,11 +107,26 @@ impl Interpreter {
                     has_other = true;
                     i += consumed;
                 }
-                Token::VectorEnd => {
+                Token::RecordStart => {
+                    let (record, consumed) = Self::collect_record_literal(tokens, i, depth + 1)?;
+                    values.push(record);
+                    has_other = true;
+                    i += consumed;
+                }
+                token if kind.closes(token) => {
                     return Ok((
                         values,
                         i - start_index + 1,
                         Self::element_hint(has_other, has_bool, has_number),
+                    ));
+                }
+                // The other pair's closer, which `validate_code_tokens`
+                // refuses before anything runs (`mismatched code delimiter`).
+                // Reached only by a caller that assembled tokens without going
+                // through it, so it is reported rather than assumed away.
+                Token::VectorEnd | Token::RecordEnd => {
+                    return Err(AjisaiError::MalformedSource(
+                        "mismatched code delimiter".to_string(),
                     ));
                 }
                 Token::Number(literal) => {
@@ -110,9 +171,7 @@ impl Interpreter {
                 }
             }
         }
-        Err(AjisaiError::MalformedSource(
-            "Unclosed bracketed literal".to_string(),
-        ))
+        Err(AjisaiError::MalformedSource(kind.unclosed().to_string()))
     }
 
     fn element_hint(has_other: bool, has_bool: bool, has_number: bool) -> Interpretation {

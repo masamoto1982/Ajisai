@@ -165,9 +165,11 @@ fn the_grammar_declares_no_rejected_character() {
 
 /// The characters that per-character rule used to refuse now lex as ordinary
 /// names wherever they sit in a word — the delimiter rule is the only rule.
+/// `{` and `}` were freed with these three and then allocated as a delimiter
+/// pair, so the law that holds them is `a_delimiter_stands_alone` below.
 #[test]
 fn a_freed_character_is_an_ordinary_name_anywhere_in_a_word() {
-    for ch in ["(", ")", "{", "}", "|"] {
+    for ch in ["(", ")", "|"] {
         for source in [
             ch.to_string(),
             format!("a{ch}"),
@@ -180,6 +182,58 @@ fn a_freed_character_is_an_ordinary_name_anywhere_in_a_word() {
                 matches!(&tokens[..], [Token::Symbol(value)] if value.as_ref() == source),
                 "{source:?} should be one Symbol carrying its own lexeme, got {tokens:?}",
             );
+        }
+    }
+}
+
+/// Each pair the grammar declares lexes to the two tokens it names, and only
+/// as a whole lexeme: glued to anything, a delimiter is the source error that
+/// asks for the space. This is the law the per-character rule's removal left
+/// to carry `[`, `]`, `{` and `}` — the whole-lexeme rule is the only rule
+/// standing between a name and a delimiter.
+#[test]
+fn a_delimiter_stands_alone() {
+    let g = grammar();
+    let pairs = g["delimiterPairs"]
+        .as_array()
+        .expect("the grammar declares its delimiter pairs");
+    assert!(!pairs.is_empty(), "there is at least one pair");
+
+    for pair in pairs {
+        for side in ["open", "close"] {
+            let ch = pair[side].as_str().expect("a delimiter character");
+            let token = pair[if side == "open" {
+                "openToken"
+            } else {
+                "closeToken"
+            }]
+            .as_str()
+            .expect("a token id");
+            // On its own it is one token, named by the pair. (An unbalanced
+            // one is refused by the structural phase, so the lexeme's own
+            // classification is read through a balanced program.)
+            let balanced = format!(
+                "{} {}",
+                pair["open"].as_str().unwrap(),
+                pair["close"].as_str().unwrap()
+            );
+            let tokens =
+                tokenize(&balanced).unwrap_or_else(|e| panic!("{balanced:?} should lex, got: {e}"));
+            let ids: Vec<String> = tokens.iter().map(|t| format!("{t:?}")).collect();
+            assert!(
+                ids.contains(&token.to_string()),
+                "{balanced:?} should hold the token {token}, got {ids:?}",
+            );
+            // Glued to anything, it is refused by name.
+            for source in [format!("a{ch}"), format!("{ch}1"), format!("a{ch}b")] {
+                let message = tokenize(&source)
+                    .err()
+                    .unwrap_or_else(|| panic!("{source:?} must not lex as a name"));
+                assert!(
+                    message.contains("must stand alone"),
+                    "{source:?} should be refused for standing alone, got: {message}",
+                );
+            }
         }
     }
 }

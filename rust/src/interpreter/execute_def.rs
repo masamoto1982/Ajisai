@@ -59,12 +59,12 @@ pub(crate) fn set_word_description(
     }
 }
 
-/// DEF is strictly two positional arguments: `{ body } 'NAME' DEF`.
+/// DEF is strictly two positional arguments: `[ body ] 'NAME' DEF`.
 ///
 /// The top of the stack is the name (a string), and directly below it is the
 /// body — any Vector, since the CodeBlock/Vector unification
 /// (docs/dev/type-unification-work-order-2026-08.md) — usually written as a
-/// literal `{ }` right there, but not required to be: a Vector built,
+/// literal `[ ]` right there, but not required to be: a Vector built,
 /// stored, or passed through any other means defines just as well. No value
 /// types are inspected to *guess* roles — position alone determines them —
 /// which is why a leftover string-like value on the stack can no longer
@@ -294,8 +294,8 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 /// Split a word body into execution lines.
 ///
 /// A line break separates *statements*, and a statement is a thing written at
-/// the body's own level. A break written inside a `{ }` block or a `[ ]`
-/// vector is interior to a single value, not a separator between two of them,
+/// the body's own level. A break written inside a literal — a `[ ]` Vector
+/// or a `{ }` Record — is interior to a single value, not a separator between two of them,
 /// so it is carried through into that value's token stream untouched.
 ///
 /// Splitting on interior breaks is what used to make a multi-line block
@@ -331,8 +331,8 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
             }
             token => {
                 match token {
-                    Token::VectorStart => depth += 1,
-                    Token::VectorEnd => depth = depth.saturating_sub(1),
+                    Token::VectorStart | Token::RecordStart => depth += 1,
+                    Token::VectorEnd | Token::RecordEnd => depth = depth.saturating_sub(1),
                     _ => {}
                 }
                 processed_tokens.push(tokens[i].clone());

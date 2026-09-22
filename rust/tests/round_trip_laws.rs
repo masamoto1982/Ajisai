@@ -1,11 +1,9 @@
 //! A value's display is source that rebuilds it.
 //!
 //! Ajisai renders every stack value as text a reader can copy back into the
-//! editor and run. For most domains that was always so — `[ 1/1 2/1 ]`, `'ab'`,
-//! `TRUE`, `NIL`, `1/3` — and the Record was the one hole: it rendered as
-//! `{ 'x': 1/1 }`, which is not a literal because a Record has none, `RECORD`
-//! being the only way one comes to exist (LANG.RECORDS.STRUCTURE). It now
-//! renders as that call.
+//! editor and run: `[ 1/1 2/1 ]`, `{ 'x' 1/1 }`, `'ab'`, `TRUE`, `NIL`,
+//! `1/3`. Every domain has a literal, so every display is one
+//! (LANG.RECORDS.STRUCTURE for the Record's own).
 //!
 //! The law is stated by executing it: render a value, run what was rendered,
 //! and require the result to be the same value. A law about a display that is
@@ -71,6 +69,10 @@ async fn assert_round_trips(program: &str) {
 async fn a_record_round_trips() {
     for program in [
         "[ 'x' 'y' ] [ 1 2 ] RECORD",
+        "{ 'x' 1 'y' 2 }",
+        "{ }",
+        "{ 'k' { 'inner' [ 1 2 ] } }",
+        "{ 1 'one' TRUE 'yes' }",
         "[ ] [ ] RECORD",
         "[ 'only' ] [ 42 ] RECORD",
         "[ 'a' ] [ NIL ] RECORD",
@@ -97,14 +99,15 @@ async fn a_record_a_core_word_built_round_trips() {
     }
 }
 
-/// A Record inside a Vector is the case that forced the `COLLECT` phrase.
+/// A Record inside a Vector: the case a constructor call cannot render.
 ///
-/// A bracket literal does not evaluate what is written inside it, so
-/// `[ [ 'a' ] [ 1 ] RECORD ]` is a three-element Vector — two Vectors and the
-/// name `RECORD` — rather than the one-element Vector it looks like. Rendering
-/// it that way would have been the one failure mode worse than not
-/// round-tripping at all: a display that reads back as a *different* value,
-/// silently.
+/// A literal does not evaluate what is written inside it, so a Record
+/// rendered as `[ 'a' ] [ 1 ] RECORD` inside a Vector literal would read back
+/// as a three-element Vector — two Vectors and the name `RECORD` — rather
+/// than the one-element Vector it came from: a display that reads back as a
+/// *different* value, silently, which is the one failure mode worse than not
+/// round-tripping at all. A Record literal is one element, so the Vector
+/// renders as an ordinary literal and reads back as itself.
 #[tokio::test]
 async fn a_record_nested_in_a_vector_round_trips() {
     for program in [
@@ -118,16 +121,20 @@ async fn a_record_nested_in_a_vector_round_trips() {
     }
 }
 
-/// The bracket literal is still what an ordinary Vector renders as. The
-/// `COLLECT` phrase is reached only by a Vector that holds a Record, so the
-/// overwhelmingly common display is untouched by the Record change.
+/// Each collection renders as its own literal, and the spelling is the one a
+/// reader writes: this is the half of the law a round trip alone cannot fix,
+/// since a wrong-but-consistent spelling would round-trip too.
 #[tokio::test]
-async fn a_vector_without_a_record_still_renders_as_a_literal() {
+async fn a_collection_renders_as_its_own_literal() {
     for (program, expected) in [
         ("[ 1 2 3 ]", "[ 1/1 2/1 3/1 ]"),
         ("[ ]", "[ ]"),
         ("[ 'a' 'b' ]", "[ 'a' 'b' ]"),
         ("[ [ 1 ] [ 2 ] ]", "[ [ 1/1 ] [ 2/1 ] ]"),
+        ("[ 'x' 'y' ] [ 1 2 ] RECORD", "{ 'x' 1/1 'y' 2/1 }"),
+        ("[ ] [ ] RECORD", "{ }"),
+        ("[ 'r' ] { 'k' 1 } 1 COLLECT RECORD", "{ 'r' { 'k' 1/1 } }"),
+        ("[ 'a' ] [ 1 ] RECORD 1 COLLECT", "[ { 'a' 1/1 } ]"),
     ] {
         let rendered = run(program).await;
         assert_eq!(

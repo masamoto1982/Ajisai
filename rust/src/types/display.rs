@@ -352,12 +352,11 @@ fn format_as_boolean(value: &Value) -> String {
             }
         }
         // A TruthValue-hinted Vector renders with `[ ]`, the one spelling
-        // every Vector-domain value now uses uniformly (`{ }` was a second,
-        // colliding spelling for exactly this shape before the CodeBlock/
-        // Vector unification — LANG.VALUES.DISJOINT never had two renderings
-        // for one value, and now it does not have to). Each element still
-        // renders as its truth-role label (TRUE/FALSE/NIL), independent of
-        // that outer bracket choice.
+        // every Vector-domain value uses (one pair per domain: `{ }` spells a
+        // Record and nothing else — LANG.VALUES.DISJOINT never had two
+        // renderings for one value, and no longer has one spelling for two
+        // domains either). Each element still renders as its truth-role label
+        // (TRUE/FALSE/NIL), independent of that outer bracket choice.
         ValueData::Vector(v) => {
             if v.is_empty() {
                 return "[ ]".to_string();

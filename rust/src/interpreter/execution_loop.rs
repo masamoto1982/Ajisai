@@ -372,10 +372,29 @@ impl Interpreter {
                         }
                     }
                 }
+                Token::RecordStart => {
+                    // `{ key value … }` builds the Record those elements
+                    // pair into — the same value `[ keys ] [ values ] RECORD`
+                    // builds, raising the same ERRORs
+                    // (`record_literal.rs`). A Record is never a `DEF` body,
+                    // so no body capture is recorded here; clearing it keeps a
+                    // literal earlier in the line from reaching a later `DEF`.
+                    let (record, consumed) = Self::collect_record_literal(execute_tokens, i, 1)?;
+                    self.pending_def_body_tokens = None;
+                    self.stack
+                        .push_with_role(record, Interpretation::Unassigned);
+                    i += consumed;
+                    continue;
+                }
                 Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::MalformedSource(
                         "Unexpected vector end".to_string(),
+                    ));
+                }
+                Token::RecordEnd => {
+                    return Err(AjisaiError::MalformedSource(
+                        "Unexpected Record end".to_string(),
                     ));
                 }
             }

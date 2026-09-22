@@ -67,8 +67,8 @@ pub fn resolve_host_lookup(interp: &Interpreter, name: &str) -> Result<HostLooku
 /// the same word — the point of looking one up being to load an existing
 /// definition, edit it, and define it once more.
 ///
-/// The body is wrapped in `[ ]`, the sole bracket left once `{ }` was retired
-/// (`docs/dev/type-unification-work-order-2026-08.md`): `DEF` takes any
+/// The body is wrapped in `[ ]`, the only bracket a program's code is written
+/// in (`docs/dev/type-unification-work-order-2026-08.md`): `DEF` takes any
 /// Vector as its body, and a bare name inside one is a Symbol — data until
 /// something executes it — so a `[ ]`-wrapped body round-trips exactly like
 /// the one that defined the word, whatever it called.

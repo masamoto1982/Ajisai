@@ -27,48 +27,45 @@ const rec = (keys: Node[], values: Node[]): Node =>
 
 const render = (node: Node): string => formatValue(node, 0);
 
-describe('a Record renders as the call that builds it', () => {
+describe('a Record renders as its own literal', () => {
     test("[ 'x' 'y' ] [ 1 2 ] RECORD", () => {
         expect(render(rec([str('x'), str('y')], [num(1), num(2)]))).toBe(
-            "[ 'x' 'y' ] [ 1/1 2/1 ] RECORD"
+            "{ 'x' 1/1 'y' 2/1 }"
         );
     });
 
-    test('the empty Record is two empty Vectors', () => {
-        expect(render(rec([], []))).toBe('[ ] [ ] RECORD');
+    test('the empty Record is an empty literal', () => {
+        expect(render(rec([], []))).toBe('{ }');
     });
 
     test('a Record whose value is a Vector — the shape GROUP answers', () => {
         expect(
             render(rec([str('a'), str('b')], [vec(num(1), num(3)), vec(num(2))]))
-        ).toBe("[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD");
+        ).toBe("{ 'a' [ 1/1 3/1 ] 'b' [ 2/1 ] }");
     });
 });
 
-describe('a Vector holding a Record renders as the COLLECT phrase', () => {
-    // A bracket literal does not evaluate what is written inside it, so the
-    // literal form would read back as a different value: two Vectors and the
-    // name RECORD, not one Record.
+describe('a Vector holding a Record is an ordinary literal', () => {
+    // A Record literal is one element, so the Vector needs no phrase of its
+    // own to read back as itself.
     test('one Record', () => {
-        expect(render(vec(rec([str('a')], [num(1)])))).toBe(
-            "[ 'a' ] [ 1/1 ] RECORD 1 COLLECT"
-        );
+        expect(render(vec(rec([str('a')], [num(1)])))).toBe("[ { 'a' 1/1 } ]");
     });
 
     test('a Record beside an ordinary value', () => {
         expect(render(vec(num(1), rec([str('a')], [num(2)])))).toBe(
-            "1/1 [ 'a' ] [ 2/1 ] RECORD 2 COLLECT"
+            "[ 1/1 { 'a' 2/1 } ]"
         );
     });
 
-    test('the phrase nests, because each fragment nets one stack value', () => {
+    test('the literals nest', () => {
         expect(render(vec(vec(rec([str('a')], [num(1)]))))).toBe(
-            "[ 'a' ] [ 1/1 ] RECORD 1 COLLECT 1 COLLECT"
+            "[ [ { 'a' 1/1 } ] ]"
         );
     });
 });
 
-describe('a Vector without a Record is still a literal', () => {
+describe('a Vector of ordinary values is a literal', () => {
     test('a flat Vector', () => {
         expect(render(vec(num(1), num(2), num(3)))).toBe('[ 1/1 2/1 3/1 ]');
     });

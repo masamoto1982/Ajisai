@@ -223,7 +223,7 @@ async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
 // ---------------------------------------------------------------------------
 // Code-operand classification regression tests (`word_contract_widen.rs`).
 //
-// `{ }` no longer exists, so a `[ ... ]` alone cannot say whether its
+// `{ }` spells a Record and never code, so a `[ ... ]` alone cannot say whether its
 // interior is inert data or a fixed-position code operand a higher-order
 // Word (`MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`/`EXEC`/`CONTRACT`/`COND`) will
 // actually run. `classify_vector_positions` answers this positionally: a
@@ -265,7 +265,7 @@ async fn a_block_written_inside_a_vector_literal_is_quoted_but_never_run() {
 
 #[tokio::test]
 async fn a_value_only_reaching_exec_through_collect_is_a_known_gap() {
-    // Before `{ }` was retired, `{ PRINT }` written outside any vector
+    // Before `{ }` was retired as a block, `{ PRINT }` written outside any vector
     // widened unconditionally, so `COLLECT`ing it and later `GET`+`EXEC`ing
     // it (measured: `'hi' { PRINT } 1 COLLECT [ 0 ] GET EXEC` printed "hi")
     // still counted as effectful. `classify_vector_positions` instead asks
