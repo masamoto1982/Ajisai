@@ -42,7 +42,7 @@ Crucially, the gray background is **reserved for Ajisai**. Mathematics does not 
 
 ## 4. Mathematics is a separate channel
 
-Because a formula and an Ajisai snippet share glyphs (`/` is both a division bar and `DIV`; `(` `)` are grouping and the `RESERVED-BEGIN`/`RESERVED-END` markers; `>=` is both ≥ and `GTE`), the two must travel in **visibly different channels**, and the channel decides the reading:
+Because a formula and an Ajisai snippet share glyphs (`/` is both a division bar and `DIV`; `(` `)` are grouping in a formula and ordinary name characters in a snippet; `>=` is both ≥ and `GTE`), the two must travel in **visibly different channels**, and the channel decides the reading:
 
 | Channel | How it is set | A `/` in it means |
 |---------|---------------|-------------------|

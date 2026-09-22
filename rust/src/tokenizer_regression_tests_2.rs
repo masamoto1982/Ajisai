@@ -264,21 +264,20 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_brace_is_rejected_as_source() {
-        let result = tokenize("{ [ 2 ] * }");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+    fn test_brace_lexes_as_a_name() {
+        // The retired block syntax is no longer refused by the lexer: `{` and
+        // `}` are ordinary names. What stops the old form working is that
+        // nothing defines those names — see
+        // `retired_brace_block_syntax_still_does_not_define_a_word`.
+        let result = tokenize("{ [ 2 ] * }").unwrap();
+        assert_eq!(result.first(), Some(&Token::Symbol("{".into())));
+        assert_eq!(result.last(), Some(&Token::Symbol("}".into())));
     }
 
     #[test]
-    fn test_brace_is_rejected_in_def_syntax() {
-        let result = tokenize("{ [ 2 ] * } 'DOUBLE' DEF");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+    fn test_brace_in_def_syntax_lexes_as_a_name() {
+        let result = tokenize("{ [ 2 ] * } 'DOUBLE' DEF").unwrap();
+        assert_eq!(result.first(), Some(&Token::Symbol("{".into())));
     }
 
     #[test]
@@ -328,21 +327,19 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_open_paren_rejected_before_bracket_close() {
+    fn test_unbalanced_bracket_is_still_refused_around_a_paren() {
+        // The paren is a name and contributes nothing; the stray `]` is the
+        // error, and it must still be reported as one.
         let result = tokenize("( [ 2 ] * ]");
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+        assert!(result.unwrap_err().contains("Unexpected ']'"));
     }
 
     #[test]
-    fn test_close_paren_rejected_after_bracket() {
+    fn test_unclosed_bracket_is_still_refused_before_a_paren() {
         let result = tokenize("[ 1 2 3 )");
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+        assert!(result.unwrap_err().contains("Unclosed"));
     }
 
     #[test]
@@ -359,21 +356,17 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_paren_rejected_at_top_level() {
-        let result = tokenize("( [ 2 ] * )");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+    fn test_paren_lexes_as_a_name_at_top_level() {
+        let result = tokenize("( [ 2 ] * )").unwrap();
+        assert_eq!(result.first(), Some(&Token::Symbol("(".into())));
+        assert_eq!(result.last(), Some(&Token::Symbol(")".into())));
     }
 
     #[test]
-    fn test_paren_rejected_in_nested_position() {
-        let result = tokenize("[ ( [ 1 ] + ) ]");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("not a valid Ajisai source character"));
+    fn test_paren_lexes_as_a_name_in_nested_position() {
+        let result = tokenize("[ ( [ 1 ] + ) ]").unwrap();
+        assert!(result.contains(&Token::Symbol("(".into())));
+        assert!(result.contains(&Token::Symbol(")".into())));
     }
 
     #[test]

@@ -107,29 +107,13 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // Whitespace is the sole word delimiter (LANG.SOURCE.TEXT): a token
         // runs to the next whitespace or end of input, full stop — nothing
         // else splits it, the same rule Forth applies to its own words
-        // (including its bracket and comment words). `(` `)` `{` `}` are
-        // never valid Ajisai source characters at all, so they are rejected
-        // the moment one turns up, wherever in the word it sits — that is a
-        // character-validity rule, not a delimiter.
+        // (including its bracket and comment words). No character is checked
+        // for validity on the way, because there is no longer any invalid
+        // one: `(` `)` `{` `}` and a bare `|` used to be refused here and are
+        // now ordinary name characters like every other punctuation mark
+        // (`spec/grammar.json`, characterClasses.nameCharacter).
         let start = i;
         while i < chars.len() && !chars[i].is_whitespace() {
-            if chars[i] == '(' || chars[i] == ')' {
-                let concept = if chars[i] == '(' {
-                    "RESERVED-BEGIN"
-                } else {
-                    "RESERVED-END"
-                };
-                return Err(format!(
-                    "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (LANG.SOURCE.TEXT). '[' and ']' are the sole bracket in Ajisai, for code blocks and for the continued-fraction display form alike.",
-                    chars[i], concept
-                ));
-            }
-            if chars[i] == '{' || chars[i] == '}' {
-                return Err(format!(
-                    "'{}' is not a valid Ajisai source character: '{{' and '}}' were retired when code blocks and vectors were unified — use '[' and ']' for both data and code.",
-                    chars[i]
-                ));
-            }
             i += 1;
         }
 
@@ -165,17 +149,6 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
             tokens.push(token);
             spans.push(span_at(start));
             continue;
-        }
-
-        // `|` separated a `COND` clause's guard from its body. `COND` is gone
-        // and `SELECT` needs no separator, so the form is retired rather than
-        // freed: a reader who meets it in older material gets told what
-        // happened instead of "Unknown word: |".
-        if token_str == "|" {
-            return Err(
-                "'|' is a retired Ajisai source form: it separated a COND clause's guard from its body, and COND was replaced by SELECT — `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` chooses between two values that already exist, so there is no clause to separate."
-                    .to_string(),
-            );
         }
 
         tokens.push(Token::Symbol(token_str.into()));

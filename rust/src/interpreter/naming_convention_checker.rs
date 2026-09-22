@@ -26,12 +26,12 @@ pub(crate) fn check_reserved_word_name(name: &str, verb: &str) -> Option<String>
         };
     }
 
-    if name == "|" {
-        return Some(format!(
-            "Cannot {} '|': '|' is tokenizer-level syntax.",
-            verb
-        ));
-    }
+    // `|` used to be refused here as "tokenizer-level syntax", which it no
+    // longer is: it separated a COND clause's guard from its body, COND was
+    // replaced by SELECT, and the bare lexeme was freed along with `(`, `)`,
+    // `{` and `}` (`spec/grammar.json`, characterClasses.nameCharacter). It is
+    // an ordinary name now, and this function speaks only for names that are
+    // genuinely taken.
 
     None
 }

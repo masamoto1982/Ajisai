@@ -556,11 +556,6 @@ no module system and nothing to import.
 | `>=` | symbol alias | shorthand for `GTE` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
-| `\|` | retired form | RETIRED-COND-CLAUSE — retired, no longer valid in source |
 | `[` | delimiter sugar | BEGIN-VECTOR — structural delimiter, not a Word |
 | `]` | delimiter sugar | END-VECTOR — structural delimiter, not a Word |
-| `{` | retired form | RETIRED-BEGIN-BLOCK — retired, no longer valid in source |
-| `}` | retired form | RETIRED-END-BLOCK — retired, no longer valid in source |
 | `'` | literal sugar | STRING-QUOTE — literal delimiter, not a Word |
-| `(` | reserved marker | RESERVED-BEGIN — reserved, never valid in source |
-| `)` | reserved marker | RESERVED-END — reserved, never valid in source |
