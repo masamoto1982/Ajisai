@@ -425,13 +425,13 @@ mod tests {
         assert_eq!(reject(&"[".repeat(10)), Some(Reject::Malformed));
         assert_eq!(
             decode("[1,[2,[]],{}]").unwrap().to_string(),
-            "[ 1/1 [ 2/1 [ ] ] { } ]"
+            "1/1 [ 2/1 [ ] ] [ ] [ ] RECORD 3 COLLECT"
         );
         assert_eq!(
             decode(r#" { "a" : 1 , "b" : [ true , null ] } "#)
                 .unwrap()
                 .to_string(),
-            "{ 'a': 1/1 'b': [ TRUE NIL ] }"
+            "[ 'a' 'b' ] [ 1/1 [ TRUE NIL ] ] RECORD"
         );
     }
 

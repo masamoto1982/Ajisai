@@ -1,5 +1,6 @@
 mod bigint_gcd;
 pub mod display;
+pub(crate) mod display_source;
 pub mod exact;
 pub mod fraction;
 mod fraction_arithmetic;

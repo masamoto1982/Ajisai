@@ -182,20 +182,48 @@ const formatTensor = (value: unknown, depth: number): string => {
     return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth, displayHint);
 };
 
+/// Whether a Record occurs anywhere inside a value. It decides how the
+/// *enclosing* Vector renders — see `formatVector`.
+const containsRecord = (item: Value): boolean => {
+    if (!item || !item.type) return false;
+    if (item.type === 'record') return true;
+    if (item.type === 'vector') {
+        return Array.isArray(item.value) && (item.value as Value[]).some(containsRecord);
+    }
+    return false;
+};
+
+/// A Vector renders as source that rebuilds it, matching the engine's own
+/// renderer (`rust/src/types/display.rs`).
+///
+/// An ordinary Vector is a bracket literal. One holding a Record cannot be: a
+/// bracket literal does not evaluate what is written inside it, so
+/// `[ [ 'a' ] [ 1 ] RECORD ]` is a three-element Vector — two Vectors and the
+/// name `RECORD` — and not the one-element Vector it appears to be. Such a
+/// Vector renders as the `COLLECT` phrase that does build it, so the display
+/// never reads back as a different value.
+///
+/// The empty Vector is `[ ]` and not `[]`: a bracket must stand alone
+/// (`spec/grammar.json`, `bracketMustStandAlone`), so `[]` is a source error
+/// rather than an empty Vector. This panel used to print the glued form,
+/// which no one noticed while a display was not expected to be source.
 const formatVector = (value: unknown, depth: number): string => {
     const [open, close] = lookupBracketsAtDepth(depth);
 
     if (Array.isArray(value)) {
         if (value.length === 0) {
-            return `${open}${close}`;
+            return `${open} ${close}`;
         }
         const formatSingleElement = (v: Value): string => {
             try { return formatValue(v, depth + 1); } catch { return '?'; }
         };
         const elements: string = value.map(formatSingleElement).join(' ');
+        if ((value as Value[]).some(containsRecord)) {
+            return `${elements} ${value.length} COLLECT`;
+        }
         return `${open} ${elements} ${close}`;
     }
-    return `${open}${close}`;
+    return `${open} ${close}`;
 };
 
 
@@ -383,7 +411,11 @@ const renderExactScalar = (item: Value, text: string): string => {
     return semantics?.approximate === true && !text.startsWith('≈') ? `≈ ${text}` : text;
 };
 
-const formatValue = (item: Value, depth: number): string => {
+/// Exported for `output-display-renderer.test.ts`, which pins these strings
+/// against the ones `rust/src/types/display.rs` produces. The two renderers
+/// are separate implementations of one display, and nothing but that test
+/// stops them drifting.
+export const formatValue = (item: Value, depth: number): string => {
     if (!item || !item.type) return 'unknown';
 
     switch (item.type) {
@@ -415,20 +447,25 @@ const formatValue = (item: Value, depth: number): string => {
 };
 
 /// A Record (LANG.RECORDS.STRUCTURE) crosses the protocol as two aligned
-/// arrays of nodes. It renders as `{ key: value … }`, the same display the
-/// engine's own stack rendering uses: braces are retired lexemes, so the
-/// form can never be read back as a literal a Record does not have.
+/// arrays of nodes. It renders as the call that builds it — `[ keys ]
+/// [ values ] RECORD` — which is the same display the engine's own stack
+/// rendering uses (`rust/src/types/display.rs`), and which is source: a
+/// Record has no literal, `RECORD` being the only way one comes to exist, so
+/// showing that call is the display telling the truth about the value.
+///
+/// The empty Record is `[ ] [ ] RECORD`, two Vectors of equal length, which
+/// needs no case of its own beyond the empty-Vector rendering.
+///
+/// A short value array is padded with NIL rather than dropped, because the
+/// two arrays are aligned by position and a missing slot is the protocol
+/// having been malformed, not a Record with fewer values than keys — and
+/// `RECORD` would reject a length mismatch outright.
 const formatRecord = (value: unknown, depth: number): string => {
     const record = value as { keys?: Value[]; values?: Value[] } | null;
     const keys = Array.isArray(record?.keys) ? record!.keys : [];
     const values = Array.isArray(record?.values) ? record!.values : [];
-    if (keys.length === 0) return '{ }';
-    const pairs = keys.map((key, index) => {
-        const paired = values[index];
-        const rendered = paired ? formatValue(paired, depth + 1) : 'NIL';
-        return `${formatValue(key, depth + 1)}: ${rendered}`;
-    });
-    return `{ ${pairs.join(' ')} }`;
+    const paired = keys.map((_, index) => values[index] ?? ({ type: 'nil' } as Value));
+    return `${formatVector(keys, depth)} ${formatVector(paired, depth)} RECORD`;
 };
 
 

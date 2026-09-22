@@ -212,7 +212,10 @@ async fn unique_and_tally_agree_on_order_and_length() {
         .await
         .unwrap();
     assert_eq!(rendered_stack(&unique), ["[ 'b' 'a' 'c' ]"]);
-    assert_eq!(rendered_stack(&tally), ["{ 'b': 3/1 'a': 1/1 'c': 1/1 }"]);
+    assert_eq!(
+        rendered_stack(&tally),
+        ["[ 'b' 'a' 'c' ] [ 3/1 1/1 1/1 ] RECORD"]
+    );
 }
 
 /// `ZIP` transposes, and transposing twice is the identity on a rectangular
@@ -272,7 +275,7 @@ async fn group_partitions_without_loss() {
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["{ 'b': [ 1/1 3/1 ] 'a': [ 2/1 4/1 ] }"]
+        ["[ 'b' 'a' ] [ [ 1/1 3/1 ] [ 2/1 4/1 ] ] RECORD"]
     );
 
     let mut mismatched = Interpreter::new();

@@ -1815,7 +1815,7 @@ W</pre>
 <section class="ajisai-case" id="core-contract-block-pure" data-category="core">
   <h3>CONTRACT infers a pure block as pure, with no gaps, as a contract Record</h3>
   <pre class="ajisai-source">[ 1 2 ADD ] CONTRACT</pre>
-  <pre class="ajisai-expect-result">{ 'inputs': 0/1 'outputs': 1/1 'nil': 'propagates' 'purity': 'pure' 'determinism': 'deterministic' 'cost': { 'steps': 'const' 'numeric': 'const' 'collection': 'const' } 'effects': [ ] 'confidence': 'complete' 'gaps': [ ] }</pre>
+  <pre class="ajisai-expect-result">[ 'inputs' 'outputs' 'nil' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ] 0/1 1/1 'propagates' 'pure' 'deterministic' [ 'steps' 'numeric' 'collection' ] [ 'const' 'const' 'const' ] RECORD [ ] 'complete' [ ] 9 COLLECT RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2557,7 +2557,7 @@ W</pre>
 <section class="ajisai-case" id="standard-sort" data-category="core"><h3>SORT</h3><pre class="ajisai-source">[ 3 1 2 ] SORT</pre><pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-order" data-category="core"><h3>ORDER</h3><pre class="ajisai-source">[ 18 13 1 1 13 2 ] ORDER</pre><pre class="ajisai-expect-result">[ 2/1 3/1 5/1 1/1 4/1 0/1 ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-unique" data-category="core"><h3>UNIQUE</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] UNIQUE</pre><pre class="ajisai-expect-result">[ 'b' 'a' 'c' ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-tally" data-category="core"><h3>TALLY answers a Record from each distinct element to its count, keys in UNIQUE order (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] TALLY</pre><pre class="ajisai-expect-result">{ 'b': 2/1 'a': 1/1 'c': 1/1 }</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-tally" data-category="core"><h3>TALLY answers a Record from each distinct element to its count, keys in UNIQUE order (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'c' ] TALLY</pre><pre class="ajisai-expect-result">[ 'b' 'a' 'c' ] [ 2/1 1/1 1/1 ] RECORD</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-zip" data-category="core"><h3>ZIP</h3><pre class="ajisai-source">[ [ 1 2 3 ] [ 4 5 6 ] ] ZIP</pre><pre class="ajisai-expect-result">[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-ceil" data-category="core">
   <h3>CEIL rounds toward positive infinity, from either side of zero</h3>
@@ -2734,7 +2734,7 @@ W</pre>
 <section class="ajisai-case" id="core-record-builds-a-keyed-correspondence" data-category="core">
   <h3>RECORD pairs a key Vector with a value Vector, keys in the order given (LANG.RECORDS.STRUCTURE)</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD</pre>
-  <pre class="ajisai-expect-result">{ 'x': 1/1 'y': 2/1 }</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' ] [ 1/1 2/1 ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-record-duplicate-key-is-an-error" data-category="core">
@@ -2784,19 +2784,19 @@ W</pre>
 <section class="ajisai-case" id="core-with-replaces-in-place" data-category="core">
   <h3>WITH replaces a present key's value without moving it</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'x' 9 WITH</pre>
-  <pre class="ajisai-expect-result">{ 'x': 9/1 'y': 2/1 }</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' ] [ 9/1 2/1 ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-with-appends-a-new-key" data-category="core">
   <h3>WITH appends an absent key at the end</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' 3 WITH</pre>
-  <pre class="ajisai-expect-result">{ 'x': 1/1 'y': 2/1 'z': 3/1 }</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' 'z' ] [ 1/1 2/1 3/1 ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-without-removes-a-key" data-category="core">
   <h3>WITHOUT answers a copy with the key removed</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT</pre>
-  <pre class="ajisai-expect-result">{ 'y': 2/1 }</pre>
+  <pre class="ajisai-expect-result">[ 'y' ] [ 2/1 ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-without-missing-key-projects-missing-field" data-category="core">
@@ -2814,25 +2814,25 @@ W</pre>
 <section class="ajisai-case" id="core-merge-is-right-biased" data-category="core">
   <h3>MERGE keeps the left order, lets the right win shared keys, and appends right-only keys</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE</pre>
-  <pre class="ajisai-expect-result">{ 'x': 1/1 'y': 9/1 'z': 3/1 }</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' 'z' ] [ 1/1 9/1 3/1 ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-record-lifts-arithmetic-over-values" data-category="core">
   <h3>Arithmetic lifts over a Record's values under unchanged keys (LANG.COLLECTIONS.LIFT)</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 10 MUL</pre>
-  <pre class="ajisai-expect-result">{ 'x': 10/1 'y': 20/1 }</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' ] [ 10/1 20/1 ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-record-lifts-comparison-over-values" data-category="core">
   <h3>Comparison lifts over a Record's values under unchanged keys</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 1 GT</pre>
-  <pre class="ajisai-expect-result">{ 'x': FALSE 'y': TRUE }</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' ] [ FALSE TRUE ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-two-records-combine-by-equal-keys" data-category="core">
   <h3>Two Records combine value by value when their key sequences are equal</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD ADD</pre>
-  <pre class="ajisai-expect-result">{ 'x': 2/1 'y': 4/1 }</pre>
+  <pre class="ajisai-expect-result">[ 'x' 'y' ] [ 2/1 4/1 ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-record-is-not-a-vector" data-category="core">
@@ -2936,7 +2936,7 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-put" data-category="core"><h3>PUT</h3><pre class="ajisai-source">[ 1 2 3 ] 1 9 PUT</pre><pre class="ajisai-expect-result">[ 1/1 9/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">{ 'b': [ 1/1 3/1 ] 'a': [ 2/1 4/1 ] }</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">[ 'b' 'a' ] [ [ 1/1 3/1 ] [ 2/1 4/1 ] ] RECORD</pre><div class="ajisai-expect-effects"></div></section>
 
 <!-- FORMAT is the one rounding boundary (LANG.VALUES.EXACT): a scalar
      becomes decimal text at a stated digit count, a tie away from zero as
@@ -2992,7 +2992,7 @@ W</pre>
 <section class="ajisai-case" id="standard-json-decode-object" data-category="core">
   <h3>JSON-DECODE reads an object as a Record and an array as a Vector</h3>
   <pre class="ajisai-source">'{"a": 1, "b": [true, null, "x"]}' JSON-DECODE</pre>
-  <pre class="ajisai-expect-result">{ 'a': 1/1 'b': [ TRUE NIL 'x' ] }</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'b' ] [ 1/1 [ TRUE NIL 'x' ] ] RECORD</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

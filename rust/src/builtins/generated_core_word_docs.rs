@@ -473,7 +473,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "TALLY",
         category: "record",
-        summary: "How many times each distinct element occurs, as a Record from element to count: `[ 'b' 'a' 'b' ] TALLY` is `{ 'b': 2/1 'a': 1/1 }`, keys in order of first appearance. `KEYS` is exactly what `UNIQUE` answers and `VALUES` is the aligned count Vector, so nothing the earlier Vector-of-counts form could do is lost, and the caller no longer has to call `UNIQUE` separately to learn what each count counts. Works for every value, not only numbers. A non-Vector operand is an ERROR.",
+        summary: "How many times each distinct element occurs, as a Record from element to count: `[ 'b' 'a' 'b' ] TALLY` is `[ 'b' 'a' ] [ 2/1 1/1 ] RECORD`, keys in order of first appearance. `KEYS` is exactly what `UNIQUE` answers and `VALUES` is the aligned count Vector, so nothing the earlier Vector-of-counts form could do is lost, and the caller no longer has to call `UNIQUE` separately to learn what each count counts. Works for every value, not only numbers. A non-Vector operand is an ERROR.",
         role: "Record primitive: a Record from each distinct element to its count.",
         stack_effect: "[ vec ] -> [ record ]",
         hover_summary: "TALLY — a Record from each distinct element to how often it occurs",
@@ -500,7 +500,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "GROUP",
         category: "record",
-        summary: "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `{ 'a': [ 1/1 3/1 ] 'b': [ 2/1 ] }`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length.",
+        summary: "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length.",
         role: "Record primitive: bundle values by key into a Record of Vectors.",
         stack_effect: "[ values ] [ keys ] -> [ record ]",
         hover_summary: "GROUP — a Record from each key to the Vector of its values",
