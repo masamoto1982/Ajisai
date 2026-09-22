@@ -164,93 +164,15 @@ fn format_as_interval(value: &Value) -> String {
     }
 }
 
-fn format_value_recursive(data: &ValueData, depth: usize) -> String {
-    match data {
-        ValueData::Nil => "NIL".to_string(),
-        // A String renders quoted at every depth, from its domain alone. This
-        // is what replaces the old `Interpretation::Text` dispatch: the
-        // Stack surface used to consult a role to decide whether a vector of
-        // numbers was "really" text, and now there is nothing to decide.
-        ValueData::Text(s) => format!("'{}'", s),
-        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
-        // has no dedicated variant, so it takes the `Nil` arm above and
-        // renders as `NIL`, same as an operational NIL.
-        // A definite boolean renders uniformly as TRUE/FALSE in every role
-        // (LANG.VALUES.TRUTH), so the three-valued axis is observable
-        // consistently whether the boolean came from a literal, a
-        // comparison, or a logic word. Display-only and non-canonical.
-        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
-        ValueData::Scalar(f) => format_fraction(f),
-        ValueData::ExactScalar(er) => format_exact_real(er),
-        // A Record renders as `{ key: value … }`, which is display text and
-        // not source: a Record has no literal, and `RECORD` is the only way
-        // one comes to exist (LANG.RECORDS.STRUCTURE). The braces keep it
-        // from being mistaken for the Vector it is not.
-        //
-        // This used to claim the form "can never be read back as a literal"
-        // because braces were retired lexemes the tokenizer refused. That
-        // reasoning was wrong twice over. It is no longer true — `{` and `}`
-        // are ordinary name characters now — and it was never what did the
-        // work: `'a':` glues a colon to a closing quote, and a quote closes a
-        // literal only before whitespace or end of input, so a Record with
-        // any Text key lexes as `unclosedLiteral` whatever the braces do.
-        // What remains readable is `{ }` and a Record whose keys are not
-        // Text, which lex as ordinary Symbols and resolve as unknown words.
-        //
-        // Nothing here rests on that. An agent never reads this string:
-        // LANG.OBSERVATION.PROTOCOL hands a Record over as a `record` node
-        // carrying its aligned key and value sequences, and
-        // LANG.OBSERVATION.FIREWALL forbids inferring semantics from display
-        // text. This form is for the human reading the Stack surface.
-        ValueData::Record(record) => {
-            if record.is_empty() {
-                return "{ }".to_string();
-            }
-            let inner: Vec<String> = record
-                .entries()
-                .map(|(key, value)| {
-                    format!(
-                        "{}: {}",
-                        format_value_recursive(&key.data, depth + 1),
-                        format_value_recursive(&value.data, depth + 1)
-                    )
-                })
-                .collect();
-            format!("{{ {} }}", inner.join(" "))
-        }
-        ValueData::Vector(v) => {
-            if v.is_empty() {
-                return "[ ]".to_string();
-            }
-
-            let open = '[';
-            let close = ']';
-
-            let inner: Vec<String> = v
-                .iter()
-                .map(|child| {
-                    // A nested element keeps its own role: a Text-role child
-                    // renders as a quoted string (`'AB'`), so strings stay
-                    // recognizable as strings inside a collection (SPEC
-                    // LANG.OBSERVATION.PROTOCOL). This now falls out of `format_value_recursive`
-                    // dispatching on the String domain, with no role to
-                    // consult.
-                    format_value_recursive(&child.data, depth + 1)
-                })
-                .collect();
-
-            format!("{} {} {}", open, inner.join(" "), close)
-        }
-        ValueData::Tensor { data, shape } => format_tensor_recursive(data, shape, depth),
-        // A Symbol renders as its own bare name — unquoted, unlike Text —
-        // and every Vector-domain value renders with `[ ]` uniformly now
-        // (the old `{ }`-spelled, lexeme-preserving CodeBlock rendering is
-        // gone with the CodeBlock domain).
-        ValueData::Symbol(name) => name.to_string(),
-    }
+pub(crate) fn format_value_recursive(data: &ValueData, depth: usize) -> String {
+    super::display_source::render_value(data, depth).source
 }
 
-fn format_tensor_recursive(data: &DenseTensor, shape: &[usize], _depth: usize) -> String {
+pub(super) fn format_tensor_recursive(
+    data: &DenseTensor,
+    shape: &[usize],
+    _depth: usize,
+) -> String {
     if shape.is_empty() {
         return "[ ]".to_string();
     }
@@ -305,7 +227,7 @@ fn format_tensor_slice_recursive(data: &[Fraction], shape: &[usize], _depth: usi
 /// `numerator/denominator`, integers included (`3` -> `3/1`). There is no
 /// decimal surface form and no per-value style — the display is uniform
 /// and matches the exact-real internal model.
-fn format_fraction(f: &Fraction) -> String {
+pub(super) fn format_fraction(f: &Fraction) -> String {
     if f.is_nil() {
         return "NIL".to_string();
     }
@@ -320,7 +242,7 @@ fn format_fraction(f: &Fraction) -> String {
 /// exact and AI-readable: arithmetic on irrationals is computed exactly
 /// on the CF representation (Gosper, LANG.VALUES.EXACT), so the display must not
 /// collapse it to an approximate rational.
-fn format_exact_real(er: &ExactReal) -> String {
+pub(super) fn format_exact_real(er: &ExactReal) -> String {
     match er {
         ExactReal::Rational(f) => format_fraction(f),
         _ => match er.partial_quotients() {
