@@ -6,8 +6,7 @@
 //
 // That is how every SAY word and GREET came to fail with "Unknown word: ,,"
 // on first launch: `,,` was the symbol for KEEP, and it was retired when every
-// symbol became one character. FIZZBUZZ's fallback branch carried the same
-// token, so it errored on any input that was not a multiple of 3 or 5.
+// symbol became one character.
 //
 // These tests check the shape of every token the seed data ships, so retired
 // residue is caught here instead of on someone's first run.

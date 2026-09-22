@@ -30,7 +30,7 @@ for (const entry of manifest.entries) {
 // deliberately. A new example word is a one-line addition here.
 const EXAMPLE_NAMES = new Set([
   // user words defined in the Reference's own examples
-  'ADD10', 'GREET', 'APPLY-GAIN', 'SAY-HELLO', 'SAY-WORLD', 'SAY-BANG', 'FIZZBUZZ',
+  'ADD10', 'GREET', 'APPLY-GAIN', 'SAY-HELLO', 'SAY-WORLD', 'SAY-BANG',
   // dictionaries and qualified paths from the resolution examples
   'EXAMPLE', 'AUDIOLIB', 'DICT@WORD', 'EXAMPLE@ADD10', 'EXAMPLE@GREET', 'AUDIOLIB@GREET',
   // literal string contents shown on the stack

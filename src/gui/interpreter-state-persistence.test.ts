@@ -5,8 +5,7 @@
 // name) threw a TypeError out of the parser.
 
 import { describe, expect, test } from 'vitest';
-import { backfillExampleDescriptions, createExportData, namesThatDidNotRestore, parseImportDocument } from './interpreter-state-persistence';
-import { EXAMPLE_USER_WORDS } from './example-words';
+import { createExportData, namesThatDidNotRestore, parseImportDocument } from './interpreter-state-persistence';
 import type { AjisaiInterpreter, UserWord } from '../wasm-interpreter-types';
 
 describe('parseImportDocument robustness', () => {
@@ -51,48 +50,6 @@ describe('parseImportDocument robustness', () => {
     });
 });
 
-// Regression for a session that saved FIZZBUZZ before the seed data gained a
-// `description`: `loadDatabaseData` only reseeds Example Words when the saved
-// state has none at all, so that session's own untouched copy of FIZZBUZZ —
-// same name, same body, no description — would otherwise never pick one up.
-describe('backfillExampleDescriptions', () => {
-    const fizzbuzz = EXAMPLE_USER_WORDS.find(w => w.name === 'FIZZBUZZ')!;
-
-    test('fills in a seeded description for an untouched saved copy', () => {
-        const word: UserWord = { name: 'FIZZBUZZ', definition: fizzbuzz.definition };
-        expect(backfillExampleDescriptions([word])).toBe(true);
-        expect(word.description).toBe(fizzbuzz.description);
-    });
-
-    test('leaves a customized body alone', () => {
-        const word: UserWord = { name: 'FIZZBUZZ', definition: "'Fizz' PRINT" };
-        expect(backfillExampleDescriptions([word])).toBe(false);
-        expect(word.description).toBeUndefined();
-    });
-
-    test('leaves an existing description alone', () => {
-        const word: UserWord = { name: 'FIZZBUZZ', definition: fizzbuzz.definition, description: 'my own note' };
-        expect(backfillExampleDescriptions([word])).toBe(false);
-        expect(word.description).toBe('my own note');
-    });
-
-    test('ignores a word with no matching Example Word', () => {
-        const word: UserWord = { name: 'MY-OWN-WORD', definition: '1 +' };
-        expect(backfillExampleDescriptions([word])).toBe(false);
-        expect(word.description).toBeUndefined();
-    });
-
-    test('is a no-op for an Example Word that has no description of its own', () => {
-        const greet = EXAMPLE_USER_WORDS.find(w => w.name === 'GREET')!;
-        const word: UserWord = { name: 'GREET', definition: greet.definition };
-        expect(backfillExampleDescriptions([word])).toBe(false);
-        expect(word.description).toBeUndefined();
-    });
-});
-
-// A restore skips a saved definition this build can no longer read rather than
-// abandoning the rest of the dictionary with it, so the words that did not
-// arrive have to be found by asking what is there afterwards.
 describe('namesThatDidNotRestore', () => {
     // Only `collect_user_words_info` is consulted, so the rest of the
     // interpreter surface is not modelled.
