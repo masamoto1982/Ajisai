@@ -90,5 +90,6 @@ Do not force a diagram where a table already says everything. A diagram earns it
 | This document | Information shape: sentence vs. label:value vs. table vs. diagram |
 | `reference-writing-style.md` | Reference site and `?`/LOOKUP text conventions |
 | `three-layer-documentation-model.md` | Structure of user-facing guidance across Reference / LOOKUP / hover |
+| `character-allocation-and-prose-2026-09.md` | Why the lexicon leaves `:` alone, so the label:value shape above stays writable |
 
 Applied together: a table cell still wraps its Ajisai tokens in `` `…` `` (notation), and a paragraph that must stay prose under §2 above still promotes any inline list of three or more tokens to a table where one appears inside it (`ajisai-authoring-style.md` §6.4).

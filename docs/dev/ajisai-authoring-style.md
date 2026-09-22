@@ -159,5 +159,6 @@ Legacy references to `SPECIFICATION.md` in older commits and archived notes are 
 | This document | The shared notation discipline for all writing about Ajisai |
 | `reference-writing-style.md` | Reference site and `?`/LOOKUP help text |
 | `three-layer-documentation-model.md` | Structure of all user-facing guidance |
+| `character-allocation-and-prose-2026-09.md` | The same discipline read backwards: which characters the lexicon may take, given the ones this prose relies on as separators |
 
 All of them share one root principle: **Ajisai code, the mathematics behind it, and the prose about both must be visually and structurally distinct, so that a symbol is never mistaken for punctuation and an operator is never mistaken for a word.** The gray code span marks each Ajisai token; a separate math channel carries the formulas; tables separate them in bulk.
