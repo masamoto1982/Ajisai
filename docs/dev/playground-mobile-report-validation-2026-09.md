@@ -399,3 +399,64 @@ User Word は `lookup_word_description` / `lookup_word_definition` の2呼び出
 `refreshSuggestions` 内の `checkIsMobile()` 分岐）はモバイル専用のまま。
 所有者により処遇を保留。これも同種のモード固有分岐であり、廃止すれば
 同じ方向に片付く。
+
+## 9. セレクタの高さをモード間でそろえる（2026-09-22）
+
+所有者の報告による。モバイルで **Stack/Dictionary 切替セレクタが 44px、
+Core/User 切替セレクタが 30px** と、同じ部品が上下に並んで別の高さに見えていた。
+
+### 9.1 何が起きていたか
+
+§3.3 で `.area-selector select` / `.dictionary-sheet-select` /
+`.sheet-selector-native-trigger` の3つに 44px の床を敷き、§6.3 で後者2つ
+（Core/User 切替）だけ床を外した。床を外したほうは `font-size: 1rem` だけが
+残るので 30px、床の残ったパネルセレクタは 44px になる。実測（Chromium,
+360×740 の Dictionary 面）:
+
+| 要素 | 改修前 | 改修後 |
+| --- | --- | --- |
+| `#mobile-panel-select` | 高さ 44px | 高さ 27px |
+| `.dictionary-sheet-select`（Core/User） | 高さ 30px | 高さ 27px |
+| `.area-selector-mobile`（行全体） | 高さ 56px | 高さ 40px |
+| `.vocabulary-search-input` | 高さ 44px（クリア × は 40×44px） | 高さ 28px（× は 24×24px） |
+| `.words-display`（一覧の箱・360px） | 462.81px | **481.81px** |
+| `.words-display`（一覧の箱・300px） | 362.81px | **381.81px** |
+
+デスクトップ（1200px）側は改修前後とも 27px で変わらない。つまり不一致は
+**モバイルだけの現象**であり、片方に与えて片方から取り上げた床がその原因だった。
+
+### 9.2 判断——床そのものを外す
+
+所有者の判断は「モバイルにだけ与えた小細工をなくし、デスクトップとソースを
+そろえる」である。集合の一員に与えて他の一員から取り上げなければならない床は
+規則ではない、という側を採った。セレクタの高さを決める場所は基底規則の1箇所
+だけになり、どのビューポートでも同じ高さになる。
+
+到達手段としての押しやすさは失う。代わりに残っているのは横スワイプと、
+Output/Stack 面のダブルタップ（§3.2 で固定した認識器）で、セレクタは
+4面に到達する唯一の手段ではない。
+
+検索欄も同じ行の中で並ぶので箱を戻した（44px → 28px、クリアボタンも
+40×44px → 24×24px）。ただし `font-size: 1rem` は残す——これは趣味ではなく
+iOS Safari のズーム動作（§3.3）であり、`min-width: 0` も 13px はみ出し
+（F）の修正なので残す。300px / 360px で `documentElement.scrollWidth` が
+ビューポート幅と一致することを再確認した。
+
+### 9.3 ソースの合流
+
+デスクトップ右列とモバイルの行は、同じ子を同じ順に持つ同じ部品である。
+`.right-mode-selector` ラッパ div を `index.html` から外して両者の DOM を
+そろえ、CSS も1本の規則にまとめた。
+
+- `.area-selector-right, .area-selector-mobile` が両方の行を並べる（`& select`
+  が黄金比の側、`& .search-wrapper` が残り）。モバイルブロックに残るのは
+  `display: flex` と、パネルの外に立つこと由来の余白と地色だけ。
+- 単語検索欄の出し入れも id 2本立てから `.area-selector .search-wrapper` と
+  `.area-selector:has(option[value="dictionary"]:checked)` の2本に減った。
+  左セレクタは Dictionary を持たないので、この1本で両モードを覆える。
+
+ラッパ div を外した副作用として、デスクトップの行の分割比がわずかに動く
+（575.5px の行で 350.7/216.8 → 357.6/209.9）。`box-sizing: border-box` では
+`flex-basis: 0` が自分の padding と border で下限を持ち、`<select>` はそれを
+持つがラッパ div は持たないためで、モバイル側はもとからこの分割だった。
+マークアップを共有すれば比も共有される。
