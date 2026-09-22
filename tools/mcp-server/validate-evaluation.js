@@ -10,25 +10,34 @@ const corpus = read("./eval/cases.json");
 const repairCorpus = read("./eval/repair-cases.json");
 
 /**
- * No prompt may show a source character the language does not accept.
+ * No prompt may show the retired block syntax.
  *
  * The `static-check` and `contract-inference` prompts asked, in both locales,
- * about `{ [ 1 ] + } 'INC' DEF` — retired syntax the tokenizer refuses — while
- * their own `arguments.source` carried the correct `[ [ 1 ] + ] 'INC' DEF`.
- * The fixtures therefore passed: the corpus scores the tool call, and nothing
- * read the prompt. But this corpus is the text a model is shown, and what a
- * model is shown is what it imitates. A corpus for an AI-first language is the
- * last place a retired lexeme should survive.
+ * about `{ [ 1 ] + } 'INC' DEF` — the retired block form — while their own
+ * `arguments.source` carried the correct `[ [ 1 ] + ] 'INC' DEF`. The fixtures
+ * therefore passed: the corpus scores the tool call, and nothing read the
+ * prompt. But this corpus is the text a model is shown, and what a model is
+ * shown is what it imitates. A corpus for an AI-first language is the last
+ * place a retired form should survive.
  *
- * The forbidden set is read from the packaged manifest rather than written out
- * here, so retiring another form extends this gate for free.
+ * This list used to be read out of the packaged manifest's `retired_form`
+ * entries, so that retiring another form extended the gate for free. There are
+ * no such entries any more: `{`, `}` and a bare `|` were freed into ordinary
+ * name characters along with `(` and `)`, and the manifest carries only live
+ * forms (`docs/dev/source-character-liberation-2026-09.md`). The gate's reason
+ * is untouched by that — `{ [ 1 ] + } 'INC' DEF` still does not define
+ * anything, because `{` resolves to no Word — so what changed is only which
+ * layer refuses it, the dictionary rather than the lexer. The pair is named
+ * here because it is now a closed historical fact rather than a registry that
+ * can grow: code blocks and vectors were unified onto `[` and `]`, and nothing
+ * is queued to be retired behind them.
  *
  * Two deliberate narrowings, each of which a first draft of this gate got
  * wrong:
  *
- * - Retired forms only, not reserved markers. `(` and `)` are reserved in
- *   Ajisai but are ordinary punctuation in both prompt languages, so forbidding
- *   them rejects correct prose.
+ * - The block delimiters only. `(` and `)` are ordinary punctuation in both
+ *   prompt languages, so forbidding them rejects correct prose — and they are
+ *   ordinary name characters in Ajisai now besides.
  * - Only cases that expect an Ajisai tool call. A negative case exists to check
  *   that a question about *another* language does not reach an Ajisai tool, so
  *   `irrelevant-debug` shows a C-style `for` loop on purpose. Code that is not
@@ -38,21 +47,13 @@ const repairCorpus = read("./eval/repair-cases.json");
  * prompts legitimately carry English prose like "the vector [1, 2]", which is
  * mathematical notation, so a tokenize-everything rule would reject them.
  */
-function retiredSourceCharacters() {
-  const manifest = read("./assets/word-manifest.json");
-  const entries = manifest.entries ?? manifest.words ?? manifest;
-  return (Array.isArray(entries) ? entries : [])
-    .filter((entry) => entry.kind === "retired_form")
-    .map((entry) => entry.surface)
-    .filter((surface) => typeof surface === "string" && surface.length === 1);
-}
+const RETIRED_BLOCK_DELIMITERS = Object.freeze(["{", "}"]);
 
 function assertPromptsAreLexicallyValid(cases, label) {
-  const retired = retiredSourceCharacters();
+  const retired = RETIRED_BLOCK_DELIMITERS;
   if (retired.length === 0) {
     throw new Error(
-      "no retired surface forms found in the packaged manifest: " +
-        "the prompt lexis gate would pass vacuously",
+      "no retired forms to check for: the prompt lexis gate would pass vacuously",
     );
   }
   const findings = [];
@@ -65,7 +66,7 @@ function assertPromptsAreLexicallyValid(cases, label) {
         if (prompt.includes(surface)) {
           findings.push(
             `${label}/${testCase.id}/${language}: prompt shows '${surface}', a retired ` +
-              "form the tokenizer refuses — a model shown it will imitate it",
+              "block delimiter that resolves to no Word — a model shown it will imitate it",
           );
         }
       }
@@ -73,7 +74,7 @@ function assertPromptsAreLexicallyValid(cases, label) {
   }
   if (findings.length > 0) {
     throw new Error(
-      `evaluation prompts must not show invalid Ajisai source:\n  ${findings.join("\n  ")}`,
+      `evaluation prompts must not show retired Ajisai source:\n  ${findings.join("\n  ")}`,
     );
   }
 }
