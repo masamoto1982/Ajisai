@@ -1336,7 +1336,7 @@ Name a value for the rest of the frame that made it. One name takes the whole va
 
 ## `DEF`
 
-Define a user word from a body and a name. The body starts with a header: the names written before | declare its inputs, and the call takes exactly that many operands, binds them, and runs the body on an empty stack. A body without a header is refused.
+Define a user word from a body and a name.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
@@ -1345,7 +1345,7 @@ Define a user word from a body and a name. The body starts with a header: the na
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.ACYCLIC`
-- **Syntax:** `[ X | X 2 * ] 'DOUBLE' DEF`
+- **Syntax:** `[ 2 * ] 'DOUBLE' DEF`
 - **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
 
 ## `DEL`
@@ -1359,7 +1359,7 @@ Delete a user word from the dictionary.
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
-- **Syntax:** `[ | [ 1 ] ] 'W' DEF 'W' DEL`
+- **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
 - **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`
 
 ## `DEFINED?`

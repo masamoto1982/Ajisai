@@ -2,14 +2,14 @@ use crate::error::{AjisaiError, Result};
 use crate::kernel::generated::{generated_word, WordId};
 use crate::types::{Interpretation, Token, Value};
 
-use super::compiled_plan::is_plan_valid;
+use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
     execute_del, format_ops, higher_order, higher_order_fold, io, json_decode, json_encode, logic,
     math_ops, nil_diagnostics, ordering_ops, power_ops, quantize_ops, record_ops, reflection_ops,
     search_ops, shape_ops, shape_words, sort, tensor_cmds, transcendental_ops, vector_ops,
-    Interpreter,
+    ConsumptionMode, Interpreter,
 };
 
 impl Interpreter {
@@ -77,7 +77,7 @@ impl Interpreter {
 
         self.charge_execution_step()?;
 
-        if def.lines.is_empty() && def.params.is_none() {
+        if def.lines.is_empty() {
             // Dispatch the Word resolution already found, rather than finding it
             // again. `execute_builtin` re-canonicalized the name — a third fold
             // of a name folded once above — and then `generated_word` scanned the
@@ -114,10 +114,49 @@ impl Interpreter {
 
         self.call_stack.push(name.to_string());
 
-        // `KEEP` modifies the call, never a Word inside the body — see
-        // `word_call.rs` for how the call settles it.
-        let params = def.params.as_deref().unwrap_or_default();
-        let result = self.run_word_call(params, compiled_plan.as_ref(), &def);
+        // `KEEP` modifies the *call*, not the first consuming Word inside the
+        // body (LANG.MODIFIERS.CONSUMPTION). Both readings agree for a Core Word, because a Core
+        // Word has no inside; they disagree for a User Word, and the body
+        // reading is the wrong one — `{ 2 * } 'TWICE' DEF` under `5 KEEP TWICE`
+        // let the modifier reach `*`, which then preserved the body's own
+        // literal `2` as if the caller had written it. The answer was `5 2 10`
+        // with no error and no NIL: a silently wrong result from the one
+        // modifier the language has, which is exactly what
+        // LANG.FAILURE.TRICHOTOMY rules out.
+        //
+        // So the modifier is settled here, at the boundary it names. The body
+        // runs in the default consuming mode, a depth watch records how far
+        // into the stack the call reached, and the operands it ate are put back
+        // underneath its results.
+        let keep_call = self.consumption_mode == ConsumptionMode::Keep;
+        let kept_operands: Option<Vec<(Value, Interpretation)>> = keep_call.then(|| {
+            self.stack
+                .iter_slots()
+                .map(|(value, role)| (value.clone(), role))
+                .collect()
+        });
+        self.consumption_mode = ConsumptionMode::Consume;
+        let enclosing_watch = self.stack.begin_depth_watch();
+
+        // A Word call is a barrier frame: its body names its own locals and
+        // reads none of the caller's, so what a Word means depends on its
+        // operands and its dictionary and nothing else.
+        self.open_binding_scope(true);
+
+        // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
+        // produces the same result whether it went through the compiled plan
+        // or the plain guard structure.
+        let result = match compiled_plan.as_ref() {
+            Some(compiled) => execute_compiled_plan(self, compiled),
+            None => self.execute_guard_structure(&def.lines),
+        };
+
+        self.close_binding_scope();
+
+        let operand_floor = self.stack.end_depth_watch(enclosing_watch);
+        if let (Some(operands), true) = (kept_operands, result.is_ok()) {
+            self.restore_kept_operands(operands, operand_floor);
+        }
 
         self.call_stack.pop();
         self.call_depth -= 1;
@@ -135,6 +174,31 @@ impl Interpreter {
         }
 
         result
+    }
+
+    /// Put a `KEEP`-ed call's operands back underneath its results.
+    ///
+    /// After the call the stack is `survivors ++ results`, where `survivors` is
+    /// the part below `operand_floor` — the shallowest depth the call reached.
+    /// `operands` is the whole stack as it stood before the call, so everything
+    /// from `operand_floor` up is what the call ate. Splicing that region back
+    /// in leaves `operands ++ results`: operands preserved, result appended.
+    pub(crate) fn restore_kept_operands(
+        &mut self,
+        operands: Vec<(Value, Interpretation)>,
+        operand_floor: usize,
+    ) {
+        if operand_floor >= operands.len() {
+            return;
+        }
+        let results = self.stack.split_off(operand_floor.min(self.stack.len()));
+        for (value, role) in operands.into_iter().skip(operand_floor) {
+            self.stack.push_with_role(value, role);
+        }
+        let (values, roles) = results.into_parts();
+        for (value, role) in values.into_iter().zip(roles) {
+            self.stack.push_with_role(value, role);
+        }
     }
 
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
@@ -359,20 +423,11 @@ impl Interpreter {
 
     pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
         let (_, def) = self.resolve_word_entry(name)?;
-        if def.is_builtin || (def.lines.is_empty() && def.params.is_none()) {
+        if def.is_builtin || def.lines.is_empty() {
             return None;
         }
 
-        // The header is part of what was defined: rendering it is what lets a
-        // saved dictionary be restored through `DEF` with the same arity.
         let mut result = String::new();
-        if let Some(params) = &def.params {
-            for param in params.iter() {
-                result.push_str(param);
-                result.push(' ');
-            }
-            result.push_str("| ");
-        }
         for (i, line) in def.lines.iter().enumerate() {
             if i > 0 {
                 result.push('\n');

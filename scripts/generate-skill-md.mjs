@@ -173,17 +173,7 @@ const canonicalExamples = [
   {
     id: 'def-basic',
     title: 'Define a user word: [ body ] then name, then DEF',
-    code: "[ | [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
-  },
-  {
-    id: 'def-header',
-    title: 'Declare the inputs: names before | take that many operands, deepest first',
-    code: "[ XS | XS 0 [ + ] FOLD XS LENGTH / ] 'MEAN' DEF [ 3 1 4 1 5 ] MEAN",
-  },
-  {
-    id: 'def-header-keep',
-    title: 'KEEP on a header word keeps exactly the declared operands',
-    code: "[ A B | A B - ] 'DIFF' DEF 10 3 KEEP DIFF",
+    code: "[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
   },
   {
     id: 'select-basic',
@@ -278,7 +268,7 @@ const forbiddenPatterns = [
   },
   {
     pattern: 'A word calling itself',
-    code: "[ | REC ] 'REC' DEF",
+    code: "[ REC ] 'REC' DEF",
     why: 'The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.',
   },
   {
@@ -472,7 +462,6 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
 - Named data is a Record, written \`{ key value … }\`: \`${canonicalExampleCode('record-literal')}\`. It is not a Vector and is never code — \`{ }\` builds a value, \`[ ]\` builds a value that may also be run (§6).
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
-- **Write a parameter header** — names, then \`|\`, then the body: \`${canonicalExampleCode('def-header')}\`. The call takes exactly that many operands (deepest first), binds them, and runs the body on an empty stack, so the Word's arity is written down, \`KEEP\` on it keeps exactly those operands, and \`CONTRACT\` reports the arity. \`DEF\` refuses a body without a header, and one that reads below its own frame on every call.
 - Comments: \`#\` to end of line.
 - One modifier, prefixing the *next word only*: \`KEEP\` (do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).

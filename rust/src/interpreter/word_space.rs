@@ -344,17 +344,15 @@ impl SpaceSim {
         // A literal inside a vector keeps the vector clean.
     }
 
-    /// A read of a bound name (LANG.SOURCE.FRAME). A header parameter is one
-    /// of the Word's inputs, moved untouched; a name a `BIND` in the body made
-    /// may hold anything the body computed, so its size is not assumed. Inside
-    /// a vector literal either one makes the vector non-constant.
-    pub(crate) fn feed_bound(&mut self, parameter: bool) {
+    /// A read of a name a `BIND` in the body made. It may hold anything the
+    /// body computed, so its size is not assumed; inside a vector literal it
+    /// makes the vector non-constant.
+    pub(crate) fn feed_bound(&mut self) {
         if self.vector_depth > 0 {
             self.vector_dirty = true;
             return;
         }
-        self.slots
-            .push(if parameter { INPUT_SLOT } else { UNKNOWN_SLOT });
+        self.slots.push(UNKNOWN_SLOT);
     }
 
     /// A symbol that failed to resolve: unknown flow and unknown growth.

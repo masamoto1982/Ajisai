@@ -281,11 +281,5 @@
     }
   ],
 
-  "lexicallyTransparent": [
-    {
-      "surface": "|",
-      "concept": "PARAMETER-SEPARATOR",
-      "reason": "The lexer allocates nothing for it: a bare | lexes as one Symbol like any name. DEF reads it, as the end of a definition body's parameter header (LANG.SOURCE.FRAME), and DEF and BIND refuse it as a name."
-    }
-  ]
+  "lexicallyTransparent": []
 }

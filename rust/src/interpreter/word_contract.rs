@@ -17,9 +17,7 @@ use crate::coreword_registry::{
 };
 use crate::types::{Token, WordDefinition};
 
-use super::word_contract_flow::{
-    declared_flow, feed_value_read, header_locals, note_bound_name, value_read, FlowSim,
-};
+use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
 use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
 };
@@ -334,20 +332,16 @@ impl Interpreter {
         let mut sim = SpaceSim::new();
         let mut cost_sim = CostSim::new();
         let mut complete = true;
-        let mut locals = header_locals(def);
+        let mut bound = BoundNames::new();
 
         'lines: for line in def.lines.iter() {
             let contexts = classify_vector_positions(&line.body_tokens);
             for (idx, token) in line.body_tokens.iter().enumerate() {
                 match token {
-                    // A literal, or a bound name (a header parameter, or one
-                    // a `BIND` in the body made): one value, no call.
-                    token if value_read(token, &locals).is_some() => {
-                        let read = value_read(token, &locals).flatten();
-                        feed_value_read(read, &mut flow, &mut sim, &mut cost_sim);
-                    }
                     Token::Number(_) | Token::String(_) => {
-                        unreachable!("a literal reads as a value")
+                        flow.feed_literal();
+                        sim.feed_literal();
+                        cost_sim.feed_literal();
                     }
                     // A vector-literal interior pushes one opaque value as
                     // far as arity/space/cost are concerned, whatever it
@@ -368,10 +362,16 @@ impl Interpreter {
                             );
                         }
                     }
+                    // A name a `BIND` made: one value of unknown size, no call.
+                    Token::Symbol(symbol) if bound.contains(&symbol.to_uppercase()) => {
+                        flow.feed_literal();
+                        sim.feed_bound();
+                        cost_sim.feed_literal();
+                    }
                     Token::Symbol(symbol) => {
                         let canonical =
                             crate::core_word_aliases::canonicalize_core_word_name(symbol);
-                        note_bound_name(&mut locals, &canonical, &line.body_tokens, idx);
+                        note_bound_names(&mut bound, &canonical, &line.body_tokens, idx);
                         let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
                             complete = false;
                             flow.go_dynamic();
@@ -433,7 +433,7 @@ impl Interpreter {
 
         visiting.remove(resolved_name);
         let (inferred_flow, flow_unmodelled) = flow.finish();
-        acc.flow = declared_flow(def, inferred_flow);
+        acc.flow = inferred_flow;
         if flow_unmodelled {
             // A `Dynamic` the simulation *gave up* on, unlike one derived
             // from a dependency's own mass contract: it may only ever produce

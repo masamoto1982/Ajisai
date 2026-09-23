@@ -44,7 +44,7 @@ mod malformed_numeric_literal_tests {
             "-1/0",
             "[ 1/0 ]",
             "1/0 2 ADD",
-            "[ X | X 1/0 MUL ] 'W' DEF",
+            "[ 1/0 MUL ] 'W' DEF",
         ] {
             let mut interp = Interpreter::new();
             let error = interp

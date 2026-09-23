@@ -60,7 +60,7 @@ proptest! {
     fn user_definition_cannot_shadow_a_core_word(n in 2i64..12) {
         let sq = n * n;
         assert!(
-            outcome("[ X | X 99 ADD ] 'SQRT' DEF").is_err(),
+            outcome("[ 99 ADD ] 'SQRT' DEF").is_err(),
             "defining a user word over the Core name SQRT must fail"
         );
         prop_assert_eq!(obs(&format!("{sq} SQRT")), vec![format!("{n}/1")]);
@@ -73,11 +73,11 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(40))]
 
     /// **DEF makes a name resolvable; the defined word equals its inlined
-    /// body.** `[ X | X body ] 'W' DEF  x W  ≡  x body` — defining then calling is the
+    /// body.** `[body] 'W' DEF  x W  ≡  x body` — defining then calling is the
     /// identity on the body transducer (LANG.DICTIONARY.MUTATION).
     #[test]
     fn def_then_call_inlines_body(name in user_word_name(), (body, inline) in user_word_body(), x in small()) {
-        let defined = obs(&format!("[ X | X {body} ] '{name}' DEF {x} {name}"));
+        let defined = obs(&format!("[ {body} ] '{name}' DEF {x} {name}"));
         let inlined = obs(&format!("{x} {inline}"));
         prop_assert_eq!(defined, inlined);
     }
@@ -88,8 +88,8 @@ proptest! {
     #[test]
     fn def_del_round_trip_restores_unknown(name in user_word_name(), (body, _i) in user_word_body(), x in small()) {
         let fresh = format!("{x} {name}");
-        let defined = format!("[ X | X {body} ] '{name}' DEF {x} {name}");
-        let def_del = format!("[ X | X {body} ] '{name}' DEF '{name}' DEL {x} {name}");
+        let defined = format!("[ {body} ] '{name}' DEF {x} {name}");
+        let def_del = format!("[ {body} ] '{name}' DEF '{name}' DEL {x} {name}");
         // Fresh name resolves to Unknown.
         prop_assert!(outcome(&fresh).is_err());
         // Defined → resolves.
@@ -106,14 +106,14 @@ proptest! {
 /// (LANG.DICTIONARY.MUTATION).
 #[test]
 fn delete_with_dependents_is_refused() {
-    let referenced = "[ X | X 1 ADD ] 'INC' DEF [ X | X INC INC ] 'INC2' DEF 'INC' DEL";
+    let referenced = "[ 1 ADD ] 'INC' DEF [ INC INC ] 'INC2' DEF 'INC' DEL";
     assert!(
         outcome(referenced).is_err(),
         "deleting a referenced word must fail"
     );
 
     // Removing the dependent first is what makes the delete legal.
-    let ordered = "[ X | X 1 ADD ] 'INC' DEF [ X | X INC INC ] 'INC2' DEF 'INC2' DEL 'INC' DEL 42";
+    let ordered = "[ 1 ADD ] 'INC' DEF [ INC INC ] 'INC2' DEF 'INC2' DEL 'INC' DEL 42";
     assert_eq!(outcome(ordered), Ok(vec!["42/1".to_string()]));
 }
 
@@ -123,7 +123,7 @@ fn delete_with_dependents_is_refused() {
 fn builtin_words_cannot_be_redefined() {
     for w in ["ADD", "GET", "EQ"] {
         assert!(
-            outcome(&format!("[ | 0 ] '{w}' DEF")).is_err(),
+            outcome(&format!("[ 0 ] '{w}' DEF")).is_err(),
             "redefining built-in {w} must be rejected"
         );
     }
@@ -176,16 +176,13 @@ fn a_binding_reaches_blocks_written_in_its_frame() {
 /// does not exist.
 #[test]
 fn a_binding_does_not_cross_a_word_call() {
-    let message = run_err("[ | T ] 'READS-T' DEF 5 'T' BIND READS-T");
+    let message = run_err("[ T ] 'READS-T' DEF 5 'T' BIND READS-T");
     assert!(
         message.contains("bound in another frame"),
         "expected the scope rule, got: {message}"
     );
     // The value reaches the Word the ordinary way, as an operand.
-    assert_eq!(
-        obs("[ X | X 1 ADD ] 'INC' DEF 5 'T' BIND T INC"),
-        vec!["6/1"]
-    );
+    assert_eq!(obs("[ 1 ADD ] 'INC' DEF 5 'T' BIND T INC"), vec!["6/1"]);
 }
 
 /// **A binding ends with its frame.** A Word that binds leaves no name behind
@@ -194,11 +191,11 @@ fn a_binding_does_not_cross_a_word_call() {
 /// exists not to be.
 #[test]
 fn a_binding_ends_with_its_frame() {
-    let message = run_err("[ | 5 'INNER' BIND INNER ] 'MAKES' DEF MAKES INNER");
+    let message = run_err("[ 5 'INNER' BIND INNER ] 'MAKES' DEF MAKES INNER");
     assert!(!message.is_empty(), "INNER must not survive the call");
     // The Word itself still works; only the name is gone afterwards.
     assert_eq!(
-        obs("[ | 5 'INNER' BIND INNER ] 'MAKES' DEF MAKES"),
+        obs("[ 5 'INNER' BIND INNER ] 'MAKES' DEF MAKES"),
         vec!["5/1"]
     );
 }
@@ -214,8 +211,8 @@ fn a_binding_and_a_word_may_not_share_a_name() {
             "a binding must not take the Core name {word}"
         );
     }
-    assert!(run_err("[ | 1 ] 'Q' DEF 5 'Q' BIND").contains("User Word"));
-    assert!(run_err("5 'T' BIND [ | 1 ] 'T' DEF").contains("bound in this frame"));
+    assert!(run_err("[ 1 ] 'Q' DEF 5 'Q' BIND").contains("User Word"));
+    assert!(run_err("5 'T' BIND [ 1 ] 'T' DEF").contains("bound in this frame"));
 }
 
 /// **Destructuring is exact.** A Vector longer than the name list would drop
@@ -252,7 +249,7 @@ fn a_binding_survives_neither_an_ordinary_call_nor_a_deep_call_chain() {
     // One level down: CALLEE reads the bare name `N` without binding it
     // itself. If CALLER's binding leaked in, this would answer `5`; the
     // barrier instead makes `N` unreachable there.
-    let one_level = "[ | N ] 'CALLEE' DEF [ X | X 'N' BIND CALLEE ] 'CALLER' DEF ";
+    let one_level = "[ N ] 'CALLEE' DEF [ 'N' BIND CALLEE ] 'CALLER' DEF ";
     let err = run_err(&format!("{one_level} 5 CALLER"));
     assert!(
         err.contains("bound in another frame"),
@@ -261,7 +258,7 @@ fn a_binding_survives_neither_an_ordinary_call_nor_a_deep_call_chain() {
 
     // Several levels down: the same barrier must hold transitively through a
     // chain of distinct (non-cyclic) words, not just at the first call.
-    let chain = "[ | N ] 'D' DEF [ | D ] 'C' DEF [ | C ] 'B' DEF [ X | X 'N' BIND B ] 'A' DEF ";
+    let chain = "[ N ] 'D' DEF [ D ] 'C' DEF [ C ] 'B' DEF [ 'N' BIND B ] 'A' DEF ";
     let err = run_err(&format!("{chain} 5 A"));
     assert!(
         err.contains("bound in another frame"),
@@ -297,7 +294,7 @@ fn session(src: &str) -> Interpreter {
 /// does not hold answers with neither.
 #[test]
 fn the_host_lookup_resolves_by_the_dictionary_order() {
-    let interp = session("[ X | X 2 MUL ] 'DBL' DEF");
+    let interp = session("[ 2 MUL ] 'DBL' DEF");
 
     assert!(matches!(
         resolve_host_lookup(&interp, "ADD"),
@@ -324,7 +321,7 @@ fn the_host_lookup_and_a_program_agree_on_what_is_unknown() {
 /// there to read again.
 #[test]
 fn the_host_lookup_leaves_the_session_untouched() {
-    let interp = session("[ X | X 2 MUL ] 'DBL' DEF 7");
+    let interp = session("[ 2 MUL ] 'DBL' DEF 7");
     let before: Vec<String> = interp
         .get_stack()
         .iter()

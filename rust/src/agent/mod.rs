@@ -236,28 +236,34 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
         }
     }
 
-    // Names that are bindings rather than Words: every `'NAME' BIND`, and
-    // every parameter a body's header names (`[ A B | … ]`,
-    // LANG.SOURCE.FRAME). Neither is in the dictionary, and `check` resolves
-    // without running, so without this every local read as an unknown Word.
+    // Every `BIND` makes bindings rather than Words — one name (`'N' BIND`)
+    // or several (`[ 'A' 'B' ] BIND`). They are not in the dictionary, and
+    // `check` resolves without running, so without this every bound name read
+    // as an unknown Word and `check` refused programs that run.
     for (i, token) in tokens.iter().enumerate() {
-        match token {
-            Token::String(text) if matches!(tokens.get(i + 1), Some(Token::Symbol(s)) if normalize_word(s) == "BIND") =>
-            {
-                locally_known.insert(text.to_uppercase());
+        if !matches!(token, Token::Symbol(s) if normalize_word(s) == "BIND") {
+            continue;
+        }
+        match i.checked_sub(1).map(|j| (j, &tokens[j])) {
+            Some((_, Token::String(name))) => {
+                locally_known.insert(name.to_uppercase());
             }
-            Token::VectorStart => {
-                let header: Vec<&str> = tokens[i + 1..]
-                    .iter()
-                    .map_while(|t| match t {
-                        Token::Symbol(s) => Some(s.as_ref()),
-                        _ => None,
-                    })
-                    .take_while(|s| *s != "|")
-                    .collect();
-                if matches!(tokens.get(i + 1 + header.len()), Some(Token::Symbol(s)) if s.as_ref() == "|")
-                {
-                    locally_known.extend(header.iter().map(|s| s.to_uppercase()));
+            Some((close, Token::VectorEnd)) => {
+                let mut depth = 0usize;
+                for t in tokens[..=close].iter().rev() {
+                    match t {
+                        Token::VectorEnd => depth += 1,
+                        Token::VectorStart => {
+                            depth -= 1;
+                            if depth == 0 {
+                                break;
+                            }
+                        }
+                        Token::String(name) if depth == 1 => {
+                            locally_known.insert(name.to_uppercase());
+                        }
+                        _ => {}
+                    }
                 }
             }
             _ => {}
@@ -270,10 +276,6 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
         let Token::Symbol(symbol) = token else {
             continue;
         };
-        // The header separator is read by `DEF`, not resolved.
-        if symbol.as_ref() == "|" {
-            continue;
-        }
         let normalized = normalize_word(symbol);
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
         let resolved = interp.core_vocabulary.contains_key(canonical.as_ref())

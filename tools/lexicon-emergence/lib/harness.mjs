@@ -46,7 +46,7 @@ const SUBMIT_TOOL = {
           required: ['name', 'body', 'note'],
           properties: {
             name: { type: 'string', description: 'The Word name, starting with your agent id and a dot.' },
-            body: { type: 'string', description: 'The code between `[` and `]` in `[ body ] \'NAME\' DEF`, starting with its parameter header.' },
+            body: { type: 'string', description: 'The code between `[` and `]` in `[ body ] \'NAME\' DEF`.' },
             note: { type: 'string', description: 'What the Word does, one line.' },
           },
         },

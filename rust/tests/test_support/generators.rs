@@ -134,7 +134,7 @@ pub fn effect_free_src() -> impl Strategy<Value = String> {
         irrational_src(),
         vector_src(),
         (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
-        (small(), small()).prop_map(|(a, b)| format!("[ X | X 1 ADD ] 'INC' DEF {a} INC {b} ADD")),
+        (small(), small()).prop_map(|(a, b)| format!("[ 1 ADD ] 'INC' DEF {a} INC {b} ADD")),
     ]
 }
 

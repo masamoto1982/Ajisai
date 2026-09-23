@@ -21,7 +21,7 @@ mod tests {
     #[tokio::test]
     async fn def_registers_a_user_word() {
         let mut interp = Interpreter::new();
-        interp.execute("[ | 1 ] 'X' DEF").await.unwrap();
+        interp.execute("[ 1 ] 'X' DEF").await.unwrap();
         assert!(interp.user_words.contains_key("X"));
     }
 

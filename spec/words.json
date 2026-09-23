@@ -5119,8 +5119,8 @@
       "documentation": {
         "summary": "Define a user word from a body and a name.",
         "hover": "DEF — define user word",
-        "lookup": "Define a user word from a body and a name. The body starts with a header: the names written before | declare its inputs, and the call takes exactly that many operands, binds them, and runs the body on an empty stack. A body without a header is refused.",
-        "syntax": "[ X | X 2 * ] 'DOUBLE' DEF",
+        "lookup": "Define a user word from a body and a name.",
+        "syntax": "[ 2 * ] 'DOUBLE' DEF",
         "role": "Dictionary primitive: Define a user word from a body and a name.",
         "stackEffect": "[ body ] [ name ] -> []"
       },
@@ -5176,7 +5176,7 @@
         "summary": "Delete a user word from the dictionary.",
         "hover": "DEL — delete user word",
         "lookup": "Delete a user word from the dictionary.",
-        "syntax": "[ | [ 1 ] ] 'W' DEF 'W' DEL",
+        "syntax": "[ [ 1 ] ] 'W' DEF 'W' DEL",
         "role": "Dictionary primitive: Delete a user word from the dictionary.",
         "stackEffect": "[ name ] -> []"
       },

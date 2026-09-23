@@ -48,7 +48,6 @@ impl Interpreter {
             registration_order: self.next_registration_order(),
             compiled_plan: None,
             generated: None,
-            params: None,
         });
         let mut visiting = HashSet::new();
         self.infer_word_contract_inner("", &def, &mut visiting)

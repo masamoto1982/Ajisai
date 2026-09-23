@@ -56,7 +56,7 @@ mod tests {
     #[tokio::test]
     async fn map_by_word_name_follows_the_same_rule() {
         assert_eq!(
-            run("[ X | X 1 COLLECT ] 'WRAP' DEF [ 1 2 ] [ WRAP ] MAP").await,
+            run("[ 1 COLLECT ] 'WRAP' DEF [ 1 2 ] [ WRAP ] MAP").await,
             "[ [ 1/1 ] [ 2/1 ] ]"
         );
     }

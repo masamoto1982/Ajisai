@@ -7,7 +7,7 @@
     "primitives": 24,
     "primitives_without_tests": 0,
     "distinct_law_test_files": 24,
-    "distinct_conformance_cases": 172
+    "distinct_conformance_cases": 168
   },
   "primitives": [
     {
@@ -714,7 +714,7 @@
       "status": "accepted",
       "derived_word_count": 12,
       "law_test_count": 6,
-      "conformance_case_count": 21,
+      "conformance_case_count": 17,
       "derived_words": [
         "core.bind",
         "core.def",
@@ -743,10 +743,6 @@
         "core-fail-raises-declared-error",
         "core-fold",
         "core-fold-word-name",
-        "core-header-frame-starts-empty",
-        "core-header-takes-declared-operands",
-        "core-keep-on-exec-modifies-the-call",
-        "core-keep-on-header-word",
         "core-map",
         "core-rank",
         "core-rank-0-sees-the-whole-vector",
@@ -804,7 +800,7 @@
       "status": "accepted",
       "derived_word_count": 4,
       "law_test_count": 1,
-      "conformance_case_count": 6,
+      "conformance_case_count": 3,
       "derived_words": [
         "core.bind",
         "core.def",
@@ -817,9 +813,6 @@
       "conformance_cases": [
         "core-binding-does-not-cross-a-word-call",
         "core-binding-names-a-value",
-        "core-header-frame-starts-empty",
-        "core-header-takes-declared-operands",
-        "core-keep-on-header-word",
         "core-user-definition-resolved"
       ]
     },
