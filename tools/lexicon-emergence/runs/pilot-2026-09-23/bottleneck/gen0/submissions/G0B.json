@@ -1,0 +1,83 @@
+{
+  "agent": "G0B",
+  "generation": 0,
+  "condition": "bottleneck",
+  "definitions": [
+    {
+      "name": "G0B.SUM",
+      "body": "0 [ + ] FOLD",
+      "note": "sum of a numeric Vector as a bare scalar"
+    },
+    {
+      "name": "G0B.MEAN",
+      "body": "'G0B.XS' BIND G0B.XS G0B.SUM G0B.XS LENGTH /",
+      "note": "arithmetic mean of a numeric Vector, bare scalar"
+    },
+    {
+      "name": "G0B.DEV",
+      "body": "KEEP G0B.MEAN -",
+      "note": "Vector of each number minus the mean"
+    },
+    {
+      "name": "G0B.VAR",
+      "body": "G0B.DEV 2 POW G0B.MEAN",
+      "note": "population variance, bare scalar"
+    },
+    {
+      "name": "G0B.MAX",
+      "body": "'G0B.R' BIND G0B.R G0B.R 0 GET [ MAX ] FOLD",
+      "note": "largest element of a non-empty numeric Vector, bare scalar"
+    },
+    {
+      "name": "G0B.MIN",
+      "body": "'G0B.R' BIND G0B.R G0B.R 0 GET [ MIN ] FOLD",
+      "note": "smallest element of a non-empty numeric Vector, bare scalar"
+    },
+    {
+      "name": "G0B.RANGE",
+      "body": "'G0B.R' BIND G0B.R G0B.MAX G0B.R G0B.MIN -",
+      "note": "max minus min, bare scalar"
+    },
+    {
+      "name": "G0B.NORMALIZE",
+      "body": "'G0B.N' BIND G0B.N G0B.N G0B.MIN - G0B.N G0B.RANGE /",
+      "note": "rescale each number to (x - min) / (max - min)"
+    },
+    {
+      "name": "G0B.WORDS",
+      "body": "' ' TOKENIZE",
+      "note": "split a String on single spaces into a Vector of words"
+    },
+    {
+      "name": "G0B.LEN",
+      "body": "CHARS LENGTH",
+      "note": "character count of a String"
+    },
+    {
+      "name": "G0B.CAP",
+      "body": "CHARS 'G0B.C' BIND G0B.C [ 1 ] TAKE [ UPPER ] MAP G0B.C [ 1 ] DROP CONCAT JOIN",
+      "note": "upper-case the first letter of a String"
+    },
+    {
+      "name": "G0B.UNWORDS",
+      "body": "[ ' ' 2 COLLECT ] MAP FLATTEN JOIN TRIM",
+      "note": "join a Vector of Strings with single spaces"
+    }
+  ],
+  "solutions": {
+    "stats.sum": "G0B.SUM",
+    "stats.mean": "G0B.MEAN",
+    "stats.deviations": "G0B.DEV",
+    "stats.variance": "G0B.VAR",
+    "stats.stddev": "G0B.VAR SQRT",
+    "stats.range": "G0B.RANGE",
+    "stats.normalize": "G0B.NORMALIZE",
+    "text.count": "G0B.WORDS LENGTH",
+    "text.frequency": "G0B.WORDS TALLY",
+    "text.distinct": "G0B.WORDS UNIQUE",
+    "text.titlecase": "G0B.WORDS [ G0B.CAP ] MAP G0B.UNWORDS",
+    "text.longest": "G0B.WORDS [ G0B.LEN ] MAP G0B.MAX",
+    "text.long-words": "G0B.WORDS [ G0B.LEN 3 > ] FILTER",
+    "text.acronym": "G0B.WORDS [ CHARS 0 GET ] MAP JOIN UPPER"
+  }
+}

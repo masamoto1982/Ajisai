@@ -1,0 +1,30 @@
+{
+  "agent": "G1B", "generation": 1, "condition": "bottleneck",
+  "definitions": [
+    { "name": "G1B.MIN", "body": "'G1B.R' BIND G1B.R G1B.R 0 GET [ MIN ] FOLD", "note": "smallest element of a non-empty numeric Vector, bare scalar" },
+    { "name": "G1B.RANGE", "body": "'G1B.X' BIND G1B.X G0B.MAX G1B.X G1B.MIN -", "note": "max minus min of a non-empty numeric Vector, bare scalar" },
+    { "name": "G1B.NORMALIZE", "body": "'G1B.N' BIND G1B.N G1B.N G1B.MIN - G1B.N G1B.RANGE /", "note": "rescale each number to (x - min) / (max - min)" },
+    { "name": "G1B.STDDEV", "body": "G0B.VAR SQRT", "note": "population standard deviation, bare scalar" },
+    { "name": "G1B.CAP", "body": "CHARS 'G1B.C' BIND G1B.C 0 G1B.C 0 GET UPPER PUT JOIN", "note": "upper-case the first letter of a non-empty String" },
+    { "name": "G1B.UNWORDS", "body": "[ CHARS REVERSE [ ' ' ] CONCAT REVERSE ] MAP FLATTEN [ 1 ] DROP JOIN", "note": "join a non-empty Vector of Strings with single spaces" },
+    { "name": "G1B.TITLECASE", "body": "G0A.WORDS [ G1B.CAP ] MAP G1B.UNWORDS", "note": "capitalize every word of a space-separated String" },
+    { "name": "G1B.LONGEST", "body": "G0A.WORDS [ G0A.LEN ] MAP G0B.MAX", "note": "character count of the longest word in a space-separated String" },
+    { "name": "G1B.ACRONYM", "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER", "note": "upper-cased first letters of every word, as one String" }
+  ],
+  "solutions": {
+    "stats.sum": "G0A.SUM",
+    "stats.mean": "G0A.MEAN",
+    "stats.deviations": "G0B.DEV",
+    "stats.variance": "G0B.VAR",
+    "stats.stddev": "G1B.STDDEV",
+    "stats.range": "G1B.RANGE",
+    "stats.normalize": "G1B.NORMALIZE",
+    "text.count": "G0A.WORDS LENGTH",
+    "text.frequency": "G0A.WORDS TALLY",
+    "text.distinct": "G0A.WORDS UNIQUE",
+    "text.titlecase": "G1B.TITLECASE",
+    "text.longest": "G1B.LONGEST",
+    "text.long-words": "G0A.WORDS [ G0A.LEN 3 > ] FILTER",
+    "text.acronym": "G1B.ACRONYM"
+  }
+}

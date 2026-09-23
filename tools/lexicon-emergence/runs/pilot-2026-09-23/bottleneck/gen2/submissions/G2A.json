@@ -1,0 +1,28 @@
+{
+  "agent": "G2A", "generation": 2, "condition": "bottleneck",
+  "definitions": [
+    { "name": "G2A.STDDEV", "body": "G0B.VAR SQRT", "note": "population standard deviation of a numeric Vector, bare scalar" },
+    { "name": "G2A.NORMALIZE", "body": "'G2A.XS' BIND G2A.XS G2A.XS G1A.MIN - G2A.XS G1A.RANGE /", "note": "rescale each number to (x - min) / (max - min), Vector in original order" },
+    { "name": "G2A.LEN", "body": "CHARS LENGTH", "note": "character count of a String, bare scalar" },
+    { "name": "G2A.CAP", "body": "'G2A.CS' BIND G2A.CS 1 TAKE JOIN UPPER G2A.CS 1 DROP JOIN 2 COLLECT JOIN", "note": "Vector of one-char Strings (from CHARS) to a String with its first letter upper-cased" },
+    { "name": "G2A.TITLE", "body": "G0A.WORDS [ CHARS G2A.CAP ' ' 2 COLLECT JOIN ] MAP JOIN TRIM", "note": "space-separated String to title case, words joined by single spaces" },
+    { "name": "G2A.LONGEST", "body": "G0A.WORDS [ G2A.LEN ] MAP G0B.MAX", "note": "length of the longest word in a space-separated String, bare scalar" },
+    { "name": "G2A.ACRONYM", "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER", "note": "upper-cased first letters of every word of a space-separated String" }
+  ],
+  "solutions": {
+    "stats.sum": "G0A.SUM",
+    "stats.mean": "G0A.MEAN",
+    "stats.deviations": "G0B.DEV",
+    "stats.variance": "G0B.VAR",
+    "stats.stddev": "G2A.STDDEV",
+    "stats.range": "G1A.RANGE",
+    "stats.normalize": "G2A.NORMALIZE",
+    "text.count": "G0A.WORDS LENGTH",
+    "text.frequency": "G0A.WORDS TALLY",
+    "text.distinct": "G0A.WORDS UNIQUE",
+    "text.titlecase": "G2A.TITLE",
+    "text.longest": "G2A.LONGEST",
+    "text.long-words": "G0A.WORDS [ G2A.LEN 3 > ] FILTER",
+    "text.acronym": "G2A.ACRONYM"
+  }
+}

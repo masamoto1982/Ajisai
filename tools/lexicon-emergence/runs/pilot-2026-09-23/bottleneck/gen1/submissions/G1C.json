@@ -1,0 +1,31 @@
+{
+  "agent": "G1C", "generation": 1, "condition": "bottleneck",
+  "definitions": [
+    { "name": "G1C.MIN", "body": "'G1C.R' BIND G1C.R G1C.R 0 GET [ MIN ] FOLD", "note": "smallest element of a non-empty numeric Vector, bare scalar" },
+    { "name": "G1C.RANGE", "body": "'G1C.RV' BIND G1C.RV G0B.MAX G1C.RV G1C.MIN -", "note": "max minus min of a non-empty numeric Vector, bare scalar" },
+    { "name": "G1C.NORMALIZE", "body": "'G1C.NV' BIND G1C.NV G1C.NV G1C.MIN - G1C.NV G1C.RANGE /", "note": "rescale each number to (x - min) / (max - min)" },
+    { "name": "G1C.STDDEV", "body": "G0B.VAR SQRT", "note": "population standard deviation, bare scalar" },
+    { "name": "G1C.CAP", "body": "CHARS 'G1C.C' BIND G1C.C [ 1 ] TAKE JOIN UPPER G1C.C [ 1 ] DROP JOIN 2 COLLECT JOIN", "note": "upper-case the first character of a non-empty String" },
+    { "name": "G1C.UNWORDS", "body": "[ ' ' 2 COLLECT ] MAP FLATTEN [ -1 ] DROP JOIN", "note": "join a non-empty Vector of Strings with single spaces" },
+    { "name": "G1C.TITLECASE", "body": "G0A.WORDS [ G1C.CAP ] MAP G1C.UNWORDS", "note": "capitalize every space-separated word of a String" },
+    { "name": "G1C.ACRONYM", "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER", "note": "upper-cased first letters of every word of a String" },
+    { "name": "G1C.LONGEST", "body": "G0A.WORDS [ G0A.LEN ] MAP G0B.MAX", "note": "character count of the longest word in a String" },
+    { "name": "G1C.LONGWORDS", "body": "G0A.WORDS [ G0A.LEN 3 > ] FILTER", "note": "Vector of words longer than 3 characters, original order" }
+  ],
+  "solutions": {
+    "stats.sum": "G0A.SUM",
+    "stats.mean": "G0A.MEAN",
+    "stats.deviations": "G0B.DEV",
+    "stats.variance": "G0B.VAR",
+    "stats.stddev": "G1C.STDDEV",
+    "stats.range": "G1C.RANGE",
+    "stats.normalize": "G1C.NORMALIZE",
+    "text.count": "G0A.WORDS LENGTH",
+    "text.frequency": "G0A.WORDS TALLY",
+    "text.distinct": "G0A.WORDS UNIQUE",
+    "text.titlecase": "G1C.TITLECASE",
+    "text.longest": "G1C.LONGEST",
+    "text.long-words": "G1C.LONGWORDS",
+    "text.acronym": "G1C.ACRONYM"
+  }
+}

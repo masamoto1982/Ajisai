@@ -1,0 +1,94 @@
+{
+  "generation": 1,
+  "capacity": 8,
+  "entries": [
+    {
+      "name": "G0A.WORDS",
+      "body": "' ' TOKENIZE",
+      "note": "split a String on single spaces into a Vector of words",
+      "classId": "G0A.WORDS",
+      "uses": 21,
+      "agents": [
+        "G0A",
+        "G0B",
+        "G0C"
+      ]
+    },
+    {
+      "name": "G0A.SUM",
+      "body": "0 [ + ] FOLD",
+      "note": "sum of a numeric Vector as a bare scalar",
+      "classId": "G0A.SUM",
+      "uses": 10,
+      "agents": [
+        "G0A",
+        "G0B"
+      ]
+    },
+    {
+      "name": "G0A.MEAN",
+      "body": "'G0A.XS' BIND G0A.XS G0A.SUM G0A.XS LENGTH /",
+      "note": "arithmetic mean of a numeric Vector",
+      "classId": "G0A.MEAN",
+      "uses": 8,
+      "agents": [
+        "G0A",
+        "G0B"
+      ]
+    },
+    {
+      "name": "G0B.DEV",
+      "body": "KEEP G0A.MEAN -",
+      "note": "Vector of each number minus the mean",
+      "classId": "G0A.DEVS",
+      "uses": 6,
+      "agents": [
+        "G0A",
+        "G0B"
+      ]
+    },
+    {
+      "name": "G0B.MAX",
+      "body": "'G0B.R' BIND G0B.R G0B.R 0 GET [ MAX ] FOLD",
+      "note": "largest element of a non-empty numeric Vector, bare scalar",
+      "classId": "G0B.MAX",
+      "uses": 5,
+      "agents": [
+        "G0B",
+        "G0C"
+      ]
+    },
+    {
+      "name": "G0C.SUM",
+      "body": "[ 0 ] [ + ] FOLD 0 GET",
+      "note": "sum of a numeric Vector as a bare scalar",
+      "classId": "G0C.SUM",
+      "uses": 5,
+      "agents": [
+        "G0C"
+      ]
+    },
+    {
+      "name": "G0B.VAR",
+      "body": "G0B.DEV 2 POW G0A.MEAN",
+      "note": "population variance, bare scalar",
+      "classId": "G0A.VAR",
+      "uses": 4,
+      "agents": [
+        "G0A",
+        "G0B"
+      ]
+    },
+    {
+      "name": "G0A.LEN",
+      "body": "CHARS LENGTH",
+      "note": "character count of a String",
+      "classId": "G0A.LEN",
+      "uses": 4,
+      "agents": [
+        "G0A",
+        "G0B"
+      ]
+    }
+  ]
+}

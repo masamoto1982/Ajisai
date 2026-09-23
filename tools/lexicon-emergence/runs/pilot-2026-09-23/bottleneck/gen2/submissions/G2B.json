@@ -1,0 +1,25 @@
+{
+  "agent": "G2B", "generation": 2, "condition": "bottleneck",
+  "definitions": [
+    { "name": "G2B.NORMALIZE", "body": "'G2B.XS' BIND G2B.XS G2B.XS G1A.MIN - G2B.XS G1A.RANGE /", "note": "rescale each number of a numeric Vector to (x - min) / (max - min)" },
+    { "name": "G2B.CAP", "body": "CHARS 'G2B.C' BIND G2B.C [ 1 ] TAKE JOIN UPPER G2B.C [ 1 ] DROP JOIN ' ' 3 COLLECT JOIN", "note": "a word with its first letter upper-cased, followed by one trailing space" },
+    { "name": "G2B.TITLECASE", "body": "G0A.WORDS [ G2B.CAP ] MAP JOIN TRIM", "note": "title-case a space-separated String: every word's first letter upper-cased" },
+    { "name": "G2B.ACRONYM", "body": "G0A.WORDS [ CHARS 0 GET UPPER ] MAP JOIN", "note": "upper-cased first letters of every word of a String, as one String" }
+  ],
+  "solutions": {
+    "stats.sum": "G0A.SUM",
+    "stats.mean": "G0A.MEAN",
+    "stats.deviations": "G0B.DEV",
+    "stats.variance": "G0B.VAR",
+    "stats.stddev": "G0B.VAR SQRT",
+    "stats.range": "G1A.RANGE",
+    "stats.normalize": "G2B.NORMALIZE",
+    "text.count": "G0A.WORDS LENGTH",
+    "text.frequency": "G0A.WORDS TALLY",
+    "text.distinct": "G0A.WORDS UNIQUE",
+    "text.titlecase": "G2B.TITLECASE",
+    "text.longest": "G0A.WORDS [ CHARS LENGTH ] MAP G0B.MAX",
+    "text.long-words": "G0A.WORDS [ CHARS LENGTH 3 > ] FILTER",
+    "text.acronym": "G2B.ACRONYM"
+  }
+}

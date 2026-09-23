@@ -1,0 +1,38 @@
+{
+  "agent": "G0C", "generation": 0, "condition": "bottleneck",
+  "definitions": [
+    { "name": "G0C.SUM", "body": "[ 0 ] [ + ] FOLD 0 GET", "note": "sum of a numeric Vector as a bare scalar" },
+    { "name": "G0C.MEAN", "body": "'G0C.M' BIND G0C.M G0C.SUM G0C.M LENGTH /", "note": "arithmetic mean of a numeric Vector as a bare scalar" },
+    { "name": "G0C.DEVIATIONS", "body": "'G0C.D' BIND G0C.D G0C.D G0C.MEAN -", "note": "Vector of each element minus the mean" },
+    { "name": "G0C.VARIANCE", "body": "G0C.DEVIATIONS 'G0C.V' BIND G0C.V G0C.V * G0C.MEAN", "note": "population variance as a bare scalar" },
+    { "name": "G0C.STDDEV", "body": "G0C.VARIANCE SQRT", "note": "population standard deviation (exact SQRT) as a bare scalar" },
+    { "name": "G0C.MIN", "body": "'G0C.L' BIND G0C.L G0C.L 0 GET [ MIN ] FOLD", "note": "smallest element of a non-empty Vector as a bare scalar" },
+    { "name": "G0C.MAX", "body": "'G0C.H' BIND G0C.H G0C.H 0 GET [ MAX ] FOLD", "note": "largest element of a non-empty Vector as a bare scalar" },
+    { "name": "G0C.RANGE", "body": "'G0C.R' BIND G0C.R G0C.MAX G0C.R G0C.MIN -", "note": "max minus min as a bare scalar" },
+    { "name": "G0C.NORMALIZE", "body": "'G0C.N' BIND G0C.N G0C.N G0C.MIN - G0C.N G0C.RANGE /", "note": "min-max rescale each element to (x-min)/(max-min)" },
+    { "name": "G0C.WORDS", "body": "' ' TOKENIZE", "note": "split a String on single spaces into a Vector of words" },
+    { "name": "G0C.UNWORDS", "body": "[ ' ' 2 COLLECT JOIN ] MAP JOIN TRIM", "note": "join a Vector of Strings with single spaces" },
+    { "name": "G0C.CAPITALIZE", "body": "CHARS 'G0C.C' BIND G0C.C [ 1 ] TAKE JOIN UPPER G0C.C [ 1 ] DROP JOIN 2 COLLECT JOIN", "note": "upper-case the first character of a String" },
+    { "name": "G0C.TITLECASE", "body": "G0C.WORDS [ G0C.CAPITALIZE ] MAP G0C.UNWORDS", "note": "capitalize every word of a space-separated String" },
+    { "name": "G0C.WORD-LENGTHS", "body": "G0C.WORDS [ CHARS LENGTH ] MAP", "note": "Vector of character counts of each word" },
+    { "name": "G0C.LONGEST", "body": "G0C.WORD-LENGTHS 0 [ MAX ] FOLD", "note": "length of the longest word as a bare scalar" },
+    { "name": "G0C.LONG-WORDS", "body": "G0C.WORDS [ CHARS LENGTH 3 > ] FILTER", "note": "words longer than 3 characters, in order" },
+    { "name": "G0C.ACRONYM", "body": "G0C.WORDS [ CHARS 0 GET ] MAP JOIN UPPER", "note": "upper-cased first letters of every word as one String" }
+  ],
+  "solutions": {
+    "stats.sum": "G0C.SUM",
+    "stats.mean": "G0C.MEAN",
+    "stats.deviations": "G0C.DEVIATIONS",
+    "stats.variance": "G0C.VARIANCE",
+    "stats.stddev": "G0C.STDDEV",
+    "stats.range": "G0C.RANGE",
+    "stats.normalize": "G0C.NORMALIZE",
+    "text.count": "G0C.WORDS LENGTH",
+    "text.frequency": "G0C.WORDS TALLY",
+    "text.distinct": "G0C.WORDS UNIQUE",
+    "text.titlecase": "G0C.TITLECASE",
+    "text.longest": "G0C.LONGEST",
+    "text.long-words": "G0C.LONG-WORDS",
+    "text.acronym": "G0C.ACRONYM"
+  }
+}

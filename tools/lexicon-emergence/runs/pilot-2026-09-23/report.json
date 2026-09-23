@@ -1,0 +1,1653 @@
+{
+  "perGeneration": [
+    {
+      "condition": "bottleneck",
+      "generation": 0,
+      "agents": 3,
+      "lexiconSize": 0,
+      "accuracy": "42/42",
+      "meanTokens": 2.2,
+      "compression": 0.086,
+      "coreEquivalent": "39/42"
+    },
+    {
+      "condition": "bottleneck",
+      "generation": 1,
+      "agents": 3,
+      "lexiconSize": 8,
+      "accuracy": "42/42",
+      "meanTokens": 1.4,
+      "compression": 0.053,
+      "coreEquivalent": "33/42"
+    },
+    {
+      "condition": "bottleneck",
+      "generation": 2,
+      "agents": 3,
+      "lexiconSize": 8,
+      "accuracy": "42/42",
+      "meanTokens": 1.9,
+      "compression": 0.077,
+      "coreEquivalent": "33/42"
+    },
+    {
+      "condition": "solo",
+      "generation": 0,
+      "agents": 3,
+      "lexiconSize": 0,
+      "accuracy": "42/42",
+      "meanTokens": 1.8,
+      "compression": 0.073,
+      "coreEquivalent": "42/42"
+    }
+  ],
+  "convergent": [
+    {
+      "classId": "G0A.ACRONYM",
+      "definers": [
+        "G0A",
+        "G0C",
+        "G1A",
+        "G1B",
+        "G1C",
+        "G2A",
+        "G2B",
+        "G2C",
+        "S0A",
+        "S0B"
+      ],
+      "links": [
+        "d0",
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.ACRONYM",
+          "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of every word",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0C.ACRONYM",
+          "body": "G0C.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of every word as one String",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1A.ACRONYM",
+          "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of each word of a String, as one String",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G1B.ACRONYM",
+          "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of every word, as one String",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.ACRONYM",
+          "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of every word of a String",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "G2A.ACRONYM",
+          "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of every word of a space-separated String",
+          "definedBy": "G2A"
+        },
+        {
+          "name": "G2B.ACRONYM",
+          "body": "G0A.WORDS [ CHARS 0 GET UPPER ] MAP JOIN",
+          "note": "upper-cased first letters of every word of a String, as one String",
+          "definedBy": "G2B"
+        },
+        {
+          "name": "G2C.ACRONYM",
+          "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of every word of a String, as one String",
+          "definedBy": "G2C"
+        },
+        {
+          "name": "S0A.ACRONYM",
+          "body": "S0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+          "note": "upper-cased first letters of every word",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.ACRONYM",
+          "body": "S0B.WORDS [ CHARS 0 GET UPPER ] MAP JOIN",
+          "note": "upper-cased first letters of the space-separated words",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0B.NORMALIZE",
+      "definers": [
+        "G0B",
+        "G0C",
+        "G1A",
+        "G1B",
+        "G1C",
+        "G2A",
+        "G2B",
+        "G2C",
+        "S0A",
+        "S0C"
+      ],
+      "links": [
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G0B.NORMALIZE",
+          "body": "'G0B.N' BIND G0B.N G0B.N G0B.MIN - G0B.N G0B.RANGE /",
+          "note": "rescale each number to (x - min) / (max - min)",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0C.NORMALIZE",
+          "body": "'G0C.N' BIND G0C.N G0C.N G0C.MIN - G0C.N G0C.RANGE /",
+          "note": "min-max rescale each element to (x-min)/(max-min)",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1A.NORMALIZE",
+          "body": "'G1A.NS' BIND G1A.NS G1A.NS G1A.MIN - G1A.NS G1A.RANGE /",
+          "note": "min-max rescale a numeric Vector to (x - min) / (max - min)",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G1B.NORMALIZE",
+          "body": "'G1B.N' BIND G1B.N G1B.N G1B.MIN - G1B.N G1B.RANGE /",
+          "note": "rescale each number to (x - min) / (max - min)",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.NORMALIZE",
+          "body": "'G1C.NV' BIND G1C.NV G1C.NV G1C.MIN - G1C.NV G1C.RANGE /",
+          "note": "rescale each number to (x - min) / (max - min)",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "G2A.NORMALIZE",
+          "body": "'G2A.XS' BIND G2A.XS G2A.XS G1A.MIN - G2A.XS G1A.RANGE /",
+          "note": "rescale each number to (x - min) / (max - min), Vector in original order",
+          "definedBy": "G2A"
+        },
+        {
+          "name": "G2B.NORMALIZE",
+          "body": "'G2B.XS' BIND G2B.XS G2B.XS G1A.MIN - G2B.XS G1A.RANGE /",
+          "note": "rescale each number of a numeric Vector to (x - min) / (max - min)",
+          "definedBy": "G2B"
+        },
+        {
+          "name": "G2C.NORMALIZE",
+          "body": "'G2C.XS' BIND G2C.XS G2C.XS G1A.MIN - G2C.XS G1A.RANGE /",
+          "note": "rescale each number to (x - min) / (max - min), Vector in original order",
+          "definedBy": "G2C"
+        },
+        {
+          "name": "S0A.NORMALIZE",
+          "body": "'XS' BIND XS XS S0A.MIN - XS S0A.RANGE /",
+          "note": "min-max rescale to [0,1]",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0C.NORMALIZE",
+          "body": "'S0C.Z' BIND S0C.Z S0C.Z S0C.MIN - S0C.Z S0C.RANGE /",
+          "note": "min-max rescale of a numeric Vector to [0,1]",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.SD",
+      "definers": [
+        "G0A",
+        "G1A",
+        "G1B",
+        "G1C",
+        "G2A",
+        "G2C",
+        "S0A",
+        "S0B",
+        "S0C"
+      ],
+      "links": [
+        "d1",
+        "d0",
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G0A.SD",
+          "body": "G0A.VAR SQRT",
+          "note": "population standard deviation (exact sqrt)",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G1A.STDDEV",
+          "body": "G0B.VAR SQRT",
+          "note": "population standard deviation of a numeric Vector, bare scalar",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G1B.STDDEV",
+          "body": "G0B.VAR SQRT",
+          "note": "population standard deviation, bare scalar",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.STDDEV",
+          "body": "G0B.VAR SQRT",
+          "note": "population standard deviation, bare scalar",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "G2A.STDDEV",
+          "body": "G0B.VAR SQRT",
+          "note": "population standard deviation of a numeric Vector, bare scalar",
+          "definedBy": "G2A"
+        },
+        {
+          "name": "G2C.STDDEV",
+          "body": "G0B.VAR SQRT",
+          "note": "population standard deviation of a numeric Vector, bare scalar",
+          "definedBy": "G2C"
+        },
+        {
+          "name": "S0A.STDDEV",
+          "body": "S0A.VAR SQRT",
+          "note": "population standard deviation (exact)",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.STD",
+          "body": "S0B.VAR SQRT",
+          "note": "population standard deviation (exact)",
+          "definedBy": "S0B"
+        },
+        {
+          "name": "S0C.STDDEV",
+          "body": "S0C.VARIANCE SQRT",
+          "note": "population standard deviation (exact) as a bare scalar",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.TITLE",
+      "definers": [
+        "G0A",
+        "G0C",
+        "G1A",
+        "G1B",
+        "G1C",
+        "G2A",
+        "G2B",
+        "G2C",
+        "S0A"
+      ],
+      "links": [
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.TITLE",
+          "body": "G0A.WORDS [ G0A.CAP1 ] MAP G0A.UNWORDS",
+          "note": "title-case every word of a space-separated String",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0C.TITLECASE",
+          "body": "G0C.WORDS [ G0C.CAPITALIZE ] MAP G0C.UNWORDS",
+          "note": "capitalize every word of a space-separated String",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1A.TITLECASE",
+          "body": "G0A.WORDS [ G1A.CAP ] MAP G1A.UNWORDS",
+          "note": "capitalize every word of a space-separated String",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G1B.TITLECASE",
+          "body": "G0A.WORDS [ G1B.CAP ] MAP G1B.UNWORDS",
+          "note": "capitalize every word of a space-separated String",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.TITLECASE",
+          "body": "G0A.WORDS [ G1C.CAP ] MAP G1C.UNWORDS",
+          "note": "capitalize every space-separated word of a String",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "G2A.TITLE",
+          "body": "G0A.WORDS [ CHARS G2A.CAP ' ' 2 COLLECT JOIN ] MAP JOIN TRIM",
+          "note": "space-separated String to title case, words joined by single spaces",
+          "definedBy": "G2A"
+        },
+        {
+          "name": "G2B.TITLECASE",
+          "body": "G0A.WORDS [ G2B.CAP ] MAP JOIN TRIM",
+          "note": "title-case a space-separated String: every word's first letter upper-cased",
+          "definedBy": "G2B"
+        },
+        {
+          "name": "G2C.TITLE",
+          "body": "G0A.WORDS [ G2C.CAP ' ' 2 COLLECT JOIN ] MAP JOIN CHARS [ -1 ] DROP JOIN",
+          "note": "title-case a space-separated String: each word capitalized, joined by single spaces",
+          "definedBy": "G2C"
+        },
+        {
+          "name": "S0A.TITLECASE",
+          "body": "S0A.WORDS [ S0A.CAP ] MAP S0A.UNWORDS",
+          "note": "capitalize every word of a space-separated String",
+          "definedBy": "S0A"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.CAP1",
+      "definers": [
+        "G0A",
+        "G0B",
+        "G0C",
+        "G1A",
+        "G1B",
+        "G1C",
+        "G2C",
+        "S0A"
+      ],
+      "links": [
+        "d1",
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G0A.CAP1",
+          "body": "CHARS 'G0A.TW' BIND G0A.TW [ 1 ] TAKE JOIN UPPER G0A.TW [ 1 ] DROP JOIN 2 COLLECT JOIN",
+          "note": "upper-case the first letter of one word String",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0B.CAP",
+          "body": "CHARS 'G0B.C' BIND G0B.C [ 1 ] TAKE [ UPPER ] MAP G0B.C [ 1 ] DROP CONCAT JOIN",
+          "note": "upper-case the first letter of a String",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0C.CAPITALIZE",
+          "body": "CHARS 'G0C.C' BIND G0C.C [ 1 ] TAKE JOIN UPPER G0C.C [ 1 ] DROP JOIN 2 COLLECT JOIN",
+          "note": "upper-case the first character of a String",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1A.CAP",
+          "body": "'G1A.W' BIND G1A.W CHARS [ 1 ] TAKE JOIN UPPER CHARS G1A.W CHARS [ 1 ] DROP CONCAT JOIN",
+          "note": "upper-case the first letter of a non-empty String",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G1B.CAP",
+          "body": "CHARS 'G1B.C' BIND G1B.C 0 G1B.C 0 GET UPPER PUT JOIN",
+          "note": "upper-case the first letter of a non-empty String",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.CAP",
+          "body": "CHARS 'G1C.C' BIND G1C.C [ 1 ] TAKE JOIN UPPER G1C.C [ 1 ] DROP JOIN 2 COLLECT JOIN",
+          "note": "upper-case the first character of a non-empty String",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "G2C.CAP",
+          "body": "CHARS 'G2C.C' BIND G2C.C [ 1 ] TAKE JOIN UPPER G2C.C [ 1 ] DROP JOIN 2 COLLECT JOIN",
+          "note": "one non-empty word String with its first letter upper-cased",
+          "definedBy": "G2C"
+        },
+        {
+          "name": "S0A.CAP",
+          "body": "CHARS 'CS' BIND CS 0 GET UPPER CS [ 1 ] DROP JOIN 2 COLLECT JOIN",
+          "note": "upper-case the first letter of a String",
+          "definedBy": "S0A"
+        }
+      ]
+    },
+    {
+      "classId": "G1A.MIN",
+      "definers": [
+        "G1A",
+        "G0B",
+        "G0C",
+        "G1B",
+        "G1C",
+        "S0A",
+        "S0C"
+      ],
+      "links": [
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G1A.MIN",
+          "body": "'G1A.R' BIND G1A.R G1A.R 0 GET [ MIN ] FOLD",
+          "note": "smallest element of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G0B.MIN",
+          "body": "'G0B.R' BIND G0B.R G0B.R 0 GET [ MIN ] FOLD",
+          "note": "smallest element of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0C.MIN",
+          "body": "'G0C.L' BIND G0C.L G0C.L 0 GET [ MIN ] FOLD",
+          "note": "smallest element of a non-empty Vector as a bare scalar",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1B.MIN",
+          "body": "'G1B.R' BIND G1B.R G1B.R 0 GET [ MIN ] FOLD",
+          "note": "smallest element of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.MIN",
+          "body": "'G1C.R' BIND G1C.R G1C.R 0 GET [ MIN ] FOLD",
+          "note": "smallest element of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "S0A.MIN",
+          "body": "'XS' BIND XS XS 0 GET [ MIN ] FOLD",
+          "note": "smallest element as a bare scalar",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0C.MIN",
+          "body": "'S0C.N' BIND S0C.N S0C.N 0 GET [ MIN ] FOLD",
+          "note": "smallest element of a non-empty numeric Vector",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G1A.RANGE",
+      "definers": [
+        "G1A",
+        "G0B",
+        "G0C",
+        "G1B",
+        "G1C",
+        "S0A",
+        "S0C"
+      ],
+      "links": [
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G1A.RANGE",
+          "body": "'G1A.XS' BIND G1A.XS G0B.MAX G1A.XS G1A.MIN -",
+          "note": "largest minus smallest of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G0B.RANGE",
+          "body": "'G0B.R' BIND G0B.R G0B.MAX G0B.R G0B.MIN -",
+          "note": "max minus min, bare scalar",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0C.RANGE",
+          "body": "'G0C.R' BIND G0C.R G0C.MAX G0C.R G0C.MIN -",
+          "note": "max minus min as a bare scalar",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1B.RANGE",
+          "body": "'G1B.X' BIND G1B.X G0B.MAX G1B.X G1B.MIN -",
+          "note": "max minus min of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.RANGE",
+          "body": "'G1C.RV' BIND G1C.RV G0B.MAX G1C.RV G1C.MIN -",
+          "note": "max minus min of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "S0A.RANGE",
+          "body": "'XS' BIND XS S0A.MAX XS S0A.MIN -",
+          "note": "max minus min",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0C.RANGE",
+          "body": "'S0C.R' BIND S0C.R S0C.MAX S0C.R S0C.MIN -",
+          "note": "max minus min of a numeric Vector",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0C.LONGEST",
+      "definers": [
+        "G0C",
+        "G1A",
+        "G1B",
+        "G1C",
+        "G2A",
+        "S0A",
+        "S0B"
+      ],
+      "links": [
+        "d1",
+        "d0"
+      ],
+      "members": [
+        {
+          "name": "G0C.LONGEST",
+          "body": "G0C.WORD-LENGTHS 0 [ MAX ] FOLD",
+          "note": "length of the longest word as a bare scalar",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1A.LONGEST",
+          "body": "G0A.WORDS [ G0A.LEN ] MAP G0B.MAX",
+          "note": "character count of the longest word in a String",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G1B.LONGEST",
+          "body": "G0A.WORDS [ G0A.LEN ] MAP G0B.MAX",
+          "note": "character count of the longest word in a space-separated String",
+          "definedBy": "G1B"
+        },
+        {
+          "name": "G1C.LONGEST",
+          "body": "G0A.WORDS [ G0A.LEN ] MAP G0B.MAX",
+          "note": "character count of the longest word in a String",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "G2A.LONGEST",
+          "body": "G0A.WORDS [ G2A.LEN ] MAP G0B.MAX",
+          "note": "length of the longest word in a space-separated String, bare scalar",
+          "definedBy": "G2A"
+        },
+        {
+          "name": "S0A.LONGEST",
+          "body": "S0A.WORDS [ CHARS LENGTH ] MAP 0 [ MAX ] FOLD",
+          "note": "length of the longest word in a String",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.LONGEST",
+          "body": "S0B.WORDS [ S0B.LEN ] MAP S0B.MAX",
+          "note": "length of the longest space-separated word",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.WORDS",
+      "definers": [
+        "G0A",
+        "G0B",
+        "G0C",
+        "S0A",
+        "S0B",
+        "S0C"
+      ],
+      "links": [
+        "d0"
+      ],
+      "members": [
+        {
+          "name": "G0A.WORDS",
+          "body": "' ' TOKENIZE",
+          "note": "split a String on single spaces into a Vector of words",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0B.WORDS",
+          "body": "' ' TOKENIZE",
+          "note": "split a String on single spaces into a Vector of words",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0C.WORDS",
+          "body": "' ' TOKENIZE",
+          "note": "split a String on single spaces into a Vector of words",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "S0A.WORDS",
+          "body": "' ' TOKENIZE",
+          "note": "split a String on single spaces into a Vector of words",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.WORDS",
+          "body": "' ' TOKENIZE",
+          "note": "split a String on single spaces into a Vector of words",
+          "definedBy": "S0B"
+        },
+        {
+          "name": "S0C.WORDS",
+          "body": "' ' TOKENIZE",
+          "note": "split a String on single spaces into a Vector of words",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.SUM",
+      "definers": [
+        "G0A",
+        "G0B",
+        "S0A",
+        "S0B",
+        "S0C"
+      ],
+      "links": [
+        "d0",
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.SUM",
+          "body": "0 [ + ] FOLD",
+          "note": "sum of a numeric Vector as a bare scalar",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0B.SUM",
+          "body": "0 [ + ] FOLD",
+          "note": "sum of a numeric Vector as a bare scalar",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "S0A.SUM",
+          "body": "'XS' BIND XS 0 [ + ] FOLD",
+          "note": "sum of a numeric Vector as a bare scalar",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.SUM",
+          "body": "0 [ + ] FOLD",
+          "note": "sum of a numeric Vector as a bare scalar",
+          "definedBy": "S0B"
+        },
+        {
+          "name": "S0C.SUM",
+          "body": "0 [ + ] FOLD",
+          "note": "sum of a numeric Vector as a bare scalar",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.MEAN",
+      "definers": [
+        "G0A",
+        "G0B",
+        "S0A",
+        "S0B",
+        "S0C"
+      ],
+      "links": [
+        "d0a",
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.MEAN",
+          "body": "'G0A.XS' BIND G0A.XS G0A.SUM G0A.XS LENGTH /",
+          "note": "arithmetic mean of a numeric Vector",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0B.MEAN",
+          "body": "'G0B.XS' BIND G0B.XS G0B.SUM G0B.XS LENGTH /",
+          "note": "arithmetic mean of a numeric Vector, bare scalar",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "S0A.MEAN",
+          "body": "'XS' BIND XS S0A.SUM XS LENGTH /",
+          "note": "arithmetic mean of a numeric Vector",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.MEAN",
+          "body": "'S0B.XS' BIND S0B.XS S0B.SUM S0B.XS LENGTH /",
+          "note": "arithmetic mean of a numeric Vector",
+          "definedBy": "S0B"
+        },
+        {
+          "name": "S0C.MEAN",
+          "body": "'S0C.M' BIND S0C.M S0C.SUM S0C.M LENGTH /",
+          "note": "arithmetic mean of a numeric Vector as a bare scalar",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0B.DEV",
+      "definers": [
+        "G0B",
+        "G0A",
+        "S0A",
+        "S0B",
+        "S0C"
+      ],
+      "links": [
+        "d1",
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G0B.DEV",
+          "body": "KEEP G0B.MEAN -",
+          "note": "Vector of each number minus the mean",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0A.DEVS",
+          "body": "'G0A.DX' BIND G0A.DX G0A.DX G0A.MEAN -",
+          "note": "Vector of each element minus the mean",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "S0A.DEVS",
+          "body": "'XS' BIND XS XS S0A.MEAN -",
+          "note": "each element minus the mean",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.DEV",
+          "body": "'S0B.XS' BIND S0B.XS S0B.XS S0B.MEAN -",
+          "note": "Vector of each element minus the mean",
+          "definedBy": "S0B"
+        },
+        {
+          "name": "S0C.DEVIATIONS",
+          "body": "'S0C.D' BIND S0C.D S0C.D S0C.MEAN -",
+          "note": "Vector of each element minus the mean",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0B.VAR",
+      "definers": [
+        "G0B",
+        "G0A",
+        "S0A",
+        "S0B",
+        "S0C"
+      ],
+      "links": [
+        "d1",
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G0B.VAR",
+          "body": "G0B.DEV 2 POW G0B.MEAN",
+          "note": "population variance, bare scalar",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0A.VAR",
+          "body": "G0A.DEVS 'G0A.VD' BIND G0A.VD G0A.VD * G0A.MEAN",
+          "note": "population variance",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "S0A.VAR",
+          "body": "S0A.DEVS 'DS' BIND DS DS * S0A.MEAN",
+          "note": "population variance",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0B.VAR",
+          "body": "S0B.DEV 'S0B.D' BIND S0B.D S0B.D * S0B.MEAN",
+          "note": "population variance",
+          "definedBy": "S0B"
+        },
+        {
+          "name": "S0C.VARIANCE",
+          "body": "S0C.DEVIATIONS 'S0C.V' BIND S0C.V S0C.V * S0C.MEAN",
+          "note": "population variance as a bare scalar",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0B.MAX",
+      "definers": [
+        "G0B",
+        "G0C",
+        "S0A",
+        "S0C"
+      ],
+      "links": [
+        "d0a"
+      ],
+      "members": [
+        {
+          "name": "G0B.MAX",
+          "body": "'G0B.R' BIND G0B.R G0B.R 0 GET [ MAX ] FOLD",
+          "note": "largest element of a non-empty numeric Vector, bare scalar",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G0C.MAX",
+          "body": "'G0C.H' BIND G0C.H G0C.H 0 GET [ MAX ] FOLD",
+          "note": "largest element of a non-empty Vector as a bare scalar",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "S0A.MAX",
+          "body": "'XS' BIND XS XS 0 GET [ MAX ] FOLD",
+          "note": "largest element as a bare scalar",
+          "definedBy": "S0A"
+        },
+        {
+          "name": "S0C.MAX",
+          "body": "'S0C.X' BIND S0C.X S0C.X 0 GET [ MAX ] FOLD",
+          "note": "largest element of a non-empty numeric Vector",
+          "definedBy": "S0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.LEN",
+      "definers": [
+        "G0A",
+        "G0B",
+        "G2A",
+        "S0B"
+      ],
+      "links": [
+        "d0"
+      ],
+      "members": [
+        {
+          "name": "G0A.LEN",
+          "body": "CHARS LENGTH",
+          "note": "character count of a String",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0B.LEN",
+          "body": "CHARS LENGTH",
+          "note": "character count of a String",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G2A.LEN",
+          "body": "CHARS LENGTH",
+          "note": "character count of a String, bare scalar",
+          "definedBy": "G2A"
+        },
+        {
+          "name": "S0B.LEN",
+          "body": "CHARS LENGTH",
+          "note": "character count of a String",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0C.LONG-WORDS",
+      "definers": [
+        "G0C",
+        "G1A",
+        "G1C",
+        "S0B"
+      ],
+      "links": [
+        "d1",
+        "d0"
+      ],
+      "members": [
+        {
+          "name": "G0C.LONG-WORDS",
+          "body": "G0C.WORDS [ CHARS LENGTH 3 > ] FILTER",
+          "note": "words longer than 3 characters, in order",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G1A.LONGWORDS",
+          "body": "G0A.WORDS [ G0A.LEN 3 > ] FILTER",
+          "note": "Vector of words longer than 3 characters, original order",
+          "definedBy": "G1A"
+        },
+        {
+          "name": "G1C.LONGWORDS",
+          "body": "G0A.WORDS [ G0A.LEN 3 > ] FILTER",
+          "note": "Vector of words longer than 3 characters, original order",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "S0B.LONGWORDS",
+          "body": "S0B.WORDS [ S0B.LEN 3 > ] FILTER",
+          "note": "words longer than 3 characters, in order",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0B.UNWORDS",
+      "definers": [
+        "G0B",
+        "G1C",
+        "S0A"
+      ],
+      "links": [
+        "d1",
+        "d0"
+      ],
+      "members": [
+        {
+          "name": "G0B.UNWORDS",
+          "body": "[ ' ' 2 COLLECT ] MAP FLATTEN JOIN TRIM",
+          "note": "join a Vector of Strings with single spaces",
+          "definedBy": "G0B"
+        },
+        {
+          "name": "G1C.UNWORDS",
+          "body": "[ ' ' 2 COLLECT ] MAP FLATTEN [ -1 ] DROP JOIN",
+          "note": "join a non-empty Vector of Strings with single spaces",
+          "definedBy": "G1C"
+        },
+        {
+          "name": "S0A.UNWORDS",
+          "body": "[ ' ' 2 COLLECT ] MAP FLATTEN [ -1 ] DROP JOIN",
+          "note": "join a Vector of Strings with single spaces",
+          "definedBy": "S0A"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.MIN",
+      "definers": [
+        "G0A",
+        "S0B"
+      ],
+      "links": [
+        "d0"
+      ],
+      "members": [
+        {
+          "name": "G0A.MIN",
+          "body": "SORT 0 GET",
+          "note": "smallest element of a Vector",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "S0B.MIN",
+          "body": "SORT 0 GET",
+          "note": "smallest element of a Vector as a bare scalar",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.MAX",
+      "definers": [
+        "G0A",
+        "S0B"
+      ],
+      "links": [
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.MAX",
+          "body": "SORT -1 GET",
+          "note": "largest element of a Vector",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "S0B.MAX",
+          "body": "SORT REVERSE 0 GET",
+          "note": "largest element of a Vector as a bare scalar",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.RANGE",
+      "definers": [
+        "G0A",
+        "S0B"
+      ],
+      "links": [
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.RANGE",
+          "body": "'G0A.RX' BIND G0A.RX G0A.MAX G0A.RX G0A.MIN -",
+          "note": "max minus min",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "S0B.RANGE",
+          "body": "'S0B.XS' BIND S0B.XS S0B.MAX S0B.XS S0B.MIN -",
+          "note": "max minus min",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.NORM",
+      "definers": [
+        "G0A",
+        "S0B"
+      ],
+      "links": [
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.NORM",
+          "body": "'G0A.NX' BIND G0A.NX G0A.NX G0A.MIN - G0A.NX G0A.RANGE /",
+          "note": "min-max rescale each element to [0,1]",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "S0B.NORM",
+          "body": "'S0B.XS' BIND S0B.XS S0B.XS S0B.MIN - S0B.XS S0B.RANGE /",
+          "note": "min-max rescale each element to [0,1]",
+          "definedBy": "S0B"
+        }
+      ]
+    },
+    {
+      "classId": "G0A.UNWORDS",
+      "definers": [
+        "G0A",
+        "G0C"
+      ],
+      "links": [
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "G0A.UNWORDS",
+          "body": "[ 'G0A.JW' BIND ' ' G0A.JW 2 COLLECT JOIN ] MAP JOIN CHARS [ 1 ] DROP JOIN",
+          "note": "join a Vector of Strings with single spaces",
+          "definedBy": "G0A"
+        },
+        {
+          "name": "G0C.UNWORDS",
+          "body": "[ ' ' 2 COLLECT JOIN ] MAP JOIN TRIM",
+          "note": "join a Vector of Strings with single spaces",
+          "definedBy": "G0C"
+        }
+      ]
+    },
+    {
+      "classId": "G0C.WORD-LENGTHS",
+      "definers": [
+        "G0C",
+        "G2C"
+      ],
+      "links": [
+        "d0"
+      ],
+      "members": [
+        {
+          "name": "G0C.WORD-LENGTHS",
+          "body": "G0C.WORDS [ CHARS LENGTH ] MAP",
+          "note": "Vector of character counts of each word",
+          "definedBy": "G0C"
+        },
+        {
+          "name": "G2C.LENS",
+          "body": "G0A.WORDS [ CHARS LENGTH ] MAP",
+          "note": "Vector of the character length of each space-separated word of a String",
+          "definedBy": "G2C"
+        }
+      ]
+    },
+    {
+      "classId": "S0B.TITLE",
+      "definers": [
+        "S0B",
+        "S0C"
+      ],
+      "links": [
+        "d1"
+      ],
+      "members": [
+        {
+          "name": "S0B.TITLE",
+          "body": "CHARS 'S0B.C' BIND S0B.C [ UPPER ] MAP S0B.C ' ' 1 COLLECT S0B.C -1 DROP CONCAT [ ' ' EQ ] MAP SELECT JOIN",
+          "note": "upper-case every character that starts the String or follows a space",
+          "definedBy": "S0B"
+        },
+        {
+          "name": "S0C.TITLECASE",
+          "body": "CHARS 'S0C.C' BIND S0C.C [ UPPER ] MAP S0C.C [ ' ' ] S0C.C -1 DROP CONCAT [ ' ' = ] MAP SELECT JOIN",
+          "note": "upper-case the first letter of every space-separated word in a String",
+          "definedBy": "S0C"
+        }
+      ]
+    }
+  ],
+  "classCount": 34,
+  "wordCount": 132,
+  "compositional": [
+    {
+      "condition": "bottleneck",
+      "generation": 1,
+      "compositional": "3/8"
+    },
+    {
+      "condition": "bottleneck",
+      "generation": 2,
+      "compositional": "4/8"
+    }
+  ],
+  "coreUse": [
+    [
+      "BIND",
+      93
+    ],
+    [
+      "FOLD",
+      91
+    ],
+    [
+      "LENGTH",
+      84
+    ],
+    [
+      "TOKENIZE",
+      82
+    ],
+    [
+      "ADD",
+      60
+    ],
+    [
+      "SUB",
+      60
+    ],
+    [
+      "DIV",
+      60
+    ],
+    [
+      "GET",
+      52
+    ],
+    [
+      "CHARS",
+      48
+    ],
+    [
+      "MAP",
+      36
+    ],
+    [
+      "MAX",
+      31
+    ],
+    [
+      "JOIN",
+      24
+    ],
+    [
+      "UPPER",
+      24
+    ],
+    [
+      "KEEP",
+      21
+    ],
+    [
+      "MIN",
+      20
+    ],
+    [
+      "POW",
+      14
+    ],
+    [
+      "GT",
+      12
+    ],
+    [
+      "SQRT",
+      12
+    ],
+    [
+      "DROP",
+      12
+    ],
+    [
+      "UNIQUE",
+      12
+    ],
+    [
+      "TALLY",
+      12
+    ],
+    [
+      "FILTER",
+      12
+    ],
+    [
+      "MUL",
+      10
+    ],
+    [
+      "COLLECT",
+      9
+    ],
+    [
+      "TAKE",
+      8
+    ],
+    [
+      "CONCAT",
+      5
+    ],
+    [
+      "FLATTEN",
+      5
+    ],
+    [
+      "SORT",
+      5
+    ],
+    [
+      "TRIM",
+      5
+    ],
+    [
+      "REVERSE",
+      4
+    ],
+    [
+      "SELECT",
+      2
+    ],
+    [
+      "EQ",
+      2
+    ],
+    [
+      "PUT",
+      1
+    ],
+    [
+      "TRUE",
+      0
+    ],
+    [
+      "FALSE",
+      0
+    ],
+    [
+      "AND",
+      0
+    ],
+    [
+      "OR",
+      0
+    ],
+    [
+      "NOT",
+      0
+    ],
+    [
+      "LT",
+      0
+    ],
+    [
+      "LTE",
+      0
+    ],
+    [
+      "GTE",
+      0
+    ],
+    [
+      "MOD",
+      0
+    ],
+    [
+      "FLOOR",
+      0
+    ],
+    [
+      "CEIL",
+      0
+    ],
+    [
+      "ROUND",
+      0
+    ],
+    [
+      "QUANTIZE",
+      0
+    ],
+    [
+      "ABS",
+      0
+    ],
+    [
+      "NEG",
+      0
+    ],
+    [
+      "GCD",
+      0
+    ],
+    [
+      "RATIO",
+      0
+    ],
+    [
+      "EXP",
+      0
+    ],
+    [
+      "LN",
+      0
+    ],
+    [
+      "SIN",
+      0
+    ],
+    [
+      "COS",
+      0
+    ],
+    [
+      "ATAN",
+      0
+    ],
+    [
+      "PI",
+      0
+    ],
+    [
+      "RANDOM",
+      0
+    ],
+    [
+      "RANGE",
+      0
+    ],
+    [
+      "FILL",
+      0
+    ],
+    [
+      "SHAPE",
+      0
+    ],
+    [
+      "RESHAPE",
+      0
+    ],
+    [
+      "DEPTH",
+      0
+    ],
+    [
+      "ORDER",
+      0
+    ],
+    [
+      "ZIP",
+      0
+    ],
+    [
+      "GROUP",
+      0
+    ],
+    [
+      "INDEX-OF",
+      0
+    ],
+    [
+      "MEMBER",
+      0
+    ],
+    [
+      "BSEARCH",
+      0
+    ],
+    [
+      "RECORD",
+      0
+    ],
+    [
+      "KEYS",
+      0
+    ],
+    [
+      "VALUES",
+      0
+    ],
+    [
+      "AT",
+      0
+    ],
+    [
+      "WITH",
+      0
+    ],
+    [
+      "WITHOUT",
+      0
+    ],
+    [
+      "HAS?",
+      0
+    ],
+    [
+      "MERGE",
+      0
+    ],
+    [
+      "SCAN",
+      0
+    ],
+    [
+      "ANY",
+      0
+    ],
+    [
+      "ALL",
+      0
+    ],
+    [
+      "RANK",
+      0
+    ],
+    [
+      "LOWER",
+      0
+    ],
+    [
+      "SEARCH",
+      0
+    ],
+    [
+      "REPLACE",
+      0
+    ],
+    [
+      "NUM",
+      0
+    ],
+    [
+      "STR",
+      0
+    ],
+    [
+      "FORMAT",
+      0
+    ],
+    [
+      "JSON-DECODE",
+      0
+    ],
+    [
+      "JSON-ENCODE",
+      0
+    ],
+    [
+      "EXEC",
+      0
+    ],
+    [
+      "CONTRACT",
+      0
+    ],
+    [
+      "FAIL",
+      0
+    ],
+    [
+      "NIL",
+      0
+    ],
+    [
+      "NIL?",
+      0
+    ],
+    [
+      "NIL-REASON",
+      0
+    ],
+    [
+      "ABSENT",
+      0
+    ],
+    [
+      "DEF",
+      0
+    ],
+    [
+      "DEL",
+      0
+    ],
+    [
+      "DEFINED?",
+      0
+    ],
+    [
+      "DIGEST",
+      0
+    ],
+    [
+      "PRINT",
+      0
+    ]
+  ],
+  "coreFailures": [
+    {
+      "agent": "G0B",
+      "task": "stats.deviations"
+    },
+    {
+      "agent": "G0B",
+      "task": "stats.variance"
+    },
+    {
+      "agent": "G0B",
+      "task": "stats.stddev"
+    },
+    {
+      "agent": "G1A",
+      "task": "stats.deviations"
+    },
+    {
+      "agent": "G1A",
+      "task": "stats.variance"
+    },
+    {
+      "agent": "G1A",
+      "task": "stats.stddev"
+    },
+    {
+      "agent": "G1B",
+      "task": "stats.deviations"
+    },
+    {
+      "agent": "G1B",
+      "task": "stats.variance"
+    },
+    {
+      "agent": "G1B",
+      "task": "stats.stddev"
+    },
+    {
+      "agent": "G1C",
+      "task": "stats.deviations"
+    },
+    {
+      "agent": "G1C",
+      "task": "stats.variance"
+    },
+    {
+      "agent": "G1C",
+      "task": "stats.stddev"
+    },
+    {
+      "agent": "G2A",
+      "task": "stats.deviations"
+    },
+    {
+      "agent": "G2A",
+      "task": "stats.variance"
+    },
+    {
+      "agent": "G2A",
+      "task": "stats.stddev"
+    },
+    {
+      "agent": "G2B",
+      "task": "stats.deviations"
+    },
+    {
+      "agent": "G2B",
+      "task": "stats.variance"
+    },
+    {
+      "agent": "G2B",
+      "task": "stats.stddev"
+    },
+    {
+      "agent": "G2C",
+      "task": "stats.deviations"
+    },
+    {
+      "agent": "G2C",
+      "task": "stats.variance"
+    },
+    {
+      "agent": "G2C",
+      "task": "stats.stddev"
+    }
+  ]
+}

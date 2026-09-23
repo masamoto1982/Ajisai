@@ -1,0 +1,98 @@
+{
+  "agent": "G0A",
+  "generation": 0,
+  "condition": "bottleneck",
+  "definitions": [
+    {
+      "name": "G0A.SUM",
+      "body": "0 [ + ] FOLD",
+      "note": "sum of a numeric Vector as a bare scalar"
+    },
+    {
+      "name": "G0A.MEAN",
+      "body": "'G0A.XS' BIND G0A.XS G0A.SUM G0A.XS LENGTH /",
+      "note": "arithmetic mean of a numeric Vector"
+    },
+    {
+      "name": "G0A.DEVS",
+      "body": "'G0A.DX' BIND G0A.DX G0A.DX G0A.MEAN -",
+      "note": "Vector of each element minus the mean"
+    },
+    {
+      "name": "G0A.VAR",
+      "body": "G0A.DEVS 'G0A.VD' BIND G0A.VD G0A.VD * G0A.MEAN",
+      "note": "population variance"
+    },
+    {
+      "name": "G0A.SD",
+      "body": "G0A.VAR SQRT",
+      "note": "population standard deviation (exact sqrt)"
+    },
+    {
+      "name": "G0A.MIN",
+      "body": "SORT 0 GET",
+      "note": "smallest element of a Vector"
+    },
+    {
+      "name": "G0A.MAX",
+      "body": "SORT -1 GET",
+      "note": "largest element of a Vector"
+    },
+    {
+      "name": "G0A.RANGE",
+      "body": "'G0A.RX' BIND G0A.RX G0A.MAX G0A.RX G0A.MIN -",
+      "note": "max minus min"
+    },
+    {
+      "name": "G0A.NORM",
+      "body": "'G0A.NX' BIND G0A.NX G0A.NX G0A.MIN - G0A.NX G0A.RANGE /",
+      "note": "min-max rescale each element to [0,1]"
+    },
+    {
+      "name": "G0A.WORDS",
+      "body": "' ' TOKENIZE",
+      "note": "split a String on single spaces into a Vector of words"
+    },
+    {
+      "name": "G0A.CAP1",
+      "body": "CHARS 'G0A.TW' BIND G0A.TW [ 1 ] TAKE JOIN UPPER G0A.TW [ 1 ] DROP JOIN 2 COLLECT JOIN",
+      "note": "upper-case the first letter of one word String"
+    },
+    {
+      "name": "G0A.UNWORDS",
+      "body": "[ 'G0A.JW' BIND ' ' G0A.JW 2 COLLECT JOIN ] MAP JOIN CHARS [ 1 ] DROP JOIN",
+      "note": "join a Vector of Strings with single spaces"
+    },
+    {
+      "name": "G0A.LEN",
+      "body": "CHARS LENGTH",
+      "note": "character count of a String"
+    },
+    {
+      "name": "G0A.TITLE",
+      "body": "G0A.WORDS [ G0A.CAP1 ] MAP G0A.UNWORDS",
+      "note": "title-case every word of a space-separated String"
+    },
+    {
+      "name": "G0A.ACRONYM",
+      "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+      "note": "upper-cased first letters of every word"
+    }
+  ],
+  "solutions": {
+    "stats.sum": "G0A.SUM",
+    "stats.mean": "G0A.MEAN",
+    "stats.deviations": "G0A.DEVS",
+    "stats.variance": "G0A.VAR",
+    "stats.stddev": "G0A.SD",
+    "stats.range": "G0A.RANGE",
+    "stats.normalize": "G0A.NORM",
+    "text.count": "G0A.WORDS LENGTH",
+    "text.frequency": "G0A.WORDS TALLY",
+    "text.distinct": "G0A.WORDS UNIQUE",
+    "text.titlecase": "G0A.TITLE",
+    "text.longest": "G0A.WORDS [ G0A.LEN ] MAP 0 [ MAX ] FOLD",
+    "text.long-words": "G0A.WORDS [ G0A.LEN 3 > ] FILTER",
+    "text.acronym": "G0A.ACRONYM"
+  }
+}

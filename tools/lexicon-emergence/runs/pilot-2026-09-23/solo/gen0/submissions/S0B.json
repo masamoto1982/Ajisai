@@ -1,0 +1,36 @@
+{
+  "agent": "S0B", "generation": 0, "condition": "solo",
+  "definitions": [
+    { "name": "S0B.SUM", "body": "0 [ + ] FOLD", "note": "sum of a numeric Vector as a bare scalar" },
+    { "name": "S0B.MEAN", "body": "'S0B.XS' BIND S0B.XS S0B.SUM S0B.XS LENGTH /", "note": "arithmetic mean of a numeric Vector" },
+    { "name": "S0B.DEV", "body": "'S0B.XS' BIND S0B.XS S0B.XS S0B.MEAN -", "note": "Vector of each element minus the mean" },
+    { "name": "S0B.VAR", "body": "S0B.DEV 'S0B.D' BIND S0B.D S0B.D * S0B.MEAN", "note": "population variance" },
+    { "name": "S0B.STD", "body": "S0B.VAR SQRT", "note": "population standard deviation (exact)" },
+    { "name": "S0B.MIN", "body": "SORT 0 GET", "note": "smallest element of a Vector as a bare scalar" },
+    { "name": "S0B.MAX", "body": "SORT REVERSE 0 GET", "note": "largest element of a Vector as a bare scalar" },
+    { "name": "S0B.RANGE", "body": "'S0B.XS' BIND S0B.XS S0B.MAX S0B.XS S0B.MIN -", "note": "max minus min" },
+    { "name": "S0B.NORM", "body": "'S0B.XS' BIND S0B.XS S0B.XS S0B.MIN - S0B.XS S0B.RANGE /", "note": "min-max rescale each element to [0,1]" },
+    { "name": "S0B.WORDS", "body": "' ' TOKENIZE", "note": "split a String on single spaces into a Vector of words" },
+    { "name": "S0B.LEN", "body": "CHARS LENGTH", "note": "character count of a String" },
+    { "name": "S0B.TITLE", "body": "CHARS 'S0B.C' BIND S0B.C [ UPPER ] MAP S0B.C ' ' 1 COLLECT S0B.C -1 DROP CONCAT [ ' ' EQ ] MAP SELECT JOIN", "note": "upper-case every character that starts the String or follows a space" },
+    { "name": "S0B.ACRONYM", "body": "S0B.WORDS [ CHARS 0 GET UPPER ] MAP JOIN", "note": "upper-cased first letters of the space-separated words" },
+    { "name": "S0B.LONGEST", "body": "S0B.WORDS [ S0B.LEN ] MAP S0B.MAX", "note": "length of the longest space-separated word" },
+    { "name": "S0B.LONGWORDS", "body": "S0B.WORDS [ S0B.LEN 3 > ] FILTER", "note": "words longer than 3 characters, in order" }
+  ],
+  "solutions": {
+    "stats.sum": "S0B.SUM",
+    "stats.mean": "S0B.MEAN",
+    "stats.deviations": "S0B.DEV",
+    "stats.variance": "S0B.VAR",
+    "stats.stddev": "S0B.STD",
+    "stats.range": "S0B.RANGE",
+    "stats.normalize": "S0B.NORM",
+    "text.count": "S0B.WORDS LENGTH",
+    "text.frequency": "S0B.WORDS TALLY",
+    "text.distinct": "S0B.WORDS UNIQUE",
+    "text.titlecase": "S0B.TITLE",
+    "text.longest": "S0B.LONGEST",
+    "text.long-words": "S0B.LONGWORDS",
+    "text.acronym": "S0B.ACRONYM"
+  }
+}
