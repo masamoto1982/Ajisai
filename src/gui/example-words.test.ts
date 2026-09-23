@@ -71,7 +71,7 @@ describe('EXAMPLE_USER_WORDS', () => {
         // (say GREET losing SAY-BANG) is caught: the dependency must be seeded.
         const greet = EXAMPLE_USER_WORDS.find(w => w.name === 'GREET');
         expect(greet).toBeDefined();
-        for (const token of tokenize(greet!.definition ?? '').filter(token => token !== '|')) {
+        for (const token of tokenize(greet!.definition ?? '')) {
             expect(exampleWordNames.has(token), `GREET calls unseeded ${token}`).toBe(true);
         }
     });

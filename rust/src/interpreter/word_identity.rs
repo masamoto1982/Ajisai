@@ -238,21 +238,6 @@ impl Interpreter {
 
     fn build_word_shape(&self, def: &WordDefinition, user_set: &HashSet<String>) -> Vec<Atom> {
         let mut atoms = Vec::new();
-        // A header is encoded by its arity, and each parameter by its position
-        // (`A0`, `A1`, …) wherever it is written: two definitions that differ
-        // only in what they call their parameters are one Word
-        // (LANG.DICTIONARY.MUTATION), and a header-less body — which has no
-        // arity to state — never shares an encoding with one that has.
-        if let Some(params) = &def.params {
-            let mut b = vec![b'H'];
-            b.extend_from_slice(params.len().to_string().as_bytes());
-            atoms.push(Atom::Raw(b));
-        }
-        let param_position = |name: &str| {
-            def.params
-                .as_ref()
-                .and_then(|p| p.iter().position(|n| n == name))
-        };
         for line in def.lines.iter() {
             atoms.push(structural_atom(b'\n'));
             for tok in line.body_tokens.iter() {
@@ -261,14 +246,6 @@ impl Interpreter {
                     Token::String(s) => {
                         let mut b = vec![b'S'];
                         b.extend_from_slice(s.as_bytes());
-                        Atom::Raw(b)
-                    }
-                    Token::Symbol(s)
-                        if param_position(&canonicalize_core_word_name(s)).is_some() =>
-                    {
-                        let position = param_position(&canonicalize_core_word_name(s)).unwrap_or(0);
-                        let mut b = vec![b'A'];
-                        b.extend_from_slice(position.to_string().as_bytes());
                         Atom::Raw(b)
                     }
                     Token::Symbol(s) => {

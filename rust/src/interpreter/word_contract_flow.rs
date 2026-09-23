@@ -12,7 +12,7 @@
 //! contains. The old walk instead counted each interior `Number`/`String` as
 //! a push and *applied* each interior `Symbol`'s arity, so `[ [ 1 2 ] ]`
 //! `'PAIR' DEF` inferred `( 0 -- 2 )` for a word that produces one vector,
-//! and `[ X | X [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF` inferred `( 2 -- 1 )` for a word
+//! and `[ [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF` inferred `( 2 -- 1 )` for a word
 //! whose true arity is `( 1 -- 1 )`. Those inferences are reported at
 //! `ContractConfidence::Complete`, so a *correct* `#:contract` declaration was
 //! rejected as a proven violation — a false `error`, which
@@ -204,74 +204,45 @@ fn is_keep_modifier(name: &str) -> bool {
     )
 }
 
-/// Names a body can read that are not Words, each marked `true` for a header
-/// parameter (LANG.SOURCE.FRAME) and `false` for a name a `'NAME' BIND` in
-/// the body made. Reading one pushes one value; looking it up in the
-/// dictionary instead would report a bound name as an unresolved Word and give
-/// up on the arity.
-pub(crate) type Locals = std::collections::HashMap<String, bool>;
+/// Names a `BIND` in the body made. The rest of the body reads each as one
+/// value; looking it up in the dictionary instead would report a bound name as
+/// an unresolved Word and give up on the arity (the lexicon-emergence pilot's
+/// finding M-2).
+pub(crate) type BoundNames = std::collections::HashSet<String>;
 
-pub(crate) fn header_locals(def: &crate::types::WordDefinition) -> Locals {
-    def.params
-        .as_ref()
-        .map(|p| p.iter().map(|name| (name.clone(), true)).collect())
-        .unwrap_or_default()
-}
-
-/// At a `BIND` whose name operand is the String just before it, the rest of
-/// the body reads that name as a value.
-pub(crate) fn note_bound_name(locals: &mut Locals, canonical: &str, tokens: &[Token], idx: usize) {
+/// At a `BIND`, record the names it binds: the String just before it, or each
+/// String of the Vector literal just before it (`[ 'A' 'B' ] BIND`).
+pub(crate) fn note_bound_names(
+    bound: &mut BoundNames,
+    canonical: &str,
+    tokens: &[Token],
+    idx: usize,
+) {
     if canonical != "BIND" {
         return;
     }
-    if let Some(Token::String(bound)) = idx.checked_sub(1).and_then(|i| tokens.get(i)) {
-        locals.entry(bound.to_uppercase()).or_insert(false);
-    }
-}
-
-/// A header fixes what the call consumes, whatever the body reads: the body
-/// starts on an empty stack, so the simulation's own `consumes` counts reads
-/// *below* the frame, each of which is a stack-underflow ERROR at the call
-/// rather than an operand.
-pub(crate) fn declared_flow(
-    def: &crate::types::WordDefinition,
-    inferred: ContractFlow,
-) -> ContractFlow {
-    match (&def.params, inferred) {
-        (Some(params), ContractFlow::Fixed { produces, .. }) => ContractFlow::Fixed {
-            consumes: params.len() as u16,
-            produces,
-        },
-        (_, flow) => flow,
-    }
-}
-
-/// What a token that pushes one value and calls nothing is: a literal, or a
-/// read of a bound name (`Some(true)` for a parameter). `None` for any other
-/// token.
-pub(crate) fn value_read(token: &Token, locals: &Locals) -> Option<Option<bool>> {
-    match token {
-        Token::Number(_) | Token::String(_) => Some(None),
-        Token::Symbol(symbol) => locals
-            .get(crate::core_word_aliases::canonicalize_core_word_name(symbol).as_ref())
-            .map(|parameter| Some(*parameter)),
-        _ => None,
-    }
-}
-
-/// Feed one value read (`value_read`) to the three simulations riding one
-/// walk: a literal is a constant, a parameter one of the Word's inputs, and a
-/// `BIND` name a value of unknown size.
-pub(crate) fn feed_value_read(
-    read: Option<bool>,
-    flow: &mut FlowSim,
-    sim: &mut super::word_space::SpaceSim,
-    cost_sim: &mut super::word_cost::CostSim,
-) {
-    flow.feed_literal();
-    cost_sim.feed_literal();
-    match read {
-        None => sim.feed_literal(),
-        Some(parameter) => sim.feed_bound(parameter),
+    match idx.checked_sub(1).map(|j| (j, &tokens[j])) {
+        Some((_, Token::String(name))) => {
+            bound.insert(name.to_uppercase());
+        }
+        Some((close, Token::VectorEnd)) => {
+            let mut depth = 0usize;
+            for token in tokens[..=close].iter().rev() {
+                match token {
+                    Token::VectorEnd => depth += 1,
+                    Token::VectorStart => {
+                        depth -= 1;
+                        if depth == 0 {
+                            break;
+                        }
+                    }
+                    Token::String(name) if depth == 1 => {
+                        bound.insert(name.to_uppercase());
+                    }
+                    _ => {}
+                }
+            }
+        }
+        _ => {}
     }
 }

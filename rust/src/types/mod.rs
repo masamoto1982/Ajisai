@@ -421,11 +421,4 @@ pub struct WordDefinition {
     /// a question resolution had already answered. `builtins::register` has the
     /// entry in hand when it builds each definition, so it puts it here.
     pub generated: Option<&'static crate::kernel::generated::GeneratedWord>,
-    /// The parameter names a body declares in its header (`[ A B | … ]`),
-    /// deepest operand first, upper-cased; `None` for a Core Word. `DEF`
-    /// refuses a body without a header, so every User Word has one
-    /// (LANG.SOURCE.FRAME). A header fixes the Word's arity: the call takes
-    /// exactly that many operands, binds them, and runs the body on an empty
-    /// stack.
-    pub params: Option<Arc<[String]>>,
 }

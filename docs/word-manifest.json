@@ -17,8 +17,8 @@
     "corewords": 100,
     "aliases": 10,
     "inputHelpers": 1,
-    "surface_forms": 7,
-    "manifestEntries": 118
+    "surface_forms": 6,
+    "manifestEntries": 117
   },
   "entries": [
     {
@@ -2048,22 +2048,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "END-RECORD",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.pipe",
-      "kind": "delimiter_sugar",
-      "surface": "|",
-      "concept": "PARAMETER-SEPARATOR",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "PARAMETER-SEPARATOR",
-      "coverage_entry_id": "surface.pipe",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "PARAMETER-SEPARATOR",
       "classification": "Surface"
     },
     {

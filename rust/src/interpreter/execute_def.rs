@@ -2,7 +2,6 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
     extract_word_name_from_value, keep_mode_operands, restore_keep_mode_operands,
 };
-use crate::interpreter::word_contract::ContractFlow;
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::types::{ExecutionLine, Token};
 use std::collections::{HashMap, HashSet};
@@ -60,7 +59,7 @@ pub(crate) fn set_word_description(
     }
 }
 
-/// DEF is strictly two positional arguments: `[ params | body ] 'NAME' DEF`.
+/// DEF is strictly two positional arguments: `[ body ] 'NAME' DEF`.
 ///
 /// The top of the stack is the name (a string), and directly below it is the
 /// body — any Vector, since the CodeBlock/Vector unification
@@ -171,11 +170,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         )));
     }
 
-    // The header is read after the name and before anything is mutated, so
-    // a malformed or missing one leaves the dictionary exactly as it was
-    // (LANG.DICTIONARY.MUTATION).
-    let (params, tokens) = split_param_header(interp, name, tokens)?;
-
     if let Some(warning) =
         crate::interpreter::naming_convention_checker::check_word_name_convention(name)
     {
@@ -211,13 +205,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     let staged_tokens = tokens.to_vec();
-    // A header makes an empty body meaningful: `[ X | ]` takes one operand
-    // and leaves nothing.
-    let lines = if staged_tokens.iter().all(|t| matches!(t, Token::LineBreak)) {
-        Vec::new()
-    } else {
-        parse_definition_body(&staged_tokens)?
-    };
+    let lines = parse_definition_body(&staged_tokens)?;
 
     // Content store (Section 8.6): share one stored body across textually
     // identical definitions so copying or re-importing a word group does not
@@ -242,10 +230,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
-                // A parameter is a binding, not a reference to a Word.
-                if params.iter().any(|p| p.as_str() == upper_s.as_ref()) {
-                    continue;
-                }
                 new_text_references.insert(upper_s.to_string());
                 if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
                     if !resolved_def.is_builtin || resolved_name.contains('@') {
@@ -269,8 +253,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         });
     }
 
-    refuse_reads_below_frame(interp, &upper_name, &params, &lines)?;
-
     for dep_name in &new_dependencies {
         interp
             .dependents
@@ -293,7 +275,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         // (LANG.DICTIONARY.RESOLUTION seals Core), so this is `None` by
         // construction rather than by omission.
         generated: None,
-        params: Some(Arc::from(params)),
     };
 
     interp
@@ -308,116 +289,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
     interp.bump_dictionary_epoch();
     Ok(())
-}
-
-/// Refuse a body that reads below its frame on every run (LANG.SOURCE.FRAME).
-///
-/// The call starts the body on an empty stack, so such a Word could only ever
-/// fail with a stack underflow. The body is read through its Core expansion
-/// — `[ A B | body ]` as `'B' BIND 'A' BIND body` — which consumes exactly
-/// the header's operands and whatever the body reaches below them; the
-/// contract walk counts that without running anything. Only a fixed count
-/// decides: a body whose stack effect depends on its values is left to fail,
-/// or not, when it runs.
-fn refuse_reads_below_frame(
-    interp: &mut Interpreter,
-    word_name: &str,
-    params: &[String],
-    lines: &[ExecutionLine],
-) -> Result<()> {
-    let mut expanded: Vec<Token> = Vec::new();
-    for param in params.iter().rev() {
-        expanded.push(Token::String(param.as_str().into()));
-        expanded.push(Token::Symbol("BIND".into()));
-    }
-    for (i, line) in lines.iter().enumerate() {
-        if i > 0 {
-            expanded.push(Token::LineBreak);
-        }
-        expanded.extend(line.body_tokens.iter().cloned());
-    }
-    let contract = interp.infer_contract_for_block(&expanded);
-    match contract.flow {
-        ContractFlow::Fixed { consumes, .. } if usize::from(consumes) > params.len() => {
-            Err(AjisaiError::declared(
-                "invalidDefinitionBody",
-                format!(
-                    "DEF: the body of '{}' reads {} value(s) below its frame. A call starts the body on an empty stack holding only its parameters, so every call would underflow; name each operand in the header instead (LANG.SOURCE.FRAME).",
-                    word_name,
-                    usize::from(consumes) - params.len()
-                ),
-            ))
-        }
-        _ => Ok(()),
-    }
-}
-
-/// Separate a body's parameter header from the body proper.
-///
-/// `[ A B | … ]`: the names written before the first `|` of the body's first
-/// statement, at the body's own level, are its parameters, deepest operand
-/// first (LANG.SOURCE.FRAME). Every User Word states its arity this way, so a
-/// body with no such `|` is refused. Every header fault is
-/// `invalidDefinitionBody` — the body is what is malformed, whichever name in
-/// it is at fault.
-pub(crate) fn split_param_header<'t>(
-    interp: &Interpreter,
-    word_name: &str,
-    tokens: &'t [Token],
-) -> Result<(Vec<String>, &'t [Token])> {
-    let start = tokens
-        .iter()
-        .take_while(|t| matches!(t, Token::LineBreak))
-        .count();
-    let mut depth: usize = 0;
-    let mut separator = None;
-    for (i, token) in tokens.iter().enumerate().skip(start) {
-        match token {
-            Token::VectorStart | Token::RecordStart => depth += 1,
-            Token::VectorEnd | Token::RecordEnd => depth = depth.saturating_sub(1),
-            Token::LineBreak if depth == 0 => break,
-            Token::Symbol(s) if depth == 0 && s.as_ref() == "|" => {
-                separator = Some(i);
-                break;
-            }
-            _ => {}
-        }
-    }
-    let malformed = |detail: String| {
-        AjisaiError::declared(
-            "invalidDefinitionBody",
-            format!("DEF: the parameter header of '{}' {}", word_name, detail),
-        )
-    };
-    let Some(separator) = separator else {
-        return Err(malformed(
-            "is missing. A body states the operands it takes before '|' — `[ X | X 2 * ]`, or `[ | 42 ]` for none (LANG.SOURCE.FRAME).".to_string(),
-        ));
-    };
-    let word_upper = word_name.to_uppercase();
-    let mut params: Vec<String> = Vec::new();
-    for token in &tokens[start..separator] {
-        let Token::Symbol(s) = token else {
-            return Err(malformed(
-                "may hold only names, one per operand, before '|'.".to_string(),
-            ));
-        };
-        let upper = s.to_uppercase();
-        interp
-            .check_bindable_name(s)
-            .map_err(|err| malformed(format!("names '{}', which cannot be bound: {}", s, err)))?;
-        if upper == word_upper {
-            return Err(malformed(format!(
-                "names '{}', the Word being defined.",
-                upper
-            )));
-        }
-        if params.contains(&upper) {
-            return Err(malformed(format!("names '{}' twice.", upper)));
-        }
-        params.push(upper);
-    }
-    Ok((params, &tokens[separator + 1..]))
 }
 
 /// Split a word body into execution lines.

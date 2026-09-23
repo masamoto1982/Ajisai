@@ -231,14 +231,14 @@ mod attribution_tests {
     /// routes reporting the same Word (LANG.AUTHORITY.FREEDOM).
     #[tokio::test]
     async fn a_user_word_body_failure_names_the_user_word() {
-        let diagnosis = diagnose("[ X | X SORT ] 'S' DEF 5 S").await;
+        let diagnosis = diagnose("[ SORT ] 'S' DEF 5 S").await;
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), None);
     }
 
     #[tokio::test]
     async fn a_user_word_applied_by_a_higher_order_word_is_still_the_locus() {
-        let diagnosis = diagnose("[ X | X SORT ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
+        let diagnosis = diagnose("[ SORT ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
     }
@@ -298,10 +298,7 @@ mod source_position_tests {
         // The body has no source of its own — it was stored as tokens — so the
         // position a reader can act on is the top-level token that reached it.
         let mut interp = Interpreter::new();
-        interp
-            .execute("[ | 1 BADWORD ] 'BROKEN' DEF")
-            .await
-            .unwrap();
+        interp.execute("[ 1 BADWORD ] 'BROKEN' DEF").await.unwrap();
         let _ = interp.drain_error_flow_trace();
         assert!(interp.execute("1 PRINT\n2 PRINT\nBROKEN").await.is_err());
         assert_eq!(evidence_of(&mut interp, "sourceLine").as_deref(), Some("3"));

@@ -77,8 +77,7 @@ export function subjectPrompt({ run, condition, generation, agent }, lexicon, fa
     lines.push('```');
   }
   lines.push('');
-  lines.push('`body` is the code that goes between `[` and `]` in `[ body ] \'NAME\' DEF`, starting with its parameter');
-  lines.push('header: the names of the operands it takes, then `|` — `X Y | X Y +`, or `| 42` for none. List definitions so that each');
+  lines.push('`body` is the code that goes between `[` and `]` in `[ body ] \'NAME\' DEF`. List definitions so that each');
   lines.push('comes after any of your own Words it calls. Solutions may call your Words and the inherited Words.');
   lines.push(`Before ${harness ? 'submitting' : 'writing the file'}, run each solution through \`compute\` exactly as it will be graded: the`);
   lines.push('inherited-Word text above (if any), your definitions as DEF lines, the example input, the solution.');

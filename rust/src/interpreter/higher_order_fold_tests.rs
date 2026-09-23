@@ -58,7 +58,7 @@ mod tests {
 
         let mut interp3 = Interpreter::new();
         interp3
-            .execute("[ X | X [ 2 ] MOD [ 0 ] = ] 'IS_EVEN' DEF")
+            .execute("[ [ 2 ] MOD [ 0 ] = ] 'IS_EVEN' DEF")
             .await
             .unwrap();
         let ok3 = interp3.execute("[ 1 3 6 ] [ IS_EVEN ] ANY").await;

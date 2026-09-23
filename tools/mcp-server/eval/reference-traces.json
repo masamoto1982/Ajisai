@@ -122,7 +122,7 @@
    "language": "en",
    "selectedTool": "check",
    "arguments": {
-    "source": "[ X | X [ 1 ] + ] 'INC' DEF"
+    "source": "[ [ 1 ] + ] 'INC' DEF"
    }
   },
   {
@@ -130,7 +130,7 @@
    "language": "ja",
    "selectedTool": "check",
    "arguments": {
-    "source": "[ X | X [ 1 ] + ] 'INC' DEF"
+    "source": "[ [ 1 ] + ] 'INC' DEF"
    }
   },
   {
@@ -138,7 +138,7 @@
    "language": "en",
    "selectedTool": "infer_contracts",
    "arguments": {
-    "source": "[ X | X [ 1 ] + ] 'INC' DEF"
+    "source": "[ [ 1 ] + ] 'INC' DEF"
    }
   },
   {
@@ -146,7 +146,7 @@
    "language": "ja",
    "selectedTool": "infer_contracts",
    "arguments": {
-    "source": "[ X | X [ 1 ] + ] 'INC' DEF"
+    "source": "[ [ 1 ] + ] 'INC' DEF"
    }
   },
   {
@@ -842,7 +842,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ | 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C"
+    "source": "[ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C"
    }
   },
   {
@@ -850,7 +850,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ | 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C"
+    "source": "[ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * 47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C"
    }
   },
   {

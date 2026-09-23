@@ -134,8 +134,8 @@ const ADVERSARIAL = [
   // A block can be pushed by one Word and executed by another, so a literal
   // that is inert *where it is written* still runs later. Prediction used to
   // skip anything a data literal contained.
-  "[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC",
-  "[ | [ 1 0 DIV ] ] 'G' DEF G EXEC",
+  "[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC",
+  "[ [ 1 0 DIV ] ] 'G' DEF G EXEC",
   '[ 1 ADD ] EXEC',
   '[ 1 2 ADD ] 1 GET EXEC',
   // A String is not a code operand, so neither of these runs `DEL`: both
@@ -153,7 +153,7 @@ const ADVERSARIAL = [
   // whole universe would still pass the two classes above, and should not.
   '1 2 ADD',
   '[ 1 2 3 ] [ 2 MUL ] MAP',
-  "[ X | X 1 ADD ] 'INC' DEF 5 INC",
+  "[ 1 ADD ] 'INC' DEF 5 INC",
   '9 1 0 DIV NIL? SELECT',
   // Reason loss: a lane holds an absence but not the reason for it, so a
   // computed NIL that crosses one twice comes back reasonless and reads as

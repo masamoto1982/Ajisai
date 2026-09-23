@@ -10,7 +10,7 @@
     { "name": "does not split a glued caret out of a word", "input": "a^c", "expected": "a^c" },
     { "name": "does not split a glued bar out of a word", "input": "a|c", "expected": "a|c" },
     { "name": "leave an unallocated symbol inside a word alone", "input": "a~b", "expected": "a~b" },
-    { "name": "idempotent on canonical input", "input": "[ | [ 1 ] [ 2 ] + ] 'ADD12' DEF", "expected": "[ | [ 1 ] [ 2 ] + ] 'ADD12' DEF" },
+    { "name": "idempotent on canonical input", "input": "[ [ 1 ] [ 2 ] + ] 'ADD12' DEF", "expected": "[ [ 1 ] [ 2 ] + ] 'ADD12' DEF" },
     { "name": "string contents kept verbatim", "input": "[ 'a  b   c' ]", "expected": "[ 'a  b   c' ]" },
     { "name": "brackets inside a string are not padded", "input": "'[not code]'", "expected": "'[not code]'" },
     { "name": "comment text kept verbatim", "input": "[ 1 ]   #   keep   spacing", "expected": "[ 1 ] #   keep   spacing" },

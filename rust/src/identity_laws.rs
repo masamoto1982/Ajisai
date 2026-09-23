@@ -188,7 +188,7 @@ fn definitions_that_disagree_never_share_an_identity() {
     let mut seen: Vec<(String, String, String)> = Vec::new();
     for (index, body) in bodies.iter().enumerate() {
         let name = format!("IDSOUND{index}");
-        let define = format!("[ X | X {body} ] '{name}' DEF");
+        let define = format!("[ {body} ] '{name}' DEF");
         let identity = identity_of(&define, &name);
         let result = observe(&format!("{define}\n{probe} {name}"));
         seen.push((identity, result, (*body).to_string()));

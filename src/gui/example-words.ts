@@ -16,18 +16,18 @@ export const EXAMPLE_USER_WORDS: UserWord[] = [
     // deleting any of them ripples up to GREET through the dependency graph.
     {
         name: 'SAY-HELLO',
-        definition: "| 'Hello' KEEP PRINT",
+        definition: "'Hello' KEEP PRINT",
     },
     {
         name: 'SAY-WORLD',
-        definition: "| 'World' KEEP PRINT",
+        definition: "'World' KEEP PRINT",
     },
     {
         name: 'SAY-BANG',
-        definition: "| '!' KEEP PRINT",
+        definition: "'!' KEEP PRINT",
     },
     {
         name: 'GREET',
-        definition: '| SAY-HELLO SAY-WORLD SAY-BANG',
+        definition: 'SAY-HELLO SAY-WORLD SAY-BANG',
     },
 ];
