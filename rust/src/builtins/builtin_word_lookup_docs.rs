@@ -268,9 +268,9 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     // ── Dictionary words ──────────────────────────────────────────────────
     BuiltinLookupDoc {
         word: "DEF",
-        behavior: "Pops the name, then the body block, and defines a user\nword under that name in the dictionary.",
+        behavior: "Pops the name, then the body block, and defines a user\nword under that name in the dictionary. Names written before |\nat the start of the body are its parameters: the call takes that\nmany operands and binds them.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 2 * ] 'DOUBLE' DEF",
+            code: "[ X | X 2 * ] 'DOUBLE' DEF",
             result: "Defines DOUBLE; 5 DOUBLE then pushes 10.",
         }],
         failure_note: "Redefining a built-in word is refused.",
@@ -280,7 +280,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "DEL",
         behavior: "Pops the name and deletes that user word from the\ndictionary.",
         examples: &[BuiltinExampleDoc {
-            code: "[ [ 1 ] ] 'W' DEF 'W' DEL",
+            code: "[ | [ 1 ] ] 'W' DEF 'W' DEL",
             result: "Defines a word, then removes it from the dictionary.",
         }],
         failure_note: "Deleting a built-in word is refused. So is deleting a word\nother words still depend on.",

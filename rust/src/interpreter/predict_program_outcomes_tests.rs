@@ -73,13 +73,13 @@ fn a_record_literal_predicts_only_the_failure_it_actually_has() {
 
 #[test]
 fn a_called_user_word_contributes_its_bodys_vocabulary() {
-    assert!(predict("[ 1 ADD ] 'INC' DEF 5 INC").contains(&"error:nonNumeric".to_string()));
+    assert!(predict("[ X | X 1 ADD ] 'INC' DEF 5 INC").contains(&"error:nonNumeric".to_string()));
 }
 
 /// A Word name written inside a `[ ... ]` counts even where that literal is
 /// inert at the point it is written, because a block can be pushed by one
 /// Word and executed by another arbitrarily far away.
-/// `[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC` really does run that `ADD` and answer
+/// `[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC` really does run that `ADD` and answer
 /// `nonNumeric`; an earlier version consulted `classify_vector_positions`
 /// and skipped anything it called `Data`, which dropped exactly that
 /// outcome from the prediction. Over-approximating here (an uncalled
@@ -88,9 +88,9 @@ fn a_called_user_word_contributes_its_bodys_vocabulary() {
 /// module doc.
 #[test]
 fn a_word_named_inside_a_literal_still_contributes_its_vocabulary() {
-    assert!(predict("[ 1 ADD ] 'INC' DEF").contains(&"error:nonNumeric".to_string()));
-    assert!(predict("[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC").contains(&"error:nonNumeric".to_string()));
-    assert!(predict("[ [ 1 0 DIV ] ] 'G' DEF G EXEC").contains(&"nil:divisionByZero".to_string()));
+    assert!(predict("[ X | X 1 ADD ] 'INC' DEF").contains(&"error:nonNumeric".to_string()));
+    assert!(predict("[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC").contains(&"error:nonNumeric".to_string()));
+    assert!(predict("[ | [ 1 0 DIV ] ] 'G' DEF G EXEC").contains(&"nil:divisionByZero".to_string()));
 }
 
 #[test]
@@ -125,9 +125,12 @@ fn a_structural_category_no_reachable_word_can_raise_is_dropped() {
 #[test]
 fn each_gated_category_returns_when_its_own_trigger_is_reachable() {
     for (source, id) in [
-        ("[ 1 ADD ] 'INC' DEF", "error:nameConflict"),
-        ("[ 1 ADD ] 'INC' DEF", "error:selfReferentialDefinition"),
-        ("[ 1 ADD ] 'INC' DEF", "error:builtinProtection"),
+        ("[ X | X 1 ADD ] 'INC' DEF", "error:nameConflict"),
+        (
+            "[ X | X 1 ADD ] 'INC' DEF",
+            "error:selfReferentialDefinition",
+        ),
+        ("[ X | X 1 ADD ] 'INC' DEF", "error:builtinProtection"),
         ("'INC' DEL", "error:builtinProtection"),
     ] {
         assert!(
@@ -141,7 +144,7 @@ fn each_gated_category_returns_when_its_own_trigger_is_reachable() {
 /// needs a User-Word activation rather than a named Word.
 #[test]
 fn the_call_depth_guard_needs_a_user_word_to_be_possible() {
-    let calls_user_word = predict("[ 1 ADD ] 'INC' DEF 5 INC");
+    let calls_user_word = predict("[ X | X 1 ADD ] 'INC' DEF 5 INC");
     assert!(calls_user_word.contains(&"error:recursionLimitExceeded".to_string()));
     assert!(!predict("1 2 ADD").contains(&"error:recursionLimitExceeded".to_string()));
 }

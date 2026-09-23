@@ -204,33 +204,28 @@ fn is_keep_modifier(name: &str) -> bool {
     )
 }
 
-/// Names a body can read that are not Words: its header's parameters
-/// (LANG.SOURCE.FRAME). Reading one pushes one value; looking it up in the
+/// Names a body can read that are not Words, each marked `true` for a header
+/// parameter (LANG.SOURCE.FRAME) and `false` for a name a `'NAME' BIND` in
+/// the body made. Reading one pushes one value; looking it up in the
 /// dictionary instead would report a bound name as an unresolved Word and give
-/// up on the arity. `note_bound_name` adds the names the body binds itself.
-pub(crate) fn header_locals(
-    def: &crate::types::WordDefinition,
-) -> std::collections::HashSet<String> {
+/// up on the arity.
+pub(crate) type Locals = std::collections::HashMap<String, bool>;
+
+pub(crate) fn header_locals(def: &crate::types::WordDefinition) -> Locals {
     def.params
         .as_ref()
-        .map(|p| p.iter().cloned().collect())
+        .map(|p| p.iter().map(|name| (name.clone(), true)).collect())
         .unwrap_or_default()
 }
 
 /// At a `BIND` whose name operand is the String just before it, the rest of
 /// the body reads that name as a value.
-pub(crate) fn note_bound_name(
-    locals: &mut std::collections::HashSet<String>,
-    canonical: &str,
-    tokens: &[crate::types::Token],
-    idx: usize,
-) {
+pub(crate) fn note_bound_name(locals: &mut Locals, canonical: &str, tokens: &[Token], idx: usize) {
     if canonical != "BIND" {
         return;
     }
-    if let Some(crate::types::Token::String(bound)) = idx.checked_sub(1).and_then(|i| tokens.get(i))
-    {
-        locals.insert(bound.to_uppercase());
+    if let Some(Token::String(bound)) = idx.checked_sub(1).and_then(|i| tokens.get(i)) {
+        locals.entry(bound.to_uppercase()).or_insert(false);
     }
 }
 
@@ -251,14 +246,32 @@ pub(crate) fn declared_flow(
     }
 }
 
-/// A literal, or a Symbol naming one of `locals`: a token that pushes one
-/// value and calls nothing.
-pub(crate) fn reads_as_value(token: &Token, locals: &std::collections::HashSet<String>) -> bool {
+/// What a token that pushes one value and calls nothing is: a literal, or a
+/// read of a bound name (`Some(true)` for a parameter). `None` for any other
+/// token.
+pub(crate) fn value_read(token: &Token, locals: &Locals) -> Option<Option<bool>> {
     match token {
-        Token::Number(_) | Token::String(_) => true,
-        Token::Symbol(symbol) => {
-            locals.contains(crate::core_word_aliases::canonicalize_core_word_name(symbol).as_ref())
-        }
-        _ => false,
+        Token::Number(_) | Token::String(_) => Some(None),
+        Token::Symbol(symbol) => locals
+            .get(crate::core_word_aliases::canonicalize_core_word_name(symbol).as_ref())
+            .map(|parameter| Some(*parameter)),
+        _ => None,
+    }
+}
+
+/// Feed one value read (`value_read`) to the three simulations riding one
+/// walk: a literal is a constant, a parameter one of the Word's inputs, and a
+/// `BIND` name a value of unknown size.
+pub(crate) fn feed_value_read(
+    read: Option<bool>,
+    flow: &mut FlowSim,
+    sim: &mut super::word_space::SpaceSim,
+    cost_sim: &mut super::word_cost::CostSim,
+) {
+    flow.feed_literal();
+    cost_sim.feed_literal();
+    match read {
+        None => sim.feed_literal(),
+        Some(parameter) => sim.feed_bound(parameter),
     }
 }

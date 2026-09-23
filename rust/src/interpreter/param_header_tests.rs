@@ -95,6 +95,23 @@ mod tests {
         );
     }
 
+    /// Transitional (work order §2.6, until Phase 3 makes the header
+    /// required): a header-less body still sees the whole stack, and `KEEP`
+    /// on it keeps whatever the call reached. The repository's own examples
+    /// were migrated to headers in Phase 2, so this is the one place the
+    /// header-less reading is still pinned.
+    #[tokio::test]
+    async fn a_header_less_word_keeps_what_the_call_reached() {
+        assert_eq!(
+            stack_of("[ 2 * ] 'TWICE' DEF 5 KEEP TWICE").await,
+            ["5/1", "10/1"]
+        );
+        assert_eq!(
+            stack_of("[ + ] 'ADDW' DEF 1 3 4 KEEP ADDW").await,
+            ["1/1", "3/1", "4/1", "7/1"]
+        );
+    }
+
     /// `KEEP` modifies the `EXEC` call, not the first Word in the block.
     #[tokio::test]
     async fn keep_does_not_leak_into_an_exec_block() {

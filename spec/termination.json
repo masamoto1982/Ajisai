@@ -23,7 +23,7 @@
     "id": "everyReachableWordIsNamedBySymbol",
     "statement": "A Word runs only when a Symbol naming it is written in source. There is no way to compute a call: no Word turns text into a Symbol, and a String is not code (LANG.SOURCE.CODE), so the code operand of the higher-order Words is a Vector and nothing else.",
     "whyItMatters": "The DEF-time acyclicity check reads the Symbols in a body. It is sound only if every call a body can make is visible to it as a Symbol. A call reachable some other way would not be in the reference graph at all, and the graph's acyclicity would say nothing about whether that call returns.",
-    "history": "Until this was fixed, the higher-order Words also accepted a String naming a Word as their code operand. The name could be computed, so it appeared in no token for the check to read: `[ [ 1 ] [ 'J' 'W' ] JOIN MAP ] 'JW' DEF` was accepted and then recursed until the native depth guard fired. Termination there was decided by a ceiling, which is exactly what the claim above says it never is.",
+    "history": "Until this was fixed, the higher-order Words also accepted a String naming a Word as their code operand. The name could be computed, so it appeared in no token for the check to read: `[ | [ 1 ] [ 'J' 'W' ] JOIN MAP ] 'JW' DEF` was accepted and then recursed until the native depth guard fired. Termination there was decided by a ceiling, which is exactly what the claim above says it never is.",
     "witnesses": {
       "refused": [
         {
@@ -39,7 +39,7 @@
       ],
       "accepted": [
         {
-          "source": "[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP",
+          "source": "[ X | X 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP",
           "note": "The Vector spelling, which names DBL with a Symbol the acyclicity check reads."
         }
       ]
@@ -68,7 +68,7 @@
       ],
       "accepted": [
         {
-          "source": "[ 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\n[ W2 ] 'W3' DEF\nW3",
+          "source": "[ | 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\n[ W2 ] 'W3' DEF\nW3",
           "note": "An acyclic chain. Completeness matters as much as soundness: a check that refused this would make the language smaller, not safer."
         }
       ]
@@ -100,7 +100,7 @@
       "descendsInto": "the body of the named Word",
       "decreases": "dictionaryRank",
       "why": "The callee's longest outgoing reference chain is shorter than the caller's, because the graph is acyclic.",
-      "witness": "[ 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\nW2"
+      "witness": "[ | 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\nW2"
     },
     {
       "id": "EXEC",

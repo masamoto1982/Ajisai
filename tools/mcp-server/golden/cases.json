@@ -44,7 +44,7 @@
     },
     {
       "name": "a misspelled user Word is matched against the live dictionary",
-      "source": "[ [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBEL",
+      "source": "[ X | X [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBEL",
       "expect": {
         "/status": "error",
         "/diagnosis/why": "typoOrUnknownName",

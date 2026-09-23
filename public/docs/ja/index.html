@@ -1080,9 +1080,9 @@
                     <p><code>KEEP</code>は<em>直後の1つのワードだけ</em>に前置され、記号は持たず、そのまま綴って書きます。Ajisaiの修飾子はこれひとつだけで、値の複製や入れ替え、破棄のためだけに用意された専用のワード群のようなものはありません。ワードの振る舞いに関するそれ以外のすべては、ワードそのものに内在しています。したがって呼び出しを読むということは、名前と、たかだか1つの前置修飾子を読むことにすぎません。</p>
                     <p class="ref-note">補足: Forthのような古典的なスタック指向言語には、値の複製・入れ替え・破棄を担う専用のワード群、いわゆる「スタックシャッフラー」が用意されていることがあります。Ajisaiにはそうした仕組み自体がなく、<code>KEEP</code>ひとつがその役割を兼ねます。</p>
                     <h3>呼び出し単位で効く</h3>
-                    <p><code>KEEP</code>を前置する対象は自分で定義したワードでもよく、その場合も意味は変わりません。<code>KEEP</code>が保持するのは<strong>その呼び出し</strong>のオペランドであり、本体がたまたま内部で使う値ではありません。<code>[ 2 MUL ] 'DOUBLE' DEF</code>があるとき、<code>5 KEEP DOUBLE</code>は<code>5/1 10/1</code>になります。本体自身が持つ<code>2</code>は本体内部の話であり、呼び出し側のスタックには決して届きません。</p>
+                    <p><code>KEEP</code>を前置する対象は自分で定義したワードでもよく、その場合も意味は変わりません。<code>KEEP</code>が保持するのは<strong>その呼び出し</strong>のオペランドであり、本体がたまたま内部で使う値ではありません。<code>[ X | X 2 MUL ] 'DOUBLE' DEF</code>があるとき、<code>5 KEEP DOUBLE</code>は<code>5/1 10/1</code>になります。本体自身が持つ<code>2</code>は本体内部の話であり、呼び出し側のスタックには決して届きません。</p>
                     <h3>あらゆる値のコピー装置になる</h3>
-                    <p>1つ覚えておくとよい帰結があります。渡された値をそのまま返すワードを用意しておくと、<code>KEEP</code>は<em>あらゆる種類</em>の値のコピー装置になります。たとえば<code>[ 1 COLLECT [ 0 ] GET ] 'ID' DEF</code>は、値を包んでまた取り出すだけのワードです。<code>'hi' KEEP ID</code>は2つの文字列を残しますし、算術演算では複製できない真偽値やコードブロックについても同じことが成り立ちます。</p>
+                    <p>1つ覚えておくとよい帰結があります。渡された値をそのまま返すワードを用意しておくと、<code>KEEP</code>は<em>あらゆる種類</em>の値のコピー装置になります。たとえば<code>[ X | X ] 'ID' DEF</code>は、受け取った値をそのまま返すだけのワードです。<code>'hi' KEEP ID</code>は2つの文字列を残しますし、算術演算では複製できない真偽値やコードブロックについても同じことが成り立ちます。</p>
                     <h3>結果を積まないワードも例外ではない</h3>
                     <p><code>BIND</code>、<code>DEF</code>、<code>DEL</code>のように結果を何も積まないワードも例外ではありません。これらに<code>KEEP</code>を付けたときに残るのは、そのオペランドそのままの姿です。<code>5 KEEP 'X' BIND</code>は値に名前を付け<em>つつ</em>、<code>5/1 'X'</code>を元の場所に残します。</p>
                     <h3>唯一の例外: 高階ワード</h3>
@@ -2228,21 +2228,22 @@
                 <section id="control" class="ref-page">
                     <h2>制御構文(<code>SELECT</code>, <code>MAP</code>)</h2>
                     <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
-                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。規則は5つあり、ブロック自身のテキストはそのどれが適用されるかを語りません。決めるのは、そのブロックを受け取るワードです。</p>
+                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。ほとんどの場合、どの規則が適用されるかはブロック自身のテキストには書かれておらず、決めるのはそのブロックを受け取るワードです。例外は<code>DEF</code>の本体で、先頭に<a href="#define">パラメータ見出し</a>を書けば、そのワードが取るオペランドの個数が本体のテキストに書かれます。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
                                 <tr><th>評価するワード</th><th>ブロックが見るもの</th><th>ブロックが残すもの</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td>ワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
+                                <tr><td>見出しを持つワードの本体(<code>[ A B | … ] DEF</code>)</td><td class="notes">何もない。呼び出しが見出しの個数ぶんのオペランドを取り、深い方から名前に束縛する</td><td class="notes">積んだものすべて、いくつでも。空のフレームより下を読めばスタックアンダーフロー</td></tr>
+                                <tr><td>見出しを持たないワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                                                 <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                                 <tr><td><code>FOLD</code> <code>SCAN</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                             </tbody>
                         </table>
                     </div>
-                    <p>したがって<code>[ + ] 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 [ + ] EXEC</code>も同様です。どちらもスタック全体を見るからです。しかし<code>100 [ 1 2 ] [ + ] MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
+                    <p>したがって<code>[ X Y | X Y + ] 'ADDW' DEF</code>に続けて<code>3 4 ADDW</code>とすると<code>7</code>になり、<code>3 4 [ + ] EXEC</code>も同様です。<code>ADDW</code>は見出しで2つのオペランドを取ると宣言しており、<code>EXEC</code>のブロックはスタック全体を見るからです。しかし<code>100 [ 1 2 ] [ + ] MAP</code>はスタックアンダーフローです。ブロックが見るのは1つの要素だけで、<code>100</code>はそのフレームに入っていません。</p>
                     <p class="ref-note">「最上位より下にあるものは捨てられる」は読み返しておいてください。これが静かに起こるからです。2つの値を残す述語もそのまま通ります。<code>[ 1 2 3 ] [ 1 GT TRUE ] FILTER</code>はすべてを残します。最上位の<code>TRUE</code>が答えであり、その下の比較結果は捨てられるからです。エラーになるのは<em>何も</em>残さなかったときだけです。高階ワードのブロックが説明のつかない答えを返したら、それが残しているものの個数を数えてください。</p>
                     <p class="ref-note">ブロックの内部で何かが失敗すると、診断はブロックを実行したワードではなく、<strong>失敗したワード自身</strong>を名指しします。<code>[ 1 2 ] [ 'x' 1 ADD ] MAP</code>は、実行された文の位置とともに<code>inside MAP</code>を添えて<code>ADD</code>を報告します。自分で定義したワードのところで、この掘り下げは止まります。その呼び出しはそのワード自体を報告します。呼び出し側から見れば、失敗したのはそれだからです。</p>
                     <p class="ref-note">別のブロックの<em>内側</em>に書かれたブロックは、書かれたその場所ではデータです。それが評価されるのは、それを受け取ったワードが実行したときだけであり、そのときは外側のブロックの規則ではなく、その受け取ったワード自身の規則の下で評価されます。ただしこれは評価の話であって、参照の話ではありません。定義しようとしているワード自身の名前が、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>の内側にしか書かれていなくても、<code>DEF</code>の<a href="#acyclic">非循環規則</a>はそれを検出し、定義そのものを拒否します。</p>
@@ -2374,7 +2375,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</code></td>
+                                    <td><code>[ X | X 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">定義済みのワードは、その引用された名前で渡せる。</td>
                                 </tr>
@@ -2516,7 +2517,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 0 [ + ] FOLD ] 'PSUM' DEF
+                                    <td><code>[ X | X 0 [ + ] FOLD ] 'PSUM' DEF
 [ 3 4 ] PSUM</code></td>
                                     <td><code>7/1</code></td>
                                     <td class="notes">引数はベクトルそのもの。展開するのではなく畳み込む。</td>
@@ -2536,7 +2537,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ [ 1 -1 ] * 0 [ + ] FOLD ] 'PDIFF' DEF
+                                    <td><code>[ X | X [ 1 -1 ] * 0 [ + ] FOLD ] 'PDIFF' DEF
 2 5 * 3 2 COLLECT PDIFF</code></td>
                                     <td><code>7/1</code></td>
                                     <td class="notes">非対称なワードは、ブロードキャストで位置に重みを付けてから畳み込む。<code>2 COLLECT</code>は計算済みの2つの値をまとめる。</td>
@@ -2548,7 +2549,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>[ 0 ] GET</code>は最初の要素、<code>[ -1 ] GET</code>は最後の要素です。したがって<code>[ SORT [ -1 ] GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>はベクトル版のswapであり、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
+                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>[ 0 ] GET</code>は最初の要素、<code>[ -1 ] GET</code>は最後の要素です。したがって<code>[ X | X SORT [ -1 ] GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>はベクトル版のswapであり、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
                     <p class="ref-note">複製のための唯一の道具は<code>KEEP</code>です。1つの値を読み取り1つを積むワードに前置すると、結果の下にオペランドを残します。したがって<code>KEEP REVERSE REVERSE</code>は最上位のベクトルをコピーし、<a href="#stack">スタックと修飾子</a>の恒等ワードを使った<code>KEEP ID</code>は、どんな種類の値でもコピーします。2つのオペランドを取るワードに前置すると<em>両方</em>のオペランドを保持しますが、これはめったに望んだ結果ではありません。<code>[ 10 3 ] KEEP [ 0 ] GET</code>は、インデックスのベクトルもスタックに残してしまいます。</p>
 
                     <h3>データとしてのコード</h3>
@@ -2630,7 +2631,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ KEEP DELTA NEG ADD ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
+                                    <td><code>[ X | X 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ X | X KEEP DELTA NEG ADD ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
                                     <td><code>7282969/1250000</code></td>
                                     <td class="notes">10からの7ステップ(<code>[ 0 6 ] RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
                                 </tr>
@@ -2652,7 +2653,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ KEEP DELTA NEG ADD 1000 QUANTIZE ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
+                                    <td><code>[ X | X 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ X | X KEEP DELTA NEG ADD 1000 QUANTIZE ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
                                     <td><code>2877/1000</code></td>
                                     <td class="notes">21ステップ経っても分母は1000のまま。<code>[ 0 20 ] RANGE</code>は0から20までの21要素。量子化しない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
                                 </tr>
@@ -2738,6 +2739,7 @@ FILTER</code></td>
                     <h2>ワードと名前(<code>DEF</code>, <code>BIND</code>)</h2>
                     <h3 id="define"><code>DEF</code>で新しいワードを作る</h3>
                     <p>新しいワードは、コードブロックと名前から定義されます：<code>[ body ] 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
+                    <p>本体の先頭には<strong>パラメータ見出し</strong>を書けます。<code>|</code>より前に並べた名前がそのワードの入力です。<code>[ A B | A B - ] 'DIFF' DEF</code>は2つのオペランドを取り、深い方を<code>A</code>、上の方を<code>B</code>に束縛して、空のスタックの上で本体を実行します。そのため<code>10 3 DIFF</code>は<code>7/1</code>になり、<code>10 3 KEEP DIFF</code>は見出しが宣言した2つのオペランドをちょうど残して<code>10/1 3/1 7/1</code>になります。入力のないワードは<code>[ | 42 ] 'K' DEF</code>のように空の見出しで書きます。見出しを書くと、そのワードが何個の値を取るかが定義を読むだけでわかります。<code>|</code>は見出しの区切りなので、ワードや束縛の名前には使えません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2746,7 +2748,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ [ 10 ] + ] 'ADD10' DEF
+                                    <td><code>[ X | X [ 10 ] + ] 'ADD10' DEF
 5 ADD10</code></td>
                                     <td><code>[ 15/1 ]</code></td>
                                     <td class="notes"><code>ADD10</code>を定義し、それを呼び出す。</td>
@@ -2766,7 +2768,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 * ] 'DBL' DEF
+                                    <td><code>[ X | X 2 * ] 'DBL' DEF
 [ 1 2 3 ] [ DBL ] MAP</code></td>
                                     <td><code>[ 2/1 4/1 6/1 ]</code></td>
                                     <td class="notes">ユーザー定義ワードは、引用された名前によって高階ワードと組み合わさる。</td>
@@ -2882,7 +2884,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p><strong>名前は、呼び出した先のワードの中までは届きません。</strong>ワードの意味は、そのオペランドと辞書だけで決まり、それ以外の何ものでもありません。これがワードを単体で読めるようにしています。本体が読むのは自分自身の束縛だけであり、呼び出し元の束縛を読むことは決してありません。中でその値が必要なら、オペランドとして渡してください。それこそがオペランドの役目です。これを誤ると、未知のワードとして報告されるのではなく、はっきりとそう告げられます。</p>
-                    <p>束縛を行うワードは、呼び出し元に対して何の名前も残しません。また実行の束縛は、その実行が終われば消えます。これは意図的です。フレームより長く生き延びる名前があれば、それは辞書の隣にある、編集可能な第2の名前空間になってしまうからです。ここには名前空間は1つしかありません。保持しておきたいデータには、<code>[ [ 1 2 3 ] ] 'XS' DEF</code>のようにワードを定義してください。これはまさに辞書が本来するべき仕事です。</p>
+                    <p>束縛を行うワードは、呼び出し元に対して何の名前も残しません。また実行の束縛は、その実行が終われば消えます。これは意図的です。フレームより長く生き延びる名前があれば、それは辞書の隣にある、編集可能な第2の名前空間になってしまうからです。ここには名前空間は1つしかありません。保持しておきたいデータには、<code>[ | [ 1 2 3 ] ] 'XS' DEF</code>のようにワードを定義してください。これはまさに辞書が本来するべき仕事です。</p>
                     <h3>名前はワードか束縛のどちらか、両方にはなれない</h3>
                     <p>CoreワードまたはUserワードがすでに持っている名前を束縛することはできず、現在束縛されている名前でワードを定義することもできません。どちらの方向も拒否されるので、ある名前がどちらを経由して解決されたのかを考える必要は決してありません。<code>W</code>、<code>DX</code>、<code>LIMIT</code>のような短い使い捨ての名前は、ここではまさにふさわしいものです。ワード名と違って命名規則の警告の対象にもなりません。これらはローカルであり、そのスコープは目の前の画面の中に収まっているからです。</p>
 
@@ -2944,7 +2946,7 @@ FILTER</code></td>
                                     <td class="notes">Coreワードは解決する。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</code></td>
+                                    <td><code>[ X | X 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">定義したワードも同じ問いで答える。</td>
                                 </tr>
@@ -2959,7 +2961,7 @@ FILTER</code></td>
                                     <td class="notes">文字列は名前ではない（<code>notASymbol</code>）。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ</code></td>
+                                    <td><code>[ X | X 2 MUL ] 'TWICE' DEF [ X | X 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">同一性は内容に対して、綴りに対してではない。</td>
                                 </tr>

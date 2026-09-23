@@ -18,7 +18,7 @@ use crate::coreword_registry::{
 use crate::types::{Token, WordDefinition};
 
 use super::word_contract_flow::{
-    declared_flow, header_locals, note_bound_name, reads_as_value, FlowSim,
+    declared_flow, feed_value_read, header_locals, note_bound_name, value_read, FlowSim,
 };
 use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
@@ -340,12 +340,11 @@ impl Interpreter {
             let contexts = classify_vector_positions(&line.body_tokens);
             for (idx, token) in line.body_tokens.iter().enumerate() {
                 match token {
-                    // A bound name (a header parameter, or one a `BIND` in
-                    // the body made) reads as one value, like a literal.
-                    token if reads_as_value(token, &locals) => {
-                        flow.feed_literal();
-                        sim.feed_literal();
-                        cost_sim.feed_literal();
+                    // A literal, or a bound name (a header parameter, or one
+                    // a `BIND` in the body made): one value, no call.
+                    token if value_read(token, &locals).is_some() => {
+                        let read = value_read(token, &locals).flatten();
+                        feed_value_read(read, &mut flow, &mut sim, &mut cost_sim);
                     }
                     Token::Number(_) | Token::String(_) => {
                         unreachable!("a literal reads as a value")

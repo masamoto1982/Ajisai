@@ -256,11 +256,11 @@ mod tokenizer_regression_tests_2 {
 
     #[test]
     fn test_def_with_vector_code() {
-        let result = tokenize("[ [ 2 ] * ] 'DOUBLE' DEF").unwrap();
+        let result = tokenize("[ X | X [ 2 ] * ] 'DOUBLE' DEF").unwrap();
 
-        assert_eq!(result.len(), 8);
-        assert!(matches!(&result[6], Token::String(s) if s.as_ref() == "DOUBLE"));
-        assert!(matches!(&result[7], Token::Symbol(s) if s.as_ref() == "DEF"));
+        assert_eq!(result.len(), 11);
+        assert!(matches!(&result[9], Token::String(s) if s.as_ref() == "DOUBLE"));
+        assert!(matches!(&result[10], Token::Symbol(s) if s.as_ref() == "DEF"));
     }
 
     #[test]

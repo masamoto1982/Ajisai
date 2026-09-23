@@ -42,11 +42,11 @@ mod reflection_words_tests {
         assert_eq!(top("[ + ] 0 GET DEFINED?").await, "TRUE");
         assert_eq!(top("[ TWICE ] 0 GET DEFINED?").await, "FALSE");
         assert_eq!(
-            top("[ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?").await,
+            top("[ X | X 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?").await,
             "TRUE"
         );
         assert_eq!(
-            top("[ 2 MUL ] 'TWICE' DEF 'TWICE' DEL [ TWICE ] 0 GET DEFINED?").await,
+            top("[ X | X 2 MUL ] 'TWICE' DEF 'TWICE' DEL [ TWICE ] 0 GET DEFINED?").await,
             "FALSE"
         );
         // A BIND name names a value, not a Word.
@@ -78,12 +78,12 @@ mod reflection_words_tests {
             "FALSE"
         );
         // A User Word's digest is the dictionary's own content identity.
-        let interp = run("[ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DIGEST").await;
+        let interp = run("[ X | X 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DIGEST").await;
         let answer = interp.stack.last().unwrap().as_text().unwrap().to_string();
         assert_eq!(Some(&answer), interp.word_identity("TWICE"));
         // Content, not spelling: the same body under two names is one Word.
         assert_eq!(
-            top("[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ")
+            top("[ X | X 2 MUL ] 'TWICE' DEF [ X | X 2 MUL ] 'DOUBLE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ")
                 .await,
             "TRUE"
         );
@@ -145,7 +145,7 @@ mod reflection_words_tests {
 
     #[tokio::test]
     async fn contract_infers_a_user_word_and_a_block_in_one_shape() {
-        let code = "[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT";
+        let code = "[ | 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT";
         let interp = run(code).await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 2);
@@ -180,11 +180,11 @@ mod reflection_words_tests {
         // Nothing ran: the effect was reported, not performed, for the
         // named body and for the bare block alike.
         let interp =
-            run("[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT").await;
+            run("[ | 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT").await;
         assert!(interp.host_effects().is_empty());
         // Inferring never mutates the dictionary.
-        let before = run("[ 2 MUL ] 'TWICE' DEF").await;
-        let after = run("[ 2 MUL ] 'TWICE' DEF [ TWICE 1 ADD ] CONTRACT").await;
+        let before = run("[ X | X 2 MUL ] 'TWICE' DEF").await;
+        let after = run("[ X | X 2 MUL ] 'TWICE' DEF [ TWICE 1 ADD ] CONTRACT").await;
         assert_eq!(before.dictionary_epoch, after.dictionary_epoch);
         assert_eq!(before.user_words.len(), after.user_words.len());
     }

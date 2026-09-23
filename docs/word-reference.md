@@ -1359,7 +1359,7 @@ Delete a user word from the dictionary.
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
-- **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
+- **Syntax:** `[ | [ 1 ] ] 'W' DEF 'W' DEL`
 - **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`
 
 ## `DEFINED?`

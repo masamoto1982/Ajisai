@@ -14,7 +14,7 @@ const repairCorpus = read("./eval/repair-cases.json");
  *
  * The `static-check` and `contract-inference` prompts asked, in both locales,
  * about `{ [ 1 ] + } 'INC' DEF` — the retired block form — while their own
- * `arguments.source` carried the correct `[ [ 1 ] + ] 'INC' DEF`. The fixtures
+ * `arguments.source` carried the correct `[ X | X [ 1 ] + ] 'INC' DEF`. The fixtures
  * therefore passed: the corpus scores the tool call, and nothing read the
  * prompt. But this corpus is the text a model is shown, and what a model is
  * shown is what it imitates. A corpus for an AI-first language is the last

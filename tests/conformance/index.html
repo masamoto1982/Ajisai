@@ -85,7 +85,7 @@
 
 <section class="ajisai-case" id="core-vector-literal-ignores-dictionary" data-category="core">
   <h3>A Vector literal denotes the same value when the name is a defined Word</h3>
-  <pre class="ajisai-source">[ [ 99 ] ] 'FOO' DEF
+  <pre class="ajisai-source">[ | [ 99 ] ] 'FOO' DEF
 [ FOO 1 ]</pre>
   <pre class="ajisai-expect-result">[ FOO 1/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
@@ -199,7 +199,7 @@
 
 <section class="ajisai-case" id="core-map" data-category="core">
   <h3>MAP applies a user block element-wise</h3>
-  <pre class="ajisai-source">[ 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</pre>
+  <pre class="ajisai-source">[ X | X 2 MUL ] 'DBL' DEF [ 1 2 3 ] [ DBL ] MAP</pre>
   <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -259,7 +259,7 @@
 
 <section class="ajisai-case" id="core-user-definition-resolved" data-category="core">
   <h3>A user-defined word resolves through the dictionary</h3>
-  <pre class="ajisai-source">[ [ 10 ] + ] 'ADD10' DEF 5 ADD10</pre>
+  <pre class="ajisai-source">[ X | X [ 10 ] + ] 'ADD10' DEF 5 ADD10</pre>
   <pre class="ajisai-expect-result">[ 15/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1706,7 +1706,7 @@ SELECT</pre>
 
 <section class="ajisai-case" id="core-word-body-multi-line-select" data-category="core">
   <h3>A word body may hold a multi-line SELECT inside a nested block</h3>
-  <pre class="ajisai-source">[ [ 'N' BIND
+  <pre class="ajisai-source">[ X | X [ 'N' BIND
 [ 1 ] [ 0 ]
 N [ 0 ] GT
 SELECT ] MAP ] 'STEPFN' DEF
@@ -1717,7 +1717,7 @@ SELECT ] MAP ] 'STEPFN' DEF
 
 <section class="ajisai-case" id="core-word-body-line-break-still-separates" data-category="core">
   <h3>A line break at the body's own level still separates statements</h3>
-  <pre class="ajisai-source">[ 1 2 ADD
+  <pre class="ajisai-source">[ | 1 2 ADD
 10 MUL ] 'W' DEF
 W</pre>
   <pre class="ajisai-expect-result">30/1</pre>
@@ -1890,7 +1890,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-defined-resolves-either-tier" data-category="core">
   <h3>DEFINED? answers whether a Symbol resolves in Core or in User</h3>
-  <pre class="ajisai-source">[ ADD ] 0 GET DEFINED? [ TWICE ] 0 GET DEFINED? [ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</pre>
+  <pre class="ajisai-source">[ ADD ] 0 GET DEFINED? [ TWICE ] 0 GET DEFINED? [ X | X 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</pre>
   <pre class="ajisai-expect-result">TRUE FALSE TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1910,7 +1910,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-digest-word-identity" data-category="core">
   <h3>DIGEST is a Word's content identity: content, not spelling</h3>
-  <pre class="ajisai-source">[ 2 MUL ] 'TWICE' DEF [ 2 MUL ] 'DOUBLE' DEF [ 3 MUL ] 'THRICE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ [ TWICE ] 0 GET DIGEST [ THRICE ] 0 GET DIGEST EQ</pre>
+  <pre class="ajisai-source">[ X | X 2 MUL ] 'TWICE' DEF [ X | X 2 MUL ] 'DOUBLE' DEF [ X | X 3 MUL ] 'THRICE' DEF [ TWICE ] 0 GET DIGEST [ DOUBLE ] 0 GET DIGEST EQ [ TWICE ] 0 GET DIGEST [ THRICE ] 0 GET DIGEST EQ</pre>
   <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1942,7 +1942,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-user-word-is-its-body" data-category="core">
   <h3>CONTRACT of a User Word is CONTRACT of its body, and runs nothing</h3>
-  <pre class="ajisai-source">[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT EQ [ SHOUT ] 0 GET CONTRACT 'effects' AT</pre>
+  <pre class="ajisai-source">[ | 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT EQ [ SHOUT ] 0 GET CONTRACT 'effects' AT</pre>
   <pre class="ajisai-expect-result">TRUE [ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2014,7 +2014,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-map-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through a MAP block</h3>
-  <pre class="ajisai-source">[ [ 1 2 ] - [ FIB ] MAP 0 [ + ] FOLD ] 'FIB' DEF</pre>
+  <pre class="ajisai-source">[ X | X [ 1 2 ] - [ FIB ] MAP 0 [ + ] FOLD ] 'FIB' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2030,7 +2030,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-filter-predicate-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through an EXEC block inside a would-be FILTER predicate</h3>
-  <pre class="ajisai-source">[ [ 1 2 ] [ [ EVENP ] EXEC ] FILTER ] 'EVENP' DEF</pre>
+  <pre class="ajisai-source">[ | [ 1 2 ] [ [ EVENP ] EXEC ] FILTER ] 'EVENP' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2047,7 +2047,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-del-removes-word" data-category="core">
   <h3>DEL removes a user word; calling it afterwards is unknownWord</h3>
-  <pre class="ajisai-source">[ 2 MUL ] 'D2' DEF 'D2' DEL 5 D2</pre>
+  <pre class="ajisai-source">[ X | X 2 MUL ] 'D2' DEF 'D2' DEL 5 D2</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">Unknown word: D2</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2063,7 +2063,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-user-word-composition" data-category="core">
   <h3>A user word calling another user word resolves through the dictionary</h3>
-  <pre class="ajisai-source">[ 2 MUL ] 'A2' DEF [ A2 4 ADD ] 'B2' DEF 5 B2</pre>
+  <pre class="ajisai-source">[ X | X 2 MUL ] 'A2' DEF [ X | X A2 4 ADD ] 'B2' DEF 5 B2</pre>
   <pre class="ajisai-expect-result">14/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2211,14 +2211,14 @@ W</pre>
 
 <section class="ajisai-case" id="core-dict-name-is-the-whole-address" data-category="core">
   <h3>A Word's name is its whole address</h3>
-  <pre class="ajisai-source">[ 1 ADD ] 'INC' DEF 5 INC</pre>
+  <pre class="ajisai-source">[ X | X 1 ADD ] 'INC' DEF 5 INC</pre>
   <pre class="ajisai-expect-result">6/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-dict-qualified-path-is-not-a-name" data-category="core">
   <h3>A qualified path addresses no tier</h3>
-  <pre class="ajisai-source">[ 1 ADD ] 'INC' DEF 5 EXAMPLE@INC</pre>
+  <pre class="ajisai-source">[ X | X 1 ADD ] 'INC' DEF 5 EXAMPLE@INC</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">Unknown word: EXAMPLE@INC</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2226,7 +2226,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-dict-user-never-shadows-core" data-category="core">
   <h3>User never shadows Core: the seal refuses the definition outright</h3>
-  <pre class="ajisai-source">[ 1 ] 'ADD' DEF</pre>
+  <pre class="ajisai-source">[ | 1 ] 'ADD' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">ADD</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2234,7 +2234,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-dict-del-rejects-qualified-path" data-category="core">
   <h3>DEL takes a name, not a path</h3>
-  <pre class="ajisai-source">[ 1 ADD ] 'INC' DEF 'EXAMPLE@INC' DEL</pre>
+  <pre class="ajisai-source">[ X | X 1 ADD ] 'INC' DEF 'EXAMPLE@INC' DEL</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">is not defined</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2418,7 +2418,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-def-mutates-then-user-word-emits" data-category="core">
   <h3>DEF commits a definition whose later call emits its block's effect</h3>
-  <pre class="ajisai-source">[ 'side' PRINT 1 ADD ] 'NOISY' DEF 5 NOISY</pre>
+  <pre class="ajisai-source">[ X | X 'side' PRINT 1 ADD ] 'NOISY' DEF 5 NOISY</pre>
   <pre class="ajisai-expect-result">6/1</pre>
   <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="side"></span></div>
 </section>

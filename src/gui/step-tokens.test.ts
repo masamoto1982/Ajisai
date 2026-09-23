@@ -63,8 +63,8 @@ describe('tokenizeWithOffsets', () => {
     });
 
     test('a code block is a vector, so a definition steps in three', () => {
-        expect(tokenizeWithOffsets("[ [ 1 ] + ] 'INC' DEF").map((t) => t.text)).toEqual([
-            '[ [ 1 ] + ]',
+        expect(tokenizeWithOffsets("[ X | X [ 1 ] + ] 'INC' DEF").map((t) => t.text)).toEqual([
+            '[ X | X [ 1 ] + ]',
             "'INC'",
             'DEF'
         ]);

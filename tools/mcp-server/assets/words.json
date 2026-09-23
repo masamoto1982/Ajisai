@@ -5176,7 +5176,7 @@
         "summary": "Delete a user word from the dictionary.",
         "hover": "DEL — delete user word",
         "lookup": "Delete a user word from the dictionary.",
-        "syntax": "[ [ 1 ] ] 'W' DEF 'W' DEL",
+        "syntax": "[ | [ 1 ] ] 'W' DEF 'W' DEL",
         "role": "Dictionary primitive: Delete a user word from the dictionary.",
         "stackEffect": "[ name ] -> []"
       },

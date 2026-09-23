@@ -231,14 +231,14 @@ mod attribution_tests {
     /// routes reporting the same Word (LANG.AUTHORITY.FREEDOM).
     #[tokio::test]
     async fn a_user_word_body_failure_names_the_user_word() {
-        let diagnosis = diagnose("[ SORT ] 'S' DEF 5 S").await;
+        let diagnosis = diagnose("[ X | X SORT ] 'S' DEF 5 S").await;
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), None);
     }
 
     #[tokio::test]
     async fn a_user_word_applied_by_a_higher_order_word_is_still_the_locus() {
-        let diagnosis = diagnose("[ SORT ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
+        let diagnosis = diagnose("[ X | X SORT ] 'S' DEF [ 1 2 ] [ S ] MAP").await;
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
     }

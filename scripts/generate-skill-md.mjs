@@ -173,7 +173,7 @@ const canonicalExamples = [
   {
     id: 'def-basic',
     title: 'Define a user word: [ body ] then name, then DEF',
-    code: "[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
+    code: "[ | [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM",
   },
   {
     id: 'def-header',

@@ -21,7 +21,7 @@
     },
     {
       "id": "protectedWord",
-      "source": "[ 1 ] '+' DEF",
+      "source": "[ | 1 ] '+' DEF",
       "expect": "error:protectedWord",
       "rationale": "No domain representative is a reserved Core Word alias, so the table never reaches naming_convention_checker::check_reserved_word_name's refusal. '+' is reserved as an alias of ADD."
     },
@@ -33,7 +33,7 @@
     },
     {
       "id": "builtinProtection",
-      "source": "[ 1 ] 'ADD' DEF",
+      "source": "[ | 1 ] 'ADD' DEF",
       "expect": "error:builtinProtection",
       "rationale": "Same gap as nameIsAWord, on DEF's side: no domain representative names a live Core Word, so op_def_inner's core_vocabulary refusal never fires in the table. Redefining ADD is the witness."
     },
@@ -45,7 +45,7 @@
     },
     {
       "id": "definitionConflict",
-      "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n[ 2 ] 'A' DEF",
+      "source": "[ | 1 ] 'A' DEF\n[ A ] 'B' DEF\n[ 2 ] 'A' DEF",
       "expect": "error:definitionConflict",
       "rationale": "Requires three statements: define A, define B referencing A, then try to redefine A while B still depends on it. Multi-statement dependency state is outside the one-Word-one-tuple table by construction (Phase 4 pitfall A’s own example)."
     },
@@ -75,7 +75,7 @@
     },
     {
       "id": "structureError",
-      "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n'A' DEL",
+      "source": "[ | 1 ] 'A' DEF\n[ A ] 'B' DEF\n'A' DEL",
       "expect": "error:structureError",
       "rationale": "structureError now means exactly one thing (docs/dev/auditable-kernel-work-order-2026-09.md Phase 1): a failure no Word has declared a condition for yet. DEL's dependents-conflict raise site (execute_del.rs) is exactly that — deliberately left generic in Phase 1 because DEL's contract has no definitionConflict counterpart to DEF's identical check, a words.json gap rather than a wiring bug. It needs two prior statements (define A, define B referencing A) to construct the conflict, so the one-Word table cannot reach it."
     },
