@@ -43,7 +43,9 @@ node cli.mjs analyze <run>                             # runs/<run>/report.{md,j
   merges those bodies.
 - **D1** only means the engine gave the same answers on the probe battery in
   `lib/identity.mjs`. The battery includes scalars and one-element Vectors,
-  because `[ 2 ] *` and `2 *` differ only on a scalar input. A Word that
+  because `[ 2 ] *` and `2 *` differ only on a scalar input, and irregular
+  text (`''`, `'x  y'`, `' lead'`), because without it a word-splitting and
+  a character-scanning title-caser answered alike (pilot, 2026-09-23). A Word that
   errors on every probe gets no D1.
 - CONTRACT is not used as a level. For any body that uses `BIND`, it reads the
   bound names as unresolved Words and answers `inputs: variable`.

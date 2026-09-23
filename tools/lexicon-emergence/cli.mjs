@@ -30,7 +30,8 @@ const lexiconOf = (dir) => (existsSync(new URL('lexicon.json', dir)) ? readJson(
 
 function* generations(run) {
   const base = new URL(`runs/${run}/`, ROOT);
-  for (const condition of readdirSync(base)) {
+  const conditions = readdirSync(base, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+  for (const condition of conditions) {
     const conditionDir = new URL(`${condition}/`, base);
     for (const g of readdirSync(conditionDir).filter((d) => /^gen\d+$/.test(d))) {
       const dir = new URL(`${g}/`, conditionDir);
