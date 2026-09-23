@@ -5,16 +5,29 @@
 
 import { prelude } from './source.mjs';
 
-export function subjectPrompt({ run, condition, generation, agent }, lexicon, families) {
+/**
+ * `route` is how the subject runs (work order §1.2): `subagent` for a Claude
+ * Code subagent that reads SKILL.md and writes a file (the pilot), `harness`
+ * for the API harness, whose system prompt already carries SKILL.md and whose
+ * subject hands in through a `submit` tool. The tasks and the lexicon read the
+ * same either way.
+ */
+export function subjectPrompt({ run, condition, generation, agent }, lexicon, families, route = 'subagent') {
+  const harness = route === 'harness';
   const path = `tools/lexicon-emergence/runs/${run}/${condition}/gen${generation}/submissions/${agent}.json`;
   const lines = [];
   lines.push(`You are subject agent ${agent} in a language-use study. Solve the tasks below in Ajisai.`);
   lines.push('');
   lines.push('## Rules');
-  lines.push('- Learn Ajisai from `SKILL.md` at the repository root. Read no other file in the repository —');
-  lines.push('  in particular nothing under `tools/lexicon-emergence/`, `docs/`, `spec/` or `rust/`.');
-  lines.push('- Run code only with the `mcp__ajisai__compute` tool (load it with ToolSearch first). You may');
-  lines.push('  also use `mcp__ajisai__check` and `mcp__ajisai__word_contract`.');
+  if (harness) {
+    lines.push('- Learn Ajisai from the reference in your instructions.');
+    lines.push('- Run code only with the `compute` tool. You may also use `check` and `word_contract`.');
+  } else {
+    lines.push('- Learn Ajisai from `SKILL.md` at the repository root. Read no other file in the repository —');
+    lines.push('  in particular nothing under `tools/lexicon-emergence/`, `docs/`, `spec/` or `rust/`.');
+    lines.push('- Run code only with the `mcp__ajisai__compute` tool (load it with ToolSearch first). You may');
+    lines.push('  also use `mcp__ajisai__check` and `mcp__ajisai__word_contract`.');
+  }
   lines.push("- Each task's input is already on the stack when your solution runs. Your solution is the code");
   lines.push('  that follows it and must leave exactly the requested value as the only item on the stack.');
   lines.push('  It is graded on more inputs than the example shown, so it must work for any input of the kind');
@@ -49,20 +62,25 @@ export function subjectPrompt({ run, condition, generation, agent }, lexicon, fa
   }
   lines.push('');
   lines.push('## Submission');
-  lines.push(`Write one JSON file to \`${path}\` with this shape, then reply with the single word DONE:`);
-  lines.push('');
-  lines.push('```json');
-  lines.push('{');
-  lines.push(`  "agent": "${agent}", "generation": ${generation}, "condition": "${condition}",`);
-  lines.push(`  "definitions": [ { "name": "${agent}.EXAMPLE", "body": "code inside the brackets", "note": "what it does, one line" } ],`);
-  lines.push('  "solutions": { "<task id>": "code that follows the input" }');
-  lines.push('}');
-  lines.push('```');
+  if (harness) {
+    lines.push('Call the `submit` tool once, with your definitions (name, body, note) and one solution per task');
+    lines.push('(task id, code that follows the input).');
+  } else {
+    lines.push(`Write one JSON file to \`${path}\` with this shape, then reply with the single word DONE:`);
+    lines.push('');
+    lines.push('```json');
+    lines.push('{');
+    lines.push(`  "agent": "${agent}", "generation": ${generation}, "condition": "${condition}",`);
+    lines.push(`  "definitions": [ { "name": "${agent}.EXAMPLE", "body": "code inside the brackets", "note": "what it does, one line" } ],`);
+    lines.push('  "solutions": { "<task id>": "code that follows the input" }');
+    lines.push('}');
+    lines.push('```');
+  }
   lines.push('');
   lines.push('`body` is the code that goes between `[` and `]` in `[ body ] \'NAME\' DEF`, starting with its parameter');
   lines.push('header: the names of the operands it takes, then `|` — `X Y | X Y +`, or `| 42` for none. List definitions so that each');
   lines.push('comes after any of your own Words it calls. Solutions may call your Words and the inherited Words.');
-  lines.push('Before writing the file, run each solution through `compute` exactly as it will be graded: the');
+  lines.push(`Before ${harness ? 'submitting' : 'writing the file'}, run each solution through \`compute\` exactly as it will be graded: the`);
   lines.push('inherited-Word text above (if any), your definitions as DEF lines, the example input, the solution.');
   return `${lines.join('\n')}\n`;
 }

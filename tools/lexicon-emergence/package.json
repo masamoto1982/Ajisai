@@ -1,0 +1,13 @@
+{
+  "name": "ajisai-lexicon-emergence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lexicon-emergence experiment tooling (docs/dev/lexicon-emergence-experiment-work-order-2026-09.md)",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0"
+  }
+}
