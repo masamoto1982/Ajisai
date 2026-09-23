@@ -258,9 +258,9 @@ mod tests {
     #[tokio::test]
     async fn test_nested_call_chain_4_levels_ok() {
         let mut interp = Interpreter::new();
-        interp.execute("[ B ] 'A' DEF").await.unwrap();
-        interp.execute("[ C ] 'B' DEF").await.unwrap();
-        interp.execute("[ D ] 'C' DEF").await.unwrap();
+        interp.execute("[ | B ] 'A' DEF").await.unwrap();
+        interp.execute("[ | C ] 'B' DEF").await.unwrap();
+        interp.execute("[ | D ] 'C' DEF").await.unwrap();
         interp.execute("[ | [ 1 ] ] 'D' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
@@ -275,10 +275,10 @@ mod tests {
     #[tokio::test]
     async fn test_deep_call_chain_succeeds() {
         let mut interp = Interpreter::new();
-        interp.execute("[ B ] 'A' DEF").await.unwrap();
-        interp.execute("[ C ] 'B' DEF").await.unwrap();
+        interp.execute("[ | B ] 'A' DEF").await.unwrap();
+        interp.execute("[ | C ] 'B' DEF").await.unwrap();
         interp.execute("[ | D ] 'C' DEF").await.unwrap();
-        interp.execute("[ E ] 'D' DEF").await.unwrap();
+        interp.execute("[ | E ] 'D' DEF").await.unwrap();
         interp.execute("[ | [ 1 ] ] 'E' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
@@ -296,7 +296,7 @@ mod tests {
     fn deep_chain_source(depth: usize) -> (String, &'static str) {
         let mut source = String::new();
         for i in 0..depth.saturating_sub(1) {
-            source.push_str(&format!("[ D{} ] 'D{}' DEF\n", i + 1, i));
+            source.push_str(&format!("[ | D{} ] 'D{}' DEF\n", i + 1, i));
         }
         source.push_str(&format!("[ | [ 1 ] ] 'D{}' DEF\n", depth.saturating_sub(1)));
         (source, "D0")
@@ -348,7 +348,7 @@ mod tests {
     #[tokio::test]
     async fn test_depth_guard_does_not_break_legal_deep_chain() {
         let mut interp = Interpreter::new();
-        interp.execute("[ B ] 'A' DEF").await.unwrap();
+        interp.execute("[ | B ] 'A' DEF").await.unwrap();
         interp.execute("[ | C ] 'B' DEF").await.unwrap();
         interp.execute("[ | D ] 'C' DEF").await.unwrap();
         interp.execute("[ | E ] 'D' DEF").await.unwrap();
@@ -421,7 +421,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_def_with_code_block_body() {
-        // DEF is strictly `[ body ] 'NAME' DEF`. The body is a Vector of
+        // DEF is strictly `[ params | body ] 'NAME' DEF`. The body is a Vector of
         // code, not a data array of source strings.
         let mut interp = Interpreter::new();
         interp
@@ -451,7 +451,7 @@ mod tests {
         // `[ 10 ] -> +1 -> *2 = 22`.
         let mut interp = Interpreter::new();
         interp
-            .execute("[\n[ 1 ] +\n[ 2 ] *\n] 'INCDOUBLE' DEF")
+            .execute("[ X | X\n[ 1 ] +\n[ 2 ] *\n] 'INCDOUBLE' DEF")
             .await
             .expect("multi-line code-block body should succeed");
         let result = interp.execute("[ 10 ] INCDOUBLE").await;

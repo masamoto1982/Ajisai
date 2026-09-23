@@ -258,7 +258,7 @@ fn parse_count(words: &[&str], side: &str) -> Result<u16, String> {
     }
 }
 
-/// Extract every top-level `[ body ] 'NAME' DEF` from `tokens`, returning
+/// Extract every top-level `[ params | body ] 'NAME' DEF` from `tokens`, returning
 /// `(NAME, body-tokens)` pairs in source order. Nested vectors are respected;
 /// this reads the token stream only — it executes nothing.
 fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {

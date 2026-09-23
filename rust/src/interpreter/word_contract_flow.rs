@@ -12,7 +12,7 @@
 //! contains. The old walk instead counted each interior `Number`/`String` as
 //! a push and *applied* each interior `Symbol`'s arity, so `[ [ 1 2 ] ]`
 //! `'PAIR' DEF` inferred `( 0 -- 2 )` for a word that produces one vector,
-//! and `[ [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF` inferred `( 2 -- 1 )` for a word
+//! and `[ X | X [ 2 MUL ] MAP ] 'DOUBLE-ALL' DEF` inferred `( 2 -- 1 )` for a word
 //! whose true arity is `( 1 -- 1 )`. Those inferences are reported at
 //! `ContractConfidence::Complete`, so a *correct* `#:contract` declaration was
 //! rejected as a proven violation — a false `error`, which

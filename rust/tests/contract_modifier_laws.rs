@@ -197,7 +197,7 @@ fn keep_preserves_the_operands_of_a_word_that_answers_with_nothing() {
 #[test]
 fn a_failed_keep_call_reports_the_failure() {
     // `EXEC` on a number is malformed use, so the call errors out.
-    let message = run_err("[ EXEC ] 'BOOM' DEF 5 KEEP BOOM");
+    let message = run_err("[ X | X EXEC ] 'BOOM' DEF 5 KEEP BOOM");
     assert!(!message.is_empty());
 }
 

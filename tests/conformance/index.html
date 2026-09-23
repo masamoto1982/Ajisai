@@ -277,10 +277,26 @@
 </section>
 
 <section class="ajisai-case" id="core-header-frame-starts-empty" data-category="core">
-  <h3>A header-carrying body cannot read below its own empty frame (LANG.SOURCE.FRAME)</h3>
-  <pre class="ajisai-source">[ X | + ] 'BAD' DEF 1 2 BAD</pre>
+  <h3>A Word's body cannot read below its own empty frame (LANG.SOURCE.FRAME)</h3>
+  <pre class="ajisai-source">[ B | B EXEC ] 'RUN' DEF 1 2 [ + ] RUN</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">underflow</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-def-refuses-a-body-that-always-reads-below-its-frame" data-category="core">
+  <h3>DEF refuses a body whose fixed stack effect reads below its frame (LANG.SOURCE.FRAME)</h3>
+  <pre class="ajisai-source">[ X | + ] 'BAD' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">below its frame</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-def-requires-a-parameter-header" data-category="core">
+  <h3>DEF refuses a body without a parameter header (LANG.SOURCE.FRAME)</h3>
+  <pre class="ajisai-source">[ 2 * ] 'TWICE' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">parameter header</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -295,6 +311,13 @@
   <h3>KEEP modifies the EXEC call, not the first Word inside its block (LANG.MODIFIERS.CONSUMPTION)</h3>
   <pre class="ajisai-source">[ 3 ] [ 1 + ] KEEP EXEC</pre>
   <pre class="ajisai-expect-result">[ 3/1 ] [ 1/1 + ] [ 4/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-keep-on-exec-keeps-the-whole-stack" data-category="core">
+  <h3>KEEP EXEC keeps the whole stack the block ran on, beneath what the block leaves (LANG.MODIFIERS.CONSUMPTION)</h3>
+  <pre class="ajisai-source">1 [ 3 ] [ 1 + ] KEEP EXEC</pre>
+  <pre class="ajisai-expect-result">1/1 [ 3/1 ] [ 1/1 + ] 1/1 [ 4/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1992,7 +2015,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-rejected" data-category="core">
   <h3>DEF refuses a directly self-referential definition</h3>
-  <pre class="ajisai-source">[ DOOMY ] 'DOOMY' DEF</pre>
+  <pre class="ajisai-source">[ | DOOMY ] 'DOOMY' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2000,7 +2023,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-mutually-referential-definition-rejected" data-category="core">
   <h3>DEF refuses a definition that closes a mutual reference cycle</h3>
-  <pre class="ajisai-source">[ B ] 'A' DEF [ A ] 'B' DEF</pre>
+  <pre class="ajisai-source">[ | B ] 'A' DEF [ | A ] 'B' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2022,7 +2045,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-self-referential-definition-through-exec-block-rejected" data-category="core">
   <h3>DEF refuses a self-call reached only through an EXEC block</h3>
-  <pre class="ajisai-source">[ 1 - [ CNT ] EXEC 1 + ] 'CNT' DEF</pre>
+  <pre class="ajisai-source">[ N | N 1 - [ CNT ] EXEC 1 + ] 'CNT' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2038,8 +2061,8 @@ W</pre>
 
 <section class="ajisai-case" id="core-mutually-referential-definition-through-exec-block-rejected" data-category="core">
   <h3>DEF refuses a mutual reference cycle reached only through an EXEC block</h3>
-  <pre class="ajisai-source">[ 1 - [ B ] EXEC ] 'A' DEF
-[ [ A ] EXEC ] 'B' DEF</pre>
+  <pre class="ajisai-source">[ N | N 1 - [ B ] EXEC ] 'A' DEF
+[ | [ A ] EXEC ] 'B' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">self-referential definition</pre>
   <div class="ajisai-expect-effects"></div>
@@ -2565,12 +2588,12 @@ W</pre>
 <section class="ajisai-case" id="core-bare-name-is-a-symbol-distinct-from-its-string" data-category="core">
 <h3>A bare name denotes a Symbol, distinct from the same spelling as a String</h3><pre class="ajisai-source">[ ADD ] [ 0 ] GET [ 'ADD' ] [ 0 ] GET EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-computed-vector-defines-a-word" data-category="core">
-<h3>DEF accepts any Vector as a body, computed or literal</h3><pre class="ajisai-source">[ 1 ] [ ADD ] CONCAT 'INC-C' DEF 5 INC-C</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
+<h3>DEF accepts any Vector as a body, computed or literal</h3><pre class="ajisai-source">[ X | X 1 ] [ ADD ] CONCAT 'INC-C' DEF 5 INC-C</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
 <!-- Beta Standard Word contract cases (Issue #1429, Phase 3). -->
 <!-- Local bindings (LANG.SOURCE.FRAME). -->
 <section class="ajisai-case" id="core-binding-names-a-value" data-category="core"><h3>A binding names a value for the rest of the frame</h3><pre class="ajisai-source">[ 2 7 ] [ 'W' 'B' ] BIND W B ADD W MUL</pre><pre class="ajisai-expect-result">18/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-binding-reaches-a-block-written-in-its-frame" data-category="core"><h3>A binding reaches the blocks written in its frame</h3><pre class="ajisai-source">3 'T' BIND [ 1 2 3 ] [ T MUL ] MAP</pre><pre class="ajisai-expect-result">[ 3/1 6/1 9/1 ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="core-binding-does-not-cross-a-word-call" data-category="core"><h3>A binding does not cross a Word call</h3><pre class="ajisai-source">[ T ] 'READS-T' DEF 5 'T' BIND READS-T</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">bound in another frame</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="core-binding-does-not-cross-a-word-call" data-category="core"><h3>A binding does not cross a Word call</h3><pre class="ajisai-source">[ | T ] 'READS-T' DEF 5 'T' BIND READS-T</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">bound in another frame</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-binding-may-not-shadow-a-word" data-category="core"><h3>A binding may not take a Word&#39;s name</h3><pre class="ajisai-source">5 'ADD' BIND</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">a binding may not shadow one</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-sub" data-category="core"><h3>SUB</h3><pre class="ajisai-source">5 2 SUB</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-mod" data-category="core"><h3>MOD</h3><pre class="ajisai-source">-7 3 MOD</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>

@@ -268,7 +268,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     // ── Dictionary words ──────────────────────────────────────────────────
     BuiltinLookupDoc {
         word: "DEF",
-        behavior: "Pops the name, then the body block, and defines a user\nword under that name in the dictionary. Names written before |\nat the start of the body are its parameters: the call takes that\nmany operands and binds them.",
+        behavior: "Pops the name, then the body block, and defines a user\nword under that name in the dictionary. The body starts with its\nparameters, written before |: the call takes that many operands\nand binds them. A body without a header is refused.",
         examples: &[BuiltinExampleDoc {
             code: "[ X | X 2 * ] 'DOUBLE' DEF",
             result: "Defines DOUBLE; 5 DOUBLE then pushes 10.",

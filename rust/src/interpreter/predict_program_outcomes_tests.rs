@@ -173,7 +173,7 @@ fn an_unresolved_name_restores_every_gated_category() {
 /// the reachability set it builds is not just the top-level symbols.
 #[test]
 fn a_gated_trigger_inside_a_definition_body_still_counts() {
-    let outcomes = predict("[ 'INC' DEL ] 'DROP-INC' DEF DROP-INC");
+    let outcomes = predict("[ | 'INC' DEL ] 'DROP-INC' DEF DROP-INC");
     assert!(outcomes.contains(&"error:builtinProtection".to_string()));
 }
 

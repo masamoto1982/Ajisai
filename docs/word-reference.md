@@ -1336,7 +1336,7 @@ Name a value for the rest of the frame that made it. One name takes the whole va
 
 ## `DEF`
 
-Define a user word from a body and a name. Names written before | at the start of the body declare its inputs: the call takes exactly that many operands, binds them, and runs the body on an empty stack.
+Define a user word from a body and a name. The body starts with a header: the names written before | declare its inputs, and the call takes exactly that many operands, binds them, and runs the body on an empty stack. A body without a header is refused.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`

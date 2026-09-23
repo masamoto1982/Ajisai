@@ -2228,15 +2228,14 @@
                 <section id="control" class="ref-page">
                     <h2>制御構文(<code>SELECT</code>, <code>MAP</code>)</h2>
                     <h3 id="blocks-frames">ブロックと評価文脈(<code>[ ]</code>)</h3>
-                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。ほとんどの場合、どの規則が適用されるかはブロック自身のテキストには書かれておらず、決めるのはそのブロックを受け取るワードです。例外は<code>DEF</code>の本体で、先頭に<a href="#define">パラメータ見出し</a>を書けば、そのワードが取るオペランドの個数が本体のテキストに書かれます。</p>
+                    <p>ブロックは<strong>それ自身のスタック規律を持ちません</strong>。ブロックを評価するワードが、そのブロックが何に到達でき、何を残してよいかを決めます。誤った規則で読むと、ブロック内の<code>+</code>が2つのオペランドを見つけるか、1つも見つけられないかの違いになります。ほとんどの場合、どの規則が適用されるかはブロック自身のテキストには書かれておらず、決めるのはそのブロックを受け取るワードです。例外は<code>DEF</code>の本体で、先頭の<a href="#define">パラメータ見出し</a>に、そのワードが取るオペランドの個数が書かれます。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
                                 <tr><th>評価するワード</th><th>ブロックが見るもの</th><th>ブロックが残すもの</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td>見出しを持つワードの本体(<code>[ A B | … ] DEF</code>)</td><td class="notes">何もない。呼び出しが見出しの個数ぶんのオペランドを取り、深い方から名前に束縛する</td><td class="notes">積んだものすべて、いくつでも。空のフレームより下を読めばスタックアンダーフロー</td></tr>
-                                <tr><td>見出しを持たないワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
+                                <tr><td>ワードの本体(<code>[ A B | … ] DEF</code>)</td><td class="notes">何もない。呼び出しが見出しの個数ぶんのオペランドを取り、深い方から名前に束縛する</td><td class="notes">積んだものすべて、いくつでも。空のフレームより下を読めばスタックアンダーフロー</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                                                 <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                                 <tr><td><code>FOLD</code> <code>SCAN</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
@@ -2738,8 +2737,8 @@ FILTER</code></td>
                 <section id="words" class="ref-page">
                     <h2>ワードと名前(<code>DEF</code>, <code>BIND</code>)</h2>
                     <h3 id="define"><code>DEF</code>で新しいワードを作る</h3>
-                    <p>新しいワードは、コードブロックと名前から定義されます：<code>[ body ] 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
-                    <p>本体の先頭には<strong>パラメータ見出し</strong>を書けます。<code>|</code>より前に並べた名前がそのワードの入力です。<code>[ A B | A B - ] 'DIFF' DEF</code>は2つのオペランドを取り、深い方を<code>A</code>、上の方を<code>B</code>に束縛して、空のスタックの上で本体を実行します。そのため<code>10 3 DIFF</code>は<code>7/1</code>になり、<code>10 3 KEEP DIFF</code>は見出しが宣言した2つのオペランドをちょうど残して<code>10/1 3/1 7/1</code>になります。入力のないワードは<code>[ | 42 ] 'K' DEF</code>のように空の見出しで書きます。見出しを書くと、そのワードが何個の値を取るかが定義を読むだけでわかります。<code>|</code>は見出しの区切りなので、ワードや束縛の名前には使えません。</p>
+                    <p>新しいワードは、コードブロックと名前から定義されます：<code>[ params | body ] 'NAME' DEF</code>。本体は、そのワードが呼ばれるたびに実行されます。</p>
+                    <p>本体の先頭には必ず<strong>パラメータ見出し</strong>を書きます。<code>|</code>より前に並べた名前がそのワードの入力です。<code>[ A B | A B - ] 'DIFF' DEF</code>は2つのオペランドを取り、深い方を<code>A</code>、上の方を<code>B</code>に束縛して、空のスタックの上で本体を実行します。そのため<code>10 3 DIFF</code>は<code>7/1</code>になり、<code>10 3 KEEP DIFF</code>は見出しが宣言した2つのオペランドをちょうど残して<code>10/1 3/1 7/1</code>になります。入力のないワードは<code>[ | 42 ] 'K' DEF</code>のように空の見出しで書きます。見出しがあるので、そのワードが何個の値を取るかが定義を読むだけでわかります。見出しのない本体は<code>DEF</code>が拒否します。本体が自分のフレームより下を必ず読む定義（<code>[ X | + ]</code>など）も、呼ぶたびに失敗するだけなので<code>DEF</code>が拒否します。<code>|</code>は見出しの区切りなので、ワードや束縛の名前には使えません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2781,11 +2780,11 @@ FILTER</code></td>
                         </div>
                     </div>
                     <h3>DEFが検査すること、しないこと</h3>
-                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです。<code>[ TOTALL 1 ] 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
+                    <p><code>DEF</code>は本体を保存するだけで、その中の名前を解決しません。存在しないワードを呼び出す本体を持つ定義は受け入れられ、定義済みとして報告されます。失敗が表面化するのは、そのワードが最初に<strong>呼び出された</strong>ときです。<code>[ | TOTALL 1 ] 'FOO' DEF</code>は成功し、<code>FOO</code>を実行して初めて<em>Unknown word: TOTALL</em>が報告されます。</p>
                     <p>これは検査漏れではなく設計上の選択です。名前は呼び出し時に解決されます。これにより、あるワードが自分より後に定義される別のワードを呼び出すことができ、定義を依存関係に合わせて並べ替える必要は決してありません。</p>
                     <p class="ref-note">その代償として、本体の中の誤字は、何かがそれを呼び出すまで静かに潜んでいます。これを事前に検出できるのがヘッドレスCLIです。<code>ajisai check</code>は何も実行せずにファイル中のすべての名前を解決し、未知のものを報告します。<code>ajisai check --contract</code>はさらに宣言されたワード契約も検証します。Playgroundにはこれに相当するものがなく、アプリの中では、ワードを呼び出すこと自体が検査になります。</p>
                     <h3 id="acyclic">ワードは自分自身を呼び出せない</h3>
-                    <p>User辞書の参照グラフは循環しません。<code>[ REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
+                    <p>User辞書の参照グラフは循環しません。<code>[ | REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
                     <p>これは間接的な循環にも及びます。<code>A</code>が<code>B</code>を呼び出すよう定義し、続けて<code>B</code>が<code>A</code>を呼び出すよう定義しようとすると、その2つ目の<code>DEF</code>が拒否されます。<code>A</code>はすでに<code>B</code>という名前を(まだ存在しなくても)本体に含んでおり、そこへ<code>B</code>から<code>A</code>への参照を足すと<code>A</code>に戻る循環が閉じるからです。すでに存在する言葉を新しい定義が呼び出すこと自体は自由です。禁じられているのは、今まさに定義しようとしているワードへ、その連鎖が戻ってくることだけです。</p>
                     <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code> <code>ANY</code> <code>ALL</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
                     <h3>ワードの管理</h3>
@@ -2906,19 +2905,19 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
+                                    <td><code>[ X | X 10 ADD ] &#39;ADD10&#39; DEF
 5 ADD10</code></td>
                                     <td><code>15/1</code></td>
                                     <td class="notes">定義済みのワードは、その名前で参照される。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 1 ] &#39;ADD&#39; DEF</code></td>
+                                    <td><code>[ | 1 ] &#39;ADD&#39; DEF</code></td>
                                     <td>error</td>
                                     <td class="notes">Coreは封印されているので、Coreの名前を奪うことはできない。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 10 ADD ] &#39;ADD10&#39; DEF
-[ 20 ADD ] &#39;ADD10&#39; DEF
+                                    <td><code>[ X | X 10 ADD ] &#39;ADD10&#39; DEF
+[ X | X 20 ADD ] &#39;ADD10&#39; DEF
 5 ADD10</code></td>
                                     <td><code>25/1</code></td>
                                     <td class="notes">再定義は、唯一のUserエントリを束縛し直す。ただし他のワードがそれに依存している場合は、<code>DEF</code>が拒否する。</td>

@@ -81,7 +81,7 @@ mod contract_report_tests {
         // the checker cannot even parse — which is exactly the round trip
         // this test exists to rule out.
         let source =
-            "[ X Y | X Y ADD ] 'A' DEF\n[ JOIN ] 'J' DEF\n[ [ 1 ] MAP ] 'M' DEF\n[ [ 0 10 ] RANGE ] 'K' DEF";
+            "[ X Y | X Y ADD ] 'A' DEF\n[ X Y | X Y JOIN ] 'J' DEF\n[ X | X [ 1 ] MAP ] 'M' DEF\n[ | [ 0 10 ] RANGE ] 'K' DEF";
         let reports = report_contracts(source);
         assert_eq!(reports.len(), 4, "expected one report per defined word");
         let mut annotated = source.to_string();

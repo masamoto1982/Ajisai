@@ -163,7 +163,7 @@ fn definition_program(
             } else {
                 body
             };
-            format!("[ {body} ] 'W{i}' DEF")
+            format!("[ | {body} ] 'W{i}' DEF")
         })
         .collect::<Vec<_>>()
         .into_iter()

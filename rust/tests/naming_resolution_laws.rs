@@ -73,11 +73,11 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(40))]
 
     /// **DEF makes a name resolvable; the defined word equals its inlined
-    /// body.** `[body] 'W' DEF  x W  ≡  x body` — defining then calling is the
+    /// body.** `[ X | X body ] 'W' DEF  x W  ≡  x body` — defining then calling is the
     /// identity on the body transducer (LANG.DICTIONARY.MUTATION).
     #[test]
     fn def_then_call_inlines_body(name in user_word_name(), (body, inline) in user_word_body(), x in small()) {
-        let defined = obs(&format!("[ {body} ] '{name}' DEF {x} {name}"));
+        let defined = obs(&format!("[ X | X {body} ] '{name}' DEF {x} {name}"));
         let inlined = obs(&format!("{x} {inline}"));
         prop_assert_eq!(defined, inlined);
     }
@@ -88,8 +88,8 @@ proptest! {
     #[test]
     fn def_del_round_trip_restores_unknown(name in user_word_name(), (body, _i) in user_word_body(), x in small()) {
         let fresh = format!("{x} {name}");
-        let defined = format!("[ {body} ] '{name}' DEF {x} {name}");
-        let def_del = format!("[ {body} ] '{name}' DEF '{name}' DEL {x} {name}");
+        let defined = format!("[ X | X {body} ] '{name}' DEF {x} {name}");
+        let def_del = format!("[ X | X {body} ] '{name}' DEF '{name}' DEL {x} {name}");
         // Fresh name resolves to Unknown.
         prop_assert!(outcome(&fresh).is_err());
         // Defined → resolves.
@@ -176,7 +176,7 @@ fn a_binding_reaches_blocks_written_in_its_frame() {
 /// does not exist.
 #[test]
 fn a_binding_does_not_cross_a_word_call() {
-    let message = run_err("[ T ] 'READS-T' DEF 5 'T' BIND READS-T");
+    let message = run_err("[ | T ] 'READS-T' DEF 5 'T' BIND READS-T");
     assert!(
         message.contains("bound in another frame"),
         "expected the scope rule, got: {message}"
@@ -252,7 +252,7 @@ fn a_binding_survives_neither_an_ordinary_call_nor_a_deep_call_chain() {
     // One level down: CALLEE reads the bare name `N` without binding it
     // itself. If CALLER's binding leaked in, this would answer `5`; the
     // barrier instead makes `N` unreachable there.
-    let one_level = "[ N ] 'CALLEE' DEF [ 'N' BIND CALLEE ] 'CALLER' DEF ";
+    let one_level = "[ | N ] 'CALLEE' DEF [ X | X 'N' BIND CALLEE ] 'CALLER' DEF ";
     let err = run_err(&format!("{one_level} 5 CALLER"));
     assert!(
         err.contains("bound in another frame"),
@@ -261,7 +261,7 @@ fn a_binding_survives_neither_an_ordinary_call_nor_a_deep_call_chain() {
 
     // Several levels down: the same barrier must hold transitively through a
     // chain of distinct (non-cyclic) words, not just at the first call.
-    let chain = "[ N ] 'D' DEF [ D ] 'C' DEF [ C ] 'B' DEF [ 'N' BIND B ] 'A' DEF ";
+    let chain = "[ | N ] 'D' DEF [ | D ] 'C' DEF [ | C ] 'B' DEF [ X | X 'N' BIND B ] 'A' DEF ";
     let err = run_err(&format!("{chain} 5 A"));
     assert!(
         err.contains("bound in another frame"),

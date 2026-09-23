@@ -52,7 +52,7 @@ async fn dependency_chains_widen_monotonically() {
 // `recursive_words_are_conservative_without_looping` tested that contract
 // inference went conservative on re-entrant (direct or mutual) recursion.
 // LANG.DICTIONARY.ACYCLIC's DEF-time acyclicity check now refuses such a definition
-// outright — `[ REC ] 'REC' DEF` and `[ X | X B ] 'A' DEF [ X | X A ] 'B' DEF` both fail
+// outright — `[ | REC ] 'REC' DEF` and `[ X | X B ] 'A' DEF [ X | X A ] 'B' DEF` both fail
 // before contract inference ever runs — so there is no longer a program that
 // reaches this path.
 
@@ -213,7 +213,8 @@ async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
         // Pending at the end of a body is a no-op, as it is at run time.
         ("1 KEEP", 0, 1),
     ] {
-        let source = format!("[ {body} ] 'W' DEF");
+        let params = ["X", "Y"][..usize::from(consumes)].join(" ");
+        let source = format!("[ {params} | {params} {body} ] 'W' DEF");
         let contract = contract_for(&source, "W").await;
         assert_eq!(contract.flow, fixed(consumes, produces), "body: {body}");
         assert_eq!(
@@ -256,7 +257,7 @@ async fn a_block_written_inside_a_vector_literal_is_quoted_but_never_run() {
         "[ [ PRINT ] [ 1 ] ]",
         "[ [ [ [ PRINT ] 0 GET EXEC ] ] 0 GET EXEC ]",
     ] {
-        let source = format!("[ {body} ] 'W' DEF");
+        let source = format!("[ | {body} ] 'W' DEF");
         let contract = contract_for(&source, "W").await;
         assert_eq!(contract.purity, ContractPurity::Pure, "body: {body}");
         assert_eq!(
@@ -281,7 +282,7 @@ async fn a_value_only_reaching_exec_through_collect_is_a_known_gap() {
     // stays conservative-by-omission (a missed `note`, never a false
     // `error`), and a value actually reaching `EXEC` this way is unusual
     // enough that recovering it is not worth another special case.
-    let contract = contract_for("[ [ PRINT ] 1 COLLECT [ 0 ] GET EXEC ] 'W' DEF", "W").await;
+    let contract = contract_for("[ | [ PRINT ] 1 COLLECT [ 0 ] GET EXEC ] 'W' DEF", "W").await;
     assert_eq!(contract.purity, ContractPurity::Pure);
 }
 

@@ -23,25 +23,22 @@ use crate::types::Value;
 /// of being applied. Bridging the elements directly needs no such round-trip.
 pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
     // `KEEP` modifies the `EXEC` call, never the first Word inside the block
-    // — the same boundary a User Word call draws (`execute_word_core`). The
-    // block runs consuming, and what the call reached, the block included, is
-    // put back beneath its results. Left alone, the modifier used to leak in:
-    // `[ 3 ] [ 1 + ] KEEP EXEC` kept `+`'s literal and answered
-    // `[ 3/1 ] 1/1 [ 4/1 ]`.
+    // (LANG.MODIFIERS.CONSUMPTION). The block's frame is the whole stack, so
+    // the whole stack is what the call was given: under `KEEP` it stays, and
+    // what the block leaves goes on top of it. The block itself runs
+    // consuming. Left alone, the modifier used to leak in: `[ 3 ] [ 1 + ]
+    // KEEP EXEC` kept `+`'s literal and answered `[ 3/1 ] 1/1 [ 4/1 ]`.
     let keep_call = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
     interp.consumption_mode = crate::interpreter::ConsumptionMode::Consume;
-    let kept_operands: Option<Vec<(Value, crate::types::Interpretation)>> = keep_call.then(|| {
-        interp
-            .stack
-            .iter_slots()
-            .map(|(value, role)| (value.clone(), role))
-            .collect()
-    });
-    let enclosing_watch = interp.stack.begin_depth_watch();
+    let kept = keep_call.then(|| interp.stack.clone());
     let result = exec_block(interp);
-    let operand_floor = interp.stack.end_depth_watch(enclosing_watch);
-    if let (Some(operands), true) = (kept_operands, result.is_ok()) {
-        interp.restore_kept_operands(operands, operand_floor);
+    if let (Some(mut given), true) = (kept, result.is_ok()) {
+        let left = std::mem::take(&mut interp.stack);
+        let (values, roles) = left.into_parts();
+        for (value, role) in values.into_iter().zip(roles) {
+            given.push_with_role(value, role);
+        }
+        interp.stack = given;
     }
     result
 }

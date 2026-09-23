@@ -6,7 +6,7 @@
 #[test]
 fn bound_names_and_header_parameters_are_not_unknown_words() {
     for source in [
-        "[ 'V' BIND V V LENGTH / ] 'MEAN' DEF",
+        "[ X | X 'V' BIND V V LENGTH / ] 'MEAN' DEF",
         "1 'Q' BIND Q",
         "[ X | X [ 1 ] + ] 'INC' DEF",
         "[ A B | A B - ] 'DIFF' DEF 10 3 DIFF",

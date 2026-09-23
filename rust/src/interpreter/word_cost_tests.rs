@@ -105,12 +105,12 @@ async fn user_word_chain_composes_a_dependency_bound() {
 
 // `recursion_is_conservative_unbounded_on_every_axis` tested that a
 // self-recursive word costed Unbounded on every axis. LANG.DICTIONARY.ACYCLIC's DEF-time
-// acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so there is no
+// acyclicity check now refuses `[ | REC ] 'REC' DEF` outright, so there is no
 // longer a recursive word for cost inference to see.
 
 #[tokio::test]
 async fn unresolved_dependency_degrades_to_conservative_cost() {
-    let cost = cost_of("[ [ 0 10 ] DUP RANGE ] 'U' DEF", "U").await;
+    let cost = cost_of("[ | [ 0 10 ] DUP RANGE ] 'U' DEF", "U").await;
     for axis in [cost.steps, cost.numeric, cost.collection] {
         assert_eq!(axis, (CostClass::Unbounded, false));
     }

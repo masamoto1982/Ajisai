@@ -288,7 +288,7 @@ fn the_declared_contract_binds_the_compiled_path_too() {
         ("STR", Outcome::NilWithReason),
     ] {
         let direct = format!("1 0 DIV {word}");
-        let wrapped = format!("[ {word} ] 'WRAP' DEF 1 0 DIV WRAP");
+        let wrapped = format!("[ X | X {word} ] 'WRAP' DEF 1 0 DIV WRAP");
 
         let direct_outcome = runtime.block_on(observe(&direct));
         let wrapped_outcome = runtime.block_on(observe(&wrapped));
