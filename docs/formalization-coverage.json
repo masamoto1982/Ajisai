@@ -1730,7 +1730,9 @@
       "law_tests": [
         "rust/tests/higher_order_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "core-keep-on-exec-modifies-the-call"
+      ],
       "status": "Formalized",
       "notes": "Executes a code value by reflecting it into state-transformer composition.",
       "semantic_role": "Derived",
@@ -2949,7 +2951,10 @@
         "rust/tests/naming_resolution_laws.rs"
       ],
       "conformance_cases": [
-        "core-user-definition-resolved"
+        "core-user-definition-resolved",
+        "core-header-takes-declared-operands",
+        "core-header-frame-starts-empty",
+        "core-keep-on-header-word"
       ],
       "status": "Formalized",
       "notes": "DEF extends the User dictionary finite partial map with a content-addressed binding while preserving the sealed Core tier.",
@@ -3815,6 +3820,31 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "END-RECORD"
+    },
+    {
+      "id": "surface.pipe",
+      "kind": "delimiter_sugar",
+      "surface": "|",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.html LANG.SOURCE.FRAME"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/param_header_tests.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [
+        "core-header-takes-declared-operands",
+        "core-keep-on-header-word"
+      ],
+      "status": "Formalized",
+      "notes": "Parameter-header separator: the names before the first | of a DEF body's first statement are the Word's parameters (LANG.SOURCE.FRAME). Lexes as one Symbol; DEF reads it, DEF and BIND refuse it as a name. Not a runtime word.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
+      "desugars_to": "PARAMETER-SEPARATOR"
     },
     {
       "id": "surface.quote",

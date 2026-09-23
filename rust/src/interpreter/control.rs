@@ -22,6 +22,31 @@ use crate::types::Value;
 /// `1 2 [ 65 68 68 ]` — the word `ADD` came back as its own codepoints instead
 /// of being applied. Bridging the elements directly needs no such round-trip.
 pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
+    // `KEEP` modifies the `EXEC` call, never the first Word inside the block
+    // — the same boundary a User Word call draws (`execute_word_core`). The
+    // block runs consuming, and what the call reached, the block included, is
+    // put back beneath its results. Left alone, the modifier used to leak in:
+    // `[ 3 ] [ 1 + ] KEEP EXEC` kept `+`'s literal and answered
+    // `[ 3/1 ] 1/1 [ 4/1 ]`.
+    let keep_call = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
+    interp.consumption_mode = crate::interpreter::ConsumptionMode::Consume;
+    let kept_operands: Option<Vec<(Value, crate::types::Interpretation)>> = keep_call.then(|| {
+        interp
+            .stack
+            .iter_slots()
+            .map(|(value, role)| (value.clone(), role))
+            .collect()
+    });
+    let enclosing_watch = interp.stack.begin_depth_watch();
+    let result = exec_block(interp);
+    let operand_floor = interp.stack.end_depth_watch(enclosing_watch);
+    if let (Some(operands), true) = (kept_operands, result.is_ok()) {
+        interp.restore_kept_operands(operands, operand_floor);
+    }
+    result
+}
+
+fn exec_block(interp: &mut Interpreter) -> Result<()> {
     let target: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let Some(elements) = target.as_vector_view() else {

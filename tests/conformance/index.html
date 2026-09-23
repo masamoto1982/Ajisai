@@ -264,6 +264,40 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- A parameter header states a Word's arity (LANG.SOURCE.FRAME): the call
+     takes exactly the declared operands, deepest first, and the body runs on
+     an empty stack, so what KEEP keeps is read from the definition
+     (LANG.MODIFIERS.CONSUMPTION). -->
+
+<section class="ajisai-case" id="core-header-takes-declared-operands" data-category="core">
+  <h3>A parameter header binds exactly the declared operands, deepest first (LANG.SOURCE.FRAME)</h3>
+  <pre class="ajisai-source">[ A B | A B - ] 'DIFF' DEF 1 10 3 DIFF</pre>
+  <pre class="ajisai-expect-result">1/1 7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-header-frame-starts-empty" data-category="core">
+  <h3>A header-carrying body cannot read below its own empty frame (LANG.SOURCE.FRAME)</h3>
+  <pre class="ajisai-source">[ X | + ] 'BAD' DEF 1 2 BAD</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">underflow</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-keep-on-header-word" data-category="core">
+  <h3>KEEP on a header-carrying Word keeps exactly the declared operands (LANG.MODIFIERS.CONSUMPTION)</h3>
+  <pre class="ajisai-source">[ A B | A B - ] 'DIFF' DEF 10 3 KEEP DIFF</pre>
+  <pre class="ajisai-expect-result">10/1 3/1 7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-keep-on-exec-modifies-the-call" data-category="core">
+  <h3>KEEP modifies the EXEC call, not the first Word inside its block (LANG.MODIFIERS.CONSUMPTION)</h3>
+  <pre class="ajisai-source">[ 3 ] [ 1 + ] KEEP EXEC</pre>
+  <pre class="ajisai-expect-result">[ 3/1 ] [ 1/1 + ] [ 4/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: STRUCTURE & VECTORS ===================== -->
 <!-- These cases extend the suite toward §"Conformance and Identity":
      every case below was observed against the reference implementation and

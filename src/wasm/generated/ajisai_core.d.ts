@@ -189,8 +189,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_snapshot_stack: (a: number) => [number, number, number, number];
     readonly init_panic_hook: () => void;
     readonly ajisaiinterpreter_reset_session: (a: number) => any;
-    readonly wasm_bindgen_f911da67128dcb0d___convert__closures_____invoke___wasm_bindgen_f911da67128dcb0d___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_f911da67128dcb0d___JsError___true_: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen_f911da67128dcb0d___convert__closures_____invoke___js_sys_e721ab5f144fe455___Function_fn_wasm_bindgen_f911da67128dcb0d___JsValue_____wasm_bindgen_f911da67128dcb0d___sys__Undefined___js_sys_e721ab5f144fe455___Function_fn_wasm_bindgen_f911da67128dcb0d___JsValue_____wasm_bindgen_f911da67128dcb0d___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h0896cde0637cafae: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

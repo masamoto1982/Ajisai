@@ -1336,7 +1336,7 @@ Name a value for the rest of the frame that made it. One name takes the whole va
 
 ## `DEF`
 
-Define a user word from a body and a name.
+Define a user word from a body and a name. Names written before | at the start of the body declare its inputs: the call takes exactly that many operands, binds them, and runs the body on an empty stack.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
@@ -1345,7 +1345,7 @@ Define a user word from a body and a name.
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.ACYCLIC`
-- **Syntax:** `[ 2 * ] 'DOUBLE' DEF`
+- **Syntax:** `[ X | X 2 * ] 'DOUBLE' DEF`
 - **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
 
 ## `DEL`

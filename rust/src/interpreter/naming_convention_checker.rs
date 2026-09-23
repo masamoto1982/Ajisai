@@ -26,12 +26,17 @@ pub(crate) fn check_reserved_word_name(name: &str, verb: &str) -> Option<String>
         };
     }
 
-    // `|` used to be refused here as "tokenizer-level syntax", which it no
-    // longer is: it separated a COND clause's guard from its body, COND was
-    // replaced by SELECT, and the bare lexeme was freed along with `(`, `)`,
-    // `{` and `}` (`spec/grammar.json`, characterClasses.nameCharacter). It is
-    // an ordinary name now, and this function speaks only for names that are
-    // genuinely taken.
+    // `|` separates a definition's parameter header from its body
+    // (`[ A B | … ] 'NAME' DEF`, LANG.SOURCE.FRAME), so it cannot also be a
+    // name: a Word or binding called `|` would be unreachable inside the very
+    // bodies that read it as the separator. Only the bare lexeme is taken —
+    // `a|b` stays an ordinary name, since only a whole token separates.
+    if name == "|" {
+        return Some(format!(
+            "Cannot {} '|': '|' separates a definition's parameters from its body.",
+            verb
+        ));
+    }
 
     None
 }

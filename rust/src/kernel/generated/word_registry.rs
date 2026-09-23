@@ -3933,7 +3933,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
             "nonText",
             "invalidDefinitionBody",
         ],
-        syntax: Some("[ 2 * ] 'DOUBLE' DEF"),
+        syntax: Some("[ X | X 2 * ] 'DOUBLE' DEF"),
     },
     GeneratedWord {
         id: WordId::Del,

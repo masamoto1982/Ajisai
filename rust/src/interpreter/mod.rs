@@ -124,6 +124,7 @@ mod value_as_code;
 pub(crate) mod vector_literal;
 
 mod execute_builtin;
+mod word_call;
 
 pub(crate) mod nil_diagnostics;
 
@@ -184,6 +185,8 @@ mod nil_contract_conformance_tests;
 mod nil_diagnostics_tests;
 #[cfg(test)]
 mod nil_reason_tests;
+#[cfg(test)]
+mod param_header_tests;
 #[cfg(test)]
 mod tier2_undecidable_conformance_tests;
 

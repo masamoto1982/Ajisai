@@ -873,7 +873,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Dictionary primitive: Define a user word from a body and a name.",
         stack_effect: "[ body ] [ name ] -> []",
         hover_summary: "DEF — define user word",
-        hover_syntax: "[ 2 * ] 'DOUBLE' DEF",
+        hover_syntax: "[ X | X 2 * ] 'DOUBLE' DEF",
     },
     GeneratedCoreWordDoc {
         name: "DEL",
