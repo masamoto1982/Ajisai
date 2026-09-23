@@ -1,0 +1,83 @@
+{
+  "agent": "S0C",
+  "generation": 0,
+  "condition": "solo",
+  "definitions": [
+    {
+      "name": "S0C.SUM",
+      "body": "0 [ + ] FOLD",
+      "note": "sum of a numeric Vector as a bare scalar"
+    },
+    {
+      "name": "S0C.MEAN",
+      "body": "'S0C.M' BIND S0C.M S0C.SUM S0C.M LENGTH /",
+      "note": "arithmetic mean of a numeric Vector as a bare scalar"
+    },
+    {
+      "name": "S0C.DEVIATIONS",
+      "body": "'S0C.D' BIND S0C.D S0C.D S0C.MEAN -",
+      "note": "Vector of each element minus the mean"
+    },
+    {
+      "name": "S0C.VARIANCE",
+      "body": "S0C.DEVIATIONS 'S0C.V' BIND S0C.V S0C.V * S0C.MEAN",
+      "note": "population variance as a bare scalar"
+    },
+    {
+      "name": "S0C.STDDEV",
+      "body": "S0C.VARIANCE SQRT",
+      "note": "population standard deviation (exact) as a bare scalar"
+    },
+    {
+      "name": "S0C.MAX",
+      "body": "'S0C.X' BIND S0C.X S0C.X 0 GET [ MAX ] FOLD",
+      "note": "largest element of a non-empty numeric Vector"
+    },
+    {
+      "name": "S0C.MIN",
+      "body": "'S0C.N' BIND S0C.N S0C.N 0 GET [ MIN ] FOLD",
+      "note": "smallest element of a non-empty numeric Vector"
+    },
+    {
+      "name": "S0C.RANGE",
+      "body": "'S0C.R' BIND S0C.R S0C.MAX S0C.R S0C.MIN -",
+      "note": "max minus min of a numeric Vector"
+    },
+    {
+      "name": "S0C.NORMALIZE",
+      "body": "'S0C.Z' BIND S0C.Z S0C.Z S0C.MIN - S0C.Z S0C.RANGE /",
+      "note": "min-max rescale of a numeric Vector to [0,1]"
+    },
+    {
+      "name": "S0C.WORDS",
+      "body": "' ' TOKENIZE",
+      "note": "split a String on single spaces into a Vector of words"
+    },
+    {
+      "name": "S0C.LENGTHS",
+      "body": "[ CHARS LENGTH ] MAP",
+      "note": "character count of each String in a Vector"
+    },
+    {
+      "name": "S0C.TITLECASE",
+      "body": "CHARS 'S0C.C' BIND S0C.C [ UPPER ] MAP S0C.C [ ' ' ] S0C.C -1 DROP CONCAT [ ' ' = ] MAP SELECT JOIN",
+      "note": "upper-case the first letter of every space-separated word in a String"
+    }
+  ],
+  "solutions": {
+    "stats.sum": "S0C.SUM",
+    "stats.mean": "S0C.MEAN",
+    "stats.deviations": "S0C.DEVIATIONS",
+    "stats.variance": "S0C.VARIANCE",
+    "stats.stddev": "S0C.STDDEV",
+    "stats.range": "S0C.RANGE",
+    "stats.normalize": "S0C.NORMALIZE",
+    "text.count": "S0C.WORDS LENGTH",
+    "text.frequency": "S0C.WORDS TALLY",
+    "text.distinct": "S0C.WORDS UNIQUE",
+    "text.titlecase": "S0C.TITLECASE",
+    "text.longest": "S0C.WORDS S0C.LENGTHS S0C.MAX",
+    "text.long-words": "S0C.WORDS [ CHARS LENGTH 3 > ] FILTER",
+    "text.acronym": "S0C.WORDS [ CHARS 0 GET ] MAP JOIN UPPER"
+  }
+}

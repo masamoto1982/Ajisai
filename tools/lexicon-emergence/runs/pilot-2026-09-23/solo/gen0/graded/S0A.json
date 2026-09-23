@@ -1,0 +1,763 @@
+{
+  "agent": "S0A",
+  "generation": 0,
+  "condition": "solo",
+  "definitions": [
+    {
+      "name": "S0A.SUM",
+      "body": "'XS' BIND XS 0 [ + ] FOLD",
+      "note": "sum of a numeric Vector as a bare scalar"
+    },
+    {
+      "name": "S0A.MEAN",
+      "body": "'XS' BIND XS S0A.SUM XS LENGTH /",
+      "note": "arithmetic mean of a numeric Vector"
+    },
+    {
+      "name": "S0A.DEVS",
+      "body": "'XS' BIND XS XS S0A.MEAN -",
+      "note": "each element minus the mean"
+    },
+    {
+      "name": "S0A.VAR",
+      "body": "S0A.DEVS 'DS' BIND DS DS * S0A.MEAN",
+      "note": "population variance"
+    },
+    {
+      "name": "S0A.STDDEV",
+      "body": "S0A.VAR SQRT",
+      "note": "population standard deviation (exact)"
+    },
+    {
+      "name": "S0A.MIN",
+      "body": "'XS' BIND XS XS 0 GET [ MIN ] FOLD",
+      "note": "smallest element as a bare scalar"
+    },
+    {
+      "name": "S0A.MAX",
+      "body": "'XS' BIND XS XS 0 GET [ MAX ] FOLD",
+      "note": "largest element as a bare scalar"
+    },
+    {
+      "name": "S0A.RANGE",
+      "body": "'XS' BIND XS S0A.MAX XS S0A.MIN -",
+      "note": "max minus min"
+    },
+    {
+      "name": "S0A.NORMALIZE",
+      "body": "'XS' BIND XS XS S0A.MIN - XS S0A.RANGE /",
+      "note": "min-max rescale to [0,1]"
+    },
+    {
+      "name": "S0A.WORDS",
+      "body": "' ' TOKENIZE",
+      "note": "split a String on single spaces into a Vector of words"
+    },
+    {
+      "name": "S0A.CAP",
+      "body": "CHARS 'CS' BIND CS 0 GET UPPER CS [ 1 ] DROP JOIN 2 COLLECT JOIN",
+      "note": "upper-case the first letter of a String"
+    },
+    {
+      "name": "S0A.UNWORDS",
+      "body": "[ ' ' 2 COLLECT ] MAP FLATTEN [ -1 ] DROP JOIN",
+      "note": "join a Vector of Strings with single spaces"
+    },
+    {
+      "name": "S0A.TITLECASE",
+      "body": "S0A.WORDS [ S0A.CAP ] MAP S0A.UNWORDS",
+      "note": "capitalize every word of a space-separated String"
+    },
+    {
+      "name": "S0A.LONGEST",
+      "body": "S0A.WORDS [ CHARS LENGTH ] MAP 0 [ MAX ] FOLD",
+      "note": "length of the longest word in a String"
+    },
+    {
+      "name": "S0A.ACRONYM",
+      "body": "S0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+      "note": "upper-cased first letters of every word"
+    }
+  ],
+  "lexiconNames": [],
+  "results": [
+    {
+      "task": "stats.sum",
+      "submitted": true,
+      "solution": "S0A.SUM",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 11,
+      "uses": [
+        "S0A.SUM"
+      ],
+      "perInput": [
+        {
+          "input": "[ 3 1 4 1 5 ]",
+          "ok": true,
+          "got": [
+            "14/1"
+          ],
+          "expected": [
+            "14/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 2 4 4 4 5 5 7 9 ]",
+          "ok": true,
+          "got": [
+            "40/1"
+          ],
+          "expected": [
+            "40/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 10 -2 7/2 ]",
+          "ok": true,
+          "got": [
+            "23/2"
+          ],
+          "expected": [
+            "23/2"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "stats.mean",
+      "submitted": true,
+      "solution": "S0A.MEAN",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 20,
+      "uses": [
+        "S0A.SUM",
+        "S0A.MEAN"
+      ],
+      "perInput": [
+        {
+          "input": "[ 3 1 4 1 5 ]",
+          "ok": true,
+          "got": [
+            "14/5"
+          ],
+          "expected": [
+            "14/5"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 2 4 4 4 5 5 7 9 ]",
+          "ok": true,
+          "got": [
+            "5/1"
+          ],
+          "expected": [
+            "5/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 10 -2 7/2 ]",
+          "ok": true,
+          "got": [
+            "23/6"
+          ],
+          "expected": [
+            "23/6"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "stats.deviations",
+      "submitted": true,
+      "solution": "S0A.DEVS",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 28,
+      "uses": [
+        "S0A.SUM",
+        "S0A.MEAN",
+        "S0A.DEVS"
+      ],
+      "perInput": [
+        {
+          "input": "[ 3 1 4 1 5 ]",
+          "ok": true,
+          "got": [
+            "[ 1/5 -9/5 6/5 -9/5 11/5 ]"
+          ],
+          "expected": [
+            "[ 1/5 -9/5 6/5 -9/5 11/5 ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 2 4 4 4 5 5 7 9 ]",
+          "ok": true,
+          "got": [
+            "[ -3/1 -1/1 -1/1 -1/1 0/1 0/1 2/1 4/1 ]"
+          ],
+          "expected": [
+            "[ -3/1 -1/1 -1/1 -1/1 0/1 0/1 2/1 4/1 ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 10 -2 7/2 ]",
+          "ok": true,
+          "got": [
+            "[ 37/6 -35/6 -1/3 ]"
+          ],
+          "expected": [
+            "[ 37/6 -35/6 -1/3 ]"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "stats.variance",
+      "submitted": true,
+      "solution": "S0A.VAR",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 56,
+      "uses": [
+        "S0A.SUM",
+        "S0A.MEAN",
+        "S0A.DEVS",
+        "S0A.VAR"
+      ],
+      "perInput": [
+        {
+          "input": "[ 3 1 4 1 5 ]",
+          "ok": true,
+          "got": [
+            "64/25"
+          ],
+          "expected": [
+            "64/25"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 2 4 4 4 5 5 7 9 ]",
+          "ok": true,
+          "got": [
+            "4/1"
+          ],
+          "expected": [
+            "4/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 10 -2 7/2 ]",
+          "ok": true,
+          "got": [
+            "433/18"
+          ],
+          "expected": [
+            "433/18"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "stats.stddev",
+      "submitted": true,
+      "solution": "S0A.STDDEV",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 60,
+      "uses": [
+        "S0A.SUM",
+        "S0A.MEAN",
+        "S0A.DEVS",
+        "S0A.VAR",
+        "S0A.STDDEV"
+      ],
+      "perInput": [
+        {
+          "input": "[ 3 1 4 1 5 ]",
+          "ok": true,
+          "got": [
+            "8/5"
+          ],
+          "expected": [
+            "8/5"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 2 4 4 4 5 5 7 9 ]",
+          "ok": true,
+          "got": [
+            "2/1"
+          ],
+          "expected": [
+            "2/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 10 -2 7/2 ]",
+          "ok": true,
+          "got": [
+            "[ 4; 1, 9, 2, 19, 7, 88, 7, 19, 2, 9, 1, 8, 1, 9, 2, 19, 7, 88, 7, 19, 2, 9, 1, 8, 1, 9, 2, 19, 7, 88, 7, … ]"
+          ],
+          "expected": [
+            "[ 4; 1, 9, 2, 19, 7, 88, 7, 19, 2, 9, 1, 8, 1, 9, 2, 19, 7, 88, 7, 19, 2, 9, 1, 8, 1, 9, 2, 19, 7, 88, 7, … ]"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "stats.range",
+      "submitted": true,
+      "solution": "S0A.RANGE",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 34,
+      "uses": [
+        "S0A.MAX",
+        "S0A.MIN",
+        "S0A.RANGE"
+      ],
+      "perInput": [
+        {
+          "input": "[ 3 1 4 1 5 ]",
+          "ok": true,
+          "got": [
+            "4/1"
+          ],
+          "expected": [
+            "4/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 2 4 4 4 5 5 7 9 ]",
+          "ok": true,
+          "got": [
+            "7/1"
+          ],
+          "expected": [
+            "7/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 10 -2 7/2 ]",
+          "ok": true,
+          "got": [
+            "12/1"
+          ],
+          "expected": [
+            "12/1"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "stats.normalize",
+      "submitted": true,
+      "solution": "S0A.NORMALIZE",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 57,
+      "uses": [
+        "S0A.MIN",
+        "S0A.MAX",
+        "S0A.RANGE",
+        "S0A.NORMALIZE"
+      ],
+      "perInput": [
+        {
+          "input": "[ 3 1 4 1 5 ]",
+          "ok": true,
+          "got": [
+            "[ 1/2 0/1 3/4 0/1 1/1 ]"
+          ],
+          "expected": [
+            "[ 1/2 0/1 3/4 0/1 1/1 ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 2 4 4 4 5 5 7 9 ]",
+          "ok": true,
+          "got": [
+            "[ 0/1 2/7 2/7 2/7 3/7 3/7 5/7 1/1 ]"
+          ],
+          "expected": [
+            "[ 0/1 2/7 2/7 2/7 3/7 3/7 5/7 1/1 ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "[ 10 -2 7/2 ]",
+          "ok": true,
+          "got": [
+            "[ 1/1 0/1 11/24 ]"
+          ],
+          "expected": [
+            "[ 1/1 0/1 11/24 ]"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "text.count",
+      "submitted": true,
+      "solution": "S0A.WORDS LENGTH",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 2,
+      "expandedTokens": 6,
+      "uses": [
+        "S0A.WORDS"
+      ],
+      "perInput": [
+        {
+          "input": "'the quick brown fox jumps over the lazy dog'",
+          "ok": true,
+          "got": [
+            "9/1"
+          ],
+          "expected": [
+            "9/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'a rose is a rose is a rose'",
+          "ok": true,
+          "got": [
+            "8/1"
+          ],
+          "expected": [
+            "8/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'hello world'",
+          "ok": true,
+          "got": [
+            "2/1"
+          ],
+          "expected": [
+            "2/1"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "text.frequency",
+      "submitted": true,
+      "solution": "S0A.WORDS TALLY",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 2,
+      "expandedTokens": 6,
+      "uses": [
+        "S0A.WORDS"
+      ],
+      "perInput": [
+        {
+          "input": "'the quick brown fox jumps over the lazy dog'",
+          "ok": true,
+          "got": [
+            "{ 'the' 2/1 'quick' 1/1 'brown' 1/1 'fox' 1/1 'jumps' 1/1 'over' 1/1 'lazy' 1/1 'dog' 1/1 }"
+          ],
+          "expected": [
+            "{ 'the' 2/1 'quick' 1/1 'brown' 1/1 'fox' 1/1 'jumps' 1/1 'over' 1/1 'lazy' 1/1 'dog' 1/1 }"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'a rose is a rose is a rose'",
+          "ok": true,
+          "got": [
+            "{ 'a' 3/1 'rose' 3/1 'is' 2/1 }"
+          ],
+          "expected": [
+            "{ 'a' 3/1 'rose' 3/1 'is' 2/1 }"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'hello world'",
+          "ok": true,
+          "got": [
+            "{ 'hello' 1/1 'world' 1/1 }"
+          ],
+          "expected": [
+            "{ 'hello' 1/1 'world' 1/1 }"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "text.distinct",
+      "submitted": true,
+      "solution": "S0A.WORDS UNIQUE",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 2,
+      "expandedTokens": 6,
+      "uses": [
+        "S0A.WORDS"
+      ],
+      "perInput": [
+        {
+          "input": "'the quick brown fox jumps over the lazy dog'",
+          "ok": true,
+          "got": [
+            "[ 'the' 'quick' 'brown' 'fox' 'jumps' 'over' 'lazy' 'dog' ]"
+          ],
+          "expected": [
+            "[ 'the' 'quick' 'brown' 'fox' 'jumps' 'over' 'lazy' 'dog' ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'a rose is a rose is a rose'",
+          "ok": true,
+          "got": [
+            "[ 'a' 'rose' 'is' ]"
+          ],
+          "expected": [
+            "[ 'a' 'rose' 'is' ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'hello world'",
+          "ok": true,
+          "got": [
+            "[ 'hello' 'world' ]"
+          ],
+          "expected": [
+            "[ 'hello' 'world' ]"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "text.titlecase",
+      "submitted": true,
+      "solution": "S0A.TITLECASE",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 45,
+      "uses": [
+        "S0A.WORDS",
+        "S0A.CAP",
+        "S0A.UNWORDS",
+        "S0A.TITLECASE"
+      ],
+      "perInput": [
+        {
+          "input": "'the quick brown fox jumps over the lazy dog'",
+          "ok": true,
+          "got": [
+            "'The Quick Brown Fox Jumps Over The Lazy Dog'"
+          ],
+          "expected": [
+            "'The Quick Brown Fox Jumps Over The Lazy Dog'"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'a rose is a rose is a rose'",
+          "ok": true,
+          "got": [
+            "'A Rose Is A Rose Is A Rose'"
+          ],
+          "expected": [
+            "'A Rose Is A Rose Is A Rose'"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'hello world'",
+          "ok": true,
+          "got": [
+            "'Hello World'"
+          ],
+          "expected": [
+            "'Hello World'"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "text.longest",
+      "submitted": true,
+      "solution": "S0A.LONGEST",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 18,
+      "uses": [
+        "S0A.WORDS",
+        "S0A.LONGEST"
+      ],
+      "perInput": [
+        {
+          "input": "'the quick brown fox jumps over the lazy dog'",
+          "ok": true,
+          "got": [
+            "5/1"
+          ],
+          "expected": [
+            "5/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'a rose is a rose is a rose'",
+          "ok": true,
+          "got": [
+            "4/1"
+          ],
+          "expected": [
+            "4/1"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'hello world'",
+          "ok": true,
+          "got": [
+            "5/1"
+          ],
+          "expected": [
+            "5/1"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "text.long-words",
+      "submitted": true,
+      "solution": "S0A.WORDS [ CHARS LENGTH 3 > ] FILTER",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 8,
+      "expandedTokens": 12,
+      "uses": [
+        "S0A.WORDS"
+      ],
+      "perInput": [
+        {
+          "input": "'the quick brown fox jumps over the lazy dog'",
+          "ok": true,
+          "got": [
+            "[ 'quick' 'brown' 'jumps' 'over' 'lazy' ]"
+          ],
+          "expected": [
+            "[ 'quick' 'brown' 'jumps' 'over' 'lazy' ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'a rose is a rose is a rose'",
+          "ok": true,
+          "got": [
+            "[ 'rose' 'rose' 'rose' ]"
+          ],
+          "expected": [
+            "[ 'rose' 'rose' 'rose' ]"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'hello world'",
+          "ok": true,
+          "got": [
+            "[ 'hello' 'world' ]"
+          ],
+          "expected": [
+            "[ 'hello' 'world' ]"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    },
+    {
+      "task": "text.acronym",
+      "submitted": true,
+      "solution": "S0A.ACRONYM",
+      "correct": true,
+      "coreEquivalent": true,
+      "tokens": 1,
+      "expandedTokens": 16,
+      "uses": [
+        "S0A.WORDS",
+        "S0A.ACRONYM"
+      ],
+      "perInput": [
+        {
+          "input": "'the quick brown fox jumps over the lazy dog'",
+          "ok": true,
+          "got": [
+            "'TQBFJOTLD'"
+          ],
+          "expected": [
+            "'TQBFJOTLD'"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'a rose is a rose is a rose'",
+          "ok": true,
+          "got": [
+            "'ARIARIAR'"
+          ],
+          "expected": [
+            "'ARIARIAR'"
+          ],
+          "coreEquivalent": true
+        },
+        {
+          "input": "'hello world'",
+          "ok": true,
+          "got": [
+            "'HW'"
+          ],
+          "expected": [
+            "'HW'"
+          ],
+          "coreEquivalent": true
+        }
+      ]
+    }
+  ]
+}

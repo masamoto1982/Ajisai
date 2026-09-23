@@ -1,0 +1,102 @@
+{
+  "generation": 2,
+  "capacity": 8,
+  "entries": [
+    {
+      "name": "G0A.WORDS",
+      "body": "' ' TOKENIZE",
+      "note": "split a String on single spaces into a Vector of words",
+      "classId": "G0A.WORDS",
+      "uses": 21,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    },
+    {
+      "name": "G0A.SUM",
+      "body": "0 [ + ] FOLD",
+      "note": "sum of a numeric Vector as a bare scalar",
+      "classId": "G0A.SUM",
+      "uses": 15,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    },
+    {
+      "name": "G0A.MEAN",
+      "body": "'G0A.XS' BIND G0A.XS G0A.SUM G0A.XS LENGTH /",
+      "note": "arithmetic mean of a numeric Vector",
+      "classId": "G0A.MEAN",
+      "uses": 12,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    },
+    {
+      "name": "G0B.DEV",
+      "body": "KEEP G0A.MEAN -",
+      "note": "Vector of each number minus the mean",
+      "classId": "G0B.DEV",
+      "uses": 9,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    },
+    {
+      "name": "G0B.MAX",
+      "body": "'G0B.R' BIND G0B.R G0B.R 0 GET [ MAX ] FOLD",
+      "note": "largest element of a non-empty numeric Vector, bare scalar",
+      "classId": "G0B.MAX",
+      "uses": 9,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    },
+    {
+      "name": "G0B.VAR",
+      "body": "G0B.DEV 2 POW G0A.MEAN",
+      "note": "population variance, bare scalar",
+      "classId": "G0B.VAR",
+      "uses": 6,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    },
+    {
+      "name": "G1A.MIN",
+      "body": "'G1A.R' BIND G1A.R G1A.R 0 GET [ MIN ] FOLD",
+      "note": "smallest element of a non-empty numeric Vector, bare scalar",
+      "classId": "G1A.MIN",
+      "uses": 6,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    },
+    {
+      "name": "G1A.RANGE",
+      "body": "'G1A.XS' BIND G1A.XS G0B.MAX G1A.XS G1A.MIN -",
+      "note": "largest minus smallest of a non-empty numeric Vector, bare scalar",
+      "classId": "G1A.RANGE",
+      "uses": 6,
+      "agents": [
+        "G1A",
+        "G1B",
+        "G1C"
+      ]
+    }
+  ]
+}

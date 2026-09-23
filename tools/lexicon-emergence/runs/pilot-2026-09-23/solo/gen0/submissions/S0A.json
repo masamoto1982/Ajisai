@@ -1,0 +1,98 @@
+{
+  "agent": "S0A",
+  "generation": 0,
+  "condition": "solo",
+  "definitions": [
+    {
+      "name": "S0A.SUM",
+      "body": "'XS' BIND XS 0 [ + ] FOLD",
+      "note": "sum of a numeric Vector as a bare scalar"
+    },
+    {
+      "name": "S0A.MEAN",
+      "body": "'XS' BIND XS S0A.SUM XS LENGTH /",
+      "note": "arithmetic mean of a numeric Vector"
+    },
+    {
+      "name": "S0A.DEVS",
+      "body": "'XS' BIND XS XS S0A.MEAN -",
+      "note": "each element minus the mean"
+    },
+    {
+      "name": "S0A.VAR",
+      "body": "S0A.DEVS 'DS' BIND DS DS * S0A.MEAN",
+      "note": "population variance"
+    },
+    {
+      "name": "S0A.STDDEV",
+      "body": "S0A.VAR SQRT",
+      "note": "population standard deviation (exact)"
+    },
+    {
+      "name": "S0A.MIN",
+      "body": "'XS' BIND XS XS 0 GET [ MIN ] FOLD",
+      "note": "smallest element as a bare scalar"
+    },
+    {
+      "name": "S0A.MAX",
+      "body": "'XS' BIND XS XS 0 GET [ MAX ] FOLD",
+      "note": "largest element as a bare scalar"
+    },
+    {
+      "name": "S0A.RANGE",
+      "body": "'XS' BIND XS S0A.MAX XS S0A.MIN -",
+      "note": "max minus min"
+    },
+    {
+      "name": "S0A.NORMALIZE",
+      "body": "'XS' BIND XS XS S0A.MIN - XS S0A.RANGE /",
+      "note": "min-max rescale to [0,1]"
+    },
+    {
+      "name": "S0A.WORDS",
+      "body": "' ' TOKENIZE",
+      "note": "split a String on single spaces into a Vector of words"
+    },
+    {
+      "name": "S0A.CAP",
+      "body": "CHARS 'CS' BIND CS 0 GET UPPER CS [ 1 ] DROP JOIN 2 COLLECT JOIN",
+      "note": "upper-case the first letter of a String"
+    },
+    {
+      "name": "S0A.UNWORDS",
+      "body": "[ ' ' 2 COLLECT ] MAP FLATTEN [ -1 ] DROP JOIN",
+      "note": "join a Vector of Strings with single spaces"
+    },
+    {
+      "name": "S0A.TITLECASE",
+      "body": "S0A.WORDS [ S0A.CAP ] MAP S0A.UNWORDS",
+      "note": "capitalize every word of a space-separated String"
+    },
+    {
+      "name": "S0A.LONGEST",
+      "body": "S0A.WORDS [ CHARS LENGTH ] MAP 0 [ MAX ] FOLD",
+      "note": "length of the longest word in a String"
+    },
+    {
+      "name": "S0A.ACRONYM",
+      "body": "S0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+      "note": "upper-cased first letters of every word"
+    }
+  ],
+  "solutions": {
+    "stats.sum": "S0A.SUM",
+    "stats.mean": "S0A.MEAN",
+    "stats.deviations": "S0A.DEVS",
+    "stats.variance": "S0A.VAR",
+    "stats.stddev": "S0A.STDDEV",
+    "stats.range": "S0A.RANGE",
+    "stats.normalize": "S0A.NORMALIZE",
+    "text.count": "S0A.WORDS LENGTH",
+    "text.frequency": "S0A.WORDS TALLY",
+    "text.distinct": "S0A.WORDS UNIQUE",
+    "text.titlecase": "S0A.TITLECASE",
+    "text.longest": "S0A.LONGEST",
+    "text.long-words": "S0A.WORDS [ CHARS LENGTH 3 > ] FILTER",
+    "text.acronym": "S0A.ACRONYM"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "agent": "G1A",
+  "generation": 1,
+  "condition": "bottleneck",
+  "definitions": [
+    {
+      "name": "G1A.MIN",
+      "body": "'G1A.R' BIND G1A.R G1A.R 0 GET [ MIN ] FOLD",
+      "note": "smallest element of a non-empty numeric Vector, bare scalar"
+    },
+    {
+      "name": "G1A.RANGE",
+      "body": "'G1A.XS' BIND G1A.XS G0B.MAX G1A.XS G1A.MIN -",
+      "note": "largest minus smallest of a non-empty numeric Vector, bare scalar"
+    },
+    {
+      "name": "G1A.NORMALIZE",
+      "body": "'G1A.NS' BIND G1A.NS G1A.NS G1A.MIN - G1A.NS G1A.RANGE /",
+      "note": "min-max rescale a numeric Vector to (x - min) / (max - min)"
+    },
+    {
+      "name": "G1A.STDDEV",
+      "body": "G0B.VAR SQRT",
+      "note": "population standard deviation of a numeric Vector, bare scalar"
+    },
+    {
+      "name": "G1A.CAP",
+      "body": "'G1A.W' BIND G1A.W CHARS [ 1 ] TAKE JOIN UPPER CHARS G1A.W CHARS [ 1 ] DROP CONCAT JOIN",
+      "note": "upper-case the first letter of a non-empty String"
+    },
+    {
+      "name": "G1A.UNWORDS",
+      "body": "[ CHARS [ ' ' ] CONCAT ] MAP FLATTEN JOIN TRIM",
+      "note": "join a Vector of Strings with single spaces into one String"
+    },
+    {
+      "name": "G1A.TITLECASE",
+      "body": "G0A.WORDS [ G1A.CAP ] MAP G1A.UNWORDS",
+      "note": "capitalize every word of a space-separated String"
+    },
+    {
+      "name": "G1A.ACRONYM",
+      "body": "G0A.WORDS [ CHARS 0 GET ] MAP JOIN UPPER",
+      "note": "upper-cased first letters of each word of a String, as one String"
+    },
+    {
+      "name": "G1A.LONGEST",
+      "body": "G0A.WORDS [ G0A.LEN ] MAP G0B.MAX",
+      "note": "character count of the longest word in a String"
+    },
+    {
+      "name": "G1A.LONGWORDS",
+      "body": "G0A.WORDS [ G0A.LEN 3 > ] FILTER",
+      "note": "Vector of words longer than 3 characters, original order"
+    }
+  ],
+  "solutions": {
+    "stats.sum": "G0A.SUM",
+    "stats.mean": "G0A.MEAN",
+    "stats.deviations": "G0B.DEV",
+    "stats.variance": "G0B.VAR",
+    "stats.stddev": "G1A.STDDEV",
+    "stats.range": "G1A.RANGE",
+    "stats.normalize": "G1A.NORMALIZE",
+    "text.count": "G0A.WORDS LENGTH",
+    "text.frequency": "G0A.WORDS TALLY",
+    "text.distinct": "G0A.WORDS UNIQUE",
+    "text.titlecase": "G1A.TITLECASE",
+    "text.longest": "G1A.LONGEST",
+    "text.long-words": "G1A.LONGWORDS",
+    "text.acronym": "G1A.ACRONYM"
+  }
+}
