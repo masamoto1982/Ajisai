@@ -5119,8 +5119,8 @@
       "documentation": {
         "summary": "Define a user word from a body and a name.",
         "hover": "DEF — define user word",
-        "lookup": "Define a user word from a body and a name.",
-        "syntax": "[ 2 * ] 'DOUBLE' DEF",
+        "lookup": "Define a user word from a body and a name. Names written before | at the start of the body declare its inputs: the call takes exactly that many operands, binds them, and runs the body on an empty stack.",
+        "syntax": "[ X | X 2 * ] 'DOUBLE' DEF",
         "role": "Dictionary primitive: Define a user word from a body and a name.",
         "stackEffect": "[ body ] [ name ] -> []"
       },

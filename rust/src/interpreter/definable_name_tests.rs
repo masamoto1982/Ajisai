@@ -104,10 +104,11 @@ mod tests {
 
     /// A freed character is a perfectly ordinary name, so a Word may be
     /// defined under one and called by writing it. This is the other half of
-    /// the rule above: nothing is reserved, so nothing is refused.
+    /// the rule above: only what is taken is refused. `a|b` is here because
+    /// only the bare `|` is taken (it separates a parameter header).
     #[tokio::test]
     async fn a_freed_character_is_a_definable_name() {
-        for name in ["(", ")", "|", "f(x)"] {
+        for name in ["(", ")", "a|b", "f(x)"] {
             def(name)
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be definable, got: {e}"));
@@ -123,6 +124,24 @@ mod tests {
                 "`{name}` should have pushed its body"
             );
         }
+    }
+
+    /// The bare `|` separates a definition's parameter header from its body
+    /// (LANG.SOURCE.FRAME), so neither a Word nor a binding may take it.
+    #[tokio::test]
+    async fn the_header_separator_is_not_a_name() {
+        let err = def("|")
+            .await
+            .expect_err("`|` must not be definable")
+            .to_string();
+        assert!(err.contains("separates"), "got: {err}");
+        let mut interp = Interpreter::new();
+        let err = interp
+            .execute("1 '|' BIND")
+            .await
+            .expect_err("`|` must not be bindable")
+            .to_string();
+        assert!(err.contains("separates"), "got: {err}");
     }
 
     /// Names are matched through the canonical normalization, so a lowercase

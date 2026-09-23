@@ -203,3 +203,62 @@ fn is_keep_modifier(name: &str) -> bool {
         Some(WordId::SetConsumptionKeep)
     )
 }
+
+/// Names a body can read that are not Words: its header's parameters
+/// (LANG.SOURCE.FRAME). Reading one pushes one value; looking it up in the
+/// dictionary instead would report a bound name as an unresolved Word and give
+/// up on the arity. `note_bound_name` adds the names the body binds itself.
+pub(crate) fn header_locals(
+    def: &crate::types::WordDefinition,
+) -> std::collections::HashSet<String> {
+    def.params
+        .as_ref()
+        .map(|p| p.iter().cloned().collect())
+        .unwrap_or_default()
+}
+
+/// At a `BIND` whose name operand is the String just before it, the rest of
+/// the body reads that name as a value.
+pub(crate) fn note_bound_name(
+    locals: &mut std::collections::HashSet<String>,
+    canonical: &str,
+    tokens: &[crate::types::Token],
+    idx: usize,
+) {
+    if canonical != "BIND" {
+        return;
+    }
+    if let Some(crate::types::Token::String(bound)) = idx.checked_sub(1).and_then(|i| tokens.get(i))
+    {
+        locals.insert(bound.to_uppercase());
+    }
+}
+
+/// A header fixes what the call consumes, whatever the body reads: the body
+/// starts on an empty stack, so the simulation's own `consumes` counts reads
+/// *below* the frame, each of which is a stack-underflow ERROR at the call
+/// rather than an operand.
+pub(crate) fn declared_flow(
+    def: &crate::types::WordDefinition,
+    inferred: ContractFlow,
+) -> ContractFlow {
+    match (&def.params, inferred) {
+        (Some(params), ContractFlow::Fixed { produces, .. }) => ContractFlow::Fixed {
+            consumes: params.len() as u16,
+            produces,
+        },
+        (_, flow) => flow,
+    }
+}
+
+/// A literal, or a Symbol naming one of `locals`: a token that pushes one
+/// value and calls nothing.
+pub(crate) fn reads_as_value(token: &Token, locals: &std::collections::HashSet<String>) -> bool {
+    match token {
+        Token::Number(_) | Token::String(_) => true,
+        Token::Symbol(symbol) => {
+            locals.contains(crate::core_word_aliases::canonicalize_core_word_name(symbol).as_ref())
+        }
+        _ => false,
+    }
+}

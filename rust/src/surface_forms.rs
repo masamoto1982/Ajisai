@@ -8,13 +8,16 @@
 //!
 //! Every form listed here is live. There is no entry for a character the
 //! tokenizer refuses, because it refuses none: `(`, `)` and a bare `|` were
-//! once carried here as reserved markers and retired forms, and are now
+//! once carried here as reserved markers and retired forms, and became
 //! ordinary name characters with no per-character rule of their own
 //! (`spec/grammar.json`, characterClasses.nameCharacter). A form earns a place
 //! in this table by *doing* something the word rule does not — which is what
 //! `{` and `}` came back for: they were freed with those three and then
 //! allocated as the Record literal's delimiters (LANG.RECORDS.STRUCTURE),
-//! the second of the grammar's two delimiter pairs.
+//! the second of the grammar's two delimiter pairs. A bare `|` came back the
+//! same way, as the separator between a definition's parameter header and its
+//! body (LANG.SOURCE.FRAME). It still lexes as one Symbol; `DEF` is what reads
+//! it, and `DEF` and `BIND` refuse it as a name.
 //!
 //! This module classifies the lexical / structural surface forms that
 //! are **not** runtime-canonicalizable words. The runtime *word* aliases
@@ -88,6 +91,13 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         // Record literal end
     },
     SurfaceForm {
+        surface: "|",
+        concept: "PARAMETER-SEPARATOR",
+        kind: SurfaceFormKind::DelimiterSugar,
+        runtime_word: false,
+        // Ends a definition body's parameter header: `[ A B | … ] 'NAME' DEF`
+    },
+    SurfaceForm {
         surface: "'",
         concept: "STRING-QUOTE",
         kind: SurfaceFormKind::LiteralSugar,
@@ -109,8 +119,9 @@ mod tests {
     /// The characters that used to be carried here as reserved markers and
     /// retired forms, and are now ordinary name characters. `{` and `}` were
     /// freed with them and are back in the table as the Record literal's
-    /// delimiters, so they are not among them.
-    const FREED: [&str; 3] = ["(", ")", "|"];
+    /// delimiters, and `|` as the parameter-header separator, so they are not
+    /// among them.
+    const FREED: [&str; 2] = ["(", ")"];
 
     #[test]
     fn lookup_returns_named_concepts() {
@@ -120,6 +131,10 @@ mod tests {
         assert_eq!(lookup_surface_form("{").unwrap().concept, "BEGIN-RECORD");
         assert_eq!(lookup_surface_form("}").unwrap().concept, "END-RECORD");
         assert_eq!(lookup_surface_form("'").unwrap().concept, "STRING-QUOTE");
+        assert_eq!(
+            lookup_surface_form("|").unwrap().concept,
+            "PARAMETER-SEPARATOR"
+        );
     }
 
     /// A form's classification must agree with what the tokenizer does to it.
@@ -160,7 +175,7 @@ mod tests {
     ///
     /// The table is generated into the word manifest, SKILL.md and the
     /// quickstart, so an entry here is a claim that the character does
-    /// something the word rule does not. `(`, `)` and `|` no longer do: they
+    /// something the word rule does not. `(` and `)` no longer do: they
     /// lex as ordinary Symbols. Re-adding one would put a dead concept name
     /// back into every generated reading surface, which is the same defect as
     /// before with the sign flipped — the test that a form in the table is

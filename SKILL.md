@@ -31,6 +31,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
 - Named data is a Record, written `{ key value … }`: `{ 'x' 1 'y' 2 }`. It is not a Vector and is never code — `{ }` builds a value, `[ ]` builds a value that may also be run (§6).
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
+- **Prefer a parameter header** — names, then `|`, then the body: `[ XS | XS 0 [ + ] FOLD XS LENGTH / ] 'MEAN' DEF [ 3 1 4 1 5 ] MEAN`. The call takes exactly that many operands (deepest first), binds them, and runs the body on an empty stack, so the Word's arity is written down, `KEEP` on it keeps exactly those operands, and `CONTRACT` reports the arity. Without a header the body sees the whole stack.
 - Comments: `#` to end of line.
 - One modifier, prefixing the *next word only*: `KEEP` (do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
@@ -115,6 +116,10 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `{ 'x' 1 'y' 2 }` → stack: `{ 'x' 1/1 'y' 2/1 }`
 - Define a user word: [ body ] then name, then DEF
   `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
+- Declare the inputs: names before | take that many operands, deepest first
+  `[ XS | XS 0 [ + ] FOLD XS LENGTH / ] 'MEAN' DEF [ 3 1 4 1 5 ] MEAN` → stack: `14/5`
+- KEEP on a header word keeps exactly the declared operands
+  `[ A B | A B - ] 'DIFF' DEF 10 3 KEEP DIFF` → stack: `10/1  3/1  7/1`
 - SELECT: the two candidates, then the truth that chooses between them
   `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT` → prints `[ 'non-negative' ]`
 - SELECT chooses lane by lane, so a whole vector branches at once
@@ -294,7 +299,7 @@ no module system and nothing to import.
 | `ABSENT` | absence | A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong. — e.g. `'rate not quoted' ABSENT` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
-| `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
+| `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ X | X 2 * ] 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `[ [ 1 ] ] 'W' DEF 'W' DEL` |
 | `DEFINED?` | dictionary | Whether a Symbol names a Word: TRUE when the name resolves in Core or in User under the same deterministic lookup execution uses, FALSE otherwise. `[ ADD ] 0 GET DEFINED?` is TRUE; a name `DEF` has not bound is FALSE, and becomes TRUE the moment it is. The operand is a Symbol, never a String: a String is text, not a name, and no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so `'ADD' DEFINED?` is an ERROR (`notASymbol`) rather than a lookup. A BIND name is a value's name, not a Word's, and answers FALSE. — e.g. `[ ADD ] 0 GET DEFINED?` |
 | `DIGEST` | dictionary | The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. A computable real (`PI`) has no finite canonical form to digest, so a value carrying one projects `undecidable`. — e.g. `[ ADD ] 0 GET DIGEST` |
@@ -315,4 +320,5 @@ no module system and nothing to import.
 | `]` | delimiter sugar | END-VECTOR — structural delimiter, not a Word |
 | `{` | delimiter sugar | BEGIN-RECORD — structural delimiter, not a Word |
 | `}` | delimiter sugar | END-RECORD — structural delimiter, not a Word |
+| `\|` | delimiter sugar | PARAMETER-SEPARATOR — structural delimiter, not a Word |
 | `'` | literal sugar | STRING-QUOTE — literal delimiter, not a Word |

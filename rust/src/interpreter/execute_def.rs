@@ -124,6 +124,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {
     crate::tokenizer::validate_code_tokens(tokens).map_err(AjisaiError::MalformedSource)?;
     interp.check_source_numeric_literals(tokens)?;
+    // The header is read before anything is mutated, so a malformed one
+    // leaves the dictionary exactly as it was (LANG.DICTIONARY.MUTATION).
+    let (params, tokens) = split_param_header(interp, name, tokens)?;
     if let Some(message) =
         crate::interpreter::naming_convention_checker::check_reserved_word_name(name, "define")
     {
@@ -205,7 +208,12 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     let staged_tokens = tokens.to_vec();
-    let lines = parse_definition_body(&staged_tokens)?;
+    // A header makes an empty body meaningful — `[ X | ]` takes one operand
+    // and leaves nothing — so only a header-less body must say something.
+    let lines = match &params {
+        Some(_) if !staged_tokens.iter().any(|t| !matches!(t, Token::LineBreak)) => Vec::new(),
+        _ => parse_definition_body(&staged_tokens)?,
+    };
 
     // Content store (Section 8.6): share one stored body across textually
     // identical definitions so copying or re-importing a word group does not
@@ -230,6 +238,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
+                // A parameter is a binding, not a reference to a Word.
+                if is_param(&params, &upper_s) {
+                    continue;
+                }
                 new_text_references.insert(upper_s.to_string());
                 if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
                     if !resolved_def.is_builtin || resolved_name.contains('@') {
@@ -275,6 +287,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         // (LANG.DICTIONARY.RESOLUTION seals Core), so this is `None` by
         // construction rather than by omission.
         generated: None,
+        params: params.map(Arc::from),
     };
 
     interp
@@ -289,6 +302,77 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
     interp.bump_dictionary_epoch();
     Ok(())
+}
+
+/// Whether `name` (canonical, upper-cased) is one of a header's parameters.
+pub(crate) fn is_param(params: &Option<Vec<String>>, name: &str) -> bool {
+    params.as_ref().is_some_and(|p| p.iter().any(|n| n == name))
+}
+
+/// Separate a body's parameter header from the body proper.
+///
+/// `[ A B | … ]`: the names written before the first `|` of the body's first
+/// statement, at the body's own level, are its parameters, deepest operand
+/// first (LANG.SOURCE.FRAME). A body with no such `|` has no header and keeps
+/// the whole-stack frame. Every header fault is `invalidDefinitionBody` — the
+/// body is what is malformed, whichever name in it is at fault.
+pub(crate) fn split_param_header<'t>(
+    interp: &Interpreter,
+    word_name: &str,
+    tokens: &'t [Token],
+) -> Result<(Option<Vec<String>>, &'t [Token])> {
+    let start = tokens
+        .iter()
+        .take_while(|t| matches!(t, Token::LineBreak))
+        .count();
+    let mut depth: usize = 0;
+    let mut separator = None;
+    for (i, token) in tokens.iter().enumerate().skip(start) {
+        match token {
+            Token::VectorStart | Token::RecordStart => depth += 1,
+            Token::VectorEnd | Token::RecordEnd => depth = depth.saturating_sub(1),
+            Token::LineBreak if depth == 0 => break,
+            Token::Symbol(s) if depth == 0 && s.as_ref() == "|" => {
+                separator = Some(i);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let Some(separator) = separator else {
+        return Ok((None, tokens));
+    };
+
+    let malformed = |detail: String| {
+        AjisaiError::declared(
+            "invalidDefinitionBody",
+            format!("DEF: the parameter header of '{}' {}", word_name, detail),
+        )
+    };
+    let word_upper = word_name.to_uppercase();
+    let mut params: Vec<String> = Vec::new();
+    for token in &tokens[start..separator] {
+        let Token::Symbol(s) = token else {
+            return Err(malformed(
+                "may hold only names, one per operand, before '|'.".to_string(),
+            ));
+        };
+        let upper = s.to_uppercase();
+        interp
+            .check_bindable_name(s)
+            .map_err(|err| malformed(format!("names '{}', which cannot be bound: {}", s, err)))?;
+        if upper == word_upper {
+            return Err(malformed(format!(
+                "names '{}', the Word being defined.",
+                upper
+            )));
+        }
+        if params.contains(&upper) {
+            return Err(malformed(format!("names '{}' twice.", upper)));
+        }
+        params.push(upper);
+    }
+    Ok((Some(params), &tokens[separator + 1..]))
 }
 
 /// Split a word body into execution lines.

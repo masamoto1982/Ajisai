@@ -105,6 +105,14 @@ impl Interpreter {
                 for token in line.body_tokens.iter() {
                     if let crate::types::Token::Symbol(s) = token {
                         let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
+                        // A parameter is a binding, not a reference to a Word.
+                        if word_def
+                            .params
+                            .as_ref()
+                            .is_some_and(|p| p.iter().any(|n| n == upper_s.as_ref()))
+                        {
+                            continue;
+                        }
                         text_references.insert(upper_s.to_string());
                         if let Some((resolved_name, resolved_def)) =
                             self.resolve_word_entry(&upper_s)

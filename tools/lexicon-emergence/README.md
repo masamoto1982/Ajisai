@@ -15,7 +15,7 @@ Nothing here defines Ajisai. Results are observation notes.
 | --- | --- |
 | `tasks/<family>.json` | Task families: prompts, inputs (the subject sees only the first), and a reference solution per task |
 | `lib/ajisai.mjs` | MCP client over `tools/mcp-server` — the grader uses the same `compute` tool as the subjects |
-| `lib/source.mjs` | Tokenizing, bound-variable renaming, and expanding user Words into Core-only source |
+| `lib/source.mjs` | Tokenizing, bound-variable renaming, and expanding user Words into Core-only source (a header-carrying Word through `BIND`, faithful under `KEEP`; a header-less one through `EXEC`, which is not) |
 | `lib/grade.mjs` | A solution is correct when every input leaves the reference's final stack; also runs the Core-only expansion (H5) |
 | `lib/identity.mjs` | D0 (DIGEST), D0α (DIGEST after renaming bound variables), D1 (probe-battery fingerprint) |
 | `lib/evolve.mjs` | Equivalence classes and the next generation's top-K lexicon |
