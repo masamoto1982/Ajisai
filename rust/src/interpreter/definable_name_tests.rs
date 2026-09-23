@@ -14,7 +14,7 @@ mod tests {
     async fn def(name: &str) -> Result<(), String> {
         let mut interp = Interpreter::new();
         interp
-            .execute(&format!("[ [ 1 ] ] '{}' DEF", name))
+            .execute(&format!("[ | [ 1 ] ] '{}' DEF", name))
             .await
             .map_err(|e| e.to_string())
     }
@@ -51,7 +51,7 @@ mod tests {
 
             let mut interp = Interpreter::new();
             interp
-                .execute(&format!("[ [ 7 ] ] '{}' DEF {}", name, name))
+                .execute(&format!("[ | [ 7 ] ] '{}' DEF {}", name, name))
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be callable, got: {e}"));
             assert_eq!(
@@ -115,7 +115,7 @@ mod tests {
 
             let mut interp = Interpreter::new();
             interp
-                .execute(&format!("[ [ 7 ] ] '{}' DEF {}", name, name))
+                .execute(&format!("[ | [ 7 ] ] '{}' DEF {}", name, name))
                 .await
                 .unwrap_or_else(|e| panic!("`{name}` should be callable, got: {e}"));
             assert_eq!(
@@ -151,7 +151,7 @@ mod tests {
         for call in ["gentle", "GENTLE"] {
             let mut interp = Interpreter::new();
             interp
-                .execute(&format!("[ [ 7 ] ] 'gentle' DEF {}", call))
+                .execute(&format!("[ | [ 7 ] ] 'gentle' DEF {}", call))
                 .await
                 .unwrap_or_else(|e| panic!("`{call}` should reach the word, got: {e}"));
             assert_eq!(interp.stack.len(), 1);

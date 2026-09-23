@@ -150,7 +150,7 @@ mod tests {
         for (setup, program) in [
             (String::new(), format!("0 {}", "1 ADD ".repeat(40))),
             (
-                "[ 1 ADD 1 ADD 1 ADD 1 ADD ] 'BUMP' DEF".to_string(),
+                "[ X | X 1 ADD 1 ADD 1 ADD 1 ADD ] 'BUMP' DEF".to_string(),
                 format!("0 {}", "BUMP ".repeat(10)),
             ),
         ] {

@@ -263,7 +263,7 @@ fn passthrough_unwinds_the_operand_window_under_both_consumption_modes() {
 
 /// A Word wrapped in a user-defined Word runs through the compiled plan rather
 /// than the interpreter's dispatch, and that second path skipped the guard
-/// entirely: `[ LENGTH ] 'LEN' DEF 1 0 DIV LEN` answered `0` for the length of
+/// entirely: `[ X | X LENGTH ] 'LEN' DEF 1 0 DIV LEN` answered `0` for the length of
 /// a NIL while `1 0 DIV LENGTH` rejected it, and SORT and STR likewise reverted
 /// to their pre-guard behavior one call deep.
 ///

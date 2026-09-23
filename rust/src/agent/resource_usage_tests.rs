@@ -46,7 +46,7 @@ mod resource_usage_tests {
         // dispatch routes that reach `execute_word_core`.
         for source in [
             "2 3 / 1 3 / +",
-            "[ [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBLE",
+            "[ X | X [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBLE",
             "[ 1 20 ] RANGE 1 [ * ] FOLD",
             "[ 1 20 ] RANGE [ [ 2 ] * ] MAP",
         ] {

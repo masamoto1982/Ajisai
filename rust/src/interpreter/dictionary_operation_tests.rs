@@ -18,7 +18,7 @@ mod tests {
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
         interp.execute("").await.unwrap();
-        let result = interp.execute("[ [ 1 ] + ] 'GET' DEF").await;
+        let result = interp.execute("[ Z | Z [ 1 ] + ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -33,10 +33,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("").await.unwrap();
 
-        let result1 = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result1 = interp.execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
-        let result2 = interp.execute("[ [ 3 ] * ] 'DOUBLE' DEF").await;
+        let result2 = interp.execute("[ Z | Z [ 3 ] * ] 'DOUBLE' DEF").await;
         assert!(result2.is_ok(), "Overriding user word should succeed");
 
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
@@ -68,8 +68,8 @@ mod tests {
     async fn test_redefinition_rebinds_the_single_user_entry() {
         let mut interp = Interpreter::new();
 
-        interp.execute("[ [ 1 ] ] 'SAY' DEF").await.unwrap();
-        interp.execute("[ SAY ] 'GREET' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'SAY' DEF").await.unwrap();
+        interp.execute("[ | SAY ] 'GREET' DEF").await.unwrap();
         interp.rebuild_dependencies().unwrap();
 
         assert!(
@@ -92,9 +92,9 @@ mod tests {
     #[tokio::test]
     async fn test_identical_content_shares_identity() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
-        interp.execute("[ [ 1 ] ] 'LEED' DEF").await.unwrap();
-        interp.execute("[ [ 2 ] ] 'OTHER' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'LEED' DEF").await.unwrap();
+        interp.execute("[ | [ 2 ] ] 'OTHER' DEF").await.unwrap();
         interp.rebuild_dependencies().unwrap();
 
         let a_leaf = interp.word_identity("LEAF").cloned();
@@ -111,10 +111,10 @@ mod tests {
     #[tokio::test]
     async fn test_identity_is_name_independent() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
-        interp.execute("[ LEAF ] 'USE' DEF").await.unwrap();
-        interp.execute("[ [ 1 ] ] 'LEED' DEF").await.unwrap();
-        interp.execute("[ LEED ] 'USE' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ | LEAF ] 'USE' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'LEED' DEF").await.unwrap();
+        interp.execute("[ | LEED ] 'USE' DEF").await.unwrap();
         interp.rebuild_dependencies().unwrap();
 
         let a_use = interp.word_identity("USE").cloned();
@@ -146,7 +146,7 @@ mod tests {
             .cloned()
             .expect("identity should be computed for caller");
 
-        interp.execute("[ [ 1 ] ] 'MISSING' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'MISSING' DEF").await.unwrap();
 
         let after = interp
             .word_identity("CALLER")
@@ -170,9 +170,9 @@ mod tests {
     #[tokio::test]
     async fn test_identical_bodies_share_one_stored_body() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
-        interp.execute("[ [ 1 ] ] 'TWIN' DEF").await.unwrap();
-        interp.execute("[ [ 2 ] ] 'OTHER' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'TWIN' DEF").await.unwrap();
+        interp.execute("[ | [ 2 ] ] 'OTHER' DEF").await.unwrap();
 
         let a_leaf = interp.user_words["LEAF"].lines.clone();
         let b_twin = interp.user_words["TWIN"].lines.clone();
@@ -196,7 +196,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         interp.defer_identity_recompute = true;
-        interp.execute("[ [ 1 ] ] 'LEAF' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'LEAF' DEF").await.unwrap();
         assert!(
             interp.word_identity("LEAF").is_none(),
             "identity recompute should be deferred"
@@ -215,11 +215,11 @@ mod tests {
     #[tokio::test]
     async fn test_body_store_gc() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 1 ] ] 'X' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 1);
 
         // Identical body in another dictionary shares one store entry.
-        interp.execute("[ [ 1 ] ] 'Y' DEF").await.unwrap();
+        interp.execute("[ | [ 1 ] ] 'Y' DEF").await.unwrap();
         assert_eq!(
             interp.body_store.len(),
             1,
@@ -227,11 +227,11 @@ mod tests {
         );
 
         // Redefining A@X keeps [1] (still used by B@Y) and adds [9].
-        interp.execute("[ [ 9 ] ] 'X' DEF").await.unwrap();
+        interp.execute("[ | [ 9 ] ] 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "shared [1] kept, [9] added");
 
         // Redefining B@Y away orphans [1]; it is reclaimed, leaving [9] and [8].
-        interp.execute("[ [ 8 ] ] 'Y' DEF").await.unwrap();
+        interp.execute("[ | [ 8 ] ] 'Y' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "orphaned [1] reclaimed");
     }
 
@@ -242,7 +242,7 @@ mod tests {
         let builtin_words = vec!["TAKE", "REVERSE", "MAP", "FILTER", "PRINT"];
 
         for word in builtin_words {
-            let code = format!("[ [ 1 ] + ] '{}' DEF", word);
+            let code = format!("[ Z | Z [ 1 ] + ] '{}' DEF", word);
             let result = interp.execute(&code).await;
             assert!(
                 result.is_err(),
@@ -289,7 +289,10 @@ mod tests {
     #[tokio::test]
     async fn test_lookup_user_word_loads_def_source() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await.unwrap();
+        interp
+            .execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF")
+            .await
+            .unwrap();
         let _ = interp.collect_output();
         let loaded = match host_lookup(&interp, "DOUBLE") {
             HostLookup::Definition(text) => text,
@@ -452,7 +455,7 @@ mod tests {
     async fn test_builtin_symbols_remain_strings_in_vector() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "Code block DEF should work: {:?}",
@@ -476,7 +479,7 @@ mod tests {
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("[ Z | Z [ 2 ] * ] 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "DEF with vector should succeed: {:?}",
@@ -507,7 +510,7 @@ mod tests {
     #[tokio::test]
     async fn test_module_first_builtin_still_protected() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ [ 1 ] ] 'GET' DEF").await;
+        let result = interp.execute("[ | [ 1 ] ] 'GET' DEF").await;
         assert!(
             result.is_err(),
             "Should not be able to override built-in GET"
@@ -537,11 +540,11 @@ mod tests {
     #[tokio::test]
     async fn another_word_still_locks_a_referenced_word() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 1 ADD ] 'W' DEF").await.unwrap();
-        interp.execute("[ W ] 'CALLER' DEF").await.unwrap();
+        interp.execute("[ Z | Z 1 ADD ] 'W' DEF").await.unwrap();
+        interp.execute("[ Z | Z W ] 'CALLER' DEF").await.unwrap();
 
         let err = interp
-            .execute("[ 2 ADD ] 'W' DEF")
+            .execute("[ Z | Z 2 ADD ] 'W' DEF")
             .await
             .unwrap_err()
             .to_string();
@@ -575,7 +578,7 @@ mod tests {
     #[tokio::test]
     async fn lookup_of_a_user_word_round_trips_through_def() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 2 MUL ] 'DBL' DEF").await.unwrap();
+        interp.execute("[ Z | Z 2 MUL ] 'DBL' DEF").await.unwrap();
         let loaded = lookup_source(&interp, "DBL");
         assert!(
             loaded.starts_with('['),
@@ -630,7 +633,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
-        interp.execute("[ [ 1 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ Z | Z [ 1 ] + ] 'INC' DEF").await.unwrap();
         assert_eq!(
             interp.lookup_word_description("INC").as_deref(),
             Some("( 1 -- 1 ) pure nil-free")
@@ -640,7 +643,7 @@ mod tests {
     #[tokio::test]
     async fn a_word_defined_without_a_contract_directive_has_no_description() {
         let mut interp = Interpreter::new();
-        interp.execute("[ [ 1 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ Z | Z [ 1 ] + ] 'INC' DEF").await.unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
     }
 
@@ -651,7 +654,7 @@ mod tests {
             .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ [ 1 ] + ] 'INC' DEF")
             .await
             .unwrap();
-        interp.execute("[ [ 2 ] + ] 'INC' DEF").await.unwrap();
+        interp.execute("[ Z | Z [ 2 ] + ] 'INC' DEF").await.unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
     }
 }

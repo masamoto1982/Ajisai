@@ -63,7 +63,7 @@ mod tests {
     async fn a_user_word_carries_no_registry_entry() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ 1 ADD ] 'INC' DEF")
+            .execute("[ X | X 1 ADD ] 'INC' DEF")
             .await
             .expect("INC defines");
         let (_, def) = interp.resolve_word_entry("INC").expect("INC resolves");

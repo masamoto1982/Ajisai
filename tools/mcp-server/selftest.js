@@ -194,7 +194,7 @@ check(
 // other axis stays at the lattice bottom.
 const composed = await client.callTool({
   name: "infer_contracts",
-  arguments: { source: "[ [ 1 ] + ] 'BUDGETED' DEF" },
+  arguments: { source: "[ X | X [ 1 ] + ] 'BUDGETED' DEF" },
 });
 check(
   "an inferred phrase bound agrees with the join of its Words' published bounds",
@@ -625,13 +625,13 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
 
   const checked = await client.callTool({
     name: "check",
-    arguments: { source: "[ [ 1 ] + ] 'INC' DEF" },
+    arguments: { source: "[ X | X [ 1 ] + ] 'INC' DEF" },
   });
   check("check is execution-free and structured", checked.structuredContent?.status === "ok");
 
   const inferred = await client.callTool({
     name: "infer_contracts",
-    arguments: { source: "[ [ 1 ] + ] 'INC' DEF" },
+    arguments: { source: "[ X | X [ 1 ] + ] 'INC' DEF" },
   });
   check(
     "infer_contracts returns the user Word contract",

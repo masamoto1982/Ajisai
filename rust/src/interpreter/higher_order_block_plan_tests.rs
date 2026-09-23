@@ -54,7 +54,7 @@ mod tests {
     async fn a_block_calling_a_user_word_answers_the_same() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ 2 MUL 1 ADD ] 'F' DEF")
+            .execute("[ X | X 2 MUL 1 ADD ] 'F' DEF")
             .await
             .expect("F defines");
         interp.update_stack(Vec::new());
@@ -76,7 +76,7 @@ mod tests {
     async fn a_block_that_redefines_a_word_is_not_served_from_its_own_stale_plan() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ 100 ADD ] 'G' DEF")
+            .execute("[ X | X 100 ADD ] 'G' DEF")
             .await
             .expect("G defines");
         interp.update_stack(Vec::new());
@@ -84,7 +84,7 @@ mod tests {
         // Element 1 runs G as `100 ADD`, then redefines it to `1 ADD`;
         // elements 2 and 3 must see the redefinition.
         interp
-            .execute("[ 1 2 3 ] [ G [ 1 ADD ] 'G' DEF ] MAP")
+            .execute("[ 1 2 3 ] [ G [ X | X 1 ADD ] 'G' DEF ] MAP")
             .await
             .expect("a block that redefines a word runs");
         assert_eq!(

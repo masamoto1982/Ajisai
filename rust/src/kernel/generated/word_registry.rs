@@ -3968,7 +3968,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         standard_kind: None,
         effects: &["dictionaryDelete"],
         error_when: &["invalidName", "wordNotFound", "protectedWord", "nonText"],
-        syntax: Some("[ [ 1 ] ] 'W' DEF 'W' DEL"),
+        syntax: Some("[ | [ 1 ] ] 'W' DEF 'W' DEL"),
     },
     GeneratedWord {
         id: WordId::Defined,

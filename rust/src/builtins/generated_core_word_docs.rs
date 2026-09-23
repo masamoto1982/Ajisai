@@ -882,7 +882,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Dictionary primitive: Delete a user word from the dictionary.",
         stack_effect: "[ name ] -> []",
         hover_summary: "DEL — delete user word",
-        hover_syntax: "[ [ 1 ] ] 'W' DEF 'W' DEL",
+        hover_syntax: "[ | [ 1 ] ] 'W' DEF 'W' DEL",
     },
     GeneratedCoreWordDoc {
         name: "DEFINED?",

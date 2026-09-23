@@ -160,7 +160,7 @@ const STEPS = [
     // used to be written as a self-calling trampoline; LANG.DICTIONARY.ACYCLIC
     // refuses a self-call, so the same per-iteration cost is paid by a MAP over
     // a materialized Vector instead.
-    ['user-word call x200k', "[ [ 7 ] + ] 'STEP' DEF", `[ 1 200000 ] RANGE [ STEP ] MAP`],
+    ['user-word call x200k', "[ X | X [ 7 ] + ] 'STEP' DEF", `[ 1 200000 ] RANGE [ STEP ] MAP`],
 ];
 
 async function section(title, meter, cases) {

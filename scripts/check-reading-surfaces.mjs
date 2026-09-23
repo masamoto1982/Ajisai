@@ -47,6 +47,10 @@ const EXAMPLE_NAMES = new Set([
   'ADDW', 'PSUM', 'PDIFF', 'PMAX',
   // the relaxation loop of the Iterative Numerics clause
   'DELTA', 'STEP',
+  // parameter names and the two-operand example of the parameter header
+  // (LANG.SOURCE.FRAME): `[ A B | A B - ] 'DIFF' DEF`, and the `X`/`Y` the
+  // header migration gave point-free example bodies
+  'X', 'Y', 'DIFF',
   // the identity word the Stack clause uses to show KEEP copying any value
   'ID', 'DOUBLE',
   // the doubling word of the MAP and FOLD examples. It only became visible to
