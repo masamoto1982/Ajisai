@@ -137,7 +137,7 @@ mod error_stack_tests {
     }
 
     /// Eighteen 256-term algebraic values, refused by the work meter.
-    const REPEATED_CASCADE: &str = "[ 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * \
+    const REPEATED_CASCADE: &str = "[ | 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + * 11 SQRT 13 SQRT + * \
 17 SQRT 19 SQRT + * 23 SQRT 29 SQRT + * 31 SQRT 37 SQRT + * 41 SQRT 43 SQRT + * \
 47 SQRT 53 SQRT + * ] 'C' DEF C C C C C C C C C C C C C C C C C C C";
 

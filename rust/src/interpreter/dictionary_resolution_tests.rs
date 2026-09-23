@@ -39,7 +39,7 @@ mod tests {
     #[tokio::test]
     async fn a_user_name_resolves_to_user_by_its_bare_name() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
 
         let (name, def) = interp.resolve_word_entry("INC").expect("INC was defined");
         assert_eq!(name.as_ref(), "INC", "a name is the whole address");
@@ -49,7 +49,7 @@ mod tests {
     #[tokio::test]
     async fn resolution_is_case_insensitive() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
         for spelling in ["INC", "inc", "Inc"] {
             assert_eq!(
                 interp
@@ -80,7 +80,7 @@ mod tests {
         // `DICT@WORD` addressed a tier that no longer exists. It is now just a
         // name that nothing holds.
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
 
         for path in [
             "EXAMPLE@INC",
@@ -100,7 +100,7 @@ mod tests {
         // Ambiguity was a consequence of several dictionaries holding a name.
         // With one User tier a name is held or it is not.
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
         assert!(interp.check_ambiguity("INC").is_empty());
         assert!(interp.check_ambiguity("ADD").is_empty());
         assert!(interp.check_ambiguity("NOPE").is_empty());
@@ -115,8 +115,8 @@ mod tests {
     #[tokio::test]
     async fn a_redefinition_replaces_the_user_entry() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
-        define(&mut interp, "INC", "2 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
+        define(&mut interp, "INC", "X | X 2 ADD");
 
         interp.execute("5 INC").await.expect("INC runs");
         assert_eq!(
@@ -148,7 +148,7 @@ mod tests {
     #[tokio::test]
     async fn a_redefinition_is_not_served_from_the_cache() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
 
         // Resolve once so the first definition is certainly cached.
         interp.execute("5 INC").await.expect("INC runs");
@@ -158,7 +158,7 @@ mod tests {
         );
         interp.update_stack(Vec::new());
 
-        define(&mut interp, "INC", "10 ADD");
+        define(&mut interp, "INC", "X | X 10 ADD");
         interp.execute("5 INC").await.expect("INC runs again");
         assert_eq!(
             format!("{}", interp.get_stack().last().expect("a result")),
@@ -173,7 +173,7 @@ mod tests {
     async fn every_redefinition_in_a_chain_is_the_one_that_resolves() {
         let mut interp = Interpreter::new();
         for (addend, expected) in [(1, "6/1"), (2, "7/1"), (3, "8/1"), (100, "105/1")] {
-            define(&mut interp, "INC", &format!("{addend} ADD"));
+            define(&mut interp, "INC", &format!("X | X {addend} ADD"));
             interp.execute("5 INC").await.expect("INC runs");
             assert_eq!(
                 format!("{}", interp.get_stack().last().expect("a result")),
@@ -187,7 +187,7 @@ mod tests {
     #[tokio::test]
     async fn a_deleted_word_is_not_served_from_the_cache() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "GONE", "1 ADD");
+        define(&mut interp, "GONE", "X | X 1 ADD");
 
         interp.execute("5 GONE").await.expect("GONE runs");
         interp.update_stack(Vec::new());
@@ -262,7 +262,7 @@ mod tests {
     #[tokio::test]
     async fn a_resolution_answers_with_the_canonical_name() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
 
         for (asked, canonical) in [
             ("+", "ADD"),
@@ -302,7 +302,7 @@ mod tests {
     #[tokio::test]
     async fn a_session_reset_leaves_no_resolution_behind() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
 
         // Run it so the resolution is certainly cached.
         interp.execute("5 INC").await.expect("INC runs");
@@ -343,7 +343,7 @@ mod tests {
     #[tokio::test]
     async fn the_retired_resolve_cache_counters_stay_and_stay_zero() {
         let mut interp = Interpreter::new();
-        define(&mut interp, "INC", "1 ADD");
+        define(&mut interp, "INC", "X | X 1 ADD");
         // Resolve plenty, through Core, through User, and across a redefinition,
         // which is every path that used to move one of these.
         interp
@@ -351,7 +351,7 @@ mod tests {
             .await
             .expect("runs");
         interp.update_stack(Vec::new());
-        define(&mut interp, "INC", "2 ADD");
+        define(&mut interp, "INC", "X | X 2 ADD");
         interp.execute("5 INC").await.expect("runs");
 
         let metrics = interp.runtime_metrics();

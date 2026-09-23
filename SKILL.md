@@ -31,7 +31,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
 - Named data is a Record, written `{ key value … }`: `{ 'x' 1 'y' 2 }`. It is not a Vector and is never code — `{ }` builds a value, `[ ]` builds a value that may also be run (§6).
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ | [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
-- **Prefer a parameter header** — names, then `|`, then the body: `[ XS | XS 0 [ + ] FOLD XS LENGTH / ] 'MEAN' DEF [ 3 1 4 1 5 ] MEAN`. The call takes exactly that many operands (deepest first), binds them, and runs the body on an empty stack, so the Word's arity is written down, `KEEP` on it keeps exactly those operands, and `CONTRACT` reports the arity. Without a header the body sees the whole stack.
+- **Write a parameter header** — names, then `|`, then the body: `[ XS | XS 0 [ + ] FOLD XS LENGTH / ] 'MEAN' DEF [ 3 1 4 1 5 ] MEAN`. The call takes exactly that many operands (deepest first), binds them, and runs the body on an empty stack, so the Word's arity is written down, `KEEP` on it keeps exactly those operands, and `CONTRACT` reports the arity. `DEF` refuses a body without a header, and one that reads below its own frame on every call.
 - Comments: `#` to end of line.
 - One modifier, prefixing the *next word only*: `KEEP` (do not consume operands). Consumption is the default.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
@@ -188,7 +188,7 @@ than it looks like it answers, which is the harder kind to notice:
 
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / ANY / ALL.
-- **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
+- **A word calling itself** (`[ | REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.

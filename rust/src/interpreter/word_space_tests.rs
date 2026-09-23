@@ -87,7 +87,7 @@ async fn higher_order_word_is_unbounded_but_not_exact() {
 
 // `recursion_is_conservative_unbounded_without_a_witness` tested that a
 // self-recursive word's space bound went conservative. LANG.DICTIONARY.ACYCLIC's DEF-time
-// acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so there is no
+// acyclicity check now refuses `[ | REC ] 'REC' DEF` outright, so there is no
 // longer a recursive word for space inference to see.
 
 #[tokio::test]
@@ -95,7 +95,7 @@ async fn unresolved_dependency_degrades_without_a_false_witness() {
     // `DUP` is not an Ajisai word: an unresolved symbol poisons provenance, so
     // the literal operand can no longer pin the RANGE — the bound widens to
     // unbounded but *without* an exactness witness (no false error).
-    let (class, exact) = space_of("[ [ 0 10 ] DUP RANGE ] 'C' DEF", "C").await;
+    let (class, exact) = space_of("[ | [ 0 10 ] DUP RANGE ] 'C' DEF", "C").await;
     assert_eq!(class, SpaceClass::Unbounded);
     assert!(!exact);
 }

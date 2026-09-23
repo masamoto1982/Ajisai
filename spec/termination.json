@@ -54,21 +54,21 @@
     "consequence": "A chain of Word calls is therefore shorter than the number of User Words, so it cannot be infinite.",
     "witnesses": {
       "refused": [
-        { "source": "[ REC ] 'REC' DEF", "note": "Direct self-reference." },
-        { "source": "[ B ] 'A' DEF\n[ A ] 'B' DEF", "note": "Indirect, through one other Word." },
-        { "source": "[ B ] 'A' DEF\n[ C ] 'B' DEF\n[ A ] 'C' DEF", "note": "A longer chain." },
+        { "source": "[ | REC ] 'REC' DEF", "note": "Direct self-reference." },
+        { "source": "[ | B ] 'A' DEF\n[ | A ] 'B' DEF", "note": "Indirect, through one other Word." },
+        { "source": "[ | B ] 'A' DEF\n[ | C ] 'B' DEF\n[ | A ] 'C' DEF", "note": "A longer chain." },
         {
-          "source": "[ [ REC2 ] EXEC ] 'REC2' DEF",
+          "source": "[ | [ REC2 ] EXEC ] 'REC2' DEF",
           "note": "Reached only through a nested block, which LANG.SOURCE.FRAME says still counts as a reference even though nothing there evaluates it."
         },
         {
-          "source": "[ LATER ] 'FIRST' DEF\n[ FIRST ] 'LATER' DEF",
+          "source": "[ | LATER ] 'FIRST' DEF\n[ | FIRST ] 'LATER' DEF",
           "note": "A forward reference to a Word that does not exist yet: the cycle closes at the second DEF, which is where it is caught. Definition order does not matter."
         }
       ],
       "accepted": [
         {
-          "source": "[ | 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\n[ W2 ] 'W3' DEF\nW3",
+          "source": "[ | 1 ] 'W1' DEF\n[ | W1 ] 'W2' DEF\n[ | W2 ] 'W3' DEF\nW3",
           "note": "An acyclic chain. Completeness matters as much as soundness: a check that refused this would make the language smaller, not safer."
         }
       ]
@@ -100,7 +100,7 @@
       "descendsInto": "the body of the named Word",
       "decreases": "dictionaryRank",
       "why": "The callee's longest outgoing reference chain is shorter than the caller's, because the graph is acyclic.",
-      "witness": "[ | 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\nW2"
+      "witness": "[ | 1 ] 'W1' DEF\n[ | W1 ] 'W2' DEF\nW2"
     },
     {
       "id": "EXEC",

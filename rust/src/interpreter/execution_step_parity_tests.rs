@@ -58,7 +58,7 @@ mod tests {
             );
 
             let via_body = steps(
-                &format!("[ {body} ] 'W' DEF"),
+                &format!("[ X | X {body} ] 'W' DEF"),
                 &format!("{seed}{}", "W ".repeat(5)),
             )
             .await;
@@ -87,8 +87,11 @@ mod tests {
             let inline = steps("", &format!("{name} ").repeat(10)).await;
             assert_eq!(inline, 10, "ten `{name}` inline");
 
-            let via_body =
-                steps(&format!("[ {name} {name} ] 'PAIR' DEF"), &"PAIR ".repeat(5)).await;
+            let via_body = steps(
+                &format!("[ | {name} {name} ] 'PAIR' DEF"),
+                &"PAIR ".repeat(5),
+            )
+            .await;
             assert_eq!(
                 via_body, 15,
                 "five calls of a Word holding two `{name}` is 10 + 5"
@@ -109,7 +112,7 @@ mod tests {
             ),
             (
                 "inside a Word body",
-                format!("[ {body} ] 'BUMP' DEF"),
+                format!("[ X | X {body} ] 'BUMP' DEF"),
                 format!("0 {}", "BUMP ".repeat(20)),
             ),
             (

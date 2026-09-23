@@ -115,11 +115,9 @@ impl Interpreter {
         self.call_stack.push(name.to_string());
 
         // `KEEP` modifies the call, never a Word inside the body — see
-        // `word_call.rs` for how each kind of call settles it.
-        let result = match def.params.as_deref() {
-            Some(params) => self.run_header_call(params, compiled_plan.as_ref(), &def),
-            None => self.run_whole_stack_call(compiled_plan.as_ref(), &def),
-        };
+        // `word_call.rs` for how the call settles it.
+        let params = def.params.as_deref().unwrap_or_default();
+        let result = self.run_word_call(params, compiled_plan.as_ref(), &def);
 
         self.call_stack.pop();
         self.call_depth -= 1;

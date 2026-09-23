@@ -298,7 +298,10 @@ mod source_position_tests {
         // The body has no source of its own — it was stored as tokens — so the
         // position a reader can act on is the top-level token that reached it.
         let mut interp = Interpreter::new();
-        interp.execute("[ 1 BADWORD ] 'BROKEN' DEF").await.unwrap();
+        interp
+            .execute("[ | 1 BADWORD ] 'BROKEN' DEF")
+            .await
+            .unwrap();
         let _ = interp.drain_error_flow_trace();
         assert!(interp.execute("1 PRINT\n2 PRINT\nBROKEN").await.is_err());
         assert_eq!(evidence_of(&mut interp, "sourceLine").as_deref(), Some("3"));

@@ -1,11 +1,10 @@
 //! Parameter headers: `[ A B | body ] 'NAME' DEF` (LANG.SOURCE.FRAME).
 //!
-//! A header states a Word's arity. The call takes exactly that many operands,
-//! binds them, and runs the body on an empty stack, so what `KEEP` keeps is
-//! read from the definition, and the Word means the same as its body with its
-//! parameters bound by `BIND` — the expansion into Core Words alone that a
-//! header-less Word under `KEEP` does not have
-//! (`docs/dev/word-arity-header-work-order-2026-09.md`).
+//! Every User Word states its arity in a header. The call takes exactly that
+//! many operands, binds them, and runs the body on an empty stack, so what
+//! `KEEP` keeps is read from the definition, and the Word means the same as
+//! its body with its parameters bound by `BIND` — an expansion into Core
+//! Words alone (`docs/dev/word-arity-header-work-order-2026-09.md`).
 
 #[cfg(test)]
 mod tests {
@@ -52,11 +51,36 @@ mod tests {
     }
 
     /// The body starts on an empty stack: reading past its own frame is an
-    /// ERROR, not a silent reach into the caller's values.
+    /// ERROR, not a silent reach into the caller's values. When the body's
+    /// stack effect is fixed, `DEF` sees that every call would fail and
+    /// refuses the definition; when it depends on a value, the call fails.
     #[tokio::test]
     async fn the_body_cannot_read_below_its_frame() {
-        let err = error_of("[ X | + ] 'BAD' DEF 1 2 BAD").await;
+        let mut interp = Interpreter::new();
+        let err = interp
+            .execute("[ X | + ] 'BAD' DEF")
+            .await
+            .expect_err("a body that always underflows is refused")
+            .to_string();
+        assert!(err.contains("below its frame"), "got: {err}");
+        assert!(!interp.user_words.contains_key("BAD"));
+
+        let err = error_of("[ B | B EXEC ] 'RUN' DEF 1 2 [ + ] RUN").await;
         assert!(err.contains("underflow"), "got: {err}");
+    }
+
+    /// Every User Word states its arity: a body without a header is refused,
+    /// and the dictionary is left as it was.
+    #[tokio::test]
+    async fn a_body_without_a_header_is_refused() {
+        let mut interp = Interpreter::new();
+        let err = interp
+            .execute("[ 2 * ] 'TWICE' DEF")
+            .await
+            .expect_err("a header-less body is refused")
+            .to_string();
+        assert!(err.contains("parameter header"), "got: {err}");
+        assert!(!interp.user_words.contains_key("TWICE"));
     }
 
     #[tokio::test]
@@ -95,29 +119,18 @@ mod tests {
         );
     }
 
-    /// Transitional (work order §2.6, until Phase 3 makes the header
-    /// required): a header-less body still sees the whole stack, and `KEEP`
-    /// on it keeps whatever the call reached. The repository's own examples
-    /// were migrated to headers in Phase 2, so this is the one place the
-    /// header-less reading is still pinned.
+    /// `KEEP` modifies the `EXEC` call, not the first Word in the block. The
+    /// block's frame is the whole stack, so the whole stack is what the call
+    /// keeps, and what the block leaves goes on top of it.
     #[tokio::test]
-    async fn a_header_less_word_keeps_what_the_call_reached() {
-        assert_eq!(
-            stack_of("[ 2 * ] 'TWICE' DEF 5 KEEP TWICE").await,
-            ["5/1", "10/1"]
-        );
-        assert_eq!(
-            stack_of("[ + ] 'ADDW' DEF 1 3 4 KEEP ADDW").await,
-            ["1/1", "3/1", "4/1", "7/1"]
-        );
-    }
-
-    /// `KEEP` modifies the `EXEC` call, not the first Word in the block.
-    #[tokio::test]
-    async fn keep_does_not_leak_into_an_exec_block() {
+    async fn keep_on_exec_keeps_the_whole_stack_it_ran_on() {
         assert_eq!(
             stack_of("[ 3 ] [ 1 + ] KEEP EXEC").await,
             ["[ 3/1 ]", "[ 1/1 + ]", "[ 4/1 ]"]
+        );
+        assert_eq!(
+            stack_of("1 [ 3 ] [ 1 + ] KEEP EXEC").await,
+            ["1/1", "[ 3/1 ]", "[ 1/1 + ]", "1/1", "[ 4/1 ]"]
         );
         assert_eq!(stack_of("[ 3 ] [ 1 + ] EXEC").await, ["[ 4/1 ]"]);
     }
@@ -144,13 +157,13 @@ mod tests {
     #[tokio::test]
     async fn a_parameter_is_not_a_reference_to_a_word() {
         assert_eq!(
-            stack_of("[ X | X 1 + ] 'H' DEF [ 9 ] 'X' DEF 5 H 'X' DEL").await,
+            stack_of("[ X | X 1 + ] 'H' DEF [ | 9 ] 'X' DEF 5 H 'X' DEL").await,
             ["6/1"]
         );
     }
 
     /// Parameters are encoded by position, so their names do not reach the
-    /// Word's content identity; a header-less body is a different Word.
+    /// Word's content identity; a name the body binds itself still does.
     #[tokio::test]
     async fn parameter_names_do_not_reach_the_digest() {
         let digests = |a: &str, b: &str| {
@@ -161,7 +174,7 @@ mod tests {
             ["TRUE"]
         );
         assert_eq!(
-            stack_of(&digests("[ 'V' BIND V LENGTH ]", "[ V | V LENGTH ]")).await,
+            stack_of(&digests("[ X | X 'V' BIND V LENGTH ]", "[ V | V LENGTH ]")).await,
             ["FALSE"]
         );
     }
@@ -193,7 +206,7 @@ mod tests {
     async fn contract_inference_reads_the_header_and_bound_names() {
         for (src, name, consumes) in [
             ("[ V | V LENGTH ] 'L' DEF", "L", 1),
-            ("[ 'V' BIND V V LENGTH / ] 'M' DEF", "M", 1),
+            ("[ X | X 'V' BIND V V LENGTH / ] 'M' DEF", "M", 1),
             ("[ A B | A ] 'FIRST' DEF", "FIRST", 2),
         ] {
             let mut interp = Interpreter::new();

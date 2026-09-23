@@ -85,7 +85,7 @@ fn symbol_in_vector_is_data_not_executed() {
     // is therefore a fully literal vector — TEN is the string "TEN", never the
     // word's result — and lowers identically on the compiled and interpreted
     // paths. This is the regression guard for the retired word-execution behavior.
-    let src = "[ | [ 10 ] ] 'TEN' DEF\n[ [ TEN 2 3 ] ] 'W' DEF\nW";
+    let src = "[ | [ 10 ] ] 'TEN' DEF\n[ | [ TEN 2 3 ] ] 'W' DEF\nW";
     let rendered = assert_on_equals_off(src);
     assert!(
         rendered.contains("TEN"),

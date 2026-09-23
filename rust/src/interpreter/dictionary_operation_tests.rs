@@ -128,7 +128,7 @@ mod tests {
 
     // `test_recursive_identity_is_stable` pinned that a self-recursive word's
     // identity hashed its self-cycle reproducibly. LANG.DICTIONARY.ACYCLIC's DEF-time
-    // acyclicity check now refuses `[ REC ] 'REC' DEF` outright, so no word's
+    // acyclicity check now refuses `[ | REC ] 'REC' DEF` outright, so no word's
     // dependency graph can contain a cycle for `word_identity`'s cycle-hashing
     // path to see; that path (Section 8.6) is unreachable but kept rather than
     // torn out, matching this codebase's convention for a retired path (see
@@ -140,7 +140,7 @@ mod tests {
     #[tokio::test]
     async fn test_unresolved_reference_identity_is_not_recaptured() {
         let mut interp = Interpreter::new();
-        interp.execute("[ MISSING ] 'CALLER' DEF").await.unwrap();
+        interp.execute("[ | MISSING ] 'CALLER' DEF").await.unwrap();
         let before = interp
             .word_identity("CALLER")
             .cloned()
@@ -333,9 +333,9 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let example_words = vec![
-            ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
-            ("E4", "C4 5 * 4 /", "純正律 E4"),
+            ("C4", "| 264", "純正律 C4"),
+            ("D4", "| C4 9 * 8 /", "純正律 D4"),
+            ("E4", "| C4 5 * 4 /", "純正律 E4"),
         ];
         restore_example_words(&mut interp, &example_words);
 
@@ -375,7 +375,7 @@ mod tests {
     async fn test_del_rejects_a_qualified_path() {
         let mut interp = Interpreter::new();
 
-        let example_words = vec![("D4", "264", "test word")];
+        let example_words = vec![("D4", "| 264", "test word")];
         restore_example_words(&mut interp, &example_words);
         assert!(interp.user_words.contains_key("D4"));
 
@@ -398,8 +398,8 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let example_words = vec![
-            ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
+            ("C4", "| 264", "純正律 C4"),
+            ("D4", "| C4 9 * 8 /", "純正律 D4"),
         ];
         restore_example_words(&mut interp, &example_words);
 
@@ -424,8 +424,8 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let example_words = vec![
-            ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
+            ("C4", "| 264", "純正律 C4"),
+            ("D4", "| C4 9 * 8 /", "純正律 D4"),
         ];
         restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
@@ -595,7 +595,7 @@ mod tests {
     async fn lookup_of_a_branching_word_round_trips_through_def() {
         let mut interp = Interpreter::new();
         interp
-            .execute("[ 'N' BIND\n[ 'small' ] [ 'big' ]\nN [ 5 ] LT\nSELECT ] 'SIZE' DEF")
+            .execute("[ N | [ 'small' ] [ 'big' ]\nN [ 5 ] LT\nSELECT ] 'SIZE' DEF")
             .await
             .unwrap();
         let loaded = lookup_source(&interp, "SIZE");
@@ -613,7 +613,7 @@ mod tests {
     async fn a_contract_directive_becomes_the_defined_words_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ X | X [ 1 ] + ] 'INC' DEF")
             .await
             .unwrap();
         assert_eq!(
@@ -651,7 +651,7 @@ mod tests {
     async fn redefining_without_a_new_directive_drops_the_old_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ X | X [ 1 ] + ] 'INC' DEF")
             .await
             .unwrap();
         interp.execute("[ Z | Z [ 2 ] + ] 'INC' DEF").await.unwrap();

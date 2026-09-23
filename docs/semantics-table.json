@@ -126486,7 +126486,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "value"
+      "outcome": "error:invalidDefinitionBody"
     },
     {
       "word": "DEF",
@@ -126574,7 +126574,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "value"
+      "outcome": "error:invalidDefinitionBody"
     },
     {
       "word": "DEF",
@@ -126662,7 +126662,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "value"
+      "outcome": "error:invalidDefinitionBody"
     },
     {
       "word": "DEF",
@@ -126838,7 +126838,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "value"
+      "outcome": "error:invalidDefinitionBody"
     },
     {
       "word": "DEF",

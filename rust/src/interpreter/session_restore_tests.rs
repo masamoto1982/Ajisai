@@ -20,10 +20,10 @@ mod tests {
         let mut interp = Interpreter::new();
         let skipped = interp
             .restore_user_word_definitions([
-                word("FIRST", "[ 1 ]"),
+                word("FIRST", "| [ 1 ]"),
                 // No longer lexes: a bracket must stand alone (LANG.SOURCE.TEXT).
-                word("LEGACY", "[1]"),
-                word("LAST", "[ 3 ]"),
+                word("LEGACY", "| [1]"),
+                word("LAST", "| [ 3 ]"),
             ])
             .expect("a skippable entry is not a restore failure");
 
@@ -54,9 +54,9 @@ mod tests {
         let mut interp = Interpreter::new();
         let skipped = interp
             .restore_user_word_definitions([
-                word("KEPT", "[ 1 ]"),
-                word("A[B", "[ 2 ]"),
-                word("ALSO-KEPT", "[ 3 ]"),
+                word("KEPT", "| [ 1 ]"),
+                word("A[B", "| [ 2 ]"),
+                word("ALSO-KEPT", "| [ 3 ]"),
             ])
             .expect("a refused name is not a restore failure");
 
@@ -72,7 +72,7 @@ mod tests {
     async fn a_clean_dictionary_restores_whole_and_reports_nothing() {
         let mut interp = Interpreter::new();
         let skipped = interp
-            .restore_user_word_definitions([word("ONE", "[ 1 ]"), word("TWO", "[ 2 ]")])
+            .restore_user_word_definitions([word("ONE", "| [ 1 ]"), word("TWO", "| [ 2 ]")])
             .expect("nothing here is unreadable");
 
         assert!(skipped.is_empty(), "nothing should be reported skipped");
@@ -87,7 +87,7 @@ mod tests {
     async fn a_definition_less_entry_is_passed_over_silently() {
         let mut interp = Interpreter::new();
         let skipped = interp
-            .restore_user_word_definitions([word("EMPTY", ""), word("REAL", "[ 1 ]")])
+            .restore_user_word_definitions([word("EMPTY", ""), word("REAL", "| [ 1 ]")])
             .expect("an empty definition is not a failure");
 
         assert!(skipped.is_empty(), "an absent body is not a skip to report");
@@ -102,10 +102,41 @@ mod tests {
     async fn a_dependent_of_a_skipped_word_still_restores() {
         let mut interp = Interpreter::new();
         let skipped = interp
-            .restore_user_word_definitions([word("MISSING", "[1]"), word("CALLER", "[ MISSING ]")])
+            .restore_user_word_definitions([
+                word("MISSING", "| [1]"),
+                word("CALLER", "| [ MISSING ]"),
+            ])
             .expect("the dependency rebuild must survive an unresolved reference");
 
         assert_eq!(skipped.len(), 1);
         assert!(interp.user_words.contains_key("CALLER"));
+    }
+
+    /// A dictionary saved before every Word had to state its arity
+    /// (LANG.SOURCE.FRAME) holds header-less bodies. Its arity cannot be read
+    /// from the text, so such an entry is skipped and named with `DEF`'s
+    /// reason, and the entries around it still restore.
+    #[tokio::test]
+    async fn a_header_less_entry_saved_before_headers_is_skipped_and_named() {
+        let mut interp = Interpreter::new();
+        let skipped = interp
+            .restore_user_word_definitions([
+                word("NEW", "| [ 1 ]"),
+                word("OLD", "2 *"),
+                word("ALSO-NEW", "X | X 2 *"),
+            ])
+            .expect("a header-less entry is not a restore failure");
+
+        assert_eq!(
+            skipped.iter().map(|s| s.name.as_str()).collect::<Vec<_>>(),
+            vec!["OLD"]
+        );
+        assert!(
+            skipped[0].reason.contains("parameter header"),
+            "the skip should say why: {}",
+            skipped[0].reason
+        );
+        assert!(interp.user_words.contains_key("NEW"));
+        assert!(interp.user_words.contains_key("ALSO-NEW"));
     }
 }

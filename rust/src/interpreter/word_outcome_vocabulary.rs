@@ -40,7 +40,7 @@
 //! right for arity/space/cost, where an unexecuted literal is one opaque
 //! push. It is the wrong question for reachability: a block can be pushed
 //! by one Word and executed by another, arbitrarily far away.
-//! `[ [ 'a' ADD ] ] 'G' DEF 1 G EXEC` runs that `ADD` and answers
+//! `[ | [ 'a' ADD ] ] 'G' DEF 1 G EXEC` runs that `ADD` and answers
 //! `nonNumeric`, but the classifier calls the inner block `Data` at every
 //! point this walk sees it, so skipping `Data` dropped `nonNumeric` from
 //! the prediction — an under-approximation, measured, not hypothetical.

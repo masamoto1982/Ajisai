@@ -36,12 +36,12 @@ mod contract_decl_tests {
     #[test]
     fn a_correct_declaration_over_literals_is_verified_not_violated() {
         for (body, decl) in [
-            ("[ 1 2 ]", "( 0 -- 1 )"),
-            ("[ 10 20 ] ADD", "( 1 -- 1 )"),
-            ("[ 2 MUL ] MAP", "( 1 -- 1 )"),
-            ("[ [ 1 ] [ 2 ] ]", "( 0 -- 1 )"),
-            ("[ [ 1 2 ] ]", "( 0 -- 1 )"),
-            ("[ [ 1 ] ]", "( 0 -- 1 )"),
+            ("| [ 1 2 ]", "( 0 -- 1 )"),
+            ("X | X [ 10 20 ] ADD", "( 1 -- 1 )"),
+            ("X | X [ 2 MUL ] MAP", "( 1 -- 1 )"),
+            ("| [ [ 1 ] [ 2 ] ]", "( 0 -- 1 )"),
+            ("| [ [ 1 2 ] ]", "( 0 -- 1 )"),
+            ("| [ [ 1 ] ]", "( 0 -- 1 )"),
         ] {
             let source = format!("[ {body} ] 'W' DEF\n#:contract W {decl}");
             let decls = contract_decls(&source);
@@ -83,7 +83,7 @@ mod contract_decl_tests {
         // INNER is defined by a nested (non-top-level) DEF, so the
         // definitions pass that builds the check environment never
         // registers it — CALLER's own inference cannot resolve it.
-        let source = "[ [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ | INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty(), "expected at least one finding");
@@ -114,7 +114,7 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_counts_add_up() {
-        let source = "[ [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
+        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ | INNER ] 'CALLER' DEF
 [ | 1 PRINT ] 'BAD' DEF
 [ X | X 1 SUB ] 'GOOD' DEF
@@ -136,7 +136,7 @@ mod contract_decl_tests {
 
     #[test]
     fn gap_summary_key_order_is_stable() {
-        let source = "[ [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
+        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ | INNER ] 'CALLER' DEF
 #:contract CALLER ( 0 -- 1 ) pure nil-free";
         let first = serde_json::to_string(&contract_decls(source)).unwrap();
@@ -174,7 +174,7 @@ mod contract_decl_tests {
 
     #[test]
     fn unverifiable_declaration_is_a_nil_with_a_reason() {
-        let source = "[ [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ | INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
         assert_eq!(decls["declarations"][0]["word"], "CALLER");
@@ -195,7 +195,7 @@ mod contract_decl_tests {
     #[test]
     fn error_dominates_nil_in_the_fold() {
         // REC is unverifiable (nil); F is a proven violation (error).
-        let source = "[ 1 SUB REC ] 'REC' DEF
+        let source = "[ X | X 1 SUB REC ] 'REC' DEF
 [ | 1 PRINT ] 'F' DEF
 #:contract REC ( 1 -- 1 ) pure nil-free
 #:contract F ( 1 -- 0 ) pure";
@@ -206,7 +206,7 @@ mod contract_decl_tests {
     #[test]
     fn nil_dominates_value_in_the_fold() {
         // CALLER is unverifiable (nil); GOOD verifies cleanly (value).
-        let source = "[ [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
+        let source = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ | INNER ] 'CALLER' DEF
 [ X | X 1 SUB ] 'GOOD' DEF
 #:contract CALLER ( 0 -- 1 ) pure nil-free
@@ -228,7 +228,7 @@ mod contract_decl_tests {
     /// that — only a proven `error` does.
     #[test]
     fn outcome_does_not_change_the_exit_code() {
-        let nil_only = "[ [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let nil_only = "[ | [ | 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ | INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
         assert_eq!(exit_code(nil_only), 0, "cannot-verify must not fail check");
 
         let with_error = "[ | 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
@@ -356,9 +356,9 @@ mod contract_decl_tests {
     #[test]
     fn a_pure_declaration_over_vector_literal_symbols_is_verified() {
         for body in [
-            "[ 'a' PRINT 'b' ]",
-            "[ [ PRINT ] ]",
-            "[ [ [ [ PRINT ] 0 GET EXEC ] ] 0 GET EXEC ]",
+            "| [ 'a' PRINT 'b' ]",
+            "| [ [ PRINT ] ]",
+            "| [ [ [ [ PRINT ] 0 GET EXEC ] ] 0 GET EXEC ]",
         ] {
             let source = format!("[ {body} ] 'W' DEF\n#:contract W pure");
             let decls = contract_decls(&source);
