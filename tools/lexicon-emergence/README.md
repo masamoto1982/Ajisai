@@ -4,8 +4,8 @@ Tooling for `docs/dev/lexicon-emergence-experiment-work-order-2026-09.md`: Core
 is held fixed, subject agents solve shared task families through the Ajisai MCP
 server, and the shared User dictionary passes from generation to generation
 through a capacity bottleneck. This directory grades, classifies and reports;
-the subject agents themselves are started elsewhere (Phase 1: Claude Code
-subagents; Phase 2: a harness).
+the subject agents run either as Claude Code subagents (route A, the pilot)
+or through the Claude API harness in `lib/harness.mjs` (route B, Phase 2 on).
 
 Nothing here defines Ajisai. Results are observation notes.
 
@@ -20,19 +20,32 @@ Nothing here defines Ajisai. Results are observation notes.
 | `lib/identity.mjs` | D0 (DIGEST), D0α (DIGEST after renaming bound variables), D1 (probe-battery fingerprint) |
 | `lib/evolve.mjs` | Equivalence classes and the next generation's top-K lexicon |
 | `lib/analyze.mjs` | H1, H2, H4, H5 over a run |
-| `lib/prompt.mjs` | The single message a subject agent receives |
-| `runs/<run>/<condition>/gen<g>/` | `lexicon.json`, `submissions/`, `graded/` |
+| `lib/prompt.mjs` | The single message a subject agent receives (route A: read SKILL.md, write a file; route B: the harness supplies SKILL.md and a `submit` tool) |
+| `lib/harness.mjs` | Route B: one subject through the Claude API. Offers the MCP server's own `compute` / `check` / `word_contract` definitions plus `submit`, relays calls unchanged, caps turns and spending, records every request's served model, usage and cost |
+| `test/` | The harness against a scripted model (no API call) with the real server and grader: `npm test` |
+| `runs/<run>/<condition>/gen<g>/` | `lexicon.json`, `submissions/`, `graded/`, and for route B `transcripts/` |
 
 ## Use
 
-Requires `npm install` in `tools/mcp-server` (the SessionStart hook does it).
+Requires `npm install` in `tools/mcp-server` and here (the SessionStart hook does both).
 
 ```sh
 node cli.mjs prompt  <run> <condition> <gen> <agent>   # message for one subject
 node cli.mjs grade   <run> <condition> <gen>           # after submissions are written
 node cli.mjs evolve  <run> <condition> <gen> <K>       # writes gen+1/lexicon.json
 node cli.mjs analyze <run>                             # runs/<run>/report.{md,json}
+
+# Route B — needs ANTHROPIC_API_KEY in the environment and spends money.
+node cli.mjs run   <run> <condition> <gen> G0A,G0B --model large --budget 10
+node cli.mjs pilot <run> --model large --effort high --budget 40   # Phase 1's design end to end
 ```
+
+`--model` takes a model id or `large` / `medium` / `small` (`claude-opus-5`,
+`claude-sonnet-5`, `claude-haiku-4-5`). `--budget` is a ceiling in USD checked
+before every request, from the rates in `lib/harness.mjs`; a run that reaches
+it stops with an error and keeps what it wrote. Server-side refusal fallbacks
+are deliberately not enabled: a fallback would change which model answered,
+which is the variable §5.3 controls. A refusal is recorded as the run's end.
 
 ## What the instrument can and cannot say
 

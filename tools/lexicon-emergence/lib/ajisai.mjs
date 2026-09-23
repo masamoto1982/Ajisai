@@ -13,14 +13,26 @@ export async function connect() {
   const client = new Client({ name: 'lexicon-emergence', version: '0.1.0' });
   await client.connect(transport);
 
-  async function call(name, args) {
+  /** The tool's text reply, exactly as a subject agent would read it. */
+  async function callText(name, args) {
     const result = await client.callTool({ name, arguments: args });
-    return JSON.parse(result.content[0].text);
+    return result.content.map((c) => c.text ?? '').join('\n');
   }
+  const call = async (name, args) => JSON.parse(await callText(name, args));
 
   return {
     compute: (source) => call('compute', { source }),
     check: (source) => call('check', { source }),
+    callText,
+    /** The server's own definitions of the named tools, in the order given. */
+    async tools(names) {
+      const { tools } = await client.listTools();
+      return names.map((name) => {
+        const tool = tools.find((t) => t.name === name);
+        if (!tool) throw new Error(`the Ajisai MCP server has no tool ${name}`);
+        return tool;
+      });
+    },
     close: () => client.close(),
   };
 }
