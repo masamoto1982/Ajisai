@@ -369,7 +369,6 @@ pub enum Token {
     VectorEnd,
     RecordStart,
     RecordEnd,
-    LineBreak,
 }
 
 impl Token {
@@ -386,13 +385,10 @@ impl Token {
 }
 
 #[derive(Debug, Clone)]
-pub struct ExecutionLine {
-    pub body_tokens: Arc<[Token]>,
-}
-
-#[derive(Debug, Clone)]
 pub struct WordDefinition {
-    pub lines: Arc<[ExecutionLine]>,
+    /// The body's tokens, in order. Whitespace, line breaks included, is not
+    /// part of it (LANG.SOURCE.TEXT).
+    pub body: Arc<[Token]>,
     pub is_builtin: bool,
     pub description: Option<String>,
     pub dependencies: HashSet<String>,

@@ -166,9 +166,6 @@ impl Interpreter {
                     }
                     i += 1;
                 }
-                Token::LineBreak => {
-                    i += 1;
-                }
             }
         }
         Err(AjisaiError::MalformedSource(kind.unclosed().to_string()))

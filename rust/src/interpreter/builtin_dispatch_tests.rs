@@ -50,7 +50,7 @@ mod tests {
             );
             assert_eq!(carried.id, word.id, "`{}` carries a foreign id", word.name);
             assert!(
-                def.lines.is_empty(),
+                def.body.is_empty(),
                 "a Core Word has no body, which is what selects this route"
             );
         }

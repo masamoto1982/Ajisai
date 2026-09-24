@@ -316,15 +316,12 @@ mod tokenizer_regression_tests_2 {
 
     #[test]
     fn test_multiline_vector_body_allowed() {
-        // A `[ ]` body may span multiple lines, with each internal line break
-        // preserved as a statement separator inside it.
-        let input = "[ LENGTH [ 1 ] =\n[ 10 ] ] 'CHECK_ONE' DEF";
-        let result = tokenize(input);
-        assert!(result.is_ok(), "multi-line vector body should tokenize");
-        assert!(
-            result.unwrap().contains(&crate::types::Token::LineBreak),
-            "internal line break must be preserved as a statement separator"
-        );
+        // A `[ ]` body may span multiple lines; the breaks are whitespace and
+        // the body is the same token stream as the one-line spelling.
+        let multi = tokenize("[ LENGTH [ 1 ] =\n[ 10 ] ] 'CHECK_ONE' DEF");
+        let flat = tokenize("[ LENGTH [ 1 ] = [ 10 ] ] 'CHECK_ONE' DEF");
+        assert!(multi.is_ok(), "multi-line vector body should tokenize");
+        assert_eq!(multi, flat);
     }
 
     #[test]

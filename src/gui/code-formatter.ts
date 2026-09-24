@@ -1,11 +1,11 @@
 // Ajisai source formatter.
 //
 // Goal: tidy messy input into the canonical written form without ever changing
-// what the code means. In Ajisai a line break at a definition body's own level
-// is a statement separator (SPECIFICATION.html 3.5), so line breaks are
-// semantically significant. The formatter therefore preserves the line
-// structure exactly and rewrites only the *insignificant* whitespace: the
-// spacing between tokens and the indentation at the start of each line.
+// what the code means. A line break is whitespace like any other in Ajisai
+// (LANG.SOURCE.TEXT) except that it ends a `#` comment, and the layout is the
+// author's. The formatter therefore preserves the line structure exactly and
+// rewrites only the spacing between tokens and the indentation at the start of
+// each line.
 //
 // Per line it:
 //   - collapses runs of spaces/tabs to a single space;

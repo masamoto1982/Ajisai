@@ -77,7 +77,7 @@ impl Interpreter {
 
         self.charge_execution_step()?;
 
-        if def.lines.is_empty() {
+        if def.body.is_empty() {
             // Dispatch the Word resolution already found, rather than finding it
             // again. `execute_builtin` re-canonicalized the name — a third fold
             // of a name folded once above — and then `generated_word` scanned the
@@ -121,10 +121,10 @@ impl Interpreter {
 
         // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
         // produces the same result whether it went through the compiled plan
-        // or the plain guard structure.
+        // or the plain token route.
         let result = match compiled_plan.as_ref() {
             Some(compiled) => execute_compiled_plan(self, compiled),
-            None => self.execute_guard_structure(&def.lines),
+            None => self.execute_section_core(&def.body, 0).map(|_| ()),
         };
 
         self.close_binding_scope();
@@ -305,7 +305,7 @@ impl Interpreter {
         resolved_name: &str,
         def: &std::sync::Arc<crate::types::WordDefinition>,
     ) -> Option<std::sync::Arc<super::compiled_plan::CompiledPlan>> {
-        if def.lines.is_empty() {
+        if def.body.is_empty() {
             return None;
         }
 
@@ -345,27 +345,21 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
             Token::RecordStart => "{".to_string(),
             Token::RecordEnd => "}".to_string(),
-            Token::LineBreak => "\n".to_string(),
         }
     }
 
     pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
         let (_, def) = self.resolve_word_entry(name)?;
-        if def.is_builtin || def.lines.is_empty() {
+        if def.is_builtin || def.body.is_empty() {
             return None;
         }
 
-        let mut result = String::new();
-        for (i, line) in def.lines.iter().enumerate() {
-            if i > 0 {
-                result.push('\n');
-            }
-            for token in line.body_tokens.iter() {
-                result.push_str(&self.format_token_to_string(token));
-                result.push(' ');
-            }
-        }
-        Some(result.trim().to_string())
+        let words: Vec<String> = def
+            .body
+            .iter()
+            .map(|token| self.format_token_to_string(token))
+            .collect();
+        Some(words.join(" "))
     }
 
     /// A User Word's `description` (SPEC: host affordance only, not a

@@ -293,18 +293,12 @@ fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
     }
 
     for (open, close) in spans {
-        // After the closing `]`, skip line breaks and look for String(name) DEF.
-        let mut j = close + 1;
-        while matches!(tokens.get(j), Some(Token::LineBreak)) {
-            j += 1;
-        }
+        // After the closing `]`, look for String(name) DEF.
+        let j = close + 1;
         let Some(Token::String(name)) = tokens.get(j) else {
             continue;
         };
-        let mut k = j + 1;
-        while matches!(tokens.get(k), Some(Token::LineBreak)) {
-            k += 1;
-        }
+        let k = j + 1;
         let is_def = matches!(tokens.get(k), Some(Token::Symbol(s))
             if crate::core_word_aliases::canonicalize_core_word_name(s).eq_ignore_ascii_case("DEF"));
         if !is_def {

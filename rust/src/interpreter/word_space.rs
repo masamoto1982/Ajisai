@@ -362,10 +362,10 @@ impl SpaceSim {
         self.degrade();
     }
 
-    /// The caller stopped feeding this line mid-way (a dependency could not be
-    /// inferred), so structural depths can no longer be trusted: pin the bound
-    /// to the conservative top and resynchronize for whatever follows.
-    pub(crate) fn abandon_line(&mut self) {
+    /// A dependency's contract could not be inferred, so nothing after it can
+    /// be bounded: pin the bound to the conservative top and resynchronize
+    /// for whatever follows.
+    pub(crate) fn abandon(&mut self) {
         self.bound.join(SpaceBound::CONSERVATIVE);
         self.degrade();
         self.vector_depth = 0;

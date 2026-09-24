@@ -1,6 +1,5 @@
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::tokenizer;
-use crate::types::ExecutionLine;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -91,10 +90,10 @@ impl AjisaiInterpreter {
 
         let token = self.step_tokens[self.step_position].clone();
 
-        let line = ExecutionLine {
-            body_tokens: vec![token].into(),
-        };
-        let result = self.interpreter.execute_guard_structure_sync(&[line]);
+        let result = self
+            .interpreter
+            .execute_section_core(std::slice::from_ref(&token), 0)
+            .map(|_| ());
 
         match result {
             Ok(()) => {

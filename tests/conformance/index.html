@@ -1571,6 +1571,18 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- Whitespace is the sole token delimiter and carries nothing else: a line
+     break inside a body is not a statement boundary, so layout is not part of
+     a Word's content identity. -->
+
+<section class="ajisai-case" id="core-layout-is-not-content" data-category="core">
+  <h3>A body written across lines is the same Word as the flat one (LANG.SOURCE.TEXT)</h3>
+  <pre class="ajisai-source">[ 1 2
++ ] 'A' DEF [ 1 2 + ] 'B' DEF [ A B ] 0 GET DIGEST [ A B ] 1 GET DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ============ CORE: A FALLBACK IS A VALUE (LANG.FAILURE.RECOVERY) ============ -->
 
 <section class="ajisai-case" id="core-absence-vector-fallback" data-category="core">

@@ -114,9 +114,7 @@ impl Interpreter {
                     // `word_outcome_vocabulary`'s module doc.
                     outcomes.extend(resolve_and_collect(self, symbol, &mut visiting, &mut reach));
                 }
-                Token::VectorStart | Token::VectorEnd | Token::LineBreak => {
-                    flow.feed_structural(token)
-                }
+                Token::VectorStart | Token::VectorEnd => flow.feed_structural(token),
                 // A Record literal is a constant, so whether it fails is
                 // decided here rather than approximated: building it answers
                 // exactly, and a literal that builds cannot fail at run time.

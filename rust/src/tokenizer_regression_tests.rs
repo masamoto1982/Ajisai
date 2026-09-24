@@ -19,7 +19,6 @@ mod tokenizer_regression_tests {
             vec![
                 Token::number("1"),
                 Token::number("2"),
-                Token::LineBreak,
                 Token::number("3"),
                 Token::number("4"),
             ]
@@ -404,7 +403,6 @@ mod tokenizer_regression_tests {
                 Token::number("1"),
                 Token::number("2"),
                 Token::Symbol("+".into()),
-                Token::LineBreak,
                 Token::number("3"),
                 Token::number("4"),
                 Token::Symbol("*".into()),

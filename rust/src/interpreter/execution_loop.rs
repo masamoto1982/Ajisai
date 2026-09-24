@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
-use crate::types::{ExecutionLine, Interpretation, Token, Value, ValueData};
+use crate::types::{Interpretation, Token, Value, ValueData};
 
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
@@ -245,12 +245,6 @@ fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_bef
 }
 
 impl Interpreter {
-    /// Synchronous single-line entry point used by the WASM step controller.
-    #[cfg(feature = "wasm")]
-    pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        self.execute_guard_structure(lines)
-    }
-
     pub(crate) fn execute_section_core(
         &mut self,
         tokens: &[Token],
@@ -369,7 +363,6 @@ impl Interpreter {
                     i += consumed;
                     continue;
                 }
-                Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::MalformedSource(
                         "Unexpected vector end".to_string(),
@@ -400,19 +393,6 @@ impl Interpreter {
         let result = self.execute_section_core(tokens, 0).map(|_| ());
         self.close_binding_scope();
         result
-    }
-
-    pub(crate) fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        for line in lines.iter() {
-            self.execute_section_core(&line.body_tokens, 0)?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn split_tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
-        Ok(vec![ExecutionLine {
-            body_tokens: tokens.to_vec().into(),
-        }])
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
@@ -448,8 +428,7 @@ impl Interpreter {
         self.current_source_span = None;
         self.current_source_word = None;
         self.check_source_numeric_literals(&tokens)?;
-        let lines: Vec<ExecutionLine> = self.split_tokens_to_lines(&tokens)?;
-        self.execute_guard_structure(&lines)?;
+        self.execute_section_core(&tokens, 0)?;
         Ok(())
     }
 

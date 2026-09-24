@@ -9,7 +9,7 @@ use super::{EpochSnapshot, Interpreter};
 
 #[derive(Debug, Clone)]
 pub struct CompiledPlan {
-    pub lines: Vec<CompiledLine>,
+    pub line: CompiledLine,
     pub compiled_at: EpochSnapshot,
 }
 
@@ -42,7 +42,6 @@ pub enum CompiledOp {
         namespace: String,
         word: String,
     },
-    LineBreak,
     // FallbackToken keeps runtime-sensitive tokens in the interpreter path:
     // - directives / control markers (NilCoalesce)
     // - unresolved symbols at compile time
@@ -174,21 +173,15 @@ fn try_collect_literal_vector(
                     }
                 }
                 i += 1;
-            }
-            // `[ IDLE | 1 ]`: `|` inside an unclosed `[` is data until COND
-            // runs it, the same promotion an ordinary name gets — mirrors
-            // `collect_bracketed_with_depth`'s handling exactly.
-            Token::LineBreak => {
-                i += 1;
-            }
+            } // `[ IDLE | 1 ]`: `|` inside an unclosed `[` is data until COND
+              // runs it, the same promotion an ordinary name gets — mirrors
+              // `collect_bracketed_with_depth`'s handling exactly.
         }
     }
     None // unclosed
 }
 
-/// Compile one token sequence into a single `CompiledLine`. `collect_vector`'s
-/// flat treatment of a section is preserved: internal `LineBreak`s become no-op
-/// `LineBreak` ops rather than line splits.
+/// Compile one token sequence into a single `CompiledLine`.
 fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
     let mut ops = Vec::with_capacity(tokens.len());
     let mut i = 0_usize;
@@ -211,7 +204,6 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
             Token::VectorEnd | Token::RecordStart | Token::RecordEnd => {
                 CompiledOp::FallbackToken(token.clone())
             }
-            Token::LineBreak => CompiledOp::LineBreak,
             Token::Symbol(s) => {
                 let upper = crate::core_word_aliases::canonicalize_core_word_name(s);
                 compile_symbol(token, upper.as_ref(), interp)
@@ -243,21 +235,15 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
 /// [`is_plan_valid`] refuses a plan whose dictionary has moved underneath it —
 /// a block that runs `DEF` falls back to interpretation from that element on.
 pub fn compile_token_block(tokens: Vec<Token>, interp: &Interpreter) -> CompiledPlan {
-    let lines = vec![compile_one_line(tokens, interp)];
     CompiledPlan {
-        lines,
+        line: compile_one_line(tokens, interp),
         compiled_at: interp.current_epoch_snapshot(),
     }
 }
 
 pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) -> CompiledPlan {
-    let mut lines = Vec::with_capacity(word_def.lines.len());
-    for line in word_def.lines.iter() {
-        lines.push(compile_one_line(line.body_tokens.to_vec(), interp));
-    }
-
     CompiledPlan {
-        lines,
+        line: compile_one_line(word_def.body.to_vec(), interp),
         compiled_at: interp.current_epoch_snapshot(),
     }
 }
@@ -282,10 +268,7 @@ pub(crate) fn execute_compiled_nested_block(
 }
 
 pub fn execute_compiled_plan(interp: &mut Interpreter, plan: &CompiledPlan) -> Result<()> {
-    for line in plan.lines.iter() {
-        execute_compiled_line(interp, line)?;
-    }
-    Ok(())
+    execute_compiled_line(interp, &plan.line)
 }
 
 fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Result<()> {
@@ -359,18 +342,17 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 interp.execute_word_core(&full_name)?;
                 super::execution_loop::apply_word_hint_override(interp, &full_name);
             }
-            CompiledOp::LineBreak | CompiledOp::FallbackToken(_) => {}
+            CompiledOp::FallbackToken(_) => {}
         }
     }
     Ok(())
 }
 
 pub fn plan_is_all_fallback(plan: &CompiledPlan) -> bool {
-    plan.lines.iter().all(|l| {
-        l.ops
-            .iter()
-            .all(|op| matches!(op, CompiledOp::FallbackToken(_) | CompiledOp::LineBreak))
-    })
+    plan.line
+        .ops
+        .iter()
+        .all(|op| matches!(op, CompiledOp::FallbackToken(_)))
 }
 
 pub fn arc_plan(plan: CompiledPlan) -> Arc<CompiledPlan> {

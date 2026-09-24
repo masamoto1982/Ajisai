@@ -288,9 +288,9 @@ impl CostSim {
         });
     }
 
-    /// The caller stopped feeding this line mid-way (a dependency could not
-    /// be inferred): pin to the conservative top, same as `SpaceSim`.
-    pub(crate) fn abandon_line(&mut self) {
+    /// A dependency's contract could not be inferred: pin to the
+    /// conservative top, same as `SpaceSim`.
+    pub(crate) fn abandon(&mut self) {
         self.bound.join(CostBound::CONSERVATIVE);
         self.block_depth = 0;
     }

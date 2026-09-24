@@ -88,15 +88,11 @@ fn consumes_preceding_as_code(canonical_name: &str) -> bool {
     )
 }
 
-/// The first Symbol at or after `from`, skipping `LineBreak`s — `None` if the
+/// The Symbol at `from` — `None` if the
 /// body ends first or a non-Symbol token comes first (a code-consuming Word
 /// is always named directly; nothing else can be "what follows").
 fn next_symbol_from(tokens: &[Token], from: usize) -> Option<&str> {
-    let mut i = from;
-    while let Some(Token::LineBreak) = tokens.get(i) {
-        i += 1;
-    }
-    match tokens.get(i) {
+    match tokens.get(from) {
         Some(Token::Symbol(s)) => Some(s),
         _ => None,
     }

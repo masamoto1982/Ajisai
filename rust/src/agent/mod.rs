@@ -224,7 +224,6 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
         };
         let next_words: Vec<String> = tokens[i + 1..]
             .iter()
-            .filter(|t| !matches!(t, Token::LineBreak))
             .take(2)
             .filter_map(|t| match t {
                 Token::Symbol(s) => Some(normalize_word(s)),

@@ -194,10 +194,10 @@ pub struct Interpreter {
     pub(crate) word_identities: HashMap<String, String>,
 
     /// Content store for definition bodies (Section 8.6), keyed by content key.
-    /// Textually identical bodies share a single `Arc<[ExecutionLine]>`, so
+    /// Textually identical bodies share a single `Arc<[Token]>`, so
     /// re-importing or copying a word group does not duplicate its code in
     /// memory.
-    pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::ExecutionLine]>>,
+    pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::Token]>>,
 
     /// When set, `recompute_word_identities` is a no-op. Bulk operations (e.g.
     /// restoring or importing many words) set this for the duration of the

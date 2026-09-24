@@ -94,7 +94,7 @@
     {
       "id": "invalidDefinitionBody",
       "kind": "declared",
-      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or a Vector with no statements."
+      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or an empty one."
     },
     {
       "id": "invalidIndex",

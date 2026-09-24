@@ -42,7 +42,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
         dictionary.insert(
             name.to_string(),
             Arc::new(WordDefinition {
-                lines: std::sync::Arc::from([]),
+                body: std::sync::Arc::from([]),
                 is_builtin: true,
                 description: Some(description.to_string()),
                 dependencies: HashSet::new(),

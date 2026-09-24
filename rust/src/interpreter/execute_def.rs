@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::{Interpreter, WordDefinition};
-use crate::types::{ExecutionLine, Token};
+use crate::types::Token;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -196,17 +196,21 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         }
     }
 
-    let staged_tokens = tokens.to_vec();
-    let lines = parse_definition_body(&staged_tokens)?;
+    if tokens.is_empty() {
+        return Err(AjisaiError::declared(
+            "invalidDefinitionBody",
+            "DEF: expected a non-empty definition body, got an empty body",
+        ));
+    }
 
     // Content store (Section 8.6): share one stored body across textually
     // identical definitions so copying or re-importing a word group does not
     // duplicate its code.
-    let body_key = crate::interpreter::word_identity::body_content_key(&lines);
-    let lines: Arc<[ExecutionLine]> = match interp.body_store.get(&body_key) {
+    let body_key = crate::interpreter::word_identity::body_content_key(tokens);
+    let body: Arc<[Token]> = match interp.body_store.get(&body_key) {
         Some(shared) => shared.clone(),
         None => {
-            let arc: Arc<[ExecutionLine]> = lines.into();
+            let arc: Arc<[Token]> = tokens.into();
             interp.body_store.insert(body_key, arc.clone());
             arc
         }
@@ -218,15 +222,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // below needs to see a forward reference to a word that does not exist
     // yet, which `new_dependencies` cannot represent.
     let mut new_text_references = HashSet::new();
-    for line in lines.iter() {
-        for token in line.body_tokens.iter() {
-            if let Token::Symbol(s) = token {
-                let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
-                new_text_references.insert(upper_s.to_string());
-                if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
-                    if !resolved_def.is_builtin || resolved_name.contains('@') {
-                        new_dependencies.insert(resolved_name.to_string());
-                    }
+    for token in body.iter() {
+        if let Token::Symbol(s) = token {
+            let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
+            new_text_references.insert(upper_s.to_string());
+            if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
+                if !resolved_def.is_builtin || resolved_name.contains('@') {
+                    new_dependencies.insert(resolved_name.to_string());
                 }
             }
         }
@@ -254,7 +256,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     let new_def = WordDefinition {
-        lines,
+        body,
         is_builtin: false,
         description: None,
         dependencies: new_dependencies,
@@ -281,71 +283,4 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
     interp.bump_dictionary_epoch();
     Ok(())
-}
-
-/// Split a word body into execution lines.
-///
-/// A line break separates *statements*, and a statement is a thing written at
-/// the body's own level. A break written inside a literal — a `[ ]` Vector
-/// or a `{ }` Record — is interior to a single value, not a separator between two of them,
-/// so it is carried through into that value's token stream untouched.
-///
-/// Splitting on interior breaks is what used to make a multi-line block
-/// unusable inside a Word: a body of
-///
-/// ```text
-/// [ [ 'N' BIND
-/// [ 1 ] [ 0 ]
-/// N [ 0 ] GT
-/// SELECT ] MAP
-/// ```
-///
-/// was cut at every break, leaving `[ [ 'N' BIND` as its own "line" — an
-/// unclosed block, and an error raised at the call rather than at the
-/// definition. Depth is the whole rule: at depth 0 a break ends a statement,
-/// below it a break is just a token.
-pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
-    let mut lines = Vec::new();
-    let mut processed_tokens = Vec::new();
-    let mut depth: usize = 0;
-
-    let mut i = 0;
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::LineBreak if depth == 0 => {
-                if !processed_tokens.is_empty() {
-                    let execution_line = ExecutionLine {
-                        body_tokens: processed_tokens.clone().into(),
-                    };
-                    lines.push(execution_line);
-                    processed_tokens.clear();
-                }
-            }
-            token => {
-                match token {
-                    Token::VectorStart | Token::RecordStart => depth += 1,
-                    Token::VectorEnd | Token::RecordEnd => depth = depth.saturating_sub(1),
-                    _ => {}
-                }
-                processed_tokens.push(tokens[i].clone());
-            }
-        }
-        i += 1;
-    }
-
-    if !processed_tokens.is_empty() {
-        let execution_line = ExecutionLine {
-            body_tokens: processed_tokens.into(),
-        };
-        lines.push(execution_line);
-    }
-
-    if lines.is_empty() {
-        return Err(AjisaiError::declared(
-            "invalidDefinitionBody",
-            "DEF: expected a non-empty definition body, got an empty body",
-        ));
-    }
-
-    Ok(lines)
 }
