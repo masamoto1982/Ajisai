@@ -29,7 +29,7 @@ use test_support::observe::{render, run};
 
 /// Whole-stack rendering (one value per element), the conformance observation.
 fn obs(src: &str) -> Vec<String> {
-    run(src).iter().map(|v| render(v, v.hint)).collect()
+    run(src).iter().map(render).collect()
 }
 
 /// Stack depth after running `src` (mass observation).

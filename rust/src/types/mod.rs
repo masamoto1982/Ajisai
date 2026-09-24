@@ -48,32 +48,6 @@ use crate::types::exact::ExactReal;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-/// Semantic interpretation role assigned to a stack value. This is the
-/// meaning the runtime attaches to a value, not a formatting switch:
-/// rendering for humans and AI is derived from (data, role).
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub enum Interpretation {
-    /// Role not yet assigned. Rendered structurally with no heuristic
-    /// re-guessing — the runtime never infers meaning at render time.
-    #[default]
-    Unassigned,
-    /// A plain exact-real number.
-    RawNumber,
-    /// A 2-element vector interpreted as a closed interval.
-    Interval,
-    /// A scalar interpreted as a truth value.
-    TruthValue,
-    /// An integer interpreted as a timestamp.
-    Timestamp,
-    /// A diagnostic absence value.
-    Nil,
-    /// Canonical AI-readable continued-fraction serialization
-    /// (LANG.VALUES.EXACT, LANG.OBSERVATION.PROTOCOL): the flat classical-notation form
-    /// `( a0; a1, a2 )`, with a trailing `…` truncation marker for
-    /// lazy irrationals. Round-trip-safe machine serialization role.
-    ContinuedFraction,
-}
-
 #[derive(Debug, Clone)]
 pub enum ValueData {
     /// A definite logical truth value, `true` or `false`
@@ -101,17 +75,8 @@ pub enum ValueData {
     /// A String: a sequence of Unicode scalar values, and one of the six
     /// disjoint domains of LANG.VALUES.DISJOINT.
     ///
-    /// String used to be encoded as a `Vector` of codepoint `Scalar`s carrying
-    /// `Interpretation::Text`, which made the domain a property of a
-    /// presentation field rather than of the value. Two consequences were
-    /// observable from the language: `'A' [ 65 ] EQ` answered TRUE, because
-    /// the encodings were identical and only the hint differed; and
-    /// `is_string_value` had to *guess* stringhood by testing whether every
-    /// element happened to be a printable codepoint, which is exactly the
-    /// render-time re-guessing `Interpretation` promises never to do.
-    ///
-    /// Holding the content directly settles both: the domain is the tag, and
-    /// nothing has to be inferred from the elements.
+    /// Holding the content directly makes the domain the tag: nothing has to
+    /// be inferred from the elements, and `'A' [ 65 ] EQ` is false.
     Text(Arc<str>),
     /// A Record: an insertion-ordered keyed correspondence, the seventh
     /// disjoint domain (LANG.RECORDS.STRUCTURE). It is not a Vector — no
@@ -230,7 +195,6 @@ impl std::hash::Hash for ValueData {
 #[derive(Debug, Clone)]
 pub struct Value {
     pub data: ValueData,
-    pub hint: Interpretation,
     pub absence: Option<AbsenceMetadata>,
 }
 
@@ -246,13 +210,9 @@ impl PartialEq for Value {
     /// NILs equal, and `[ NIL ] [ 0 ] { 0 DIV } MAP EQ` answered TRUE for a
     /// `literal` absence against a `divisionByZero` one.
     ///
-    /// `hint` is *not* part of it. It is a presentation role, and letting it
-    /// decide a semantic question would violate LANG.STACK.ORDER. It used to
-    /// be compared here for one reason only — String was encoded as a Vector
-    /// of codepoints and `Interpretation::Text` was the sole discriminator —
-    /// and `ValueData::Text` removed that reason by making the domain the tag.
-    /// Two values with the same data and the same NIL reason are now the same
-    /// value however they came to be displayed.
+    /// Nothing else is: a value carries no record of how it was made
+    /// (LANG.VALUES.DENOTATION), so two values with the same data and the same
+    /// NIL reason are the same value.
     fn eq(&self, other: &Self) -> bool {
         self.data == other.data
             && self.nil_reason() == other.nil_reason()
@@ -266,7 +226,7 @@ impl Eq for Value {}
 
 /// Hashes exactly what `PartialEq` compares — `data`, then the NIL reason and
 /// the detail a `userDeclared` reason carries —
-/// and nothing `PartialEq` does not (`hint` stays out of both). Required
+/// and nothing `PartialEq` does not. Required
 /// for `UNIQUE` / `TALLY` / `GROUP` to key a `HashMap<Value, _>` rather than
 /// re-scan the accumulated result for every element (CS5 collection-word
 /// de-quadraticization).

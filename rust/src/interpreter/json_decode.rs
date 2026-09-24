@@ -32,7 +32,7 @@ use crate::interpreter::collection_meter;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, RecordData, Value};
+use crate::types::{RecordData, Value};
 
 /// Deepest container nesting one decoded value may hold. Past it the text
 /// is refused as too large, not as malformed.
@@ -350,21 +350,16 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
     };
     match decoder.decode() {
         Ok(value) => {
-            let role = if value.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::Unassigned
-            };
-            interp.stack.push_with_role(value, role);
+            interp.stack.push(value);
         }
-        Err(Reject::Malformed) => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::InvalidEncoding, Recoverability::Recoverable),
-            Interpretation::Nil,
-        ),
-        Err(Reject::TooDeep) => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::SpaceExhausted, Recoverability::Unknown),
-            Interpretation::Nil,
-        ),
+        Err(Reject::Malformed) => interp.stack.push(Value::nil_with_reason(
+            NilReason::InvalidEncoding,
+            Recoverability::Recoverable,
+        )),
+        Err(Reject::TooDeep) => interp.stack.push(Value::nil_with_reason(
+            NilReason::SpaceExhausted,
+            Recoverability::Unknown,
+        )),
     }
     Ok(())
 }

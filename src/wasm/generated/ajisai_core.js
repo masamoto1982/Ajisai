@@ -214,7 +214,7 @@ export class AjisaiInterpreter {
     }
     /**
      * Restore a stack from a `snapshot_stack` payload, reinstating exact
-     * values (CodeBlock, ExactScalar, …) and their stack-position roles.
+     * values (CodeBlock, ExactScalar, …).
      * @param {string} snapshot_json
      */
     restore_stack_snapshot(snapshot_json) {
@@ -614,7 +614,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 278, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 275, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014);
             return ret;
         },

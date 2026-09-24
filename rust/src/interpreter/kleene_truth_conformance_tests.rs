@@ -54,9 +54,9 @@ async fn strong_kleene_and_or_truth_tables() {
         if expect_nil {
             assert!(stack[0].is_nil(), "`{code}` must produce NIL (UNKNOWN)");
             assert_eq!(
-                stack[0].truth_value(),
-                Some("unknown"),
-                "`{code}`'s NIL result must observe as truthValue `unknown`"
+                stack[0].nil_reason(),
+                Some(&crate::error::NilReason::Literal),
+                "`{code}`'s UNKNOWN is the NIL operand it read, reason intact"
             );
         } else {
             assert_eq!(

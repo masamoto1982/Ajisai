@@ -15,7 +15,7 @@ use crate::interpreter::comparison_scalar::OrderOutcome;
 use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
     interp.stack.extend(operands);
@@ -167,17 +167,7 @@ pub fn op_bsearch(interp: &mut Interpreter) -> Result<()> {
             Value::from_vector(lanes)
         }
         None => match lower_bound(&sorted, &operands[1]) {
-            Ok(found) => {
-                let value = lane(found);
-                if matches!(value.data, crate::types::ValueData::Scalar(_)) {
-                    interp
-                        .stack
-                        .push_with_role(value, Interpretation::RawNumber);
-                } else {
-                    interp.stack.push(value);
-                }
-                return Ok(());
-            }
+            Ok(found) => lane(found),
             Err(e) => {
                 restore_operands(interp, operands);
                 return Err(e);

@@ -9,7 +9,7 @@ use crate::interpreter::cast::cast_value_helpers::is_string_value;
 use crate::interpreter::value_extraction_helpers::{extract_operands, value_as_string};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 /// The texts the operands denote, or the `nonText` every text Word declares.
 fn texts(interp: &mut Interpreter, word: &str, count: usize) -> Result<Vec<String>> {
@@ -36,9 +36,7 @@ pub fn op_search(interp: &mut Interpreter) -> Result<()> {
     match haystack.find(needle.as_str()) {
         Some(byte_offset) => {
             let position = haystack[..byte_offset].chars().count();
-            interp
-                .stack
-                .push_with_role(Value::from_int(position as i64), Interpretation::RawNumber);
+            interp.stack.push(Value::from_int(position as i64));
         }
         None => interp.stack.push(Value::nil_with_reason(
             NilReason::MissingField,

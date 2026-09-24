@@ -9,7 +9,7 @@ use crate::interpreter::tensor_cmds::op_round;
 use crate::interpreter::value_extraction_helpers::{create_number_value, nil_passthrough_binary};
 use crate::interpreter::Interpreter;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// The single number an operand denotes, for a Word whose second operand is a
 /// scalar parameter rather than a broadcast operand.
@@ -95,18 +95,15 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
             interp
                 .stack
                 .push(Value::nil_with_reason_unknown(NilReason::DomainMiss));
-            let len = interp.stack.len();
-            interp.stack.set_role_at(len - 1, Interpretation::Nil);
             return Ok(());
         }
     };
 
     let subject: Value = interp.stack[top - 1].clone();
-    let subject_role: Interpretation = interp.stack.role_at(top - 1);
     let restore: crate::types::Stack = interp.stack.clone();
 
     interp.stack.truncate(top - 1);
-    interp.stack.push_with_role(subject, subject_role);
+    interp.stack.push(subject);
     interp.stack.push(create_number_value(denominator.clone()));
 
     let outcome = quantize_on_stack(interp, &denominator);

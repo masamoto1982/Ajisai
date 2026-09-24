@@ -10,7 +10,7 @@ mod observation_digest_tests {
     use crate::semantic::Recoverability;
     use crate::types::exact::ExactReal;
     use crate::types::fraction::Fraction;
-    use crate::types::{Interpretation, Value};
+    use crate::types::Value;
     use num_bigint::BigInt;
     use std::collections::HashSet;
 
@@ -159,17 +159,37 @@ mod observation_digest_tests {
         assert_eq!(digest_of(&nested), digest_of(&rank2));
     }
 
-    /// `hint` is presentation, not meaning (pitfall C): two values that only
-    /// differ in `hint` must digest the same.
-    #[test]
-    fn hint_does_not_change_the_digest() {
-        let mut raw = Value::from_int(1);
-        raw.hint = Interpretation::RawNumber;
-        let mut unassigned = raw.clone();
-        unassigned.hint = Interpretation::Unassigned;
-        assert_ne!(raw.hint, unassigned.hint);
-        assert_eq!(raw, unassigned);
-        assert_eq!(digest_of(&raw), digest_of(&unassigned));
+    /// How a value was made is not part of it (LANG.VALUES.DENOTATION): a
+    /// Boolean from `ANY` and the same Boolean from a `FOLD` of `OR` must
+    /// digest the same.
+    #[tokio::test]
+    async fn how_a_value_was_made_does_not_change_the_digest() {
+        let any = agent_json("[ 1 2 3 ] [ 2 GT ] ANY").await;
+        let fold = agent_json("[ 1 2 3 ] [ 2 GT ] MAP FALSE [ OR ] FOLD").await;
+        assert_eq!(any["stack"], fold["stack"]);
+        assert_eq!(any["observationDigest"], fold["observationDigest"]);
+    }
+
+    /// A NIL that passed through arithmetic is observed exactly as the NIL it
+    /// was: `type: "nil"` with its reason, never as a number.
+    #[tokio::test]
+    async fn a_nil_through_arithmetic_is_observed_as_that_nil() {
+        let through = agent_json("NIL -1 MUL").await;
+        let literal = agent_json("NIL").await;
+        assert_eq!(through["stack"][0]["type"], "nil");
+        assert!(through["stack"][0].get("displayHint").is_none());
+        assert_eq!(through["stack"], literal["stack"]);
+        assert_eq!(through["observationDigest"], literal["observationDigest"]);
+    }
+
+    /// UNKNOWN is a NIL (LANG.VALUES.TRUTH): no truth axis on the wire.
+    #[tokio::test]
+    async fn unknown_is_observed_as_a_nil() {
+        let unknown = agent_json("NIL TRUE AND").await;
+        let node = &unknown["stack"][0];
+        assert_eq!(node["type"], "nil");
+        assert!(node["semantics"].get("truthValue").is_none());
+        assert_eq!(node["semantics"]["absence"]["reason"], "literal");
     }
 
     /// The reverse of the previous test: the NIL reason *is* meaning

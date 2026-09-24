@@ -5,7 +5,7 @@
 
 use super::fraction::Fraction;
 use super::value_densify::try_collect_dense;
-use super::{DenseTensor, Interpretation, Value, ValueData};
+use super::{DenseTensor, Value, ValueData};
 use crate::semantic::AbsenceMetadata;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -38,8 +38,7 @@ impl Value {
     /// without materializing per-element `Value`s or `Fraction`s. This is the
     /// output constructor for the integer SIMD lane: it keeps the result in
     /// the same dense column representation as its inputs instead of degrading
-    /// to an AoS `Vector` (handoff 手1). The `hint` matches `from_tensor` /
-    /// `from_children` (`Unassigned`) so downstream interpretation is unchanged.
+    /// to an AoS `Vector` (handoff 手1).
     pub fn from_int_tensor(numerators: Vec<i64>) -> Self {
         let len = numerators.len();
         let tensor = DenseTensor::from_integers(numerators);
@@ -48,7 +47,6 @@ impl Value {
                 data: Arc::new(tensor),
                 shape: Arc::new(vec![len]),
             },
-            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
@@ -59,8 +57,7 @@ impl Value {
     /// recomputing them — a reversal, a permutation. Going through
     /// [`Value::from_tensor`] would mean handing it `Fraction`s rebuilt from
     /// columns the caller already holds, which is the round-trip the dense
-    /// representation exists to avoid. `hint` matches every other tensor
-    /// constructor (`Unassigned`).
+    /// representation exists to avoid.
     pub fn from_dense_tensor(data: DenseTensor, shape: Vec<usize>) -> Self {
         let resolved_shape = if shape.is_empty() {
             vec![data.len()]
@@ -72,7 +69,6 @@ impl Value {
                 data: Arc::new(data),
                 shape: Arc::new(resolved_shape),
             },
-            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
@@ -100,28 +96,25 @@ impl Value {
             resolved_shape.clone(),
             absences.clone(),
         ) else {
-            return Self::from_vector_with_hint(
-                tensor_fractions_to_nested_values(&data, &resolved_shape, &absences),
-                Interpretation::Unassigned,
-            );
+            return Self::from_vector(tensor_fractions_to_nested_values(
+                &data,
+                &resolved_shape,
+                &absences,
+            ));
         };
         Self {
             data: ValueData::Tensor {
                 data: Arc::new(tensor),
                 shape: Arc::new(resolved_shape),
             },
-            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
 
-    /// Like [`from_vector_with_hint`] but promotes the value to a dense
-    /// `Tensor` when every leaf is a Fraction scalar and the shape is
-    /// rectangular. Otherwise the nested form is preserved.
-    ///
-    /// The `String` display hint suppresses promotion at every level so that
-    /// codepoint-based strings retain their nested representation.
-    pub fn from_vector_promoted_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
+    /// Build a Vector value, promoted to a dense `Tensor` when every leaf is
+    /// a Fraction scalar and the shape is rectangular. Otherwise the nested
+    /// form is preserved.
+    pub fn from_vector_promoted(values: Vec<Value>) -> Self {
         if let Some(collected) = try_collect_dense(&values) {
             if let Some(tensor) = DenseTensor::from_fractions_with_absences(
                 collected.data,
@@ -133,22 +126,11 @@ impl Value {
                         data: Arc::new(tensor),
                         shape: Arc::new(collected.shape),
                     },
-                    hint,
                     absence: None,
                 };
             }
         }
-        Self {
-            data: ValueData::Vector(Arc::new(values)),
-            hint,
-            absence: None,
-        }
-    }
-
-    /// Convenience wrapper around [`from_vector_promoted_with_hint`] using
-    /// `Interpretation::Unassigned`.
-    pub fn from_vector_promoted(values: Vec<Value>) -> Self {
-        Self::from_vector_promoted_with_hint(values, Interpretation::Unassigned)
+        Self::from_vector(values)
     }
 }
 
@@ -440,19 +422,18 @@ mod tensor_boundary_tests {
     }
 
     #[test]
-    fn ensure_hydrated_converts_tensor_into_vector_preserving_hint() {
+    fn ensure_hydrated_converts_tensor_into_equal_vector() {
         use std::borrow::Cow;
 
-        let mut dense = Value::from_tensor(
+        let dense = Value::from_tensor(
             vec![Fraction::from(1), Fraction::from(2), Fraction::from(3)],
             vec![3],
         );
-        dense.hint = Interpretation::RawNumber;
         let hydrated = dense.ensure_hydrated();
         match hydrated {
             Cow::Owned(v) => {
                 assert!(matches!(v.data, ValueData::Vector(_)));
-                assert_eq!(v.hint, Interpretation::RawNumber);
+                assert_eq!(v, dense);
                 assert_eq!(v.len(), 3);
             }
             Cow::Borrowed(_) => panic!("Tensor should hydrate into an owned Vector"),

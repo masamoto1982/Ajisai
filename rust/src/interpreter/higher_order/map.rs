@@ -54,7 +54,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         interp.stack.clear();
         interp.stack.push(elem);
         match execute_executable_code(interp, &executable) {
-            Ok(_) => match interp.stack.pop_slot() {
+            Ok(_) => match interp.stack.pop() {
                 // The block's one result *is* the mapped element, whatever its
                 // shape. A one-element Vector used to be unwrapped here, back
                 // when a scalar was itself a one-element Vector and the two
@@ -67,7 +67,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 // [ 0 ] GET 5 ADD` answered `6/1` where `[ 6/1 ]` is the
                 // answer, which is exactly the quiet wrong result
                 // LANG.FAILURE.TRICHOTOMY exists to rule out.
-                Some((result_val, _result_hint)) => {
+                Some(result_val) => {
                     results.push(result_val);
                 }
                 None => {

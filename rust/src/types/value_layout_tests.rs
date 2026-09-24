@@ -21,7 +21,7 @@ mod value_layout_tests {
     use crate::types::{Value, ValueData};
     use std::mem::size_of;
 
-    /// The payload plus a pointer-sized envelope and the role, rounded to
+    /// The payload plus a pointer-sized envelope, rounded to
     /// alignment. Anything materially wider means something rare was inlined
     /// into every value again.
     ///

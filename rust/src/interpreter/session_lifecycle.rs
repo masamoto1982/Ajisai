@@ -129,9 +129,6 @@ impl Interpreter {
 
         self.defer_identity_recompute = false;
         self.next_registration_order = 1;
-        // Top-level roles live on the stack now and were cleared with it above
-        // (`self.stack.clear()`); the registry keeps only value-id-keyed flow
-        // state, which session reset leaves untouched, as before.
         self.monitor_notifications.clear();
         self.next_supervisor_id = 1;
         self.runtime_metrics = RuntimeMetrics::default();

@@ -21,8 +21,9 @@ import { Result, ok, err } from './functional-result-helpers';
 // parsed — never to record that a field went away. Dropping
 // `activeUserDictionary` kept this at 4 for that reason: a version-4 document
 // still carries everything a reader looks at, and the abandoned key beside
-// them is simply never read.
-export const STATE_FORMAT_VERSION = 4;
+// them is simply never read. Version 5 dropped the per-value and per-slot role
+// tags from the stack snapshot, so a version-4 payload no longer parses.
+export const STATE_FORMAT_VERSION = 5;
 
 export interface InterpreterState {
     readonly stateVersion: number;

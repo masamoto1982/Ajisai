@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::builtins::lookup_builtin_spec;
 use crate::error::Result;
-use crate::types::{Interpretation, Token, Value, WordDefinition};
+use crate::types::{Token, Value, WordDefinition};
 
 use super::compiled_call::{execute_compiled_call, CompiledCall};
 use super::{EpochSnapshot, Interpreter};
@@ -31,11 +31,11 @@ pub enum CompiledOp {
     /// disagree on is a budget and a ceiling the two routes disagree on.
     PushWordLiteral(Value, &'static str),
     /// A fully-literal vector (`[ 1 2 3 ]`, nested literals, `TRUE`/`FALSE`/`NIL`)
-    /// built once at compile time, with the same promoted `Value` and element
-    /// hint `collect_vector` would produce. Replaces the per-call vector walk
+    /// built once at compile time, with the same promoted `Value`
+    /// `collect_vector` would produce. Replaces the per-call vector walk
     /// and keeps lines with literal vectors on the compiled path instead of
     /// forcing them onto the interpreter via `FallbackToken`.
-    PushVectorLiteral(Value, Interpretation),
+    PushVectorLiteral(Value),
     CallBuiltin(Arc<CompiledCall>),
     CallUserWord(String),
     CallQualifiedWord {
@@ -47,7 +47,6 @@ pub enum CompiledOp {
     // - directives / control markers (NilCoalesce)
     // - unresolved symbols at compile time
     // - structural tokens we cannot lower safely in current pass (e.g. vectors)
-    // - tokens that could alter semantic hint behavior in dynamic ways
     FallbackToken(Token),
 }
 
@@ -81,17 +80,17 @@ fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> Compiled
 
 /// Try to build a fully-literal vector starting at `tokens[start]` (a
 /// `VectorStart`). Mirrors `Interpreter::collect_vector` for the literal subset
-/// — same element values, nesting, promotion, and element hint — but returns
+/// — same element values, nesting, and promotion — but returns
 /// `None` the moment a non-literal element appears (a bare symbol that could be
 /// a user word, a `|` separator, an unclosed/empty vector, excessive nesting),
 /// so those keep the interpreter's `collect_vector` behavior via `FallbackToken`.
-/// On success returns the element values, tokens consumed (including both
-/// brackets), and the element hint to attach on the stack.
+/// On success returns the element values and the tokens consumed (including
+/// both brackets).
 fn try_collect_literal_vector(
     tokens: &[Token],
     start: usize,
     depth: usize,
-) -> Option<(Vec<Value>, usize, Interpretation)> {
+) -> Option<(Vec<Value>, usize)> {
     if !matches!(tokens.get(start), Some(Token::VectorStart)) {
         return None;
     }
@@ -101,19 +100,14 @@ fn try_collect_literal_vector(
 
     let mut values: Vec<Value> = Vec::new();
     let mut i = start + 1;
-    let mut has_bool = false;
-    let mut has_number = false;
-    let mut has_other = false;
 
     while i < tokens.len() {
         match &tokens[i] {
             Token::VectorStart => {
                 // A nested empty vector returns `None` from the recursive call
                 // above (the interpreter rejects it), so `nested` is non-empty.
-                let (nested, consumed, nested_hint) =
-                    try_collect_literal_vector(tokens, i, depth + 1)?;
-                values.push(Value::from_vector_promoted_with_hint(nested, nested_hint));
-                has_other = true;
+                let (nested, consumed) = try_collect_literal_vector(tokens, i, depth + 1)?;
+                values.push(Value::from_vector_promoted(nested));
                 i += consumed;
             }
             // A Record literal is a constant too, but lowering it would have
@@ -127,51 +121,28 @@ fn try_collect_literal_vector(
                     // that error is raised rather than silently building a NIL.
                     return None;
                 }
-                let element_hint = if has_other {
-                    Interpretation::Unassigned
-                } else if has_bool && !has_number {
-                    Interpretation::TruthValue
-                } else if has_number && !has_bool {
-                    Interpretation::RawNumber
-                } else {
-                    Interpretation::Unassigned
-                };
-                return Some((values, i - start + 1, element_hint));
+                return Some((values, i - start + 1));
             }
             Token::Number(literal) => {
                 values.push(Value::from_number(literal.value()?));
-                has_number = true;
                 i += 1;
             }
             Token::String(s) => {
                 values.push(Value::from_string(s));
-                has_other = true;
                 i += 1;
             }
             Token::Symbol(s) => {
                 match Interpreter::normalize_symbol(s).as_ref() {
-                    "TRUE" => {
-                        values.push(Value::from_bool(true));
-                        has_bool = true;
-                    }
-                    "FALSE" => {
-                        values.push(Value::from_bool(false));
-                        has_bool = true;
-                    }
-                    "NIL" => {
-                        values.push(Value::nil());
-                        has_other = true;
-                    }
+                    "TRUE" => values.push(Value::from_bool(true)),
+                    "FALSE" => values.push(Value::from_bool(false)),
+                    "NIL" => values.push(Value::nil()),
                     // LANG.VALUES.VECTOR: a name inside a Vector literal
                     // denotes a Symbol — data until something executes it —
                     // never executed by appearing here. This mirrors
                     // `collect_bracketed_with_depth`, so a symbol-bearing
                     // vector is a literal and lowers here identically to the
                     // interpreter path.
-                    _ => {
-                        values.push(Value::from_symbol(s));
-                        has_other = true;
-                    }
+                    _ => values.push(Value::from_symbol(s)),
                 }
                 i += 1;
             }
@@ -202,9 +173,9 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
             },
             Token::String(s) => CompiledOp::PushLiteral(Value::from_string(s)),
             Token::VectorStart => match try_collect_literal_vector(&tokens, i, 1) {
-                Some((values, consumed, hint)) if interp.vector_literal_enabled => {
+                Some((values, consumed)) if interp.vector_literal_enabled => {
                     i += consumed - 1;
-                    CompiledOp::PushVectorLiteral(Value::from_vector_promoted(values), hint)
+                    CompiledOp::PushVectorLiteral(Value::from_vector_promoted(values))
                 }
                 _ => CompiledOp::FallbackToken(token.clone()),
             },
@@ -303,19 +274,8 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
 
     for op in line.ops.iter() {
         match op {
-            CompiledOp::PushLiteral(v) => {
-                // The legacy path normalized the new slot's role to `Unassigned`
-                // (it grew the value vector, then padded roles), so a compiled
-                // literal is role-neutral regardless of the value's own hint.
-                // Preserve that exactly.
-                interp
-                    .stack
-                    .push_with_role(v.clone(), Interpretation::Unassigned);
-            }
-            CompiledOp::PushVectorLiteral(v, hint) => {
-                // Match `execute_section_core`'s VectorStart handling exactly:
-                // push the prebuilt vector and its element hint.
-                interp.stack.push_with_role(v.clone(), *hint);
+            CompiledOp::PushLiteral(v) | CompiledOp::PushVectorLiteral(v) => {
+                interp.stack.push(v.clone());
             }
             CompiledOp::PushWordLiteral(v, name) => {
                 // A Word, so it costs a step, exactly as the Symbol dispatch the
@@ -326,9 +286,7 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                     interp.record_word_dispatch_failure(name, &err, stack_len_before);
                     return Err(err);
                 }
-                interp
-                    .stack
-                    .push_with_role(v.clone(), Interpretation::Unassigned);
+                interp.stack.push(v.clone());
             }
             CompiledOp::CallBuiltin(call) => {
                 // The step and the call are one dispatch, so one failure record
@@ -345,19 +303,13 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                     interp.record_word_dispatch_failure(&call.name, &err, stack_len_before);
                     return Err(err);
                 }
-                // Mirror the interpreted loop: retag the top role from the
-                // word-hint table so the compiled route leaves the same
-                // `(value, role)` observation (LANG.OBSERVATION.PROTOCOL).
-                super::execution_loop::apply_word_hint_override(interp, &call.name);
             }
             CompiledOp::CallUserWord(name) => {
                 interp.execute_word_core(name)?;
-                super::execution_loop::apply_word_hint_override(interp, name);
             }
             CompiledOp::CallQualifiedWord { namespace, word } => {
                 let full_name = format!("{}@{}", namespace, word);
                 interp.execute_word_core(&full_name)?;
-                super::execution_loop::apply_word_hint_override(interp, &full_name);
             }
             CompiledOp::LineBreak | CompiledOp::FallbackToken(_) => {}
         }

@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::Interpreter;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 /// The truth value of a `booleanLogic` operand.
 ///
@@ -62,17 +62,17 @@ fn compute_boolean_binary(and: bool, a: &Value, b: &Value) -> Result<Value> {
             if x == absorbing {
                 Ok(Value::from_bool(absorbing))
             } else {
-                Ok(as_unknown(b))
+                Ok(b.clone())
             }
         }
         (None, Some(y)) => {
             if y == absorbing {
                 Ok(Value::from_bool(absorbing))
             } else {
-                Ok(as_unknown(a))
+                Ok(a.clone())
             }
         }
-        (None, None) => Ok(as_unknown(a)),
+        (None, None) => Ok(a.clone()),
     }
 }
 
@@ -93,23 +93,10 @@ fn compute_selection(when_true: &Value, when_false: &Value, mask: &Value) -> Res
     match truth_or_unknown(mask)? {
         Some(true) => Ok(when_true.clone()),
         Some(false) => Ok(when_false.clone()),
-        None => Ok(unchosen(mask)),
+        // UNKNOWN chooses neither: the answer is the absence the truth
+        // operand carried, reason intact, so `NIL-REASON` can still say why.
+        None => Ok(mask.clone()),
     }
-}
-
-/// `SELECT`'s answer where the choice is UNKNOWN: the absence the truth
-/// operand carried, reason intact, so a program can still ask `NIL-REASON`
-/// why no branch was taken.
-///
-/// The `TruthValue` hint [`as_unknown`] sets is dropped on the way out. It
-/// says "this absence stands in truth position", which was true of the mask
-/// and is not true of the result: what comes back stands where the *chosen
-/// value* belongs, and reporting it as an undecided truth would misname it
-/// for every consumer that reads the observation axis.
-fn unchosen(mask: &Value) -> Value {
-    let mut absent = mask.clone();
-    absent.hint = Interpretation::Unassigned;
-    absent
 }
 
 fn compute_inverted_value(val: &Value) -> Result<Value> {
@@ -117,35 +104,9 @@ fn compute_inverted_value(val: &Value) -> Result<Value> {
     // UNKNOWN: an absent operand flows out unchanged, keeping its reason
     // (LANG.VALUES.TRUTH's NOT row).
     if val.is_nil() {
-        return Ok(as_unknown(val));
+        return Ok(val.clone());
     }
     Ok(Value::from_bool(!operand_truth(val)?))
-}
-
-/// A NIL operand read in truth position, marked as the logical UNKNOWN (U):
-/// `ValueData::Nil` carrying the `TruthValue` hint (LANG.VALUES.TRUTH). No
-/// vocabulary Word could construct U directly before this — the exact
-/// comparison domain always decides (Tier ≤ 1) — so `AND`/`OR`/`NOT` are the
-/// first to make U a value a program can actually observe, not just a value
-/// the type system reserves room for.
-fn as_unknown(value: &Value) -> Value {
-    let mut unknown = value.clone();
-    unknown.hint = Interpretation::TruthValue;
-    unknown
-}
-
-/// Push a `booleanLogic` result and mark it as truth-valued on the semantic
-/// plane too (SPEC observation axis `truthValue`), mirroring
-/// `comparison::push_boolean_result`. [`as_unknown`] already gives a
-/// propagated UNKNOWN the right `hint` for `Value::truth_value()`; this also
-/// sets the stack-level role the protocol boundary reads, so observation
-/// agrees whichever path a consumer reads it through.
-fn push_truth_result(interp: &mut Interpreter, result: Value) {
-    interp.stack.push(result);
-    let stack_len = interp.stack.len();
-    interp
-        .stack
-        .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
@@ -159,7 +120,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    push_truth_result(interp, result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -179,7 +140,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             return Err(e);
         }
     };
-    push_truth_result(interp, result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -199,7 +160,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             return Err(e);
         }
     };
-    push_truth_result(interp, result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -237,8 +198,6 @@ pub fn op_select(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // Not `push_truth_result`: what `SELECT` answers is whichever candidate
-    // the truth chose, in whatever domain that candidate was.
     interp.stack.push(result);
     Ok(())
 }

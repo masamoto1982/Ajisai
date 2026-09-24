@@ -123,10 +123,10 @@ fn apply_at_depth(
     interp.stack.clear();
     interp.stack.push(value.clone());
     execute_executable_code(interp, executable)?;
-    match interp.stack.pop_slot() {
+    match interp.stack.pop() {
         // The block's one result is the value at this position, whatever its
         // shape — no unwrapping, for the reason MAP gives.
-        Some((result, _hint)) => Ok(result),
+        Some(result) => Ok(result),
         None => Err(AjisaiError::declared(
             "blockContractViolation",
             "RANK: expected return value, got empty stack",

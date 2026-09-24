@@ -5,9 +5,8 @@ use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};
 use std::cell::RefCell;
 
-/// The logical Unknown as a plain NIL (LANG.VALUES.TRUTH): `SORT`/`ORDER`'s output
-/// domain is a vector, not a truth value, so — unlike the comparison words'
-/// `undecidable_truth_value` — this carries no `TruthValue` hint.
+/// The NIL `SORT`/`ORDER` answer when an undecidable pair leaves the order
+/// unestablished — the same `undecidable` NIL a comparison answers.
 fn undecidable_nil() -> Value {
     Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable)
 }

@@ -75,11 +75,7 @@ pub(super) fn elided_error_stack(interp: &Interpreter) -> ElidedStack {
     // away 27 MB and never building it: `[ 0 99999 ] RANGE LENGHT` spent 1.5 s
     // rendering a stack it was about to discard, close enough to `wallTimeMs`
     // that a slow host would have seen a timeout instead of its typo.
-    let slots: Vec<ProtocolNode> = interp
-        .get_stack()
-        .iter_slots()
-        .map(|(value, role)| value_to_protocol(value, Some(role)))
-        .collect();
+    let slots: Vec<ProtocolNode> = interp.get_stack().iter().map(value_to_protocol).collect();
     let costs: Vec<usize> = slots.iter().map(node_wire_bytes).collect();
 
     // Fill from the top down. The operands a failure names are the ones nearest
@@ -142,14 +138,13 @@ pub(super) fn elided_error_stack(interp: &Interpreter) -> ElidedStack {
 fn render_slot(interp: &Interpreter, index: usize) -> String {
     interp
         .get_stack()
-        .iter_slots()
-        .nth(index)
-        .map(|(value, role)| crate::types::display::format_with_hint(value, role))
+        .get(index)
+        .map(crate::types::Value::to_string)
         .unwrap_or_default()
 }
 
 /// Bytes one protocol node adds around its own value: the `semantics` block,
-/// the `type` and `displayHint` strings, and the punctuation between them.
+/// the `type` string, and the punctuation between them.
 ///
 /// Measured against `protocol_node_json`, and deliberately applied to interior
 /// nodes too even though those carry no `semantics` — over-estimating elides a
@@ -232,12 +227,6 @@ fn exact_terms_bytes(node: &ProtocolNode) -> usize {
 /// names the real domain) and by the presence of `elided`.
 fn elided_node_json(node: &ProtocolNode, approx_bytes: usize, elements: Option<usize>) -> Json {
     let mut obj = Map::new();
-    obj.insert(
-        "displayHint".into(),
-        json!(crate::types::value_protocol::interpretation_protocol_str(
-            node.display_hint
-        )),
-    );
     if let Some(source) = &node.semantics {
         // For an algebraic value the number itself lives in
         // `semantics.exactTerms`, not in `value` — `value` is only the marked
@@ -247,7 +236,7 @@ fn elided_node_json(node: &ProtocolNode, approx_bytes: usize, elements: Option<u
         // reader needs from a dropped slot is what kind of value it was, which
         // is everything in the block except the exact form; the term count goes
         // into the `elided` record instead, so nothing is silently missing.
-        let mut semantics = semantics_json(source, node.display_hint);
+        let mut semantics = semantics_json(source);
         if let Some(object) = semantics.as_object_mut() {
             object.remove("exactTerms");
             object.remove("exactDisplay");

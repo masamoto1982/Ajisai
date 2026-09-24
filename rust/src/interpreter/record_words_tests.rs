@@ -234,7 +234,7 @@ mod record_words_tests {
         );
         let interp = run(R).await;
         let value = interp.stack.last().cloned().expect("an answer");
-        let node = crate::types::value_protocol::value_to_protocol(&value, None);
+        let node = crate::types::value_protocol::value_to_protocol(&value);
         assert_eq!(node.type_str, "record");
     }
 }

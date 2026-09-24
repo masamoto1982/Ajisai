@@ -507,7 +507,7 @@ exhaust the comparison's refinement budget without deciding:
 PI PI EQ
 \`\`\`
 
-→ stack \`${exactness.undecided}\` (exit 0, truthValue \`unknown\`). Truth has
+→ stack \`${exactness.undecided}\` (exit 0, a NIL with reason \`undecidable\`). Truth has
 three values: \`TRUE\`, \`FALSE\`, and this logical UNKNOWN, which is also what a
 NIL operand reads as in a truth position (§4). An operation that cannot
 produce a value produces NIL (§4); a malformed one raises an error.

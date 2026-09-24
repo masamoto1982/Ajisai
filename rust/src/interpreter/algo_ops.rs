@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
@@ -51,7 +51,6 @@ pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
     match vector.iter().position(|elem| elem == &target) {
         Some(index) => {
             push_result(interp, Value::from_int(index as i64));
-            interp.stack.set_last_role(Interpretation::RawNumber);
         }
         None => {
             push_result(

@@ -7,30 +7,23 @@
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::value_persist::{decode_stack, encode_stack};
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::One;
 use std::str::FromStr;
 
 /// Round-trip one value as a single stack slot and return the decoded value.
-fn roundtrip(value: &Value, role: Interpretation) -> (Value, Interpretation) {
-    let json = encode_stack(std::iter::once((value, role))).expect("encode_stack");
+fn roundtrip(value: &Value) -> Value {
+    let json = encode_stack(std::iter::once(value)).expect("encode_stack");
     let mut decoded = decode_stack(&json).expect("decode_stack");
     assert_eq!(decoded.len(), 1, "single slot in, single slot out");
     decoded.pop().unwrap()
 }
 
-/// Assert a value survives the codec with its identity (data + hint) intact.
+/// Assert a value survives the codec with its identity intact.
 fn assert_value_roundtrip(value: Value) {
-    let (decoded, _) = roundtrip(&value, Interpretation::Unassigned);
+    let decoded = roundtrip(&value);
     assert_eq!(decoded, value, "value round-trip must preserve identity");
-}
-
-/// Assert both the value and its stack-position role survive.
-fn assert_stack_roundtrip(value: Value, role: Interpretation) {
-    let (decoded, decoded_role) = roundtrip(&value, role);
-    assert_eq!(decoded, value);
-    assert_eq!(decoded_role, role);
 }
 
 fn sqrt(n: i64) -> Value {
@@ -50,7 +43,7 @@ fn code_shaped_vector_survives_round_trip_instead_of_becoming_nil() {
         Value::from_vector_promoted(vec![]),
     ]);
     assert!(matches!(value.data, ValueData::Vector(_)));
-    assert_stack_roundtrip(value, Interpretation::Unassigned);
+    assert_value_roundtrip(value);
 }
 
 #[test]
@@ -59,7 +52,7 @@ fn exact_sqrt_survives_round_trip_instead_of_becoming_rational() {
     // restored as that exact rational, changing the mathematical value.
     let value = sqrt(2);
     assert!(matches!(value.data, ValueData::ExactScalar(_)));
-    assert_stack_roundtrip(value, Interpretation::RawNumber);
+    assert_value_roundtrip(value);
 }
 
 #[test]
@@ -114,34 +107,15 @@ fn tensor_with_nil_lane_round_trips() {
     assert_value_roundtrip(tensor);
 }
 #[test]
-fn hint_role_is_preserved_across_the_stack_boundary() {
-    // The value's own hint and the stack-position role are independent
-    // and must both survive.
-    let value = Value {
-        data: ValueData::Scalar(Fraction::from(5)),
-        hint: Interpretation::Timestamp,
-        absence: None,
-    };
-    assert_stack_roundtrip(value, Interpretation::Timestamp);
-}
-
-#[test]
 fn multi_slot_stack_round_trips_in_order() {
     let values = [
-        (Value::from_int(1), Interpretation::RawNumber),
-        (sqrt(2), Interpretation::RawNumber),
-        (
-            Value::from_vector_promoted(vec![Value::from_number(Fraction::from(9))]),
-            Interpretation::Unassigned,
-        ),
+        Value::from_int(1),
+        sqrt(2),
+        Value::from_vector_promoted(vec![Value::from_number(Fraction::from(9))]),
     ];
-    let json = encode_stack(values.iter().map(|(v, r)| (v, *r))).expect("encode");
+    let json = encode_stack(values.iter()).expect("encode");
     let decoded = decode_stack(&json).expect("decode");
-    assert_eq!(decoded.len(), values.len());
-    for (got, want) in decoded.iter().zip(values.iter()) {
-        assert_eq!(got.0, want.0);
-        assert_eq!(got.1, want.1);
-    }
+    assert_eq!(decoded, values);
 }
 
 // ── a restored tensor's columns are normalized at the boundary ─────────────
@@ -160,15 +134,14 @@ fn multi_slot_stack_round_trips_in_order() {
 /// Encode a tensor, then rewrite its columns on the wire the way a corrupted or
 /// hand-edited payload would, and decode that.
 fn decode_tampered_tensor(value: &Value, from: &str, to: &str) -> Value {
-    let json =
-        encode_stack(std::iter::once((value, Interpretation::Unassigned))).expect("encode_stack");
+    let json = encode_stack(std::iter::once(value)).expect("encode_stack");
     assert!(
         json.contains(from),
         "payload did not contain `{from}`: {json}"
     );
     let tampered = json.replace(from, to);
     let mut decoded = decode_stack(&tampered).expect("decode_stack");
-    decoded.pop().expect("one slot").0
+    decoded.pop().expect("one slot")
 }
 
 #[test]

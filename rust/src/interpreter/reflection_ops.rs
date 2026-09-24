@@ -25,7 +25,7 @@ use crate::interpreter::word_identity::content_digest;
 use crate::interpreter::Interpreter;
 use crate::kernel::generated::generated_word;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// Version tag for a sealed Core Word's identity. Core Words have no body to
 /// normalize, so their identity is the digest of the canonical name under a
@@ -86,9 +86,7 @@ pub(crate) fn op_defined(interp: &mut Interpreter) -> Result<()> {
         return Err(not_a_symbol("DEFINED?", got));
     };
     let defined = resolve(interp, &canonical_name(&name)).is_some();
-    interp
-        .stack
-        .push_with_role(Value::from_bool(defined), Interpretation::TruthValue);
+    interp.stack.push(Value::from_bool(defined));
     Ok(())
 }
 
@@ -116,15 +114,13 @@ pub(crate) fn op_digest(interp: &mut Interpreter) -> Result<()> {
     });
     let digest = word_identity.or_else(|| value_digest(&operand));
     match digest {
-        Some(digest) => interp
-            .stack
-            .push_with_role(Value::from_string(&digest), Interpretation::Unassigned),
+        Some(digest) => interp.stack.push(Value::from_string(&digest)),
         // A computable real has no finite canonical form to digest: the
         // same outcome its comparison reaches when refinement runs out.
-        None => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-            Interpretation::Nil,
-        ),
+        None => interp.stack.push(Value::nil_with_reason(
+            NilReason::Undecidable,
+            Recoverability::Retryable,
+        )),
     }
     Ok(())
 }
@@ -145,10 +141,7 @@ pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
             }
         };
         let contract = interp.infer_contract_for_block(&tokens);
-        interp.stack.push_with_role(
-            inferred_contract_record(&contract),
-            Interpretation::Unassigned,
-        );
+        interp.stack.push(inferred_contract_record(&contract));
         return Ok(());
     }
     let Some(name) = symbol_name(&operand) else {
@@ -165,13 +158,11 @@ pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
         None => None,
     };
     match answer {
-        Some(record) => interp
-            .stack
-            .push_with_role(record, Interpretation::Unassigned),
-        None => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::MissingField, Recoverability::Recoverable),
-            Interpretation::Nil,
-        ),
+        Some(record) => interp.stack.push(record),
+        None => interp.stack.push(Value::nil_with_reason(
+            NilReason::MissingField,
+            Recoverability::Recoverable,
+        )),
     }
     Ok(())
 }

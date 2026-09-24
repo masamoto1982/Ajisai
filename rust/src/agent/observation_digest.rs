@@ -32,9 +32,8 @@
 //!    agnostic — but `Scalar`/`ExactScalar` also report `len() == 1` and
 //!    `child(0) == self`, so those two are matched as their own leaves before
 //!    a collection encoder ever runs, or encoding them would recurse forever.
-//!  * **`hint` is presentation, not meaning; `absence`'s reason is meaning.**
-//!    `PartialEq for Value` never reads `hint` and always reads the NIL
-//!    reason, so the digest follows exactly that split.
+//!  * **`absence`'s reason is meaning.** `PartialEq for Value` always reads
+//!    the NIL reason, so the digest does too.
 //!  * **`stackDisplay` is not the value.** It is LANG.VALUES.EXACT's continued
 //!    fraction truncated at a display budget (`√2` runs to ~101 characters
 //!    and ends in `… )`), so hashing it would fold two different numbers to

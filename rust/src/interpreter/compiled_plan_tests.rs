@@ -43,6 +43,6 @@ fn compile_collects_vector_literal() {
     let plan = compile_word_definition(&wd, &interp);
     assert!(matches!(
         plan.lines[0].ops[0],
-        CompiledOp::PushVectorLiteral(_, _)
+        CompiledOp::PushVectorLiteral(_)
     ));
 }

@@ -23,7 +23,7 @@
 //! name is text in the body like every other name.
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 use std::collections::HashMap;
 
 use super::Interpreter;
@@ -38,7 +38,7 @@ use super::Interpreter;
 /// the blocks written beneath it and never into a Word called from it.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct BindingScope {
-    names: HashMap<String, (Value, Interpretation)>,
+    names: HashMap<String, Value>,
     barrier: bool,
 }
 
@@ -79,7 +79,7 @@ impl Interpreter {
     }
 
     /// The value bound to `name` in the frames this one can see.
-    pub(crate) fn lookup_binding(&self, name: &str) -> Option<(Value, Interpretation)> {
+    pub(crate) fn lookup_binding(&self, name: &str) -> Option<Value> {
         for scope in self.binding_scopes.iter().rev() {
             if let Some(bound) = scope.names.get(name) {
                 return Some(bound.clone());
@@ -110,9 +110,9 @@ impl Interpreter {
     /// would buy nothing. This is a local, not a definition: the rule that
     /// protects a referenced Word from being redefined is about names other
     /// code can reach, and nothing outside this frame can reach this one.
-    pub(crate) fn bind_local(&mut self, name: String, value: Value, role: Interpretation) {
+    pub(crate) fn bind_local(&mut self, name: String, value: Value) {
         if let Some(scope) = self.binding_scopes.last_mut() {
-            scope.names.insert(name, (value, role));
+            scope.names.insert(name, value);
         }
     }
 
@@ -182,7 +182,7 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let (name_value, name_role) = interp.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
+    let name_value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let names = match binding_names(&name_value).and_then(|names| {
         for name in &names {
             interp.check_bindable_name(name)?;
@@ -191,15 +191,15 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
     }) {
         Ok(names) => names,
         Err(error) => {
-            interp.stack.push_with_role(name_value, name_role);
+            interp.stack.push(name_value);
             return Err(error);
         }
     };
 
-    let (subject, role) = interp.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
+    let subject = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     match names.as_slice() {
-        [only] => interp.bind_local(only.to_uppercase(), subject, role),
+        [only] => interp.bind_local(only.to_uppercase(), subject),
         several => {
             // Destructuring is exact. A Vector longer than the name list would
             // otherwise drop its tail silently, and a shorter one would bind a
@@ -211,8 +211,8 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 0
             };
             if width != several.len() {
-                interp.stack.push_with_role(subject, role);
-                interp.stack.push_with_role(name_value, name_role);
+                interp.stack.push(subject);
+                interp.stack.push(name_value);
                 // Structural, not `declared()` (see `error.rs`'s `kind`
                 // note): BIND's destructuring length mismatch is the same
                 // one-dimensional `shapeMismatch` a broadcast failure is,
@@ -227,8 +227,7 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 let part = subject
                     .child(position)
                     .expect("the element count was checked against the name count");
-                let part_role = part.hint;
-                interp.bind_local(name.to_uppercase(), part, part_role);
+                interp.bind_local(name.to_uppercase(), part);
             }
         }
     }

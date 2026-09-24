@@ -27,7 +27,7 @@ use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactCmp, ExactReal, DEFAULT_COMPARISON_WATER};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// The most digits one `FORMAT` may ask for. Every digit is a decimal place
 /// of big-integer work, and the meter charges each one, so the cap only
@@ -140,14 +140,11 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
     match round_scaled(&x, digits) {
-        Rounded::Integer(n) => interp.stack.push_with_role(
-            Value::from_string(&spell(&n, digits)),
-            Interpretation::Unassigned,
-        ),
-        Rounded::Undecidable => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-            Interpretation::Nil,
-        ),
+        Rounded::Integer(n) => interp.stack.push(Value::from_string(&spell(&n, digits))),
+        Rounded::Undecidable => interp.stack.push(Value::nil_with_reason(
+            NilReason::Undecidable,
+            Recoverability::Retryable,
+        )),
     }
     Ok(())
 }

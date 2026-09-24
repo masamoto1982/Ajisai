@@ -15,16 +15,14 @@
 //!   NIL, and `√2` came back as the rational `768398401/543339720`.
 //!
 //! This codec guarantees `decode(encode(v)) == v` for every `Value`, enforced
-//! by the property tests at the bottom of this file. `Value` equality (SPEC
-//! value identity) is `data == other.data && hint == other.hint`; absence
-//! metadata and the `Unknown` diagnosis are provenance, not identity, and are
-//! outside that oracle (their round-trip is a separate future concern).
+//! by the property tests in `value_persist_tests.rs`, under `Value` equality
+//! (LANG.VALUES.DENOTATION): the data, plus a NIL's reason and detail.
 
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{DenseTensor, Interpretation, RecordData, Value, ValueData};
+use crate::types::{DenseTensor, RecordData, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use serde::{Deserialize, Serialize};
@@ -45,32 +43,6 @@ fn absence_from_reason(reason: NilReason) -> AbsenceMetadata {
         .absence_metadata()
         .cloned()
         .expect("nil_with_reason_unknown always attaches absence metadata")
-}
-
-// ---- Interpretation role <-> stable tag ----
-
-fn hint_to_tag(hint: Interpretation) -> &'static str {
-    match hint {
-        Interpretation::Unassigned => "unassigned",
-        Interpretation::RawNumber => "rawNumber",
-        Interpretation::Interval => "interval",
-        Interpretation::TruthValue => "truthValue",
-        Interpretation::Timestamp => "timestamp",
-        Interpretation::Nil => "nil",
-        Interpretation::ContinuedFraction => "continuedFraction",
-    }
-}
-
-fn hint_from_tag(tag: &str) -> Interpretation {
-    match tag {
-        "rawNumber" => Interpretation::RawNumber,
-        "interval" => Interpretation::Interval,
-        "truthValue" => Interpretation::TruthValue,
-        "timestamp" => Interpretation::Timestamp,
-        "nil" => Interpretation::Nil,
-        "continuedFraction" => Interpretation::ContinuedFraction,
-        _ => Interpretation::Unassigned,
-    }
 }
 
 // ---- Fraction <-> decimal string pair ----
@@ -121,17 +93,15 @@ enum PersistData {
         terms: Vec<PersistTerm>,
     },
     Vector {
-        items: Vec<PersistValue>,
+        items: Vec<PersistData>,
     },
     /// A Record, persisted as its two aligned sequences; decoding rebuilds the
     /// key index and refuses a payload whose keys are not distinct.
     Record {
-        keys: Vec<PersistValue>,
-        values: Vec<PersistValue>,
+        keys: Vec<PersistData>,
+        values: Vec<PersistData>,
     },
-    /// A String, persisted as its content. The old encoding was a `Vector` of
-    /// codepoint scalars plus a `"text"` role tag, which made `''` decode as
-    /// NIL and so made the codec lossy for a value it claimed to round-trip.
+    /// A String, persisted as its content.
     Text {
         s: String,
     },
@@ -173,22 +143,6 @@ enum PersistData {
     Symbol {
         name: String,
     },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-struct PersistValue {
-    /// Interpretation role tag of this value.
-    h: String,
-    d: PersistData,
-}
-
-/// One stack slot: the value plus its stack-position interpretation role
-/// (Phase 4 owns the role on the `Stack`, not on the value).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-struct PersistSlot {
-    v: PersistValue,
-    /// Stack-position role tag.
-    r: String,
 }
 
 // ---- Value <-> wire ----
@@ -357,7 +311,7 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
     })
 }
 
-fn encode_value(value: &Value) -> Result<PersistValue, String> {
+fn encode_value(value: &Value) -> Result<PersistData, String> {
     let mut d = encode_data(&value.data)?;
     // The reason lives on `Value`, not in `ValueData`, so it is attached here
     // rather than inside `encode_data`.
@@ -367,56 +321,40 @@ fn encode_value(value: &Value) -> Result<PersistValue, String> {
             .map(|reason| reason.as_protocol_str().to_string());
         *ud = value.absence_detail().map(str::to_string);
     }
-    Ok(PersistValue {
-        h: hint_to_tag(value.hint).to_string(),
-        d,
-    })
+    Ok(d)
 }
 
-fn decode_value(value: &PersistValue) -> Result<Value, String> {
+fn decode_value(value: &PersistData) -> Result<Value, String> {
     if let PersistData::Nil {
         r: Some(reason),
         ud,
-    } = &value.d
+    } = value
     {
         let reason = NilReason::from_protocol_str(reason)
             .ok_or_else(|| format!("unknown NIL reason: {}", reason))?;
-        let mut decoded = match (reason, ud) {
+        return Ok(match (reason, ud) {
             (NilReason::UserDeclared, Some(detail)) => Value::nil_user_declared(detail),
             _ => Value::nil_with_reason_unknown(reason),
-        };
-        decoded.hint = hint_from_tag(&value.h);
-        return Ok(decoded);
+        });
     }
     Ok(Value {
-        data: decode_data(&value.d)?,
-        hint: hint_from_tag(&value.h),
+        data: decode_data(value)?,
         absence: None,
     })
 }
 
 // ---- Public stack codec (WASM boundary) ----
 
-/// Serialize the stack slots (`(value, role)` pairs) to the lossless JSON
-/// persistence string.
-pub(crate) fn encode_stack<'a>(
-    slots: impl Iterator<Item = (&'a Value, Interpretation)>,
-) -> Result<String, String> {
-    let wire: Vec<PersistSlot> = slots
-        .map(|(value, role)| {
-            Ok(PersistSlot {
-                v: encode_value(value)?,
-                r: hint_to_tag(role).to_string(),
-            })
-        })
+/// Serialize the stack values to the lossless JSON persistence string.
+pub(crate) fn encode_stack<'a>(values: impl Iterator<Item = &'a Value>) -> Result<String, String> {
+    let wire: Vec<PersistData> = values
+        .map(encode_value)
         .collect::<Result<Vec<_>, String>>()?;
     serde_json::to_string(&wire).map_err(|e| e.to_string())
 }
 
-/// Deserialize a lossless persistence string back into `(value, role)` pairs.
-pub(crate) fn decode_stack(json: &str) -> Result<Vec<(Value, Interpretation)>, String> {
-    let wire: Vec<PersistSlot> = serde_json::from_str(json).map_err(|e| e.to_string())?;
-    wire.iter()
-        .map(|slot| Ok((decode_value(&slot.v)?, hint_from_tag(&slot.r))))
-        .collect()
+/// Deserialize a lossless persistence string back into stack values.
+pub(crate) fn decode_stack(json: &str) -> Result<Vec<Value>, String> {
+    let wire: Vec<PersistData> = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    wire.iter().map(decode_value).collect()
 }

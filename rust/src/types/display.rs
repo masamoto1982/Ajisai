@@ -1,101 +1,27 @@
 use super::exact::ExactReal;
 use super::fraction::Fraction;
-use super::{DenseTensor, Interpretation, Stack, Value, ValueData};
+use super::{DenseTensor, Stack, Value, ValueData};
 use num_bigint::BigInt;
 use std::fmt;
 
-/// Render every stack slot as its observable `(value, role)` string (LANG.OBSERVATION.PROTOCOL).
+/// Render every stack slot as its display string (LANG.OBSERVATION.PROTOCOL).
 ///
 /// This is the single stack rendering shared by all observation surfaces — the
 /// CLI stack display, the REPL, the in-process conformance runner, and the JSON
-/// report — so that an interpretation role such as a timestamp can never
-/// render one way on one surface and another way on another. It renders each
-/// slot with the *slot's* role rather than the value's construction-time hint,
-/// which is what makes it differ from `Value`'s own `Display`.
+/// report. Each slot renders from its value alone (LANG.VALUES.DENOTATION).
 pub fn render_stack(stack: &Stack) -> Vec<String> {
-    stack
-        .iter_slots()
-        .map(|(value, role)| format_with_hint(value, role))
-        .collect()
+    stack.iter().map(Value::to_string).collect()
 }
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", format_with_hint(self, self.hint))
-    }
-}
-
-pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
-    // An operational NIL (a value carrying absence metadata) always renders
-    // as `NIL`, regardless of the effective hint. A positional hint can carry
-    // a word's declared output role (e.g. CHR is declared to yield TEXT),
-    // which must not mask an absence into a bogus `''`/`FALSE`/datetime
-    // rendering — the canonical `Display` (which uses the value's own `Nil`
-    // hint) already shows `NIL` here, so this keeps hint-driven callers
-    // consistent with it. The empty string `''` is itself a NIL with reason
-    // `EmptySequence` (see `Value::from_string`), so it likewise renders as
-    // `NIL`, matching its canonical form (LANG.VALUES.NIL; LANG.OBSERVATION.PROTOCOL).
-    if matches!(value.data, ValueData::Nil) && value.absence_metadata().is_some() {
-        return "NIL".to_string();
-    }
-    match hint {
-        Interpretation::Nil => {
-            if matches!(value.data, ValueData::Nil) {
-                "NIL".to_string()
-            } else {
-                format_value_recursive(&value.data, 0)
-            }
-        }
-        // Unassigned renders the value in its raw structural form. The
-        // runtime never re-guesses a richer meaning (e.g. "string-like")
-        // at render time; interpretation is decided once, at construction.
-        Interpretation::Unassigned => format_value_recursive(&value.data, 0),
-        Interpretation::RawNumber => format_value_recursive(&value.data, 0),
-        Interpretation::Interval => format_as_interval(value),
-        Interpretation::TruthValue => format_as_boolean(value),
-        Interpretation::Timestamp => format_as_datetime(&value.data),
-        Interpretation::ContinuedFraction => format_as_continued_fraction(value),
+        f.write_str(&format_value_recursive(&self.data, 0))
     }
 }
 
 /// Display budget for lazy continued fractions (LANG.VALUES.EXACT:
 /// "implementation-defined display budget").
 const CF_DISPLAY_BUDGET: usize = 32;
-
-/// Render a numeric scalar value as the canonical flat continued-fraction
-/// form (LANG.VALUES.EXACT): `[ a0; a1, a2 ]`, matching the classical
-/// `[a0; a1, a2, …]` notation directly — `[` `]` is the sole bracket in
-/// Ajisai, so the CF display uses it as-is rather than standing in for it.
-/// Lazy irrationals truncate at CF_DISPLAY_BUDGET terms with a trailing `…`
-/// marker.
-pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
-    // Obtain the partial-quotient sequence and whether it is truncated.
-    let (terms, truncated): (Vec<BigInt>, bool) = match &value.data {
-        ValueData::Scalar(f) => {
-            // Rational: finite canonical CF.
-            match ExactReal::from_fraction(f.clone()).partial_quotients() {
-                Some(qs) => (qs, false),
-                None => (Vec::new(), false), // nil fraction
-            }
-        }
-        ValueData::ExactScalar(er) => match er.partial_quotients() {
-            Some(qs) => (qs, false), // collapsed to rational
-            None => {
-                // Reaching this arm means the value did not collapse to a
-                // rational, so its expansion does not terminate and what comes
-                // back is always a prefix — however short. Reading truncation
-                // off the length was right only while the budget was a term
-                // count; now that it is a work budget, a value too expensive to
-                // expand returns fewer quotients and would otherwise have been
-                // rendered as if complete.
-                (er.partial_quotients_bounded(CF_DISPLAY_BUDGET), true)
-            }
-        },
-        // Non-scalar values fall back to the structural rendering.
-        _ => return format_value_recursive(&value.data, 0),
-    };
-    render_cf_flat(&terms, truncated)
-}
 
 /// Build the flat CF string from partial quotients, in the classical
 /// `[a0; a1, a2, …]` convention (LANG.VALUES.EXACT):
@@ -138,30 +64,6 @@ fn render_cf_flat(terms: &[BigInt], truncated: bool) -> String {
     }
     s.push_str(" ]");
     s
-}
-
-fn format_as_interval(value: &Value) -> String {
-    match &value.data {
-        ValueData::Vector(v) if v.len() == 2 => {
-            let lo = match &v[0].data {
-                ValueData::Scalar(f) => format_fraction(f),
-                _ => format_value_recursive(&v[0].data, 0),
-            };
-            let hi = match &v[1].data {
-                ValueData::Scalar(f) => format_fraction(f),
-                _ => format_value_recursive(&v[1].data, 0),
-            };
-            format!("[{}, {}]", lo, hi)
-        }
-        ValueData::Tensor { data, shape } if shape.as_slice() == [2] && data.len() == 2 => {
-            format!(
-                "[{}, {}]",
-                format_fraction(&data.fraction_or_nil(0)),
-                format_fraction(&data.fraction_or_nil(1))
-            )
-        }
-        _ => format_value_recursive(&value.data, 0),
-    }
 }
 
 pub(crate) fn format_value_recursive(data: &ValueData, depth: usize) -> String {
@@ -272,7 +174,7 @@ pub(super) fn format_exact_real(er: &ExactReal) -> String {
 
 /// Render a value for an **output** boundary (`PRINT`, LANG.EFFECTS.OUTPUT).
 ///
-/// The stack projection shows a Text-role value wrapped in `'...'` so the
+/// The stack projection shows a String wrapped in `'...'` so the
 /// reader can see that it is a string and not a bare numeric vector. Those
 /// quotes are a display affordance of the Stack surface only: at an output
 /// boundary the surrounding quotes are dropped and the raw character content
@@ -283,121 +185,7 @@ pub fn format_for_output(value: &Value) -> String {
     if let ValueData::Text(s) = &value.data {
         return s.to_string();
     }
-    format_with_hint(value, value.hint)
-}
-
-/// Boolean label for a single element of a truth-valued vector/tensor. An
-/// operational NIL renders as `NIL`; the logical Unknown (U, LANG.VALUES.TRUTH) —
-/// `Nil` data carrying the `TruthValue` hint, no dedicated variant — takes
-/// the same arm below and renders as `NIL` too.
-fn boolean_element_label(child: &Value) -> &'static str {
-    match &child.data {
-        ValueData::Nil => "NIL",
-        // A String is not a truth value, so it has no boolean label; it can
-        // only reach here inside a `TruthValue`-role vector, where rendering
-        // it as `NIL` matches the other non-numeric arms.
-        ValueData::Text(_) | ValueData::Record(_) => "NIL",
-        ValueData::Boolean(b) => {
-            if *b {
-                "TRUE"
-            } else {
-                "FALSE"
-            }
-        }
-        ValueData::Scalar(f) => {
-            if f.is_nil() {
-                "NIL"
-            } else if f.is_zero() {
-                "FALSE"
-            } else {
-                "TRUE"
-            }
-        }
-        ValueData::Vector(v) => {
-            if v.is_empty() {
-                "FALSE"
-            } else {
-                "TRUE"
-            }
-        }
-        ValueData::Tensor { data, .. } => {
-            if data.is_empty() {
-                "FALSE"
-            } else {
-                "TRUE"
-            }
-        }
-        ValueData::ExactScalar(_) => "TRUE",
-        ValueData::Symbol(_) => "TRUE",
-    }
-}
-
-fn format_as_boolean(value: &Value) -> String {
-    match &value.data {
-        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint,
-        // no dedicated variant) takes this same arm and renders as `NIL`,
-        // same as an operational NIL.
-        ValueData::Nil => "NIL".to_string(),
-        ValueData::Text(_) | ValueData::Record(_) => format_value_recursive(&value.data, 0),
-        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
-        // ExactScalar values are always non-zero positive irrationals → TRUE
-        ValueData::ExactScalar(_) => "TRUE".to_string(),
-        ValueData::Scalar(f) => {
-            if f.is_nil() {
-                "NIL".to_string()
-            } else if f.is_zero() {
-                "FALSE".to_string()
-            } else {
-                "TRUE".to_string()
-            }
-        }
-        // A TruthValue-hinted Vector renders with `[ ]`, the one spelling
-        // every Vector-domain value uses (one pair per domain: `{ }` spells a
-        // Record and nothing else — LANG.VALUES.DISJOINT never had two
-        // renderings for one value, and no longer has one spelling for two
-        // domains either). Each element still renders as its truth-role label
-        // (TRUE/FALSE/NIL), independent of that outer bracket choice.
-        ValueData::Vector(v) => {
-            if v.is_empty() {
-                return "[ ]".to_string();
-            }
-
-            let inner: Vec<&str> = v.iter().map(boolean_element_label).collect();
-            format!("[ {} ]", inner.join(" "))
-        }
-        ValueData::Tensor { data, .. } => {
-            if data.is_empty() {
-                return "[ ]".to_string();
-            }
-            let inner: Vec<&str> = data
-                .iter()
-                .map(|f| {
-                    if f.is_nil() {
-                        "NIL"
-                    } else if f.is_zero() {
-                        "FALSE"
-                    } else {
-                        "TRUE"
-                    }
-                })
-                .collect();
-            format!("[ {} ]", inner.join(" "))
-        }
-        ValueData::Symbol(name) => name.to_string(),
-    }
-}
-
-fn format_as_datetime(data: &ValueData) -> String {
-    match data {
-        ValueData::Nil => format_value_recursive(data, 0),
-        ValueData::Text(_)
-        | ValueData::Boolean(_)
-        | ValueData::Symbol(_)
-        | ValueData::Record(_) => format_value_recursive(data, 0),
-        ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
-        ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
-        ValueData::Vector(_) | ValueData::Tensor { .. } => format_value_recursive(data, 0),
-    }
+    value.to_string()
 }
 
 #[cfg(test)]
