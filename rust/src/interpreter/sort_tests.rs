@@ -130,8 +130,8 @@ mod sort_tests {
             let result = interp.execute(source).await;
             let error = result.expect_err(&format!("`{source}` must be refused"));
             assert!(
-                format!("{error:?}").contains("nonComparableElement"),
-                "`{source}` must be refused as nonComparableElement, got: {error:?}"
+                format!("{error:?}").contains("nonNumeric"),
+                "`{source}` must be refused as nonNumeric, got: {error:?}"
             );
         }
     }

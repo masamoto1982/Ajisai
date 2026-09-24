@@ -1,5 +1,5 @@
 //! Behavioral probes for the search Words: the projections `BSEARCH` and
-//! `SEARCH` declare, `BSEARCH`'s order check, and `MEMBER` over every domain.
+//! `SEARCH` declare, `BSEARCH`'s order check, and `MEMBER?` over every domain.
 
 #[cfg(test)]
 mod search_words_tests {
@@ -49,12 +49,13 @@ mod search_words_tests {
     #[tokio::test]
     async fn member_answers_lane_for_lane_over_any_domain() {
         for (code, want) in [
-            ("[ 1 2 3 ] [ 2 5 ] MEMBER", "[ TRUE FALSE ]"),
-            ("[ 1 2 3 ] 2 MEMBER", "TRUE"),
-            ("[ 'a' 'b' ] [ 'b' 'c' ] MEMBER", "[ TRUE FALSE ]"),
-            ("[ [ 1 2 ] [ 3 ] ] [ [ 3 ] [ 1 ] ] MEMBER", "[ TRUE FALSE ]"),
-            ("[ ] [ 1 ] MEMBER", "[ FALSE ]"),
-            ("[ 1 2 ] [ ] MEMBER", "[ ]"),
+            ("[ 1 2 3 ] 2 MEMBER?", "TRUE"),
+            ("[ 1 2 3 ] 5 MEMBER?", "FALSE"),
+            ("[ 'a' 'b' ] 'b' MEMBER?", "TRUE"),
+            ("[ [ 1 2 ] [ 3 ] ] [ 3 ] MEMBER?", "TRUE"),
+            ("[ [ 1 2 ] [ 3 ] ] [ 1 ] MEMBER?", "FALSE"),
+            ("[ ] 1 MEMBER?", "FALSE"),
+            ("[ 1 2 ] [ ] MEMBER?", "FALSE"),
         ] {
             assert_eq!(top(code).await, want, "`{code}`");
         }

@@ -1677,7 +1677,7 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。多くの値をまとめて問うなら<code>MEMBER</code>（<code>[ 1 2 3 ] [ 2 5 ] MEMBER</code>は<code>[ TRUE FALSE ]</code>——ベクトルを一度だけ索引化する）、昇順のベクトルなら<code>BSEARCH</code>（<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2/1 ]</code>——二分探索。区間を半分にし続ける反復は自分では書けない）を使います。<code>BSEARCH</code>は昇順でないベクトルを受けるとエラーにします。</p>
+                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。含まれるかどうかだけを問うなら<code>MEMBER?</code>（<code>[ 1 2 3 ] 2 MEMBER?</code>は<code>TRUE</code>）、昇順のベクトルなら<code>BSEARCH</code>（<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2/1 ]</code>——二分探索。区間を半分にし続ける反復は自分では書けない）を使います。<code>BSEARCH</code>は昇順でないベクトルを受けるとエラーにします。</p>
 
                     <h3 id="ordering">順序付け、計数、形状</h3>
                     <p>ベクトル全体を一度に見る必要がある操作は、7つのワードでカバーされます。そのそれぞれは、他の語彙だけを使って書き下すこともできますが、書き下すと漸近的に高いコストがかかります。それだけが、これらがワードとして存在する理由です。</p>
@@ -2393,7 +2393,7 @@ SELECT</code></td>
                                 <tr>
                                     <td><code>[ 1 3 5 8 ] [ 2 / 'M' BIND M FLOOR M = ] MAP<br>FALSE [ 'B' BIND NOT B NOT AND NOT ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] [ 2 ] MEMBER</code>(<code>[ TRUE ]</code>)のほうが簡単。</td>
+                                    <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] 2 MEMBER?</code>(<code>TRUE</code>)のほうが簡単。</td>
                                 </tr>
                             </tbody>
                         </table>

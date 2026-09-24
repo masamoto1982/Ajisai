@@ -197,10 +197,10 @@ fn a_search_needle_is_an_element() {
 
     for (program, current) in [
         // Found: the Vector holds a NIL with the same reason.
-        ("1 0 DIV 1 COLLECT 1 0 DIV MEMBER", Outcome::Value),
+        ("1 0 DIV 1 COLLECT 1 0 DIV MEMBER?", Outcome::Value),
         ("1 0 DIV 1 COLLECT 1 0 DIV INDEX-OF", Outcome::Value),
-        // Not found: MEMBER answers FALSE, INDEX-OF projects `valueAbsent`.
-        ("[ 1 ] 1 0 DIV MEMBER", Outcome::Value),
+        // Not found: MEMBER? answers FALSE, INDEX-OF projects `notFound`.
+        ("[ 1 ] 1 0 DIV MEMBER?", Outcome::Value),
         ("[ 1 ] 1 0 DIV INDEX-OF", Outcome::NilWithReason),
     ] {
         assert_eq!(

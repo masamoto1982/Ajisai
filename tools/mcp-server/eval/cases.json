@@ -602,11 +602,11 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
+    "source": "[ 1 2 3 ] 2 MEMBER?"
    },
    "expect": {
     "/status": "ok",
-    "/stackDisplay/0": "[ TRUE ]"
+    "/stackDisplay/0": "TRUE"
    }
   },
   {

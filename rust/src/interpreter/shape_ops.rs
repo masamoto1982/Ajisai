@@ -20,7 +20,10 @@ use super::ordering_ops::{elements_of, restore, take_operand};
 /// tensor-conversion helpers).
 fn require_integer_operand(value: &Value) -> Result<i64> {
     extract_integer_from_value(value).map_err(|e| {
-        AjisaiError::declared("nonInteger", format!("expected an integer, got {}", e.got))
+        AjisaiError::declared(
+            "invalidIndex",
+            format!("expected an integer, got {}", e.got),
+        )
     })
 }
 

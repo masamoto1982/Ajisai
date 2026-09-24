@@ -105,7 +105,7 @@ Test less-than comparison.
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 2 <`
 - **Aliases:** `<`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `GT`
 
@@ -121,7 +121,7 @@ Test greater-than comparison.
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `2 1 >`
 - **Aliases:** `>`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
+- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `ADD`
 
@@ -513,7 +513,7 @@ Return a copy of a vector sorted in ascending order.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 3 1 2 ] SORT`
-- **ERROR conditions:** `nonVector`, `nonComparableElement`
+- **ERROR conditions:** `nonVector`, `nonNumeric`
 
 ## `ORDER`
 
@@ -528,7 +528,7 @@ The indices that would sort a vector ascending; ties keep their original order.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 30 10 20 ] ORDER`
-- **ERROR conditions:** `nonVector`, `nonComparableElement`
+- **ERROR conditions:** `nonVector`, `nonNumeric`
 
 ## `UNIQUE`
 
@@ -588,7 +588,7 @@ A copy of a vector with the element at one index replaced. An out-of-range index
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] 1 9 PUT`
-- **ERROR conditions:** `nonVector`, `nonInteger`
+- **ERROR conditions:** `nonVector`, `invalidIndex`
 
 ## `GROUP`
 
@@ -613,18 +613,18 @@ Index of the first element equal to the value; Bubble/NIL if absent.
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `element` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: valueAbsent → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 ] 2 INDEX-OF`
 - **ERROR conditions:** `nonVector`
 
-## `MEMBER`
+## `MEMBER?`
 
-Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time.
+Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts, nested vectors and NILs as well as numbers. The needle is one value, compared rather than read, so a Vector needle is looked for as an element: `[ [ 1 ] 2 ] [ 1 ] MEMBER?` is `TRUE`. It is `INDEX-OF NIL? NOT`.
 
-- **Vocabulary tier:** Standard (`algorithm`)
+- **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `element` (LANG.FAILURE.PASSTHROUGH)
@@ -632,7 +632,7 @@ Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMB
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] [ 2 5 ] MEMBER`
+- **Syntax:** `[ 1 2 3 ] 2 MEMBER?`
 - **ERROR conditions:** `nonVector`
 
 ## `BSEARCH`
@@ -643,12 +643,12 @@ The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: keyAbsent → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 3 5 7 ] [ 5 ] BSEARCH`
-- **ERROR conditions:** `nonVector`, `unsortedInput`, `nonComparableElement`
+- **ERROR conditions:** `nonVector`, `unsortedInput`, `nonNumeric`
 
 ## `RECORD`
 
@@ -703,7 +703,7 @@ The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for
 - **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: keyAbsent → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
@@ -733,7 +733,7 @@ A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Rec
 - **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: keyAbsent → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
@@ -858,7 +858,7 @@ Join a vector of strings into a single string.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 'h' 'i' ] JOIN`
-- **ERROR conditions:** `nonTextVector`, `nonTextElement`
+- **ERROR conditions:** `nonVector`, `nonText`
 
 ## `TRIM`
 
@@ -918,7 +918,7 @@ Split a string into a vector of substrings using a separator.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'a,b,c' ',' TOKENIZE`
-- **ERROR conditions:** `nonText`, `nonTextSeparator`
+- **ERROR conditions:** `nonText`
 
 ## `SEARCH`
 
@@ -928,7 +928,7 @@ The position, in characters, at which a text first occurs in another: `'hello wo
 - **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: needleAbsent → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`

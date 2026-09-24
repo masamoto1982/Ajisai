@@ -12,12 +12,8 @@ fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
 }
 
-/// `three_way_compare`, with a non-numeric operand reclassified as
-/// `nonNumeric` — MIN/MAX are the only callers of `three_way_compare`
-/// in this file, and they declare `nonNumeric`; SORT/ORDER's own wrapper in
-/// `sort.rs` remaps the same shared function's error to `nonComparableElement`
-/// instead, since a shared function cannot know which caller it is (Phase 2's
-/// lesson, repeated by Phase 4's `nonInteger`/`nonComparableElement` fixes).
+/// `three_way_compare` for MIN/MAX, raising `nonNumeric` like every other
+/// Word that asks for the exact order.
 fn compare_for_numeric(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
     crate::interpreter::comparison_scalar::three_way_compare(a, b).map_err(|e| {
         AjisaiError::declared("nonNumeric", format!("expected a Scalar, got {}", e.got))

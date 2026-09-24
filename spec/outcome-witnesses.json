@@ -56,18 +56,6 @@
       "rationale": "The exact case Phase 4 pitfall A names: a DEF body that names the very word being defined. The table never writes a word body that references anything but core words and domain literals, so it cannot construct this on its own."
     },
     {
-      "id": "nonComparableElement",
-      "source": "[ 'a' TRUE ] SORT",
-      "expect": "error:nonComparableElement",
-      "rationale": "SORT/ORDER's declared nonComparableElement fires only on a structurally non-numeric *element inside* a vector; no chosen domain representative is a vector mixing a numeric-incomparable element (a Boolean) with anything else, so the table's single-domain-per-cell shape never constructs a mixed vector at all."
-    },
-    {
-      "id": "nonTextElement",
-      "source": "[ 'a' TRUE ] JOIN",
-      "expect": "error:nonTextElement",
-      "rationale": "Same shape of gap as nonComparableElement: JOIN's nonTextElement fires on one bad element inside an otherwise-fine vector, which no single domain representative constructs (the table's vector-domain representatives are homogeneous)."
-    },
-    {
       "id": "blockContractViolation",
       "source": "[ 1 2 ] [ 'X' BIND ] MAP",
       "expect": "error:blockContractViolation",

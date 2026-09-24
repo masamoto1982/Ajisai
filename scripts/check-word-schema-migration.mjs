@@ -37,6 +37,24 @@ for (const word of words.entries) {
   }
   if (word.vocabularyTier === 'kernel' && 'standardKind' in word) fail(`${word.name} is Kernel but declares standardKind`);
   if (!manifestNames.has(word.name)) fail(`${word.name} is absent from the frozen manifest`);
+  // A Word that tests its operands and answers a truth value is named with a
+  // trailing `?` (NIL?, HAS?, MEMBER?), and a `?` name always answers one.
+  // Relations and connectives (EQ LT GT, AND NOT SELECT) are operators, named
+  // for the operation, and exempt.
+  const answersTruth = /-> \[ (TRUE \| FALSE|bool|truths?) \]/.test(word.documentation.stackEffect);
+  const operator = ['comparison', 'booleanLogic'].includes(word.family);
+  if (!operator && answersTruth !== word.name.endsWith('?')) {
+    fail(
+      answersTruth
+        ? `${word.name} answers a truth value, so its name ends in ?`
+        : `${word.name} ends in ? but does not answer a truth value`,
+    );
+  }
+  // One notation for every stack effect: operands and results in `[ … ]`
+  // groups with inner spaces, named rather than quoted.
+  if (/\[\]|'[A-Za-z.]+'/.test(word.documentation.stackEffect)) {
+    fail(`${word.name} stack effect \`${word.documentation.stackEffect}\` must write groups as [ … ] and name operands unquoted`);
+  }
   const operands = word.stack.operands;
   if (typeof word.stack.inputs === 'number') {
     if (!Array.isArray(operands) || operands.length !== word.stack.inputs) {

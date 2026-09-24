@@ -29,7 +29,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
         let got = val.domain_name();
         interp.stack.push(val);
         return Err(AjisaiError::declared(
-            "nonTextVector",
+            "nonVector",
             format!("expected a Vector, got {got}"),
         ));
     };
@@ -45,7 +45,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             let got = elem.domain_name();
             interp.stack.push(val);
             return Err(AjisaiError::declared(
-                "nonTextElement",
+                "nonText",
                 format!("expected a Vector of Strings, got {got} at index {i}"),
             ));
         };

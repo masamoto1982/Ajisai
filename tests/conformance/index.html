@@ -2646,21 +2646,21 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-member" data-category="core">
-  <h3>MEMBER answers which probes occur, lane for lane</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 2 5 ] MEMBER</pre>
-  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
+  <h3>MEMBER? answers whether one value occurs in the vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 2 MEMBER? [ 1 2 3 ] 5 MEMBER?</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="standard-member-single-probe" data-category="core">
-  <h3>A single probe answers a single truth</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] 2 MEMBER</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
+<section class="ajisai-case" id="standard-member-needle-is-an-element" data-category="core">
+  <h3>The needle is compared, not read: a Vector needle is looked for as an element</h3>
+  <pre class="ajisai-source">[ [ 1 ] 2 ] [ 1 ] MEMBER? [ 1 2 ] [ 2 ] MEMBER?</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-member-over-text" data-category="core">
   <h3>Membership is value equality, so texts work too</h3>
-  <pre class="ajisai-source">[ 'a' 'b' ] [ 'b' 'c' ] MEMBER</pre>
-  <pre class="ajisai-expect-result">[ TRUE FALSE ]</pre>
+  <pre class="ajisai-source">[ 'a' 'b' ] 'b' MEMBER?</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-bsearch" data-category="core">

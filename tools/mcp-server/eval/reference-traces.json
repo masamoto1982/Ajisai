@@ -602,7 +602,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
+    "source": "[ 1 2 3 ] 2 MEMBER?"
    }
   },
   {
@@ -610,7 +610,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
+    "source": "[ 1 2 3 ] 2 MEMBER?"
    }
   },
   {

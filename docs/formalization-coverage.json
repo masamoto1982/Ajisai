@@ -2715,22 +2715,22 @@
     {
       "id": "core.member",
       "kind": "coreword",
-      "surface": "MEMBER",
+      "surface": "MEMBER?",
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §4.3",
         "SPECIFICATION.html §7.1"
       ],
       "law_tests": [
-        "rust/tests/standard_operational_laws.rs"
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "standard-member",
-        "standard-member-single-probe",
+        "standard-member-needle-is-an-element",
         "standard-member-over-text"
       ],
       "status": "Formalized",
-      "notes": "Membership over value equality, answered lane for lane from one index of the vector.",
+      "notes": "Membership over value equality: whether one value occurs in the vector, derivable as INDEX-OF NIL? NOT.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2738,8 +2738,7 @@
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material",
-      "standard_relation": "operational",
-      "native_retention_reason": "One hash pass over the vector answers every probe in constant time; the Kernel-only route scans the vector once per probe, O(m·n)."
+      "standard_relation": "derivable"
     },
     {
       "id": "core.bsearch",

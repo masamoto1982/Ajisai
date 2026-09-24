@@ -74,7 +74,7 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
         let got = sep_val.domain_name();
         restore(interp, src_val, sep_val);
         return Err(AjisaiError::declared(
-            "nonTextSeparator",
+            "nonText",
             format!("expected a String separator, got {got}"),
         ));
     }

@@ -185,6 +185,18 @@ async fn collection_standards_have_kernel_only_witnesses() {
             "0 1 2 NIL [ 5 7 9 ] [ 2 ] GET 4 EQ SELECT \
              [ 5 7 9 ] [ 1 ] GET 4 EQ SELECT [ 5 7 9 ] [ 0 ] GET 4 EQ SELECT",
         ),
+        // MEMBER? is the same chain answering TRUE instead of an index, with
+        // FALSE where INDEX-OF's chain ends in NIL.
+        (
+            "[ 5 7 9 ] 7 MEMBER?",
+            "TRUE TRUE TRUE FALSE [ 5 7 9 ] [ 2 ] GET 7 EQ SELECT \
+             [ 5 7 9 ] [ 1 ] GET 7 EQ SELECT [ 5 7 9 ] [ 0 ] GET 7 EQ SELECT",
+        ),
+        (
+            "[ 5 7 9 ] 4 MEMBER?",
+            "TRUE TRUE TRUE FALSE [ 5 7 9 ] [ 2 ] GET 4 EQ SELECT \
+             [ 5 7 9 ] [ 1 ] GET 4 EQ SELECT [ 5 7 9 ] [ 0 ] GET 4 EQ SELECT",
+        ),
     ] {
         equivalent(native, witness).await;
     }
