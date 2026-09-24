@@ -6,7 +6,7 @@ mod tests {
 
     fn top_scalar_i64(interp: &Interpreter) -> i64 {
         let top = interp.stack.last().expect("stack top");
-        // A Boolean predicate result (ANY/ALL) reads as 1/0.
+        // A Boolean result reads as 1/0.
         if let Some(b) = top.as_truth() {
             return if b { 1 } else { 0 };
         }
@@ -42,29 +42,6 @@ mod tests {
         );
         assert_eq!(top_scalar_i64(&interp), 42);
     }
-    #[tokio::test]
-    async fn test_any_basic_and_nil_and_user_word() {
-        let mut interp = Interpreter::new();
-        let ok = interp
-            .execute("[ 1 3 5 8 ] [ [ 2 ] MOD [ 0 ] = ] ANY")
-            .await;
-        assert!(ok.is_ok(), "ANY basic failed: {:?}", ok);
-        assert_eq!(top_scalar_i64(&interp), 1);
-
-        let mut interp2 = Interpreter::new();
-        let ok2 = interp2.execute("NIL [ [ 2 ] MOD [ 0 ] = ] ANY").await;
-        assert!(ok2.is_ok(), "ANY NIL failed: {:?}", ok2);
-        assert_eq!(top_scalar_i64(&interp2), 0);
-
-        let mut interp3 = Interpreter::new();
-        interp3
-            .execute("[ [ 2 ] MOD [ 0 ] = ] 'IS_EVEN' DEF")
-            .await
-            .unwrap();
-        let ok3 = interp3.execute("[ 1 3 6 ] [ IS_EVEN ] ANY").await;
-        assert!(ok3.is_ok(), "ANY user word failed: {:?}", ok3);
-        assert_eq!(top_scalar_i64(&interp3), 1);
-    }
     /// `&` resolves to the same contract and executor as `AND`
     /// (LANG.SOURCE.NORMALIZE), including inside a predicate block.
     ///
@@ -87,7 +64,7 @@ mod tests {
             and_result
         );
 
-        // AND, OR and NOT carry no symbol: `&` is an ordinary name the
+        // AND and NOT carry no symbol: `&` is an ordinary name the
         // dictionary does not have, inside a block body like anywhere else.
         let mut alias_interp = Interpreter::new();
         let alias_result = alias_interp
@@ -105,7 +82,7 @@ mod tests {
     /// not TRUE and `0` is not FALSE (LANG.VALUES.DISJOINT).
     #[tokio::test]
     async fn test_logic_words_reject_scalar_operands() {
-        for source in ["1 1 AND", "0 1 OR", "5 NOT", "TRUE 1 AND"] {
+        for source in ["1 1 AND", "FALSE 0 AND", "5 NOT", "TRUE 1 AND"] {
             let mut interp = Interpreter::new();
             let result = interp.execute(source).await;
             assert!(
@@ -124,8 +101,8 @@ mod tests {
     async fn test_higher_order_predicates_reject_non_boolean() {
         for source in [
             "[ 1 2 3 ] [ 1 ] FILTER",
-            "[ 1 2 3 ] [ NIL ] ANY",
-            "[ 1 2 3 ] [ [ TRUE ] ] ALL",
+            "[ 1 2 3 ] [ NIL ] FILTER",
+            "[ 1 2 3 ] [ [ TRUE ] ] FILTER",
         ] {
             let mut interp = Interpreter::new();
             let result = interp.execute(source).await;

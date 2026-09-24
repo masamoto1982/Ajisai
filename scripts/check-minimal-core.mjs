@@ -2,13 +2,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const KERNEL = new Set(`TRUE FALSE AND NOT EQ LT GT
-ADD MUL DIV FLOOR NEG SQRT POW PI
-GET LENGTH CONCAT COLLECT RANGE FOLD SHAPE RESHAPE FLATTEN DEPTH RANK
+ADD MUL DIV FLOOR SQRT POW PI
+GET LENGTH CONCAT COLLECT RANGE FOLD MAP SHAPE RESHAPE FLATTEN DEPTH
 RECORD KEYS VALUES AT WITH WITHOUT HAS? MERGE
 CHARS JOIN NUM STR
-SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT BIND DEF DEL DEFINED? DIGEST PRINT RANDOM`.split(/\s+/));
-const STANDARD = new Set(`OR LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX GCD RATIO EXP LN SIN COS ATAN
-TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER BSEARCH MAP FILTER SCAN ANY ALL
+SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT BIND DEF DEL DIGEST PRINT`.split(/\s+/));
+const STANDARD = new Set(`SUB ROUND MIN MAX GCD RATIO EXP LN SIN COS ATAN
+TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER BSEARCH FILTER SCAN
 TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
 // The alpha Words retired in the phase-1 vocabulary freeze. `UNIQUE` is not
 // among them any more: it was cut as one of several overlapping collection
@@ -23,43 +23,48 @@ TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/
 // review (docs/dev/vocabulary-100-work-order-2026-09.md §7.2): `NEQ` is
 // `EQ NOT` at the same cost, and `PROBE` was `CONTRACT` over a block. The
 // two slots went to `UPPER` and `LOWER`, the top of the waiting list.
+// The thirteen after them went together, each for being a phrase over what
+// remains rather than a capability: `NEG` is `-1 MUL`, `DEFINED?` is
+// `CONTRACT NIL? NOT`, `RANK` is nested `MAP`s (and `MAP` took its Kernel
+// seat), `ANY`/`ALL` are `MAP` then a `FOLD` of the truth values, `RANDOM` a
+// user-written generator, and `OR LTE GTE CEIL QUANTIZE ABS MOD` were the
+// derivable Standards no program in the lexicon pilot
+// (tools/lexicon-emergence/runs/pilot-2026-09-23) wrote once.
 const REMOVED = new Set(`SIGN INSERT REMOVE SPLIT REORDER CONTAINS
-STARTS-WITH? ENDS-WITH? CHR EAT NEQ PROBE`.split(/\s+/));
+STARTS-WITH? ENDS-WITH? CHR EAT NEQ PROBE
+DEFINED? NEG RANDOM RANK ANY ALL OR LTE GTE CEIL QUANTIZE ABS MOD`.split(/\s+/));
 const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
-const DERIVABLE = new Set(`OR LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX
+const DERIVABLE = new Set(`SUB ROUND MIN MAX
 TAKE DROP REVERSE INDEX-OF TRIM TOKENIZE`.split(/\s+/));
 // `FORMAT` and the JSON pair are Phase 6 of the vocabulary-100 work order:
-// `FORMAT` is the one rounding boundary (a QUANTIZE-and-STR spelling would
+// `FORMAT` is the one rounding boundary (a FLOOR-and-STR spelling would
 // scatter it), and JSON nesting is input-dependent repetition no definition
 // can write, so all three are operational rather than derivable.
 // Phase 7 closes the number concept: `GCD` is input-dependent repetition
 // (Euclid), `RATIO` reads representation the language otherwise hides, and
 // the five transcendental Words are enclosure generators no definition can
 // write; all operational.
-const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP MEMBER BSEARCH SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE GCD RATIO EXP LN SIN COS ATAN UPPER LOWER'.split(/\s+/));
+const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP MEMBER BSEARCH SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE GCD RATIO EXP LN SIN COS ATAN UPPER LOWER'.split(/\s+/));
 
-// The ten Words held as the alpha's room to grow, cheapest to lose first.
+// The order in which the vocabulary would give up Words, cheapest to lose first.
 //
-// The vocabulary is held at 99 (100 until KEEP was retired), so an addition
-// has to take a slot from something. Rather than cut ten Words now on the chance that ten
-// candidates appear, the ten that *would* go are named here in the order they
-// would go, and a candidate takes the head of this list. The room is the same
-// either way; the difference is that nobody writes `X Y X Y LT SELECT` in
-// place of `MIN` until a Word worth the trade actually arrives.
+// The vocabulary is held at 86, so an addition has to take a slot from
+// something, and a candidate takes the head of this list. Every entry is a
+// derivable Standard, checked below: an operational Word cannot be written in
+// the language at all (LANG.AUTHORITY.FREEDOM's consequence for a total,
+// non-recursive language), so retiring one would cut capability rather than
+// spelling, and a Kernel Word is not on the table.
 //
-// Every entry is a derivable Standard, checked below: an operational Word
-// cannot be written in the language at all (LANG.AUTHORITY.FREEDOM's
-// consequence for a total, non-recursive language), so retiring one would cut
-// capability rather than spelling, and a Kernel Word is not on the table.
+// The order is use, least first, as counted in the lexicon pilot's programs
+// (tools/lexicon-emergence/runs/pilot-2026-09-23): INDEX-OF 0, REVERSE 6,
+// TRIM 10, TOKENIZE 12, MAX 13, MIN 14, TAKE 16, DROP 32, SUB 54 (written `-`).
 // `ROUND` is deliberately absent though it is derivable: its Kernel phrase
 // branches on the sign of its operand, which is the one of these a reader is
 // likely to write wrongly by hand.
-//
-// See docs/dev/vocabulary-100-work-order-2026-09.md §7.4.
-const RETIREMENT_QUEUE = 'LTE GTE SUB CEIL OR QUANTIZE ABS MIN MAX MOD'.split(/\s+/);
+const RETIREMENT_QUEUE = 'INDEX-OF REVERSE TRIM TOKENIZE MAX MIN TAKE DROP SUB'.split(/\s+/);
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
@@ -83,10 +88,10 @@ for (const name of setDifference(KERNEL, kernelWords)) errors.push(`${name}: mis
 for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: unexpected Semantic Kernel classification`);
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
-if (kernelWords.size !== 53) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 53`);
-if (standardWords.size !== 46) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 46`);
+if (kernelWords.size !== 50) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 50`);
+if (standardWords.size !== 36) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 36`);
 
-if (words.length !== 99) errors.push(`canonical inventory has ${words.length} Words; expected 99`);
+if (words.length !== 86) errors.push(`canonical inventory has ${words.length} Words; expected 86`);
 for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 
 for (const word of words) {
@@ -148,12 +153,12 @@ if (operationalWords.size !== OPERATIONAL.size) {
   errors.push(`${operationalWords.size} operational Standards declared; expected ${OPERATIONAL.size}`);
 }
 
-// The retirement queue has to stay the thing it claims to be: ten Words that
-// are still here, each one a spelling of a Kernel phrase rather than a
+// The retirement queue has to stay the thing it claims to be: every derivable
+// Standard but `ROUND`, each one a spelling of a Kernel phrase rather than a
 // capability. A queue naming a Word that has already gone, or one whose
 // relation drifted to operational, would promise room it cannot give.
-if (RETIREMENT_QUEUE.length !== 10) {
-  errors.push(`retirement queue holds ${RETIREMENT_QUEUE.length} Words; expected 10`);
+for (const name of setDifference(DERIVABLE, new Set([...RETIREMENT_QUEUE, 'ROUND']))) {
+  errors.push(`${name}: derivable Standard missing from the retirement queue`);
 }
 if (new Set(RETIREMENT_QUEUE).size !== RETIREMENT_QUEUE.length) {
   errors.push('retirement queue names the same Word twice');
@@ -188,6 +193,6 @@ console.log(
     `${OPERATIONAL.size}/${OPERATIONAL.size} operational Standards state a native retention reason.`,
 );
 console.log(
-  `[minimal-core] room for ${RETIREMENT_QUEUE.length} more Words, first out ${RETIREMENT_QUEUE[0]}: ` +
+  `[minimal-core] ${RETIREMENT_QUEUE.length} Words queued for retirement, first out ${RETIREMENT_QUEUE[0]}: ` +
     RETIREMENT_QUEUE.join(' '),
 );

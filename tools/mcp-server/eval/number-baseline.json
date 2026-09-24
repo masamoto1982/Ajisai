@@ -31,7 +31,7 @@
     },
     {
       "id": "small-integer-modulus",
-      "source": "10 4 MOD",
+      "source": "10 'A' BIND 4 'B' BIND A A B / FLOOR B * -",
       "operation": "modulo",
       "operands": ["10", "4"],
       "expectedCanonical": "2"

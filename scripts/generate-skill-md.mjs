@@ -155,7 +155,7 @@ const canonicalExamples = [
   { title: 'Exact rational division — no floats, ever', code: '[ 1 ] [ 3 ] /' },
   { title: 'Elementwise vector arithmetic', code: '[ 1 2 3 ] [ 4 5 6 ] +' },
   { title: 'Scalar broadcast over a vector', code: '[ 5 ] [ 1 2 3 ] *' },
-  { title: 'Remainder', code: '[ 10 ] [ 3 ] %' },
+  { title: 'Remainder: name the operands, then a - b * floor(a/b)', code: "10 'A' BIND 3 'B' BIND A A B / FLOOR B * -" },
   { title: 'Comparison pushes a boolean', code: '1 2 <' },
   { title: 'Comparison lifts over vectors element-wise', code: '[ 1 2 ] [ 3 1 ] <' },
   { title: 'Range: one vector [ start end ] (inclusive)', code: '[ 0 5 ] RANGE' },
@@ -164,7 +164,6 @@ const canonicalExamples = [
   { title: 'MAP with a [ ] code block', code: '[ 0 4 ] RANGE [ [ 2 ] * ] MAP' },
   { title: 'FILTER keeps matching elements', code: '[ 0 10 ] RANGE [ 5 > ] FILTER' },
   { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ + ] FOLD' },
-  { title: 'ANY / ALL take predicate blocks', code: '[ 1 2 3 ] [ 1 > ] ANY' },
   {
     id: 'record-literal',
     title: 'A Record literal: each key beside the value under it',
@@ -178,7 +177,7 @@ const canonicalExamples = [
   {
     id: 'select-basic',
     title: 'SELECT: the two candidates, then the truth that chooses between them',
-    code: "[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT",
+    code: "[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT",
   },
   {
     id: 'select-lanes',
@@ -264,12 +263,12 @@ const forbiddenPatterns = [
   {
     pattern: 'IF / ELSE / THEN / WHILE',
     code: '[ 1 ] IF',
-    why: 'No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / ANY / ALL.',
+    why: 'No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / SCAN.',
   },
   {
     pattern: 'A word calling itself',
     code: "[ REC ] 'REC' DEF",
-    why: 'The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.',
+    why: 'The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.',
   },
   {
     pattern: 'Parentheses ( )',
@@ -470,8 +469,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Branch: the two candidates, then the truth that chooses between them, then \`SELECT\`: \`${canonicalExampleCode('select-basic')}\` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: \`${canonicalExampleCode('select-lanes')}\`. An absent truth chooses neither and answers that same absence.
 - Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with block operands (examples in §6). \`FOLD\` requires an explicit initial-value Vector.
-- Predicates: \`ANY\` / \`ALL\` take a predicate block (examples in §6).
-- No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
+- No recursion: \`DEF\` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
 
 ## 4. NIL — absence is a value, not an exception
 

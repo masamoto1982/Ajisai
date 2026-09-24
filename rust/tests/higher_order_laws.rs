@@ -3,8 +3,7 @@
 //! Encodes `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 4: the
 //! control vocabulary of LANG.COLLECTIONS.HIGHER obeys the algebraic laws of its categorical
 //! models — `MAP` is a functor lift, `FOLD` a catamorphism, `FILTER` a
-//! predicate restriction, `ANY`/`ALL` existential/universal quantifiers,
-//! `EXEC`/`EVAL` reflection of `⟦·⟧`, and `COND` a K3-honest guarded case in
+//! predicate restriction, `EXEC`/`EVAL` reflection of `⟦·⟧`, and `COND` a K3-honest guarded case in
 //! which a `unknown` (U) guard does not fire (LANG.VALUES.TRUTH).
 //!
 //! Observation matches the conformance runner: whole-stack `Value::to_string`.
@@ -138,24 +137,6 @@ fn filter_predicates_commute() {
             "filter-commute",
             &format!("{v} [ 2 > ] FILTER [ 4 < ] FILTER"),
             &format!("{v} [ 4 < ] FILTER [ 2 > ] FILTER"),
-        );
-    }
-}
-
-// ── ANY / ALL De Morgan duality: ALL p ≡ ¬ ANY ¬p ──
-#[test]
-fn all_any_de_morgan() {
-    let cases = [
-        ("[ 1 2 3 ]", "0 >"),
-        ("[ 1 2 3 ]", "2 >"),
-        ("[ 1 2 3 ]", "5 >"),
-        ("[ -1 -2 -3 ]", "0 <"),
-    ];
-    for (v, p) in cases {
-        assert_law(
-            &format!("all-is-not-any-not[{v};{p}]"),
-            &format!("{v} [ {p} ] ALL"),
-            &format!("{v} [ {p} NOT ] ANY NOT"),
         );
     }
 }

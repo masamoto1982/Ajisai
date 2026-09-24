@@ -125,7 +125,7 @@ fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Valu
                 .unwrap_or(NilReason::Literal),
         ));
     }
-    // `unsupportedComparison`: LT/LTE/GT/GTE, the only callers of
+    // `unsupportedComparison`: LT/GT, the only callers of
     // `compare_lane`, declare it uniformly. EQ/NEQ never reach here —
     // `pairwise_eq` is total and raises nothing.
     match compare_scalar_pair(a_val, b_val, kind).map_err(|e| match e {
@@ -177,25 +177,11 @@ pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
     apply_ordering_schema(interp, OrderingKind::Lt)
 }
 
-pub fn op_le(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_le)? {
-        return Ok(());
-    }
-    apply_ordering_schema(interp, OrderingKind::Le)
-}
-
 pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_binary(interp, &op_gt)? {
         return Ok(());
     }
     apply_ordering_schema(interp, OrderingKind::Gt)
-}
-
-pub fn op_gte(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_gte)? {
-        return Ok(());
-    }
-    apply_ordering_schema(interp, OrderingKind::Ge)
 }
 
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {

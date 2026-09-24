@@ -39,12 +39,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Divide values",
     },
     CoreWordAlias {
-        alias: "%",
-        canonical: Some("MOD"),
-        kind: CoreWordAliasKind::SymbolAlias,
-        summary: "Modulo",
-    },
-    CoreWordAlias {
         alias: "=",
         canonical: Some("EQ"),
         kind: CoreWordAliasKind::SymbolAlias,
@@ -61,24 +55,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         canonical: Some("GT"),
         kind: CoreWordAliasKind::SymbolAlias,
         summary: "Compare greater-than",
-    },
-    // The comparison family had symbols for three of its six Words. Writing
-    // `<` and then reaching for `<=` is the natural next keystroke, and it
-    // answered "Unknown word: <=" — a gap with no rule behind it, since a
-    // symbol resolves to exactly the same contract and executor as its English
-    // name (LANG.SOURCE.TEXT). A token ends only at whitespace or a structural
-    // delimiter, so these two-character spellings need no lexer change.
-    CoreWordAlias {
-        alias: "<=",
-        canonical: Some("LTE"),
-        kind: CoreWordAliasKind::SymbolAlias,
-        summary: "Compare less-than-or-equal",
-    },
-    CoreWordAlias {
-        alias: ">=",
-        canonical: Some("GTE"),
-        kind: CoreWordAliasKind::SymbolAlias,
-        summary: "Compare greater-than-or-equal",
     },
     CoreWordAlias {
         alias: "'",
@@ -97,7 +73,7 @@ pub fn lookup_core_word_alias(alias: &str) -> Option<&'static CoreWordAlias> {
 ///
 /// This is called on every word dispatch, so the previous unconditional
 /// `String` allocation was pure overhead for the two dominant cases:
-/// * a symbol alias (`+`, `<=`, `,,`) maps to a `&'static str` canonical name —
+/// * a symbol alias (`+`, `<`) maps to a `&'static str` canonical name —
 ///   returned as `Cow::Borrowed` with zero allocation;
 /// * an already-uppercase ASCII word (`MAP`, `LENGTH`, most user words) is its
 ///   own canonical form, so the input slice is borrowed unchanged.

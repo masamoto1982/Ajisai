@@ -115,9 +115,10 @@ mod ordering_ops_tests {
         for word in ["UNIQUE", "TALLY"] {
             assert_eq!(
                 equals(
-                    &format!("[ 0 99 ] RANGE [ 7 MOD ] MAP {word}"),
+                    &format!("[ 0 99 ] RANGE [ 1/7 MUL FLOOR ] MAP {word}"),
                     &format!(
-                        "[ 0 49 ] RANGE [ 7 MOD ] MAP [ 50 99 ] RANGE [ 7 MOD ] MAP CONCAT {word}"
+                        "[ 0 49 ] RANGE [ 1/7 MUL FLOOR ] MAP \
+                         [ 50 99 ] RANGE [ 1/7 MUL FLOOR ] MAP CONCAT {word}"
                     )
                 )
                 .await,
@@ -132,15 +133,25 @@ mod ordering_ops_tests {
     /// than a canonical one.
     #[tokio::test]
     async fn a_dense_scan_follows_the_inputs_order_not_a_canonical_one() {
+        // `(x - 5)^2` over 0..9 is 25 16 9 4 1 0 1 4 9 16: not monotone, so
+        // neither direction of the input is a sorted order.
+        assert!(
+            top_is_dense("[ 0 9 ] RANGE [ 5 SUB 2 POW ] MAP").await,
+            "the operand must take the dense route this test is about"
+        );
         assert_eq!(
-            equals("[ 0 9 ] RANGE [ 7 MOD ] MAP UNIQUE", "[ 0 1 2 3 4 5 6 ]").await,
+            equals(
+                "[ 0 9 ] RANGE [ 5 SUB 2 POW ] MAP UNIQUE",
+                "[ 25 16 9 4 1 0 ]"
+            )
+            .await,
             Some(true),
             "first occurrence in the input order"
         );
         assert_eq!(
             equals(
-                "[ 0 9 ] RANGE [ 7 MOD ] MAP REVERSE UNIQUE",
-                "[ 2 1 0 6 5 4 3 ]"
+                "[ 0 9 ] RANGE [ 5 SUB 2 POW ] MAP REVERSE UNIQUE",
+                "[ 16 9 4 1 0 25 ]"
             )
             .await,
             Some(true),

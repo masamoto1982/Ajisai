@@ -1,8 +1,8 @@
 //! A higher-order Word's block is compiled once, not re-interpreted per element.
 //!
-//! `MAP`, `FILTER`, `FOLD`, `ALL` and `ANY` used to walk their block's tokens
+//! `MAP`, `FILTER` and `FOLD` used to walk their block's tokens
 //! again for every element, which means resolving every Symbol in it by name
-//! every time: `[ ABS ] MAP` over 20,000 lanes hashed `"ABS"` and probed the
+//! every time: `[ SQRT ] MAP` over 20,000 lanes hashed `"SQRT"` and probed the
 //! dictionary 20,000 times to reach the one Word it names. A block is fixed for
 //! the length of the loop, so it is compiled before the loop instead.
 //!
@@ -36,13 +36,9 @@ mod tests {
     async fn each_higher_order_word_answers_the_same_through_a_compiled_block() {
         for (program, expected) in [
             ("[ 1 2 3 ] [ 2 MUL ] MAP", "[ 2/1 4/1 6/1 ]"),
-            ("[ -1 2 -3 ] [ ABS ] MAP", "[ 1/1 2/1 3/1 ]"),
-            ("[ 1 2 3 4 ] [ 2 MOD 0 EQ ] FILTER", "[ 2/1 4/1 ]"),
+            ("[ -1 2 -3 ] [ -1 MUL ] MAP", "[ 1/1 -2/1 3/1 ]"),
+            ("[ 1 2 3 4 ] [ 2 GT ] FILTER", "[ 3/1 4/1 ]"),
             ("[ 1 2 3 4 ] 0 [ ADD ] FOLD", "10/1"),
-            ("[ 1 2 3 ] [ 0 GT ] ALL", "TRUE"),
-            ("[ 1 -2 3 ] [ 0 GT ] ALL", "FALSE"),
-            ("[ 1 -2 3 ] [ 0 LT ] ANY", "TRUE"),
-            ("[ 1 2 3 ] [ 0 LT ] ANY", "FALSE"),
         ] {
             assert_eq!(answer(program).await, expected, "`{program}`");
         }

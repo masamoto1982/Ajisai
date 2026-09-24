@@ -250,7 +250,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "10 4 MOD"
+    "source": "10 'A' BIND 4 'B' BIND A A B / FLOOR B * -"
    },
    "expect": {
     "/status": "ok",
@@ -570,7 +570,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER"
+    "source": "[ 1 2 3 4 ] [ 2 / 'H' BIND H FLOOR H = ] FILTER"
    },
    "expect": {
     "/status": "ok",
@@ -602,11 +602,11 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 = ] ANY"
+    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
    },
    "expect": {
     "/status": "ok",
-    "/stackDisplay/0": "TRUE"
+    "/stackDisplay/0": "[ TRUE ]"
    }
   },
   {
@@ -618,7 +618,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 2 4 ] [ 2 MOD 0 = ] ALL"
+    "source": "[ 2 4 ] [ 2 / 'H' BIND H FLOOR H = ] MAP TRUE [ AND ] FOLD"
    },
    "expect": {
     "/status": "ok",

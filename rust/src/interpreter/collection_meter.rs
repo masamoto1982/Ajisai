@@ -148,7 +148,7 @@ pub(crate) fn charge_stacktop_copy(
 
 /// Charge for materializing `count` fresh elements of unit width.
 ///
-/// The generative Words (`RANGE`, `FILL`, `RANDOM`) have no operand to measure
+/// The generative Words (`RANGE`, `FILL`) have no operand to measure
 /// — the elements do not exist yet — but they allocate the same boxed values a
 /// copy does, and a program can ask for them repeatedly. Priced as a copy of
 /// `count` machine-word scalars, which is what they are.

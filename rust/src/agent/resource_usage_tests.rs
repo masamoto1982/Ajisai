@@ -122,7 +122,7 @@ mod resource_usage_tests {
         // longer dominates the price the way it did — both succeed now, and
         // the gap between them is only the cost of copying every new value
         // into the result rather than an O(n×distinct) amplification.
-        let uniform = agent_json("[ 0 15999 ] RANGE [ 1 MOD ] MAP UNIQUE LENGTH").await;
+        let uniform = agent_json("[ 0 15999 ] RANGE [ 0 MUL ] MAP UNIQUE LENGTH").await;
         assert_eq!(uniform["status"], "ok");
         let uniform_work = uniform["resourceUsage"]["collectionWork"]
             .as_u64()

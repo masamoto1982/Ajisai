@@ -191,7 +191,7 @@ async fn numbers_render_as_canonical_fractions_on_stack() {
 async fn comparison_words_return_scalar_booleans() {
     let cases = [
         ("1 2 LT", true),
-        ("2 2 LTE", true),
+        ("2 1 GT", true),
         ("2 1 LT", false),
         ("1 1 EQ", true),
         ("1 2 EQ", false),

@@ -58,7 +58,7 @@ fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
 
 #[test]
 fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
-    // LANG.CONTRACT.REGISTRY: all six comparison primitives are
+    // LANG.CONTRACT.REGISTRY: the comparison primitives are
     // Projecting/PassthroughThenProject/B. They are Projecting because a
     // Tier 2 (`PI`) pair can exhaust its comparison-refinement budget
     // (LANG.VALUES.EXACT) without deciding — that genuine incomparability projects onto
@@ -66,7 +66,7 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
     // reads as U rather than as an ordinary absence. They are
     // PassthroughThenProject because they still pass a NIL operand through
     // first (LANG.FAILURE.PASSTHROUGH), and only then may project the budget-exhaustion case.
-    for name in &["EQ", "LT", "LTE", "GT", "GTE"] {
+    for name in &["EQ", "LT", "GT"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
         assert_eq!(
@@ -91,13 +91,13 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
 }
 
 #[test]
-fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
-    // MOD/FLOOR/ROUND operate on ExactScalar (CF) operands whose
+fn aq_ver_contract_g_rounding_creates_nil_under_undecidable() {
+    // FLOOR/ROUND operate on ExactScalar (CF) operands whose
     // partial-quotient budget can exhaust, yielding an Undecidable NIL
     // (LANG.VALUES.EXACT). They are therefore Projecting/CreatesNil/B, matching
     // DIV and the comparison words. ADD/SUB/MUL stay Total because their
     // CF arithmetic always yields a value (never a budget miss).
-    for name in &["MOD", "FLOOR", "ROUND"] {
+    for name in &["FLOOR", "ROUND"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
         assert_eq!(

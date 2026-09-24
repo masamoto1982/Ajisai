@@ -9,12 +9,15 @@ use ajisai_core::AjisaiError;
 /// a contract in `spec/words.json`, a law witness, a conformance case — so
 /// asserting it is unknown would assert the opposite of what the language now
 /// says. A retired name returning is a vocabulary decision, and this list
-/// records the decision rather than freezing the first one made. `CEIL` came
-/// back the same way in the vocabulary-100 work order's Phase 1
-/// (docs/dev/vocabulary-100-work-order-2026-09.md §7): the closure of the
-/// rounding family, with a contract, a Kernel-only witness and conformance
-/// cases of its own. `REPLACE` came back in Phase 3, as INDEX-OF's
+/// records the decision rather than freezing the first one made. `REPLACE`
+/// came back in the vocabulary-100 work order's Phase 3, as INDEX-OF's
 /// substitution counterpart for Text, retained natively for cost.
+///
+/// The minimal-core cut retired thirteen more, each either a one-line Kernel
+/// phrase (`NEG` is `-1 MUL`, `a b LTE` is `a b GT NOT`, `OR` is De Morgan over
+/// `AND`/`NOT`, `RANK` is nested `MAP`s, ...) or, for `RANDOM`, dropped outright.
+/// `CEIL`, which had once come back as the closure of the rounding family, is
+/// among them. They are listed here on the same terms as the beta retirements.
 const REMOVED_WORDS: &[&str] = &[
     "SIGN",
     "INSERT",
@@ -26,6 +29,19 @@ const REMOVED_WORDS: &[&str] = &[
     "ENDS-WITH?",
     "CHR",
     "EAT",
+    "DEFINED?",
+    "NEG",
+    "RANDOM",
+    "RANK",
+    "ANY",
+    "ALL",
+    "OR",
+    "LTE",
+    "GTE",
+    "CEIL",
+    "QUANTIZE",
+    "ABS",
+    "MOD",
 ];
 
 #[tokio::test]

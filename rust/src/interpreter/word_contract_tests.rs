@@ -195,7 +195,7 @@ async fn a_recovery_phrase_has_a_fixed_arity() {
 //
 // `{ }` spells a Record and never code, so a `[ ... ]` alone cannot say whether its
 // interior is inert data or a fixed-position code operand a higher-order
-// Word (`MAP`/`FILTER`/`FOLD`/`ANY`/`ALL`/`EXEC`/`CONTRACT`/`COND`) will
+// Word (`MAP`/`FILTER`/`FOLD`/`SCAN`/`EXEC`/`CONTRACT`) will
 // actually run. `classify_vector_positions` answers this positionally: a
 // `[ ... ]` immediately followed by one of those Words is code, everything
 // else is data, and a `Data` ancestor forces `Data` all the way down. Every

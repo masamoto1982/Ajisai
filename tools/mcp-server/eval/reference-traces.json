@@ -250,7 +250,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "10 4 MOD"
+    "source": "10 'A' BIND 4 'B' BIND A A B / FLOOR B * -"
    }
   },
   {
@@ -258,7 +258,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "10 4 MOD"
+    "source": "10 'A' BIND 4 'B' BIND A A B / FLOOR B * -"
    }
   },
   {
@@ -570,7 +570,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER"
+    "source": "[ 1 2 3 4 ] [ 2 / 'H' BIND H FLOOR H = ] FILTER"
    }
   },
   {
@@ -578,7 +578,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER"
+    "source": "[ 1 2 3 4 ] [ 2 / 'H' BIND H FLOOR H = ] FILTER"
    }
   },
   {
@@ -602,7 +602,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 = ] ANY"
+    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
    }
   },
   {
@@ -610,7 +610,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 = ] ANY"
+    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
    }
   },
   {
@@ -618,7 +618,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 2 4 ] [ 2 MOD 0 = ] ALL"
+    "source": "[ 2 4 ] [ 2 / 'H' BIND H FLOOR H = ] MAP TRUE [ AND ] FOLD"
    }
   },
   {
@@ -626,7 +626,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 2 4 ] [ 2 MOD 0 = ] ALL"
+    "source": "[ 2 4 ] [ 2 / 'H' BIND H FLOOR H = ] MAP TRUE [ AND ] FOLD"
    }
   },
   {

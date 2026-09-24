@@ -41,8 +41,8 @@ enum SortAttempt {
 /// is reported as `Malformed`.
 /// `three_way_compare`, with a structurally non-comparable operand
 /// reclassified as `nonComparableElement` — SORT and ORDER are the only two
-/// Words that declare it; `three_way_compare`'s other callers (MIN/MAX, ABS's
-/// zero-check in `math_ops.rs`) declare `nonNumeric` instead, so the shared
+/// Words that declare it; `three_way_compare`'s other callers (MIN/MAX in
+/// `math_ops.rs`) declare `nonNumeric` instead, so the shared
 /// function cannot make this remap itself (the same shared-helper lesson as
 /// Phase 2's tensor-conversion helpers and Phase 4's `nonInteger` fix).
 pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<OrderOutcome> {

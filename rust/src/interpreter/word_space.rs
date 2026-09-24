@@ -83,18 +83,17 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Add | Sub | Mul | Div => (Linear, true),
         // Comparisons and logic may produce elementwise results; O(input),
         // not audited as tight.
-        Eq | Lt | Le | Gt | Gte | And | Or | Not | Select => (Linear, false),
+        Eq | Lt | Gt | And | Not | Select => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
-        Map | Filter | Fold | Scan | Any | All | Rank => (Unbounded, false),
+        Map | Filter | Fold | Scan => (Unbounded, false),
         Exec => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
         Get | Length => (Const, false),
         // `Contract` walks a block's tokens once without evaluating them, or
         // reads one registry entry, and answers one fixed-shape Record;
-        // `Defined` a truth value; `Digest` a fixed-length text after walking
-        // its operand once.
-        Contract | Defined | Digest => (Const, false),
+        // `Digest` a fixed-length text after walking its operand once.
+        Contract | Digest => (Const, false),
         NilCheck | NilReason | Absent | Fail => (Const, false),
         True | False | Nil | Pi => (Const, false),
         // Structure builders bounded by their operands' total size.
@@ -106,7 +105,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // materialized length (Phase 3 gives these the runtime water level).
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
-        Floor | Ceil | Round | Quantize | Mod => (Linear, false),
+        Floor | Round => (Linear, false),
         Str | Num | Chars | Tokenize | Trim | Upper | Lower | Search | Replace => (Linear, false),
         // Text out of a value, or a value out of text: both O(input).
         Format => (Linear, false),
@@ -118,7 +117,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Del => (Const, false),
         Print => (Linear, false),
         // The Words promoted out of the deleted MATH and ALGO modules.
-        Abs | Neg | Min | Max | Sqrt => (Linear, false),
+        Min | Max | Sqrt => (Linear, false),
         // The numeric Words of Phase 7: element-wise like the rest of the
         // family; a transcendental answer is one lazy enclosure per lane.
         Pow | Gcd | Ratio | Exp | Ln | Sin | Cos | Atan => (Linear, false),
@@ -131,10 +130,6 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // answer one value.
         Record | Keys | Values | With | Without | Merge => (Linear, true),
         At | Has => (Const, false),
-        // A value-driven materializer like RANGE and FILL: the *count*
-        // operand's value sets the length, so it takes the runtime water level
-        // rather than a static bound.
-        Random => (Unbounded, true),
     }
 }
 

@@ -186,8 +186,8 @@ const SWEEP_OPERANDS = [
   '[ NIL 1 ]',
   '[ 1 [ 2 3 ] ]',
 ];
-const SWEEP_BINARY = ['ADD', 'DIV', 'MOD', 'EQ', 'AND', 'CONCAT', 'GET', 'MAP'];
-const SWEEP_UNARY = ['NEG', 'SQRT', 'NOT', 'LENGTH', 'SORT', 'JOIN', 'NIL-REASON', 'EXEC'];
+const SWEEP_BINARY = ['ADD', 'DIV', 'SUB', 'EQ', 'AND', 'CONCAT', 'GET', 'MAP'];
+const SWEEP_UNARY = ['FLOOR', 'SQRT', 'NOT', 'LENGTH', 'SORT', 'JOIN', 'NIL-REASON', 'EXEC'];
 
 function sweepPrograms() {
   const programs = new Set();

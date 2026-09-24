@@ -72,7 +72,7 @@ async fn nil_check_is_false_for_present_value() {
 /// tells about it (`type: "nil"`, a published `absence.reason`).
 ///
 /// `TRUE NIL AND` is the strong-Kleene UNKNOWN row (neither operand absorbs
-/// the other), so it produces a genuine U — `AND`/`OR`/`NOT` are what makes
+/// the other), so it produces a genuine U — `AND`/`NOT` are what makes
 /// U reachable from source at all.
 #[tokio::test]
 async fn nil_check_is_true_for_logical_unknown() {

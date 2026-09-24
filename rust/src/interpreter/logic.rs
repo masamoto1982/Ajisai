@@ -5,7 +5,7 @@ use crate::types::{Interpretation, Value};
 
 /// The truth value of a `booleanLogic` operand.
 ///
-/// The Boolean domain is the *whole* definite input domain of `AND`, `OR`,
+/// The Boolean domain is the *whole* definite input domain of `AND`,
 /// `NOT`, and `SELECT`'s truth operand: `spec/semantic-families.json` gives
 /// the family `truth: threeValued` and each contract registers
 /// `nonTruthValue` as its error condition. NIL is handled separately by
@@ -16,7 +16,7 @@ use crate::types::{Interpretation, Value};
 /// at a time: [`lift_lanes`] has already aligned the operands, and a Vector
 /// reaching here is a Vector standing where a truth value belongs, which is
 /// the `nonTruthValue` it reports. Masks are built by the comparison Words,
-/// which lift the same way, so `[ 1 2 3 ] [ 2 ] GT [ 1 2 3 ] [ 2 ] LT OR` is
+/// which lift the same way, so `[ 1 2 3 ] [ 2 ] GT [ 1 2 3 ] [ 2 ] LT AND` is
 /// an ordinary phrase rather than a shape error.
 ///
 /// So a scalar is not an operand. These Words used to select between a Boolean
@@ -48,38 +48,24 @@ fn truth_or_unknown(value: &Value) -> Result<Option<bool>> {
     operand_truth(value).map(Some)
 }
 
-/// Binary Boolean combination under the strong Kleene tables
-/// (LANG.VALUES.TRUTH): FALSE absorbs into `AND` and TRUE absorbs into `OR`
-/// even against an UNKNOWN operand, because the absorbing value is decided by
-/// the definite operand alone. Only where neither operand is the absorbing
-/// value does an UNKNOWN operand surface in the result — the left operand's,
-/// when both are UNKNOWN, matching left-to-right evaluation order.
-fn compute_boolean_binary(and: bool, a: &Value, b: &Value) -> Result<Value> {
-    let absorbing = !and; // AND absorbs on FALSE, OR absorbs on TRUE.
+/// Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): FALSE
+/// absorbs into `AND` even against an UNKNOWN operand, because the absorbing
+/// value is decided by the definite operand alone. Only where neither operand
+/// is FALSE does an UNKNOWN operand surface in the result — the left
+/// operand's, when both are UNKNOWN, matching left-to-right evaluation order.
+fn compute_conjunction(a: &Value, b: &Value) -> Result<Value> {
     match (truth_or_unknown(a)?, truth_or_unknown(b)?) {
-        (Some(x), Some(y)) => Ok(Value::from_bool(if and { x && y } else { x || y })),
-        (Some(x), None) => {
-            if x == absorbing {
-                Ok(Value::from_bool(absorbing))
-            } else {
-                Ok(as_unknown(b))
-            }
-        }
-        (None, Some(y)) => {
-            if y == absorbing {
-                Ok(Value::from_bool(absorbing))
-            } else {
-                Ok(as_unknown(a))
-            }
-        }
-        (None, None) => Ok(as_unknown(a)),
+        (Some(x), Some(y)) => Ok(Value::from_bool(x && y)),
+        (Some(false), None) | (None, Some(false)) => Ok(Value::from_bool(false)),
+        (Some(true), None) => Ok(as_unknown(b)),
+        (None, Some(true)) | (None, None) => Ok(as_unknown(a)),
     }
 }
 
-/// `AND`/`OR` over whole operands: the scalar law above, applied lane by lane
+/// `AND` over whole operands: the scalar law above, applied lane by lane
 /// (LANG.COLLECTIONS.LIFT).
-fn lifted_boolean_binary(and: bool, a: &Value, b: &Value) -> Result<Value> {
-    lift_lanes([a, b], &|[x, y]| compute_boolean_binary(and, x, y))
+fn lifted_conjunction(a: &Value, b: &Value) -> Result<Value> {
+    lift_lanes([a, b], &|[x, y]| compute_conjunction(x, y))
 }
 
 /// `SELECT`'s scalar law: a definite truth chooses one of the two values it
@@ -125,7 +111,7 @@ fn compute_inverted_value(val: &Value) -> Result<Value> {
 /// A NIL operand read in truth position, marked as the logical UNKNOWN (U):
 /// `ValueData::Nil` carrying the `TruthValue` hint (LANG.VALUES.TRUTH). No
 /// vocabulary Word could construct U directly before this — the exact
-/// comparison domain always decides (Tier ≤ 1) — so `AND`/`OR`/`NOT` are the
+/// comparison domain always decides (Tier ≤ 1) — so `AND`/`NOT` are the
 /// first to make U a value a program can actually observe, not just a value
 /// the type system reserves room for.
 fn as_unknown(value: &Value) -> Value {
@@ -171,27 +157,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let result = match lifted_boolean_binary(true, &a_val, &b_val) {
-        Ok(v) => v,
-        Err(e) => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
-            return Err(e);
-        }
-    };
-    push_truth_result(interp, result);
-    Ok(())
-}
-
-pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-
-    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let result = match lifted_boolean_binary(false, &a_val, &b_val) {
+    let result = match lifted_conjunction(&a_val, &b_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(a_val);

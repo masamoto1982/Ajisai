@@ -245,24 +245,12 @@ mod nil_passthrough_tests {
     }
 
     #[tokio::test]
-    async fn mod_with_nil_yields_nil() {
-        let interp = run("NIL 3 MOD").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL MOD").await;
-        assert!(interp.get_stack()[0].is_nil());
-    }
-
-    #[tokio::test]
     async fn comparisons_with_nil_yield_nil() {
         let interp = run("NIL 3 <").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL LTE").await;
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL NIL =").await;
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL 3 >").await;
-        assert!(interp.get_stack()[0].is_nil());
-        let interp = run("3 NIL GTE").await;
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL 3 EQ NOT").await;
         assert!(interp.get_stack()[0].is_nil());
@@ -315,8 +303,8 @@ mod nil_passthrough_tests {
 #[cfg(test)]
 mod ai_first_comparison_tests {
     use crate::interpreter::Interpreter;
-    // Tests for the AI-first comparison primitives GT and GTE. These mirror
-    // LT / LTE / EQ and exist so an automated producer can emit the relation
+    // Tests for the AI-first comparison primitive GT. It mirrors
+    // LT / EQ and exists so an automated producer can emit the relation
     // that matches its intent directly rather than rewriting it as a
     // negation or operand swap.
 
@@ -338,7 +326,7 @@ mod ai_first_comparison_tests {
         }
     }
 
-    // ── canonical-name parity with LT/LTE/EQ ─────────────────────────────
+    // ── canonical-name parity with LT/EQ ─────────────────────────────────
 
     #[tokio::test]
     async fn gt_canonical_name_returns_true_when_strictly_greater() {
@@ -349,18 +337,6 @@ mod ai_first_comparison_tests {
     #[tokio::test]
     async fn gt_returns_false_on_equal_values() {
         let interp = run("1 1 GT").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_canonical_name_returns_true_on_equal_values() {
-        let interp = run("1 1 GTE").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_returns_false_when_strictly_less() {
-        let interp = run("0 1 GTE").await;
         assert!(!bool_of(&interp));
     }
 
@@ -381,12 +357,6 @@ mod ai_first_comparison_tests {
     #[tokio::test]
     async fn gt_symbol_alias_matches_canonical() {
         let interp = run("5 3 >").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_symbol_alias_matches_canonical() {
-        let interp = run("3 3 GTE").await;
         assert!(bool_of(&interp));
     }
 
@@ -417,12 +387,6 @@ mod ai_first_comparison_tests {
     #[tokio::test]
     async fn gt_with_nil_left_yields_nil() {
         let interp = run("NIL 1 GT").await;
-        assert!(interp.get_stack()[0].is_nil());
-    }
-
-    #[tokio::test]
-    async fn gte_with_nil_right_yields_nil() {
-        let interp = run("1 NIL GTE").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
@@ -478,21 +442,8 @@ mod comparison_budget_infrastructure_tests {
     }
 
     #[tokio::test]
-    async fn lte_decides_on_equal_reduced_rationals() {
-        let interp = run("2/4 1/2 LTE").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
     async fn gt_decides_on_negative_left() {
         let interp = run("-3/2 1/2 GT").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_decides_on_large_rationals() {
-        let interp = run("355/113 22/7 GTE").await;
-        // 355/113 ≈ 3.14159292 < 22/7 ≈ 3.14285714 ⇒ GTE is false.
         assert!(!bool_of(&interp));
     }
 
@@ -530,8 +481,7 @@ mod comparison_budget_infrastructure_tests {
 /// Phase 7 — EQ Undecidable-NIL plumbing.
 ///
 /// Phase 6 (PR #904) wired the `Undecidable` / `ComparisonBudget`
-/// projection through the ordering path (`LT` / `LTE` / `GT` /
-/// `GTE`) and explicitly left `EQ` for Phase 7. This module
+/// projection through the ordering path (`LT` / `GT`) and explicitly left `EQ` for Phase 7. This module
 /// pins the new dispatch shape:
 ///
 /// 1. `pairwise_eq` is three-valued (`Option<bool>`): rational

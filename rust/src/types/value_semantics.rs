@@ -337,7 +337,7 @@ impl Value {
             }
             // Every NIL advertises `nilPassthrough`, the logical Unknown (U)
             // included. U used to be excluded here by its `TruthValue` hint,
-            // which advertised something untrue the moment `AND`/`OR`/`NOT`
+            // which advertised something untrue the moment `AND`/`NOT`
             // made U reachable: `TRUE NIL AND 1 ADD` answers NIL, so U does
             // pass through, and a capability a consumer branches on
             // (LANG.OBSERVATION.FIREWALL) may not say otherwise. U's
@@ -472,7 +472,7 @@ impl Value {
             // so it conservatively collapses to `false` — the same result as
             // an operational NIL, hence the shared arm. Words that must
             // honour the third value read it before asking for a definite
-            // truth (`SELECT`, `AND`/`OR`/`NOT`), never here.
+            // truth (`SELECT`, `AND`/`NOT`), never here.
             ValueData::Nil => false,
             // A String is not a truth value. LANG.VALUES.TRUTH is two-valued
             // over Booleans, and the logic Words reject anything else outright

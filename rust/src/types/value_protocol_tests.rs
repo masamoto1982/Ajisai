@@ -312,7 +312,7 @@ fn tensor_1d_default_renders_numbers() {
 
 #[test]
 fn tensor_1d_truthvalue_renders_booleans() {
-    // Regression: a promoted dense boolean vector ([ TRUE ], AND/OR/NOT
+    // Regression: a promoted dense boolean vector ([ TRUE ], AND/NOT
     // results) must serialize its leaves as booleans, not 1/1 numbers.
     let node = value_to_protocol(&tensor(&[1, 0, 1], &[3]), Some(Interpretation::TruthValue));
     assert_eq!(node.type_str, "vector");

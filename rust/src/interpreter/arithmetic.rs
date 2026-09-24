@@ -26,12 +26,6 @@ pub(crate) enum ExactArithmeticSchema {
     Sub,
     Mul,
     Div,
-    /// `MOD` shares `DIV`'s division, so it shares its schema: `a MOD b` is
-    /// `a - b * floor(a/b)`, and a zero divisor is the same undefined
-    /// operation underneath (`arithmetic_division`'s module header). It joined
-    /// the schema when a vector of irrationals reached `MOD` with no exact
-    /// route to take and panicked in the rational kernel.
-    Mod,
 }
 
 impl ExactArithmeticSchema {
@@ -47,13 +41,6 @@ impl ExactArithmeticSchema {
                     Ok(a.div(b))
                 }
             }
-            ExactArithmeticSchema::Mod => {
-                if b.is_zero() {
-                    Err(AjisaiError::DivisionByZero)
-                } else {
-                    Ok(a.modulo(b))
-                }
-            }
         }
     }
 
@@ -63,13 +50,6 @@ impl ExactArithmeticSchema {
             ExactArithmeticSchema::Sub => Some(a.sub(b)),
             ExactArithmeticSchema::Mul => Some(a.mul(b)),
             ExactArithmeticSchema::Div => a.div(b),
-            // `a - b * floor(a/b)`, the definition `op_mod`'s scalar arm
-            // already computes. `None` folds a zero divisor together with
-            // continued-fraction budget exhaustion, exactly as `Div` does.
-            ExactArithmeticSchema::Mod => a
-                .div(b)
-                .and_then(|quotient| quotient.floor())
-                .map(|floor| a.sub(&b.mul(&floor))),
         }
     }
 }
@@ -94,9 +74,8 @@ fn simd_schema_candidate(
         ExactArithmeticSchema::Mul => simd_ops::apply_simd_mul(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_mul(a, b))
             .or_else(|| simd_ops::apply_simd_scalar_mul(b, a)),
-        // No SIMD kernel inverts or divides a lane, so neither of the two
-        // Words built on division takes this route.
-        ExactArithmeticSchema::Div | ExactArithmeticSchema::Mod => None,
+        // No SIMD kernel inverts or divides a lane.
+        ExactArithmeticSchema::Div => None,
     }
 }
 
@@ -242,11 +221,6 @@ fn schema_via_kernel(
         ExactArithmeticSchema::Sub => kernel_arithmetic::sub,
         ExactArithmeticSchema::Mul => kernel_arithmetic::mul,
         ExactArithmeticSchema::Div => kernel_arithmetic::div,
-        // The Spine has no modulo primitive, and `MOD` does not take the
-        // scalar fast path that reaches this. Answering by the schema's own
-        // rational law keeps that a fact about routing rather than a panic
-        // waiting for the caller that stops being true.
-        ExactArithmeticSchema::Mod => return schema.fraction(a, b),
     };
     match &primitive(&operands)[0] {
         KernelValue::Scalar(result) => Ok(result.as_fraction().cloned().expect("rational")),
@@ -430,7 +404,7 @@ fn apply_exact_real_recursive_broadcast(
                 return Ok(nil);
             }
             let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
-                // Reached only through ADD/SUB/MUL/DIV/MOD/QUANTIZE's own
+                // Reached only through ADD/SUB/MUL/DIV's own
                 // binary dispatch, which all declare `nonNumeric` uniformly.
                 return Err(AjisaiError::declared(
                     "nonNumeric",

@@ -123,10 +123,10 @@ fn lookup_reports_the_vocabulary_tier() {
         "FOLD LOOKUP body must name the Semantic Kernel:\n{}",
         kernel
     );
-    let standard = lookup_builtin_detail("MAP");
+    let standard = lookup_builtin_detail("FILTER");
     assert!(
         standard.contains("Standard vocabulary (operational)"),
-        "MAP LOOKUP body must name its Standard kind:\n{}",
+        "FILTER LOOKUP body must name its Standard kind:\n{}",
         standard
     );
     for word in builtin_specs() {
@@ -239,7 +239,7 @@ fn comparison_words_have_uniform_stack_effect() {
     // notation so the four-section template is consistent across the
     // comparison category.
     const EXPECTED: &str = "[ a ] [ b ] -> [ TRUE | FALSE ]";
-    for name in &["EQ", "LT", "LTE", "GT", "GTE"] {
+    for name in &["EQ", "LT", "GT"] {
         let spec = crate::builtins::builtin_word_definitions::lookup_builtin_spec(name)
             .unwrap_or_else(|| panic!("{} must have a BuiltinSpec", name));
         assert_eq!(

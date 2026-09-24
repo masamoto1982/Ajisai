@@ -18,7 +18,7 @@
 //!
 //! This module classifies the lexical / structural surface forms that
 //! are **not** runtime-canonicalizable words. The runtime *word* aliases
-//! (`+` -> `ADD`, `<=` -> `LTE`, ...) live in [`crate::core_word_aliases`], which
+//! (`+` -> `ADD`, `<` -> `LT`, ...) live in [`crate::core_word_aliases`], which
 //! remains the single source of truth for runtime name canonicalization. The two
 //! tables are deliberately kept separate:
 //! [`crate::core_word_aliases::canonicalize_core_word_name`] must never map `#`,

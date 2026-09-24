@@ -34,9 +34,7 @@
         "EQ",
         "NEQ",
         "LT",
-        "LTE",
         "GT",
-        "GTE",
         "COMPARE-WITHIN",
         "SELECT",
         "FILTER"
@@ -48,14 +46,10 @@
         "EQ",
         "NEQ",
         "LT",
-        "LTE",
         "GT",
-        "GTE",
         "COMPARE-WITHIN",
         "SELECT",
         "FILTER",
-        "ANY",
-        "ALL",
         "COUNT",
         "STARTS-WITH?",
         "ENDS-WITH?",
@@ -77,21 +71,6 @@
       ],
       "can_derive": [
         "AND"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "algebra.k3.join",
-      "algebraic_family": "boolean-truth",
-      "core_tier": "identity",
-      "kind": "operation",
-      "description": "Strong Kleene join (least upper bound) on K3; the algebraic primitive OR derives from.",
-      "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "OR"
-      ],
-      "can_derive": [
-        "OR"
       ],
       "status": "accepted"
     },
@@ -122,16 +101,14 @@
         "ADD",
         "SUB",
         "MUL",
-        "DIV",
-        "MOD"
+        "DIV"
       ],
       "can_derive": [
         "ADD/SUB/MUL/DIV",
         "ADD",
         "SUB",
         "MUL",
-        "DIV",
-        "MOD"
+        "DIV"
       ],
       "status": "accepted"
     },
@@ -147,9 +124,7 @@
         "EQ",
         "NEQ",
         "LT",
-        "LTE",
         "GT",
-        "GTE",
         "COMPARE-WITHIN",
         "ALGO@SORT",
         "ALGO@UNIQUE",
@@ -161,9 +136,7 @@
         "EQ",
         "NEQ",
         "LT",
-        "LTE",
         "GT",
-        "GTE",
         "COMPARE-WITHIN",
         "ALGO@SORT",
         "ALGO@UNIQUE",
@@ -187,9 +160,7 @@
       "description": "Canonical continued-fraction observation sequence of an exact real, derived from the value for display and serialization; not an internal representation and not an approximation.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
-        "MOD",
         "FLOOR",
-        "CEIL",
         "ROUND",
         "'math' IMPORT SQRT",
         "COUNT",
@@ -201,9 +172,7 @@
         "TIME@MONTH"
       ],
       "can_derive": [
-        "MOD",
         "FLOOR",
-        "CEIL",
         "ROUND",
         "'math' IMPORT SQRT",
         "COUNT",
@@ -252,21 +221,6 @@
         "MATH@ABS",
         "MATH@NEG",
         "MATH@POW"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "algebra.exact-real.seeded-stream",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "kind": "operation",
-      "description": "Deterministic exact-rational stream in [0,1) generated from an integer seed; a pure function of the seed, with no host entropy and no state carried between calls.",
-      "admission_reason": "Accepted because no composition of the existing vocabulary produces it: the language has no bit mixing and no hash, so a seeded stream is not derivable at any cost. Its exactness and purity are unaffected — the draws are exact rationals and the same seed always draws the same ones.",
-      "introduced_by": [
-        "RANDOM"
-      ],
-      "can_derive": [
-        "RANDOM"
       ],
       "status": "accepted"
     },
@@ -361,9 +315,7 @@
         "SUB",
         "MUL",
         "DIV",
-        "MOD",
         "FLOOR",
-        "CEIL",
         "ROUND",
         "EQ",
         "NEQ",
@@ -375,16 +327,12 @@
         "SUB",
         "MUL",
         "DIV",
-        "MOD",
         "FLOOR",
-        "CEIL",
         "ROUND",
         "EQ",
         "NEQ",
         "LT",
-        "LTE",
-        "GT",
-        "GTE"
+        "GT"
       ],
       "status": "accepted"
     },
@@ -399,8 +347,6 @@
         "FILTER",
         "FOLD",
         "UNFOLD",
-        "ANY",
-        "ALL",
         "COUNT",
         "SCAN",
         "GET",
@@ -413,8 +359,6 @@
         "FILTER",
         "FOLD",
         "UNFOLD",
-        "ANY",
-        "ALL",
         "COUNT",
         "SCAN",
         "GET",
@@ -470,18 +414,16 @@
       "algebraic_family": "structure-lift",
       "core_tier": "material",
       "kind": "operation",
-      "description": "Shape/index isomorphisms for tensors; RESHAPE, TRANSPOSE, SHAPE, RANK, and FILL derive from this reshape-group action.",
+      "description": "Shape/index isomorphisms for tensors; RESHAPE, TRANSPOSE, SHAPE, and FILL derive from this reshape-group action.",
       "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "SHAPE",
-        "RANK",
         "RESHAPE",
         "TRANSPOSE",
         "FILL"
       ],
       "can_derive": [
         "SHAPE",
-        "RANK",
         "RESHAPE",
         "TRANSPOSE",
         "FILL"
@@ -864,33 +806,6 @@
       "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values"
     },
     {
-      "id": "core.or",
-      "kind": "coreword",
-      "surface": "OR",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.5"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-kleene-or-definite"
-      ],
-      "status": "Formalized",
-      "notes": "Strong Kleene disjunction.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.k3.join"
-      ],
-      "algebraic_family": "boolean-truth",
-      "core_tier": "identity",
-      "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values",
-      "standard_relation": "derivable"
-    },
-    {
       "id": "core.not",
       "kind": "coreword",
       "surface": "NOT",
@@ -1055,36 +970,6 @@
       "implementation_schema": "exact_arithmetic_schema(Div) via apply_exact_arithmetic_schema"
     },
     {
-      "id": "core.mod",
-      "kind": "coreword",
-      "surface": "MOD",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs",
-        "rust/tests/desugar_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-mod"
-      ],
-      "status": "Formalized",
-      "notes": "Modulo is derived as x - floor(x/y)·y over exact reals, so it depends on integer projection plus exact arithmetic and preserves Bubble/NIL absence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.bihomographic",
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "derivable"
-    },
-    {
       "id": "core.floor",
       "kind": "coreword",
       "surface": "FLOOR",
@@ -1109,36 +994,6 @@
       "core_tier": "material"
     },
     {
-      "id": "core.ceil",
-      "kind": "coreword",
-      "surface": "CEIL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-ceil",
-        "standard-ceil-of-an-integer-is-itself",
-        "standard-ceil-lifts-over-a-vector"
-      ],
-      "status": "Formalized",
-      "notes": "CEIL — exact-real integer projection toward positive infinity; FLOOR reflected through zero (ceil(x) = -floor(-x)), which is its Kernel-only witness.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "derivable"
-    },
-    {
       "id": "core.round",
       "kind": "coreword",
       "surface": "ROUND",
@@ -1156,33 +1011,6 @@
       ],
       "status": "Formalized",
       "notes": "ROUND — exact-real nearest-integer projection without float round trips. Projecting failures create NIL/Bubble observations.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "derivable"
-    },
-    {
-      "id": "core.quantize",
-      "kind": "coreword",
-      "surface": "QUANTIZE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
-      ],
-      "law_tests": [
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-quantize"
-      ],
-      "status": "Formalized",
-      "notes": "QUANTIZE — scaled nearest-integer projection, x' = ROUND(x*d)/d, bounding the denominator by d. Names the representation-size trade an iterative method must make explicitly, at the caller's resolution, instead of letting an exact denominator record the whole derivation.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -1280,37 +1108,6 @@
       "implementation_schema": "ordering_schema(Lt) via apply_ordering_schema"
     },
     {
-      "id": "core.lte",
-      "kind": "coreword",
-      "surface": "LTE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.4",
-        "SPECIFICATION.html §7.4.1"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs",
-        "rust/src/arithmetic_operation_tests.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-lte"
-      ],
-      "status": "Formalized",
-      "notes": "Less-than-or-equal is derived from the same budgeted order observation as LT/EQ, projected into K3 truth.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity",
-      "implementation_schema": "ordering_schema(Le) via apply_ordering_schema",
-      "standard_relation": "derivable"
-    },
-    {
       "id": "core.gt",
       "kind": "coreword",
       "surface": "GT",
@@ -1336,37 +1133,6 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "implementation_schema": "ordering_schema(Gt) via apply_ordering_schema"
-    },
-    {
-      "id": "core.gte",
-      "kind": "coreword",
-      "surface": "GTE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.4",
-        "SPECIFICATION.html §7.4.1"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs",
-        "rust/src/arithmetic_operation_tests.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-gte"
-      ],
-      "status": "Formalized",
-      "notes": "Greater-than-or-equal is the operand-dual of LTE over the shared budgeted-order primitive.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity",
-      "implementation_schema": "ordering_schema(Ge) via apply_ordering_schema",
-      "standard_relation": "derivable"
     },
     {
       "id": "core.exact-real.sqrt",
@@ -1746,8 +1512,7 @@
         "SPECIFICATION.html §7.7"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs",
-        "rust/tests/standard_operational_laws.rs"
+        "rust/tests/higher_order_laws.rs"
       ],
       "conformance_cases": [
         "core-map"
@@ -1762,9 +1527,7 @@
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material",
-      "implementation_schema": "traversal_scheme(map) -> block_application -> structure_lift",
-      "standard_relation": "operational",
-      "native_retention_reason": "Fixes index-order visitation, isolated callback stacks, effect order, and atomic ERROR restoration."
+      "implementation_schema": "traversal_scheme(map) -> block_application -> structure_lift"
     },
     {
       "id": "core.filter",
@@ -1853,96 +1616,6 @@
       "implementation_schema": "traversal_scheme(scan) -> block_application -> accumulator_policy",
       "standard_relation": "operational",
       "native_retention_reason": "Re-folding each prefix is quadratic where the walk is linear, and the language has no loop or recursion to carry state any other way; also fixes index-order visitation, isolated callback stacks and effect order."
-    },
-    {
-      "id": "core.any",
-      "kind": "coreword",
-      "surface": "ANY",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "law_tests": [
-        "rust/tests/higher_order_laws.rs",
-        "rust/tests/standard_operational_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-any"
-      ],
-      "status": "Formalized",
-      "notes": "Existential predicate fold over an indexed sequence into the K3 truth domain.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "boolean-truth",
-      "core_tier": "identity",
-      "implementation_schema": "predicate_fold(exists) via traversal_scheme + K3 projection",
-      "standard_relation": "operational",
-      "native_retention_reason": "Fixes left-to-right short-circuiting so effects for unvisited elements do not run."
-    },
-    {
-      "id": "core.all",
-      "kind": "coreword",
-      "surface": "ALL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "law_tests": [
-        "rust/tests/higher_order_laws.rs",
-        "rust/tests/standard_operational_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-all"
-      ],
-      "status": "Formalized",
-      "notes": "Universal predicate fold over an indexed sequence into the K3 truth domain.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "boolean-truth",
-      "core_tier": "identity",
-      "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection",
-      "standard_relation": "operational",
-      "native_retention_reason": "Fixes left-to-right short-circuiting so effects for unvisited elements do not run."
-    },
-    {
-      "id": "core.rank",
-      "kind": "coreword",
-      "surface": "RANK",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs",
-        "rust/tests/termination_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-rank",
-        "core-rank-1-is-map",
-        "core-rank-0-sees-the-whole-vector",
-        "core-rank-stops-at-a-leaf",
-        "core-rank-negative-depth-error",
-        "core-rank-nil-target"
-      ],
-      "status": "Formalized",
-      "notes": "MAP at a stated depth: the applicative lift applied at an inner axis, which no other Word reaches. Depth 1 coincides with MAP.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.applicative",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "implementation_schema": "traversal_scheme(rank) -> depth_descent -> block_application -> structure_lift"
     },
     {
       "id": "hosted.clock.deterministic",
@@ -2925,32 +2598,6 @@
       "core_tier": "flow"
     },
     {
-      "id": "core.defined",
-      "kind": "coreword",
-      "surface": "DEFINED?",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §8.1",
-        "SPECIFICATION.html §8.4"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/reflection_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-defined-resolves-either-tier",
-        "core-defined-string-is-not-a-name"
-      ],
-      "status": "Formalized",
-      "notes": "Asks the same deterministic lookup execution performs, of a Symbol: TRUE when the name resolves in Core or User. A String is refused (notASymbol) so that no Word turns text into a name, which is what keeps the DEF-time acyclicity check complete.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.lookup"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "flow"
-    },
-    {
       "id": "core.digest",
       "kind": "coreword",
       "surface": "DIGEST",
@@ -3205,32 +2852,6 @@
       "core_tier": "material",
       "standard_relation": "operational",
       "native_retention_reason": "One traversal instead of a scan of the key vector per distinct key, which is O(n*k) with the index plumbing written by hand."
-    },
-    {
-      "id": "core.random",
-      "kind": "coreword",
-      "surface": "RANDOM",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
-      ],
-      "law_tests": [
-        "rust/tests/standard_operational_laws.rs"
-      ],
-      "conformance_cases": [
-        "kernel-random"
-      ],
-      "status": "Formalized",
-      "notes": "A deterministic exact-rational stream in [0,1) as a pure function of an integer seed; no host entropy and no hidden state.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.seeded-stream",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
     },
     {
       "id": "module.algo.index-of",
@@ -3528,59 +3149,6 @@
       "core_tier": "identity"
     },
     {
-      "id": "module.math.abs",
-      "kind": "coreword",
-      "surface": "ABS",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-abs"
-      ],
-      "status": "Formalized",
-      "notes": "Absolute value derived from sign/order and exact arithmetic.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.exact-real.gosper"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "derivable"
-    },
-    {
-      "id": "module.math.neg",
-      "kind": "coreword",
-      "surface": "NEG",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Additive inverse over exact numeric values.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.gosper"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
       "id": "module.math.min",
       "kind": "coreword",
       "surface": "MIN",
@@ -3861,27 +3429,6 @@
       "desugars_to": "DIV"
     },
     {
-      "id": "alias.percent",
-      "kind": "symbol_alias",
-      "surface": "%",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for MOD; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "MOD"
-    },
-    {
       "id": "alias.equals",
       "kind": "symbol_alias",
       "surface": "=",
@@ -3943,48 +3490,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "GT"
-    },
-    {
-      "id": "alias.less-than-or-equal",
-      "kind": "symbol_alias",
-      "surface": "<=",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for LTE; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "LTE"
-    },
-    {
-      "id": "alias.greater-than-or-equal",
-      "kind": "symbol_alias",
-      "surface": ">=",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for GTE; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "GTE"
     },
     {
       "id": "alias.not-equal",

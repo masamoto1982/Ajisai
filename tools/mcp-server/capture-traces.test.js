@@ -87,8 +87,8 @@ assert.deepEqual(negative.toolCalls, [], "restraint records an empty turn, not a
 // reached the right tool in most of those very turns.
 const exploring = scriptedClient([{
   content: [
-    { type: "tool_use", id: "l1", name: "word_contract", input: { word: "MOD" } },
-    { type: "tool_use", id: "c1", name: "compute", input: { source: "10 4 MOD" } },
+    { type: "tool_use", id: "l1", name: "word_contract", input: { word: "FLOOR" } },
+    { type: "tool_use", id: "c1", name: "compute", input: { source: "10 'A' BIND 4 'B' BIND A A B / FLOOR B * -" } },
   ],
   stop_reason: "tool_use",
 }]);

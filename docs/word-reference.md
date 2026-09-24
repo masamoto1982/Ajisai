@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **99 Words**, of which **53** form the Semantic Kernel and **46** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **86 Words**, of which **50** form the Semantic Kernel and **36** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -43,20 +43,6 @@ Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yie
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `TRUE TRUE &`
-- **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
-
-## `OR`
-
-Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `booleanLogic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `kleeneAbsorbing`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `TRUE FALSE OR`
 - **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
 
 ## `NOT`
@@ -116,21 +102,6 @@ Test less-than comparison.
 - **Aliases:** `<`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
-## `LTE`
-
-Test less-than-or-equal comparison.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 1 LTE`
-- **Aliases:** `<=`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
-
 ## `GT`
 
 Test greater-than comparison.
@@ -144,21 +115,6 @@ Test greater-than comparison.
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `2 1 >`
 - **Aliases:** `>`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
-
-## `GTE`
-
-Test greater-than-or-equal comparison.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 1 GTE`
-- **Aliases:** `>=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `ADD`
@@ -221,21 +177,6 @@ Divide two numeric values exactly (fractional result).
 - **Aliases:** `/`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
-## `MOD`
-
-Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.
-
-- **Vocabulary tier:** Standard (`namedPattern`)
-- **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable,divisorEqualsZero → undecidable, divisionByZero
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `7 3 %`
-- **Aliases:** `%`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
 ## `FLOOR`
 
 Round toward negative infinity.
@@ -248,20 +189,6 @@ Round toward negative infinity.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 7/3 ] FLOOR`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
-## `CEIL`
-
-Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.
-
-- **Vocabulary tier:** Standard (`shorthand`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 7/3 ] CEIL`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
 ## `ROUND`
@@ -277,48 +204,6 @@ Round to nearest integer (half-up).
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 5/2 ] ROUND`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
-## `QUANTIZE`
-
-Round to the nearest multiple of 1/d, bounding the denominator by d. An exact number carries its whole history in its denominator, so an iterative method grows one without bound; quantizing each step keeps the representation the size of the answer rather than the size of the computation. Ties round away from zero, matching ROUND. A d that is not a positive integer projects to NIL.
-
-- **Vocabulary tier:** Standard (`algorithm`)
-- **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: denominatorIsNotAPositiveInteger → domainMiss
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 119/125 32/125 ] 10 QUANTIZE`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
-
-## `ABS`
-
-Absolute value of a number.
-
-- **Vocabulary tier:** Standard (`namedPattern`)
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `-2 ABS`
-- **ERROR conditions:** `nonNumeric`
-
-## `NEG`
-
-Numeric negation.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 NEG`
-- **ERROR conditions:** `nonNumeric`
 
 ## `MIN`
 
@@ -486,20 +371,6 @@ Push π: a general computable real with no algebraic normal form (LANG.VALUES.EX
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`
 - **Syntax:** `PI`
-
-## `RANDOM`
-
-Count exact rationals in [0,1), determined entirely by the seed.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: spaceExhausted → spaceExhausted
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `7 3 RANDOM`
-- **ERROR conditions:** `nonInteger`, `negativeCount`
 
 ## `GET`
 
@@ -671,7 +542,7 @@ Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`
 
 ## `DEPTH`
 
-How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes.
+How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -938,7 +809,7 @@ The union of two Records, the right one winning: `defaults overrides MERGE`. The
 
 Apply a code block to each element of a vector.
 
-- **Vocabulary tier:** Standard (`operational`)
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `consumeNil`; projection: none
@@ -989,48 +860,6 @@ Reduce a vector step by step, answering the accumulator after each element rathe
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
 - **Syntax:** `[ 1 2 3 4 ] 0 [ ADD ] SCAN`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
-
-## `ANY`
-
-TRUE if at least one element satisfies the predicate.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] [ 2 = ] ANY`
-- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
-
-## `ALL`
-
-TRUE if every element satisfies the predicate.
-
-- **Vocabulary tier:** Standard (`operational`)
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 2 4 ] [ 2 MOD 0 = ] ALL`
-- **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
-
-## `RANK`
-
-MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.COLLECTIONS.LIFT`, `LANG.DICTIONARY.ACYCLIC`
-- **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK`
-- **ERROR conditions:** `nonVector`, `invalidCount`, `notExecutable`, `blockContractViolation`
 
 ## `CHARS`
 
@@ -1160,7 +989,7 @@ Parse text as a number; Bubble/NIL on parse failure.
 
 ## `STR`
 
-Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. QUANTIZE names an approximation explicitly when one is wanted.
+Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
@@ -1173,7 +1002,7 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 
 ## `FORMAT`
 
-Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.
+Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `text`
@@ -1348,20 +1177,6 @@ Delete a user word from the dictionary.
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
 - **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
 - **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`
-
-## `DEFINED?`
-
-Whether a Symbol names a Word: TRUE when the name resolves in Core or in User under the same deterministic lookup execution uses, FALSE otherwise. `[ ADD ] 0 GET DEFINED?` is TRUE; a name `DEF` has not bound is FALSE, and becomes TRUE the moment it is. The operand is a Symbol, never a String: a String is text, not a name, and no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so `'ADD' DEFINED?` is an ERROR (`notASymbol`) rather than a lookup. A BIND name is a value's name, not a Word's, and answers FALSE.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `dictionary`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.ACYCLIC`, `LANG.VALUES.DISJOINT`
-- **Syntax:** `[ ADD ] 0 GET DEFINED?`
-- **ERROR conditions:** `notASymbol`
 
 ## `DIGEST`
 

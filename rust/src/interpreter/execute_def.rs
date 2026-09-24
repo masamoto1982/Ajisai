@@ -237,7 +237,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // Section 8.7: the User dictionary's reference graph is acyclic — no Word
     // may name itself, directly or through any chain of other User words.
     // Repetition is expressed only through the bounded higher-order Words
-    // (`MAP`, `FILTER`, `FOLD`, `ANY`, `ALL`) over an already-finite Vector,
+    // (`MAP`, `FILTER`, `FOLD`, `SCAN`) over an already-finite Vector,
     // never through a Word calling itself: every evaluation is then
     // structurally finite, not merely bounded by a runtime step budget.
     if let Some(cycle) = interp.find_reference_cycle(&upper_name, &new_text_references) {

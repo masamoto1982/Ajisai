@@ -139,13 +139,13 @@ mod tests {
         }
     }
 
-    /// A name reserved as an alias keeps its own diagnosis: `+` and `>=` both
+    /// A name reserved as an alias keeps its own diagnosis: `+` and `<` both
     /// lex as perfectly ordinary Symbols, so the unwritable-name rule must not
     /// shadow the more specific message. This is why that rule is checked after
     /// the reserved-name one rather than before it.
     #[tokio::test]
     async fn a_reserved_alias_keeps_its_own_message() {
-        for name in ["+", ">="] {
+        for name in ["+", "<"] {
             let err = def(name).await.expect_err(&format!("`{name}` is reserved"));
             assert!(
                 err.contains("reserved"),

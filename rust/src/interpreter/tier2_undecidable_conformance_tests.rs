@@ -37,13 +37,13 @@ async fn pi_is_a_computable_real_decisive_against_separated_rationals() {
     }
 }
 
-/// `EQ`/`LT`/`LTE`/`GT`/`GTE`: a `PI PI` pair never separates, so the
+/// `EQ`/`LT`/`GT`: a `PI PI` pair never separates, so the
 /// comparison's budget exhausts and the result is the logical Unknown (U) —
 /// a NIL tagged `TruthValue` so `truthValue()` reports `unknown`, not an
 /// ordinary absence and never an error.
 #[tokio::test]
 async fn comparison_family_projects_undecidable_pi_pair_to_unknown() {
-    for name in ["EQ", "LT", "LTE", "GT", "GTE"] {
+    for name in ["EQ", "LT", "GT"] {
         let code = format!("PI PI {name}");
         let stack = run_ok(&code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
@@ -56,7 +56,7 @@ async fn comparison_family_projects_undecidable_pi_pair_to_unknown() {
     }
 }
 
-/// `MIN`/`MAX`/`ABS`: their output domain is numeric, not truth, so an
+/// `MIN`/`MAX`: their output domain is numeric, not truth, so an
 /// undecidable `PI PI` pair projects to a plain NIL — no `TruthValue` hint.
 #[tokio::test]
 async fn selecting_words_project_undecidable_pi_pair_to_plain_nil() {
@@ -102,10 +102,10 @@ async fn ordering_words_project_undecidable_pi_pair_to_plain_nil() {
 ///
 /// It did not: `Computable`'s `PartialEq` is pointer identity, so the shared
 /// pair took `pairwise_eq`'s structural shortcut and `X X EQ` answered TRUE
-/// while `X X GTE` — which equality entails — still answered UNKNOWN.
+/// while `X X LT NOT` — which equality entails — still answered UNKNOWN.
 #[tokio::test]
 async fn equality_reads_the_value_not_the_allocation() {
-    for op in ["EQ", "LT", "LTE", "GT", "GTE"] {
+    for op in ["EQ", "LT", "GT"] {
         let fresh = run_ok(&format!("PI PI {op}")).await;
         let shared = run_ok(&format!("PI 'X' BIND X X {op}")).await;
         assert!(

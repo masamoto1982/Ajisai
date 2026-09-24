@@ -446,24 +446,6 @@ impl ExactReal {
         }
     }
 
-    /// Ceiling. `None` for nil or an unpinned Tier 2 value.
-    pub fn ceil(&self) -> Option<ExactReal> {
-        match self {
-            Self::Rational(f) => {
-                if f.is_nil() {
-                    return None;
-                }
-                Some(Self::from_bigint(f.numerator().div_ceil(&f.denominator())))
-            }
-            Self::Algebraic(a) => Some(Self::from_bigint(a.ceil_int())),
-            Self::Computable(_) => self.tier2_pinned_integer(|iv| {
-                let cl = iv.lo.numerator().div_ceil(&iv.lo.denominator());
-                let ch = iv.hi.numerator().div_ceil(&iv.hi.denominator());
-                (cl == ch).then_some(cl)
-            }),
-        }
-    }
-
     /// Round to the nearest integer, ties away from zero (matching
     /// `Fraction::round`). `None` for nil or an unpinned Tier 2 value.
     pub fn round(&self) -> Option<ExactReal> {

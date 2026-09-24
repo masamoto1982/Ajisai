@@ -34,7 +34,7 @@ pub(crate) struct FlatTensor {
 impl FlatTensor {
     /// Every caller reaches this only through the arithmetic-broadcast
     /// machinery (`apply_lane_wise_broadcast`, `apply_binary_broadcast_with_metrics`)
-    /// on behalf of ADD/SUB/MUL/DIV/MOD/QUANTIZE, which all declare
+    /// on behalf of ADD/SUB/MUL/DIV, which all declare
     /// `nonNumeric` uniformly — so a non-numeric operand's `StructureError`
     /// is remapped directly here, not at each caller.
     pub(crate) fn from_value(value: &Value) -> Result<Self> {

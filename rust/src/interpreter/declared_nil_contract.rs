@@ -85,10 +85,6 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
             "notASymbol",
             "CONTRACT: expected a Symbol naming a Word, got NIL",
         ),
-        ("DEFINED?", 0) => AjisaiError::declared(
-            "notASymbol",
-            "DEFINED?: expected a Symbol naming a Word, got NIL",
-        ),
         ("DEL", 0) => AjisaiError::declared("nonText", "expected a name (String), got Nil"),
         ("FAIL", 0) => AjisaiError::declared(
             "nonText",
@@ -104,7 +100,6 @@ fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
         ),
 
         // Arity 2, uniform across both positions.
-        ("RANDOM", _) => AjisaiError::declared("nonInteger", "expected an integer, got NIL"),
         ("CONCAT", _) => AjisaiError::declared(
             "nonVector",
             "CONCAT: expected two Vectors, got a non-vector operand",
@@ -262,10 +257,10 @@ impl Interpreter {
             // with non-NIL operands; `consumeNil` and `inspectNil` make the NIL
             // itself the Word's subject. None of them constrain dispatch.
             //
-            // `kleeneAbsorbing` (strong-Kleene `AND`/`OR`, LANG.VALUES.TRUTH)
+            // `kleeneAbsorbing` (strong-Kleene `AND`, LANG.VALUES.TRUTH)
             // cannot be decided from a NIL operand alone: whether it settles
             // to a definite result or to UNKNOWN depends on the *other*
-            // operand (FALSE absorbs `AND`, TRUE absorbs `OR`), so dispatch
+            // operand (FALSE absorbs `AND`), so dispatch
             // must always reach the primitive rather than pre-empt it the way
             // a blanket `passthrough` does.
             NilPolicy::CreatesNil
@@ -351,8 +346,9 @@ mod declared_nil_contract_tests {
         // Phase 6 added DEFINED? and CONTRACT (1 each) and FORMAT (2): 38 + 4.
         // The post-work-order adjustment folded PROBE into CONTRACT (−1) and
         // added UPPER and LOWER (+2): 42 + 1.
+        // The minimal-core cut removed DEFINED? (1) and RANDOM (2): 43 − 3.
         assert_eq!(
-            checked, 43,
+            checked, 40,
             "the set of fixed-arity rejectNil Words changed; update nil_rejection_error"
         );
     }

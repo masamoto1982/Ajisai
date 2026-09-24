@@ -134,10 +134,10 @@ const TIMEOUT_DIAGNOSIS: ProtocolDiagnosis = {
             code: 'trimWhatTheRunCarries',
             title: { en: 'Trim what the run carries', ja: '実行が抱える値を削る' },
             detail: {
-                en: 'Exact values grow as they are combined; QUANTIZE bounds a denominator that '
-                    + 'is otherwise free to grow every iteration.',
-                ja: '厳密値は組み合わせるほど大きくなる。QUANTIZE は、そのままでは反復ごとに'
-                    + '増え続ける分母に上限を与える。'
+                en: 'Exact values grow as they are combined; rounding to a grid (x d MUL FLOOR d DIV) '
+                    + 'bounds a denominator that is otherwise free to grow every iteration.',
+                ja: '厳密値は組み合わせるほど大きくなる。格子への丸め(x d MUL FLOOR d DIV)は、'
+                    + 'そのままでは反復ごとに増え続ける分母に上限を与える。'
             }
         },
         {

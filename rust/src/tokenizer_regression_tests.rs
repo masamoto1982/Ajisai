@@ -249,7 +249,7 @@ mod tokenizer_regression_tests {
     }
 
     #[test]
-    fn test_percent_symbol_in_mod_context() {
+    fn test_percent_symbol_after_vectors() {
         let result = tokenize("[ 7 ] [ 3 ] %").unwrap();
         assert_eq!(
             result,

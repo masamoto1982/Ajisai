@@ -1,11 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::arithmetic::{push_exact_real_broadcast_result, ExactArithmeticSchema};
-use crate::interpreter::arithmetic_division::{division_by_zero_projection, modulo_lane};
 use crate::interpreter::record_lift;
-use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
-use crate::interpreter::value_extraction_helpers::{
-    create_number_value, nil_passthrough_binary, nil_passthrough_unary,
-};
+use crate::interpreter::value_extraction_helpers::{create_number_value, nil_passthrough_unary};
 use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -33,9 +28,7 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
     interp.stack.set_role_at(stack_len - 1, Interpretation::Nil);
 }
 
-use super::tensor_ops::{
-    apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, build_nested_value,
-};
+use super::tensor_ops::{apply_unary_flat_with_metrics, build_nested_value};
 
 fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G, op_name: &str) -> Result<()>
 where
@@ -76,6 +69,37 @@ where
         return Ok(());
     }
 
+    // A NIL lane passes through carrying its reason (LANG.FAILURE.PASSTHROUGH).
+    // The flat route below works on bare fractions and would keep the lane
+    // absent but drop why, so a vector holding one takes the lane-wise route.
+    if val.is_vector() && holds_nil_lane(&val) {
+        let scalar_op = |lane: &Value| -> Result<Value> {
+            if let Some(f) = lane.as_scalar() {
+                return Ok(create_number_value(op(f)));
+            }
+            if let ValueData::ExactScalar(er) = &lane.data {
+                return Ok(match exact_op(er) {
+                    Some(result) => Value::from_exact_real(result),
+                    None => Value::nil_with_reason_unknown(NilReason::Undecidable),
+                });
+            }
+            Err(AjisaiError::declared(
+                "nonNumeric",
+                format!("{} requires number or vector", op_name),
+            ))
+        };
+        return match crate::interpreter::math_ops::lift_unary_numeric(&val, &scalar_op) {
+            Ok(result) => {
+                interp.stack.push(result);
+                Ok(())
+            }
+            Err(e) => {
+                interp.stack.push(val);
+                Err(e)
+            }
+        };
+    }
+
     if val.is_vector() {
         match apply_unary_flat_with_metrics(&val, op, Some(&mut interp.runtime_metrics)) {
             Ok(result) => {
@@ -99,6 +123,13 @@ where
     ))
 }
 
+fn holds_nil_lane(value: &Value) -> bool {
+    match value.as_vector_view() {
+        Some(items) => items.iter().any(holds_nil_lane),
+        None => value.is_nil(),
+    }
+}
+
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_floor)? {
         return Ok(());
@@ -106,131 +137,11 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     apply_unary_math(interp, |f| f.floor(), |er| er.floor(), "FLOOR")
 }
 
-/// `CEIL` is `FLOOR`'s counterpart: the same integer projection, toward
-/// positive infinity. `Fraction::ceil` and `ExactReal::ceil` already existed
-/// beside their `floor`s, so the Word is the one line that names them; a
-/// Kernel-only `NEG FLOOR NEG` says the same thing in three tokens, which is
-/// why it is a Standard shorthand rather than a Kernel Word.
-pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_unary(interp, &op_ceil)? {
-        return Ok(());
-    }
-    apply_unary_math(interp, |f| f.ceil(), |er| er.ceil(), "CEIL")
-}
-
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_round)? {
         return Ok(());
     }
     apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
-}
-
-pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
-    if nil_passthrough_binary(interp) {
-        return Ok(());
-    }
-    if record_lift::lift_binary(interp, &op_mod)? {
-        return Ok(());
-    }
-
-    // ExactScalar path: a mod b = a - b * floor(a/b), exact over Tier 1
-    if interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a_ref = &interp.stack[stack_len - 2];
-        let b_ref = &interp.stack[stack_len - 1];
-        let has_exact = matches!(&a_ref.data, ValueData::ExactScalar(_))
-            || matches!(&b_ref.data, ValueData::ExactScalar(_));
-        if has_exact {
-            let a_er = match &a_ref.data {
-                ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-                ValueData::ExactScalar(er) => Some(er.clone()),
-                _ => None,
-            };
-            let b_er = match &b_ref.data {
-                ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-                ValueData::ExactScalar(er) => Some(er.clone()),
-                _ => None,
-            };
-            if let (Some(a), Some(b)) = (a_er, b_er) {
-                // Zero-ness of the divisor is decidable on the normal
-                // form: a Tier 1 algebraic is never zero, and a rational
-                // shows it structurally.
-                if b.is_structurally_zero() {
-                    // A zero divisor is a projection, not a failure: the
-                    // operands are well formed and the operation simply has no
-                    // answer (`LANG.FAILURE.TRICHOTOMY`). `DIV` has always read
-                    // it that way; `MOD` raised, which made one condition mean
-                    // two things depending on which Word wrapped the same
-                    // division.
-                    interp.stack.pop();
-                    interp.stack.pop();
-                    interp.stack.push(division_by_zero_projection());
-                    return Ok(());
-                }
-                // a mod b = a - b * floor(a/b). A `None` here (after the
-                // zero check) means an absent operand slipped through:
-                // project to NIL rather than erroring.
-                let modulo = a
-                    .div(&b)
-                    .and_then(|q| q.floor())
-                    .map(|fl| a.sub(&b.mul(&fl)));
-                interp.stack.pop();
-                interp.stack.pop();
-                match modulo {
-                    Some(result) => interp.stack.push(Value::from_exact_real(result)),
-                    None => push_undecidable_nil(interp),
-                }
-                return Ok(());
-            }
-        }
-    }
-
-    // A *vector* of irrationals has no scalar `ExactScalar` on top, so the
-    // block above declines it and the rational broadcast below cannot hold it
-    // either: `[ 2 3 ] [ SQRT ] MAP [ 1 1 ] %` flattened two continued
-    // fractions into a rational lane buffer and indexed off its end — a panic,
-    // which is no outcome at all under LANG.FAILURE.TRICHOTOMY. Take the same
-    // exact-real broadcast ADD/SUB/MUL/DIV take; `MOD` was simply never given
-    // one.
-    if let Some((a, b)) = crate::interpreter::arithmetic::stacktop_pair(interp) {
-        if push_exact_real_broadcast_result(interp, ExactArithmeticSchema::Mod, &a, &b)? {
-            return Ok(());
-        }
-    }
-
-    let b_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let result = apply_binary_broadcast_with_metrics(
-        &a_val,
-        &b_val,
-        |x, y| ExactArithmeticSchema::Mod.fraction(x, y),
-        Some(&mut interp.runtime_metrics),
-    );
-
-    // `LANG.COLLECTIONS.LIFT`: a zero divisor empties its own lane, it does not
-    // empty the vector. The flat broadcast's leaf answers with a `Fraction`, so
-    // a projection can only surface there as one error for the whole operation;
-    // re-run lane-wise, where the leaf answers with a value and each projection
-    // carries its reason. The same fallback `DIV` uses, and it costs a second
-    // pass only when a zero divisor was actually met.
-    let result = match result {
-        Err(AjisaiError::DivisionByZero) => apply_lane_wise_broadcast(&a_val, &b_val, modulo_lane),
-        other => other,
-    };
-
-    match result {
-        Ok(r) => {
-            interp.stack.push(r);
-            Ok(())
-        }
-        Err(e) => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
-            Err(e)
-        }
-    }
 }
 
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {

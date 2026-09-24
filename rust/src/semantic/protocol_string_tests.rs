@@ -89,7 +89,7 @@ fn unknown_advertises_truth_valued_capability() {
     // LANG.VALUES.TRUTH: the logical Unknown (U) is observed through the
     // `truthValue` axis as `unknown` and advertises the `truthValued`
     // capability. U has no dedicated `ValueData` variant — it is `Nil`
-    // data carrying the `TruthValue` hint. `AND`/`OR`/`NOT` construct it at
+    // data carrying the `TruthValue` hint. `AND`/`NOT` construct it at
     // the interpreter level (`interpreter::logic::as_unknown`); this test
     // stays at the `Value` level, so it still builds one directly.
     use crate::types::{Interpretation, Value};

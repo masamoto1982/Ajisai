@@ -10,6 +10,7 @@
 
 use ajisai_core::interpreter::Interpreter;
 
+/// The Semantic Kernel: the 50 Words every Standard must be derivable from.
 const KERNEL_WORDS: &[&str] = &[
     "TRUE",
     "FALSE",
@@ -22,28 +23,45 @@ const KERNEL_WORDS: &[&str] = &[
     "MUL",
     "DIV",
     "FLOOR",
-    "NEG",
     "SQRT",
+    "POW",
+    "PI",
     "GET",
     "LENGTH",
     "CONCAT",
     "COLLECT",
     "RANGE",
     "FOLD",
+    "MAP",
+    "SHAPE",
+    "RESHAPE",
+    "FLATTEN",
+    "DEPTH",
+    "RECORD",
+    "KEYS",
+    "VALUES",
+    "AT",
+    "WITH",
+    "WITHOUT",
+    "HAS?",
+    "MERGE",
     "CHARS",
     "JOIN",
     "NUM",
     "STR",
     "SELECT",
     "EXEC",
+    "CONTRACT",
+    "FAIL",
     "NIL",
     "NIL?",
     "NIL-REASON",
-    "OR-NIL",
+    "ABSENT",
+    "BIND",
     "DEF",
     "DEL",
+    "DIGEST",
     "PRINT",
-    "REFLECT",
 ];
 
 async fn observe(source: &str) -> Vec<String> {
@@ -92,65 +110,32 @@ async fn equivalent(native: &str, witness: &str) {
 }
 
 #[tokio::test]
-async fn truth_standards_have_kernel_only_witnesses() {
-    for (native, witness) in [
-        ("TRUE FALSE OR", "TRUE NOT FALSE NOT AND NOT"),
-        ("FALSE FALSE OR", "FALSE NOT FALSE NOT AND NOT"),
-        ("2 3 LTE", "2 3 GT NOT"),
-        ("3 2 LTE", "3 2 GT NOT"),
-        ("3 2 GTE", "3 2 LT NOT"),
-        ("2 3 GTE", "2 3 LT NOT"),
-    ] {
-        equivalent(native, witness).await;
-    }
-}
-
-#[tokio::test]
 async fn arithmetic_standards_have_kernel_only_witnesses() {
     for (native, witness) in [
-        ("7 3 SUB", "7 3 NEG ADD"),
-        ("-7 3 SUB", "-7 3 NEG ADD"),
-        ("7 3 MOD", "7 3 DIV FLOOR 3 MUL NEG 7 ADD"),
-        ("-7 3 MOD", "-7 3 DIV FLOOR 3 MUL NEG -7 ADD"),
+        // Subtraction is adding the additive inverse, and the inverse is a
+        // multiplication by -1.
+        ("7 3 SUB", "7 3 -1 MUL ADD"),
+        ("-7 3 SUB", "-7 3 -1 MUL ADD"),
         ("5/2 ROUND", "5/2 1/2 ADD FLOOR"),
-        // CEIL is FLOOR reflected through zero: ceil(x) = -floor(-x).
-        ("7/3 CEIL", "7/3 NEG FLOOR NEG"),
-        ("-7/3 CEIL", "-7/3 NEG FLOOR NEG"),
-        ("3 CEIL", "3 NEG FLOOR NEG"),
-        ("-5/2 ROUND", "-5/2 NEG 1/2 ADD FLOOR NEG"),
-        // QUANTIZE is ROUND scaled by the denominator: round(x*d)/d. Written
-        // in the Kernel the scaling is explicit, which is the point — the
-        // Standard Word exists so the resolution is named once instead of
-        // spelled out with a magic constant at every step of a loop.
-        ("119/125 10 QUANTIZE", "119/125 10 MUL 1/2 ADD FLOOR 10 DIV"),
-        ("32/125 10 QUANTIZE", "32/125 10 MUL 1/2 ADD FLOOR 10 DIV"),
-        (
-            "-32/125 10 QUANTIZE",
-            "-32/125 NEG 10 MUL 1/2 ADD FLOOR NEG 10 DIV",
-        ),
-        // At d = 1 the two Words coincide, which is the boundary that makes
-        // QUANTIZE a generalization rather than a second rounding rule.
-        ("5/2 1 QUANTIZE", "5/2 1/2 ADD FLOOR"),
-        // |x| = sqrt(x*x): exact over the rationals closed under SQRT, so the
-        // witness needs no case split on the sign.
-        ("-7 ABS", "-7 -7 MUL SQRT"),
-        ("7 ABS", "7 7 MUL SQRT"),
-        // min(a,b) = ((a+b) - |a-b|) / 2 and max(a,b) = ((a+b) + |a-b|) / 2.
+        ("-5/2 ROUND", "-5/2 -1 MUL 1/2 ADD FLOOR -1 MUL"),
+        // min(a,b) = ((a+b) - |a-b|) / 2 and max(a,b) = ((a+b) + |a-b|) / 2,
+        // with |x| = sqrt(x*x): exact over the rationals closed under SQRT, so
+        // the witness needs no case split on the sign.
         (
             "2 5 MIN",
-            "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT NEG ADD 2 DIV",
+            "2 5 ADD 2 5 -1 MUL ADD 2 5 -1 MUL ADD MUL SQRT -1 MUL ADD 2 DIV",
         ),
         (
             "5 2 MIN",
-            "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT NEG ADD 2 DIV",
+            "5 2 ADD 5 2 -1 MUL ADD 5 2 -1 MUL ADD MUL SQRT -1 MUL ADD 2 DIV",
         ),
         (
             "2 5 MAX",
-            "2 5 ADD 2 5 NEG ADD 2 5 NEG ADD MUL SQRT ADD 2 DIV",
+            "2 5 ADD 2 5 -1 MUL ADD 2 5 -1 MUL ADD MUL SQRT ADD 2 DIV",
         ),
         (
             "5 2 MAX",
-            "5 2 ADD 5 2 NEG ADD 5 2 NEG ADD MUL SQRT ADD 2 DIV",
+            "5 2 ADD 5 2 -1 MUL ADD 5 2 -1 MUL ADD MUL SQRT ADD 2 DIV",
         ),
     ] {
         equivalent(native, witness).await;

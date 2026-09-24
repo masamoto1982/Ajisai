@@ -98,8 +98,7 @@ impl CostBound {
 ///   outside `arithmetic.rs`). `runtime_limits.rs`'s own module comment states
 ///   `ADD`/`SUB`/`MUL`/`DIV` are "priced limb×limb, including addition and
 ///   subtraction"; `SUM` folds with that same charged schema per element
-///   (`add_values_metered`); `QUANTIZE` was measured non-zero on a minimal
-///   case. Every other word measured zero on a representative input — a
+///   (`add_values_metered`). Every other word measured zero on a representative input — a
 ///   plausible `const` bound, but not `exact`, since one representative
 ///   measurement is evidence rather than a proof across every bit width.
 /// * `collection` (collectionWork): the element-processing words scale with

@@ -191,11 +191,7 @@ pub(crate) fn check_structure(tokens: &[Token]) -> Result<(), String> {
 }
 
 pub(crate) fn normalize_word(symbol: &str) -> String {
-    match symbol {
-        "%" => "MOD".to_string(),
-        "&" => "AND".to_string(),
-        _ => symbol.to_uppercase(),
-    }
+    symbol.to_uppercase()
 }
 
 /// The outcome of best-effort static word resolution.

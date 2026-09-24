@@ -222,9 +222,9 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
 /// Compile a block of tokens — a higher-order Word's code operand — into a
 /// one-line plan.
 ///
-/// `MAP`, `FILTER`, `FOLD`, `ALL` and `ANY` used to re-interpret their block's
+/// `MAP`, `FILTER` and `FOLD` used to re-interpret their block's
 /// tokens once per element, which means resolving every Symbol in it by name
-/// every time: `[ ABS ] MAP` over 20,000 lanes hashed the string `"ABS"` and
+/// every time: `[ SQRT ] MAP` over 20,000 lanes hashed the string `"SQRT"` and
 /// probed the dictionary 20,000 times to reach the one Word it names. A block is
 /// fixed for the length of the loop, so it is compiled before the loop instead,
 /// and `CompiledOp::CallBuiltin` carries the `CompiledCall` that resolution

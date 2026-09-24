@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 # Headless agent-facing CLI (docs/dev/agent-cli-output-contract.md).
-# Builds with the default native features (std + hosted); never depends on
+# Builds with the default native features (std); never depends on
 # the wasm feature.
 [[bin]]
 name = "ajisai"
@@ -41,7 +41,6 @@ js-sys = { version = "0.3", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
-getrandom = { version = "0.2", optional = true }
 
 [dependencies.web-sys]
 version = "0.3"
@@ -49,20 +48,12 @@ optional = true
 features = ["console", "Window", "CustomEvent", "EventTarget", "Event"]
 
 [features]
-# default keeps the native std + hosted build. hosted is included so that
-# CSPRNG (a Hosted capability) and the existing native test suite still build
-# and run under a plain `cargo test`. The portability template's bare
-# default=["std"] would drop `getrandom` and fail to compile interpreter/random.rs.
-default = ["std", "hosted"]
+default = ["std"]
 std = []
-# hosted: ネイティブ std 環境では getrandom は OS バックエンドで動作する。
-# wasm 環境では getrandom/js を使う（wasm feature 側で指定）。
-hosted = ["std", "dep:getrandom"]
 wasm = [
-  "std", "hosted",
+  "std",
   "dep:wasm-bindgen", "dep:js-sys", "dep:serde-wasm-bindgen",
   "dep:wasm-bindgen-futures", "dep:console_error_panic_hook", "dep:web-sys",
-  "getrandom/js",
 ]
 
 [dev-dependencies]

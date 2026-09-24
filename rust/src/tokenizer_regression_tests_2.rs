@@ -301,8 +301,8 @@ mod tokenizer_regression_tests_2 {
     }
 
     /// Every symbol is exactly one character, so a two-character spelling is one
-    /// ordinary name token rather than a comparison. `GTE` and `NEQ` are reached
-    /// by name.
+    /// ordinary name token rather than a comparison. None of these names a Word:
+    /// the relations are spelled `a b LT NOT`, `a b GT NOT` and `a b EQ NOT`.
     #[test]
     fn test_two_character_comparisons_are_plain_names() {
         for lexeme in [">=", "<>", "<="] {

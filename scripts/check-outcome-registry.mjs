@@ -98,7 +98,7 @@ const rustStructuralErrorCategories = new Set(errorCategoryArms.values());
 // list entry (outcome-space-bijection-work-order-2026-09.md Phase 2 pitfall
 // C rules out the latter): investigation found this one Rust variant never
 // classifies a program *outcome* at all. `AjisaiError::DivisionByZero` is an
-// internal fast-path control-flow signal inside DIV/MOD's scalar arithmetic
+// internal fast-path control-flow signal inside DIV's scalar arithmetic
 // that is always caught and re-projected to the reasoned NIL
 // `nil:divisionByZero` (a real, witnessed NilReason — untouched by this
 // exclusion) before a Report is built, so `status:error` with this category

@@ -5,7 +5,7 @@
 // originally chosen by type in docs/dev/competitive-advantage-work-order-2026-08.md
 // Phase 2).
 //
-// 99 Words in one flat dictionary with no imports means the language's whole
+// 86 Words in one flat dictionary with no imports means the language's whole
 // input/outcome surface is finite. Excluding the variable/control-arity Words
 // (COLLECT, EXEC, OR-NIL) leaves the rest with a
 // fixed integer arity; every (Word, domain tuple) pair is run through the
@@ -107,7 +107,7 @@ function resolveAjisaiBin() {
 const DOMAINS = [
   { id: 'scalarOne', source: '1', motivatedBy: [] },
   { id: 'scalarZero', source: '0', motivatedBy: ['divisionByZero'] },
-  { id: 'scalarNegative', source: '1 NEG', motivatedBy: ['domainMiss'] },
+  { id: 'scalarNegative', source: '-1', motivatedBy: ['domainMiss'] },
   { id: 'scalarLarge', source: '999', motivatedBy: ['indexOutOfBounds'] },
   { id: 'booleanTrue', source: 'TRUE', motivatedBy: [] },
   { id: 'textShort', source: "'a'", motivatedBy: [] },

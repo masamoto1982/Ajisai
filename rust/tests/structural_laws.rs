@@ -82,7 +82,6 @@ proptest! {
         assert_law("reshape-through-own-shape", &format!("{v} {v} SHAPE RESHAPE"), &v);
         assert_law("flatten-flat", &format!("{v} FLATTEN"), &v);
         assert_law("depth-flat", &format!("{v} DEPTH"), "1");
-        assert_law("rank-1-is-map", &format!("{v} 1 [ 2 MUL ] RANK"), &format!("{v} [ 2 MUL ] MAP"));
     }
 
     /// Nesting a Vector inside another raises its depth by one, prefixes its

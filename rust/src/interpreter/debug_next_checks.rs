@@ -88,10 +88,10 @@ pub(crate) fn build_next_checks(
     match why {
         CauseClass::Domain => {
             if matches!(category, Some(ErrorCategory::DivisionByZero)) {
-                // Name the Word that actually met the zero. This check was
-                // written for `DIV` and hard-coded its spelling, so `MOD` —
-                // which declares the same `divisorEqualsZero` condition — sent
-                // the reader to look at an operand of a Word it had not called.
+                // Name the Word that actually met the zero rather than
+                // hard-coding `DIV`: any Word that declares the same
+                // `divisorEqualsZero` condition must send the reader to an
+                // operand of the Word it actually called.
                 let word_label = word.unwrap_or("the word");
                 out.push(check(
                     "checkDivisor",

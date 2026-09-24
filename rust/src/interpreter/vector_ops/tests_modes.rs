@@ -116,19 +116,3 @@ async fn test_floor_consumes_operand() {
     assert!(result.is_ok(), "FLOOR should succeed: {:?}", result);
     assert_eq!(interp.stack.len(), 1, "FLOOR leaves only its result");
 }
-
-#[tokio::test]
-async fn test_mod_consumes_both_operands() {
-    let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 3 ] MOD").await;
-    assert!(result.is_ok(), "MOD should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 1, "MOD leaves only its result");
-}
-
-#[tokio::test]
-async fn test_percent_alias_consumes_both_operands() {
-    let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 3 ] %").await;
-    assert!(result.is_ok(), "% should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 1, "% alias leaves only its result");
-}

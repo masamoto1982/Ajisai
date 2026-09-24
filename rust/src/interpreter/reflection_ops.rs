@@ -1,4 +1,4 @@
-//! The reflection Words: `DEFINED?`, `DIGEST`, `CONTRACT`
+//! The reflection Words: `DIGEST`, `CONTRACT`
 //! (LANG.DICTIONARY.RESOLUTION, LANG.DICTIONARY.MUTATION, LANG.CONTRACT.REGISTRY,
 //! LANG.CONTRACT.CHECK).
 //!
@@ -75,21 +75,6 @@ fn resolve(interp: &Interpreter, canonical: &str) -> Option<Resolved> {
     } else {
         None
     }
-}
-
-/// `DEFINED? ( [ symbol ] -> [ TRUE | FALSE ] )`.
-pub(crate) fn op_defined(interp: &mut Interpreter) -> Result<()> {
-    let operand = take_operand(interp)?;
-    let Some(name) = symbol_name(&operand) else {
-        let got = describe(&operand);
-        restore(interp, operand);
-        return Err(not_a_symbol("DEFINED?", got));
-    };
-    let defined = resolve(interp, &canonical_name(&name)).is_some();
-    interp
-        .stack
-        .push_with_role(Value::from_bool(defined), Interpretation::TruthValue);
-    Ok(())
 }
 
 fn symbol_name(value: &Value) -> Option<String> {

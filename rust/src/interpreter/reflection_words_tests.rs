@@ -1,4 +1,4 @@
-//! Behavioral probes for the reflection Words `DEFINED?`, `DIGEST`,
+//! Behavioral probes for the reflection Words `DIGEST` and
 //! `CONTRACT` — over a Symbol and over a block
 //! (LANG.DICTIONARY.RESOLUTION, LANG.DICTIONARY.MUTATION,
 //! LANG.CONTRACT.REGISTRY, LANG.CONTRACT.CHECK).
@@ -35,33 +35,13 @@ mod reflection_words_tests {
     }
 
     #[tokio::test]
-    async fn defined_answers_resolution_in_either_tier() {
-        assert_eq!(top("[ ADD ] 0 GET DEFINED?").await, "TRUE");
-        // Case and alias fold exactly as execution folds them.
-        assert_eq!(top("[ add ] 0 GET DEFINED?").await, "TRUE");
-        assert_eq!(top("[ + ] 0 GET DEFINED?").await, "TRUE");
-        assert_eq!(top("[ TWICE ] 0 GET DEFINED?").await, "FALSE");
-        assert_eq!(
-            top("[ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?").await,
-            "TRUE"
-        );
-        assert_eq!(
-            top("[ 2 MUL ] 'TWICE' DEF 'TWICE' DEL [ TWICE ] 0 GET DEFINED?").await,
-            "FALSE"
-        );
-        // A BIND name names a value, not a Word.
-        assert_eq!(top("7 'N' BIND [ N ] 0 GET DEFINED?").await, "FALSE");
-    }
-
-    #[tokio::test]
     async fn a_string_is_not_a_name() {
-        assert_eq!(error_of("'ADD' DEFINED?").await, "notASymbol");
         assert_eq!(error_of("'ADD' CONTRACT").await, "notASymbol");
-        assert_eq!(error_of("NIL DEFINED?").await, "notASymbol");
+        assert_eq!(error_of("NIL CONTRACT").await, "notASymbol");
         assert_eq!(error_of("5 CONTRACT").await, "notASymbol");
         // The operand is back on the stack after the ERROR.
         let mut interp = Interpreter::new();
-        let _ = interp.execute("'ADD' DEFINED?").await;
+        let _ = interp.execute("'ADD' CONTRACT").await;
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -153,8 +133,8 @@ mod reflection_words_tests {
             "CONTRACT of a User Word is CONTRACT of its body"
         );
         assert_eq!(
-            top("[ SHOUT ] 0 GET DEFINED? [ 42 PRINT ] CONTRACT KEYS").await,
-            "FALSE [ 'inputs' 'outputs' 'nil' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
+            top("[ 42 PRINT ] CONTRACT KEYS").await,
+            "[ 'inputs' 'outputs' 'nil' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
         );
         assert_eq!(top("[ 1 2 ADD ] CONTRACT 'purity' AT").await, "'pure'");
         assert_eq!(

@@ -298,7 +298,7 @@ pub(crate) fn value_to_protocol(
     // is `value.hint` here, and U's hint is `TruthValue`), which is the axis
     // LANG.OBSERVATION.FIREWALL says a consumer must read instead of `type` —
     // so this shape is firewalled correctly, just not by hiding `type: "nil"`.
-    // `AND`, `OR`, and `NOT` construct U directly now (no Tier 2 numeric
+    // `AND` and `NOT` construct U directly now (no Tier 2 numeric
     // domain needed), so this path is live, not aspirational.
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),

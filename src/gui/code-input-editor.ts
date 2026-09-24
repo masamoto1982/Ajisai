@@ -88,8 +88,8 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
 const MAX_SUGGESTIONS = 10;
 // Two characters, not three. The mobile cheat sheet advertises autocomplete
 // while typing, and a three-character floor silently withholds it for exactly
-// the prefixes a phone typist most wants it for: `AB` for `ABS`, `DU` for
-// `DUP`. Ten results are the ceiling either way (`MAX_SUGGESTIONS`), so a
+// the prefixes a phone typist most wants it for: `MA` for `MAP`, `SQ` for
+// `SQRT`. Ten results are the ceiling either way (`MAX_SUGGESTIONS`), so a
 // shorter prefix costs a longer list, not an unbounded one.
 const MIN_SUGGESTION_TRIGGER_LENGTH = 2;
 const MOBILE_BREAKPOINT = 768;
