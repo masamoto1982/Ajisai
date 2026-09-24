@@ -115,8 +115,8 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
     let mut open_stack: Vec<usize> = Vec::new();
     for (i, t) in tokens.iter().enumerate() {
         match t {
-            Token::VectorStart | Token::RecordStart => open_stack.push(i),
-            Token::VectorEnd | Token::RecordEnd => {
+            Token::VectorStart => open_stack.push(i),
+            Token::VectorEnd => {
                 if let Some(open) = open_stack.pop() {
                     close_of[open] = Some(i);
                 }
@@ -151,13 +151,7 @@ pub(super) fn classify_vector_positions(tokens: &[Token]) -> Vec<LiteralContext>
                 contexts[i] = enclosing;
                 level_stack.push(this_level);
             }
-            // A Record is never executed, so its interior is `Data` whatever
-            // follows its close — the one group whose context needs no lookahead.
-            Token::RecordStart => {
-                contexts[i] = enclosing;
-                level_stack.push(LiteralContext::Data);
-            }
-            Token::VectorEnd | Token::RecordEnd => {
+            Token::VectorEnd => {
                 contexts[i] = level_stack.pop().unwrap_or(LiteralContext::TopLevel);
             }
             _ => {

@@ -189,7 +189,7 @@ fn a_freed_character_is_an_ordinary_name_anywhere_in_a_word() {
 /// Each pair the grammar declares lexes to the two tokens it names, and only
 /// as a whole lexeme: glued to anything, a delimiter is the source error that
 /// asks for the space. This is the law the per-character rule's removal left
-/// to carry `[`, `]`, `{` and `}` — the whole-lexeme rule is the only rule
+/// to carry `[` and `]` — the whole-lexeme rule is the only rule
 /// standing between a name and a delimiter.
 #[test]
 fn a_delimiter_stands_alone() {

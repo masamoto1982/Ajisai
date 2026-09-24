@@ -579,7 +579,7 @@
                         <li><code>[</code>と<code>]</code>は、他のどのワードとも同じく単独で立たなければなりません。<code>[ 1 2 3 ]</code>は正しく、<code>[1 2 3]</code>は空白の不足を指摘するソースエラーになります。</li>
                         <li><code>#</code>がコメントを開始するのは、それがトークンの先頭にあるときだけです。直前のトークンに密着した<code>#</code>はその名前の一部になるため、<code>ADD# メモ</code>はコメント付きの<code>ADD</code>ではなく、<code>ADD#</code>という未定義のワードです。</li>
                     </ul>
-                    <p class="ref-note">Ajisaiが意味を与える括弧は<code>[</code> <code>]</code>と<code>{</code> <code>}</code>の2組です。<code>[</code> <code>]</code>はベクトルの括弧で、コードブロックにも連分数の表示形式にも同じものを使います。<code>{</code> <code>}</code>は<a href="#records">Record</a>の字面専用で、コードになることはありません。<code>(</code>と<code>)</code>に構文上の役割はありません。これらは名前を構成するただの文字なので、単独で書けば「そんなワードは無い」という結果になります。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
+                    <p class="ref-note">Ajisaiが意味を与える括弧は<code>[</code> <code>]</code>の1組だけです。ベクトルの括弧で、コードブロックにも同じものを使います。<code>{</code> <code>}</code>や<code>(</code> <code>)</code>に構文上の役割はありません。これらは名前を構成するただの文字なので、単独で書けば「そんなワードは無い」という結果になります。詳しくは<a href="#numbers">厳密な数</a>を参照してください。</p>
                     <h3>演算子と空白の必要性</h3>
                     <p>一般的な演算記号もワード(名前)の一種であるため、前後に空白が必要です。<code>2 +</code>は<code>2</code>と<code>+</code>の2つのトークンとして正しく解釈されます。<code>2+</code>は「2+」という1つの名前とみなされ、加算ではなく未定義ワードとしてエラーになります。</p>
                     <p class="ref-note">角括弧<code>[</code> <code>]</code>も同じです。それ自体で1つのワードであり、前後に空白が必要です。<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>という不正なトークンとして拒否されるため、<code>[ 1 2 ] LENGTH</code>と書いてください。</p>
@@ -1799,8 +1799,8 @@
                 <section id="records" class="ref-page">
                     <h2>キーによる対応(<code>RECORD</code>, <code>AT</code>)</h2>
                     <p>名前の付いたデータ——価格表、設定、1行のレコード——を、Ajisaiは<strong>Record</strong>という第7の値領域で持ちます。Recordは<em>キー列</em>と<em>値列</em>を位置で対応付けたもので、キーは与えた順序を保ち、同じキーは一度しか現れません。キーには任意の値を使えます(ふつうは文字列)。ベクトルではないので、ベクトルのワードはRecordを受け取らず、Recordのワードはベクトルを受け取りません。暗黙の変換はどちら向きにもありません。</p>
-                    <p>Recordを作る形は2つあり、どちらも同じ値を作ります。<strong>字面(リテラル)</strong>の<code>{ 'x' 1 'y' 2 }</code>は、キーとその値を横に並べて書いた順に対応付けます。<code>RECORD</code>は、プログラムが計算したキー列と値列から組み立てます。字面は中身を評価しないので、要素の読み方はベクトルの字面と同じ規則です(裸の名前はシンボル、<code>TRUE</code>/<code>FALSE</code>/<code>NIL</code>だけが値)。どちらの形も、キーに値が無ければ長さの不一致、同じキーが2回あれば<code>duplicateKey</code>の<strong>同じ2つのエラー</strong>を出します。</p>
-                    <p>表示はこの字面そのもので、<code>{ 'x' 1/1 'y' 2/1 }</code>の形になります。つまり<strong>表示をそのままエディタに貼り戻せば同じRecordが再現します</strong>。Ajisaiのどの値も字面を持つので、どの表示もその値を再現するソースです。</p>
+                    <p>Recordは<code>RECORD</code>で作ります。キー列と値列を受け取り、位置で対応付けます。キーに対応する値が無ければ長さの不一致、同じキーが2回あれば<code>duplicateKey</code>のエラーになります。</p>
+                    <p>表示は<code>{ 'x' 1/1 'y' 2/1 }</code>の形です。これは値の見え方であって、ソースに書ける形ではありません。Ajisaiの区切り記号は<code>[ ]</code>だけで、<code>{</code>や<code>}</code>は普通の名前の文字です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1809,19 +1809,19 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ 'x' 1 'y' 2 } [ 'x' 'y' ] [ 1 2 ] RECORD EQ</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">字面と<code>RECORD</code>は同じ値を作る。</td>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD</code></td>
+                                    <td><code>{ 'x' 1/1 'y' 2/1 }</code></td>
+                                    <td class="notes">キー列と値列を位置で対応付ける。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ { 'a' 1 } { 'b' 2 } ] LENGTH</code></td>
+                                    <td><code>[ 'a' ] [ 1 ] RECORD [ 'b' ] [ 2 ] RECORD 2 COLLECT LENGTH</code></td>
                                     <td><code>2/1</code></td>
-                                    <td class="notes">Recordの字面は1つの要素。ベクトルの中に素直に入る。</td>
+                                    <td class="notes">Recordはベクトルの1つの要素になる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>{ 'v' [ 1 2 ] 'r' { 'k' 3 } }</code></td>
+                                    <td><code>[ 'v' 'r' ] [ 1 2 ] [ 'k' ] [ 3 ] RECORD 2 COLLECT RECORD</code></td>
                                     <td><code>{ 'v' [ 1/1 2/1 ] 'r' { 'k' 3/1 } }</code></td>
-                                    <td class="notes">2つの字面は互いに入れ子にできる。</td>
+                                    <td class="notes">値列にRecordを入れれば入れ子になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2531,7 +2531,7 @@ SELECT</code></td>
                     <p class="ref-note">複製のための道具は<a href="#bindings"><code>BIND</code></a>です。値に名前を付ければ、名前を書くたびにその値が積まれるので、どんな種類の値でも必要な回数だけ使えます。</p>
 
                     <h3>データとしてのコード</h3>
-                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>[ ]</code>はその両方にとって唯一の括弧であり(<code>{ }</code>は<a href="#records">Record</a>の字面で、コードにはなりません)、後で評価されるためのソースを保持したベクトルというだけで、データとは別の領域ではありません。あるワードの契約がそれをコードとして要求したときに実行可能なものとして読まれるだけなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>[ 2 MUL ]</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>[ ]</code>は<code>[ ]</code>です。<code>[ 1 2 + ] [ 1 2 + ] EQ</code>は<code>TRUE</code>――値がどう組み立てられたか（構築履歴）はその値の一部ではないので、あるベクトルが「コード」か「データ」かは使われ方より前には決まりません。ブロックの中の裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
+                    <p class="ref-note">コードブロックとベクトルは<strong>同じ種類の値</strong>です。<code>[ ]</code>はその両方にとって唯一の括弧であり、後で評価されるためのソースを保持したベクトルというだけで、データとは別の領域ではありません。あるワードの契約がそれをコードとして要求したときに実行可能なものとして読まれるだけなので、スタック上のブロックはどんなベクトルとも同じ姿で表示されます。<code>[ 2 MUL ]</code>は<code>[ 2/1 MUL ]</code>と表示され、<code>[ ]</code>は<code>[ ]</code>です。<code>[ 1 2 + ] [ 1 2 + ] EQ</code>は<code>TRUE</code>――値がどう組み立てられたか（構築履歴）はその値の一部ではないので、あるベクトルが「コード」か「データ」かは使われ方より前には決まりません。ブロックの中の裸の名前――上の<code>MUL</code>――はSymbolであり、リテラルを組み立てる時点では参照されません。<code>EXEC</code>や評価を要求するワードがそれを実行し、それ以外は実行しません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

@@ -17,13 +17,11 @@
 //! cares about — LANG.VALUES.DENOTATION already says a value's construction
 //! history is not part of the value, so `1.0` and `1` denoting the same
 //! Scalar are `EQ` and were always meant to be indistinguishable once built.
-//! An `ExactScalar` element (reachable only via a runtime computation such as
-//! `SQRT`, never a literal) has no number-literal lexeme at all — no
-//! implementation can synthesize one, since LANG.VALUES.EXACT is explicit
-//! that literals are source forms for rationals only — so bridging it is a
-//! hard error, a narrow and honest edge rather than a silently wrong answer.
+//! A value no source text denotes — an exact irrational, a NIL with its
+//! reason, a Record — crosses as a `Token::Value` carrying it whole, so
+//! running the Vector pushes exactly the element it holds.
 
-use crate::error::{AjisaiError, Result};
+use crate::error::Result;
 use crate::types::{Token, Value, ValueData};
 
 pub(crate) fn value_elements_to_tokens(elements: &[Value]) -> Result<Vec<Token>> {
@@ -45,20 +43,10 @@ fn push_value_as_tokens(value: &Value, out: &mut Vec<Token>) -> Result<()> {
         ValueData::Scalar(f) => out.push(Token::number_from_value(f.clone())),
         ValueData::Boolean(true) => out.push(Token::Symbol("TRUE".into())),
         ValueData::Boolean(false) => out.push(Token::Symbol("FALSE".into())),
-        ValueData::Nil => out.push(Token::Symbol("NIL".into())),
-        // A Record carries into a block as its own literal
-        // (LANG.RECORDS.STRUCTURE): key beside value, in the order the
-        // Record holds them. Executing the block therefore yields the same
-        // value — and, being one literal, it is one element of the enclosing
-        // Vector rather than a phrase of several.
-        ValueData::Record(record) => {
-            out.push(Token::RecordStart);
-            for (key, value) in record.entries() {
-                push_value_as_tokens(key, out)?;
-                push_value_as_tokens(value, out)?;
-            }
-            out.push(Token::RecordEnd);
-        }
+        // A value no source text denotes is carried across whole: a NIL
+        // keeps its reason (the `NIL` name would denote a literal NIL, a
+        // different value), and a Record has no literal of its own.
+        ValueData::Nil | ValueData::Record(_) => out.push(Token::Value(Box::new(value.clone()))),
         ValueData::Vector(children) => {
             out.push(Token::VectorStart);
             for child in children.iter() {
@@ -76,16 +64,9 @@ fn push_value_as_tokens(value: &Value, out: &mut Vec<Token>) -> Result<()> {
             }
             out.push(Token::VectorEnd);
         }
-        ValueData::ExactScalar(_) => {
-            // Shared by EXEC and DEF's body construction, which declare
-            // different errorWhen vocabularies (`notExecutable` vs none) —
-            // neither fits both callers, so this stays the Word-independent
-            // structural category.
-            return Err(AjisaiError::create_structure_error(
-                "a value with a number-literal lexeme",
-                "an ExactScalar (LANG.VALUES.EXACT — a literal denotes a rational only)",
-            ));
-        }
+        // An exact irrational has no number-literal lexeme (LANG.VALUES.EXACT:
+        // a literal denotes a rational), so it too is carried whole.
+        ValueData::ExactScalar(_) => out.push(Token::Value(Box::new(value.clone()))),
     }
     Ok(())
 }

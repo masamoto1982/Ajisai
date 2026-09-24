@@ -149,7 +149,7 @@ mod format_json_tests {
             "'quote \" and \\ and newline\n'",
             "[ [ 1 2 ] [ 3 4 ] ]",
             "[ ]",
-            "{ }",
+            "[ ] [ ] RECORD",
         ] {
             // BIND holds the value; DECODE rebuilds it beside a second
             // reading of it, and EQ takes both.

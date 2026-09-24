@@ -3273,56 +3273,6 @@
       "desugars_to": "END-VECTOR"
     },
     {
-      "id": "surface.left-brace",
-      "kind": "delimiter_sugar",
-      "surface": "{",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/round_trip_laws.rs",
-        "rust/src/lexical_grammar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [
-        "core-record-literal-builds-the-same-record"
-      ],
-      "status": "Formalized",
-      "notes": "Record opening delimiter; parser-level structure for Record literal construction (LANG.RECORDS.STRUCTURE), not a runtime word.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "BEGIN-RECORD"
-    },
-    {
-      "id": "surface.right-brace",
-      "kind": "delimiter_sugar",
-      "surface": "}",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "law_tests": [
-        "rust/tests/round_trip_laws.rs",
-        "rust/src/lexical_grammar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [
-        "core-record-literal-builds-the-same-record"
-      ],
-      "status": "Formalized",
-      "notes": "Record closing delimiter; parser-level structure for Record literal construction (LANG.RECORDS.STRUCTURE), not a runtime word.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "END-RECORD"
-    },
-    {
       "id": "surface.quote",
       "kind": "literal_sugar",
       "surface": "'",

@@ -74,20 +74,6 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         // Vector end
     },
     SurfaceForm {
-        surface: "{",
-        concept: "BEGIN-RECORD",
-        kind: SurfaceFormKind::DelimiterSugar,
-        runtime_word: false,
-        // Record literal start
-    },
-    SurfaceForm {
-        surface: "}",
-        concept: "END-RECORD",
-        kind: SurfaceFormKind::DelimiterSugar,
-        runtime_word: false,
-        // Record literal end
-    },
-    SurfaceForm {
         surface: "'",
         concept: "STRING-QUOTE",
         kind: SurfaceFormKind::LiteralSugar,
@@ -106,19 +92,14 @@ mod tests {
     use super::*;
     use crate::core_word_aliases::canonicalize_core_word_name;
 
-    /// The characters that used to be carried here as reserved markers and
-    /// retired forms, and are now ordinary name characters. `{` and `}` were
-    /// freed with them and are back in the table as the Record literal's
-    /// delimiters, so they are not among them.
-    const FREED: [&str; 3] = ["(", ")", "|"];
+    /// Characters that are ordinary name characters, not surface forms.
+    const FREED: [&str; 5] = ["(", ")", "|", "{", "}"];
 
     #[test]
     fn lookup_returns_named_concepts() {
         assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
         assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
         assert_eq!(lookup_surface_form("]").unwrap().concept, "END-VECTOR");
-        assert_eq!(lookup_surface_form("{").unwrap().concept, "BEGIN-RECORD");
-        assert_eq!(lookup_surface_form("}").unwrap().concept, "END-RECORD");
         assert_eq!(lookup_surface_form("'").unwrap().concept, "STRING-QUOTE");
     }
 

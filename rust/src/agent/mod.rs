@@ -160,29 +160,22 @@ pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
 
 /// execution — this only front-loads the same failure for `check`.
 pub(crate) fn check_structure(tokens: &[Token]) -> Result<(), String> {
-    // One stack over both delimiter pairs, so a crossed `[ }` is reported
-    // here too rather than read as balanced (`spec/grammar.json`,
-    // structuralValidation).
-    let mut open: Vec<&Token> = Vec::new();
+    let mut depth: usize = 0;
     for token in tokens {
         match token {
-            Token::VectorStart | Token::RecordStart => open.push(token),
-            Token::VectorEnd => match open.pop() {
-                Some(Token::VectorStart) => {}
-                _ => return Err("Unexpected vector end".to_string()),
-            },
-            Token::RecordEnd => match open.pop() {
-                Some(Token::RecordStart) => {}
-                _ => return Err("Unexpected Record end".to_string()),
-            },
+            Token::VectorStart => depth += 1,
+            Token::VectorEnd => {
+                depth = depth
+                    .checked_sub(1)
+                    .ok_or_else(|| "Unexpected vector end".to_string())?;
+            }
             _ => {}
         }
     }
-    match open.last() {
-        Some(Token::RecordStart) => Err("Unclosed Record".to_string()),
-        Some(_) => Err("Unclosed vector".to_string()),
-        None => Ok(()),
+    if depth > 0 {
+        return Err("Unclosed vector".to_string());
     }
+    Ok(())
 }
 
 pub(crate) fn normalize_word(symbol: &str) -> String {

@@ -695,7 +695,7 @@ The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5
 
 ## `RECORD`
 
-Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. The literal `{ 'x' 1 'y' 2 }` builds the same Record from the same values, pairing its elements as it reads them; this Word is what builds one from sequences a program computed.
+Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`

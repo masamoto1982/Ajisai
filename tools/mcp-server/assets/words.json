@@ -2639,9 +2639,9 @@
         "LANG.VALUES.VECTOR"
       ],
       "documentation": {
-        "summary": "Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. The literal `{ 'x' 1 'y' 2 }` builds the same Record from the same values, pairing its elements as it reads them; this Word is what builds one from sequences a program computed.",
+        "summary": "Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins.",
         "hover": "RECORD — a keyed correspondence from a key Vector and a value Vector",
-        "lookup": "Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. The literal `{ 'x' 1 'y' 2 }` builds the same Record from the same values, pairing its elements as it reads them; this Word is what builds one from sequences a program computed.",
+        "lookup": "Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins.",
         "syntax": "[ 'x' 'y' ] [ 1 2 ] RECORD",
         "role": "Record primitive: build a keyed correspondence from a key Vector and a value Vector.",
         "stackEffect": "[ keys ] [ values ] -> [ record ]"

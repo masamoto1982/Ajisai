@@ -121,15 +121,11 @@ const UNALLOCATED_MENTIONS = new Set([
   // named once beside it for the same reason: `COND` was the branch `SELECT`
   // replaced.
   'COND',
-  // the two brackets Ajisai gives no role to. `(`, `)`, `{`, `}` were carried
-  // in the vocabulary registry as reserved markers and retired forms until the
-  // per-character rule that refused them was removed; `(` and `)` are ordinary
-  // name characters now, so the registry no longer knows them and the
-  // reference names them precisely to say the language allocates them nothing.
-  // `{` and `}` are not in this list: they were allocated to the Record
-  // literal and are registered surfaces again, so a document naming them is
-  // making a claim the registry answers.
-  '(', ')',
+  // the brackets Ajisai gives no role to. They are ordinary name characters,
+  // so the registry does not know them; the reference names them to say the
+  // language allocates them nothing, and `{ }` also appears as the Record's
+  // display, which is not source.
+  '(', ')', '{', '}',
 ]);
 
 const errors = [];

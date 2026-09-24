@@ -300,15 +300,14 @@ impl SpaceSim {
         self.poisoned = true;
     }
 
-    /// A structural token outside any symbol dispatch. A literal — `[ ... ]`
-    /// or `{ ... }`, on one depth because each leaves one value — collapses
-    /// to one slot; their inner tokens are not simulated (any execution of
+    /// A structural token outside any symbol dispatch. A `[ ... ]` literal
+    /// leaves one value, so it collapses to one slot; their inner tokens are not simulated (any execution of
     /// one goes through a higher-order word, which is classified `Unbounded`
     /// at *its* call site).
     pub(crate) fn feed_structural(&mut self, token: &Token) {
         match token {
-            Token::VectorStart | Token::RecordStart => self.vector_depth += 1,
-            Token::VectorEnd | Token::RecordEnd => {
+            Token::VectorStart => self.vector_depth += 1,
+            Token::VectorEnd => {
                 self.vector_depth = self.vector_depth.saturating_sub(1);
                 if self.vector_depth == 0 {
                     if self.vector_dirty {

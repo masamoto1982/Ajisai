@@ -57,33 +57,19 @@ mod record_words_tests {
         );
     }
 
-    /// The literal and the constructor are one construction
-    /// (LANG.RECORDS.STRUCTURE): the same value, and the same ERRORs.
+    /// A Record's keys may be any value, not only Text, and a Record nests in
+    /// a Vector and in another Record (LANG.RECORDS.STRUCTURE).
     #[tokio::test]
-    async fn a_record_literal_builds_what_the_constructor_builds() {
-        assert_eq!(top("{ 'x' 1 'y' 2 }").await, "{ 'x' 1/1 'y' 2/1 }");
-        assert_eq!(top(&format!("{R} {{ 'x' 1 'y' 2 }} EQ")).await, "TRUE");
-        assert_eq!(top("{ }").await, "{ }");
-        assert_eq!(top("{ } [ ] [ ] RECORD EQ").await, "TRUE");
-        // Key order is observable in the literal too.
-        assert_eq!(top("{ 'x' 1 'y' 2 } { 'y' 2 'x' 1 } EQ").await, "FALSE");
-        // The constructor's two ERRORs, raised by the literal.
-        assert_eq!(error_of("{ 'a' 1 'a' 2 }").await, "duplicateKey");
-        assert_eq!(error_of("{ 'a' 1 'b' }").await, "vectorLengthMismatch");
-        // A literal evaluates nothing, so a bare name inside one is a Symbol
-        // (LANG.VALUES.VECTOR's rule, over the same elements) and a key may be
-        // any value, not only Text.
-        assert_eq!(top("{ 'a' ADD }").await, "{ 'a' ADD }");
+    async fn a_record_takes_any_key_and_nests() {
         assert_eq!(
-            top("{ 1 'one' TRUE 'yes' }").await,
+            top("[ 1 TRUE ] [ 'one' 'yes' ] RECORD").await,
             "{ 1/1 'one' TRUE 'yes' }"
         );
-        // Either literal nests inside the other.
         assert_eq!(
-            top("{ 'v' [ 1 2 ] 'r' { 'k' 3 } }").await,
+            top("[ 'v' 'r' ] [ 1 2 ] [ 'k' ] [ 3 ] RECORD 2 COLLECT RECORD").await,
             "{ 'v' [ 1/1 2/1 ] 'r' { 'k' 3/1 } }"
         );
-        assert_eq!(top("[ { 'a' 1 } ] LENGTH").await, "1/1");
+        assert_eq!(top("[ 'a' ] [ 1 ] RECORD 1 COLLECT LENGTH").await, "1/1");
     }
 
     #[tokio::test]

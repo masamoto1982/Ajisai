@@ -2517,44 +2517,46 @@ W</pre>
   <pre class="ajisai-expect-result">{ 'x' 1/1 'y' 2/1 }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-record-literal-builds-the-same-record" data-category="core">
-  <h3>The Record literal builds what RECORD builds from the same values (LANG.RECORDS.STRUCTURE)</h3>
-  <pre class="ajisai-source">{ 'x' 1 'y' 2 } [ 'x' 'y' ] [ 1 2 ] RECORD EQ</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-record-literal-is-the-empty-record" data-category="core">
-  <h3>An empty Record literal is the empty Record</h3>
-  <pre class="ajisai-source">{ } KEYS</pre>
-  <pre class="ajisai-expect-result">[ ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-record-literal-duplicate-key-is-an-error" data-category="core">
-  <h3>A key written twice in a Record literal raises duplicateKey, as RECORD does</h3>
-  <pre class="ajisai-source">{ 'a' 1 'a' 2 }</pre>
+<section class="ajisai-case" id="core-brace-is-an-ordinary-name" data-category="core">
+  <h3>A brace is an ordinary name, not a delimiter: only [ and ] delimit (LANG.SOURCE.TEXT)</h3>
+  <pre class="ajisai-source">{ 'x' 1 }</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">repeats the key</pre>
+  <pre class="ajisai-expect-error">Unknown word</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-record-literal-unpaired-key-is-an-error" data-category="core">
-  <h3>A key with no value in a Record literal raises the length mismatch RECORD raises</h3>
-  <pre class="ajisai-source">{ 'a' 1 'b' }</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">length</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-<section class="ajisai-case" id="core-record-literal-nests-with-the-vector-literal" data-category="core">
-  <h3>Each literal nests inside the other, and a nested Record is one element</h3>
-  <pre class="ajisai-source">[ { 'a' 1 } { 'b' [ 2 3 ] } ] LENGTH</pre>
+
+<section class="ajisai-case" id="core-record-nests-in-a-vector" data-category="core">
+  <h3>A Record is one element of a Vector (LANG.RECORDS.STRUCTURE)</h3>
+  <pre class="ajisai-source">[ 'a' ] [ 1 ] RECORD [ 'b' ] [ 2 ] RECORD 2 COLLECT LENGTH</pre>
   <pre class="ajisai-expect-result">2/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-record-literal-evaluates-nothing" data-category="core">
-  <h3>A Record literal evaluates nothing: a bare name in one is a Symbol, as in a Vector literal (LANG.VALUES.VECTOR)</h3>
-  <pre class="ajisai-source">{ 'op' ADD } 'op' AT</pre>
-  <pre class="ajisai-expect-result">ADD</pre>
+
+<!-- A Vector run as code pushes each element it holds as the value it is:
+     a NIL keeps its reason, and a Record or an exact irrational, which no
+     source text denotes, arrives unchanged (LANG.SOURCE.CODE). -->
+
+<section class="ajisai-case" id="core-exec-keeps-a-nil-reason" data-category="core">
+  <h3>EXEC of a Vector holding a NIL pushes that NIL with its reason</h3>
+  <pre class="ajisai-source">1 0 DIV 1 COLLECT EXEC NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
+
+<section class="ajisai-case" id="core-exec-carries-an-irrational" data-category="core">
+  <h3>EXEC of a Vector holding an exact irrational pushes that irrational</h3>
+  <pre class="ajisai-source">2 SQRT 1 COLLECT EXEC 2 SQRT EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-exec-carries-a-record" data-category="core">
+  <h3>EXEC of a Vector holding a Record pushes that Record</h3>
+  <pre class="ajisai-source">[ 'x' ] [ 1 ] RECORD 1 COLLECT EXEC 'x' AT</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-record-duplicate-key-is-an-error" data-category="core">
   <h3>RECORD raises duplicateKey for a repeated key rather than choosing a value</h3>
   <pre class="ajisai-source">[ 'a' 'a' ] [ 1 2 ] RECORD</pre>

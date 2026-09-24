@@ -68,9 +68,19 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
         }
         Token::VectorStart => bytes.push(b'['),
         Token::VectorEnd => bytes.push(b']'),
-        Token::RecordStart => bytes.push(b'{'),
-        Token::RecordEnd => bytes.push(b'}'),
+        Token::Value(value) => {
+            bytes.push(b'V');
+            bytes.extend_from_slice(value_identity(value).as_bytes());
+        }
     }
+}
+
+/// The identity of a value a body carries whole (`Token::Value`): its
+/// denotation digest (LANG.VALUES.DENOTATION), so equal values identify
+/// alike. A computable real has no finite digest and falls back to its
+/// exact debug form, which never makes two different values collide.
+fn value_identity(value: &crate::types::Value) -> String {
+    crate::agent::observation_digest::value_digest(value).unwrap_or_else(|| format!("{value:?}"))
 }
 
 /// Canonical content key for a word body, independent of references' identities
@@ -279,8 +289,11 @@ impl Interpreter {
                 }
                 Token::VectorStart => structural_atom(b'['),
                 Token::VectorEnd => structural_atom(b']'),
-                Token::RecordStart => structural_atom(b'{'),
-                Token::RecordEnd => structural_atom(b'}'),
+                Token::Value(value) => {
+                    let mut b = vec![b'V'];
+                    b.extend_from_slice(value_identity(value).as_bytes());
+                    Atom::Raw(b)
+                }
             };
             atoms.push(atom);
         }
