@@ -25037,7 +25037,7 @@
         "codeBlock",
         "codeBlock"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "LENGTH",
@@ -25170,7 +25170,7 @@
         "scalarOne",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25178,7 +25178,7 @@
         "scalarOne",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25186,7 +25186,7 @@
         "scalarOne",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25258,7 +25258,7 @@
         "scalarZero",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25266,7 +25266,7 @@
         "scalarZero",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25274,7 +25274,7 @@
         "scalarZero",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25346,7 +25346,7 @@
         "scalarNegative",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25354,7 +25354,7 @@
         "scalarNegative",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25362,7 +25362,7 @@
         "scalarNegative",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25434,7 +25434,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25442,7 +25442,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25450,7 +25450,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25522,7 +25522,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25530,7 +25530,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25538,7 +25538,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25610,7 +25610,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25618,7 +25618,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25626,7 +25626,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "TAKE",
@@ -25672,94 +25672,6 @@
       "word": "TAKE",
       "inputs": [
         "vectorPair",
-        "scalarLarge"
-      ],
-      "outcome": "nil:indexOutOfBounds"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorPair",
-        "booleanTrue"
-      ],
-      "outcome": "error:invalidCount"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorPair",
-        "textShort"
-      ],
-      "outcome": "error:invalidCount"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorPair",
-        "vectorPair"
-      ],
-      "outcome": "error:invalidCount"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorPair",
-        "vectorTriple"
-      ],
-      "outcome": "error:invalidCount"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorPair",
-        "vectorHuge"
-      ],
-      "outcome": "error:invalidCount"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorPair",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorPair",
-        "codeBlock"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorTriple",
-        "scalarOne"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorTriple",
-        "scalarZero"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorTriple",
-        "scalarNegative"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "TAKE",
-      "inputs": [
-        "vectorTriple",
         "scalarLarge"
       ],
       "outcome": "nil:indexOutOfBounds"
@@ -25767,6 +25679,94 @@
     {
       "word": "TAKE",
       "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:invalidCount"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "nil:indexOutOfBounds"
+    },
+    {
+      "word": "TAKE",
+      "inputs": [
         "vectorTriple",
         "booleanTrue"
       ],
@@ -25786,7 +25786,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -25794,7 +25794,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -25802,7 +25802,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -25874,7 +25874,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -25882,7 +25882,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -25890,7 +25890,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -26050,7 +26050,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -26058,7 +26058,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -26066,7 +26066,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "TAKE",
@@ -26138,7 +26138,7 @@
         "scalarOne",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26146,7 +26146,7 @@
         "scalarOne",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26154,7 +26154,7 @@
         "scalarOne",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26226,7 +26226,7 @@
         "scalarZero",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26234,7 +26234,7 @@
         "scalarZero",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26242,7 +26242,7 @@
         "scalarZero",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26314,7 +26314,7 @@
         "scalarNegative",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26322,7 +26322,7 @@
         "scalarNegative",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26330,7 +26330,7 @@
         "scalarNegative",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26402,7 +26402,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26410,7 +26410,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26418,7 +26418,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26490,7 +26490,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26498,7 +26498,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26506,7 +26506,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26578,7 +26578,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26586,7 +26586,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26594,7 +26594,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:nonVector"
     },
     {
       "word": "DROP",
@@ -26666,7 +26666,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26674,7 +26674,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26682,7 +26682,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26754,7 +26754,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26762,7 +26762,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26770,7 +26770,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26842,7 +26842,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26850,7 +26850,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -26858,7 +26858,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -27018,7 +27018,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -27026,7 +27026,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -27034,7 +27034,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "DROP",
@@ -36970,7 +36970,7 @@
         "vectorPair",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -36979,7 +36979,7 @@
         "vectorPair",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -36988,7 +36988,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -36997,7 +36997,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37006,7 +37006,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37015,7 +37015,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37024,7 +37024,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37033,7 +37033,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37042,7 +37042,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37051,7 +37051,7 @@
         "vectorPair",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37060,7 +37060,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37069,7 +37069,7 @@
         "vectorTriple",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37078,7 +37078,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37087,7 +37087,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37096,7 +37096,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37105,7 +37105,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37114,7 +37114,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37123,7 +37123,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37132,7 +37132,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37141,7 +37141,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37150,7 +37150,7 @@
         "vectorTriple",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37159,7 +37159,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37168,7 +37168,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37177,7 +37177,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37186,7 +37186,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37195,7 +37195,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37204,7 +37204,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37213,7 +37213,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37222,7 +37222,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37231,7 +37231,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37240,7 +37240,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37249,7 +37249,7 @@
         "vectorHuge",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -37258,7 +37258,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38059,7 +38059,7 @@
         "vectorPair",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38068,7 +38068,7 @@
         "vectorPair",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38077,7 +38077,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38086,7 +38086,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38095,7 +38095,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38104,7 +38104,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38113,7 +38113,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38122,7 +38122,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38131,7 +38131,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38140,7 +38140,7 @@
         "vectorPair",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38149,7 +38149,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38158,7 +38158,7 @@
         "vectorTriple",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38167,7 +38167,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38176,7 +38176,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38185,7 +38185,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38194,7 +38194,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38203,7 +38203,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38212,7 +38212,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38221,7 +38221,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38230,7 +38230,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38239,7 +38239,7 @@
         "vectorTriple",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38248,7 +38248,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38257,7 +38257,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38266,7 +38266,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38275,7 +38275,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38284,7 +38284,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38293,7 +38293,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38302,7 +38302,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38311,7 +38311,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38320,7 +38320,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38329,7 +38329,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38338,7 +38338,7 @@
         "vectorHuge",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -38347,7 +38347,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39148,7 +39148,7 @@
         "vectorPair",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39157,7 +39157,7 @@
         "vectorPair",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39166,7 +39166,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39175,7 +39175,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39184,7 +39184,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39193,7 +39193,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39202,7 +39202,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39211,7 +39211,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39220,7 +39220,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39229,7 +39229,7 @@
         "vectorPair",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39238,7 +39238,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39247,7 +39247,7 @@
         "vectorTriple",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39256,7 +39256,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39265,7 +39265,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39274,7 +39274,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39283,7 +39283,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39292,7 +39292,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39301,7 +39301,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39310,7 +39310,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39319,7 +39319,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39328,7 +39328,7 @@
         "vectorTriple",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39337,7 +39337,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39346,7 +39346,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39355,7 +39355,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39364,7 +39364,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39373,7 +39373,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39382,7 +39382,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39391,7 +39391,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39400,7 +39400,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39409,7 +39409,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39418,7 +39418,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39427,7 +39427,7 @@
         "vectorHuge",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -39436,7 +39436,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41326,7 +41326,7 @@
         "vectorPair",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41335,7 +41335,7 @@
         "vectorPair",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41344,7 +41344,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41353,7 +41353,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41362,7 +41362,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41371,7 +41371,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41380,7 +41380,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41389,7 +41389,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41398,7 +41398,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41407,7 +41407,7 @@
         "vectorPair",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41416,7 +41416,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41425,7 +41425,7 @@
         "vectorTriple",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41434,7 +41434,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41443,7 +41443,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41452,7 +41452,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41461,7 +41461,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41470,7 +41470,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41479,7 +41479,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41488,7 +41488,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41497,7 +41497,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41506,7 +41506,7 @@
         "vectorTriple",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41515,7 +41515,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41524,7 +41524,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41533,7 +41533,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41542,7 +41542,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41551,7 +41551,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41560,7 +41560,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41569,7 +41569,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41578,7 +41578,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41587,7 +41587,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41596,7 +41596,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41605,7 +41605,7 @@
         "vectorHuge",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41614,7 +41614,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41722,7 +41722,7 @@
         "codeBlock",
         "scalarOne"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41731,7 +41731,7 @@
         "codeBlock",
         "scalarZero"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41740,7 +41740,7 @@
         "codeBlock",
         "scalarNegative"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41749,7 +41749,7 @@
         "codeBlock",
         "scalarLarge"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41758,7 +41758,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41767,7 +41767,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41776,7 +41776,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41785,7 +41785,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41794,7 +41794,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41803,7 +41803,7 @@
         "codeBlock",
         "nilLiteral"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "PUT",
@@ -41812,7 +41812,7 @@
         "codeBlock",
         "codeBlock"
       ],
-      "outcome": "nil:indexOutOfBounds"
+      "outcome": "value"
     },
     {
       "word": "GROUP",
@@ -89528,7 +89528,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "TOKENIZE",
@@ -89608,7 +89608,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "TOKENIZE",
@@ -89624,7 +89624,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "TOKENIZE",
@@ -89704,7 +89704,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "TOKENIZE",
@@ -90496,7 +90496,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "SEARCH",
@@ -90576,7 +90576,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "SEARCH",
@@ -90592,7 +90592,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "SEARCH",
@@ -90672,7 +90672,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "SEARCH",
@@ -91538,7 +91538,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -91628,7 +91628,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -91646,7 +91646,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -91736,7 +91736,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -92627,7 +92627,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -92717,7 +92717,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -92735,7 +92735,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -92825,7 +92825,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -93716,7 +93716,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -93806,7 +93806,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -93824,7 +93824,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -93914,7 +93914,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -94805,7 +94805,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -94895,7 +94895,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -94913,7 +94913,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -95003,7 +95003,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -95894,7 +95894,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -95984,7 +95984,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -96002,7 +96002,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -96092,7 +96092,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -96983,7 +96983,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97073,7 +97073,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97091,7 +97091,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97181,7 +97181,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97478,7 +97478,7 @@
         "scalarOne",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97577,7 +97577,7 @@
         "scalarZero",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97676,7 +97676,7 @@
         "scalarNegative",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97775,7 +97775,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97874,7 +97874,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -97973,7 +97973,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98072,7 +98072,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98108,7 +98108,7 @@
         "vectorTriple",
         "scalarOne"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98117,7 +98117,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98126,7 +98126,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98135,7 +98135,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98144,7 +98144,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98153,7 +98153,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98162,7 +98162,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98171,7 +98171,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98180,7 +98180,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98198,7 +98198,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98270,7 +98270,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98468,7 +98468,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98558,7 +98558,7 @@
         "scalarOne",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98576,7 +98576,7 @@
         "scalarOne",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98657,7 +98657,7 @@
         "scalarZero",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98675,7 +98675,7 @@
         "scalarZero",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98756,7 +98756,7 @@
         "scalarNegative",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98774,7 +98774,7 @@
         "scalarNegative",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98855,7 +98855,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98873,7 +98873,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98954,7 +98954,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -98972,7 +98972,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99053,7 +99053,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99071,7 +99071,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99098,7 +99098,7 @@
         "vectorPair",
         "scalarOne"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99107,7 +99107,7 @@
         "vectorPair",
         "scalarZero"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99116,7 +99116,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99125,7 +99125,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99134,7 +99134,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99143,7 +99143,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99152,7 +99152,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99161,7 +99161,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99170,7 +99170,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99188,7 +99188,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99251,7 +99251,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99269,7 +99269,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99296,7 +99296,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99305,7 +99305,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99314,7 +99314,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99323,7 +99323,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99332,7 +99332,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99341,7 +99341,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99350,7 +99350,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99359,7 +99359,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99368,7 +99368,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99386,7 +99386,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99548,7 +99548,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99566,7 +99566,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99656,7 +99656,7 @@
         "scalarOne",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99755,7 +99755,7 @@
         "scalarZero",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99854,7 +99854,7 @@
         "scalarNegative",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -99953,7 +99953,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100052,7 +100052,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100151,7 +100151,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100250,7 +100250,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100286,7 +100286,7 @@
         "vectorTriple",
         "scalarOne"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100295,7 +100295,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100304,7 +100304,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100313,7 +100313,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100322,7 +100322,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100331,7 +100331,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100340,7 +100340,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100349,7 +100349,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100358,7 +100358,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100376,7 +100376,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100448,7 +100448,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -100646,7 +100646,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -102428,7 +102428,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -102518,7 +102518,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -102536,7 +102536,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -102626,7 +102626,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonText"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "REPLACE",
@@ -103061,7 +103061,7 @@
         "scalarOne",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103069,7 +103069,7 @@
         "scalarOne",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103093,7 +103093,7 @@
         "scalarOne",
         "codeBlock"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103149,7 +103149,7 @@
         "scalarZero",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103157,7 +103157,7 @@
         "scalarZero",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103181,7 +103181,7 @@
         "scalarZero",
         "codeBlock"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103237,7 +103237,7 @@
         "scalarNegative",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103245,7 +103245,7 @@
         "scalarNegative",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103269,7 +103269,7 @@
         "scalarNegative",
         "codeBlock"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103325,7 +103325,7 @@
         "scalarLarge",
         "vectorPair"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103333,7 +103333,7 @@
         "scalarLarge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103357,215 +103357,215 @@
         "scalarLarge",
         "codeBlock"
       ],
+      "outcome": "value"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FORMAT",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
       "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
       "inputs": [
-        "booleanTrue",
-        "scalarOne"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "scalarZero"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "textShort"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "vectorPair"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "booleanTrue",
-        "codeBlock"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "scalarOne"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "scalarZero"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "scalarLarge"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "booleanTrue"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "textShort"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "vectorPair"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "vectorTriple"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "vectorHuge"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "nilLiteral"
-      ],
-      "outcome": "nil:literal"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "textShort",
-        "codeBlock"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "vectorPair",
-        "scalarOne"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "vectorPair",
-        "scalarZero"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
-        "vectorPair",
-        "scalarNegative"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FORMAT",
-      "inputs": [
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103573,7 +103573,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103581,7 +103581,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103589,7 +103589,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103597,7 +103597,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "FORMAT",
@@ -103605,7 +103605,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103621,7 +103621,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103629,7 +103629,7 @@
         "vectorTriple",
         "scalarOne"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103637,7 +103637,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103645,7 +103645,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103653,7 +103653,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103661,7 +103661,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103669,7 +103669,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103677,7 +103677,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "FORMAT",
@@ -103685,7 +103685,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103693,7 +103693,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "FORMAT",
@@ -103709,7 +103709,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103717,7 +103717,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103725,7 +103725,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103733,7 +103733,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103741,7 +103741,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103749,7 +103749,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103757,7 +103757,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103765,7 +103765,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103773,7 +103773,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "FORMAT",
@@ -103781,7 +103781,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103797,7 +103797,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103893,7 +103893,7 @@
         "codeBlock",
         "scalarOne"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103901,7 +103901,7 @@
         "codeBlock",
         "scalarZero"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103909,7 +103909,7 @@
         "codeBlock",
         "scalarNegative"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103917,7 +103917,7 @@
         "codeBlock",
         "scalarLarge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103925,7 +103925,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103933,7 +103933,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103941,7 +103941,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103949,7 +103949,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FORMAT",
@@ -103957,7 +103957,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidCount"
     },
     {
       "word": "FORMAT",
@@ -103973,7 +103973,7 @@
         "codeBlock",
         "codeBlock"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "JSON-DECODE",

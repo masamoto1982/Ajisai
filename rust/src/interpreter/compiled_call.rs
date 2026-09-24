@@ -53,7 +53,10 @@ pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCal
     };
     let result = match interp.apply_declared_nil_contract(word) {
         Some(decided) => decided,
-        None => interp.execute_builtin_by_id(word.id),
+        None => match interp.apply_declared_lift(word) {
+            Some(lifted) => lifted,
+            None => interp.execute_builtin_by_id(word.id),
+        },
     };
     result.map_err(|err| err.attributed_to(word.name))
 }

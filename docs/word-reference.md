@@ -98,7 +98,7 @@ Test less-than comparison.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -114,7 +114,7 @@ Test greater-than comparison.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -130,7 +130,7 @@ Add two numeric values, element-wise with broadcasting.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -146,7 +146,7 @@ Subtract two numeric values, element-wise with broadcasting.
 - **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -162,7 +162,7 @@ Multiply two numeric values, element-wise with broadcasting.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -178,7 +178,7 @@ Divide two numeric values exactly (fractional result).
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: divisorEqualsZero → divisionByZero
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -194,7 +194,7 @@ Round toward negative infinity.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -209,7 +209,7 @@ Round to nearest integer (half-up).
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -224,7 +224,7 @@ Smaller of two numbers, element-wise with broadcasting.
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -239,7 +239,7 @@ Larger of two numbers, element-wise with broadcasting.
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -254,7 +254,7 @@ Exact square root of a non-negative rational, element-wise over a vector. The re
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: negativeScalar → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -269,7 +269,7 @@ Exact power `x y POW`, element-wise over Vectors, answered inside the exact fiel
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: zeroBaseNegativeExponent,negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize → divisionByZero, domainMiss, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -284,7 +284,7 @@ The greatest common divisor of two integers, non-negative, element-wise over Vec
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: nonIntegerOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -299,7 +299,7 @@ A rational opened into its reduced numerator and denominator, as a two-element V
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: irrationalOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -314,7 +314,7 @@ Select elements of a vector by index. One index answers with the element itself;
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -339,32 +339,32 @@ Return the number of elements in a vector.
 
 ## `TAKE`
 
-Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 9 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 4 5 ] [ 3 ] TAKE`
+- **Syntax:** `[ 1 2 3 4 5 ] 3 TAKE`
 - **ERROR conditions:** `nonVector`, `invalidCount`
 
 ## `DROP`
 
-Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 4 5 ] [ 2 ] DROP`
+- **Syntax:** `[ 1 2 3 4 5 ] 2 DROP`
 - **ERROR conditions:** `nonVector`, `invalidCount`
 
 ## `CONCAT`
@@ -582,7 +582,7 @@ A copy of a vector with the element at one index replaced. An out-of-range index
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
 - **Stack:** 3 input(s) → 1 output(s)
-- **Operands:** `data`, `data`, `element` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf`, `element` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -642,7 +642,7 @@ The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -702,7 +702,7 @@ The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -717,7 +717,7 @@ A copy of a Record with one key set: `R 'z' 3 WITH`. A key already present keeps
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
 - **Stack:** 3 input(s) → 1 output(s)
-- **Operands:** `data`, `data`, `element` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf`, `element` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -732,7 +732,7 @@ A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Rec
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -747,7 +747,7 @@ Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about prese
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -837,7 +837,7 @@ Split a string into a vector of one-character strings.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -867,7 +867,7 @@ Remove whitespace from both ends of a string.
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -882,7 +882,7 @@ The String with every character mapped to its upper form under Unicode's default
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -897,7 +897,7 @@ The String with every character mapped to its lower form under Unicode's default
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -912,13 +912,13 @@ Split a string into a vector of substrings using a separator.
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'a,b,c' ',' TOKENIZE`
-- **ERROR conditions:** `nonText`
+- **ERROR conditions:** `nonText`, `shapeMismatch`
 
 ## `SEARCH`
 
@@ -927,13 +927,13 @@ The position, in characters, at which a text first occurs in another: `'hello wo
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'hello world' 'world' SEARCH`
-- **ERROR conditions:** `nonText`
+- **ERROR conditions:** `nonText`, `shapeMismatch`
 
 ## `REPLACE`
 
@@ -942,13 +942,13 @@ Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 3 input(s) → 1 output(s)
-- **Operands:** `data`, `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'a-b-c' '-' '+' REPLACE`
-- **ERROR conditions:** `nonText`
+- **ERROR conditions:** `nonText`, `shapeMismatch`
 
 ## `NUM`
 
@@ -957,7 +957,7 @@ Parse text as a number; Bubble/NIL on parse failure.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: parseFailure → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -986,13 +986,13 @@ Render an exact scalar as decimal text with a stated number of digits after the 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `1/3 5 FORMAT`
-- **ERROR conditions:** `nonNumeric`, `invalidCount`
+- **ERROR conditions:** `nonNumeric`, `invalidCount`, `shapeMismatch`
 
 ## `JSON-DECODE`
 
@@ -1001,7 +1001,7 @@ Read JSON text into a value: an object becomes a Record keyed by its member name
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: textIsNotJson,nestingDeeperThanTheMachineHolds → invalidEncoding, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none

@@ -124,7 +124,7 @@ async fn nil_reason_is_protocol_string_not_debug_name() {
 
 #[tokio::test]
 async fn nil_reason_reports_index_out_of_bounds() {
-    let interp = run("[ 1 2 3 ] [ 9 ] GET NIL-REASON").await;
+    let interp = run("[ 1 2 3 ] 9 GET NIL-REASON").await;
     assert_eq!(top_text(&interp).as_deref(), Some("indexOutOfBounds"));
 }
 

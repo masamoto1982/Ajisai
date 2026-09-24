@@ -284,14 +284,14 @@
 
 <section class="ajisai-case" id="core-get-negative-index" data-category="core">
   <h3>GET with a negative index counts from the end</h3>
-  <pre class="ajisai-source">[ 10 20 30 ] [ -1 ] GET</pre>
+  <pre class="ajisai-source">[ 10 20 30 ] -1 GET</pre>
   <pre class="ajisai-expect-result">30/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-get-zero-index" data-category="core">
   <h3>GET index 0 is the first element</h3>
-  <pre class="ajisai-source">[ 10 20 30 ] [ 0 ] GET</pre>
+  <pre class="ajisai-source">[ 10 20 30 ] 0 GET</pre>
   <pre class="ajisai-expect-result">10/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -326,7 +326,7 @@
 
 <section class="ajisai-case" id="core-take" data-category="core">
   <h3>TAKE keeps the first N elements</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 3 ] TAKE</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] 3 TAKE</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1006,7 +1006,7 @@
 
 <section class="ajisai-case" id="core-get-out-of-bounds-reason" data-category="core">
   <h3>GET out of bounds projects to a reasoned Bubble</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 9 ] GET NIL-REASON</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 9 GET NIL-REASON</pre>
   <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1033,7 +1033,7 @@
 
 <section class="ajisai-case" id="core-take-zero-is-empty-vector" data-category="core">
   <h3>TAKE 0 yields the empty vector, and does not project</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] TAKE</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 0 TAKE</pre>
   <pre class="ajisai-expect-result">[ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1379,14 +1379,14 @@
 
 <section class="ajisai-case" id="core-arithmetic-preserves-a-nil-lanes-reason" data-category="core">
   <h3>A NIL lane keeps the reason it was created with through the next arithmetic Word</h3>
-  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 1 1 ] + 1 GET NIL-REASON</pre>
   <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-arithmetic-preserves-an-exact-lanes-nil" data-category="core">
   <h3>A NIL lane beside an irrational one is still a NIL after the next arithmetic Word</h3>
-  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] + 1 GET NIL-REASON</pre>
   <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1401,14 +1401,14 @@
 
 <section class="ajisai-case" id="core-nil-lane-survives-a-structural-rebuild" data-category="core">
   <h3>A NIL lane keeps its reason when the vector is rebuilt around it</h3>
-  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 3 4 ] CONCAT [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 3 4 ] CONCAT 1 GET NIL-REASON</pre>
   <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-written-nil-lane-keeps-its-own-reason" data-category="core">
   <h3>A NIL written into a vector literal still reports itself as written after the lift</h3>
-  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] * [ 1 ] GET NIL-REASON</pre>
+  <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] * 1 GET NIL-REASON</pre>
   <pre class="ajisai-expect-result">'literal'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1464,7 +1464,7 @@
 
 <section class="ajisai-case" id="core-take-exceeds-length-projects" data-category="core">
   <h3>TAKE beyond the vector length projects to NIL, not a shorter vector and not an error</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] TAKE NIL-REASON</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 5 TAKE NIL-REASON</pre>
   <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2262,6 +2262,34 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-lift-text-words-over-a-vector" data-category="core">
+  <h3>A text Word lifts over a Vector by the one lifting rule (LANG.COLLECTIONS.LIFT)</h3>
+  <pre class="ajisai-source">[ 'ab' 'c' ] UPPER [ 'ab' 'cd' ] 'b' SEARCH</pre>
+  <pre class="ajisai-expect-result">[ 'AB' 'C' ] [ 1/1 NIL ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-logic-over-a-record" data-category="core">
+  <h3>NOT lifts over a Record as arithmetic does, in the value direction</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ TRUE FALSE ] RECORD NOT</pre>
+  <pre class="ajisai-expect-result">{ 'a' FALSE 'b' TRUE }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-a-key-vector" data-category="core">
+  <h3>A Vector of keys lifts AT, as a Vector of indices lifts GET</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 4 9 ] RECORD [ 'a' 'b' ] AT [ 10 20 30 ] [ 0 2 ] GET</pre>
+  <pre class="ajisai-expect-result">[ 4/1 9/1 ] [ 10/1 30/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-a-singleton-is-a-vector" data-category="core">
+  <h3>A one-element Vector index is a Vector, never its element: GET answers a one-element Vector</h3>
+  <pre class="ajisai-source">[ 10 20 30 ] [ 1 ] GET [ 10 20 30 ] 1 GET</pre>
+  <pre class="ajisai-expect-result">[ 20/1 ] 20/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-denotation-same-real-is-one-value" data-category="core">
   <h3>Values built through different histories are one value when they denote the same real</h3>
   <pre class="ajisai-source">8 SQRT 2 SQRT 2 SQRT ADD EQ</pre>
@@ -2347,7 +2375,7 @@ W</pre>
      sole bracket, for both. -->
 
 <section class="ajisai-case" id="core-bare-name-is-a-symbol-distinct-from-its-string" data-category="core">
-<h3>A bare name denotes a Symbol, distinct from the same spelling as a String</h3><pre class="ajisai-source">[ ADD ] [ 0 ] GET [ 'ADD' ] [ 0 ] GET EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
+<h3>A bare name denotes a Symbol, distinct from the same spelling as a String</h3><pre class="ajisai-source">[ ADD ] 0 GET [ 'ADD' ] 0 GET EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="core-computed-vector-defines-a-word" data-category="core">
 <h3>DEF accepts any Vector as a body, computed or literal</h3><pre class="ajisai-source">[ 1 ] [ ADD ] CONCAT 'INC-C' DEF 5 INC-C</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
 <!-- Beta Standard Word contract cases (Issue #1429, Phase 3). -->
@@ -2372,31 +2400,31 @@ W</pre>
 <section class="ajisai-case" id="standard-zip" data-category="core"><h3>ZIP</h3><pre class="ajisai-source">[ [ 1 2 3 ] [ 4 5 6 ] ] ZIP</pre><pre class="ajisai-expect-result">[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="standard-drop" data-category="core">
   <h3>DROP answers everything after the first N</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] 2 DROP</pre>
   <pre class="ajisai-expect-result">[ 3/1 4/1 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-from-the-end" data-category="core">
   <h3>A negative count drops from the end</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ -2 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] -2 DROP</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-zero-is-identity" data-category="core">
   <h3>DROP 0 is the vector itself, and does not project</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 0 DROP</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-all-is-empty-vector" data-category="core">
   <h3>Dropping the whole length leaves the empty vector</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 3 ] DROP</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 3 DROP</pre>
   <pre class="ajisai-expect-result">[ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-exceeds-length-projects" data-category="core">
   <h3>DROP beyond the vector length projects to NIL, as TAKE does</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] DROP NIL-REASON</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 5 DROP NIL-REASON</pre>
   <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2409,7 +2437,7 @@ W</pre>
 </section>
 <section class="ajisai-case" id="standard-take-and-drop-partition" data-category="core">
   <h3>TAKE and DROP are the two halves of one cut</h3>
-  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 2 ] TAKE [ 1 2 3 4 5 ] [ 2 ] DROP CONCAT</pre>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] 2 TAKE [ 1 2 3 4 5 ] 2 DROP CONCAT</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>

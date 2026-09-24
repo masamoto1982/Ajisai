@@ -198,7 +198,7 @@ mod collection_meter_tests {
         // would charge for elements they never touch, which is the difference
         // between a ceiling and a tax on holding a large vector.
         let whole = charged_by_word("[ 1 1000 ] RANGE", "REVERSE").await;
-        let part = charged_by_word("[ 1 1000 ] RANGE", "[ 3 ] TAKE").await;
+        let part = charged_by_word("[ 1 1000 ] RANGE", "3 TAKE").await;
         assert!(
             part * 10 < whole,
             "taking three of a thousand must cost far less than touching all \
@@ -355,7 +355,7 @@ mod collection_meter_tests {
         for source in [
             "[ 1 32 ] RANGE",
             "[ 1 32 ] RANGE REVERSE",
-            "[ 1 32 ] RANGE [ 4 ] TAKE",
+            "[ 1 32 ] RANGE 4 TAKE",
             "[ 1 32 ] RANGE [ 1 2 ] CONCAT",
             "[ 1 32 ] RANGE 0 7 PUT",
             "[ 1 32 ] RANGE [ 0 1 ] GET",

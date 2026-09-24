@@ -1,13 +1,14 @@
-//! Lifting the arithmetic and comparison Words over Records
+//! Lifting the arithmetic Words over Records
 //! (LANG.COLLECTIONS.LIFT, LANG.RECORDS.STRUCTURE).
 //!
 //! A Record lifts in the value direction only: the keys are untouched and the
 //! result is a Record over the same key sequence. Two Records combine when
 //! their key sequences are equal, pairing values position by position; a
 //! Record combines with anything else by applying the Word to each value and
-//! that other operand. No other family lifts over a Record — the logic Words,
-//! the Vector Words and the text Words all reject one — so this module is the
-//! whole of the seventh domain's containment rule.
+//! that other operand. The comparison and logic Words lift over a Record
+//! through `lane_lift`, and every other Word through the dispatcher
+//! (`declared_lift`); this is the arithmetic family's entry to the same rule,
+//! ahead of its tensor path.
 //!
 //! The lift is generic over the Word rather than written once per Word: the
 //! Word's own entry point is run on each value pair on a scratch region of

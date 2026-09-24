@@ -52,14 +52,14 @@ async fn raises(code: &str) -> bool {
 #[tokio::test]
 async fn past_the_end_projects_the_same_reason_from_every_addressing_word() {
     for code in [
-        "[ 1 2 3 ] [ 5 ] GET",
-        "[ 1 2 3 ] [ -5 ] GET",
-        "[ 1 2 3 ] [ 5 ] TAKE",
-        "[ 1 2 3 ] [ -5 ] TAKE",
-        "[ ] [ 1 ] TAKE",
-        "[ 1 2 3 ] [ 5 ] DROP",
-        "[ 1 2 3 ] [ -5 ] DROP",
-        "[ ] [ 1 ] DROP",
+        "[ 1 2 3 ] 5 GET",
+        "[ 1 2 3 ] -5 GET",
+        "[ 1 2 3 ] 5 TAKE",
+        "[ 1 2 3 ] -5 TAKE",
+        "[ ] 1 TAKE",
+        "[ 1 2 3 ] 5 DROP",
+        "[ 1 2 3 ] -5 DROP",
+        "[ ] 1 DROP",
         "[ 1 2 3 ] 9 5 PUT",
         "[ 1 2 3 ] -9 5 PUT",
     ] {
@@ -76,13 +76,13 @@ async fn past_the_end_projects_the_same_reason_from_every_addressing_word() {
 #[tokio::test]
 async fn an_address_that_lands_is_untouched() {
     for (code, want) in [
-        ("[ 1 2 3 ] [ 2 ] GET", "3/1"),
-        ("[ 1 2 3 ] [ 2 ] TAKE", "[ 1/1 2/1 ]"),
-        ("[ 1 2 3 ] [ -2 ] TAKE", "[ 2/1 3/1 ]"),
-        ("[ 1 2 3 ] [ 2 ] DROP", "[ 3/1 ]"),
-        ("[ 1 2 3 ] [ -2 ] DROP", "[ 1/1 ]"),
-        ("[ 1 2 3 ] [ 3 ] DROP", "[ ]"),
-        ("[ 1 2 3 ] [ 0 ] DROP", "[ 1/1 2/1 3/1 ]"),
+        ("[ 1 2 3 ] 2 GET", "3/1"),
+        ("[ 1 2 3 ] 2 TAKE", "[ 1/1 2/1 ]"),
+        ("[ 1 2 3 ] -2 TAKE", "[ 2/1 3/1 ]"),
+        ("[ 1 2 3 ] 2 DROP", "[ 3/1 ]"),
+        ("[ 1 2 3 ] -2 DROP", "[ 1/1 ]"),
+        ("[ 1 2 3 ] 3 DROP", "[ ]"),
+        ("[ 1 2 3 ] 0 DROP", "[ 1/1 2/1 3/1 ]"),
         ("[ 1 2 3 ] -1 9 PUT", "[ 1/1 2/1 9/1 ]"),
     ] {
         assert_eq!(format!("{}", top_of(code).await), want, "`{code}`");
@@ -106,7 +106,7 @@ async fn a_projected_address_is_recovered_in_one_phrase() {
     assert_eq!(
         format!(
             "{}",
-            top_of("[ 1 2 3 ] [ 5 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT").await
+            top_of("[ 1 2 3 ] 5 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT").await
         ),
         "[ 1/1 2/1 3/1 ]"
     );

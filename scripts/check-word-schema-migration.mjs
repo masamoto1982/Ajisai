@@ -22,7 +22,7 @@ const names = new Set();
 function derivedNilPolicy(roles, projecting) {
   if (roles.length === 0) return 'preserveReason';
   if (roles.includes('truth')) return 'kleeneAbsorbing';
-  if (roles.includes('data')) return projecting ? 'passthroughThenProject' : 'passthrough';
+  if (roles.includes('data') || roles.includes('leaf')) return projecting ? 'passthroughThenProject' : 'passthrough';
   if (!roles.includes('element')) return projecting ? 'createsNil' : 'rejectNil';
   return 'consumeNil';
 }
@@ -54,6 +54,11 @@ for (const word of words.entries) {
   // groups with inner spaces, named rather than quoted.
   if (/\[\]|'[A-Za-z.]+'/.test(word.documentation.stackEffect)) {
     fail(`${word.name} stack effect \`${word.documentation.stackEffect}\` must write groups as [ … ] and name operands unquoted`);
+  }
+  // A lifted operand is only meaningful for a Word with one result: the
+  // lift assembles one result per element.
+  if ((word.stack.operands ?? []).some((role) => role === 'leaf' || role === 'truth') && word.stack.outputs !== 1) {
+    fail(`${word.name} lifts over an operand but does not answer exactly one value`);
   }
   const operands = word.stack.operands;
   if (typeof word.stack.inputs === 'number') {

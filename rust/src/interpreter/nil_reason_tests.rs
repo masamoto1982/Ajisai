@@ -28,7 +28,7 @@ async fn division_by_zero_preserves_direct_projection_reason() {
 #[tokio::test]
 async fn index_out_of_bounds_preserves_direct_projection_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("[ 10 20 ] [ 99 ] GET").await.unwrap();
+    interp.execute("[ 10 20 ] 99 GET").await.unwrap();
     let stack = interp.get_stack();
     assert!(
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
@@ -197,7 +197,7 @@ async fn nil_projection_rule_division_by_zero_is_recoverable() {
 #[tokio::test]
 async fn nil_projection_rule_get_out_of_range_without_safe_has_direct_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("[ 10 20 ] [ 99 ] GET").await.unwrap();
+    interp.execute("[ 10 20 ] 99 GET").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(top.is_nil());
     assert_eq!(top.nil_reason(), Some(&NilReason::IndexOutOfBounds));
@@ -207,7 +207,7 @@ async fn nil_projection_rule_get_out_of_range_without_safe_has_direct_reason() {
 async fn nil_projection_rule_get_out_of_range_is_recoverable() {
     let mut interp = Interpreter::new();
     interp
-        .execute("[ 10 20 ] [ 99 ] GET 'S' BIND 0 S S NIL? SELECT")
+        .execute("[ 10 20 ] 99 GET 'S' BIND 0 S S NIL? SELECT")
         .await
         .unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -221,7 +221,7 @@ async fn nil_projection_rule_contract_violations_remain_errors() {
     assert!(interp.execute("10 'x' /").await.is_err());
 
     let mut interp = Interpreter::new();
-    assert!(interp.execute("123 [ 0 ] GET").await.is_err());
+    assert!(interp.execute("123 0 GET").await.is_err());
 
     let mut interp = Interpreter::new();
     assert!(interp.execute("[ 10 20 ] 'x' GET").await.is_err());
@@ -316,8 +316,8 @@ async fn every_reachable_nil_carries_a_reason() {
         "NIL NIL",
         "1 0 / -1 SQRT",
         "[ 1 NIL 2 ]",
-        "[ 1 NIL 2 ] [ 1 ] GET",
-        "[ 1 2 3 ] [ 9 ] GET",
+        "[ 1 NIL 2 ] 1 GET",
+        "[ 1 2 3 ] 9 GET",
     ] {
         let mut interp = Interpreter::new();
         interp

@@ -63,7 +63,7 @@ mod declared_outcomes_tests {
     #[tokio::test]
     async fn the_detail_survives_a_dense_lane() {
         assert_eq!(
-            top("1 'why' ABSENT 2 COLLECT [ 1 ] GET NIL-REASON").await,
+            top("1 'why' ABSENT 2 COLLECT 1 GET NIL-REASON").await,
             "'why'"
         );
     }

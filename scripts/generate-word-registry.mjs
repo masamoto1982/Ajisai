@@ -198,6 +198,15 @@ const projectionReasons = (reason) => {
   return rustStrSlice(reasons);
 };
 
+// Families whose primitives lift their own leaf and truth operands (the
+// tensor path, and `lane_lift` for comparison and logic). Every other Word is
+// lifted by the dispatcher (`declared_lift`); the rule is the same one.
+const nativeLifting = new Set(
+  JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'))
+    .families.filter((family) => family.lifting === 'elementwise')
+    .map((family) => family.id),
+);
+
 const operandRoles = (roles) =>
   `&[${(roles ?? []).map((role) => `OperandRole::${pascal(role)}`).join(', ')}]`;
 
@@ -213,6 +222,7 @@ const rows = entries
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
         operand_roles: ${operandRoles(word.stack.operands)},
+        lifts_natively: ${nativeLifting.has(word.family)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
         projection_reasons: ${projectionReasons(word.projection.reason)},
@@ -249,7 +259,11 @@ ${enumBlocks}
 /// What a Word does with one operand (LANG.FAILURE.PASSTHROUGH).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum OperandRole {
-    /// Read by the Word: an absent operand makes the result that absence.
+    /// Read as one Scalar, String or Boolean: an absent operand makes the
+    /// result that absence, and a Vector or Record lifts the Word over its
+    /// elements (LANG.COLLECTIONS.LIFT).
+    Leaf,
+    /// Read whole: an absent operand makes the result that absence.
     Data,
     /// Carried without being read: a NIL is an ordinary value here.
     Element,
@@ -324,6 +338,10 @@ pub struct GeneratedWord {
     /// position (\`declared_nil_contract\`), and \`nil_policy\` is its
     /// summary.
     pub operand_roles: &'static [OperandRole],
+    /// Whether the primitive lifts its own \`leaf\` and \`truth\` operands
+    /// over Vectors and Records (its family declares \`lifting\`); otherwise
+    /// the dispatcher lifts them (\`declared_lift\`).
+    pub lifts_natively: bool,
     pub nil_policy: NilPolicy,
     /// The conditions under which a *well-formed* operand yields a reasoned
     /// NIL; empty for the Words that declare \`never\`. Distinct from

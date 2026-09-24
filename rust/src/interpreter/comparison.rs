@@ -1,6 +1,5 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::lane_lift::lift_lanes;
-use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::Interpreter;
 use crate::types::fraction::Fraction;
@@ -141,16 +140,10 @@ fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result
 }
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_lt)? {
-        return Ok(());
-    }
     apply_ordering_schema(interp, OrderingKind::Lt)
 }
 
 pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_gt)? {
-        return Ok(());
-    }
     apply_ordering_schema(interp, OrderingKind::Gt)
 }
 

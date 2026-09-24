@@ -99,7 +99,10 @@ async fn observe(program: &str) -> Outcome {
 fn required(roles: &[OperandRole]) -> Option<Outcome> {
     if roles.contains(&OperandRole::Program) {
         Some(Outcome::Error)
-    } else if roles.contains(&OperandRole::Data) || roles.contains(&OperandRole::Truth) {
+    } else if roles.contains(&OperandRole::Data)
+        || roles.contains(&OperandRole::Leaf)
+        || roles.contains(&OperandRole::Truth)
+    {
         Some(Outcome::NilWithReason)
     } else {
         None

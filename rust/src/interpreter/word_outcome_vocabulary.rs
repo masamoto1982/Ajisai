@@ -181,8 +181,8 @@ const NIL_WORD: &str = "NIL";
 /// back reasonless, and a reasonless NIL reads back as `literal`:
 ///
 /// ```text
-/// [ 1 2 ] [ 1 0 ] DIV [ 1 ] GET NIL-REASON            -> 'divisionByZero'
-/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET NIL-REASON -> 'literal'
+/// [ 1 2 ] [ 1 0 ] DIV 1 GET NIL-REASON            -> 'divisionByZero'
+/// [ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET NIL-REASON -> 'literal'
 /// ```
 ///
 /// The second program contains no `NIL` token, so "a NIL literal is written

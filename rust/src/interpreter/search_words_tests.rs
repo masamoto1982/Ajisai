@@ -77,7 +77,7 @@ mod search_words_tests {
             Some("missingField")
         );
         assert_eq!(
-            top("[ 1 3 5 7 ] [ 4 5 ] BSEARCH [ 0 ] GET NIL-REASON").await,
+            top("[ 1 3 5 7 ] [ 4 5 ] BSEARCH 0 GET NIL-REASON").await,
             "'missingField'"
         );
         assert_eq!(

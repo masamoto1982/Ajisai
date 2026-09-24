@@ -19,7 +19,8 @@
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT"
       ],
-      "decidability": "totalOverField"
+      "decidability": "totalOverField",
+      "lifting": "elementwise"
     },
     {
       "id": "exactArithmetic",

@@ -62,7 +62,7 @@ async fn test_collect_error_negative_count() {
 async fn test_get_consume_mode() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
+    let result = interp.execute("[ 10 20 30 ] 0 GET").await;
     assert!(result.is_ok(), "GET should succeed: {:?}", result);
     assert_eq!(
         interp.stack.len(),
@@ -87,7 +87,7 @@ async fn test_length_consume_mode() {
 #[tokio::test]
 async fn test_get_returns_the_element() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
+    let result = interp.execute("[ 10 20 30 ] 0 GET").await;
     assert!(result.is_ok(), "GET should succeed: {:?}", result);
     assert_eq!(interp.stack.len(), 1, "only the element remains");
     let result_scalar = interp.stack[0]

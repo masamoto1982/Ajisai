@@ -15,6 +15,7 @@ mod debug_declared_checks;
 pub mod debug_diagnosis;
 mod debug_limit_checks;
 mod debug_next_checks;
+mod declared_lift;
 pub(crate) mod declared_nil_contract;
 mod declared_outcomes;
 #[cfg(test)]
