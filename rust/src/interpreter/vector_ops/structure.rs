@@ -6,17 +6,12 @@ use crate::interpreter::Interpreter;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
-/// Join two vectors, lifting one level of nesting out of each, under the role
-/// the join carries.
+/// Join two vectors, lifting one level of nesting out of each.
 ///
 /// Both operands are vectors by the time this runs — `op_concat` rejects
 /// anything else — so there is no singleton-lifting branch here: an element is
 /// carried across exactly as it sits, and `[ [ 1 ] ] [ [ 2 ] ] CONCAT` stays
 /// `[ [ 1 ] [ 2 ] ]`.
-///
-/// The role goes on the value, not only on the stack slot, so a Text survives
-/// being put inside a vector or returned from a user Word — the same place
-/// `Value::from_string` puts it.
 fn concat_values(left: &Value, right: &Value) -> Value {
     let mut elements = Vec::new();
     elements.extend(extract_vector_elements(left));

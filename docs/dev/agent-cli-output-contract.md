@@ -337,15 +337,13 @@ together exceed what a host will accept, sending the residue and losing the
 answer is the wrong trade.
 
 So on `status: "error"` only, slots whose values do not fit a byte budget are
-replaced in place: `value` becomes `null`, `type`, `displayHint` and
-`semantics` still say what the value was, and an `elided` record says what was
-dropped.
+replaced in place: `value` becomes `null`, `type` and `semantics` still say
+what the value was, and an `elided` record says what was dropped.
 
 ```json
 {
   "type": "vector",
   "value": null,
-  "displayHint": "unassigned",
   "semantics": {},
   "elided": { "reason": "errorStackBudget", "approxBytes": 27178011, "elements": 100000 }
 }
@@ -394,15 +392,15 @@ playground boundary:
 {
   "type": "number",
   "value": { "numerator": "3", "denominator": "2" },
-  "displayHint": "rawNumber",
   "semantics": {}
 }
 ```
 
 Arbitrary-precision integers are decimal strings, never JSON floating-point
 numbers. Vectors contain arrays of value nodes. NIL carries normalized absence
-metadata in `semantics.absence`. Logical Unknown is observed through the truth
-axis rather than serialized as operational NIL.
+metadata in `semantics.absence`. UNKNOWN is a NIL and is serialized as one; a
+Boolean carries `semantics.truthValue`. Every field of a node is derived from
+the value itself, never from the Word that produced it.
 
 An algebraic irrational retains the approximate rational compatibility view,
 marks it with `approximate: true`, and carries its authoritative multiquadratic
@@ -412,7 +410,6 @@ normal form:
 {
   "type": "number",
   "value": { "numerator": "768398401", "denominator": "543339720" },
-  "displayHint": "rawNumber",
   "semantics": {
     "approximate": true,
     "exactDisplay": "sqrt(2)",

@@ -1,9 +1,9 @@
-//! Operational absence and truth-role behavior for [`Value`].
+//! Operational absence and the truth observation for [`Value`].
 //!
 //! Invariant: a [`NilReason`] chooses its [`AbsenceOrigin`] in exactly one place,
 //! and every reasoned NIL constructor routes through that exhaustive mapping.
 
-use super::{Interpretation, Value, ValueData};
+use super::{Value, ValueData};
 use crate::error::NilReason;
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 
@@ -40,7 +40,6 @@ impl Value {
     pub fn nil_literal() -> Self {
         Self {
             data: ValueData::Nil,
-            hint: Interpretation::Nil,
             absence: Some(AbsenceMetadata::literal()),
         }
     }
@@ -49,7 +48,6 @@ impl Value {
     pub fn nil_with_absence(absence: AbsenceMetadata) -> Self {
         Self {
             data: ValueData::Nil,
-            hint: Interpretation::Nil,
             absence: Some(absence),
         }
     }
@@ -64,55 +62,16 @@ impl Value {
         ))
     }
 
-    /// Whether this value carries the `TruthValue` interpretation role. Used at
-    /// observation boundaries to attach the `truthValue` axis. The logical
-    /// truth value `Unknown` (U, LANG.VALUES.TRUTH) is `ValueData::Nil`
-    /// carrying this role — there is no dedicated `Unknown` variant — so
-    /// `is_truth_value()` combined with `matches!(self.data, ValueData::Nil)`
-    /// is how U is detected, never by assuming a distinct storage
-    /// representation.
-    #[inline]
-    pub fn is_truth_value(&self) -> bool {
-        self.hint == Interpretation::TruthValue
-    }
-
-    /// The observable `truthValue` axis (LANG.VALUES.TRUTH, LANG.OBSERVATION.PROTOCOL)
-    /// under a given effective interpretation role: `Some("true")`,
-    /// `Some("false")`, or `Some("unknown")` for truth-valued values, and
-    /// `None` otherwise.
-    ///
-    /// The role is taken as a parameter because a definite boolean produced
-    /// by a comparison/logic word carries its `TruthValue` role in the
-    /// semantic plane, not on the value's own `hint`. The
-    /// logical Unknown (U) is always `unknown` regardless of the role, since
-    /// it is detected from its reason. This is the single canonical mapping
-    /// from a value to its three-valued logical surface; external consumers
-    /// must read this axis rather than the internal NIL representation or
-    /// display text.
-    pub fn truth_value_for_role(&self, effective: Interpretation) -> Option<&'static str> {
-        // A Boolean is intrinsically truth-valued: it reports its truth on the
-        // axis regardless of the effective role, because its data identity —
-        // not a semantic-plane role — carries the truth.
-        if let ValueData::Boolean(b) = &self.data {
-            return Some(if *b { "true" } else { "false" });
-        }
-        if effective != Interpretation::TruthValue {
-            return None;
-        }
-        match &self.data {
-            ValueData::Nil => Some("unknown"),
-            ValueData::Scalar(f) => Some(if f.is_zero() { "false" } else { "true" }),
-            ValueData::ExactScalar(_) => Some("true"),
-            _ => Some(if self.is_truthy() { "true" } else { "false" }),
-        }
-    }
-
-    /// The `truthValue` axis using the value's own `hint` as the role.
-    /// Convenience for values that carry the `TruthValue` role on the value
-    /// itself (notably U); the boundary uses
-    /// [`truth_value_for_role`] with the effective role.
+    /// The observable `truthValue` axis (LANG.VALUES.TRUTH,
+    /// LANG.OBSERVATION.PROTOCOL): `Some("true")` or `Some("false")` for a
+    /// Boolean, `None` for every other value. It is read off the value's
+    /// domain alone. UNKNOWN is a NIL (LANG.VALUES.TRUTH) and is observed as
+    /// one, with its reason, so it has no entry on this axis.
     pub fn truth_value(&self) -> Option<&'static str> {
-        self.truth_value_for_role(self.hint)
+        match &self.data {
+            ValueData::Boolean(b) => Some(if *b { "true" } else { "false" }),
+            _ => None,
+        }
     }
 
     #[inline]

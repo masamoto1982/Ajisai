@@ -162,8 +162,6 @@ ADDTEST
 
 #[tokio::test]
 async fn numbers_render_as_canonical_fractions_on_stack() {
-    use crate::types::display::format_with_hint;
-    use crate::types::Interpretation;
     // Every number renders as a reduced numerator/denominator, integers
     // included. Surface literal style is not retained; `0.6 0.8 *` and any
     // mixed-style arithmetic therefore display uniformly.
@@ -179,7 +177,7 @@ async fn numbers_render_as_canonical_fractions_on_stack() {
         let mut interp = crate::interpreter::Interpreter::new();
         interp.execute(program).await.unwrap();
         assert_eq!(interp.stack.len(), 1, "program: {program}");
-        let rendered = format_with_hint(&interp.stack[0], Interpretation::RawNumber);
+        let rendered = interp.stack[0].to_string();
         assert_eq!(
             rendered, expected,
             "`{program}` must render as canonical `{expected}`",

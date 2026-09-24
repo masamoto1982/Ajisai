@@ -88,7 +88,7 @@ export class AjisaiInterpreter {
     resolve_host_lookup(name: string): any;
     /**
      * Restore a stack from a `snapshot_stack` payload, reinstating exact
-     * values (CodeBlock, ExactScalar, …) and their stack-position roles.
+     * values (CodeBlock, ExactScalar, …).
      */
     restore_stack_snapshot(snapshot_json: string): void;
     restore_user_words(words_js: any): void;

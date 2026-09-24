@@ -57,14 +57,6 @@ fn rendered_stack(interp: &Interpreter) -> Vec<String> {
         .collect()
 }
 
-fn hint_stack(interp: &Interpreter) -> Vec<String> {
-    interp
-        .get_stack()
-        .iter()
-        .map(|value| format!("{:?}", value.hint))
-        .collect()
-}
-
 fn assert_on_equals_off(src: &str) -> (Interpreter, Interpreter) {
     let on = run(src, true);
     let off = run(src, false);
@@ -77,11 +69,6 @@ fn assert_on_equals_off(src: &str) -> (Interpreter, Interpreter) {
         rendered_stack(&on),
         rendered_stack(&off),
         "fast path ON vs OFF render diverged for: {src}"
-    );
-    assert_eq!(
-        hint_stack(&on),
-        hint_stack(&off),
-        "fast path ON vs OFF hints diverged for: {src}"
     );
     (on, off)
 }
@@ -101,11 +88,6 @@ fn assert_direct_on_equals_off(
         rendered_stack(&on),
         rendered_stack(&off),
         "direct fast path ON vs OFF render diverged"
-    );
-    assert_eq!(
-        hint_stack(&on),
-        hint_stack(&off),
-        "direct fast path ON vs OFF hints diverged"
     );
     (on, off)
 }

@@ -85,26 +85,21 @@ fn every_nil_reason_has_a_distinct_lower_camel_protocol_string() {
 }
 
 #[test]
-fn unknown_advertises_truth_valued_capability() {
-    // LANG.VALUES.TRUTH: the logical Unknown (U) is observed through the
-    // `truthValue` axis as `unknown` and advertises the `truthValued`
-    // capability. U has no dedicated `ValueData` variant — it is `Nil`
-    // data carrying the `TruthValue` hint. `AND`/`NOT` construct it at
-    // the interpreter level (`interpreter::logic::as_unknown`); this test
-    // stays at the `Value` level, so it still builds one directly.
-    use crate::types::{Interpretation, Value};
-    let mut u = Value::nil();
-    u.hint = Interpretation::TruthValue;
-    assert_eq!(u.truth_value(), Some("unknown"));
-    assert!(u.has_capability(Capability::TruthValued));
+fn unknown_is_observed_as_a_nil() {
+    // LANG.VALUES.TRUTH: UNKNOWN is NIL read in truth position, not a fourth
+    // variant, so it is observed as a NIL — no truth axis, no truth
+    // capability, and the NIL capabilities every absence has.
+    use crate::types::Value;
+    let u = Value::nil_with_reason_unknown(NilReason::Undecidable);
+    assert_eq!(u.truth_value(), None);
+    assert!(!u.has_capability(Capability::TruthValued));
+    assert!(u.has_capability(Capability::NilPassthrough));
 }
 #[test]
 fn definite_truth_values_expose_truth_value_axis() {
-    use crate::types::{Interpretation, Value};
-    let mut t = Value::from_bool(true);
-    t.hint = Interpretation::TruthValue;
-    let mut f = Value::from_bool(false);
-    f.hint = Interpretation::TruthValue;
+    use crate::types::Value;
+    let t = Value::from_bool(true);
+    let f = Value::from_bool(false);
     assert_eq!(t.truth_value(), Some("true"));
     assert_eq!(f.truth_value(), Some("false"));
     assert!(t.has_capability(Capability::TruthValued));

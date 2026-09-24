@@ -889,9 +889,8 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- Being read in truth position adds the truthValue axis; it takes no
-     observation away. UNKNOWN is still the NIL it is, so every absence-facing
-     Word answers about it exactly as it would about any other NIL. -->
+<!-- UNKNOWN is the NIL it is, so every absence-facing Word answers about it
+     exactly as it would about any other NIL. -->
 
 <section class="ajisai-case" id="core-logic-unknown-is-an-absence" data-category="core">
   <h3>UNKNOWN is an absence: NIL? answers TRUE</h3>
@@ -918,6 +917,24 @@
   <h3>UNKNOWN passes through a passthrough Word, like any other absence</h3>
   <pre class="ajisai-source">TRUE NIL AND 1 ADD</pre>
   <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A value is what it denotes, never how it was made: the same truth value
+     reached by two different Words is one value, and a NIL that passed
+     through arithmetic is the NIL it was. -->
+
+<section class="ajisai-case" id="core-truth-value-is-denoted-not-produced" data-category="core">
+  <h3>A truth value is the same value whichever Word produced it (LANG.VALUES.DENOTATION)</h3>
+  <pre class="ajisai-source">3 2 GT [ 3 4 ] [ 2 GT ] MAP TRUE [ AND ] FOLD EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-through-arithmetic-is-the-same-nil" data-category="core">
+  <h3>A NIL passed through MUL is the NIL it was (LANG.VALUES.DENOTATION)</h3>
+  <pre class="ajisai-source">NIL -1 MUL DIGEST NIL DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

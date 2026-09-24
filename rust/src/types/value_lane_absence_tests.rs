@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use super::fraction::Fraction;
 use super::value_persist::{decode_stack, encode_stack};
-use super::{DenseTensor, Interpretation, Value, ValueData};
+use super::{DenseTensor, Value, ValueData};
 use crate::error::NilReason;
 use crate::semantic::Recoverability;
 
@@ -109,7 +109,6 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
     let dense = Value::from_vector_promoted(vec![Value::from_int(1), div_by_zero()]);
     let nested = Value {
         data: ValueData::Vector(Arc::new(vec![Value::from_int(1), div_by_zero()])),
-        hint: Interpretation::Unassigned,
         absence: None,
     };
     assert_eq!(dense, nested);
@@ -117,7 +116,6 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
 
     let written = Value {
         data: ValueData::Vector(Arc::new(vec![Value::from_int(1), Value::nil()])),
-        hint: Interpretation::Unassigned,
         absence: None,
     };
     assert_ne!(
@@ -149,10 +147,9 @@ fn a_tensors_absent_lane_keeps_its_reason_across_the_boundary() {
         value.data
     );
 
-    let encoded = encode_stack(std::iter::once((&value, Interpretation::Unassigned)))
-        .expect("a tensor encodes");
+    let encoded = encode_stack(std::iter::once(&value)).expect("a tensor encodes");
     let decoded = decode_stack(&encoded).expect("it decodes");
-    let restored = &decoded[0].0;
+    let restored = &decoded[0];
 
     let ValueData::Tensor { data, .. } = &restored.data else {
         panic!("expected a tensor back, got {:?}", restored.data);

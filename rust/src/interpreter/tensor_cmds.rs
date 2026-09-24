@@ -4,7 +4,7 @@ use crate::interpreter::value_extraction_helpers::{create_number_value, nil_pass
 use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// Multiply dimension sizes without ever overflowing `usize`. Returns `None`
 /// when the running product would wrap, so callers can reject pathological
@@ -24,8 +24,6 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
     interp
         .stack
         .push(Value::nil_with_reason_unknown(NilReason::Undecidable));
-    let stack_len = interp.stack.len();
-    interp.stack.set_role_at(stack_len - 1, Interpretation::Nil);
 }
 
 use super::tensor_ops::{apply_unary_flat_with_metrics, build_nested_value};

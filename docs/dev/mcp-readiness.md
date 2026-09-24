@@ -311,7 +311,7 @@ points it at shrinking output when the fix is to compute less.
 An error report's answer is its diagnosis; the stack is residual state, and
 `agent::error_stack` is where that distinction is spent. On `status: "error"`
 only, slots whose values do not fit a 64 KiB budget are replaced in place —
-`value` becomes `null`, `type`/`displayHint`/`semantics` still say what the
+`value` becomes `null`, `type`/`semantics` still say what the
 value was, and an `elided` record says what was dropped, repeated at the
 envelope level as `stackElided`. The fold answers in 7,470 bytes with
 `diagnosis.resourceLimit.resource: "numericWork"` intact. Values give way,

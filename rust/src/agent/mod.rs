@@ -124,11 +124,7 @@ pub(crate) fn error_report(
 /// payloads (`Vector`, `Tensor`, `Text`, `CodeBlock`) are all reference
 /// counted.
 pub(crate) fn stack_values(interp: &Interpreter) -> Vec<Value> {
-    interp
-        .get_stack()
-        .iter_slots()
-        .map(|(value, _role)| value.clone())
-        .collect()
+    interp.get_stack().to_vec()
 }
 
 /// `(normalized word name, content identity)` for every user word, sorted by
@@ -157,9 +153,8 @@ pub(crate) fn print_payloads(interp: &Interpreter) -> Vec<String> {
 }
 
 pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
-    // One shared `(value, role)` rendering (LANG.OBSERVATION.PROTOCOL) for every observation
-    // surface; the `Stack` owns aligned values and roles, so no snapshot/
-    // realignment step is needed here.
+    // One shared rendering (LANG.OBSERVATION.PROTOCOL) for every observation
+    // surface.
     crate::types::display::render_stack(interp.get_stack())
 }
 

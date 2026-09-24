@@ -68,19 +68,6 @@ const checkFractionObject = (value: unknown): Record<string, unknown> | null => 
     return candidate;
 };
 
-const formatFractionToText = (fraction: Record<string, unknown>): string => {
-    const numerator = String(fraction.numerator);
-    const denominator = String(fraction.denominator);
-    return denominator === '1' ? numerator : `${numerator}/${denominator}`;
-};
-
-const parseFractionToNumber = (fraction: Record<string, unknown>): number | null => {
-    const numerator = parseInt(String(fraction.numerator || '0'), 10);
-    const denominator = parseInt(String(fraction.denominator || '1'), 10);
-    if (Number.isNaN(numerator) || Number.isNaN(denominator) || denominator === 0) return null;
-    return denominator === 1 ? numerator : Math.floor(numerator / denominator);
-};
-
 // Canonical numeric rendering: every number is a reduced
 // numerator/denominator, integers included (`3` -> `3/1`).
 const formatNumber = (value: unknown): string => {
@@ -95,55 +82,7 @@ const formatFraction = (frac: unknown): string => {
     return `${fraction.numerator}/${fraction.denominator}`;
 };
 
-const formatDateTime = (value: unknown): string => {
-    const fraction = checkFractionObject(value);
-    if (!fraction) return '@?';
-
-    try {
-        const numer = BigInt(String(fraction.numerator));
-        const denom = BigInt(String(fraction.denominator));
-        const timestampMs = Number((numer * 1000n) / denom);
-        const date = new Date(timestampMs);
-
-        if (isNaN(date.getTime())) {
-            return `@${formatFractionToText(fraction)}`;
-        }
-
-        const pad = (n: number) => String(n).padStart(2, '0');
-        const year = date.getFullYear();
-        const month = pad(date.getMonth() + 1);
-        const day = pad(date.getDate());
-        const hours = pad(date.getHours());
-        const minutes = pad(date.getMinutes());
-        const seconds = pad(date.getSeconds());
-        const ms = date.getMilliseconds();
-
-        const dateStr = `@${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        return ms > 0 ? `${dateStr}.${String(ms).padStart(3, '0')}` : dateStr;
-    } catch {
-        return `@${formatFractionToText(fraction)}`;
-    }
-};
-
-const extractByteFromFraction = (frac: unknown): number | null => {
-    const fraction: Record<string, unknown> | null = checkFractionObject(frac);
-    if (!fraction) return null;
-    return parseFractionToNumber(fraction);
-};
-
-const deserializeBytesToString = (data: unknown[]): string => {
-    const bytes: number[] = data
-        .map(extractByteFromFraction)
-        .filter((value): value is number => value !== null && value >= 0 && value <= 255);
-
-    try {
-        return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
-    } catch {
-        return bytes.map(b => String.fromCharCode(b)).join('');
-    }
-};
-
-const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, displayHint?: string): string => {
+const formatTensorRecursive = (shape: number[], data: unknown[], depth: number): string => {
     const [open, close] = lookupBracketsAtDepth(depth);
 
     if (shape.length === 0) {
@@ -153,10 +92,6 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, 
 
     if (shape.length === 1) {
         if (data.length === 0) return `${open}${close}`;
-        if (displayHint === 'text') {
-            const str = deserializeBytesToString(data);
-            return `'${str}'`;
-        }
         const elements: string = data.map(frac => formatFraction(frac)).join(' ');
         return `${open} ${elements} ${close}`;
     }
@@ -168,7 +103,7 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, 
     const parts: string[] = [];
     for (let i = 0; i < outerSize; i++) {
         const innerData = data.slice(i * innerSize, (i + 1) * innerSize);
-        parts.push(formatTensorRecursive(innerShape, innerData, depth + 1, displayHint));
+        parts.push(formatTensorRecursive(innerShape, innerData, depth + 1));
     }
 
     return `${open} ${parts.join(' ')} ${close}`;
@@ -178,8 +113,7 @@ const formatTensor = (value: unknown, depth: number): string => {
     if (!value || typeof value !== 'object') return '?';
     const v = value as Record<string, unknown>;
     if (!('shape' in v) || !('data' in v)) return '?';
-    const displayHint = v.displayHint as string | undefined;
-    return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth, displayHint);
+    return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth);
 };
 
 /// A Vector renders as source that rebuilds it — a bracket literal, whatever
@@ -311,7 +245,7 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
     }
 
     if (item.type === 'tensor' && item.value && typeof item.value === 'object') {
-        const tensor = item.value as { shape?: number[]; data?: unknown[]; displayHint?: string };
+        const tensor = item.value as { shape?: number[]; data?: unknown[] };
         const shape = Array.isArray(tensor.shape) ? tensor.shape : [];
         const data = Array.isArray(tensor.data) ? tensor.data : [];
 
@@ -327,21 +261,17 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
             }
 
             if (tensorShape.length === 1) {
-                if ((tensor.displayHint ?? '').toLowerCase() === 'text') {
-                    tensorNode.append(deserializeBytesToString(tensorData));
-                } else {
-                    const { shown, elided } = planCollectionRender(tensorData.length, budget);
-                    tensorNode.appendChild(createBracketSpan('[', tensorDepth));
-                    for (let index = 0; index < shown; index++) {
-                        if (index > 0) tensorNode.append(' ');
-                        tensorNode.append(formatFraction(tensorData[index]));
-                    }
-                    if (elided > 0) {
-                        if (shown > 0) tensorNode.append(' ');
-                        tensorNode.appendChild(createElisionSpan(elided));
-                    }
-                    tensorNode.appendChild(createBracketSpan(']', tensorDepth));
+                const { shown, elided } = planCollectionRender(tensorData.length, budget);
+                tensorNode.appendChild(createBracketSpan('[', tensorDepth));
+                for (let index = 0; index < shown; index++) {
+                    if (index > 0) tensorNode.append(' ');
+                    tensorNode.append(formatFraction(tensorData[index]));
                 }
+                if (elided > 0) {
+                    if (shown > 0) tensorNode.append(' ');
+                    tensorNode.appendChild(createElisionSpan(elided));
+                }
+                tensorNode.appendChild(createBracketSpan(']', tensorDepth));
                 return tensorNode;
             }
 
@@ -402,8 +332,6 @@ export const formatValue = (item: Value, depth: number): string => {
     switch (item.type) {
         case 'number':
             return formatNumber(item.value);
-        case 'datetime':
-            return formatDateTime(item.value);
         case 'tensor':
             return formatTensor(item.value, depth);
         case 'string':
@@ -412,10 +340,6 @@ export const formatValue = (item: Value, depth: number): string => {
             return String(item.value);
         case 'boolean':
             return item.value ? 'TRUE' : 'FALSE';
-        case 'truthValue':
-            // Three-valued logic Unknown (LANG.VALUES.TRUTH). The wire value is the
-            // protocol string 'unknown'; render it as UNKNOWN (display-only).
-            return item.value === 'unknown' ? 'UNKNOWN' : String(item.value).toUpperCase();
         case 'vector':
             return formatVector(item.value, depth);
         case 'record':

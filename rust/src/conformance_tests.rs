@@ -309,10 +309,8 @@ async fn run_case(case: &Case) -> std::result::Result<(), String> {
     } else {
         execution.map_err(|e| format!("execution failed: {e}"))?;
 
-        // Final result = the whole stack, each slot rendered as its observable
-        // `(value, role)` string via the shared surface (LANG.OBSERVATION.PROTOCOL), so a
-        // interpretation role such as a timestamp is observed here exactly as
-        // the CLI observes it — not via role-blind `Value::to_string()`.
+        // Final result = the whole stack, each slot rendered through the
+        // shared surface (LANG.OBSERVATION.PROTOCOL) the CLI observes.
         let actual_result = crate::types::display::render_stack(interp.get_stack()).join(" ");
         let expected_norm = normalize_ws(&case.expect_result);
         let actual_norm = normalize_ws(&actual_result);

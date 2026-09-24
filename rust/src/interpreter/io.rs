@@ -6,7 +6,7 @@ use std::fmt::Write;
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
     interp.run_effect_schema(|interp| {
         let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        // PRINT is an output boundary: a Text-role value is emitted as its raw
+        // PRINT is an output boundary: a String is emitted as its raw
         // character content, without the `'...'` quotes the Stack projection
         // uses to mark it as a string (LANG.EFFECTS.OUTPUT).
         let payload = crate::types::display::format_for_output(&val);
@@ -81,10 +81,10 @@ mod tests {
         assert_eq!(interp.collect_output().trim(), "[ 'AB' 'CD' ]");
     }
 
-    /// A mixed collection renders each element in its own role: strings
+    /// A mixed collection renders each element by its domain: strings
     /// quoted, numbers as fractions.
     #[tokio::test]
-    async fn test_print_mixed_vector_renders_each_role() {
+    async fn test_print_mixed_vector_renders_each_domain() {
         let mut interp = Interpreter::new();
         interp.execute("[ 'mix' 42 ] PRINT").await.unwrap();
         assert_eq!(interp.collect_output().trim(), "[ 'mix' 42/1 ]");

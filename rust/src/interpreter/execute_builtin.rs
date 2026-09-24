@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::kernel::generated::{generated_word, WordId};
-use crate::types::{Interpretation, Token, Value};
+use crate::types::{Token, Value};
 
 use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
@@ -32,8 +32,8 @@ impl Interpreter {
         // stored under either way — the uppercase that used to be here could
         // only ever rebuild a string already in hand, once per word dispatch,
         // which is the hottest path the interpreter has.
-        if let Some((value, role)) = self.lookup_binding(name) {
-            self.stack.push_with_role(value, role);
+        if let Some(value) = self.lookup_binding(name) {
+            self.stack.push(value);
             return Ok(());
         }
 
@@ -202,17 +202,15 @@ impl Interpreter {
             WordId::Not => logic::op_not(self),
             WordId::Select => logic::op_select(self),
             WordId::True => {
-                self.stack
-                    .push_with_role(Value::from_bool(true), Interpretation::TruthValue);
+                self.stack.push(Value::from_bool(true));
                 Ok(())
             }
             WordId::False => {
-                self.stack
-                    .push_with_role(Value::from_bool(false), Interpretation::TruthValue);
+                self.stack.push(Value::from_bool(false));
                 Ok(())
             }
             WordId::Nil => {
-                self.stack.push_with_role(Value::nil(), Interpretation::Nil);
+                self.stack.push(Value::nil());
                 Ok(())
             }
             WordId::Exec => control::op_exec(self),

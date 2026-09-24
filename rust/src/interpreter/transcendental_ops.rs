@@ -14,7 +14,7 @@ use crate::interpreter::value_extraction_helpers::{extract_operands, push_result
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactReal, Transcendental};
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 pub(crate) fn exact_real_of(value: &Value) -> Option<ExactReal> {
     match &value.data {
@@ -62,13 +62,7 @@ pub(crate) fn unary(
     let operands = extract_operands(interp, 1)?;
     match lift_unary_numeric(&operands[0], &scalar_law(word, f)) {
         Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::RawNumber
-            };
             push_result(interp, result);
-            interp.stack.set_last_role(role);
             Ok(())
         }
         Err(e) => {

@@ -144,10 +144,8 @@ const rowsToMatrixLatex = (rows: string[][]): string => {
 
 const tensorToLatex = (value: unknown): string | null => {
     if (!value || typeof value !== 'object') return null;
-    const tensor = value as { shape?: unknown; data?: unknown; displayHint?: unknown };
+    const tensor = value as { shape?: unknown; data?: unknown };
     if (!Array.isArray(tensor.shape) || !Array.isArray(tensor.data)) return null;
-    // Text-hinted byte tensors are strings, not mathematics.
-    if (String(tensor.displayHint ?? '').toLowerCase() === 'text') return null;
 
     const shape = tensor.shape as number[];
     const data = tensor.data as unknown[];

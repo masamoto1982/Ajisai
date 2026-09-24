@@ -18,7 +18,7 @@ use crate::interpreter::collection_meter::ScanMeter;
 use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, RecordBuildError, RecordData, Value};
+use crate::types::{RecordBuildError, RecordData, Value};
 
 /// Put a Word's consumed operands back, in order.
 fn restore_all(interp: &mut Interpreter, operands: Vec<Value>) {
@@ -28,9 +28,7 @@ fn restore_all(interp: &mut Interpreter, operands: Vec<Value>) {
 }
 
 fn push_record(interp: &mut Interpreter, record: RecordData) {
-    interp
-        .stack
-        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
+    interp.stack.push(Value::from_record(record));
 }
 
 /// The declared `nonRecord` condition, naming the Word and the position.
@@ -101,9 +99,7 @@ pub fn op_keys(interp: &mut Interpreter) -> Result<()> {
         return Err(non_record("KEYS", "its operand"));
     };
     let keys = Value::from_vector(record.keys().to_vec());
-    interp
-        .stack
-        .push_with_role(keys, Interpretation::Unassigned);
+    interp.stack.push(keys);
     Ok(())
 }
 
@@ -115,9 +111,7 @@ pub fn op_values(interp: &mut Interpreter) -> Result<()> {
         return Err(non_record("VALUES", "its operand"));
     };
     let values = Value::from_vector(record.values().to_vec());
-    interp
-        .stack
-        .push_with_role(values, Interpretation::Unassigned);
+    interp.stack.push(values);
     Ok(())
 }
 
@@ -132,12 +126,7 @@ pub fn op_at(interp: &mut Interpreter) -> Result<()> {
         Some(value) => value.clone(),
         None => missing_field(),
     };
-    let role = if answer.is_nil() {
-        Interpretation::Nil
-    } else {
-        answer.hint
-    };
-    interp.stack.push_with_role(answer, role);
+    interp.stack.push(answer);
     Ok(())
 }
 
@@ -173,9 +162,7 @@ pub fn op_without(interp: &mut Interpreter) -> Result<()> {
             push_record(interp, next);
         }
         None => {
-            interp
-                .stack
-                .push_with_role(missing_field(), Interpretation::Nil);
+            interp.stack.push(missing_field());
         }
     }
     Ok(())
@@ -189,9 +176,7 @@ pub fn op_has(interp: &mut Interpreter) -> Result<()> {
         return Err(non_record("HAS?", "the first operand"));
     };
     let present = record.has(&operands[1]);
-    interp
-        .stack
-        .push_with_role(Value::from_bool(present), Interpretation::TruthValue);
+    interp.stack.push(Value::from_bool(present));
     Ok(())
 }
 

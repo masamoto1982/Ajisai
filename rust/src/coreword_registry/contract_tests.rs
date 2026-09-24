@@ -62,8 +62,7 @@ fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
     // Projecting/PassthroughThenProject/B. They are Projecting because a
     // Tier 2 (`PI`) pair can exhaust its comparison-refinement budget
     // (LANG.VALUES.EXACT) without deciding — that genuine incomparability projects onto
-    // the logical `Unknown` (U), a reasoned NIL tagged `TruthValue` so it
-    // reads as U rather than as an ordinary absence. They are
+    // UNKNOWN, a NIL carrying `undecidable` (LANG.VALUES.TRUTH). They are
     // PassthroughThenProject because they still pass a NIL operand through
     // first (LANG.FAILURE.PASSTHROUGH), and only then may project the budget-exhaustion case.
     for name in &["EQ", "LT", "GT"] {

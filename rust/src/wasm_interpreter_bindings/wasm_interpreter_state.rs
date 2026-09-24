@@ -64,13 +64,8 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        // Keep the WASM boundary on the Phase 4 `(value, role)` façade rather
-        // than independently indexing the legacy value and role vectors.
-        // The `Stack` owns each value with its role in lockstep, so iterating
-        // its slots yields aligned `(value, role)` observations by construction
-        // — no snapshot type and no alignment assertion are needed.
-        for (value, role) in self.interpreter.get_stack().iter_slots() {
-            js_array.push(&value_to_js(value, Some(role)));
+        for value in self.interpreter.get_stack().iter() {
+            js_array.push(&value_to_js(value));
         }
         js_array.into()
     }
@@ -234,8 +229,7 @@ impl AjisaiInterpreter {
     /// person at the keyboard is the one asking.
     #[wasm_bindgen]
     pub fn clear_stack(&mut self) {
-        self.interpreter
-            .update_stack_with_hints(Vec::new(), Vec::new());
+        self.interpreter.update_stack(crate::types::Stack::new());
     }
 
     /// The one stack format persistence accepts (LANG.OBSERVATION.FIREWALL). Unlike
@@ -249,16 +243,15 @@ impl AjisaiInterpreter {
     /// `crate::types::value_persist`.
     #[wasm_bindgen]
     pub fn snapshot_stack(&self) -> Result<String, String> {
-        crate::types::value_persist::encode_stack(self.interpreter.get_stack().iter_slots())
+        crate::types::value_persist::encode_stack(self.interpreter.get_stack().iter())
     }
 
     /// Restore a stack from a `snapshot_stack` payload, reinstating exact
-    /// values (CodeBlock, ExactScalar, …) and their stack-position roles.
+    /// values (CodeBlock, ExactScalar, …).
     #[wasm_bindgen]
     pub fn restore_stack_snapshot(&mut self, snapshot_json: &str) -> Result<(), String> {
-        let slots = crate::types::value_persist::decode_stack(snapshot_json)?;
-        let (stack, hints): (Vec<_>, Vec<_>) = slots.into_iter().unzip();
-        self.interpreter.update_stack_with_hints(stack, hints);
+        let stack = crate::types::value_persist::decode_stack(snapshot_json)?;
+        self.interpreter.update_stack(stack);
         Ok(())
     }
 

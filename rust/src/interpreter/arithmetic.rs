@@ -17,7 +17,7 @@ use crate::kernel::arithmetic as kernel_arithmetic;
 use crate::kernel::{KernelValue, Scalar as KernelScalar};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{DenseTensor, Interpretation, SparseTensor, Value, ValueData};
+use crate::types::{DenseTensor, SparseTensor, Value, ValueData};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
@@ -195,7 +195,6 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
                         data: Arc::new(data),
                         shape: Arc::new(shape.clone()),
                     },
-                    hint: Interpretation::Unassigned,
                     absence: None,
                 }
             } else {

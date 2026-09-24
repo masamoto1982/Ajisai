@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::types::{Interpretation, Stack, Token, Value, WordDefinition};
+use crate::types::{Stack, Token, Value, WordDefinition};
 use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -590,9 +590,5 @@ impl Interpreter {
 
     pub fn update_stack(&mut self, stack: impl Into<Stack>) {
         self.stack = stack.into();
-    }
-
-    pub fn update_stack_with_hints(&mut self, values: Vec<Value>, hints: Vec<Interpretation>) {
-        self.stack = Stack::from_values_and_roles(values, hints);
     }
 }

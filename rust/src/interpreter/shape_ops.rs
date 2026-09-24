@@ -8,7 +8,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 use super::ordering_ops::{elements_of, restore, take_operand};
 
@@ -109,9 +109,7 @@ pub fn op_zip(interp: &mut Interpreter) -> Result<()> {
             )
         })
         .collect();
-    interp
-        .stack
-        .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
+    interp.stack.push(Value::from_vector(out));
     Ok(())
 }
 
@@ -187,8 +185,6 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
     }
 
     items[position as usize] = replacement;
-    interp
-        .stack
-        .push_with_role(Value::from_vector(items), Interpretation::Unassigned);
+    interp.stack.push(Value::from_vector(items));
     Ok(())
 }

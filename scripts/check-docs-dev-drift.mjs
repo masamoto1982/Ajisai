@@ -124,6 +124,15 @@ const KNOWN_FALSE_POSITIVES = new Set([
   // since done exactly that (rust/src/error.rs). Same shape as the
   // EmptySequence entry above: a work-order instruction, now fulfilled.
   'outcome-space-bijection-work-order-2026-09.md::AjisaiError::Custom',
+
+  // The interpretation-role plane (`Interpretation`, the word-hint override
+  // table) these memos describe as then-present has since been deleted: every
+  // observation of a value is derived from the value itself. The memos record
+  // the state they were written against; the vocabulary-100 work order asked
+  // for exactly this removal.
+  'semantic-spine-migration-plan.md::Interpretation::Text',
+  'vocabulary-100-work-order-2026-09.md::Interpretation::Timestamp',
+  'vocabulary-100-work-order-2026-09.md::apply_word_hint_override',
 ]);
 
 function parseIndexScope() {

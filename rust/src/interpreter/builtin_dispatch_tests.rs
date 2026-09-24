@@ -20,12 +20,12 @@ mod tests {
     use crate::interpreter::Interpreter;
     use crate::kernel::generated::GENERATED_WORDS;
 
-    /// The stack as a program can see it: each value rendered, with its role.
+    /// The stack as a program can see it: each value rendered.
     fn rendered(interp: &Interpreter) -> Vec<String> {
         interp
             .get_stack()
-            .iter_slots()
-            .map(|(value, role)| format!("{value}:{role:?}"))
+            .iter()
+            .map(|value| value.to_string())
             .collect()
     }
 
@@ -75,8 +75,7 @@ mod tests {
 
     /// The two routes into a primitive must be the same step. Compared at the
     /// point where they actually differ — the carried entry versus the registry
-    /// scan — rather than through a whole dispatch, because a full dispatch also
-    /// applies the word hint, which neither of these does. Both a value operand
+    /// scan — rather than through a whole dispatch. Both a value operand
     /// and a NIL one, since the declared-NIL contract is applied inside the
     /// shared step and a route that skipped it would answer differently for the
     /// same program.

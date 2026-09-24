@@ -6,7 +6,7 @@ use crate::interpreter::value_extraction_helpers::{
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
@@ -68,9 +68,7 @@ pub(crate) fn lift_unary_numeric(
 /// referential-identity shortcut.
 pub(crate) fn op_pi(interp: &mut Interpreter) -> Result<()> {
     let value = Value::from_exact_real(ExactReal::Computable(crate::types::exact::pi::pi()));
-    interp
-        .stack
-        .push_with_role(value, Interpretation::RawNumber);
+    interp.stack.push(value);
     Ok(())
 }
 
@@ -198,13 +196,7 @@ where
     };
     match lift_binary_numeric(&operands[0], &operands[1], &select) {
         Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::RawNumber
-            };
             push_result(interp, result);
-            interp.stack.set_last_role(role);
             Ok(())
         }
         Err(e) => {
@@ -252,12 +244,7 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 
     match lift_unary_numeric(&value, &sqrt_scalar) {
         Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::RawNumber
-            };
-            interp.stack.push_with_role(result, role);
+            interp.stack.push(result);
             Ok(())
         }
         Err(e) => {

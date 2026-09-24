@@ -13,10 +13,9 @@ use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, ResourceUsage, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
 use crate::types::value_protocol::{
-    exact_display, exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode,
-    ProtocolValue,
+    exact_display, exact_terms, value_to_protocol, ProtocolNode, ProtocolValue,
 };
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 use serde_json::{json, Map, Value as Json};
 
 /// Version of the top-level `--json` envelope. Bump only on a breaking
@@ -97,11 +96,10 @@ impl Report {
 }
 
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {
-    // The `Stack` owns aligned `(value, role)` slots, so iterate them directly.
     let nodes: Vec<Json> = interp
         .get_stack()
-        .iter_slots()
-        .map(|(value, role)| protocol_node_json(&value_to_protocol(value, Some(role))))
+        .iter()
+        .map(|value| protocol_node_json(&value_to_protocol(value)))
         .collect();
     Json::Array(nodes)
 }
@@ -251,18 +249,11 @@ pub(crate) fn resource_usage_json(usage: &ResourceUsage) -> Json {
 }
 
 /// JSON rendering of a `ProtocolNode` — the same shape `protocol_to_js`
-/// produces for the GUI: `{ type, value, displayHint, semantics? }`.
+/// produces for the GUI: `{ type, value, semantics? }`.
 pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
     let mut obj = Map::new();
-    obj.insert(
-        "displayHint".into(),
-        json!(interpretation_protocol_str(node.display_hint)),
-    );
     if let Some(source) = &node.semantics {
-        obj.insert(
-            "semantics".into(),
-            semantics_json(source, node.display_hint),
-        );
+        obj.insert("semantics".into(), semantics_json(source));
     }
     obj.insert("type".into(), json!(node.type_str));
     let value = match &node.value {
@@ -286,18 +277,15 @@ pub(super) fn protocol_node_json(node: &ProtocolNode) -> Json {
 /// JSON rendering of the per-value `semantics` block — the native mirror of
 /// `value_semantics_to_js` at the WASM boundary; the two now emit the exact
 /// same field set.
-pub(super) fn semantics_json(value: &Value, effective: Interpretation) -> Json {
+pub(super) fn semantics_json(value: &Value) -> Json {
     let mut obj = Map::new();
-    let truth = value.truth_value_for_role(effective);
-    if let Some(truth) = truth {
+    if let Some(truth) = value.truth_value() {
         obj.insert("truthValue".into(), json!(truth));
     }
     if let Some(absence) = value.normalized_absence_metadata() {
         obj.insert("absence".into(), absence_json(&absence));
     }
-    if matches!(value.data, ValueData::ExactScalar(_))
-        && effective != Interpretation::ContinuedFraction
-    {
+    if matches!(value.data, ValueData::ExactScalar(_)) {
         obj.insert("approximate".into(), json!(true));
     }
     // The same normal form in two shapes: the terms a consumer computes with,
@@ -337,7 +325,7 @@ mod tests {
         let sqrt_two = ExactReal::from_sqrt_rational(Fraction::new(2.into(), 1.into()))
             .expect("sqrt(2) is in the supported algebraic domain");
         let value = Value::from_exact_real(sqrt_two);
-        let semantics = semantics_json(&value, Interpretation::RawNumber);
+        let semantics = semantics_json(&value);
 
         assert_eq!(semantics["approximate"], true);
         assert_eq!(semantics["exactTerms"][0]["numerator"], "1");

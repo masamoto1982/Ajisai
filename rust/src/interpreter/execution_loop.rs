@@ -1,9 +1,9 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
-use crate::types::{Interpretation, Token, Value, ValueData};
+use crate::types::{Token, Value, ValueData};
 
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
-use super::value_extraction_helpers::{create_number_value, is_vector_value};
+use super::value_extraction_helpers::create_number_value;
 use super::Interpreter;
 
 /// If the bracketed literal spanning `tokens[start..start+consumed)` is
@@ -29,63 +29,6 @@ fn def_body_tokens_if_literal_precedes_def(
             Some(tokens[start + 1..start + consumed - 1].to_vec())
         }
         _ => None,
-    }
-}
-
-/// After a core word runs, retag the top-of-stack plane role from a small
-/// name-keyed table (LANG.OBSERVATION.PROTOCOL). The interpreted loop applies this after every
-/// symbol; the compiled plan mirrors it after each call op so the two routes
-/// leave identical `(value, role)` observations. A no-op for words not in the
-/// table (e.g. user words).
-pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
-    let hint: Option<Interpretation> = match word {
-        "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "FLOOR" | "ROUND" | "FOLD" => {
-            Some(Interpretation::RawNumber)
-        }
-        "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" => {
-            Some(Interpretation::Interval)
-        }
-        "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
-            Some(Interpretation::RawNumber)
-        }
-        "BOOL" | "LT" | "GT" | "EQ" | "AND" | "NOT" | "STARTS-WITH?" | "ENDS-WITH?" => {
-            Some(Interpretation::TruthValue)
-        }
-        "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
-        // `CONCAT` is deliberately absent: its result role depends on its
-        // operands (joining two Texts yields a Text), so `op_concat` pushes the
-        // slot role itself. Stamping `Unassigned` here is what made
-        // `'ab' 'c' CONCAT` render as `[ 97/1 98/1 99/1 ]` — the join was
-        // right, the role was thrown away.
-        "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "SORT" | "TAKE" | "DROP"
-        | "REORDER" | "SPLIT" | "COLLECT" | "FILL" | "TOKENIZE" | "CONSERVE" | "REFLECT" => {
-            Some(Interpretation::Unassigned)
-        }
-        _ => None,
-    };
-    if let Some(h) = hint {
-        let len: usize = interp.stack.len();
-        if len > 0 {
-            // `Interval` describes a *number*'s presentation. `SQRT` lifts over
-            // a vector now, and stamping the role on the vector itself rendered
-            // `[ 4 9 ] SQRT` as `[2/1, 3/1]` — a scalar's notation wrapped
-            // around a collection. A collection keeps whatever role it was
-            // built with; the lanes inside it are numbers either way.
-            //
-            // Asked of the representation, not of a materialized view.
-            // `as_vector_view` hands back a `Cow`, and for a `Tensor` that
-            // `Cow` is `Owned`: it built one boxed `Value` per lane to answer
-            // "is this a collection?", then dropped them all. This runs after
-            // every core word in the table above, so a single `[ ... ] 2 MUL`
-            // over a million-lane tensor materialized a million `Value`s for a
-            // question the discriminant already answers — and paid for it again
-            // on the next Word. `is_vector_value` reads the tag.
-            let stamps_a_scalar_role = matches!(h, Interpretation::Interval);
-            let top_is_collection = interp.stack.last().is_some_and(is_vector_value);
-            if !(stamps_a_scalar_role && top_is_collection) {
-                interp.stack.set_role_at(len - 1, h);
-            }
-        }
     }
 }
 
@@ -132,12 +75,7 @@ fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
 /// The first reasoned absence in reading order names the event, keeping one
 /// event per Word call as the trace's shape requires.
 fn projected_nil_reason(value: &Value) -> Option<NilReason> {
-    // Only operational NIL is meant to participate in error-flow tracing
-    // (LANG.VALUES.TRUTH / LANG.VALUES.TRUTH); the logical Unknown (U) — `Nil` data carrying
-    // the `TruthValue` hint, not a dedicated variant — should not. `is_nil`
-    // does not look at `hint`, so it does not currently distinguish the
-    // two; this has no observable effect today because U is unreachable
-    // from the current vocabulary (see `types/exact/computable.rs`).
+    // UNKNOWN is a NIL (LANG.VALUES.TRUTH), so it is traced like any other.
     if value.is_nil() {
         return match value.nil_reason() {
             Some(NilReason::Literal) | None => None,
@@ -290,8 +228,7 @@ impl Interpreter {
                     // number. `parsed` only re-derives anything on the refusal
                     // path, which ends the program.
                     let frac = literal.parsed().map_err(AjisaiError::MalformedSource)?;
-                    self.stack
-                        .push_with_role(create_number_value(frac), Interpretation::RawNumber);
+                    self.stack.push(create_number_value(frac));
                 }
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
@@ -304,7 +241,7 @@ impl Interpreter {
                     // and pushed exactly like this one) rather than a
                     // variable-length run recognized here — see
                     // `control_cond.rs::op_cond`'s doc comment for why.
-                    let (values, consumed, element_hint) =
+                    let (values, consumed) =
                         Self::collect_bracketed_with_depth(execute_tokens, i, 1)?;
                     // A literal immediately followed by `<name> DEF`
                     // is that DEF's body — captured here, as written, for
@@ -315,8 +252,7 @@ impl Interpreter {
                     // in place, and `op_def` falls back normally.
                     self.pending_def_body_tokens =
                         def_body_tokens_if_literal_precedes_def(execute_tokens, i, consumed);
-                    self.stack
-                        .push_with_role(Value::from_vector_promoted(values), element_hint);
+                    self.stack.push(Value::from_vector_promoted(values));
                     i += consumed;
                     continue;
                 }
@@ -337,7 +273,6 @@ impl Interpreter {
                         match self.execute_word_core(upper.as_ref()) {
                             Ok(()) => {
                                 trace_direct_nil_produced(self, upper.as_ref(), stack_len_before);
-                                apply_word_hint_override(self, upper.as_ref());
                             }
                             Err(err) => {
                                 self.record_word_dispatch_failure(
@@ -359,8 +294,7 @@ impl Interpreter {
                     // literal earlier in the line from reaching a later `DEF`.
                     let (record, consumed) = Self::collect_record_literal(execute_tokens, i, 1)?;
                     self.pending_def_body_tokens = None;
-                    self.stack
-                        .push_with_role(record, Interpretation::Unassigned);
+                    self.stack.push(record);
                     i += consumed;
                     continue;
                 }

@@ -29,7 +29,7 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::Interpreter;
 use crate::semantic::AbsenceMetadata;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 /// Borrow the operational-NIL metadata of the top-of-stack value without
 /// consuming it. Returns `None` when the stack is empty *(malformed use)*, or
@@ -51,16 +51,8 @@ fn require_non_empty(interp: &Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// Push a result above the retained inspection target and register its semantic
-/// interpretation so the value renders correctly (Text with quotes, a truth
-/// value, a NIL, a Record). The target below keeps its own hint untouched.
-fn push_result(interp: &mut Interpreter, value: Value, hint: Interpretation) {
-    interp.stack.push_with_role(value, hint);
-}
-
 /// A protocol-string Text result, or a `notAvailable` NIL when the accessor
-/// found no value. Carries the matching interpretation hint so a Text result
-/// renders as text and a NIL result renders as NIL.
+/// found no value.
 ///
 /// The projected NIL is *reasoned*. It used to be `Value::nil()`, a bare
 /// literal NIL, which left `NIL-REASON`'s declared `projection.reason:
@@ -71,16 +63,10 @@ fn push_result(interp: &mut Interpreter, value: Value, hint: Interpretation) {
 /// reasonless projection would have no content to observe.
 fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&str>) {
     match value {
-        Some(protocol) => push_result(
-            interp,
-            Value::from_string(protocol),
-            Interpretation::Unassigned,
-        ),
-        None => push_result(
-            interp,
-            Value::nil_with_reason_unknown(NilReason::NotAvailable),
-            Interpretation::Nil,
-        ),
+        Some(protocol) => interp.stack.push(Value::from_string(protocol)),
+        None => interp
+            .stack
+            .push(Value::nil_with_reason_unknown(NilReason::NotAvailable)),
     }
 }
 
@@ -92,11 +78,7 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
         Some(value) => value.is_operational_nil(),
         None => return Err(AjisaiError::StackUnderflow),
     };
-    push_result(
-        interp,
-        Value::from_bool(is_absent),
-        Interpretation::TruthValue,
-    );
+    interp.stack.push(Value::from_bool(is_absent));
     Ok(())
 }
 

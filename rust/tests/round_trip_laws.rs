@@ -11,13 +11,13 @@
 //! exactly what may change; this pins the property that makes the spelling
 //! worth having.
 //!
-//! Two domains are deliberately out of scope, because the display does not
-//! claim to round-trip them and `display.rs` says so:
+//! Two kinds of value are deliberately out of scope, because the display does
+//! not claim to round-trip them and `display_source.rs` says so:
 //!
 //! - A Symbol renders as its bare name, which calls a Word rather than
 //!   pushing the name.
-//! - A role-dependent rendering (datetime, interval, continued fraction) comes
-//!   from `format_with_hint`, not from the structural renderer under test.
+//! - An irrational scalar renders as a continued fraction truncated at a
+//!   display budget.
 
 use ajisai_core::interpreter::Interpreter;
 

@@ -16,7 +16,6 @@ mod test_support;
 
 use ajisai_core::interpreter::host_lookup::{resolve_host_lookup, HostLookup};
 use ajisai_core::interpreter::Interpreter;
-use ajisai_core::types::Interpretation;
 use proptest::prelude::*;
 use test_support::generators::{small, user_word_body, user_word_name};
 use test_support::observe::{render, run, run_err};
@@ -25,7 +24,7 @@ use test_support::observe::{render, run, run_err};
 
 /// Whole-stack rendering (one value per element), the conformance observation.
 fn obs(src: &str) -> Vec<String> {
-    run(src).iter().map(|v| render(v, v.hint)).collect()
+    run(src).iter().map(render).collect()
 }
 
 /// The resolution *outcome* of a program: `Ok(stack-render)` when every word
@@ -39,11 +38,7 @@ fn outcome(src: &str) -> Result<Vec<String>, ()> {
     rt.block_on(async {
         let mut interp = Interpreter::new();
         match interp.execute(src).await {
-            Ok(()) => Ok(interp
-                .get_stack()
-                .iter()
-                .map(|v| render(v, v.hint))
-                .collect()),
+            Ok(()) => Ok(interp.get_stack().iter().map(render).collect()),
             Err(_) => Err(()),
         }
     })
@@ -322,20 +317,12 @@ fn the_host_lookup_and_a_program_agree_on_what_is_unknown() {
 #[test]
 fn the_host_lookup_leaves_the_session_untouched() {
     let interp = session("[ 2 MUL ] 'DBL' DEF 7");
-    let before: Vec<String> = interp
-        .get_stack()
-        .iter()
-        .map(|v| render(v, Interpretation::Unassigned))
-        .collect();
+    let before: Vec<String> = interp.get_stack().iter().map(render).collect();
 
     let _ = resolve_host_lookup(&interp, "ADD");
     let _ = resolve_host_lookup(&interp, "DBL");
 
-    let after: Vec<String> = interp
-        .get_stack()
-        .iter()
-        .map(|v| render(v, Interpretation::Unassigned))
-        .collect();
+    let after: Vec<String> = interp.get_stack().iter().map(render).collect();
     assert_eq!(before, after, "a lookup must not touch the stack");
     assert!(
         resolve_host_lookup(&interp, "DBL").is_ok(),

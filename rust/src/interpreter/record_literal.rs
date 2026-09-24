@@ -27,7 +27,7 @@ impl Interpreter {
         start_index: usize,
         depth: usize,
     ) -> Result<(Value, usize)> {
-        let (elements, consumed, _) =
+        let (elements, consumed) =
             Self::collect_literal_elements(tokens, start_index, depth, LiteralKind::Record)?;
         let record = record_from_literal_elements(elements)?;
         Ok((Value::from_record(record), consumed))

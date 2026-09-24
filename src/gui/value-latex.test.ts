@@ -22,8 +22,8 @@ function vec(...elements: Value[]): Value {
     return { type: 'vector', value: elements };
 }
 
-function tensor(shape: number[], data: unknown[], displayHint?: string): Value {
-    return { type: 'tensor', value: { shape, data, displayHint } };
+function tensor(shape: number[], data: unknown[]): Value {
+    return { type: 'tensor', value: { shape, data } };
 }
 
 describe('fractionToLatex', () => {
@@ -169,10 +169,6 @@ describe('valueToLatex: tensors', () => {
 
     test('rank-3 tensor is refused', () => {
         expect(valueToLatex(tensor([1, 1, 2], [frac(1), frac(2)]))).toBeNull();
-    });
-
-    test('text-hinted byte tensor is refused (it is a string)', () => {
-        expect(valueToLatex(tensor([2], [frac(72), frac(105)], 'text'))).toBeNull();
     });
 
     test('shape/data mismatch for rank-2 is refused', () => {

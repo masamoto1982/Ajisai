@@ -29,7 +29,7 @@ fn obs1(src: &str) -> String {
         "{src:?} must leave one value, got {}",
         stack.len()
     );
-    render(&stack[0], stack[0].hint)
+    render(&stack[0])
 }
 
 proptest! {

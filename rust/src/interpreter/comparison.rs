@@ -5,37 +5,22 @@ use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 use super::comparison_scalar::{compare_scalar_pair, scalar_pair_eq, OrderingKind, ScalarCmp};
 
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
     interp.stack.push(Value::from_bool(result));
-    let stack_len = interp.stack.len();
-    interp
-        .stack
-        .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
-/// The logical Unknown (U): a NIL read in truth position (LANG.VALUES.TRUTH),
-/// carrying the reason a comparison could not decide. Mirrors
-/// `interpreter::logic::as_unknown` — U's `hint` is `TruthValue` directly
-/// (not just the stack role) so `Value::truth_value()` reports `"unknown"`
-/// from the value alone, and `NIL?`/`NIL-REASON` still see the
-/// absence it is (SPEC: being read in truth position adds an observation, it
-/// takes none away).
+/// UNKNOWN from a comparison that could not decide: a NIL carrying
+/// `undecidable` (LANG.VALUES.TRUTH — UNKNOWN is NIL read in truth position).
 fn undecidable_truth_value() -> Value {
-    let mut v = Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable);
-    v.hint = Interpretation::TruthValue;
-    v
+    Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable)
 }
 
 fn push_undecidable_result(interp: &mut Interpreter) {
     interp.stack.push(undecidable_truth_value());
-    let stack_len = interp.stack.len();
-    interp
-        .stack
-        .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
 struct ScalarFastOperand {

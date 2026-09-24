@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::interpreter_core::RuntimeMetrics;
 use crate::interpreter::tensor_lane_ops::{apply_lane_wise_broadcast, contains_absent_lane};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 use std::sync::Arc;
 
 #[inline]
@@ -210,7 +210,6 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         if data.len() == 1 {
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
-                hint: Interpretation::RawNumber,
                 absence: None,
             };
         }
@@ -228,7 +227,6 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
             .collect();
         return Value {
             data: ValueData::Vector(Arc::new(children)),
-            hint: Interpretation::Unassigned,
             absence: None,
         };
     }
@@ -247,7 +245,6 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 
     Value {
         data: ValueData::Vector(Arc::new(children)),
-        hint: Interpretation::Unassigned,
         absence: None,
     }
 }

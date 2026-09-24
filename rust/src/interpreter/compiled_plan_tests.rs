@@ -39,8 +39,5 @@ fn compile_collects_vector_literal() {
         Token::VectorEnd,
     ]);
     let plan = compile_word_definition(&wd, &interp);
-    assert!(matches!(
-        plan.line.ops[0],
-        CompiledOp::PushVectorLiteral(_, _)
-    ));
+    assert!(matches!(plan.line.ops[0], CompiledOp::PushVectorLiteral(_)));
 }

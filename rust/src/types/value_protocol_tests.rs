@@ -1,17 +1,13 @@
 // AQ-VER-003-C: native verification of the pure serialization mapping
-// `value_to_protocol`. The historical WASM boundary left the (Value, hint)
-// -> wire-format decision untested (only `cargo check --target wasm32`),
-// which allowed a promoted boolean tensor to serialize as numbers. These
-// tests pin the type/value/displayHint decision for every ValueData kind,
-// the four scalar interpretation arms, the Vector/Tensor text projections,
-// the TruthValue leaf propagation through promoted tensors (the regression),
-// and the external-vs-value hint precedence.
+// `value_to_protocol`. These tests pin the type/value decision for every
+// ValueData kind: each is a function of the value's domain alone
+// (LANG.VALUES.DENOTATION, LANG.VALUES.DISJOINT).
 //
 // Trace: docs/quality/TRACEABILITY_MATRIX.md, requirement AQ-REQ-003.
 
 use crate::types::fraction::Fraction;
 use crate::types::value_protocol::{value_to_protocol, ProtocolNode, ProtocolValue};
-use crate::types::{DenseTensor, Interpretation, Value, ValueData};
+use crate::types::{DenseTensor, Value, ValueData};
 use std::sync::Arc;
 
 fn frac(n: i64) -> Fraction {
@@ -20,11 +16,6 @@ fn frac(n: i64) -> Fraction {
 
 fn scalar(n: i64) -> Value {
     Value::from_fraction(frac(n))
-}
-
-fn with_hint(mut v: Value, hint: Interpretation) -> Value {
-    v.hint = hint;
-    v
 }
 
 fn vector(children: Vec<Value>) -> Value {
@@ -40,7 +31,6 @@ fn tensor(nums: &[i64], shape: &[usize]) -> Value {
             data: Arc::new(dense),
             shape: Arc::new(shape.to_vec()),
         },
-        hint: Interpretation::Unassigned,
         absence: None,
     }
 }
@@ -60,7 +50,7 @@ fn children_of(node: &ProtocolNode) -> &[ProtocolNode] {
 }
 #[test]
 fn plain_nil_is_still_nil_not_unknown() {
-    let node = value_to_protocol(&Value::nil(), None);
+    let node = value_to_protocol(&Value::nil());
     assert_eq!(node.type_str, "nil");
     assert_eq!(node.value, ProtocolValue::Null);
 }
@@ -72,7 +62,7 @@ fn plain_nil_is_still_nil_not_unknown() {
 /// LANG.OBSERVATION.FIREWALL rules out.
 #[test]
 fn a_symbol_serializes_as_its_own_domain_with_its_bare_name() {
-    let node = value_to_protocol(&Value::from_symbol("MUL"), None);
+    let node = value_to_protocol(&Value::from_symbol("MUL"));
     assert_eq!(node.type_str, "symbol");
     assert_eq!(node.value, ProtocolValue::Text("MUL".to_string()));
 }
@@ -91,14 +81,14 @@ fn sqrt2() -> Value {
     v
 }
 
-/// Under `RawNumber`, an ExactScalar serializes as a `number` (its best
-/// rational approximation) but its `semantics` block must carry the
-/// original exact value, so the GUI can reference the exact source rather
-/// than a silent truncation (Option 1 / LANG.OBSERVATION.FIREWALL firewall).
+/// An ExactScalar serializes as a `number` (its best rational approximation)
+/// but its `semantics` block must carry the original exact value, so the GUI
+/// can reference the exact source rather than a silent truncation
+/// (LANG.OBSERVATION.FIREWALL).
 #[test]
-fn exact_scalar_rawnumber_carries_exact_source_in_semantics() {
-    let node = value_to_protocol(&sqrt2(), Some(Interpretation::RawNumber));
-    assert_eq!(node.type_str, "number", "RawNumber ExactScalar -> number");
+fn exact_scalar_carries_exact_source_in_semantics() {
+    let node = value_to_protocol(&sqrt2());
+    assert_eq!(node.type_str, "number", "ExactScalar -> number");
     assert!(
         matches!(node.value, ProtocolValue::Number { .. }),
         "value is the rational approximation, got {:?}",
@@ -181,96 +171,60 @@ fn algebraic_exact_display_writes_the_normal_form_short() {
     assert_eq!(display(&sqrt_of(8)), "sqrt(8)");
 }
 
-/// Under the `ContinuedFraction` role the value is rendered losslessly as
-/// the canonical nested-form string and carries no `semantics` block, so
-/// it is never marked approximate (regression guard: unchanged behavior).
-#[test]
-fn exact_scalar_continued_fraction_role_is_lossless_nested_form() {
-    let node = value_to_protocol(&sqrt2(), Some(Interpretation::ContinuedFraction));
-    assert_eq!(node.type_str, "string", "CF role -> nested-form string");
-    assert!(
-        matches!(node.value, ProtocolValue::Text(_)),
-        "CF role yields the nested-form text, got {:?}",
-        node.value
-    );
-    assert_eq!(node.display_hint, Interpretation::ContinuedFraction);
-    assert!(
-        node.semantics.is_none(),
-        "CF nodes carry no semantics block (and thus no approximate marker)"
-    );
-}
-// --- scalar interpretation arms (MC/DC on the 4-way match) ---
+// --- scalar and truth domains ---
 
 #[test]
-fn scalar_default_hint_is_number() {
-    let node = value_to_protocol(&scalar(7), None);
+fn scalar_is_number() {
+    let node = value_to_protocol(&scalar(7));
     assert_eq!(node.type_str, "number");
     assert_eq!(node.value, num("7", "1"));
-    assert_eq!(node.display_hint, Interpretation::RawNumber);
 }
 
+/// LANG.VALUES.DISJOINT: TRUE is not scalar one and FALSE is not scalar zero,
+/// on the wire as anywhere else.
 #[test]
-fn scalar_truthvalue_is_boolean() {
-    let node = value_to_protocol(&scalar(1), Some(Interpretation::TruthValue));
-    assert_eq!(node.type_str, "boolean");
-    assert_eq!(node.value, ProtocolValue::Bool(true));
-    let zero = value_to_protocol(&scalar(0), Some(Interpretation::TruthValue));
-    assert_eq!(zero.value, ProtocolValue::Bool(false));
+fn zero_and_one_are_numbers_and_booleans_are_booleans() {
+    for n in [0, 1] {
+        let node = value_to_protocol(&scalar(n));
+        assert_eq!(node.type_str, "number");
+        assert_eq!(node.value, num(&n.to_string(), "1"));
+    }
+    for b in [true, false] {
+        let node = value_to_protocol(&Value::from_bool(b));
+        assert_eq!(node.type_str, "boolean");
+        assert_eq!(node.value, ProtocolValue::Bool(b));
+    }
 }
 
+/// UNKNOWN is a NIL (LANG.VALUES.TRUTH), so it is observed as one: there is
+/// no truth-valued NIL on the wire.
 #[test]
-fn scalar_timestamp_is_datetime_with_number_value() {
-    let node = value_to_protocol(&scalar(123), Some(Interpretation::Timestamp));
-    assert_eq!(node.type_str, "datetime");
-    assert_eq!(node.value, num("123", "1"));
+fn a_nil_in_truth_position_is_observed_as_a_nil() {
+    let unknown = Value::nil_with_reason_unknown(crate::error::NilReason::Undecidable);
+    let node = value_to_protocol(&unknown);
+    assert_eq!(node.type_str, "nil");
+    assert_eq!(node.value, ProtocolValue::Null);
+    assert_eq!(unknown.truth_value(), None);
 }
 
 #[test]
 fn a_string_projects_to_a_string_leaf() {
-    let node = value_to_protocol(&Value::from_string("A"), None);
+    let node = value_to_protocol(&Value::from_string("A"));
     assert_eq!(node.type_str, "string");
     assert_eq!(node.value, ProtocolValue::Text("A".to_string()));
 }
 
 #[test]
 fn a_scalar_never_projects_as_a_string() {
-    // 65 is the number 65 under every role. It used to project as `'A'` when
-    // a Text role was supplied, which is a presentation field changing the
-    // domain a host observes.
-    for role in [
-        Interpretation::Unassigned,
-        Interpretation::RawNumber,
-        Interpretation::Timestamp,
-    ] {
-        let node = value_to_protocol(&scalar(65), Some(role));
-        assert_ne!(
-            node.type_str, "string",
-            "role {role:?} must not make a number a string"
-        );
-    }
+    let node = value_to_protocol(&scalar(65));
+    assert_eq!(node.type_str, "number");
 }
 
-// --- hint precedence: external Some wins, None falls back to value.hint ---
-
-#[test]
-fn external_hint_overrides_value_hint() {
-    let v = with_hint(scalar(1), Interpretation::RawNumber);
-    let node = value_to_protocol(&v, Some(Interpretation::TruthValue));
-    assert_eq!(node.type_str, "boolean");
-}
-
-#[test]
-fn absent_external_hint_falls_back_to_value_hint() {
-    let v = with_hint(scalar(1), Interpretation::TruthValue);
-    let node = value_to_protocol(&v, None);
-    assert_eq!(node.type_str, "boolean");
-}
-
-// --- Vector branch: structural vs Text projection vs TruthValue children ---
+// --- Vector branch ---
 
 #[test]
 fn vector_structural_renders_number_children() {
-    let node = value_to_protocol(&vector(vec![scalar(1), scalar(2)]), None);
+    let node = value_to_protocol(&vector(vec![scalar(1), scalar(2)]));
     assert_eq!(node.type_str, "vector");
     let kids = children_of(&node);
     assert_eq!(kids.len(), 2);
@@ -279,23 +233,25 @@ fn vector_structural_renders_number_children() {
 }
 
 #[test]
-fn vector_truthvalue_propagates_to_children() {
-    let node = value_to_protocol(
-        &vector(vec![scalar(1), scalar(0)]),
-        Some(Interpretation::TruthValue),
-    );
+fn a_vector_of_booleans_has_boolean_children() {
+    let node = value_to_protocol(&vector(vec![
+        Value::from_bool(true),
+        Value::from_bool(false),
+        Value::nil(),
+    ]));
+    assert_eq!(node.type_str, "vector");
     let kids = children_of(&node);
     assert_eq!(kids[0].type_str, "boolean");
     assert_eq!(kids[0].value, ProtocolValue::Bool(true));
     assert_eq!(kids[1].value, ProtocolValue::Bool(false));
-    assert_eq!(kids[0].display_hint, Interpretation::TruthValue);
+    assert_eq!(kids[2].type_str, "nil");
 }
 
 #[test]
 fn a_codepoint_vector_projects_as_a_vector() {
     // `[ 65 66 ]` is a Vector of two numbers, not the string `'AB'`. This is
     // the protocol-side face of `'A' [ 65 ] EQ` answering false.
-    let node = value_to_protocol(&vector(vec![scalar(65), scalar(66)]), None);
+    let node = value_to_protocol(&vector(vec![scalar(65), scalar(66)]));
     assert_eq!(node.type_str, "vector");
 }
 
@@ -303,7 +259,7 @@ fn a_codepoint_vector_projects_as_a_vector() {
 
 #[test]
 fn tensor_1d_default_renders_numbers() {
-    let node = value_to_protocol(&tensor(&[1, 2, 3], &[3]), None);
+    let node = value_to_protocol(&tensor(&[1, 2, 3], &[3]));
     let kids = children_of(&node);
     assert_eq!(kids.len(), 3);
     assert!(kids.iter().all(|k| k.type_str == "number"));
@@ -311,28 +267,11 @@ fn tensor_1d_default_renders_numbers() {
 }
 
 #[test]
-fn tensor_1d_truthvalue_renders_booleans() {
-    // Regression: a promoted dense boolean vector ([ TRUE ], AND/NOT
-    // results) must serialize its leaves as booleans, not 1/1 numbers.
-    let node = value_to_protocol(&tensor(&[1, 0, 1], &[3]), Some(Interpretation::TruthValue));
-    assert_eq!(node.type_str, "vector");
-    let kids = children_of(&node);
-    assert_eq!(kids[0].value, ProtocolValue::Bool(true));
-    assert_eq!(kids[1].value, ProtocolValue::Bool(false));
-    assert_eq!(kids[2].value, ProtocolValue::Bool(true));
-    assert!(kids.iter().all(|k| k.type_str == "boolean"));
-    assert!(kids
-        .iter()
-        .all(|k| k.display_hint == Interpretation::TruthValue));
-}
-
-#[test]
-fn tensor_2d_numbers_nest_with_unassigned_interior_hint() {
-    let node = value_to_protocol(&tensor(&[1, 2, 3, 4], &[2, 2]), None);
+fn tensor_2d_numbers_nest() {
+    let node = value_to_protocol(&tensor(&[1, 2, 3, 4], &[2, 2]));
     let rows = children_of(&node);
     assert_eq!(rows.len(), 2);
     assert_eq!(rows[0].type_str, "vector");
-    assert_eq!(rows[0].display_hint, Interpretation::Unassigned);
     assert!(
         rows[0].semantics.is_none(),
         "interior tensor nodes carry no semantics"
@@ -343,31 +282,18 @@ fn tensor_2d_numbers_nest_with_unassigned_interior_hint() {
 }
 
 #[test]
-fn tensor_2d_truthvalue_nests_booleans() {
-    let node = value_to_protocol(
-        &tensor(&[1, 0, 0, 1], &[2, 2]),
-        Some(Interpretation::TruthValue),
-    );
-    let rows = children_of(&node);
-    assert_eq!(rows[0].display_hint, Interpretation::TruthValue);
-    let leaves = children_of(&rows[1]);
-    assert_eq!(leaves[0].value, ProtocolValue::Bool(false));
-    assert_eq!(leaves[1].value, ProtocolValue::Bool(true));
-}
-
-#[test]
 fn a_dense_tensor_projects_as_a_vector() {
     // Strings are never densified now, so a dense numeric tensor has no text
     // reading available to it at all.
-    let node = value_to_protocol(&tensor(&[72, 105], &[2]), None);
+    let node = value_to_protocol(&tensor(&[72, 105], &[2]));
     assert_eq!(node.type_str, "vector");
 }
 
 // --- remaining ValueData kinds ---
 #[test]
 fn top_level_node_always_carries_semantics() {
-    assert!(value_to_protocol(&scalar(1), None).semantics.is_some());
-    assert!(value_to_protocol(&tensor(&[1, 2], &[2]), None)
+    assert!(value_to_protocol(&scalar(1)).semantics.is_some());
+    assert!(value_to_protocol(&tensor(&[1, 2], &[2]))
         .semantics
         .is_some());
 }
@@ -385,33 +311,16 @@ mod protocol_property_tests {
                 data: Arc::new(dense),
                 shape: Arc::new(vec![len]),
             },
-            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
 
     proptest! {
-        // TruthValue role => every leaf is a boolean whose truth equals
-        // (element != 0); never a number. Drives broad input coverage of
-        // the tensor leaf decision beyond the hand-picked MC/DC rows.
-        #[test]
-        fn truthvalue_tensor_leaves_are_boolean(nums in proptest::collection::vec(-5i64..5, 1..12)) {
-            let node = value_to_protocol(&tensor_1d(&nums), Some(Interpretation::TruthValue));
-            let kids = match node.value {
-                ProtocolValue::Children(k) => k,
-                other => panic!("expected Children, got {:?}", other),
-            };
-            prop_assert_eq!(kids.len(), nums.len());
-            for (kid, n) in kids.iter().zip(nums.iter()) {
-                prop_assert_eq!(kid.type_str, "boolean");
-                prop_assert_eq!(&kid.value, &ProtocolValue::Bool(*n != 0));
-            }
-        }
-
-        // Default (numeric) role => every leaf is a number, never a boolean.
+        // A dense tensor holds numbers: every leaf is a number, never a
+        // boolean, whatever produced it.
         #[test]
         fn default_tensor_leaves_are_number(nums in proptest::collection::vec(-5i64..5, 1..12)) {
-            let node = value_to_protocol(&tensor_1d(&nums), None);
+            let node = value_to_protocol(&tensor_1d(&nums));
             let kids = match node.value {
                 ProtocolValue::Children(k) => k,
                 other => panic!("expected Children, got {:?}", other),

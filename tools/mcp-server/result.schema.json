@@ -737,23 +737,19 @@
    "additionalProperties": true,
    "required": [
     "type",
-    "value",
-    "displayHint"
+    "value"
    ],
    "properties": {
     "type": {
      "type": "string"
     },
     "value": {},
-    "displayHint": {
-     "type": "string"
-    },
     "semantics": {
      "$ref": "#/$defs/semantics"
     },
     "elided": {
      "type": "object",
-     "description": "Present when this slot's value was dropped to keep an error report deliverable. `type`, `displayHint` and `semantics` still describe what the value was; `value` is `null`. Tell this apart from a genuine `NIL` by `type`, which names the real domain, and by this field's presence.",
+     "description": "Present when this slot's value was dropped to keep an error report deliverable. `type` and `semantics` still describe what the value was; `value` is `null`. Tell this apart from a genuine `NIL` by `type`, which names the real domain, and by this field's presence.",
      "properties": {
       "reason": {
        "type": "string",

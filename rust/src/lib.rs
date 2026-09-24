@@ -77,6 +77,3 @@ mod conformance_tests;
 
 #[cfg(test)]
 mod stack_render_tests;
-
-#[cfg(test)]
-mod role_ownership_tests;

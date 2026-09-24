@@ -4,7 +4,7 @@
 //! `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff ⟦p⟧ σ₀)`. This module gives the
 //! data-plane half of that: it reads a value **only** through the LANG.OBSERVATION.FIREWALL
 //! semantic axes (`semanticKind`, `shape`, `capabilities`, `truthValue`,
-//! `origin`, `absence`) and through the pure renderer `render : (data, role) →
+//! `origin`, `absence`) and through the pure renderer `render : value →
 //! display`. It never branches on a Rust enum name, `Debug` string, or display
 //! text — the semantic-firewall discipline the roadmap §1.2-3 mandates.
 //!
@@ -19,26 +19,14 @@
 #![allow(dead_code)]
 
 use ajisai_core::interpreter::Interpreter;
-use ajisai_core::types::display::format_with_hint;
-use ajisai_core::types::{Interpretation, Value};
+use ajisai_core::types::Value;
 use ajisai_core::ErrorCategory;
 
-/// Every interpretation role of LANG.OBSERVATION.PROTOCOL, in table order.
-pub const ALL_ROLES: [Interpretation; 7] = [
-    Interpretation::Unassigned,
-    Interpretation::RawNumber,
-    Interpretation::ContinuedFraction,
-    Interpretation::Interval,
-    Interpretation::TruthValue,
-    Interpretation::Timestamp,
-    Interpretation::Nil,
-];
-
-/// The pure renderer `render : (data, role) → display` (LANG.OBSERVATION.PROTOCOL). Exposed as
-/// a named function so laws read as equations over `render`, not over the
-/// `Display` impl.
-pub fn render(v: &Value, role: Interpretation) -> String {
-    format_with_hint(v, role)
+/// The pure renderer `render : value → display` (LANG.OBSERVATION.PROTOCOL,
+/// LANG.VALUES.DENOTATION). Exposed as a named function so laws read as
+/// equations over `render`.
+pub fn render(v: &Value) -> String {
+    v.to_string()
 }
 
 /// The protocol-level observation of one value: the LANG.OBSERVATION.FIREWALL semantic axes as
@@ -125,7 +113,7 @@ pub fn observe_axes(v: &Value) -> AxisObservation {
 /// metadata when present.
 pub fn observe_value(v: &Value) -> ValueObservation {
     ValueObservation {
-        render: render(v, v.hint),
+        render: render(v),
         axes: observe_axes(v),
     }
 }
