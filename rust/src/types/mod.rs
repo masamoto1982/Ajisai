@@ -56,8 +56,8 @@ pub enum ValueData {
     /// so `TRUE 1 EQ` is false.
     Boolean(bool),
     Scalar(Fraction),
-    /// An exact real value backed by a continued-fraction representation
-    /// (e.g. AlgebraicSqrt or a Gosper transform). Constructed only by
+    /// An exact real value outside the rationals: an algebraic normal form
+    /// over `SQRT` (`Σ cᵢ√mᵢ`). Constructed only by
     /// `Value::from_exact_real`; use `as_scalar()` for the rational fast path.
     ExactScalar(ExactReal),
     Vector(Arc<Vec<Value>>),

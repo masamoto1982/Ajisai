@@ -133,18 +133,17 @@ result of
 
 read either of these two fields, in this order:
 
-- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`. Read this
-  first. It is a display: read it, do not parse it.
+- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`, the same
+  string `stackDisplay` shows for it. Read this first. It is a display: read
+  it, do not parse it.
 - **`semantics.exactTerms`** — the value itself: a list of
   `{ numerator, denominator, radicand }` terms meaning `Σ (n/d)·√radicand`,
   arbitrary-precision integers as strings. Compute with this.
 
-They are the same fact in two shapes and always appear together. Two *other*
-fields on that same result are **not** the value, and reading either as if it
-were will mislead you:
+They are the same fact in two shapes and always appear together. One *other*
+field on that same result is **not** the value, and reading it as if it were
+will mislead you:
 
-- `stackDisplay` shows the canonical continued fraction, truncated at a display
-  budget (`[ 1; 2, 2, … ]`). It is a rendering, and an incomplete one.
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 
@@ -372,7 +371,7 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - Sorting is a plain Core word
   `[ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
 - Exact square root takes a bare scalar
-  `2 SQRT` → exact value: `sqrt(2)` (the stack display is its continued fraction)
+  `2 SQRT` → stack: `sqrt(2)`
 - A value used twice is named with BIND
   `5 'N' BIND N N 1 +` → stack: `5/1  6/1`
 
@@ -428,7 +427,7 @@ than it looks like it answers, which is the harder kind to notice:
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Every Word consumes the operands it reads; name a value with `BIND` to use it more than once.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / SCAN.
 - **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
-- **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
+- **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors and code alike.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.
 
@@ -503,7 +502,7 @@ no module system and nothing to import.
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
 | `UPPER` | cast | The String with every character mapped to its upper form under Unicode's default, locale-independent case mapping: `'Ajisai' UPPER` is `'AJISAI'`, `'straße' UPPER` is `'STRASSE'`. A character with no upper-case form is kept as it is, so the answer may be longer than the operand but never shorter. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native. — e.g. `'Ajisai' UPPER` |
 | `LOWER` | cast | The String with every character mapped to its lower form under Unicode's default, locale-independent case mapping: `'Ajisai' LOWER` is `'ajisai'`, `'ΣΑΣ' LOWER` is `'σασ'`. The final-sigma rule and every other language-specific rule are not applied: the same text lowers the same way wherever it is run. A non-String operand is an ERROR (`nonText`). The mapping table is Unicode's, which no definition over `CHARS` and `JOIN` could carry, so the Word is native. — e.g. `'Ajisai' LOWER` |
-| `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
+| `TOKENIZE` | cast | Split a string into a vector of substrings using a separator; the empty separator splits between every character. — e.g. `'a,b,c' ',' TOKENIZE` |
 | `SEARCH` | cast | The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(missingField). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass. — e.g. `'hello world' 'world' SEARCH` |
 | `REPLACE` | cast | Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `'a+b+c'`. Occurrences are found left to right and do not overlap, and an empty `from` matches nothing, so the text comes back unchanged rather than growing without bound. Spelled over CHARS and JOIN this is a scan with a window at every position; the Word is the one pass. — e.g. `'a-b-c' '-' '+' REPLACE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
@@ -520,7 +519,7 @@ no module system and nothing to import.
 | `ABSENT` | absence | A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong. — e.g. `'rate not quoted' ABSENT` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
-| `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `[ [ 1 ] ] 'W' DEF 'W' DEL` |
+| `DEL` | dictionary | Delete a user word from the dictionary; ERROR while other words still reference it. — e.g. `[ [ 1 ] ] 'W' DEF 'W' DEL` |
 | `DIGEST` | dictionary | The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. — e.g. `[ ADD ] 0 GET DIGEST` |
 | `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
 | `+` | symbol alias | shorthand for `ADD` |

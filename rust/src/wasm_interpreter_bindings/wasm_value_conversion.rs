@@ -137,7 +137,7 @@ fn value_semantics_to_js(value: &Value) -> JsValue {
     // algebraic irrational is *stored* as the multiquadratic normal form
     // Σ c_m √m (LANG.VALUES.EXACT), so these pairs are the number rather than a view of
     // it, and a host given them can draw `√3` or `1/2 + 1/3√5` instead of
-    // choosing between a thirty-line continued fraction and an approximation.
+    // reading the source form back or settling for an approximation.
     // Additive and optional: a host that ignores it sees exactly what it saw
     // before.
     if let Some(display) = exact_display(value) {

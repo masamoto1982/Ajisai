@@ -102858,28 +102858,28 @@
       "inputs": [
         "scalarOne"
       ],
-      "outcome": "value"
+      "outcome": "error:nonText"
     },
     {
       "word": "NUM",
       "inputs": [
         "scalarZero"
       ],
-      "outcome": "value"
+      "outcome": "error:nonText"
     },
     {
       "word": "NUM",
       "inputs": [
         "scalarNegative"
       ],
-      "outcome": "value"
+      "outcome": "error:nonText"
     },
     {
       "word": "NUM",
       "inputs": [
         "scalarLarge"
       ],
-      "outcome": "value"
+      "outcome": "error:nonText"
     },
     {
       "word": "NUM",

@@ -65,13 +65,13 @@ const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 /// (not any specific Word's own declared `errorWhen`) — the fixed,
 /// non-`Declared` `ErrorCategory` variants, read through the real
 /// `as_protocol_str()` so this can never drift from the wire spelling.
-/// `DivisionByZero` is excluded: it is not a registered outcome category at
-/// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
-/// diagnostic-trace-only, Phase 2 of this work order).
-fn structural_error_categories() -> [ErrorCategory; 12] {
+/// `DivisionByZero` and `StructureError` are excluded: neither is a
+/// registered outcome category (`scripts/check-outcome-registry.mjs`'s two
+/// documented exclusions — the first diagnostic-trace-only, the second the
+/// undeclared-failure bucket no program reaches).
+fn structural_error_categories() -> [ErrorCategory; 11] {
     [
         ErrorCategory::StackUnderflow,
-        ErrorCategory::StructureError,
         ErrorCategory::UnknownWord,
         ErrorCategory::VectorLengthMismatch,
         ErrorCategory::ShapeMismatch,
@@ -279,7 +279,7 @@ impl Reachability {
 /// User-Word activation, since `execute_builtin` raises it on `call_depth`),
 /// so it is handled separately rather than forced into this table.
 ///
-/// Everything not listed stays unconditional. `structureError` and
+/// Everything not listed stays unconditional. `shapeMismatch` and
 /// `vectorLengthMismatch` are spread across the arithmetic and collection
 /// modules, and narrowing them would mean modelling which of those a program
 /// reaches — a different and much larger claim than "this program contains no

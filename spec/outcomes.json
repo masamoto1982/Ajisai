@@ -68,7 +68,7 @@
     {
       "id": "definitionConflict",
       "kind": "declared",
-      "documentation": "DEF named a word the dictionary already binds in a way this definition cannot resolve."
+      "documentation": "DEF or DEL asked for a dictionary change its existing bindings refuse: DEF named a word the dictionary already binds in a way this definition cannot resolve, or DEL named a word other words still reference."
     },
     {
       "id": "duplicateKey",
@@ -222,12 +222,6 @@
       "kind": "structural",
       "attribution": "machine",
       "documentation": "A Word was applied with fewer operands than its declared arity."
-    },
-    {
-      "id": "structureError",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "A value's structure did not match what the operation expected, outside the more specific shape/vector-length categories."
     },
     {
       "id": "unsortedInput",

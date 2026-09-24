@@ -2,6 +2,7 @@ use super::exact::ExactReal;
 use super::fraction::Fraction;
 use super::{DenseTensor, Stack, Value, ValueData};
 use num_bigint::BigInt;
+use num_traits::Signed;
 use std::fmt;
 
 /// Render every stack slot as its display string (LANG.OBSERVATION.PROTOCOL).
@@ -17,53 +18,6 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&format_value_recursive(&self.data, 0))
     }
-}
-
-/// Display budget for lazy continued fractions (LANG.VALUES.EXACT:
-/// "implementation-defined display budget").
-const CF_DISPLAY_BUDGET: usize = 32;
-
-/// Build the flat CF string from partial quotients, in the classical
-/// `[a0; a1, a2, …]` convention (LANG.VALUES.EXACT):
-/// finite   [a0]         -> "[ a0 ]"          (no tail, no `;`)
-/// finite   [a0,a1,a2]   -> "[ a0; a1, a2 ]"
-/// truncated [a0,a1,a2]  -> "[ a0; a1, a2, … ]"
-/// truncated [a0]        -> "[ a0; … ]"
-/// truncated []          -> "[ … ]"
-///
-/// The `;` marks the one real distinction the notation carries: `a0` is
-/// any integer, while the tail terms are each a positive integer — the
-/// partial quotients of a value that is itself always ≥ 1 (the "complete
-/// quotient" one level down). The truncation marker is the Unicode
-/// ellipsis `…` rather than ASCII `...`: Ajisai numbers never render with
-/// a `.` (fractions always print `n/d`), so a literal `.` next to a digit
-/// would be the one place a display string could look like a malformed
-/// decimal; `…` is a different code point entirely, so no such reading is
-/// possible even by accident.
-fn render_cf_flat(terms: &[BigInt], truncated: bool) -> String {
-    if terms.is_empty() {
-        return if truncated {
-            "[ … ]".to_string()
-        } else {
-            "[ ]".to_string()
-        };
-    }
-    let mut s = String::from("[ ");
-    s.push_str(&terms[0].to_string());
-    if terms.len() > 1 || truncated {
-        s.push_str("; ");
-        let tail: Vec<String> = terms[1..].iter().map(BigInt::to_string).collect();
-        s.push_str(&tail.join(", "));
-        if truncated {
-            if terms.len() > 1 {
-                s.push_str(", …");
-            } else {
-                s.push('…');
-            }
-        }
-    }
-    s.push_str(" ]");
-    s
 }
 
 pub(crate) fn format_value_recursive(data: &ValueData, depth: usize) -> String {
@@ -136,40 +90,55 @@ pub(super) fn format_fraction(f: &Fraction) -> String {
     format!("{}/{}", f.numerator(), f.denominator())
 }
 
-/// Display an `ExactReal`. Rational variants use the canonical
-/// `numerator/denominator` form. Irrational variants (`AlgebraicSqrt`,
-/// `Gosper`) render in the canonical flat continued-fraction form of
-/// LANG.VALUES.EXACT — `[ a0; a1, a2 ]` — truncated at the display budget with
-/// a trailing `…` for lazy CFs. This keeps the default numeric surface
-/// exact and AI-readable: arithmetic on irrationals is computed exactly
-/// on the CF representation (Gosper, LANG.VALUES.EXACT), so the display must not
-/// collapse it to an approximate rational.
+/// Display an `ExactReal`. A rational writes as `numerator/denominator`;
+/// an algebraic irrational writes its normal form as one token —
+/// `sqrt(2)`, `1/2*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` — the same
+/// string the host protocol's `exactDisplay` carries. It is a display, not
+/// source: no literal denotes an irrational, and a Vector literal would read
+/// `2 SQRT` as a number and a Symbol. Written without spaces so that inside a
+/// Vector it still reads as one element. Nothing is truncated or
+/// approximated: the normal form *is* the value, and its rendering is finite.
 pub(super) fn format_exact_real(er: &ExactReal) -> String {
     match er {
         ExactReal::Rational(f) => format_fraction(f),
-        _ => match er.partial_quotients() {
-            // Collapsed to a finite (rational) CF: render the exact flat form.
-            Some(qs) => render_cf_flat(&qs, false),
-            // Lazy irrational: emit partial quotients up to the display budget.
-            None => {
-                let qs = er.partial_quotients_bounded(CF_DISPLAY_BUDGET);
-                if qs.is_empty() {
-                    // Not even `a0` was affordable: either a rare Gosper
-                    // transform the streaming algorithm does not resolve, or a
-                    // value carrying so many algebraic terms that one
-                    // floor-and-reciprocate step exceeds the whole expansion
-                    // budget. Render the undetermined-CF marker rather than an
-                    // empty `[ ]` or an approximate `~` rational — `exactTerms`
-                    // beside it still carries the value exactly.
-                    "[ … ]".to_string()
-                } else {
-                    // Always a prefix: this arm is only reached for a value
-                    // whose expansion does not terminate.
-                    render_cf_flat(&qs, true)
-                }
-            }
-        },
+        ExactReal::Algebraic(a) => render_algebraic_terms(&a.normal_form_terms()),
     }
+}
+
+/// The normal form `Σ cᵢ√mᵢ` as one token, terms in the normal form's own
+/// ascending radicand order (the rational term, radicand 1, first). The
+/// coefficient keeps Ajisai's own `numerator/denominator` rendering rather
+/// than collapsing `2/1` to `2`: every other number the language displays is
+/// written that way. A unit coefficient is left unwritten.
+pub(crate) fn render_algebraic_terms(terms: &[(Fraction, BigInt)]) -> String {
+    // An algebraic irrational always has at least one term (a term-free normal
+    // form would have demoted to a rational). Writing the zero rather than an
+    // empty string keeps the display readable if that invariant ever moves.
+    if terms.is_empty() {
+        return "0/1".to_string();
+    }
+    let mut out = String::new();
+    for (index, (coefficient, radicand)) in terms.iter().enumerate() {
+        let negative = !coefficient.is_positive() && !coefficient.is_zero();
+        if index == 0 {
+            if negative {
+                out.push('-');
+            }
+        } else {
+            out.push(if negative { '-' } else { '+' });
+        }
+        let magnitude = Fraction::new(coefficient.numerator().abs(), coefficient.denominator());
+        // The monomial `1` keys the rational part of the normal form: there is
+        // no radical to write, only the coefficient.
+        if radicand == &BigInt::from(1) {
+            out.push_str(&format_fraction(&magnitude));
+        } else if magnitude.is_integer() && magnitude.numerator() == BigInt::from(1) {
+            out.push_str(&format!("sqrt({radicand})"));
+        } else {
+            out.push_str(&format!("{}*sqrt({radicand})", format_fraction(&magnitude)));
+        }
+    }
+    out
 }
 
 /// Render a value for an **output** boundary (`PRINT`, LANG.EFFECTS.OUTPUT).
@@ -190,79 +159,35 @@ pub fn format_for_output(value: &Value) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::render_cf_flat;
+    use super::format_exact_real;
+    use crate::types::exact::ExactReal;
+    use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
 
-    fn bi(n: i64) -> BigInt {
-        BigInt::from(n)
+    fn sqrt_of(n: i64, d: i64) -> ExactReal {
+        ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
+            .expect("a valid sqrt")
     }
 
+    /// The display of an irrational is its normal form as one token: exact,
+    /// finite, spaceless, and in the normal form's own term order.
     #[test]
-    fn render_cf_flat_exact_forms() {
-        assert_eq!(render_cf_flat(&[bi(1)], false), "[ 1 ]");
-        assert_eq!(render_cf_flat(&[bi(1), bi(2)], false), "[ 1; 2 ]");
-        assert_eq!(render_cf_flat(&[bi(1), bi(2), bi(2)], false), "[ 1; 2, 2 ]");
+    fn irrational_renders_its_normal_form_as_one_token() {
+        assert_eq!(format_exact_real(&sqrt_of(2, 1)), "sqrt(2)");
+        assert_eq!(format_exact_real(&sqrt_of(1, 2)), "1/2*sqrt(2)");
+        let sqrt2 = sqrt_of(2, 1);
+        let one = ExactReal::Rational(Fraction::new(BigInt::from(1), BigInt::from(1)));
+        assert_eq!(format_exact_real(&one.add(&sqrt2)), "1/1+sqrt(2)");
+        assert_eq!(format_exact_real(&one.sub(&sqrt2)), "1/1-sqrt(2)");
         assert_eq!(
-            render_cf_flat(&[bi(1), bi(2), bi(2)], true),
-            "[ 1; 2, 2, … ]"
+            format_exact_real(&sqrt2.sub(&sqrt_of(3, 1))),
+            "sqrt(2)-sqrt(3)"
         );
-        assert_eq!(render_cf_flat(&[bi(1)], true), "[ 1; … ]");
-        assert_eq!(render_cf_flat(&[], false), "[ ]");
-        assert_eq!(render_cf_flat(&[], true), "[ … ]");
-    }
-
-    #[test]
-    fn irrational_renders_as_flat_cf_not_approximation() {
-        use super::format_exact_real;
-        use crate::types::exact::ExactReal;
-        use crate::types::fraction::Fraction;
-        use num_bigint::BigInt;
-
-        // √2 = [1; 2, 2, 2, …]. Default display must be the canonical flat
-        // CF form (LANG.VALUES.EXACT), never `sqrt(...)` or a `~`-approximation.
-        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
-            .expect("√2 is a valid algebraic sqrt");
-        let s = format_exact_real(&sqrt2);
-        assert!(s.starts_with("[ 1; 2, 2, "), "expected flat CF, got {s:?}");
-        assert!(
-            s.ends_with(", … ]"),
-            "lazy CF must carry the trailing `…` truncation marker, got {s:?}"
-        );
-        assert!(
-            !s.contains("sqrt"),
-            "must not use sqrt() display, got {s:?}"
-        );
-        assert!(
-            !s.contains('~'),
-            "must not use ~approximation display, got {s:?}"
-        );
-        assert!(
-            !s.contains('.'),
-            "CF display must never contain a literal '.', got {s:?}"
-        );
-        let opens = s.matches('[').count();
-        let closes = s.matches(']').count();
-        assert_eq!(opens, closes, "unbalanced brackets in {s:?}");
-
+        assert_eq!(format_exact_real(&sqrt2.neg()), "-sqrt(2)");
+        assert_eq!(format_exact_real(&sqrt2.add(&sqrt2)), "2/1*sqrt(2)");
+        // The stored form is rendered faithfully: √8 is not reduced to 2√2.
+        assert_eq!(format_exact_real(&sqrt_of(8, 1)), "sqrt(8)");
         // A perfect square collapses to the exact rational form.
-        let sqrt4 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(4), BigInt::from(1)))
-            .expect("√4 is a valid sqrt");
-        assert_eq!(format_exact_real(&sqrt4), "2/1");
-    }
-
-    #[test]
-    fn render_cf_flat_balanced_brackets() {
-        for terms in [
-            vec![bi(1)],
-            vec![bi(1), bi(2)],
-            vec![bi(2), bi(2), bi(2), bi(2)],
-        ] {
-            for truncated in [false, true] {
-                let s = render_cf_flat(&terms, truncated);
-                let opens = s.matches('[').count();
-                let closes = s.matches(']').count();
-                assert_eq!(opens, closes, "unbalanced brackets in {s:?}");
-            }
-        }
+        assert_eq!(format_exact_real(&sqrt_of(4, 1)), "2/1");
     }
 }

@@ -1,7 +1,8 @@
-//! Integer rounding and continued-fraction derivation for algebraic values.
+//! Integer rounding and rational approximation for algebraic values.
 //!
-//! The continued fraction is **derived** here for display and rational
-//! approximation — it is no longer an internal representation. Because a
+//! The continued fraction is **derived** here for the rational approximation
+//! only — it is not an internal representation, and it is not a display
+//! either (an irrational displays as its own source, `display.rs`). Because a
 //! Tier 1 value has a decidable floor and exact field arithmetic, the
 //! canonical CF terms fall out of the classical floor-and-reciprocate
 //! iteration, exactly, to any requested depth.
@@ -18,32 +19,25 @@ fn fraction_floor(f: &Fraction) -> BigInt {
 }
 
 /// Work an observation surface may spend expanding one value's continued
-/// fraction, in the limb-multiply units the runtime work meter counts in.
+/// fraction for its rational approximation, in the limb-multiply units the
+/// runtime work meter counts in.
 ///
-/// LANG.VALUES.EXACT leaves the display budget implementation-defined. It used to be
-/// a *term count* — 32 partial quotients, however much each one cost — and the
-/// cost is not flat: each floor-and-reciprocate step roughly doubles the term
-/// count once and then grows the coefficients without bound, so the price per
-/// quotient climbs as the expansion deepens.
+/// The cost of the expansion is not flat: each floor-and-reciprocate step
+/// roughly doubles the term count once and then grows the coefficients without
+/// bound, so the price per quotient climbs as the expansion deepens. Measured
+/// on the reference container, a multiquadratic product of 2 / 4 / 8 / 16 / 32
+/// terms took 0.1 ms to *build* throughout, while expanding 32 quotients of it
+/// took 5 ms / 57 ms / 951 ms / 9.1 s / **147 s** — about 12x per doubling.
 ///
-/// That made writing a value down far dearer than computing it, and nothing
-/// priced the difference. Measured on the reference container, a multiquadratic
-/// product of 2 / 4 / 8 / 16 / 32 terms took 0.1 ms to *build* throughout,
-/// while rendering it took 5 ms / 57 ms / 951 ms / 9.1 s / **147 s** — about
-/// 12x per doubling. `wallTimeMs` was the only ceiling that noticed, and it
-/// answers with a timeout, which names nothing and tells an agent nothing.
-///
-/// Budgeting the work instead of the terms costs the common case nothing: a
-/// one- or two-term value (`2 SQRT`, `2 SQRT 3 SQRT +`) spends well under this
-/// and still gets all 32 quotients. An expansion that would cost seconds stops
-/// early and renders the trailing `…` truncation it was always entitled to, or
-/// the `[ … ]` undetermined marker when not even `a0` is affordable. Neither loses
-/// anything: for an algebraic value the CF is a rendering, and `exactTerms`
-/// (with `exactDisplay` beside it) is the value.
+/// Budgeting the work costs the common case nothing: a one- or two-term value
+/// (`2 SQRT`, `2 SQRT 3 SQRT +`) spends well under this and still reaches any
+/// practical denominator bound. An expansion that would cost seconds stops
+/// early and yields a coarser convergent, never a wrong one; the value itself
+/// is `exactTerms` (and the stack display, which is the value's own source).
 ///
 /// The value is chosen from measurement, not from a rate: it is the largest
-/// budget under which a one- or two-term value still expands to all 32
-/// quotients while a sixteen-term one is cut off before its first step. See
+/// budget under which a one- or two-term value still expands to 32 quotients
+/// while a sixteen-term one is cut off before its first step. See
 /// `examples/work_meter_calibration`, whose second section is this table.
 pub const CF_OBSERVATION_WORK_BUDGET: u64 = 16_384;
 
@@ -107,44 +101,6 @@ impl Algebraic {
             .saturating_mul(limbs)
     }
 
-    /// The first `budget` canonical (regular) CF partial quotients, by
-    /// floor-and-reciprocate, or as many of them as
-    /// [`CF_OBSERVATION_WORK_BUDGET`] affords.
-    ///
-    /// The expansion of an irrational never terminates, so the result is always
-    /// a strict prefix and a caller must always render it as truncated —
-    /// including when it is shorter than `budget`, or empty.
-    pub fn cf_prefix(&self, budget: usize) -> Vec<BigInt> {
-        let mut out = Vec::with_capacity(budget);
-        let mut state: Option<Algebraic> = Some(self.clone());
-        let mut remaining = CF_OBSERVATION_WORK_BUDGET;
-        while out.len() < budget {
-            let Some(x) = state else { break };
-            // Charged before the step runs, like every other work budget here:
-            // an expansion is refused rather than measured.
-            let units = x.cf_step_units();
-            if units > remaining {
-                break;
-            }
-            remaining -= units;
-            let a = x.floor_int();
-            let minus_a = Fraction::new(-a.clone(), BigInt::one());
-            out.push(a);
-            // x_{k+1} = 1 / (x_k − a_k); the fractional part of an
-            // irrational is irrational and in (0, 1), so the iteration
-            // never leaves Tier 1 — the demotion arms are unreachable
-            // (kept total for safety).
-            state = match x.add_fraction(&minus_a) {
-                AlgebraicResult::Irrational(frac_part) => match frac_part.reciprocal() {
-                    AlgebraicResult::Irrational(next) => Some(next),
-                    AlgebraicResult::Rational(_) => None,
-                },
-                AlgebraicResult::Rational(_) => None,
-            };
-        }
-        out
-    }
-
     /// Best rational approximation within a denominator bound: the
     /// deepest principal convergent whose denominator does not exceed
     /// `max_denominator`. Same contract as the historical
@@ -160,10 +116,10 @@ impl Algebraic {
         let mut k_prev1 = BigInt::from(0);
         let mut best: Option<(BigInt, BigInt)> = None;
         let mut state: Option<Algebraic> = Some(self.clone());
-        // The same expansion as `cf_prefix`, so the same budget: this feeds the
-        // `approximate: true` rational beside a value in the wire protocol, and
-        // a *convenience* field is the last thing that should cost seconds. A
-        // shallower expansion yields a coarser convergent, never a wrong one.
+        // Budgeted: this feeds the `approximate: true` rational beside a value
+        // in the wire protocol, and a *convenience* field is the last thing
+        // that should cost seconds. A shallower expansion yields a coarser
+        // convergent, never a wrong one.
         let mut remaining = CF_OBSERVATION_WORK_BUDGET;
         while let Some(x) = state {
             let units = x.cf_step_units();

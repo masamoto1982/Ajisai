@@ -3168,7 +3168,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Split a string into a vector of substrings using a separator.",
+        "summary": "Split a string into a vector of substrings using a separator; the empty separator splits between every character.",
         "hover": "TOKENIZE — split string by separator",
         "lookup": "Split a string into a vector of substrings using a separator.",
         "syntax": "'a,b,c' ',' TOKENIZE",
@@ -4022,7 +4022,8 @@
         "invalidName",
         "wordNotFound",
         "protectedWord",
-        "nonText"
+        "nonText",
+        "definitionConflict"
       ],
       "purity": "effectful",
       "determinism": "stateRelative",
@@ -4045,7 +4046,7 @@
         "LANG.DICTIONARY.MUTATION"
       ],
       "documentation": {
-        "summary": "Delete a user word from the dictionary.",
+        "summary": "Delete a user word from the dictionary; ERROR while other words still reference it.",
         "hover": "DEL — delete user word",
         "lookup": "Delete a user word from the dictionary.",
         "syntax": "[ [ 1 ] ] 'W' DEF 'W' DEL",

@@ -18,8 +18,10 @@
 //!   holding a Record inherits this.
 //! - A Symbol renders as its bare name, which calls a Word rather than
 //!   pushing the name.
-//! - An irrational scalar renders as a continued fraction truncated at a
-//!   display budget.
+//! - An irrational scalar renders its normal form as one token,
+//!   `1/1+sqrt(2)`: no literal denotes an irrational, and the source that
+//!   builds one (`1 2 SQRT ADD`) would read as three elements inside a
+//!   Vector literal.
 
 use ajisai_core::interpreter::Interpreter;
 
@@ -104,6 +106,23 @@ async fn the_other_domains_round_trip() {
     ] {
         assert_round_trips(program).await;
     }
+}
+
+/// An irrational displays its exact normal form as one token, so a Vector of
+/// them still reads element by element; the display is not source, and
+/// reading it back is a call of an unknown Word.
+#[tokio::test]
+async fn an_irrational_displays_but_is_not_source() {
+    for (program, expected) in [
+        ("2 SQRT", "sqrt(2)"),
+        ("1 2 SQRT ADD", "1/1+sqrt(2)"),
+        ("2 SQRT 3 SQRT SUB", "sqrt(2)-sqrt(3)"),
+        ("2 SQRT 3 2 COLLECT", "[ sqrt(2) 3/1 ]"),
+    ] {
+        assert_eq!(run(program).await, [expected]);
+    }
+    let mut interpreter = Interpreter::new();
+    assert!(interpreter.execute("sqrt(2)").await.is_err());
 }
 
 /// A Record displays key beside value, and the display is not source: `{` is

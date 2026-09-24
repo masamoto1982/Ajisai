@@ -3154,7 +3154,13 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         vocabulary_tier: VocabularyTier::Kernel,
         standard_kind: None,
         effects: &["dictionaryDelete"],
-        error_when: &["invalidName", "wordNotFound", "protectedWord", "nonText"],
+        error_when: &[
+            "invalidName",
+            "wordNotFound",
+            "protectedWord",
+            "nonText",
+            "definitionConflict",
+        ],
         syntax: Some("[ [ 1 ] ] 'W' DEF 'W' DEL"),
     },
     GeneratedWord {

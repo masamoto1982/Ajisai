@@ -211,17 +211,22 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 0
             };
             if width != several.len() {
+                let is_vector = subject.is_vector();
                 interp.stack.push(subject);
                 interp.stack.push(name_value);
-                // Structural, not `declared()` (see `error.rs`'s `kind`
-                // note): BIND's destructuring length mismatch is the same
-                // one-dimensional `shapeMismatch` a broadcast failure is,
-                // even though the message here isn't about broadcasting.
-                return Err(AjisaiError::ShapeMismatch {
-                    left: vec![several.len()],
-                    right: vec![width],
-                    axis: 0,
-                });
+                // Declared under BIND's own `shapeMismatch`, with a message
+                // about destructuring: the broadcast wording of
+                // `AjisaiError::ShapeMismatch` would describe a failure BIND
+                // never performs.
+                let what = if is_vector {
+                    format!("a Vector of {} elements", width)
+                } else {
+                    "a non-Vector value".to_string()
+                };
+                return Err(AjisaiError::declared(
+                    "shapeMismatch",
+                    format!("BIND: {} names cannot destructure {}", several.len(), what),
+                ));
             }
             for (position, name) in several.iter().enumerate() {
                 let part = subject

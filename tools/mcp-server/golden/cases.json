@@ -79,7 +79,7 @@
       "source": "2 SQRT 3 SQRT +",
       "expect": {
         "/status": "ok",
-        "/stack/0/semantics/exactDisplay": "sqrt(2) + sqrt(3)",
+        "/stack/0/semantics/exactDisplay": "sqrt(2)+sqrt(3)",
         "/stack/0/semantics/exactTerms/0/radicand": "2",
         "/stack/0/semantics/exactTerms/1/radicand": "3"
       }

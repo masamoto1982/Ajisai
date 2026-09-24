@@ -119,10 +119,9 @@ fn algebraic_exact_terms_are_lossless_decimal_strings() {
     );
 }
 
-/// `exactDisplay` renders the same normal form `exactTerms` carries, short
-/// enough to read. The continued-fraction projection a consumer meets first is
-/// truncated and the node's own `value` is an approximation, so this is the
-/// only rendering of an algebraic value that is both short and complete.
+/// `exactDisplay` renders the same normal form `exactTerms` carries, in
+/// mathematical notation. `stackDisplay` writes the same value as Ajisai
+/// source; the node's own `value` is an approximation.
 ///
 /// Every rendering decision is pinned here rather than through the CLI,
 /// because both host serializers call this one function and neither adds any

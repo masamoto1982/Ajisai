@@ -499,13 +499,13 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
       exactTerm?.denominator === "1" &&
       exactTerm?.radicand === "2",
   );
-  // The same normal form written short. Everything else on this result that
-  // looks like the value is not: `stackDisplay` is a continued fraction cut
-  // off at a display budget, and `value` is a rational approximation.
+  // The same normal form written short, and `stackDisplay` shows the same
+  // string for the whole slot; only `value` (a rational approximation) is
+  // not the number.
   check(
     "compute writes the algebraic value short beside the terms it renders",
     sqrt?.semantics?.exactDisplay === "sqrt(2)" &&
-      compute.structuredContent?.stackDisplay?.[0]?.includes("…") === true,
+      compute.structuredContent?.stackDisplay?.[0] === "[ sqrt(2) ]",
   );
   check(
     "compute reports engine provenance and applied limits",

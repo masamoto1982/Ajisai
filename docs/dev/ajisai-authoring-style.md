@@ -73,7 +73,7 @@ The specification (`SPECIFICATION.html`) and the Reference (`public/docs/`) type
 | Library | KaTeX with its auto-render extension, **self-hosted** at `public/vendor/katex/` — no CDN, matching the repository's no-external-services stance |
 | Refreshing the vendored copy | `npm run vendor:katex` (copies from the `katex` devDependency; woff2 fonts only) |
 | Ajisai channel exclusion | auto-render is configured with `ignoredTags` covering `code` and `pre`, so the gray Ajisai channel is structurally unreachable by math rendering — the channel separation is enforced by tooling, not just by discipline |
-| Continued fractions | use `\cfrac` for a nested display form rather than a flat Unicode transcription. The Reference writes the canonical *display* of a continued fraction as the flat `[ 1; 2, 2, 2, … ]` (LANG.OBSERVATION.PROTOCOL): that is stack text, not mathematics, so it stays in the Ajisai channel and a formula about it goes in this one |
+| Irrational displays | the stack writes an irrational's normal form as one token, `1/1+sqrt(2)` (LANG.OBSERVATION.PROTOCOL): that is stack text, not mathematics, so it stays in the Ajisai channel and a formula about it (`\(1+\sqrt{2}\)`) goes in this one |
 | Variables and names | single letters italic by default (`\(a_0\)`, `\(b_i\)`, `\(\varepsilon_i\)`); multi-letter names as `\mathit{…}` (`\(\mathit{num}/\mathit{den}\)`) |
 | No-JS degradation | without JavaScript the raw `\(…\)` LaTeX source remains visible; this is acceptable — LaTeX source is itself a precise, AI-readable notation |
 

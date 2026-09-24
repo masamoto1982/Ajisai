@@ -101,8 +101,14 @@ fn convert_value_to_number(val: &Value) -> Result<Value> {
         }
     }
 
+    // A number is not Text: NUM parses, it does not pass through. Accepting
+    // numbers here would make NUM's `nonText` contract false for exactly the
+    // operand kind a caller is most likely to pass by mistake.
     if is_number_value(val) {
-        return Ok(val.clone());
+        return Err(AjisaiError::declared(
+            "nonText",
+            "NUM: expected String, got Number",
+        ));
     }
     if is_boolean_value(val) {
         return Err(AjisaiError::declared(

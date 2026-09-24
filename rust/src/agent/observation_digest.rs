@@ -34,11 +34,9 @@
 //!    a collection encoder ever runs, or encoding them would recurse forever.
 //!  * **`absence`'s reason is meaning.** `PartialEq for Value` always reads
 //!    the NIL reason, so the digest does too.
-//!  * **`stackDisplay` is not the value.** It is LANG.VALUES.EXACT's continued
-//!    fraction truncated at a display budget (`√2` runs to ~101 characters
-//!    and ends in `… )`), so hashing it would fold two different numbers to
-//!    one digest the moment either runs past the budget. The digest always
-//!    encodes the value itself.
+//!  * **`stackDisplay` is not the value.** It is a rendering, and for a
+//!    Word it is the body's text; the digest always encodes the value itself,
+//!    so two spellings of one value digest alike.
 
 use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
@@ -171,6 +169,10 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
                 .map(|r| r.as_protocol_str())
                 .unwrap_or("");
             write_str(bytes, reason);
+            // An ABSENT NIL is identified by its Text (LANG.VALUES.NIL), so
+            // the detail is part of the identity, exactly as `Value::hash`
+            // and `PartialEq` treat it.
+            write_str(bytes, value.absence_detail().unwrap_or(""));
         }
         ValueData::Boolean(b) => {
             bytes.push(b'B');

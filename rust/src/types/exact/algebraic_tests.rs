@@ -225,38 +225,6 @@ fn floor_ceil_round_are_exact() {
 }
 
 #[test]
-fn derived_cf_matches_known_expansions() {
-    // √2 = [1; 2, 2, 2, …].
-    let cf = sqrt_irr(2, 1).cf_prefix(8);
-    let expected: Vec<BigInt> = [1, 2, 2, 2, 2, 2, 2, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-    // √3 = [1; 1, 2, 1, 2, …].
-    let cf = sqrt_irr(3, 1).cf_prefix(7);
-    let expected: Vec<BigInt> = [1, 1, 2, 1, 2, 1, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-    // −√2 = [−2; 1, 1, 2, 2, 2, …] (floor convention).
-    let cf = sqrt_irr(2, 1).neg().cf_prefix(6);
-    let expected: Vec<BigInt> = [-2, 1, 1, 2, 2, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-    // √(1/2) = [0; 1, 2, 2, 2, …].
-    let cf = sqrt_irr(1, 2).cf_prefix(6);
-    let expected: Vec<BigInt> = [0, 1, 2, 2, 2, 2]
-        .iter()
-        .map(|n| BigInt::from(*n))
-        .collect();
-    assert_eq!(cf, expected);
-}
-
-#[test]
 fn best_rational_approximation_returns_principal_convergents() {
     let sqrt2 = sqrt_irr(2, 1);
     // Convergents of √2: 1, 3/2, 7/5, 17/12, 41/29, 99/70, …
@@ -290,7 +258,7 @@ fn enclosures_narrow_monotonically_around_the_value() {
 
 /// The normal form is the value, and `normal_form_terms` hands it out in the
 /// shape a host can draw in one line. This is what lets a Stack area show `√3`
-/// instead of choosing between a thirty-line continued fraction and a best
+/// instead of choosing between the source-form display and a best
 /// rational approximation that looks exactly like an exact rational.
 #[test]
 fn normal_form_terms_expose_the_stored_representation() {

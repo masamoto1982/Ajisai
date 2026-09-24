@@ -118,17 +118,16 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     let src = value_as_string(&src_val).unwrap_or_default();
     let sep = value_as_string(&sep_val).unwrap_or_default();
 
-    if sep.is_empty() {
-        // Not `nonTextSeparator`: the separator *is* Text, it just carries no
-        // content to split on. TOKENIZE's contract does not name this
-        // condition, so `StructureError` is the honest fallback rather than
-        // reusing a type-mismatch category for a value-domain one.
-        let err = AjisaiError::create_structure_error("a non-empty separator", "the empty string");
-        restore(interp, src_val, sep_val);
-        return Err(err);
-    }
-
-    let parts: Vec<Value> = src.split(sep.as_str()).map(Value::from_string).collect();
+    // The empty separator splits between every character, the same reading
+    // SEARCH and REPLACE give the empty pattern (it matches everywhere). This
+    // keeps TOKENIZE total over Text × Text.
+    let parts: Vec<Value> = if sep.is_empty() {
+        src.chars()
+            .map(|c| Value::from_string(&c.to_string()))
+            .collect()
+    } else {
+        src.split(sep.as_str()).map(Value::from_string).collect()
+    };
     interp.stack.push(Value::from_vector(parts));
     Ok(())
 }
@@ -175,10 +174,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn tokenize_empty_separator_errors() {
+    async fn tokenize_empty_separator_splits_characters() {
         let mut interp = Interpreter::new();
-        let r = interp.execute("'abc' '' TOKENIZE").await;
-        assert!(r.is_err());
+        interp.execute("'abc' '' TOKENIZE").await.unwrap();
+        let v = interp.stack.last().unwrap();
+        let parts = v.as_vector_view().unwrap();
+        let got: Vec<String> = parts.iter().map(|p| value_as_string(p).unwrap()).collect();
+        assert_eq!(got, vec!["a", "b", "c"]);
     }
 
     #[tokio::test]

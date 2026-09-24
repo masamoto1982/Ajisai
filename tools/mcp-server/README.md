@@ -156,7 +156,7 @@ On the stack node, read either of:
 
 | field | what it is |
 |---|---|
-| `semantics.exactDisplay` | the value written short: `"sqrt(2)"`, `"2/1*sqrt(2)"`, `"sqrt(2) - sqrt(3)"` |
+| `semantics.exactDisplay` | the value written short: `"sqrt(2)"`, `"2/1*sqrt(2)"`, `"sqrt(2)-sqrt(3)"` — the same string `stackDisplay` shows for it |
 | `semantics.exactTerms` | the value itself: `Σ (numerator/denominator)·√radicand`, arbitrary-precision integers as strings |
 
 They are one fact in two shapes, derived from the same extraction, and the
@@ -164,13 +164,9 @@ result schema requires each whenever the other is present — so a reader never
 has to decide which to believe. Compute with `exactTerms`; `exactDisplay` is a
 display, meant to be read rather than parsed.
 
-The two that mislead are the ones a consumer meets first. `stackDisplay` is the
-LANG.VALUES.EXACT continued fraction **truncated at a display budget** — √2 runs to
-`[ 1; 2, 2, … ]`, ~101 characters, ending in the truncation marker `…`, so it
-looks complete and is not — and the
-node's own `value` is a rational approximation flagged `semantics.approximate`,
-so it looks exact and is not. Neither field changed; `exactDisplay` is what
-makes reading them unnecessary.
+The one that misleads is the one a consumer meets first: the node's own
+`value` is a rational approximation flagged `semantics.approximate`, so it
+looks exact and is not. `exactDisplay` is what makes reading it unnecessary.
 
 `exactDisplay` renders the stored normal form faithfully, which means equal
 values can be written differently: `8 SQRT` gives `"sqrt(8)"` and

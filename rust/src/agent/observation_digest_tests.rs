@@ -202,6 +202,19 @@ mod observation_digest_tests {
         assert_ne!(digest_of(&division), digest_of(&missing));
     }
 
+    /// Two ABSENT NILs are the same value exactly when their Texts are equal
+    /// (LANG.VALUES.NIL), so the Text is part of the digest too — as it is
+    /// of `Value::hash` and `PartialEq`.
+    #[test]
+    fn absent_texts_separate_digests() {
+        let a = Value::nil_user_declared("a");
+        let b = Value::nil_user_declared("b");
+        let a_again = Value::nil_user_declared("a");
+        assert_ne!(a, b);
+        assert_ne!(digest_of(&a), digest_of(&b));
+        assert_eq!(digest_of(&a), digest_of(&a_again));
+    }
+
     /// `create_unreduced` never calls the gcd normalizer; the digest must
     /// still land on the same bytes as the reduced form.
     #[test]
