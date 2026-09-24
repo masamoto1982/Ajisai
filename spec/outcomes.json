@@ -57,7 +57,7 @@
     {
       "id": "blockContractViolation",
       "kind": "declared",
-      "documentation": "A higher-order Word's block operand did not return the shape its contract requires — MAP/FILTER/FOLD/ANY's block returned other than one value per contract."
+      "documentation": "A higher-order Word's block operand did not return the shape its contract requires — MAP/FILTER/FOLD/SCAN's block returned other than one value per contract."
     },
     {
       "id": "builtinProtection",
@@ -89,12 +89,12 @@
     {
       "id": "invalidCount",
       "kind": "declared",
-      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that is not a well-formed count at all (distinct from negativeCount, and from a well-formed count past the end, which TAKE projects as indexOutOfBounds); FORMAT given a digit count that is not a non-negative integer."
+      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that is not a well-formed count at all (distinct from a well-formed count past the end, which TAKE projects as indexOutOfBounds); FORMAT given a digit count that is not a non-negative integer."
     },
     {
       "id": "invalidDefinitionBody",
       "kind": "declared",
-      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or a Vector with no statements."
+      "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or an empty one."
     },
     {
       "id": "invalidIndex",
@@ -134,11 +134,6 @@
       "documentation": "BIND was asked to bind a name that is already a Word name."
     },
     {
-      "id": "negativeCount",
-      "kind": "declared",
-      "documentation": "RANDOM (or another count-taking Word) received a negative count."
-    },
-    {
       "id": "nonRecord",
       "kind": "declared",
       "documentation": "A Record Word (KEYS, VALUES, AT, WITH, WITHOUT, HAS?, MERGE) was given something other than a Record where one is required. A Record is its own domain (LANG.VALUES.DISJOINT): a Vector of pairs is not a Record and nothing converts one implicitly."
@@ -151,7 +146,7 @@
     {
       "id": "nonInteger",
       "kind": "declared",
-      "documentation": "An operand that must be a whole number carried a non-integer scalar — RANDOM's bound, PUT's index."
+      "documentation": "An operand that must be a whole number carried a non-integer scalar — PUT's index."
     },
     {
       "id": "nonNumeric",
@@ -181,7 +176,7 @@
     {
       "id": "nonTruthValue",
       "kind": "declared",
-      "documentation": "AND, OR, NOT, or a FILTER/ANY/ALL predicate block, met a value that is not a truth value or Unknown."
+      "documentation": "AND, NOT, or a FILTER predicate block, met a value that is not a truth value or Unknown."
     },
     {
       "id": "nonVector",
@@ -253,7 +248,7 @@
     {
       "id": "unsupportedComparison",
       "kind": "declared",
-      "documentation": "EQ/LT/LTE met a pair of operands whose types have no defined comparison law."
+      "documentation": "EQ/LT/GT met a pair of operands whose types have no defined comparison law."
     },
     {
       "id": "vectorLengthMismatch",

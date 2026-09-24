@@ -174,9 +174,9 @@ mod tests {
         interp.execute("[ [ 1 ] ] 'TWIN' DEF").await.unwrap();
         interp.execute("[ [ 2 ] ] 'OTHER' DEF").await.unwrap();
 
-        let a_leaf = interp.user_words["LEAF"].lines.clone();
-        let b_twin = interp.user_words["TWIN"].lines.clone();
-        let b_other = interp.user_words["OTHER"].lines.clone();
+        let a_leaf = interp.user_words["LEAF"].body.clone();
+        let b_twin = interp.user_words["TWIN"].body.clone();
+        let b_other = interp.user_words["OTHER"].body.clone();
 
         assert!(
             std::sync::Arc::ptr_eq(&a_leaf, &b_twin),

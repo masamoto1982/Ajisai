@@ -124,11 +124,7 @@ pub(crate) fn error_report(
 /// payloads (`Vector`, `Tensor`, `Text`, `CodeBlock`) are all reference
 /// counted.
 pub(crate) fn stack_values(interp: &Interpreter) -> Vec<Value> {
-    interp
-        .get_stack()
-        .iter_slots()
-        .map(|(value, _role)| value.clone())
-        .collect()
+    interp.get_stack().to_vec()
 }
 
 /// `(normalized word name, content identity)` for every user word, sorted by
@@ -157,9 +153,8 @@ pub(crate) fn print_payloads(interp: &Interpreter) -> Vec<String> {
 }
 
 pub(crate) fn stack_display(interp: &Interpreter) -> Vec<String> {
-    // One shared `(value, role)` rendering (LANG.OBSERVATION.PROTOCOL) for every observation
-    // surface; the `Stack` owns aligned values and roles, so no snapshot/
-    // realignment step is needed here.
+    // One shared rendering (LANG.OBSERVATION.PROTOCOL) for every observation
+    // surface.
     crate::types::display::render_stack(interp.get_stack())
 }
 
@@ -191,11 +186,7 @@ pub(crate) fn check_structure(tokens: &[Token]) -> Result<(), String> {
 }
 
 pub(crate) fn normalize_word(symbol: &str) -> String {
-    match symbol {
-        "%" => "MOD".to_string(),
-        "&" => "AND".to_string(),
-        _ => symbol.to_uppercase(),
-    }
+    symbol.to_uppercase()
 }
 
 /// The outcome of best-effort static word resolution.
@@ -224,7 +215,6 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
         };
         let next_words: Vec<String> = tokens[i + 1..]
             .iter()
-            .filter(|t| !matches!(t, Token::LineBreak))
             .take(2)
             .filter_map(|t| match t {
                 Token::Symbol(s) => Some(normalize_word(s)),

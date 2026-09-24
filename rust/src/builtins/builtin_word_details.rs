@@ -150,7 +150,7 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
                 lines.push("A NIL value keeps its reason through this word.")
             }
             NilPolicy::KleeneAbsorbing => lines.push(
-                "A dominating definite operand (FALSE for AND, TRUE for OR) absorbs a NIL operand into that definite result; otherwise a NIL operand yields NIL as UNKNOWN.",
+                "A dominating definite operand (FALSE for AND) absorbs a NIL operand into that definite result; otherwise a NIL operand yields NIL as UNKNOWN.",
             ),
         }
         // The accepted domain qualifies everything above it. `total` says what
@@ -294,7 +294,7 @@ mod accepted_domain_render_tests {
 
     #[test]
     fn min_and_sqrt_state_that_they_lift() {
-        for word in ["MIN", "MAX", "SQRT", "ABS", "NEG"] {
+        for word in ["MIN", "MAX", "SQRT"] {
             let text = lookup_builtin_detail(word);
             assert!(
                 text.contains("Accepts a number, or a vector of them at any depth"),

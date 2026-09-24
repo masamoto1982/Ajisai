@@ -1,16 +1,15 @@
 //! What the per-Word bookkeeping in `execution_loop` must answer, and must
 //! answer without unpacking the data it is asked about.
 //!
-//! Two questions run after *every* core word: "is the top of the stack a
-//! collection?" (the hint-override rule) and "did this Word produce a reasoned
-//! absence?" (the error-flow trace). Both used to be answered through
+//! One question runs after *every* core word: "did this Word produce a
+//! reasoned absence?" (the error-flow trace). It used to be answered through
 //! `Value::as_vector_view`, whose `Cow` is `Owned` for a `Tensor`: it rebuilt
-//! the entire buffer as boxed per-lane `Value`s, twice per Word, and threw both
-//! copies away. On a 4096-lane tensor that was 67% of all instructions
-//! executed, and it scaled with the data rather than with the failures.
+//! the entire buffer as boxed per-lane `Value`s and threw the copy away. On
+//! a 4096-lane tensor that was 67% of all instructions executed, and it
+//! scaled with the data rather than with the failures.
 //!
-//! Both now read the representation instead — the discriminant for the shape
-//! question, [`crate::types::DenseTensor`]'s absence map for the reason. These
+//! It now reads the representation instead —
+//! [`crate::types::DenseTensor`]'s absence map for the reason. These
 //! are ratio-free, wall-clock-free gates on the part that could silently
 //! change: the *answers* must not depend on which representation holds the
 //! value, because the fast path is only safe while they agree.
@@ -20,7 +19,7 @@ mod execution_loop_tests {
     use crate::error::NilReason;
     use crate::interpreter::error_flow_trace::ErrorFlowEventKind;
     use crate::interpreter::Interpreter;
-    use crate::types::{Interpretation, ValueData};
+    use crate::types::ValueData;
 
     /// Every reason the trace recorded for a `NilProduced` event raised by
     /// `word`, in the order the run recorded them.
@@ -123,33 +122,6 @@ mod execution_loop_tests {
         assert!(
             produced.is_empty(),
             "a literal NIL is propagated, not produced: {produced:?}"
-        );
-    }
-
-    /// The hint-override rule the shape question exists for. `Interval` is a
-    /// *number*'s presentation, so `SQRT` stamps it on a scalar result and
-    /// leaves a collection's own role alone — the behavior that made the
-    /// question necessary, now answered from the discriminant.
-    #[tokio::test]
-    async fn sqrt_stamps_interval_on_a_scalar_and_not_on_a_collection() {
-        let mut scalar = Interpreter::new();
-        scalar.execute("4 SQRT").await.expect("must compute");
-        assert_eq!(
-            scalar.get_stack().last_role(),
-            Interpretation::Interval,
-            "a scalar SQRT result carries the Interval role"
-        );
-
-        let mut collection = Interpreter::new();
-        collection
-            .execute("[ 4 9 16 25 36 49 64 81 ] SQRT")
-            .await
-            .expect("must compute");
-        assert_ne!(
-            collection.get_stack().last_role(),
-            Interpretation::Interval,
-            "a collection keeps the role it was built with; only its lanes are \
-             numbers"
         );
     }
 }

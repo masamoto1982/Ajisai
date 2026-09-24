@@ -137,7 +137,7 @@ proptest! {
     #[test]
     fn comparison_dualities(a in small(), b in small()) {
         assert_law("lt-gt-dual", &format!("{a} {b} LT"), &format!("{b} {a} GT"));
-        assert_law("lte-gte-dual", &format!("{a} {b} LTE"), &format!("{b} {a} GTE"));
+        assert_law("not-gt-not-lt-dual", &format!("{a} {b} GT NOT"), &format!("{b} {a} LT NOT"));
     }
 
     // ─────────────────── NIL-projection monad (§5) ───────────────────
@@ -160,26 +160,12 @@ proptest! {
     }
 }
 
-/// MOD is the Euclidean remainder induced by floor division: x - floor(x/y)·y.
-#[test]
-fn mod_floor_remainder_examples() {
-    assert_law("mod-positive", "7 3 MOD", "1");
-    assert_law("mod-negative-dividend", "-7 3 MOD", "2");
-}
-
 /// Integer projections are exact-real observations, not float round trips.
 #[test]
 fn integer_projection_examples() {
     assert_law("floor-positive", "7 3 DIV FLOOR", "2");
     assert_law("floor-negative", "-7 3 DIV FLOOR", "-3");
-    assert_law("ceil-positive", "7 3 DIV CEIL", "3");
-    assert_law("ceil-negative", "-7 3 DIV CEIL", "-2");
-    assert_law(
-        "ceil-is-reflected-floor",
-        "7 3 DIV CEIL",
-        "7 3 DIV NEG FLOOR NEG",
-    );
-    assert_law("ceil-of-integer", "4 CEIL", "4");
+    assert_law("floor-of-integer", "4 FLOOR", "4");
     assert_law("round-positive-half", "5 2 DIV ROUND", "3");
     assert_law("round-negative-half", "-5 2 DIV ROUND", "-3");
 }
@@ -211,41 +197,13 @@ fn k3_double_negation() {
 }
 
 #[test]
-fn k3_and_or_commutative() {
+fn k3_and_commutative() {
     for (na, a) in truths() {
         for (nb, b) in truths() {
             assert_law(
                 &format!("and-comm[{na},{nb}]"),
                 &format!("{a} {b} AND"),
                 &format!("{b} {a} AND"),
-            );
-            assert_law(
-                &format!("or-comm[{na},{nb}]"),
-                &format!("{a} {b} OR"),
-                &format!("{b} {a} OR"),
-            );
-        }
-    }
-}
-
-// De Morgan over {T, F, U}. Truth values now render uniformly as
-// TRUE/FALSE/UNKNOWN through every path (finding B fixed), so both sides of
-// each law render identically when they denote the same truth value.
-#[test]
-fn k3_de_morgan() {
-    for (na, a) in truths() {
-        for (nb, b) in truths() {
-            // ¬(a ∧ b) = ¬a ∨ ¬b
-            assert_law(
-                &format!("de-morgan-and[{na},{nb}]"),
-                &format!("{a} {b} AND NOT"),
-                &format!("{a} NOT {b} NOT OR"),
-            );
-            // ¬(a ∨ b) = ¬a ∧ ¬b
-            assert_law(
-                &format!("de-morgan-or[{na},{nb}]"),
-                &format!("{a} {b} OR NOT"),
-                &format!("{a} NOT {b} NOT AND"),
             );
         }
     }
@@ -255,20 +213,14 @@ fn k3_de_morgan() {
 fn k3_associativity_and_idempotence() {
     let ts = truths();
     for (na, a) in ts {
-        // Idempotence: a ∧ a = a, a ∨ a = a.
+        // Idempotence: a ∧ a = a.
         assert_law(&format!("and-idem[{na}]"), &format!("{a} {a} AND"), a);
-        assert_law(&format!("or-idem[{na}]"), &format!("{a} {a} OR"), a);
         for (nb, b) in ts {
             for (nc, c) in ts {
                 assert_law(
                     &format!("and-assoc[{na},{nb},{nc}]"),
                     &format!("{a} {b} AND {c} AND"),
                     &format!("{a} {b} {c} AND AND"),
-                );
-                assert_law(
-                    &format!("or-assoc[{na},{nb},{nc}]"),
-                    &format!("{a} {b} OR {c} OR"),
-                    &format!("{a} {b} {c} OR OR"),
                 );
             }
         }

@@ -48,7 +48,7 @@
       },
       "over": {
         "kind": "source",
-        "source": "[ 0 10000 ] RANGE",
+        "source": "[ 0 20000 ] RANGE",
         "expect": {
           "/status": "hostError",
           "/error/code": "responseTooLarge",

@@ -63,8 +63,6 @@ async fn a_named_condition_is_one_the_word_declares() {
         ("[ 1 2 ] [ 'X' BIND ] MAP", "MAP"),
         ("[ 1 2 ] [ 0 ] [ 'A' BIND 'B' BIND ] FOLD", "FOLD"),
         ("[ 1 2 ] [ 'X' BIND ] FILTER", "FILTER"),
-        ("[ 1 2 ] [ 'X' BIND ] ALL", "ALL"),
-        ("[ 1 2 ] [ 'X' BIND ] ANY", "ANY"),
         ("42 CONTRACT", "CONTRACT"),
         ("[ 1 2 ] 5 MAP", "MAP"),
         ("TRUE NUM", "NUM"),

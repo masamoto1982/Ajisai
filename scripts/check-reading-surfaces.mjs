@@ -63,10 +63,9 @@ const EXAMPLE_NAMES = new Set([
   'W', 'B', 'A', 'T', 'LIMIT', 'DX', 'XS', 'K', 'I', 'YS',
   // binding names from the pattern clause, likewise locals rather than Words
   'P', 'M', 'D',
-  // the seed and count of the RANDOM clause, written as names to show the shape
-  'SEED', 'N',
+  'N',
   // the reflection clause's worked example: TWICE is defined and asked about
-  // by DEFINED?, DIGEST and CONTRACT; NOPE is written precisely because it is
+  // by DIGEST and CONTRACT; NOPE is written precisely because it is
   // never defined, to show CONTRACT projecting missingField for it.
   'TWICE', 'NOPE',
 ]);

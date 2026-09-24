@@ -144,9 +144,9 @@
     },
     {
       "id": "notASymbol",
-      "source": "'ADD' DEFINED?",
+      "source": "'ADD' CONTRACT",
       "expect": "error:notASymbol",
-      "rationale": "The exhaustive table hands DEFINED? every domain representative, so the category is reached there too; stated beside its registry entry because the String case is the one a reader will try first, and the one LANG.DICTIONARY.ACYCLIC forbids answering."
+      "rationale": "The exhaustive table hands CONTRACT every domain representative, so the category is reached there too; stated beside its registry entry because the String case is the one a reader will try first, and the one LANG.DICTIONARY.ACYCLIC forbids answering."
     }
   ]
 }

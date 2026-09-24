@@ -101,8 +101,8 @@ fn required(policy: NilPolicy) -> Option<Outcome> {
         }
         NilPolicy::RejectNil => Some(Outcome::Error),
         NilPolicy::CreatesNil | NilPolicy::ConsumeNil => None,
-        // `kleeneAbsorbing` (strong-Kleene `AND`/`OR`) only decides to a
-        // definite value when a dominating operand (FALSE/TRUE) is present;
+        // `kleeneAbsorbing` (strong-Kleene `AND`) only decides to a
+        // definite value when a dominating operand (FALSE) is present;
         // this blanket probe fills every operand position with NIL, so no
         // dominating operand exists and the result must still be a reasoned
         // NIL standing for UNKNOWN (LANG.VALUES.TRUTH).

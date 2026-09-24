@@ -1,15 +1,13 @@
 //! Test suite for `crate::interpreter::compiled_plan`.
 
 use crate::interpreter::{compile_word_definition, is_plan_valid, CompiledOp, Interpreter};
-use crate::types::{ExecutionLine, Token, WordDefinition};
+use crate::types::{Token, WordDefinition};
 use std::collections::HashSet;
 use std::sync::Arc;
 
 fn test_word(tokens: Vec<Token>) -> WordDefinition {
     WordDefinition {
-        lines: Arc::new([ExecutionLine {
-            body_tokens: Arc::from(tokens),
-        }]),
+        body: Arc::from(tokens),
         is_builtin: false,
         description: None,
         dependencies: HashSet::new(),
@@ -41,8 +39,5 @@ fn compile_collects_vector_literal() {
         Token::VectorEnd,
     ]);
     let plan = compile_word_definition(&wd, &interp);
-    assert!(matches!(
-        plan.lines[0].ops[0],
-        CompiledOp::PushVectorLiteral(_, _)
-    ));
+    assert!(matches!(plan.line.ops[0], CompiledOp::PushVectorLiteral(_)));
 }

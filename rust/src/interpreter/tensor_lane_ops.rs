@@ -76,8 +76,8 @@ pub(crate) fn lane_nil_passthrough(a: &Value, b: &Value) -> Option<Value> {
 
 /// The tree-walking half of [`apply_lane_wise_broadcast`], for ragged or
 /// nested-mixed operands. Mirrors [`apply_recursive_broadcast`] exactly; only
-/// the leaf's return type differs. Every caller (ADD/SUB/MUL/DIV/MOD/
-/// QUANTIZE, directly or through DIV/MOD's own division-by-zero fallback)
+/// the leaf's return type differs. Every caller (ADD/SUB/MUL/DIV, directly or
+/// through DIV's own division-by-zero fallback)
 /// declares `nonNumeric` uniformly, same as `FlatTensor::from_value`.
 fn apply_lane_wise_recursive<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where

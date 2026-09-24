@@ -15,7 +15,7 @@
 //! longer be read off which character opened the group. It is still
 //! answerable, from the fixed-position-operand convention the higher-order
 //! Words share: a `[ ... ]` immediately followed by one of
-//! `MAP`/`FILTER`/`FOLD`/`ANY`/`ALL` (or `EXEC`/`CONTRACT`) *is* that Word's
+//! `MAP`/`FILTER`/`FOLD`/`SCAN` (or `EXEC`/`CONTRACT`) *is* that Word's
 //! code operand, and that Word will run it. Any other `[ ... ]` is
 //! inert data: `[ 'a' PRINT 'b' ]` *is* `[ 'a' 'PRINT' 'b' ]`, PRINT never
 //! resolves or runs, so widening the accumulator with it would be a false
@@ -84,19 +84,15 @@ impl LiteralContext {
 fn consumes_preceding_as_code(canonical_name: &str) -> bool {
     matches!(
         canonical_name,
-        "MAP" | "FILTER" | "FOLD" | "SCAN" | "ANY" | "ALL" | "RANK" | "EXEC" | "CONTRACT"
+        "MAP" | "FILTER" | "FOLD" | "SCAN" | "EXEC" | "CONTRACT"
     )
 }
 
-/// The first Symbol at or after `from`, skipping `LineBreak`s — `None` if the
+/// The Symbol at `from` — `None` if the
 /// body ends first or a non-Symbol token comes first (a code-consuming Word
 /// is always named directly; nothing else can be "what follows").
 fn next_symbol_from(tokens: &[Token], from: usize) -> Option<&str> {
-    let mut i = from;
-    while let Some(Token::LineBreak) = tokens.get(i) {
-        i += 1;
-    }
-    match tokens.get(i) {
+    match tokens.get(from) {
         Some(Token::Symbol(s)) => Some(s),
         _ => None,
     }

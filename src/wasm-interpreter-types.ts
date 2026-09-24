@@ -195,21 +195,17 @@ export interface ProtocolAbsence {
 
 export interface ProtocolValueSemantics {
     /**
-     * Three-valued logic surface (LANG.OBSERVATION.FIREWALL, LANG.VALUES.TRUTH). Present only on
-     * truth-valued values; `'true'` / `'false'` / `'unknown'`. This is the
-     * only observable surface for the third value — do not infer it from
-     * the value's `type` or the internal NIL representation.
+     * Truth axis (LANG.VALUES.TRUTH): present only on a Boolean. UNKNOWN is a
+     * NIL read in truth position and is observed as a NIL (`type: 'nil'`,
+     * with its `absence`), never on this axis.
      */
-    truthValue?: 'true' | 'false' | 'unknown';
+    truthValue?: 'true' | 'false';
     absence?: ProtocolAbsence;
     /**
      * Present and `true` only when this node's numeric `value` is a *best
-     * rational approximation* of an exact irrational (`ExactScalar`) rendered
-     * under a lossy role (e.g. `rawNumber`), rather than an exact rational
-     * (LANG.OBSERVATION.FIREWALL). The exact source is available via the node's `semantics`.
-     * Lossless `continuedFraction` rendering carries no `semantics` block and
-     * never sets this. The GUI may use it to prefix an `≈`; consumers that
-     * ignore it are unaffected (additive, optional).
+     * rational approximation* of an exact irrational (`ExactScalar`) rather
+     * than an exact rational (LANG.OBSERVATION.FIREWALL). The GUI may use it
+     * to prefix an `≈`.
      */
     approximate?: boolean;
     /**
@@ -292,24 +288,12 @@ export interface Fraction {
 }
 
 /**
- * Semantic interpretation role attached to a value. This is the meaning
- * the runtime assigned, not a formatting switch — rendering is derived
- * from (data, role). `unassigned` means no role was assigned and the
- * value is shown structurally with no heuristic guessing.
+ * One observed stack value (LANG.OBSERVATION.PROTOCOL). Every field is derived
+ * from the value itself: `type` is its domain.
  */
-export type Interpretation =
-    | 'unassigned'
-    | 'rawNumber'
-    | 'interval'
-    | 'text'
-    | 'truthValue'
-    | 'timestamp'
-    | 'nil';
-
 export interface Value {
     type: string;
     value: any | Fraction | Value[];
-    displayHint?: Interpretation;
     semantics?: ProtocolValueSemantics;
 }
 

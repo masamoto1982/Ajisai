@@ -5,9 +5,8 @@ use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};
 use std::cell::RefCell;
 
-/// The logical Unknown as a plain NIL (LANG.VALUES.TRUTH): `SORT`/`ORDER`'s output
-/// domain is a vector, not a truth value, so — unlike the comparison words'
-/// `undecidable_truth_value` — this carries no `TruthValue` hint.
+/// The NIL `SORT`/`ORDER` answer when an undecidable pair leaves the order
+/// unestablished — the same `undecidable` NIL a comparison answers.
 fn undecidable_nil() -> Value {
     Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable)
 }
@@ -41,8 +40,8 @@ enum SortAttempt {
 /// is reported as `Malformed`.
 /// `three_way_compare`, with a structurally non-comparable operand
 /// reclassified as `nonComparableElement` — SORT and ORDER are the only two
-/// Words that declare it; `three_way_compare`'s other callers (MIN/MAX, ABS's
-/// zero-check in `math_ops.rs`) declare `nonNumeric` instead, so the shared
+/// Words that declare it; `three_way_compare`'s other callers (MIN/MAX in
+/// `math_ops.rs`) declare `nonNumeric` instead, so the shared
 /// function cannot make this remap itself (the same shared-helper lesson as
 /// Phase 2's tensor-conversion helpers and Phase 4's `nonInteger` fix).
 pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<OrderOutcome> {

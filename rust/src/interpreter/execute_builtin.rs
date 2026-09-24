@@ -1,15 +1,14 @@
 use crate::error::{AjisaiError, Result};
 use crate::kernel::generated::{generated_word, WordId};
-use crate::types::{Interpretation, Token, Value};
+use crate::types::{Token, Value};
 
 use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     algo_ops, arithmetic, bindings, cast, comparison, control, declared_outcomes, execute_def,
     execute_del, format_ops, higher_order, higher_order_fold, io, json_decode, json_encode, logic,
-    math_ops, nil_diagnostics, ordering_ops, power_ops, quantize_ops, record_ops, reflection_ops,
-    search_ops, shape_ops, shape_words, sort, tensor_cmds, transcendental_ops, vector_ops,
-    Interpreter,
+    math_ops, nil_diagnostics, ordering_ops, power_ops, record_ops, reflection_ops, search_ops,
+    shape_ops, shape_words, sort, tensor_cmds, transcendental_ops, vector_ops, Interpreter,
 };
 
 impl Interpreter {
@@ -33,8 +32,8 @@ impl Interpreter {
         // stored under either way — the uppercase that used to be here could
         // only ever rebuild a string already in hand, once per word dispatch,
         // which is the hottest path the interpreter has.
-        if let Some((value, role)) = self.lookup_binding(name) {
-            self.stack.push_with_role(value, role);
+        if let Some(value) = self.lookup_binding(name) {
+            self.stack.push(value);
             return Ok(());
         }
 
@@ -77,7 +76,7 @@ impl Interpreter {
 
         self.charge_execution_step()?;
 
-        if def.lines.is_empty() {
+        if def.body.is_empty() {
             // Dispatch the Word resolution already found, rather than finding it
             // again. `execute_builtin` re-canonicalized the name — a third fold
             // of a name folded once above — and then `generated_word` scanned the
@@ -121,10 +120,10 @@ impl Interpreter {
 
         // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
         // produces the same result whether it went through the compiled plan
-        // or the plain guard structure.
+        // or the plain token route.
         let result = match compiled_plan.as_ref() {
             Some(compiled) => execute_compiled_plan(self, compiled),
-            None => self.execute_guard_structure(&def.lines),
+            None => self.execute_section_core(&def.body, 0).map(|_| ()),
         };
 
         self.close_binding_scope();
@@ -191,40 +190,31 @@ impl Interpreter {
             WordId::Div => arithmetic::op_div(self),
             WordId::Eq => comparison::op_eq(self),
             WordId::Lt => comparison::op_lt(self),
-            WordId::Le => comparison::op_le(self),
             WordId::Gt => comparison::op_gt(self),
-            WordId::Gte => comparison::op_gte(self),
             WordId::Map => higher_order::op_map(self),
             WordId::Filter => higher_order::op_filter(self),
             WordId::Fold => higher_order_fold::op_fold(self),
             WordId::Scan => higher_order_fold::op_scan(self),
-            WordId::Any => higher_order::op_any(self),
-            WordId::All => higher_order::op_all(self),
-            WordId::Rank => higher_order::op_rank(self),
             WordId::Get => vector_ops::op_get(self),
             WordId::Length => vector_ops::op_length(self),
             WordId::Concat => vector_ops::op_concat(self),
             WordId::And => logic::op_and(self),
-            WordId::Or => logic::op_or(self),
             WordId::Not => logic::op_not(self),
             WordId::Select => logic::op_select(self),
             WordId::True => {
-                self.stack
-                    .push_with_role(Value::from_bool(true), Interpretation::TruthValue);
+                self.stack.push(Value::from_bool(true));
                 Ok(())
             }
             WordId::False => {
-                self.stack
-                    .push_with_role(Value::from_bool(false), Interpretation::TruthValue);
+                self.stack.push(Value::from_bool(false));
                 Ok(())
             }
             WordId::Nil => {
-                self.stack.push_with_role(Value::nil(), Interpretation::Nil);
+                self.stack.push(Value::nil());
                 Ok(())
             }
             WordId::Exec => control::op_exec(self),
             WordId::Contract => reflection_ops::op_contract(self),
-            WordId::Defined => reflection_ops::op_defined(self),
             WordId::Digest => reflection_ops::op_digest(self),
             WordId::Bind => bindings::op_bind(self),
             WordId::Def => execute_def::op_def(self),
@@ -241,10 +231,7 @@ impl Interpreter {
             WordId::Collect => vector_ops::op_collect(self),
             WordId::Fill => tensor_cmds::op_fill(self),
             WordId::Floor => tensor_cmds::op_floor(self),
-            WordId::Ceil => tensor_cmds::op_ceil(self),
             WordId::Round => tensor_cmds::op_round(self),
-            WordId::Quantize => quantize_ops::op_quantize(self),
-            WordId::Mod => tensor_cmds::op_mod(self),
             WordId::Str => cast::op_str(self),
             WordId::Num => cast::op_num(self),
             WordId::Format => format_ops::op_format(self),
@@ -260,8 +247,6 @@ impl Interpreter {
             WordId::Replace => cast::op_replace(self),
             WordId::NilCheck => nil_diagnostics::op_nil_check(self),
             WordId::NilReason => nil_diagnostics::op_nil_reason(self),
-            WordId::Abs => math_ops::op_abs(self),
-            WordId::Neg => math_ops::op_neg(self),
             WordId::Min => math_ops::op_min(self),
             WordId::Max => math_ops::op_max(self),
             WordId::Sqrt => math_ops::op_sqrt(self),
@@ -281,7 +266,6 @@ impl Interpreter {
             WordId::Group => ordering_ops::op_group(self),
             WordId::Zip => shape_ops::op_zip(self),
             WordId::Put => shape_ops::op_put(self),
-            WordId::Random => shape_ops::op_random(self),
             WordId::IndexOf => algo_ops::op_index_of(self),
             WordId::Absent => declared_outcomes::op_absent(self),
             WordId::Fail => declared_outcomes::op_fail(self),
@@ -305,7 +289,7 @@ impl Interpreter {
         resolved_name: &str,
         def: &std::sync::Arc<crate::types::WordDefinition>,
     ) -> Option<std::sync::Arc<super::compiled_plan::CompiledPlan>> {
-        if def.lines.is_empty() {
+        if def.body.is_empty() {
             return None;
         }
 
@@ -345,27 +329,21 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
             Token::RecordStart => "{".to_string(),
             Token::RecordEnd => "}".to_string(),
-            Token::LineBreak => "\n".to_string(),
         }
     }
 
     pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
         let (_, def) = self.resolve_word_entry(name)?;
-        if def.is_builtin || def.lines.is_empty() {
+        if def.is_builtin || def.body.is_empty() {
             return None;
         }
 
-        let mut result = String::new();
-        for (i, line) in def.lines.iter().enumerate() {
-            if i > 0 {
-                result.push('\n');
-            }
-            for token in line.body_tokens.iter() {
-                result.push_str(&self.format_token_to_string(token));
-                result.push(' ');
-            }
-        }
-        Some(result.trim().to_string())
+        let words: Vec<String> = def
+            .body
+            .iter()
+            .map(|token| self.format_token_to_string(token))
+            .collect();
+        Some(words.join(" "))
     }
 
     /// A User Word's `description` (SPEC: host affordance only, not a

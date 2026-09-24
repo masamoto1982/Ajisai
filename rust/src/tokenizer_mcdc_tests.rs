@@ -5,7 +5,7 @@
 // Scope: `crate::tokenizer::tokenize` — boolean decisions whose
 // independent atomic conditions can each cause an incorrect token
 // stream (token-count drift, wrong token kind, mis-classified
-// linebreak/comment behavior, etc.).
+// comment behavior, etc.).
 //
 // Tests are black-box through `tokenize()` because the helpers
 // (`is_string_close_delimiter`, `parse_number_from_string`, ...) are
@@ -31,156 +31,38 @@ fn string_tok(s: &str) -> Token {
 }
 
 // AQ-VER-002-A
-// DUT: rust/src/tokenizer.rs:13 inside the '\n' whitespace branch
+// DUT: rust/src/tokenizer.rs, the whitespace branch and the '#' comment branch
 //
-//     if tokens.last() != Some(&Token::LineBreak) { tokens.push(LineBreak); }
+// Whitespace is the sole token delimiter and carries nothing else
+// (LANG.SOURCE.TEXT): a line break is whitespace like a space, so no token
+// ever records one. A comment is the one construct a line break ends: `#` at
+// a fresh word position runs to the end of its line.
 //
-// One atomic condition C = (tokens.last() != Some(&LineBreak)).
-//   row 1: C = T -> emit LineBreak
-//   row 2: C = F -> suppress LineBreak (dedup)
-//
-// To observe row 2 we must place two consecutive newlines so the second
-// `\n` sees a LineBreak as the most recent token. The trailing-LineBreak
-// pop at the end of `tokenize` does not affect inter-token positions, so
-// observing the *count* of LineBreak tokens between two Symbols proves
-// dedup behavior.
-mod linebreak_dedup {
+// One decision in the comment loop, `i < chars.len() && chars[i] != '\n'`:
+//   row 1: a newline ends the comment      -> the next line's tokens follow
+//   row 2: end of input ends the comment   -> nothing follows
+mod whitespace_and_comments {
     use super::*;
 
     #[test]
-    fn aq_ver_002_a_row1_single_newline_emits_linebreak() {
-        let tokens = tokenize("a\nb").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::LineBreak, sym("b")]);
+    fn aq_ver_002_a_a_line_break_is_whitespace() {
+        assert_eq!(tokenize("a\nb").unwrap(), vec![sym("a"), sym("b")]);
+        assert_eq!(tokenize("a\n\n\nb").unwrap(), vec![sym("a"), sym("b")]);
+        assert_eq!(tokenize("a\n").unwrap(), vec![sym("a")]);
+        assert_eq!(tokenize("a\nb").unwrap(), tokenize("a b").unwrap());
     }
 
     #[test]
-    fn aq_ver_002_a_row2_consecutive_newlines_dedupe() {
-        // Three '\n' between a and b must collapse to a single LineBreak
-        // token thanks to the C = F path.
-        let tokens = tokenize("a\n\n\nb").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::LineBreak, sym("b")]);
+    fn aq_ver_002_a_row1_a_newline_ends_a_comment() {
+        assert_eq!(tokenize("a # c\nb").unwrap(), vec![sym("a"), sym("b")]);
+        assert_eq!(tokenize("# c\nb").unwrap(), vec![sym("b")]);
+        assert_eq!(tokenize("a\n# c\nb").unwrap(), vec![sym("a"), sym("b")]);
     }
 
     #[test]
-    fn aq_ver_002_a_trailing_linebreak_is_popped() {
-        // Documents the post-loop cleanup that complements the dedup rule.
-        let tokens = tokenize("a\n").unwrap();
-        assert_eq!(tokens, vec![sym("a")]);
-    }
-}
-
-// AQ-VER-002-B
-// DUT: rust/src/tokenizer.rs:23 inside the '#' comment branch
-//
-//     let had_token_before =
-//         !tokens.is_empty() && tokens.last() != Some(&Token::LineBreak);
-//
-// Conditions:
-//   A = !tokens.is_empty()
-//   B = tokens.last() != Some(&LineBreak)
-//
-// Reachable rows (note: A=F implies last()==None, which is != Some(LB),
-// so B is forced T whenever A is F):
-//   row 1: (A=T, B=T) -> had_token = true  (real preceding token)
-//   row 2: (A=T, B=F) -> had_token = false (only a LineBreak preceding)
-//   row 3: (A=F, B=T) -> had_token = false (empty stream)
-//
-// MC/DC pairs:
-//   (1,2) holds A=T and flips B -> proves B's independent effect.
-//   (1,3) holds B=T and flips A -> proves A's independent effect.
-//
-// `had_token_before` is observable indirectly via the AQ-VER-002-C
-// decision (newline absorption). Here we verify the three reachable
-// rows by checking the resulting token stream shape.
-mod comment_had_token_before {
-    use super::*;
-
-    #[test]
-    fn aq_ver_002_b_row1_preceding_real_token_keeps_linebreak() {
-        // (A=T, B=T): "a # c\nb" — preceding 'a' is a non-LineBreak token,
-        // so had_token=true and the comment's trailing newline is NOT
-        // absorbed; a LineBreak appears between 'a' and 'b'.
-        let tokens = tokenize("a # c\nb").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::LineBreak, sym("b")]);
-    }
-
-    #[test]
-    fn aq_ver_002_b_row2_preceding_linebreak_absorbs_newline() {
-        // (A=T, B=F): "a\n# c\nb" — last token before the comment is the
-        // LineBreak emitted by the first '\n', so had_token=false. The
-        // comment line absorbs its trailing newline, leaving a single
-        // LineBreak between 'a' and 'b'.
-        let tokens = tokenize("a\n# c\nb").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::LineBreak, sym("b")]);
-    }
-
-    #[test]
-    fn aq_ver_002_b_row3_empty_stream_absorbs_newline() {
-        // (A=F, B=T trivially): "# c\nb" — empty before the comment. The
-        // comment swallows its newline, so the result starts directly
-        // with 'b' (no leading LineBreak).
-        let tokens = tokenize("# c\nb").unwrap();
-        assert_eq!(tokens, vec![sym("b")]);
-    }
-}
-
-// AQ-VER-002-C
-// DUT: rust/src/tokenizer.rs:29 inside the '#' comment branch
-//
-//     if !had_token_before && i < chars.len() && chars[i] == '\n' {
-//         i += 1;
-//     }
-//
-// Conditions:
-//   C = !had_token_before
-//   D = i < chars.len()
-//   E = chars[i] == '\n'
-//
-// Reachability constraint: the inner `while i < chars.len() && chars[i]
-// != '\n'` exits only when D = F (EOF) or chars[i] == '\n' (E = T given
-// D = T). Hence E cannot be F when D is T — the (C, D=T, E=F) rows are
-// structurally unreachable. This is documented but not asserted.
-//
-// Reachable rows:
-//   row 1: (C=T, D=T, E=T) -> consume newline (no LineBreak inserted)
-//   row 2: (C=F, D=T, E=T) -> leave newline (LineBreak will be emitted)
-//   row 3: (C=T, D=F, _ )  -> nothing to consume (EOF)
-//   row 4: (C=F, D=F, _ )  -> nothing to consume (EOF)
-//
-// MC/DC pairs:
-//   (1,2) holds D=T,E=T and flips C -> proves C's independent effect.
-//   (1,3) holds C=T,E=*  and flips D -> proves D's independent effect.
-//   E is short-circuit-masked by D and cannot be exercised independently.
-mod comment_newline_absorption {
-    use super::*;
-
-    #[test]
-    fn aq_ver_002_c_row1_lone_comment_absorbs_trailing_newline() {
-        // (C=T, D=T, E=T): see AQ-VER-002-B row 3 for the full chain.
-        let tokens = tokenize("# c\nb").unwrap();
-        assert_eq!(tokens, vec![sym("b")]);
-    }
-
-    #[test]
-    fn aq_ver_002_c_row2_inline_comment_keeps_trailing_newline() {
-        // (C=F, D=T, E=T): preceding token forces had_token=true so the
-        // newline is not absorbed and surfaces as a LineBreak token.
-        let tokens = tokenize("a # c\nb").unwrap();
-        assert_eq!(tokens, vec![sym("a"), Token::LineBreak, sym("b")]);
-    }
-
-    #[test]
-    fn aq_ver_002_c_row3_lone_comment_at_eof_no_absorption() {
-        // (C=T, D=F): comment runs to EOF, nothing to absorb.
-        let tokens = tokenize("# c").unwrap();
-        assert_eq!(tokens, Vec::<Token>::new());
-    }
-
-    #[test]
-    fn aq_ver_002_c_row4_inline_comment_at_eof_no_absorption() {
-        // (C=F, D=F): same EOF condition, but with preceding token.
-        let tokens = tokenize("a # c").unwrap();
-        assert_eq!(tokens, vec![sym("a")]);
+    fn aq_ver_002_a_row2_end_of_input_ends_a_comment() {
+        assert_eq!(tokenize("# c").unwrap(), Vec::<Token>::new());
+        assert_eq!(tokenize("a # c").unwrap(), vec![sym("a")]);
     }
 }
 

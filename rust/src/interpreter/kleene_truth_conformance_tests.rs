@@ -1,4 +1,4 @@
-//! The full strong-Kleene truth tables for `AND`/`OR`/`NOT` (LANG.VALUES.TRUTH),
+//! The full strong-Kleene truth tables for `AND`/`NOT` (LANG.VALUES.TRUTH),
 //! with NIL standing for UNKNOWN. Split out from `nil_conformance_tests` to
 //! stay under the the file-size budget in docs/dev/specification-implementation-rules.md file-size budget.
 
@@ -14,11 +14,11 @@ async fn run_ok(code: &str) -> Vec<Value> {
     interp.get_stack().to_vec()
 }
 
-/// FALSE absorbs into `AND` and TRUE absorbs into `OR` even against a NIL
+/// FALSE absorbs into `AND` even against a NIL
 /// operand; only where neither operand is the absorbing value does a NIL
 /// operand surface in the result.
 #[tokio::test]
-async fn strong_kleene_and_or_truth_tables() {
+async fn strong_kleene_and_not_truth_tables() {
     for (code, expect_nil, expect_bool) in [
         // AND: definite rows.
         ("TRUE TRUE AND", false, Some(true)),
@@ -32,18 +32,6 @@ async fn strong_kleene_and_or_truth_tables() {
         ("TRUE NIL AND", true, None),
         ("NIL TRUE AND", true, None),
         ("NIL NIL AND", true, None),
-        // OR: definite rows.
-        ("TRUE TRUE OR", false, Some(true)),
-        ("TRUE FALSE OR", false, Some(true)),
-        ("FALSE TRUE OR", false, Some(true)),
-        ("FALSE FALSE OR", false, Some(false)),
-        // OR: TRUE absorbs a NIL operand into TRUE, from either side.
-        ("TRUE NIL OR", false, Some(true)),
-        ("NIL TRUE OR", false, Some(true)),
-        // OR: FALSE does not settle it, so a NIL operand surfaces as UNKNOWN.
-        ("FALSE NIL OR", true, None),
-        ("NIL FALSE OR", true, None),
-        ("NIL NIL OR", true, None),
         // NOT: no second operand to absorb into, so NIL stays NIL.
         ("TRUE NOT", false, Some(false)),
         ("FALSE NOT", false, Some(true)),
@@ -54,9 +42,9 @@ async fn strong_kleene_and_or_truth_tables() {
         if expect_nil {
             assert!(stack[0].is_nil(), "`{code}` must produce NIL (UNKNOWN)");
             assert_eq!(
-                stack[0].truth_value(),
-                Some("unknown"),
-                "`{code}`'s NIL result must observe as truthValue `unknown`"
+                stack[0].nil_reason(),
+                Some(&crate::error::NilReason::Literal),
+                "`{code}`'s UNKNOWN is the NIL operand it read, reason intact"
             );
         } else {
             assert_eq!(

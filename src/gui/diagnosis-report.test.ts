@@ -110,8 +110,8 @@ describe('describeTimeoutDiagnosis', () => {
                     + 'did not refuse this program; it was still running when the time ran out.',
                 'next: Rewrite the loop as a bulk operation - A whole-vector Word does in one step what a '
                     + 'per-element loop does in as many, and only the loop is charged per step.',
-                'next: Trim what the run carries - Exact values grow as they are combined; QUANTIZE bounds a '
-                    + 'denominator that is otherwise free to grow every iteration.',
+                'next: Trim what the run carries - Exact values grow as they are combined; rounding to a grid '
+                    + '(x d MUL FLOOR d DIV) bounds a denominator that is otherwise free to grow every iteration.',
                 'next: Check the host profile - This guard is not part of the language. Another host '
                     + '(the MCP server) applies different limits; the profile badge beside the build version '
                     + 'lists the ones in force here.'

@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::types::{Interpretation, Stack, Token, Value, WordDefinition};
+use crate::types::{Stack, Token, Value, WordDefinition};
 use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -194,10 +194,10 @@ pub struct Interpreter {
     pub(crate) word_identities: HashMap<String, String>,
 
     /// Content store for definition bodies (Section 8.6), keyed by content key.
-    /// Textually identical bodies share a single `Arc<[ExecutionLine]>`, so
+    /// Textually identical bodies share a single `Arc<[Token]>`, so
     /// re-importing or copying a word group does not duplicate its code in
     /// memory.
-    pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::ExecutionLine]>>,
+    pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::Token]>>,
 
     /// When set, `recompute_word_identities` is a no-op. Bulk operations (e.g.
     /// restoring or importing many words) set this for the duration of the
@@ -436,16 +436,10 @@ impl Interpreter {
         }
     }
     pub(crate) fn normalize_symbol<'a>(symbol: &'a str) -> std::borrow::Cow<'a, str> {
-        match symbol {
-            "%" => std::borrow::Cow::Borrowed("MOD"),
-            "&" => std::borrow::Cow::Borrowed("AND"),
-            _ => {
-                if symbol.as_bytes().iter().any(|b| b.is_ascii_lowercase()) {
-                    std::borrow::Cow::Owned(symbol.to_uppercase())
-                } else {
-                    std::borrow::Cow::Borrowed(symbol)
-                }
-            }
+        if symbol.as_bytes().iter().any(|b| b.is_ascii_lowercase()) {
+            std::borrow::Cow::Owned(symbol.to_uppercase())
+        } else {
+            std::borrow::Cow::Borrowed(symbol)
         }
     }
 
@@ -596,9 +590,5 @@ impl Interpreter {
 
     pub fn update_stack(&mut self, stack: impl Into<Stack>) {
         self.stack = stack.into();
-    }
-
-    pub fn update_stack_with_hints(&mut self, values: Vec<Value>, hints: Vec<Interpretation>) {
-        self.stack = Stack::from_values_and_roles(values, hints);
     }
 }

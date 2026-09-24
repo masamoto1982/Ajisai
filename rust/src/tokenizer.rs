@@ -59,10 +59,6 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
 
     while i < chars.len() {
         if chars[i].is_whitespace() {
-            if chars[i] == '\n' && tokens.last() != Some(&Token::LineBreak) {
-                tokens.push(Token::LineBreak);
-                spans.push(span_at(i));
-            }
             i += 1;
             continue;
         }
@@ -74,13 +70,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // Forth's own comment word — `#` glued to a preceding name is just
         // part of that name, not a comment start.
         if chars[i] == '#' {
-            let had_token_before = !tokens.is_empty() && tokens.last() != Some(&Token::LineBreak);
-
             while i < chars.len() && chars[i] != '\n' {
-                i += 1;
-            }
-
-            if !had_token_before && i < chars.len() && chars[i] == '\n' {
                 i += 1;
             }
             continue;
@@ -151,11 +141,6 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
 
         tokens.push(Token::Symbol(token_str.into()));
         spans.push(span_at(start));
-    }
-
-    if tokens.last() == Some(&Token::LineBreak) {
-        tokens.pop();
-        spans.pop();
     }
 
     check_bracket_matching(input)?;

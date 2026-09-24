@@ -3,11 +3,11 @@
 //!
 //! Arithmetic never rounds and `STR` refuses a number with no exact lexeme,
 //! so the language had no place a program could ask for `1/3` to three
-//! places without first rounding the *value* (`QUANTIZE`) and then spelling
+//! places without first rounding the *value* (`1000 MUL ROUND 1000 DIV`) and then spelling
 //! the rounded number. `FORMAT` is that place, and it is the only one: what
 //! leaves it is text, so the rounded quantity never re-enters arithmetic as
 //! if it were exact. The rule is fixed — a tie rounds away from zero, the
-//! one rule `ROUND` and `QUANTIZE` already apply — because a choice of
+//! one rule `ROUND` already applies — because a choice of
 //! rounding mode is a family of Words, and the language keeps one rule.
 //!
 //! The decision is exact at every tier. A rational scales and rounds
@@ -27,7 +27,7 @@ use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactCmp, ExactReal, DEFAULT_COMPARISON_WATER};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// The most digits one `FORMAT` may ask for. Every digit is a decimal place
 /// of big-integer work, and the meter charges each one, so the cap only
@@ -140,14 +140,11 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
     match round_scaled(&x, digits) {
-        Rounded::Integer(n) => interp.stack.push_with_role(
-            Value::from_string(&spell(&n, digits)),
-            Interpretation::Unassigned,
-        ),
-        Rounded::Undecidable => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-            Interpretation::Nil,
-        ),
+        Rounded::Integer(n) => interp.stack.push(Value::from_string(&spell(&n, digits))),
+        Rounded::Undecidable => interp.stack.push(Value::nil_with_reason(
+            NilReason::Undecidable,
+            Recoverability::Retryable,
+        )),
     }
     Ok(())
 }

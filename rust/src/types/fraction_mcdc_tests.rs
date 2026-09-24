@@ -343,42 +343,6 @@ mod floor_negative_remainder {
     }
 }
 
-// AQ-VER-001-F
-// DUT: rust/src/types/fraction-arithmetic.rs:293 in `Fraction::ceil` (Small)
-//
-//     let ceiled = if *n > 0 && r != 0 { q + 1 } else { q };
-//
-// Conditions:
-//   A = (n > 0)
-//   B = (r != 0)
-//
-// Same reachability caveat as AQ-VER-001-E.
-mod ceil_positive_remainder {
-    use super::*;
-
-    #[test]
-    fn aq_ver_001_f_row1_positive_with_remainder_rounds_toward_pos_inf() {
-        // (A=T, B=T): 7/3 -> q=2, r=1, ceiled = 3.
-        let f = small(7, 3);
-        assert_eq!(f.ceil(), small(3, 1));
-    }
-
-    #[test]
-    fn aq_ver_001_f_row2_negative_with_remainder_truncates() {
-        // (A=F, B=T): -7/3 -> q=-2, r=-1, ceiled = -2 (else branch).
-        // Pair (row1, row2) flips A with B held T -> independent effect of A.
-        let f = small(-7, 3);
-        assert_eq!(f.ceil(), small(-2, 1));
-    }
-
-    #[test]
-    fn aq_ver_001_f_zero_short_circuits_via_is_integer() {
-        // Zero is is_integer() == true (d == 1 after reduction), short-circuits.
-        let f = small(0, 5);
-        assert_eq!(f.ceil(), small(0, 1));
-    }
-}
-
 // ---------------------------------------------------------------------------
 // AQ-VER-001-G
 // DUT: rust/src/types/fraction.rs:266-269 in `Fraction::create_from_i128`
@@ -631,77 +595,6 @@ mod add_checked_chain_defensive {
         let rhs = small(-i64::MAX, i64::MAX);
         let result = lhs.add(&rhs);
         assert_eq!(result, small(-2, 1), "-i64::MAX/i64::MAX + same = -2");
-    }
-}
-
-// ---------------------------------------------------------------------------
-// AQ-VER-001-J
-// DUT: rust/src/types/fraction-arithmetic.rs:354-358 in `Fraction::modulo`
-// (Small fast path, b == 1 && d == 1)
-//
-//     let result = if rem < 0 {
-//         if c > 0 { rem + c } else { rem - c }
-//     } else {
-//         rem
-//     };
-//
-// Sign-normalizing branch over the integer remainder. Conditions:
-//   A = (rem < 0)
-//   B = (c > 0)
-//
-// Three reachable branches:
-//   row 1: (A=F, B=any) -> rem        (no sign correction)
-//   row 2: (A=T, B=T)   -> rem + c    (positive divisor, normalize to [0, c))
-//   row 3: (A=T, B=F)   -> rem - c    (negative divisor, normalize to (c, 0])
-//
-// MC/DC pairs:
-//   Pair (row 1, row 2) with B held T (positive c, e.g., c=3):
-//     A flips F->T -> branch flips from `rem` to `rem + c`. A independent.
-//   Pair (row 2, row 3) with A held T (negative rem, e.g., a=-7):
-//     B flips T->F -> branch flips from `rem + c` to `rem - c`. B independent.
-//
-// Modulo by zero is rejected at line 348 (panics) before reaching this
-// branch, so c == 0 is not part of the reachable input space.
-//
-// Expected values were verified by an offline probe (2026-04-24):
-//   a= 7, c= 3, rem= 1, result=1   (row 1, A=F, B=T)
-//   a=-7, c= 3, rem=-1, result=2   (row 2, A=T, B=T)
-//   a=-7, c=-3, rem=-1, result=2   (row 3, A=T, B=F)
-//   a= 7, c=-3, rem= 1, result=1   (row 1', A=F, B=F)
-// ---------------------------------------------------------------------------
-mod modulo_remainder_sign_normalization {
-    use super::*;
-
-    #[test]
-    fn aq_ver_001_j_row1_nonneg_remainder_returns_remainder_unchanged() {
-        // (A=F, B=T): rem = 7 % 3 = 1 >= 0, no sign correction.
-        let result = small(7, 1).modulo(&small(3, 1));
-        assert_eq!(result, small(1, 1));
-    }
-
-    #[test]
-    fn aq_ver_001_j_row2_neg_remainder_pos_divisor_adds_divisor() {
-        // (A=T, B=T): rem = -7 % 3 = -1 < 0 and c = 3 > 0, result = -1 + 3 = 2.
-        // Pair (row1, row2) with B held T proves A's independent effect.
-        let result = small(-7, 1).modulo(&small(3, 1));
-        assert_eq!(result, small(2, 1));
-    }
-
-    #[test]
-    fn aq_ver_001_j_row3_neg_remainder_neg_divisor_subtracts_divisor() {
-        // (A=T, B=F): rem = -7 % -3 = -1 < 0 and c = -3 not > 0, result = -1 - (-3) = 2.
-        // Pair (row2, row3) with A held T proves B's independent effect.
-        let result = small(-7, 1).modulo(&small(-3, 1));
-        assert_eq!(result, small(2, 1));
-    }
-
-    #[test]
-    fn aq_ver_001_j_row1_alt_pos_remainder_neg_divisor_returns_remainder() {
-        // (A=F, B=F): rem = 7 % -3 = 1 >= 0, no sign correction (returns rem).
-        // Documents the (A=F, B=F) cell of the truth table; not used in MC/DC
-        // pairs but covers the entire reachable surface of the inner branch.
-        let result = small(7, 1).modulo(&small(-3, 1));
-        assert_eq!(result, small(1, 1));
     }
 }
 

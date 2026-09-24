@@ -341,7 +341,6 @@ async fn a_nil_lane_keeps_its_reason_through_the_next_element_wise_word() {
         ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] -", NilReason::DivisionByZero),
         ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] *", NilReason::DivisionByZero),
         ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] /", NilReason::DivisionByZero),
-        ("[ 1 2 ] [ 1 0 ] / [ 1 1 ] %", NilReason::DivisionByZero),
         ("[ 1 2 ] [ 1 0 ] / 2 *", NilReason::DivisionByZero),
         ("[ 4 -1 ] SQRT [ 1 1 ] +", NilReason::DomainMiss),
         (

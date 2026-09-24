@@ -22,7 +22,7 @@ use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactReal, PowOutcome};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 fn non_numeric(word: &str) -> AjisaiError {
     AjisaiError::declared(
@@ -100,13 +100,7 @@ fn restore(interp: &mut Interpreter, operands: Vec<Value>) {
 }
 
 fn finish(interp: &mut Interpreter, result: Value) {
-    let role = if result.is_nil() {
-        Interpretation::Nil
-    } else {
-        Interpretation::RawNumber
-    };
     push_result(interp, result);
-    interp.stack.set_last_role(role);
 }
 
 fn binary(interp: &mut Interpreter, leaf: &dyn Fn(&Value, &Value) -> Result<Value>) -> Result<()> {
@@ -144,13 +138,7 @@ pub(crate) fn op_ratio(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 1)?;
     match lift_unary_numeric(&operands[0], &ratio_scalar) {
         Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::Unassigned
-            };
             push_result(interp, result);
-            interp.stack.set_last_role(role);
             Ok(())
         }
         Err(e) => {

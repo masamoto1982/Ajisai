@@ -80,7 +80,7 @@ mod collection_meter_tests {
         // Hash` turned that scan into one hash-and-lookup per element, so the
         // charge now tracks element count; distinctness only adds the small,
         // linear cost of copying every new value into the result.
-        let uniform = charged_by("[ 0 3999 ] RANGE [ 1 MOD ] MAP UNIQUE").await;
+        let uniform = charged_by("[ 0 3999 ] RANGE [ 0 MUL ] MAP UNIQUE").await;
         let distinct = charged_by("[ 0 3999 ] RANGE UNIQUE").await;
         assert!(
             distinct < uniform * 3,
@@ -146,9 +146,12 @@ mod collection_meter_tests {
         // width of an element moves. Multiplying by the wide literal is what
         // makes the elements genuine BigInts rather than machine words — the
         // step where the measured cost jumps twelvefold.
-        let narrow = charged_by_word("[ 1 200 ] RANGE [ 2 MOD 1 + ] MAP", "UNIQUE").await;
+        let narrow = charged_by_word("[ 1 200 ] RANGE [ 1/101 MUL FLOOR 1 + ] MAP", "UNIQUE").await;
         let wide = charged_by_word(
-            &format!("[ 1 200 ] RANGE [ 2 MOD 1 + {} * ] MAP", "9".repeat(512)),
+            &format!(
+                "[ 1 200 ] RANGE [ 1/101 MUL FLOOR 1 + {} * ] MAP",
+                "9".repeat(512)
+            ),
             "UNIQUE",
         )
         .await;
@@ -364,7 +367,6 @@ mod collection_meter_tests {
             "[ 1 32 ] RANGE [ 1 32 ] RANGE 2 COLLECT ZIP",
             "[ 1 32 ] RANGE -1 INDEX-OF",
             "[ 4 4 0 ] FILL",
-            "7 32 RANDOM",
         ] {
             assert!(
                 charged_by(source).await > 0,
@@ -413,7 +415,8 @@ mod collection_meter_tests {
     /// which is the axis a hash-keyed scan's price actually turns on.
     fn dense_and_nested(n: usize, modulo: Option<usize>) -> (String, String) {
         let half = n / 2;
-        let fold = modulo.map_or(String::new(), |m| format!(" [ {m} MOD ] MAP"));
+        // `[ m n DIV MUL FLOOR ] MAP` sends 0..n-1 onto exactly 0..m-1.
+        let fold = modulo.map_or(String::new(), |m| format!(" [ {m} {n} DIV MUL FLOOR ] MAP"));
         (
             format!("[ 0 {} ] RANGE{fold} REVERSE", n - 1),
             format!(
@@ -458,7 +461,7 @@ mod collection_meter_tests {
     /// Unlike the sort's, this scan charges *as it goes*, and how often it
     /// charges for retaining an element depends on how many distinct values the
     /// data holds. So the parity is checked across that axis as well as across
-    /// size: `[ m MOD ] MAP` sets the distinct count to `m`.
+    /// size: `[ m n DIV MUL FLOOR ] MAP` sets the distinct count to `m`.
     #[tokio::test]
     async fn a_hash_keyed_scan_costs_the_same_whichever_representation_holds_it() {
         for (n, modulo) in [(8usize, 2usize), (100, 4), (1000, 7), (1000, 1000)] {

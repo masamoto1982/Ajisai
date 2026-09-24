@@ -9,9 +9,9 @@ use crate::types::Value;
 /// itself a well-formed index (non-integer, wrong shape)", distinct from
 /// `indexOutOfBounds` (a well-formed index outside bounds, which is a NIL
 /// projection, not this ERROR). The shared helper also serves TAKE, COLLECT,
-/// and (via local wrappers of their own) PUT/RANDOM, none of which declare
+/// and (via a local wrapper of its own) PUT, none of which declare
 /// `invalidIndex`, so the remap belongs here rather than in the helper
-/// itself (the same shared-helper lesson as `nonInteger`'s `PUT`/`RANDOM`
+/// itself (the same shared-helper lesson as `nonInteger`'s `PUT`
 /// fix).
 fn require_index_operand(value: &Value) -> Result<i64> {
     match extract_integer_from_value(value) {

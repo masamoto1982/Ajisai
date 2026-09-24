@@ -182,8 +182,8 @@ const rustStrSlice = (values) => {
 
 // A projection condition of "never" is the absence of one, so it is projected
 // as an empty slice rather than as a string every reader would have to compare
-// against. A Word may declare several conditions (`MOD` projects for a zero
-// divisor and for an undecidable integer projection), so the slice is the
+// against. A Word may declare several conditions (`GCD` projects for a
+// non-integer operand and for a Tier 2 one), so the slice is the
 // shape even where only one is declared.
 const projection = (when) => {
   if (when === 'never') return '&[]';
@@ -313,8 +313,8 @@ pub struct GeneratedWord {
     /// or project without any NIL-operand rule engaging at all.
     ///
     /// A slice rather than a single condition because a Word can project for
-    /// more than one reason: \`MOD\` answers NIL both for a zero divisor and
-    /// for an integer projection it cannot decide.
+    /// more than one reason: \`GCD\` answers NIL both for a non-integer
+    /// operand and for a Tier 2 operand whose integrality it cannot decide.
     pub projection: &'static [&'static str],
     /// The NIL reason each condition in \`projection\` answers with, aligned
     /// with it position by position: the ids \`NIL-REASON\` reports, and what

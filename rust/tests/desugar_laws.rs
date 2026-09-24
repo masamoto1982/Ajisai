@@ -40,28 +40,22 @@ fn nonzero() -> impl Strategy<Value = i64> {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
-    // ── Arithmetic aliases (LANG.SOURCE.NORMALIZE Word alias): + - * / % ──
+    // ── Arithmetic aliases (LANG.SOURCE.NORMALIZE Word alias): + - * / ──
     #[test]
     fn arith_aliases(a in small(), b in nonzero()) {
         assert_law("alias-add", &format!("{a} {b} +"), &format!("{a} {b} ADD"));
         assert_law("alias-sub", &format!("{a} {b} -"), &format!("{a} {b} SUB"));
         assert_law("alias-mul", &format!("{a} {b} *"), &format!("{a} {b} MUL"));
         assert_law("alias-div", &format!("{a} {b} /"), &format!("{a} {b} DIV"));
-        assert_law("alias-mod", &format!("{a} {b} %"), &format!("{a} {b} MOD"));
     }
 
-    // ── Comparison aliases (LANG.SOURCE.NORMALIZE): = != < <= > >= ──
+    // ── Comparison aliases (LANG.SOURCE.NORMALIZE): = < > ──
     #[test]
     fn comparison_aliases(a in small(), b in small()) {
-        // The comparison family is symmetric: all six relations have a symbol,
-        // and each renders identically to its English name. `<=`, `>=` and `!=`
-        // are two characters, which costs the lexer nothing — a token ends only
-        // at whitespace or a structural delimiter.
+        // Each comparison Word's symbol renders identically to its English name.
         assert_law("alias-eq", &format!("{a} {b} ="), &format!("{a} {b} EQ"));
         assert_law("alias-lt", &format!("{a} {b} <"), &format!("{a} {b} LT"));
-        assert_law("alias-lte", &format!("{a} {b} <="), &format!("{a} {b} LTE"));
         assert_law("alias-gt", &format!("{a} {b} >"), &format!("{a} {b} GT"));
-        assert_law("alias-gte", &format!("{a} {b} >="), &format!("{a} {b} GTE"));
     }
 
     // ── An unallocated symbol is not a silent no-op ──
@@ -70,12 +64,11 @@ proptest! {
     // ways: a symbol the language has not allocated must not quietly disappear
     // from a program, and neither must a retired spelling. Each of these reaches
     // the dictionary as an ordinary name and fails there: `~` was never
-    // allocated, `&` no longer spells AND, and `<>` and `,,` are retired
-    // spellings. `<=` and `>=` have left this list: they are allocated now, to
-    // LTE and GTE, and the law above pins them to their English names.
+    // allocated, `&` no longer spells AND, and `<>`, `,,`, `%`, `<=` and `>=`
+    // are retired spellings (the last three went with MOD, LTE and GTE).
     #[test]
     fn an_unallocated_symbol_is_not_a_silent_noop(a in small(), b in small()) {
-        for symbol in ["~", "&", "<>", ",,"] {
+        for symbol in ["~", "&", "<>", ",,", "%", "<=", ">="] {
             let observation = observed(&format!("{a} {b} {symbol} ADD"));
             prop_assert_eq!(
                 observation.error_category,

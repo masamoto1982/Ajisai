@@ -1,6 +1,5 @@
 //! Behavioral probes for the shape Words (LANG.COLLECTIONS.LIFT): the two
-//! projections `SHAPE` and `RESHAPE` declare, and the depth walk `RANK`
-//! shares with `MAP`.
+//! projections `SHAPE` and `RESHAPE` declare.
 
 #[cfg(test)]
 mod shape_words_tests {
@@ -105,28 +104,6 @@ mod shape_words_tests {
                 message.contains("RESHAPE"),
                 "`{code}` must name RESHAPE in its diagnosis, got: {message}"
             );
-        }
-    }
-
-    /// RANK at depth 1 is MAP; at depth 0 the block sees the whole Vector; a
-    /// leaf met before the depth is reached is what the block gets.
-    #[tokio::test]
-    async fn rank_descends_to_the_stated_depth() {
-        for (code, want) in [
-            (
-                "[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK",
-                "[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]",
-            ),
-            ("[ [ 1 2 ] [ 3 4 ] ] 1 [ LENGTH ] RANK", "[ 2/1 2/1 ]"),
-            ("[ [ 1 2 ] [ 3 4 ] ] 0 [ LENGTH ] RANK", "2/1"),
-            ("[ 1 [ 2 3 ] ] 2 [ 10 MUL ] RANK", "[ 10/1 [ 20/1 30/1 ] ]"),
-            ("[ ] 3 [ 10 MUL ] RANK", "[ ]"),
-            (
-                "[ 1 2 3 ] 1 [ 2 MUL ] RANK [ 1 2 3 ] [ 2 MUL ] MAP EQ",
-                "TRUE",
-            ),
-        ] {
-            assert_eq!(top(code).await, want, "`{code}`");
         }
     }
 }

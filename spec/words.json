@@ -150,59 +150,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "OR",
-      "aliases": [],
-      "family": "booleanLogic",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "kleeneAbsorbing",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonTruthValue",
-        "shapeMismatch"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.TRUTH",
-        "LANG.COLLECTIONS.LIFT"
-      ],
-      "documentation": {
-        "summary": "Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.",
-        "hover": "OR — logical OR",
-        "lookup": "Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN.",
-        "syntax": "TRUE FALSE OR",
-        "role": "Logic primitive: strong-Kleene three-valued OR (LANG.VALUES.TRUTH).",
-        "stackEffect": "[ a ] [ b ] -> [ a OR b ]"
-      },
-      "executorKey": "Or",
-      "effects": [],
-      "partiality": "total",
-      "category": "logic",
-      "vocabularyTier": "standard",
-      "standardKind": "shorthand"
-    },
-    {
       "name": "NOT",
       "aliases": [],
       "family": "booleanLogic",
@@ -413,62 +360,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "LTE",
-      "aliases": [
-        "<="
-      ],
-      "family": "comparison",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "budgetExhausted",
-        "reason": "undecidable"
-      },
-      "errorWhen": [
-        "unsupportedComparison",
-        "shapeMismatch"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT"
-      ],
-      "documentation": {
-        "summary": "Test less-than-or-equal comparison.",
-        "hover": "LTE — test less than or equal",
-        "lookup": "Test less-than-or-equal comparison.",
-        "syntax": "1 1 LTE",
-        "role": "Comparison primitive: Test less-than-or-equal comparison.",
-        "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "Le",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "comparison",
-      "vocabularyTier": "standard",
-      "standardKind": "shorthand"
-    },
-    {
       "name": "GT",
       "aliases": [
         ">"
@@ -522,62 +413,6 @@
       "partiality": "projecting",
       "category": "comparison",
       "vocabularyTier": "kernel"
-    },
-    {
-      "name": "GTE",
-      "aliases": [
-        ">="
-      ],
-      "family": "comparison",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "budgetExhausted",
-        "reason": "undecidable"
-      },
-      "errorWhen": [
-        "unsupportedComparison",
-        "shapeMismatch"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT"
-      ],
-      "documentation": {
-        "summary": "Test greater-than-or-equal comparison.",
-        "hover": "GTE — test greater than or equal",
-        "lookup": "Test greater-than-or-equal comparison.",
-        "syntax": "1 1 GTE",
-        "role": "Comparison primitive: Test greater-than-or-equal comparison.",
-        "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "Gte",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "comparison",
-      "vocabularyTier": "standard",
-      "standardKind": "shorthand"
     },
     {
       "name": "ADD",
@@ -801,68 +636,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "MOD",
-      "aliases": [
-        "%"
-      ],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": [
-          "integerProjectionUndecidable",
-          "divisorEqualsZero"
-        ],
-        "reason": [
-          "undecidable",
-          "divisionByZero"
-        ]
-      },
-      "errorWhen": [
-        "nonNumeric",
-        "shapeMismatch"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.",
-        "hover": "MOD — modulo",
-        "lookup": "Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath.",
-        "syntax": "7 3 %",
-        "role": "Arithmetic primitive: Modulo (remainder) of two numeric values.",
-        "stackEffect": "[ a ] [ b ] -> [ a mod b ]"
-      },
-      "executorKey": "Mod",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "standardKind": "namedPattern"
-    },
-    {
       "name": "FLOOR",
       "aliases": [],
       "family": "exactArithmetic",
@@ -914,60 +687,6 @@
       "partiality": "projecting",
       "category": "arithmetic",
       "vocabularyTier": "kernel"
-    },
-    {
-      "name": "CEIL",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "integerProjectionUndecidable",
-        "reason": "undecidable"
-      },
-      "errorWhen": [
-        "nonNumeric",
-        "shapeMismatch"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.",
-        "hover": "CEIL — round toward positive infinity",
-        "lookup": "Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists.",
-        "syntax": "[ 7/3 ] CEIL",
-        "role": "Arithmetic primitive: Round toward positive infinity.",
-        "stackEffect": "[ x ] -> [ ceil x ]"
-      },
-      "executorKey": "Ceil",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "standardKind": "shorthand"
     },
     {
       "name": "ROUND",
@@ -1022,167 +741,6 @@
       "category": "arithmetic",
       "vocabularyTier": "standard",
       "standardKind": "algorithm"
-    },
-    {
-      "name": "QUANTIZE",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "denominatorIsNotAPositiveInteger",
-        "reason": "domainMiss"
-      },
-      "errorWhen": [
-        "nonNumeric",
-        "shapeMismatch"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "linear",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Round to the nearest multiple of 1/d, bounding the denominator by d.",
-        "hover": "QUANTIZE — nearest multiple of 1/d",
-        "lookup": "Round to the nearest multiple of 1/d, bounding the denominator by d. An exact number carries its whole history in its denominator, so an iterative method grows one without bound; quantizing each step keeps the representation the size of the answer rather than the size of the computation. Ties round away from zero, matching ROUND. A d that is not a positive integer projects to NIL.",
-        "syntax": "[ 119/125 32/125 ] 10 QUANTIZE",
-        "role": "Arithmetic primitive: bound the representation size of an exact number.",
-        "stackEffect": "[ x ] [ d ] -> [ x' ]"
-      },
-      "executorKey": "Quantize",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "arithmetic",
-      "vocabularyTier": "standard",
-      "standardKind": "algorithm"
-    },
-    {
-      "name": "ABS",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "budgetExhausted",
-        "reason": "undecidable"
-      },
-      "errorWhen": [
-        "nonNumeric"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Absolute value of a number.",
-        "hover": "Absolute value of a number.",
-        "lookup": "Absolute value of a number.",
-        "syntax": "-2 ABS",
-        "role": "Magnitude without sign.",
-        "stackEffect": "[ x ] -> [ |x| ]"
-      },
-      "executorKey": "Abs",
-      "effects": [],
-      "partiality": "total",
-      "acceptedDomain": "numeric",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "standardKind": "namedPattern"
-    },
-    {
-      "name": "NEG",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonNumeric"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "documentation": {
-        "summary": "Numeric negation.",
-        "hover": "Numeric negation.",
-        "lookup": "Numeric negation.",
-        "syntax": "2 NEG",
-        "role": "Additive inverse.",
-        "stackEffect": "[ x ] -> [ -x ]"
-      },
-      "executorKey": "Neg",
-      "effects": [],
-      "partiality": "total",
-      "acceptedDomain": "numeric",
-      "category": "math",
-      "vocabularyTier": "kernel"
     },
     {
       "name": "MIN",
@@ -1857,59 +1415,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "RANDOM",
-      "aliases": [],
-      "family": "exactArithmetic",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "spaceExhausted",
-        "reason": "spaceExhausted"
-      },
-      "errorWhen": [
-        "nonInteger",
-        "negativeCount"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.VALUES.EXACT",
-        "LANG.VALUES.VECTOR",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "documentation": {
-        "summary": "Count exact rationals in [0,1), determined entirely by the seed.",
-        "hover": "Count exact rationals in [0,1), determined entirely by the seed.",
-        "lookup": "Count exact rationals in [0,1), determined entirely by the seed.",
-        "syntax": "7 3 RANDOM",
-        "role": "A pure, seeded generator: exact rationals, no hidden state, same seed same draw.",
-        "stackEffect": "[ seed ] [ count ] -> [ rationals ]"
-      },
-      "executorKey": "Random",
-      "effects": [],
-      "partiality": "projecting",
-      "category": "math",
-      "vocabularyTier": "kernel"
-    },
-    {
       "name": "GET",
       "aliases": [],
       "family": "collection",
@@ -2579,9 +2084,9 @@
         "LANG.DICTIONARY.ACYCLIC"
       ],
       "documentation": {
-        "summary": "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes.",
+        "summary": "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.",
         "hover": "DEPTH — how deeply a value nests",
-        "lookup": "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes.",
+        "lookup": "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.",
         "syntax": "[ 1 [ 2 [ 3 ] ] ] DEPTH",
         "role": "Shape primitive: the nesting depth of a value.",
         "stackEffect": "[ x ] -> [ n ]"
@@ -3606,8 +3111,7 @@
       "effects": [],
       "partiality": "partial",
       "category": "higher-order",
-      "vocabularyTier": "standard",
-      "standardKind": "operational"
+      "vocabularyTier": "kernel"
     },
     {
       "name": "FILTER",
@@ -3767,169 +3271,6 @@
       "category": "higher-order",
       "vocabularyTier": "standard",
       "standardKind": "operational"
-    },
-    {
-      "name": "ANY",
-      "aliases": [],
-      "family": "higherOrder",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "consumeNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "notExecutable",
-        "blockContractViolation",
-        "nonTruthValue"
-      ],
-      "purity": "conditional",
-      "determinism": "stateRelative",
-      "cost": {
-        "steps": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "numeric": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "collection": {
-          "class": "unbounded",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.COLLECTIONS.HIGHER"
-      ],
-      "documentation": {
-        "summary": "TRUE if at least one element satisfies the predicate.",
-        "hover": "ANY — true if any element matches",
-        "lookup": "TRUE if at least one element satisfies the predicate.",
-        "syntax": "[ 1 2 3 ] [ 2 = ] ANY",
-        "role": "Higher-order primitive: TRUE if at least one element satisfies the predicate.",
-        "stackEffect": "[ vec ] [ pred ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "Any",
-      "effects": [],
-      "partiality": "partial",
-      "category": "higher-order",
-      "vocabularyTier": "standard",
-      "standardKind": "operational"
-    },
-    {
-      "name": "ALL",
-      "aliases": [],
-      "family": "higherOrder",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "consumeNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "notExecutable",
-        "blockContractViolation",
-        "nonTruthValue"
-      ],
-      "purity": "conditional",
-      "determinism": "stateRelative",
-      "cost": {
-        "steps": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "numeric": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "collection": {
-          "class": "unbounded",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.COLLECTIONS.HIGHER"
-      ],
-      "documentation": {
-        "summary": "TRUE if every element satisfies the predicate.",
-        "hover": "ALL — true if all elements match",
-        "lookup": "TRUE if every element satisfies the predicate.",
-        "syntax": "[ 2 4 ] [ 2 MOD 0 = ] ALL",
-        "role": "Higher-order primitive: TRUE if every element satisfies the predicate.",
-        "stackEffect": "[ vec ] [ pred ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "All",
-      "effects": [],
-      "partiality": "partial",
-      "category": "higher-order",
-      "vocabularyTier": "standard",
-      "standardKind": "operational"
-    },
-    {
-      "name": "RANK",
-      "aliases": [],
-      "family": "higherOrder",
-      "stack": {
-        "inputs": 3,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "consumeNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonVector",
-        "invalidCount",
-        "notExecutable",
-        "blockContractViolation"
-      ],
-      "purity": "conditional",
-      "determinism": "stateRelative",
-      "cost": {
-        "steps": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "numeric": {
-          "class": "unbounded",
-          "exact": false
-        },
-        "collection": {
-          "class": "unbounded",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.COLLECTIONS.HIGHER",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.DICTIONARY.ACYCLIC"
-      ],
-      "documentation": {
-        "summary": "MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis.",
-        "hover": "RANK — apply a block at a stated depth",
-        "lookup": "MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis.",
-        "syntax": "[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK",
-        "role": "Higher-order primitive: evaluate a block on every value at a stated depth of a vector.",
-        "stackEffect": "[ vec ] [ n ] [ body ] -> [ result ]"
-      },
-      "executorKey": "Rank",
-      "effects": [],
-      "partiality": "partial",
-      "category": "higher-order",
-      "vocabularyTier": "kernel"
     },
     {
       "name": "CHARS",
@@ -4438,7 +3779,7 @@
       "documentation": {
         "summary": "Convert a value to its string representation.",
         "hover": "STR — convert to string",
-        "lookup": "Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. QUANTIZE names an approximation explicitly when one is wanted.",
+        "lookup": "Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.",
         "syntax": "42 STR",
         "role": "Cast primitive: Convert a value to its string representation.",
         "stackEffect": "[ x ] -> [ str ]"
@@ -4489,9 +3830,9 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
+        "summary": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
         "hover": "FORMAT — render an exact scalar as decimal text at a stated precision",
-        "lookup": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
+        "lookup": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`.",
         "syntax": "1/3 5 FORMAT",
         "role": "Text primitive: render an exact scalar as decimal text at a stated precision, ties away from zero.",
         "stackEffect": "[ x ] [ digits ] -> [ text ]"
@@ -5137,58 +4478,6 @@
         "dictionaryDelete"
       ],
       "partiality": "partial",
-      "category": "dictionary",
-      "vocabularyTier": "kernel"
-    },
-    {
-      "name": "DEFINED?",
-      "aliases": [],
-      "family": "dictionary",
-      "stack": {
-        "inputs": 1,
-        "outputs": 1
-      },
-      "consumption": "eat",
-      "nilPolicy": "rejectNil",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "notASymbol"
-      ],
-      "purity": "pure",
-      "determinism": "stateRelative",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.DICTIONARY.RESOLUTION",
-        "LANG.DICTIONARY.ACYCLIC",
-        "LANG.VALUES.DISJOINT"
-      ],
-      "documentation": {
-        "summary": "Whether a Symbol names a Word: TRUE when the name resolves in Core or in User under the same deterministic lookup execution uses, FALSE otherwise. `[ ADD ] 0 GET DEFINED?` is TRUE; a name `DEF` has not bound is FALSE, and becomes TRUE the moment it is. The operand is a Symbol, never a String: a String is text, not a name, and no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so `'ADD' DEFINED?` is an ERROR (`notASymbol`) rather than a lookup. A BIND name is a value's name, not a Word's, and answers FALSE.",
-        "hover": "DEFINED? — whether a Symbol resolves to a Word",
-        "lookup": "Whether a Symbol names a Word: TRUE when the name resolves in Core or in User under the same deterministic lookup execution uses, FALSE otherwise. `[ ADD ] 0 GET DEFINED?` is TRUE; a name `DEF` has not bound is FALSE, and becomes TRUE the moment it is. The operand is a Symbol, never a String: a String is text, not a name, and no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so `'ADD' DEFINED?` is an ERROR (`notASymbol`) rather than a lookup. A BIND name is a value's name, not a Word's, and answers FALSE.",
-        "syntax": "[ ADD ] 0 GET DEFINED?",
-        "role": "Dictionary primitive: whether a Symbol resolves to a Word.",
-        "stackEffect": "[ symbol ] -> [ TRUE | FALSE ]"
-      },
-      "executorKey": "Defined",
-      "effects": [],
-      "partiality": "total",
       "category": "dictionary",
       "vocabularyTier": "kernel"
     },

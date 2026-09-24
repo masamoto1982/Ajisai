@@ -1,13 +1,8 @@
 //! Rendering a value as Ajisai source that rebuilds it.
 //!
-//! This is the structural half of the display: the part whose output is
-//! source text. Its counterpart in `display.rs` is the role-dependent half —
-//! a datetime, an interval, a continued fraction — which renders for reading
-//! only and makes no round-trip claim.
-//!
-//! Splitting them apart is what keeps the round-trip rule statable in one
-//! place: everything in this file must satisfy `tests/round_trip_laws.rs`,
-//! and nothing in `display.rs` need do so.
+//! Everything in this file must satisfy `tests/round_trip_laws.rs`. The one
+//! exception is an irrational scalar, whose continued-fraction display is
+//! truncated at a budget (LANG.VALUES.EXACT) and so cannot rebuild it.
 
 use super::display::{format_exact_real, format_fraction, format_tensor_recursive};
 use super::ValueData;
@@ -48,25 +43,15 @@ fn render_vector_source(elements: &[Rendered]) -> String {
 /// one with). `tests/round_trip_laws.rs` holds this to that promise by
 /// executing what it writes.
 ///
-/// Two domains do not round-trip and are not claimed to: a Symbol renders as
-/// its bare name, which *calls* a Word rather than pushing the name, and a
-/// role-dependent rendering (datetime, interval, continued fraction) comes
-/// from `format_with_hint` above, not from here.
+/// A Symbol does not round-trip and is not claimed to: it renders as its bare
+/// name, which *calls* a Word rather than pushing the name.
 pub(super) fn render_value(data: &ValueData, depth: usize) -> Rendered {
     match data {
         ValueData::Nil => Rendered::plain("NIL".to_string()),
-        // A String renders quoted at every depth, from its domain alone. This
-        // is what replaces the old `Interpretation::Text` dispatch: the
-        // Stack surface used to consult a role to decide whether a vector of
-        // numbers was "really" text, and now there is nothing to decide.
+        // A String renders quoted at every depth, from its domain alone.
         ValueData::Text(s) => Rendered::plain(format!("'{}'", s)),
-        // The logical Unknown (U — `Nil` carrying the `TruthValue` hint)
-        // has no dedicated variant, so it takes the `Nil` arm above and
-        // renders as `NIL`, same as an operational NIL.
-        // A definite boolean renders uniformly as TRUE/FALSE in every role
-        // (LANG.VALUES.TRUTH), so the three-valued axis is observable
-        // consistently whether the boolean came from a literal, a
-        // comparison, or a logic word. Display-only and non-canonical.
+        // UNKNOWN is a NIL (LANG.VALUES.TRUTH), so it takes the `Nil` arm
+        // above. A Boolean renders as TRUE/FALSE however it was produced.
         ValueData::Boolean(b) => Rendered::plain(if *b { "TRUE" } else { "FALSE" }.to_string()),
         ValueData::Scalar(f) => Rendered::plain(format_fraction(f)),
         ValueData::ExactScalar(er) => Rendered::plain(format_exact_real(er)),
@@ -86,11 +71,8 @@ pub(super) fn render_value(data: &ValueData, depth: usize) -> Rendered {
         ValueData::Vector(v) => {
             let elements: Vec<Rendered> = v
                 .iter()
-                // A nested element keeps its own role: a Text-role child
-                // renders as a quoted string (`'AB'`), so strings stay
-                // recognizable as strings inside a collection (SPEC
-                // LANG.OBSERVATION.PROTOCOL). This falls out of `render_value`
-                // dispatching on the String domain, with no role to consult.
+                // A String child renders quoted (`'AB'`), so strings stay
+                // recognizable inside a collection.
                 .map(|child| render_value(&child.data, depth + 1))
                 .collect();
             Rendered {

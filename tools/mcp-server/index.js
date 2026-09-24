@@ -140,7 +140,7 @@ const sourceSchema = {
         `Ajisai source text (file paths are not accepted). The effective limit is ${LIMITS.sourceBytes} UTF-8 bytes, so non-ASCII text reaches it at fewer characters than maxLength suggests. ` +
         "Syntax is postfix: operands first, then the Word — `1 2 ADD`, `[ 1 2 3 ] LENGTH`. " +
         "A string is single-quoted (`'hi'`, never \"hi\"). " +
-        "A block passed to MAP/FILTER/FOLD/ANY/ALL is a Vector like any other, written with `[ ]` — there is no separate block bracket (`[ 1 2 3 4 ] [ 2 MOD 0 = ] FILTER`). " +
+        "A block passed to MAP/FILTER/FOLD/SCAN is a Vector like any other, written with `[ ]` — there is no separate block bracket (`[ 1 2 3 4 ] [ 2 > ] FILTER`). " +
         "A Word's operand shape is part of its contract and is worth checking with word_contract when unsure — several take a vector where one number looks natural, e.g. `[ 0 4 ] RANGE` and `[ [ 1 2 ] [ 3 4 ] ] ZIP`.",
     },
   },
@@ -181,10 +181,10 @@ export const TOOLS = [
     // of leaving "out of domain" to be inferred.
     description:
       "Execute a bounded Ajisai program and return its stack. Ajisai is postfix (RPN) and its numbers are exact rationals closed under square root — no floats, so results are reproducible and comparisons decide. " +
-      "Its 99 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT POW GCD RATIO), transcendentals as computable reals compared under a budget (EXP LN SIN COS ATAN PI — render them with FORMAT), comparison (EQ LT LTE GT GTE — not-equal is EQ NOT), boolean logic (AND OR NOT), " +
+      "Its 86 Words cover arithmetic (ADD SUB MUL DIV FLOOR ROUND MIN MAX SQRT POW GCD RATIO — negate with -1 MUL), transcendentals as computable reals compared under a budget (EXP LN SIN COS ATAN PI — render them with FORMAT), comparison (EQ LT GT — not-equal is EQ NOT, at-most is GT NOT), boolean logic (AND NOT — or is a NOT b NOT AND NOT), " +
       "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE ZIP RANGE FILL TAKE DROP CONCAT REVERSE LENGTH GET PUT INDEX-OF MEMBER BSEARCH SHAPE RESHAPE FLATTEN DEPTH), " +
       "records — keyed data, built by RECORD from a key vector and a value vector, read by AT/KEYS/VALUES/HAS?, rewritten by WITH/WITHOUT/MERGE; TALLY and GROUP answer Records — " +
-      "higher-order blocks (MAP FILTER FOLD SCAN ANY ALL RANK), text (CHARS JOIN TOKENIZE TRIM UPPER LOWER SEARCH REPLACE NUM STR FORMAT), JSON (JSON-DECODE JSON-ENCODE — objects are Records, numbers exact, nothing rounded), absence (NIL NIL? NIL-REASON ABSENT), control (SELECT EXEC FAIL), reflection (DEFINED? DIGEST CONTRACT — a Word's or a block's contract as a Record, inferred without running it), plus DEF to name your own. " +
+      "higher-order blocks (MAP FILTER FOLD SCAN), text (CHARS JOIN TOKENIZE TRIM UPPER LOWER SEARCH REPLACE NUM STR FORMAT), JSON (JSON-DECODE JSON-ENCODE — objects are Records, numbers exact, nothing rounded), absence (NIL NIL? NIL-REASON ABSENT), control (SELECT EXEC FAIL), reflection (DIGEST CONTRACT — a Word's or a block's contract as a Record, inferred without running it), plus DEF to name your own. " +
       "Word names are exact and case-sensitive; the full list is the ajisai://vocabulary resource and word_contract answers a near-miss with suggestions, so look a name up rather than guessing it. " +
       "Reach for this whenever the request is one of those operations and the answer should be exact and checkable rather than recalled. Out of domain: floats, I/O, and general-purpose programming. " +
       "Ajisai also has no external or real-world reference data of its own — no exchange rates, no calendars, no reading speeds, no other language's syntax semantics. Do not invent a plausible-looking number for one of those and run it through this tool to dress a guess up as an exact answer; if the question needs a real-world fact rather than a value already given or derivable from first principles inside this domain, answer directly without a call, or say you don't know.",

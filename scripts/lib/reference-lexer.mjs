@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ACTIONS = new Set([
-  'emitLineBreakIfTerminator',
+  'skip',
   'consumeToLineTerminator',
   'scanStringLiteral',
   'scanToWhitespace',
@@ -242,24 +242,13 @@ export function makeLexer(grammar) {
     while (i < chars.length) {
       const rule = positionRules.find((r) => guardHolds(r.guard, chars[i]));
 
-      if (rule.action === 'emitLineBreakIfTerminator') {
-        if (
-          isLineTerminator(chars[i]) &&
-          tokens[tokens.length - 1]?.id !== 'LineBreak'
-        ) {
-          tokens.push({ id: 'LineBreak', value: null });
-        }
+      if (rule.action === 'skip') {
         i += 1;
         continue;
       }
 
       if (rule.action === 'consumeToLineTerminator') {
-        const hadTokenBefore =
-          tokens.length > 0 && tokens[tokens.length - 1].id !== 'LineBreak';
         while (i < chars.length && !isLineTerminator(chars[i])) i += 1;
-        if (!hadTokenBefore && i < chars.length && isLineTerminator(chars[i])) {
-          i += 1;
-        }
         continue;
       }
 
@@ -296,8 +285,6 @@ export function makeLexer(grammar) {
       if (classified.condition) return { condition: classified.condition };
       tokens.push(classified.token);
     }
-
-    if (tokens[tokens.length - 1]?.id === 'LineBreak') tokens.pop();
 
     const bracket = bracketPrecheck(chars);
     if (bracket) return { condition: bracket };

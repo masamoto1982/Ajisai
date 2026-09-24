@@ -169,7 +169,7 @@
         "leftWord": "IDX",
         "right": "[ 1 ADD 0 ADD ] 'IDY' DEF",
         "rightWord": "IDY",
-        "agreeOn": ["0", "1", "5", "1/2", "1 NEG", "[ 1 2 3 ]"]
+        "agreeOn": ["0", "1", "5", "1/2", "-1", "[ 1 2 3 ]"]
       }
     }
   ]

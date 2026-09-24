@@ -1,7 +1,7 @@
 //! Tests for compile-time literal-vector lowering (`CompiledOp::PushVectorLiteral`).
 //!
 //! A fully-literal vector is prebuilt once at compile time with the same
-//! promoted value and element hint `collect_vector` produces, so the line runs
+//! promoted value `collect_vector` produces, so the line runs
 //! compiled instead of falling back to the interpreter. These tests pin that the
 //! lowered path is byte-for-byte identical to the interpreted one across element
 //! kinds, that non-literal vectors still fall back, and that errors are kept.
@@ -22,7 +22,7 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
 }
 
 /// Run `src` twice — lowering on and off — and assert the resulting stacks are
-/// identical (value and the rendered form, which depends on the element hint).
+/// identical (value and rendered form).
 fn assert_on_equals_off(src: &str) -> String {
     let mut on = Interpreter::new();
     on.set_vector_literal_enabled(true);
@@ -52,7 +52,7 @@ fn render(interp: &Interpreter) -> String {
 
 #[test]
 fn literal_vector_shapes_match_interpreter() {
-    // Numeric (tensor-promoted), boolean (TruthValue hint), string (Text),
+    // Numeric (tensor-promoted), boolean, string,
     // NIL-bearing, nested, and arithmetic-over-literals all agree.
     let cases = [
         "[ [ 1 2 3 ] [ 4 5 6 ] + ] 'W' DEF W",
@@ -68,9 +68,7 @@ fn literal_vector_shapes_match_interpreter() {
 }
 
 #[test]
-fn boolean_vector_keeps_truth_value_rendering() {
-    // The element hint is what makes a boolean vector render as TRUE/FALSE; the
-    // lowered op must carry it so the display is unchanged.
+fn boolean_vector_renders_its_booleans() {
     let rendered = assert_on_equals_off("[ [ TRUE FALSE ] ] 'W' DEF W");
     assert!(
         rendered.contains("TRUE") && rendered.contains("FALSE"),

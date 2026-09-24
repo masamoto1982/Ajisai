@@ -26,7 +26,7 @@ use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 /// How many times `factor` divides `n`, and what is left.
 fn strip_factor(mut n: BigInt, factor: u32) -> (u32, BigInt) {
@@ -149,13 +149,11 @@ pub(crate) fn op_json_encode(interp: &mut Interpreter) -> Result<()> {
     }
     let mut out = String::new();
     match encode(&mut out, &operand) {
-        Some(()) => interp
-            .stack
-            .push_with_role(Value::from_string(&out), Interpretation::Unassigned),
-        None => interp.stack.push_with_role(
-            Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Recoverable),
-            Interpretation::Nil,
-        ),
+        Some(()) => interp.stack.push(Value::from_string(&out)),
+        None => interp.stack.push(Value::nil_with_reason(
+            NilReason::DomainMiss,
+            Recoverability::Recoverable,
+        )),
     }
     Ok(())
 }

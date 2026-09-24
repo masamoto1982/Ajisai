@@ -14,7 +14,7 @@
 //! same value under every dictionary state.
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Interpretation, Token, Value};
+use crate::types::{Token, Value};
 
 use super::Interpreter;
 
@@ -54,7 +54,7 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
         depth: usize,
-    ) -> Result<(Vec<Value>, usize, Interpretation)> {
+    ) -> Result<(Vec<Value>, usize)> {
         Self::collect_literal_elements(tokens, start_index, depth, LiteralKind::Vector)
     }
 
@@ -68,7 +68,7 @@ impl Interpreter {
         start_index: usize,
         depth: usize,
         kind: LiteralKind,
-    ) -> Result<(Vec<Value>, usize, Interpretation)> {
+    ) -> Result<(Vec<Value>, usize)> {
         if tokens.get(start_index) != Some(&kind.opener()) {
             return Err(AjisaiError::MalformedSource(
                 "Expected a literal start".to_string(),
@@ -91,34 +91,22 @@ impl Interpreter {
 
         let mut values = Vec::new();
         let mut i = start_index + 1;
-        let mut has_bool: bool = false;
-        let mut has_number: bool = false;
-        let mut has_other: bool = false;
 
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart => {
-                    let (nested_values, consumed, nested_hint) =
+                    let (nested_values, consumed) =
                         Self::collect_bracketed_with_depth(tokens, i, depth + 1)?;
-                    values.push(Value::from_vector_promoted_with_hint(
-                        nested_values,
-                        nested_hint,
-                    ));
-                    has_other = true;
+                    values.push(Value::from_vector_promoted(nested_values));
                     i += consumed;
                 }
                 Token::RecordStart => {
                     let (record, consumed) = Self::collect_record_literal(tokens, i, depth + 1)?;
                     values.push(record);
-                    has_other = true;
                     i += consumed;
                 }
                 token if kind.closes(token) => {
-                    return Ok((
-                        values,
-                        i - start_index + 1,
-                        Self::element_hint(has_other, has_bool, has_number),
-                    ));
+                    return Ok((values, i - start_index + 1));
                 }
                 // The other pair's closer, which `validate_code_tokens`
                 // refuses before anything runs (`mismatched code delimiter`).
@@ -133,56 +121,27 @@ impl Interpreter {
                     values.push(Value::from_number(
                         literal.parsed().map_err(AjisaiError::MalformedSource)?,
                     ));
-                    has_number = true;
                     i += 1;
                 }
                 Token::String(s) => {
                     values.push(Value::from_string(s));
-                    has_other = true;
                     i += 1;
                 }
                 Token::Symbol(s) => {
                     let upper = Self::normalize_symbol(s);
                     match upper.as_ref() {
-                        "TRUE" => {
-                            values.push(Value::from_bool(true));
-                            has_bool = true;
-                        }
-                        "FALSE" => {
-                            values.push(Value::from_bool(false));
-                            has_bool = true;
-                        }
-                        "NIL" => {
-                            values.push(Value::nil());
-                            has_other = true;
-                        }
-                        _ => {
-                            // A bare name is a Symbol: data until something
-                            // executes it, dictionary-independent (building
-                            // the literal never looks anything up).
-                            values.push(Value::from_symbol(s));
-                            has_other = true;
-                        }
+                        "TRUE" => values.push(Value::from_bool(true)),
+                        "FALSE" => values.push(Value::from_bool(false)),
+                        "NIL" => values.push(Value::nil()),
+                        // A bare name is a Symbol: data until something
+                        // executes it, dictionary-independent (building the
+                        // literal never looks anything up).
+                        _ => values.push(Value::from_symbol(s)),
                     }
-                    i += 1;
-                }
-                Token::LineBreak => {
                     i += 1;
                 }
             }
         }
         Err(AjisaiError::MalformedSource(kind.unclosed().to_string()))
-    }
-
-    fn element_hint(has_other: bool, has_bool: bool, has_number: bool) -> Interpretation {
-        if has_other {
-            Interpretation::Unassigned
-        } else if has_bool && !has_number {
-            Interpretation::TruthValue
-        } else if has_number && !has_bool {
-            Interpretation::RawNumber
-        } else {
-            Interpretation::Unassigned
-        }
     }
 }

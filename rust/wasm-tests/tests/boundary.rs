@@ -1,6 +1,6 @@
 //! Phase C: end-to-end verification of the real WASM serialization boundary.
 //!
-//! Phases A and B verify the (Value, hint) -> protocol mapping and the
+//! Phases A and B verify the Value -> protocol mapping and the
 //! interpreter's NIL-projection behavior natively, on the host target -- those
 //! never cross the `wasm-bindgen` glue. This crate closes the last gap: it
 //! drives the public `AjisaiInterpreter` API compiled to `wasm32`, executes
@@ -148,10 +148,9 @@ async fn exact_rational_is_not_marked_approximate() {
 // deeply nested vector (unbounded recursion overflows the wasm stack).
 // ---------------------------------------------------------------------------
 
-/// One stack slot in the persistence wire format: an unassigned-role value
-/// wrapping the given `d` payload.
+/// One stack slot in the persistence wire format: the given value payload.
 fn snapshot_of(data: &str) -> String {
-    format!("[{{\"v\":{{\"h\":\"unassigned\",\"d\":{data}}},\"r\":\"unassigned\"}}]")
+    format!("[{data}]")
 }
 
 #[wasm_bindgen_test]
@@ -199,7 +198,7 @@ fn restore_stack_snapshot_rejects_deeply_nested_payload_without_overflow() {
     let mut data = String::from("{\"t\":\"Scalar\",\"n\":\"1\",\"d\":\"1\"}");
     for _ in 0..1000 {
         data = format!(
-            "{{\"t\":\"Vector\",\"items\":[{{\"h\":\"unassigned\",\"d\":{data}}}]}}"
+            "{{\"t\":\"Vector\",\"items\":[{data}]}}"
         );
     }
     let mut interp = AjisaiInterpreter::new();

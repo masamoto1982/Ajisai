@@ -37,10 +37,9 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 3. Control and iteration
 
-- Branch: the two candidates, then the truth that chooses between them, then `SELECT`: `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: `[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT`. An absent truth chooses neither and answers that same absence.
+- Branch: the two candidates, then the truth that chooses between them, then `SELECT`: `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT` (§6). Both candidates are values the program already built, so neither is skipped and nothing is evaluated by SELECT itself. The choice is made lane by lane, so a Vector of truths branches a whole Vector at once: `[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT`. An absent truth chooses neither and answers that same absence.
 - Iterate data, not counters: `MAP` / `FILTER` / `FOLD` with block operands (examples in §6). `FOLD` requires an explicit initial-value Vector.
-- Predicates: `ANY` / `ALL` take a predicate block (examples in §6).
-- No recursion: `DEF` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
+- No recursion: `DEF` refuses a word whose body names itself, directly or through other user words (a diagnosed error at definition time, not at the call). Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
 
 ## 4. NIL — absence is a value, not an exception
 
@@ -76,7 +75,7 @@ exhaust the comparison's refinement budget without deciding:
 PI PI EQ
 ```
 
-→ stack `NIL` (exit 0, truthValue `unknown`). Truth has
+→ stack `NIL` (exit 0, a NIL with reason `undecidable`). Truth has
 three values: `TRUE`, `FALSE`, and this logical UNKNOWN, which is also what a
 NIL operand reads as in a truth position (§4). An operation that cannot
 produce a value produces NIL (§4); a malformed one raises an error.
@@ -91,8 +90,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 1 2 3 ] [ 4 5 6 ] +` → stack: `[ 5/1 7/1 9/1 ]`
 - Scalar broadcast over a vector
   `[ 5 ] [ 1 2 3 ] *` → stack: `[ 5/1 10/1 15/1 ]`
-- Remainder
-  `[ 10 ] [ 3 ] %` → stack: `[ 1/1 ]`
+- Remainder: name the operands, then a - b * floor(a/b)
+  `10 'A' BIND 3 'B' BIND A A B / FLOOR B * -` → stack: `1/1`
 - Comparison pushes a boolean
   `1 2 <` → stack: `TRUE`
 - Comparison lifts over vectors element-wise
@@ -109,14 +108,12 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 0 10 ] RANGE [ 5 > ] FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
 - FOLD needs an explicit initial value
   `[ 1 2 3 ] [ 0 ] [ + ] FOLD` → stack: `[ 6/1 ]`
-- ANY / ALL take predicate blocks
-  `[ 1 2 3 ] [ 1 > ] ANY` → stack: `TRUE`
 - A Record literal: each key beside the value under it
   `{ 'x' 1 'y' 2 }` → stack: `{ 'x' 1/1 'y' 2/1 }`
 - Define a user word: [ body ] then name, then DEF
   `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
 - SELECT: the two candidates, then the truth that chooses between them
-  `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] GTE SELECT PRINT` → prints `[ 'non-negative' ]`
+  `[ 'non-negative' ] [ 'negative' ] [ 4 ] [ 0 ] LT NOT SELECT PRINT` → prints `[ 'non-negative' ]`
 - SELECT chooses lane by lane, so a whole vector branches at once
   `[ 0 ] [ -3 5 -1 ] [ -3 5 -1 ] [ 0 ] LT SELECT` → stack: `[ 0/1 5/1 0/1 ]`
 - Strings are bare '...' literals; CHARS/JOIN convert
@@ -182,8 +179,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 8. Forbidden patterns (each verified to fail)
 
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Every Word consumes the operands it reads; name a value with `BIND` to use it more than once.
-- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / ANY / ALL.
-- **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
+- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / SCAN.
+- **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.
@@ -191,8 +188,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-99 canonical Words in one flat Core dictionary, of which
-53 form the Semantic Kernel and 46 are Standard Words. Both are
+86 canonical Words in one flat Core dictionary, of which
+50 form the Semantic Kernel and 36 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -202,25 +199,17 @@ no module system and nothing to import.
 | `TRUE` | constant | Push the boolean TRUE onto the stack. — e.g. `TRUE` |
 | `FALSE` | constant | Push the boolean FALSE onto the stack. — e.g. `FALSE` |
 | `AND` | logic | Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN. — e.g. `TRUE TRUE &` |
-| `OR` | logic | Logical OR. TRUE absorbs a NIL operand into TRUE; otherwise a NIL operand yields UNKNOWN. — e.g. `TRUE FALSE OR` |
 | `NOT` | logic | Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged. — e.g. `TRUE NOT` |
 | `SELECT` | logic | Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once. — e.g. `[ 'yes' ] [ 'no' ] TRUE SELECT` |
 | `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
 | `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
-| `LTE` | comparison | Test less-than-or-equal comparison. — e.g. `1 1 LTE` |
 | `GT` | comparison | Test greater-than comparison. — e.g. `2 1 >` |
-| `GTE` | comparison | Test greater-than-or-equal comparison. — e.g. `1 1 GTE` |
 | `ADD` | arithmetic | Add two numeric values, element-wise with broadcasting. — e.g. `1 2 +` |
 | `SUB` | arithmetic | Subtract two numeric values, element-wise with broadcasting. — e.g. `5 3 -` |
 | `MUL` | arithmetic | Multiply two numeric values, element-wise with broadcasting. — e.g. `2 4 *` |
 | `DIV` | arithmetic | Divide two numeric values exactly (fractional result). — e.g. `10 2 /` |
-| `MOD` | arithmetic | Modulo (remainder) of two numeric values. A zero divisor is a projection, not a failure: the operand is well formed and the operation simply has no answer, so the lane it could not compute answers NIL(divisionByZero) exactly as `DIV` does — `a MOD b` is `a - b * floor(a/b)`, and it is the same division underneath. — e.g. `7 3 %` |
 | `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
-| `CEIL` | arithmetic | Round toward positive infinity. FLOOR's counterpart: `7/3 CEIL` is `3` and `-7/3 CEIL` is `-2`. Written in the Kernel it is `NEG FLOOR NEG`, which is exactly the phrase the Word replaces; it is here so the rounding family is closed and a reader never has to ask whether it exists. — e.g. `[ 7/3 ] CEIL` |
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
-| `QUANTIZE` | arithmetic | Round to the nearest multiple of 1/d, bounding the denominator by d. — e.g. `[ 119/125 32/125 ] 10 QUANTIZE` |
-| `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
-| `NEG` | math | Numeric negation. — e.g. `2 NEG` |
 | `MIN` | math | Smaller of two numbers, element-wise with broadcasting. — e.g. `1 2 MIN` |
 | `MAX` | math | Larger of two numbers, element-wise with broadcasting. — e.g. `1 2 MAX` |
 | `SQRT` | math | Exact square root of a non-negative rational, element-wise over a vector. — e.g. `2 SQRT` |
@@ -233,7 +222,6 @@ no module system and nothing to import.
 | `COS` | math | The cosine of an angle in radians, element-wise over Vectors. `0 COS` is exactly `1`; every other result is a computable real (LANG.VALUES.EXACT) compared under a budget, so `PI COS` encloses −1 without ever proving it: `PI COS -1 EQ` and `PI COS -1 LT` are both `NIL`, while `PI 4 DIV COS 6 FORMAT` is `'0.707107'`. The argument is reduced by multiples of 2π through π's own 512-bit enclosure; an argument so large that the reduction would leave nothing projects `spaceExhausted`. — e.g. `1 COS 5 FORMAT` |
 | `ATAN` | math | The arctangent, in radians, element-wise over Vectors: the one inverse that accompanies `SIN` and `COS`, total over every real. `0 ATAN` is exactly `0`; every other result is a computable real (LANG.VALUES.EXACT), so `1 ATAN 4 MUL` is a value enclosing π that no budget proves equal to `PI`. `y x DIV ATAN` gives the angle of a point in the right half-plane. — e.g. `1 ATAN 4 MUL 6 FORMAT` |
 | `PI` | constant | The Tier 2 computable real π. — e.g. `PI` |
-| `RANDOM` | math | Count exact rationals in [0,1), determined entirely by the seed. — e.g. `7 3 RANDOM` |
 | `GET` | vector | Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. `TAKE` and `PUT` answer the same condition the same way, so past-the-end is one outcome across the whole vocabulary. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
 | `TAKE` | vector | Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 1 2 3 ] [ 9 ] TAKE NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
@@ -246,7 +234,7 @@ no module system and nothing to import.
 | `SHAPE` | shape | The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone. — e.g. `[ [ 1 2 ] [ 3 4 ] ] SHAPE` |
 | `RESHAPE` | shape | Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET). — e.g. `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` |
 | `FLATTEN` | shape | Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`, the leaves in index order however deeply they were nested. CONCAT joins two vectors and flattens one level; FLATTEN takes one vector and flattens all of them. It cannot be written as a user definition: the depth is not known in advance, and a language with no recursion and no unbounded loop cannot walk a structure of unknown depth (LANG.DICTIONARY.ACYCLIC). — e.g. `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` |
-| `DEPTH` | shape | How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. It is also the number RANK takes. — e.g. `[ 1 [ 2 [ 3 ] ] ] DEPTH` |
+| `DEPTH` | shape | How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk. — e.g. `[ 1 [ 2 [ 3 ] ] ] DEPTH` |
 | `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
 | `ORDER` | vector | The indices that would sort a vector ascending; ties keep their original order. — e.g. `[ 30 10 20 ] ORDER` |
 | `UNIQUE` | vector | The distinct elements of a vector, in first-occurrence order. — e.g. `[ 'a' 'b' 'a' ] UNIQUE` |
@@ -269,9 +257,6 @@ no module system and nothing to import.
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] [ 2 = ] FILTER` |
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] [ + ] FOLD` |
 | `SCAN` | higher-order | Reduce a vector step by step, answering the accumulator after each element rather than only the last one: `[ 1 2 3 4 ] 0 [ ADD ] SCAN` is `[ 1/1 3/1 6/1 10/1 ]`. The answer has one lane per input lane — the initial accumulator is the seed, not a lane, so it is not among them — which is what lets a scan pair with the Vector it came from. The block sees the accumulator and the current element, exactly as FOLD's does, and what it leaves is both the next accumulator and that lane's answer. An empty Vector answers an empty Vector, and an absent Vector answers that same absence. — e.g. `[ 1 2 3 4 ] 0 [ ADD ] SCAN` |
-| `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] [ 2 = ] ANY` |
-| `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] [ 2 MOD 0 = ] ALL` |
-| `RANK` | higher-order | MAP at a stated depth. RANK descends that many levels into the vector, stopping early at a leaf, and evaluates the block once on each value it reaches, in index order, rebuilding the structure above them: `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` is `[ [ 10 20 ] [ 30 40 ] ]`, depth 1 is exactly MAP, and depth 0 evaluates the block once on the whole vector. The block runs on an isolated frame holding the value reached and must leave one result (LANG.SOURCE.FRAME). A depth that is not a non-negative integer is ERROR(invalidCount). This is how a block reaches an inner axis without a second modifier axis. — e.g. `[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
@@ -282,7 +267,7 @@ no module system and nothing to import.
 | `REPLACE` | cast | Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `'a+b+c'`. Occurrences are found left to right and do not overlap, and an empty `from` matches nothing, so the text comes back unchanged rather than growing without bound. Spelled over CHARS and JOIN this is a scan with a window at every position; the Word is the one pass. — e.g. `'a-b-c' '-' '+' REPLACE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `FORMAT` | cast | Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` and `QUANTIZE` do: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`. — e.g. `1/3 5 FORMAT` |
+| `FORMAT` | cast | Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`. — e.g. `1/3 5 FORMAT` |
 | `JSON-DECODE` | cast | Read JSON text into a value: an object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1'` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past what the machine holds projects `spaceExhausted`, the outcome of every materialization past a ceiling. A non-String operand is an ERROR (`nonText`). — e.g. `'{"a": 1, "b": [true, null]}' JSON-DECODE` |
 | `JSON-ENCODE` | cast | Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other rational is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. Decoding what this Word writes gives back the value it was given, and a rational written as a lexeme comes back as that String, from which `NUM` recovers the number. — e.g. `[ 'a' ] [ 1 ] RECORD JSON-ENCODE` |
 | `EXEC` | control | Evaluate a code block. — e.g. `[ 1 2 ADD ] EXEC` |
@@ -295,19 +280,15 @@ no module system and nothing to import.
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `[ [ 1 ] ] 'W' DEF 'W' DEL` |
-| `DEFINED?` | dictionary | Whether a Symbol names a Word: TRUE when the name resolves in Core or in User under the same deterministic lookup execution uses, FALSE otherwise. `[ ADD ] 0 GET DEFINED?` is TRUE; a name `DEF` has not bound is FALSE, and becomes TRUE the moment it is. The operand is a Symbol, never a String: a String is text, not a name, and no Word turns text into a Symbol (LANG.DICTIONARY.ACYCLIC), so `'ADD' DEFINED?` is an ERROR (`notASymbol`) rather than a lookup. A BIND name is a value's name, not a Word's, and answers FALSE. — e.g. `[ ADD ] 0 GET DEFINED?` |
 | `DIGEST` | dictionary | The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. A computable real (`PI`) has no finite canonical form to digest, so a value carrying one projects `undecidable`. — e.g. `[ ADD ] 0 GET DIGEST` |
 | `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |
 | `*` | symbol alias | shorthand for `MUL` |
 | `/` | symbol alias | shorthand for `DIV` |
-| `%` | symbol alias | shorthand for `MOD` |
 | `=` | symbol alias | shorthand for `EQ` |
 | `<` | symbol alias | shorthand for `LT` |
 | `>` | symbol alias | shorthand for `GT` |
-| `<=` | symbol alias | shorthand for `LTE` |
-| `>=` | symbol alias | shorthand for `GTE` |
 | `'` | input helper | STRING-QUOTE — editor affordance, not a Word |
 | `#` | source directive | COMMENT-LINE — consumed by the lexer, not a Word |
 | `[` | delimiter sugar | BEGIN-VECTOR — structural delimiter, not a Word |

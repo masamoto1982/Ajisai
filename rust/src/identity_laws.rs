@@ -180,8 +180,8 @@ fn definitions_that_disagree_never_share_an_identity() {
         "1 MUL",
         "2 MUL",
         "1 ADD 1 ADD",
-        "NEG",
-        "1 ADD NEG",
+        "-1 MUL",
+        "1 ADD -1 MUL",
     ];
     let probe = "7";
 

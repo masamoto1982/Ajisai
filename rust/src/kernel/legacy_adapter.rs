@@ -12,10 +12,7 @@
 //! the side, and the spine folds it back into the value itself
 //! (`KernelValue::Nil(reason)`).
 //!
-//! String no longer needs folding. It used to be a `Vector` of codepoints
-//! wearing an `Interpretation::Text` hint, so the legacy domain was not a
-//! function of `ValueData` alone and this adapter had to reconstruct it;
-//! `ValueData::Text` now mirrors `KernelValue::String` one-to-one.
+//! `ValueData::Text` mirrors `KernelValue::String` one-to-one.
 //!
 //! ## Deliberate collapses (legacy → spine)
 //! - `ValueData::ExactScalar` and `ValueData::Scalar` both lower to
@@ -31,15 +28,12 @@
 //!   `''` is now a String on both sides and round-trips as itself.
 //!
 //! ## Scope
-//! The adapter converts value *structure* (the six domains). It does not model
-//! interpretation-role-driven leaf retyping (e.g. a `TruthValue`-hinted vector
-//! whose numeric leaves display as booleans, or timestamp/interval rendering):
-//! those are presentation concerns, settled by whatever renders a value.
+//! The adapter converts value *structure* (the six domains).
 
 use std::sync::Arc;
 
 use crate::semantic::AbsenceMetadata;
-use crate::types::{Interpretation, RecordData, Value, ValueData};
+use crate::types::{RecordData, Value, ValueData};
 
 use super::scalar::Scalar;
 use super::value::KernelValue;
@@ -95,7 +89,6 @@ impl From<&KernelValue> for Value {
             }
             KernelValue::Symbol(name) => Value {
                 data: ValueData::Symbol(Arc::clone(name)),
-                hint: Interpretation::Unassigned,
                 absence: None,
             },
             KernelValue::Record { keys, values } => Value::from_record(
@@ -205,7 +198,6 @@ mod tests {
                 data: Arc::new(dense),
                 shape: Arc::new(vec![2]),
             },
-            hint: Interpretation::Unassigned,
             absence: None,
         };
         let lowered = KernelValue::from(&tensor);

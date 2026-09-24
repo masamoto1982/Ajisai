@@ -9,16 +9,13 @@
     "LANG.COLLECTIONS.HIGHER"
   ],
   "description": "Why every Ajisai evaluation is finite, as data rather than as a sentence. Ajisai has no recursion and no unbounded loop, so this is a real property of the language and not a budget the host happens to enforce — but it is a property with an exact shape, and that shape is what this file states: the places evaluation descends into more evaluation, what strictly decreases at each one, and the invariant the whole argument rests on.",
-
   "claim": "Every evaluation of a well-formed Ajisai program halts. The ceilings of LANG.MACHINE.LIMITS bound what a run may cost; none of them decides whether it ends.",
-
   "consequence": {
     "totality": "Ajisai is a total language: it is not Turing-complete, and that is a deliberate trade rather than an omission.",
     "cost": "There is no unbounded iteration. A computation that must run until it converges, rather than once per element of a collection that already exists, cannot be written — it has to be re-expressed over a finite Vector the program builds first.",
     "benefit": "A denotational reading of Ajisai needs no domain theory: with no divergence there is no bottom to model, no continuity obligation and no least-fixed-point construction, so the semantic function is an ordinary recursive function on finite structures.",
     "selfInterpretation": "A total language cannot define an interpreter for itself, so Ajisai cannot be its own metalanguage. This is also why the pre-execution check of LANG.CONTRACT.CHECK is necessarily conservative and partial rather than merely cautious."
   },
-
   "invariant": {
     "id": "everyReachableWordIsNamedBySymbol",
     "statement": "A Word runs only when a Symbol naming it is written in source. There is no way to compute a call: no Word turns text into a Symbol, and a String is not code (LANG.SOURCE.CODE), so the code operand of the higher-order Words is a Vector and nothing else.",
@@ -45,7 +42,6 @@
       ]
     }
   },
-
   "acyclicity": {
     "id": "acyclicUserDictionary",
     "clause": "LANG.DICTIONARY.ACYCLIC",
@@ -54,9 +50,18 @@
     "consequence": "A chain of Word calls is therefore shorter than the number of User Words, so it cannot be infinite.",
     "witnesses": {
       "refused": [
-        { "source": "[ REC ] 'REC' DEF", "note": "Direct self-reference." },
-        { "source": "[ B ] 'A' DEF\n[ A ] 'B' DEF", "note": "Indirect, through one other Word." },
-        { "source": "[ B ] 'A' DEF\n[ C ] 'B' DEF\n[ A ] 'C' DEF", "note": "A longer chain." },
+        {
+          "source": "[ REC ] 'REC' DEF",
+          "note": "Direct self-reference."
+        },
+        {
+          "source": "[ B ] 'A' DEF\n[ A ] 'B' DEF",
+          "note": "Indirect, through one other Word."
+        },
+        {
+          "source": "[ B ] 'A' DEF\n[ C ] 'B' DEF\n[ A ] 'C' DEF",
+          "note": "A longer chain."
+        },
         {
           "source": "[ [ REC2 ] EXEC ] 'REC2' DEF",
           "note": "Reached only through a nested block, which LANG.SOURCE.FRAME says still counts as a reference even though nothing there evaluates it."
@@ -74,7 +79,6 @@
       ]
     }
   },
-
   "measure": {
     "note": "Lexicographic, outermost component first. Every descent below strictly decreases one component and leaves the components before it unchanged, so no descent chain is infinite.",
     "components": [
@@ -92,7 +96,6 @@
       }
     ]
   },
-
   "recursionSites": [
     {
       "id": "userWordCall",
@@ -141,33 +144,8 @@
       "decreases": "remainingElements",
       "why": "As FOLD — the same walk over the same materialized collection. Keeping every accumulator rather than only the last one adds a value to the answer, not a descent.",
       "witness": "[ 1 2 3 ] 0 [ ADD ] SCAN"
-    },
-    {
-      "id": "ANY",
-      "kind": "word",
-      "descendsInto": "the code block, once per visited element",
-      "decreases": "remainingElements",
-      "why": "As MAP, and it may stop early, which only shortens the walk.",
-      "witness": "[ 1 2 3 ] [ 2 GT ] ANY"
-    },
-    {
-      "id": "ALL",
-      "kind": "word",
-      "descendsInto": "the code block, once per visited element",
-      "decreases": "remainingElements",
-      "why": "As ANY.",
-      "witness": "[ 1 2 3 ] [ 0 GT ] ALL"
-    },
-    {
-      "id": "RANK",
-      "kind": "word",
-      "descendsInto": "the code block, once per value reached at the stated depth",
-      "decreases": "remainingElements",
-      "why": "As MAP, one level at a time: the depth falls by one per level, each level's children are a finite, already materialized collection, and the walk stops early at a leaf. The block runs once per value reached, which is a fixed number decided before the first run.",
-      "witness": "[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK"
     }
   ],
-
   "ceilings": {
     "note": "LANG.MACHINE.LIMITS' ceilings bound cost. None of them is what makes a program end, and a program that needs one to stop is a bug in this argument, not a program the language accepts. The witnesses above are run under the default profile and must all finish without reaching any ceiling.",
     "notLoadBearing": [

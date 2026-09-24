@@ -15,8 +15,6 @@
 #[cfg(test)]
 mod cf_budget_tests {
     use crate::interpreter::Interpreter;
-    use crate::types::display::format_with_hint;
-    use crate::types::Interpretation;
 
     /// `(√p₁+√q₁)·(√p₂+√q₂)·…`, whose term count doubles per factor.
     fn algebraic_product(factors: usize) -> String {
@@ -39,8 +37,7 @@ mod cf_budget_tests {
             .await
             .unwrap_or_else(|e| panic!("`{source}` must compute, got: {e:?}"));
         let stack = interp.get_stack();
-        let (value, role) = stack.iter_slots().last().expect("a value on the stack");
-        format_with_hint(value, role)
+        stack.last().expect("a value on the stack").to_string()
     }
 
     /// Count the partial quotients actually written in a flat CF display —
@@ -116,35 +113,13 @@ mod cf_budget_tests {
             .await
             .expect("a 64-term product computes");
         let stack = interp.get_stack();
-        let (value, _) = stack.iter_slots().last().expect("a value");
+        let value = stack.last().expect("a value");
         let terms = crate::types::value_protocol::exact_terms(value).expect("algebraic terms");
         assert_eq!(
             terms.len(),
             64,
             "every term survives however little of the CF is written"
         );
-    }
-
-    #[tokio::test]
-    async fn the_budget_does_not_reach_a_rational() {
-        // A rational's CF terminates and is exact — it is not a prefix and not
-        // an approximation, so nothing here may touch it, and in particular it
-        // must never gain a truncation marker.
-        for source in ["1 2 /", "7 2 /", "355 113 /"] {
-            let mut interp = Interpreter::new();
-            interp.execute(source).await.expect("computes");
-            let stack = interp.get_stack();
-            let (value, _) = stack.iter_slots().last().expect("a value");
-            let display = format_with_hint(value, Interpretation::ContinuedFraction);
-            assert!(
-                display.ends_with(" ]"),
-                "`{source}` is exact and finite, got: {display}"
-            );
-            assert!(
-                !display.contains('…'),
-                "`{source}` terminates and must not be marked truncated, got: {display}"
-            );
-        }
     }
 
     #[tokio::test]
@@ -160,24 +135,6 @@ mod cf_budget_tests {
         assert!(
             cf_term_count(&display) < 32,
             "and this one was cut short by the budget, not by the term count, got: {display}"
-        );
-    }
-
-    #[tokio::test]
-    async fn the_role_hinted_renderer_agrees_with_the_default_one() {
-        // `format_as_continued_fraction` is a second call site of the same
-        // expansion; both had to learn the same truncation rule.
-        let mut interp = Interpreter::new();
-        interp
-            .execute(&algebraic_product(4))
-            .await
-            .expect("computes");
-        let stack = interp.get_stack();
-        let (value, _) = stack.iter_slots().last().expect("a value");
-        let hinted = format_with_hint(value, Interpretation::ContinuedFraction);
-        assert!(
-            hinted.ends_with("… ]"),
-            "the CF-hinted rendering must be marked truncated too, got: {hinted}"
         );
     }
 }

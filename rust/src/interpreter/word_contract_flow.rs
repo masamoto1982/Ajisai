@@ -95,7 +95,7 @@ impl FlowSim {
             // value, which is as true of `{ ... }` as of `[ ... ]`.
             Token::VectorStart | Token::RecordStart => self.vector_depth += 1,
             Token::VectorEnd | Token::RecordEnd => self.close(),
-            Token::LineBreak | Token::Number(_) | Token::String(_) | Token::Symbol(_) => {}
+            Token::Number(_) | Token::String(_) | Token::Symbol(_) => {}
         }
     }
 
@@ -141,10 +141,10 @@ impl FlowSim {
         }
     }
 
-    /// The caller stopped feeding this line mid-way, so the depths no longer
-    /// describe the source: resynchronize for whatever follows, exactly as
-    /// `SpaceSim::abandon_line` does.
-    pub(crate) fn abandon_line(&mut self) {
+    /// A dependency's contract could not be inferred, so the flow is dynamic
+    /// from here on: resynchronize for whatever follows, exactly as
+    /// `SpaceSim::abandon` does.
+    pub(crate) fn abandon(&mut self) {
         self.dynamic = true;
         self.vector_depth = 0;
     }

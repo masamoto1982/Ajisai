@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::interpreter_core::RuntimeMetrics;
 use crate::interpreter::tensor_lane_ops::{apply_lane_wise_broadcast, contains_absent_lane};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 use std::sync::Arc;
 
 #[inline]
@@ -34,7 +34,7 @@ pub(crate) struct FlatTensor {
 impl FlatTensor {
     /// Every caller reaches this only through the arithmetic-broadcast
     /// machinery (`apply_lane_wise_broadcast`, `apply_binary_broadcast_with_metrics`)
-    /// on behalf of ADD/SUB/MUL/DIV/MOD/QUANTIZE, which all declare
+    /// on behalf of ADD/SUB/MUL/DIV, which all declare
     /// `nonNumeric` uniformly — so a non-numeric operand's `StructureError`
     /// is remapped directly here, not at each caller.
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
@@ -210,7 +210,6 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         if data.len() == 1 {
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
-                hint: Interpretation::RawNumber,
                 absence: None,
             };
         }
@@ -228,7 +227,6 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
             .collect();
         return Value {
             data: ValueData::Vector(Arc::new(children)),
-            hint: Interpretation::Unassigned,
             absence: None,
         };
     }
@@ -247,7 +245,6 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 
     Value {
         data: ValueData::Vector(Arc::new(children)),
-        hint: Interpretation::Unassigned,
         absence: None,
     }
 }

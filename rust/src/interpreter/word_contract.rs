@@ -334,99 +334,92 @@ impl Interpreter {
         let mut complete = true;
         let mut bound = BoundNames::new();
 
-        'lines: for line in def.lines.iter() {
-            let contexts = classify_vector_positions(&line.body_tokens);
-            for (idx, token) in line.body_tokens.iter().enumerate() {
-                match token {
-                    Token::Number(_) | Token::String(_) => {
-                        flow.feed_literal();
-                        sim.feed_literal();
-                        cost_sim.feed_literal();
+        let contexts = classify_vector_positions(&def.body);
+        'body: for (idx, token) in def.body.iter().enumerate() {
+            match token {
+                Token::Number(_) | Token::String(_) => {
+                    flow.feed_literal();
+                    sim.feed_literal();
+                    cost_sim.feed_literal();
+                }
+                // A vector-literal interior pushes one opaque value as
+                // far as arity/space/cost are concerned, whatever it
+                // contains (`word_contract_widen.rs`). Whether the
+                // Symbol itself ever runs — and so contributes to `acc`
+                // — depends on whether this `[ ]` is inert data or a
+                // higher-order Word's code operand.
+                Token::Symbol(symbol) if contexts[idx].in_vector_literal() => {
+                    flow.feed_literal();
+                    sim.feed_literal();
+                    cost_sim.feed_literal();
+                    if contexts[idx] == LiteralContext::Code {
+                        self.widen_with_code_operand_symbol(
+                            symbol,
+                            visiting,
+                            &mut acc,
+                            &mut complete,
+                        );
                     }
-                    // A vector-literal interior pushes one opaque value as
-                    // far as arity/space/cost are concerned, whatever it
-                    // contains (`word_contract_widen.rs`). Whether the
-                    // Symbol itself ever runs — and so contributes to `acc`
-                    // — depends on whether this `[ ]` is inert data or a
-                    // higher-order Word's code operand.
-                    Token::Symbol(symbol) if contexts[idx].in_vector_literal() => {
-                        flow.feed_literal();
-                        sim.feed_literal();
-                        cost_sim.feed_literal();
-                        if contexts[idx] == LiteralContext::Code {
-                            self.widen_with_code_operand_symbol(
-                                symbol,
-                                visiting,
-                                &mut acc,
-                                &mut complete,
-                            );
-                        }
-                    }
-                    // A name a `BIND` made: one value of unknown size, no call.
-                    Token::Symbol(symbol) if bound.contains(&symbol.to_uppercase()) => {
-                        flow.feed_literal();
-                        sim.feed_bound();
-                        cost_sim.feed_literal();
-                    }
-                    Token::Symbol(symbol) => {
-                        let canonical =
-                            crate::core_word_aliases::canonicalize_core_word_name(symbol);
-                        note_bound_names(&mut bound, &canonical, &line.body_tokens, idx);
-                        let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
-                            complete = false;
-                            flow.go_dynamic();
-                            sim.feed_unresolved();
-                            cost_sim.feed_unresolved();
-                            acc.gaps.push(GapCode::UnresolvedWord);
-                            continue;
-                        };
-                        let dep_contract = if dep_def.is_builtin {
-                            Arc::new(static_word_contract(&dep_name, &dep_def))
-                        } else if visiting.contains(dep_name.as_ref()) {
-                            complete = false;
-                            acc.gaps.push(GapCode::RecursiveDependency);
-                            // Cleared, not merged: incompleteness here is
-                            // attributed above, not the placeholder's own seed.
-                            let mut placeholder = WordContract::conservative(
-                                self.contract_cache_key(&dep_name, &dep_def),
-                            );
-                            placeholder.gaps.clear();
-                            Arc::new(placeholder)
-                        } else {
-                            match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
-                                Some(contract) => contract,
-                                None => {
-                                    complete = false;
-                                    flow.abandon_line();
-                                    sim.abandon_line();
-                                    cost_sim.abandon_line();
-                                    acc.gaps.push(GapCode::DependencyUnknown);
-                                    continue 'lines;
-                                }
+                }
+                // A name a `BIND` made: one value of unknown size, no call.
+                Token::Symbol(symbol) if bound.contains(&symbol.to_uppercase()) => {
+                    flow.feed_literal();
+                    sim.feed_bound();
+                    cost_sim.feed_literal();
+                }
+                Token::Symbol(symbol) => {
+                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
+                    note_bound_names(&mut bound, &canonical, &def.body, idx);
+                    let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
+                        complete = false;
+                        flow.go_dynamic();
+                        sim.feed_unresolved();
+                        cost_sim.feed_unresolved();
+                        acc.gaps.push(GapCode::UnresolvedWord);
+                        continue;
+                    };
+                    let dep_contract = if dep_def.is_builtin {
+                        Arc::new(static_word_contract(&dep_name, &dep_def))
+                    } else if visiting.contains(dep_name.as_ref()) {
+                        complete = false;
+                        acc.gaps.push(GapCode::RecursiveDependency);
+                        // Cleared, not merged: incompleteness here is
+                        // attributed above, not the placeholder's own seed.
+                        let mut placeholder = WordContract::conservative(
+                            self.contract_cache_key(&dep_name, &dep_def),
+                        );
+                        placeholder.gaps.clear();
+                        Arc::new(placeholder)
+                    } else {
+                        match self.infer_word_contract_inner(&dep_name, &dep_def, visiting) {
+                            Some(contract) => contract,
+                            None => {
+                                complete = false;
+                                flow.abandon();
+                                sim.abandon();
+                                cost_sim.abandon();
+                                acc.gaps.push(GapCode::DependencyUnknown);
+                                continue 'body;
                             }
-                        };
-                        flow.feed_word(&dep_contract.flow);
-                        let builtin = dep_def.is_builtin;
-                        // One slot model, two bounds: the space walk computes
-                        // the operand provenance and the cost walk refines
-                        // against the very same reading.
-                        let operands = sim.feed_word(&if builtin {
-                            DepSpace::of_builtin(&dep_name, &dep_contract)
-                        } else {
-                            DepSpace::of_user_word(&dep_contract)
-                        });
-                        cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
-                        acc.widen_with(&dep_contract);
-                    }
-                    Token::VectorStart
-                    | Token::VectorEnd
-                    | Token::RecordStart
-                    | Token::RecordEnd
-                    | Token::LineBreak => {
-                        flow.feed_structural(token);
-                        sim.feed_structural(token);
-                        cost_sim.feed_structural(token);
-                    }
+                        }
+                    };
+                    flow.feed_word(&dep_contract.flow);
+                    let builtin = dep_def.is_builtin;
+                    // One slot model, two bounds: the space walk computes
+                    // the operand provenance and the cost walk refines
+                    // against the very same reading.
+                    let operands = sim.feed_word(&if builtin {
+                        DepSpace::of_builtin(&dep_name, &dep_contract)
+                    } else {
+                        DepSpace::of_user_word(&dep_contract)
+                    });
+                    cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
+                    acc.widen_with(&dep_contract);
+                }
+                Token::VectorStart | Token::VectorEnd | Token::RecordStart | Token::RecordEnd => {
+                    flow.feed_structural(token);
+                    sim.feed_structural(token);
+                    cost_sim.feed_structural(token);
                 }
             }
         }

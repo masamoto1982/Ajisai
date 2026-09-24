@@ -1,11 +1,11 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::Interpreter;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 /// The truth value of a `booleanLogic` operand.
 ///
-/// The Boolean domain is the *whole* definite input domain of `AND`, `OR`,
+/// The Boolean domain is the *whole* definite input domain of `AND`,
 /// `NOT`, and `SELECT`'s truth operand: `spec/semantic-families.json` gives
 /// the family `truth: threeValued` and each contract registers
 /// `nonTruthValue` as its error condition. NIL is handled separately by
@@ -16,7 +16,7 @@ use crate::types::{Interpretation, Value};
 /// at a time: [`lift_lanes`] has already aligned the operands, and a Vector
 /// reaching here is a Vector standing where a truth value belongs, which is
 /// the `nonTruthValue` it reports. Masks are built by the comparison Words,
-/// which lift the same way, so `[ 1 2 3 ] [ 2 ] GT [ 1 2 3 ] [ 2 ] LT OR` is
+/// which lift the same way, so `[ 1 2 3 ] [ 2 ] GT [ 1 2 3 ] [ 2 ] LT AND` is
 /// an ordinary phrase rather than a shape error.
 ///
 /// So a scalar is not an operand. These Words used to select between a Boolean
@@ -48,38 +48,24 @@ fn truth_or_unknown(value: &Value) -> Result<Option<bool>> {
     operand_truth(value).map(Some)
 }
 
-/// Binary Boolean combination under the strong Kleene tables
-/// (LANG.VALUES.TRUTH): FALSE absorbs into `AND` and TRUE absorbs into `OR`
-/// even against an UNKNOWN operand, because the absorbing value is decided by
-/// the definite operand alone. Only where neither operand is the absorbing
-/// value does an UNKNOWN operand surface in the result — the left operand's,
-/// when both are UNKNOWN, matching left-to-right evaluation order.
-fn compute_boolean_binary(and: bool, a: &Value, b: &Value) -> Result<Value> {
-    let absorbing = !and; // AND absorbs on FALSE, OR absorbs on TRUE.
+/// Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): FALSE
+/// absorbs into `AND` even against an UNKNOWN operand, because the absorbing
+/// value is decided by the definite operand alone. Only where neither operand
+/// is FALSE does an UNKNOWN operand surface in the result — the left
+/// operand's, when both are UNKNOWN, matching left-to-right evaluation order.
+fn compute_conjunction(a: &Value, b: &Value) -> Result<Value> {
     match (truth_or_unknown(a)?, truth_or_unknown(b)?) {
-        (Some(x), Some(y)) => Ok(Value::from_bool(if and { x && y } else { x || y })),
-        (Some(x), None) => {
-            if x == absorbing {
-                Ok(Value::from_bool(absorbing))
-            } else {
-                Ok(as_unknown(b))
-            }
-        }
-        (None, Some(y)) => {
-            if y == absorbing {
-                Ok(Value::from_bool(absorbing))
-            } else {
-                Ok(as_unknown(a))
-            }
-        }
-        (None, None) => Ok(as_unknown(a)),
+        (Some(x), Some(y)) => Ok(Value::from_bool(x && y)),
+        (Some(false), None) | (None, Some(false)) => Ok(Value::from_bool(false)),
+        (Some(true), None) => Ok(b.clone()),
+        (None, Some(true)) | (None, None) => Ok(a.clone()),
     }
 }
 
-/// `AND`/`OR` over whole operands: the scalar law above, applied lane by lane
+/// `AND` over whole operands: the scalar law above, applied lane by lane
 /// (LANG.COLLECTIONS.LIFT).
-fn lifted_boolean_binary(and: bool, a: &Value, b: &Value) -> Result<Value> {
-    lift_lanes([a, b], &|[x, y]| compute_boolean_binary(and, x, y))
+fn lifted_conjunction(a: &Value, b: &Value) -> Result<Value> {
+    lift_lanes([a, b], &|[x, y]| compute_conjunction(x, y))
 }
 
 /// `SELECT`'s scalar law: a definite truth chooses one of the two values it
@@ -93,23 +79,10 @@ fn compute_selection(when_true: &Value, when_false: &Value, mask: &Value) -> Res
     match truth_or_unknown(mask)? {
         Some(true) => Ok(when_true.clone()),
         Some(false) => Ok(when_false.clone()),
-        None => Ok(unchosen(mask)),
+        // UNKNOWN chooses neither: the answer is the absence the truth
+        // operand carried, reason intact, so `NIL-REASON` can still say why.
+        None => Ok(mask.clone()),
     }
-}
-
-/// `SELECT`'s answer where the choice is UNKNOWN: the absence the truth
-/// operand carried, reason intact, so a program can still ask `NIL-REASON`
-/// why no branch was taken.
-///
-/// The `TruthValue` hint [`as_unknown`] sets is dropped on the way out. It
-/// says "this absence stands in truth position", which was true of the mask
-/// and is not true of the result: what comes back stands where the *chosen
-/// value* belongs, and reporting it as an undecided truth would misname it
-/// for every consumer that reads the observation axis.
-fn unchosen(mask: &Value) -> Value {
-    let mut absent = mask.clone();
-    absent.hint = Interpretation::Unassigned;
-    absent
 }
 
 fn compute_inverted_value(val: &Value) -> Result<Value> {
@@ -117,35 +90,9 @@ fn compute_inverted_value(val: &Value) -> Result<Value> {
     // UNKNOWN: an absent operand flows out unchanged, keeping its reason
     // (LANG.VALUES.TRUTH's NOT row).
     if val.is_nil() {
-        return Ok(as_unknown(val));
+        return Ok(val.clone());
     }
     Ok(Value::from_bool(!operand_truth(val)?))
-}
-
-/// A NIL operand read in truth position, marked as the logical UNKNOWN (U):
-/// `ValueData::Nil` carrying the `TruthValue` hint (LANG.VALUES.TRUTH). No
-/// vocabulary Word could construct U directly before this — the exact
-/// comparison domain always decides (Tier ≤ 1) — so `AND`/`OR`/`NOT` are the
-/// first to make U a value a program can actually observe, not just a value
-/// the type system reserves room for.
-fn as_unknown(value: &Value) -> Value {
-    let mut unknown = value.clone();
-    unknown.hint = Interpretation::TruthValue;
-    unknown
-}
-
-/// Push a `booleanLogic` result and mark it as truth-valued on the semantic
-/// plane too (SPEC observation axis `truthValue`), mirroring
-/// `comparison::push_boolean_result`. [`as_unknown`] already gives a
-/// propagated UNKNOWN the right `hint` for `Value::truth_value()`; this also
-/// sets the stack-level role the protocol boundary reads, so observation
-/// agrees whichever path a consumer reads it through.
-fn push_truth_result(interp: &mut Interpreter, result: Value) {
-    interp.stack.push(result);
-    let stack_len = interp.stack.len();
-    interp
-        .stack
-        .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
@@ -159,7 +106,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    push_truth_result(interp, result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -171,7 +118,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let result = match lifted_boolean_binary(true, &a_val, &b_val) {
+    let result = match lifted_conjunction(&a_val, &b_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(a_val);
@@ -179,27 +126,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             return Err(e);
         }
     };
-    push_truth_result(interp, result);
-    Ok(())
-}
-
-pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-
-    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let result = match lifted_boolean_binary(false, &a_val, &b_val) {
-        Ok(v) => v,
-        Err(e) => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
-            return Err(e);
-        }
-    };
-    push_truth_result(interp, result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -237,8 +164,6 @@ pub fn op_select(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // Not `push_truth_result`: what `SELECT` answers is whichever candidate
-    // the truth chose, in whatever domain that candidate was.
     interp.stack.push(result);
     Ok(())
 }

@@ -15,7 +15,7 @@ use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, RecordData, Value, ValueData};
+use crate::types::{RecordData, Value, ValueData};
 use std::collections::HashMap;
 
 /// Take the Word's single operand off the stack.
@@ -83,9 +83,7 @@ pub fn op_order(interp: &mut Interpreter) -> Result<()> {
                 .into_iter()
                 .map(|i| Value::from_int(i as i64))
                 .collect();
-            interp
-                .stack
-                .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
+            interp.stack.push(Value::from_vector(out));
             Ok(())
         }
         // A required comparison exhausted its refinement budget: no
@@ -220,9 +218,7 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     match dense_integer_distinct_with_counts(interp, &value) {
         Ok(Some(distinct)) => {
             let lanes: Vec<i64> = distinct.into_iter().map(|(lane, _)| lane).collect();
-            interp
-                .stack
-                .push_with_role(Value::from_int_tensor(lanes), Interpretation::Unassigned);
+            interp.stack.push(Value::from_int_tensor(lanes));
             return Ok(());
         }
         Ok(None) => {}
@@ -242,9 +238,7 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     match distinct_with_counts(interp, &items) {
         Ok(distinct) => {
             let out: Vec<Value> = distinct.into_iter().map(|(value, _)| value).collect();
-            interp
-                .stack
-                .push_with_role(Value::from_vector(out), Interpretation::Unassigned);
+            interp.stack.push(Value::from_vector(out));
             Ok(())
         }
         Err(e) => {
@@ -311,9 +305,7 @@ pub fn op_tally(interp: &mut Interpreter) -> Result<()> {
 /// fail and charges nothing the scan has not already charged.
 fn push_tally(interp: &mut Interpreter, keys: Vec<Value>, counts: Vec<Value>) {
     let record = RecordData::new(keys, counts).expect("distinct_with_counts yields distinct keys");
-    interp
-        .stack
-        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
+    interp.stack.push(Value::from_record(record));
 }
 
 /// `GROUP ( [ values ] [ keys ] -> [ record ] )`: a Record from each key to
@@ -393,8 +385,6 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
         .map(|(key, bucket)| (key, Value::from_vector(bucket)))
         .unzip();
     let record = RecordData::new(keys, buckets).expect("group keys are distinct by construction");
-    interp
-        .stack
-        .push_with_role(Value::from_record(record), Interpretation::Unassigned);
+    interp.stack.push(Value::from_record(record));
     Ok(())
 }

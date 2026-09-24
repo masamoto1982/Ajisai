@@ -7,7 +7,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::types::{ExecutionLine, Token, WordDefinition};
+use crate::types::{Token, WordDefinition};
 
 use super::word_contract::WordContract;
 use super::Interpreter;
@@ -31,14 +31,8 @@ impl Interpreter {
     /// cache across probes, which is the correct trade for a Word whose
     /// input is, by construction, unnamed.
     pub(crate) fn infer_contract_for_block(&mut self, tokens: &[Token]) -> Arc<WordContract> {
-        let lines: Vec<ExecutionLine> =
-            crate::interpreter::execute_def::parse_definition_body(tokens).unwrap_or_else(|_| {
-                vec![ExecutionLine {
-                    body_tokens: Arc::from(Vec::new()),
-                }]
-            });
         let def = Arc::new(WordDefinition {
-            lines: lines.into(),
+            body: Arc::from(tokens),
             is_builtin: false,
             description: None,
             dependencies: HashSet::new(),

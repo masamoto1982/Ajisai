@@ -209,19 +209,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_nil_or_false_returns_nil() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("NIL FALSE OR").await;
-        assert!(result.is_ok(), "NIL OR FALSE should work: {:?}", result);
-        let val = interp.stack.pop().unwrap();
-        assert!(
-            val.is_nil(),
-            "NIL OR FALSE should return NIL, got {:?}",
-            val
-        );
-    }
-
-    #[tokio::test]
     async fn test_not_nil_returns_nil() {
         let mut interp = Interpreter::new();
         let result = interp.execute("NIL NOT").await;

@@ -41,9 +41,8 @@ fn reason_of(v: &Value) -> Option<NilReason> {
 enum NilClass {
     /// Any NIL operand collapses the result to NIL (arithmetic, comparison).
     BinaryBlanket,
-    /// AND/OR/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
+    /// AND/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
     ThreeValAnd,
-    ThreeValOr,
     ThreeValNot,
     /// SELECT: an UNKNOWN truth chooses neither candidate and answers that
     /// same absence. Not a blanket collapse — an absent *candidate* is only
@@ -59,15 +58,14 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
-    // MOD / FLOOR / CEIL / ROUND create NIL on a domain miss and are covered
+    // FLOOR / ROUND create NIL on a domain miss and are covered
     // by projecting_word_set_matches_registry.
-    // The comparison words (EQ/LT/LTE/GT/GTE) are PassthroughThenProject,
+    // The comparison words (EQ/LT/GT) are PassthroughThenProject,
     // not pure Passthrough — a Tier 2 pair can exhaust its comparison budget
     // and project to Unknown (LANG.VALUES.EXACT) — so they belong to
     // PROJECTING_WORDS / tier2_undecidable_conformance_tests, not here.
     ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
-    ("OR", NilClass::ThreeValOr),
     ("SELECT", NilClass::ThreeValSelect),
 ];
 
@@ -134,10 +132,7 @@ async fn passthrough_blanket_collapses_to_nil() {
                 }
             }
             // Not a blanket collapse; see `kleene_truth_conformance_tests`.
-            NilClass::ThreeValAnd
-            | NilClass::ThreeValOr
-            | NilClass::ThreeValNot
-            | NilClass::ThreeValSelect => {}
+            NilClass::ThreeValAnd | NilClass::ThreeValNot | NilClass::ThreeValSelect => {}
         }
     }
 }
@@ -146,10 +141,10 @@ async fn passthrough_blanket_collapses_to_nil() {
 
 /// Projecting words: a well-formed domain miss yields a reasoned NIL with a
 /// reason; malformed use raises an ordinary error.
-// `ABS`/`EQ`/`GT`/`GTE`/`LT`/`LTE`/`MAX`/`MIN`/`ORDER`/`SORT` are probed
+// `EQ`/`GT`/`LT`/`MAX`/`MIN`/`ORDER`/`SORT` are probed
 // in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
-// exhausts its comparison budget. `RANDOM`/`RANGE`/`SQRT`/`STR` are probed in
-// `shape_ops`, beside the Word itself; `SHAPE` (a ragged operand) and `RESHAPE`
+// exhausts its comparison budget. `RANGE`/`SQRT`/`STR` are probed
+// beside their own Words; `SHAPE` (a ragged operand) and `RESHAPE`
 // (the materialization ceiling) in `shape_words_tests`; `BSEARCH` and `SEARCH`
 // (an absent key or needle, and BSEARCH's undecidable order) in `search_words_tests`;
 // `ABSENT` (the reason a program states) in `declared_outcomes_tests`. `GET`/`TAKE`/`PUT` are probed together
@@ -157,18 +152,17 @@ async fn passthrough_blanket_collapses_to_nil() {
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABS", "ABSENT", "AT", "BSEARCH", "CEIL", "CONTRACT", "COS", "DIGEST", "DIV", "DROP", "EQ",
-    "EXP", "FILL", "FLOOR", "FORMAT", "GCD", "GET", "GT", "GTE", "INDEX-OF", "JSON-DECODE",
-    "JSON-ENCODE", "LN", "LT", "LTE", "MAX", "MIN", "MOD", "NIL-REASON", "NUM", "ORDER",
-    "POW", "PUT", "QUANTIZE", "RANDOM", "RANGE", "RATIO", "RESHAPE", "ROUND", "SEARCH", "SHAPE",
-    "SIN", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
+    "ABSENT", "AT", "BSEARCH", "CONTRACT", "COS", "DIGEST", "DIV", "DROP", "EQ", "EXP", "FILL",
+    "FLOOR", "FORMAT", "GCD", "GET", "GT", "INDEX-OF", "JSON-DECODE", "JSON-ENCODE", "LN", "LT",
+    "MAX", "MIN", "NIL-REASON", "NUM", "ORDER", "POW", "PUT", "RANGE", "RATIO", "RESHAPE",
+    "ROUND", "SEARCH", "SHAPE", "SIN", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a
 /// NIL it produced, so **every** Word that declares one carries a behavioral
-/// probe. Declaring a NIL *policy* is not that claim: `NEG` declares
-/// `passthroughThenProject` with a projection of `never`, so nothing about it
-/// can produce a NIL and it needs no probe. The condition is what this set is
+/// probe. Declaring a NIL *policy* is not that claim: a Word that declared
+/// `passthroughThenProject` with a projection of `never` could produce no NIL
+/// of its own and would need no probe. The condition is what this set is
 /// keyed on.
 ///
 /// It used to be keyed on the policy as well — `createsNil` or
@@ -226,23 +220,6 @@ async fn top_of(code: &str) -> crate::types::Value {
     interp.stack.last().cloned().expect("an answer was pushed")
 }
 
-/// `QUANTIZE` projects on the condition it declares: a denominator that is not
-/// a positive integer is a well-formed operand outside the Word's domain, so it
-/// yields a reasoned NIL rather than an error — the `SQRT` of a negative rule.
-/// Malformed use (an operand that is not a single number at all) still raises.
-#[tokio::test]
-async fn nil_projection_quantize_projects_on_a_denominator_outside_its_domain() {
-    for code in ["7 0 QUANTIZE", "7 -4 QUANTIZE", "7 3/2 QUANTIZE"] {
-        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
-    }
-
-    let mut malformed = Interpreter::new();
-    assert!(
-        malformed.execute("7 'ten' QUANTIZE").await.is_err(),
-        "a denominator that is not a number at all is malformed use, not a domain miss"
-    );
-}
-
 /// `STR` projects on the condition it declares: the sealed numeric grammar
 /// writes integers and ratios, so an exact irrational has no lexeme and there
 /// is no text to answer with.
@@ -273,7 +250,9 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
     // The escape hatch is a Word, not a silent default: the caller names the
     // resolution, so the approximation is visible in the source.
     assert_eq!(
-        text_answer("2 SQRT 10000 QUANTIZE STR").await.as_deref(),
+        text_answer("2 SQRT 10000 MUL ROUND 10000 DIV STR")
+            .await
+            .as_deref(),
         Some("7071/5000")
     );
 }
@@ -354,7 +333,7 @@ async fn nil_projection_comparison_nil_input() {
     // NIL operand propagates as NIL output via the passthrough rule
     // (LANG.FAILURE.PROJECT, LANG.FAILURE.PASSTHROUGH). (Budget exhaustion instead yields Unknown, a NIL
     // tagged TruthValue — covered by `tier2_undecidable_conformance_tests`.)
-    for name in &["EQ", "LT", "LTE", "GT", "GTE"] {
+    for name in &["EQ", "LT", "GT"] {
         for code in [
             format!("NIL 1 {name}"),
             format!("1 NIL {name}"),
@@ -373,18 +352,13 @@ async fn nil_projection_comparison_nil_input() {
 
 #[tokio::test]
 async fn projecting_arithmetic_nil_input_passes_through() {
-    // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil, but a NIL operand
+    // FLOOR/ROUND are Projecting/CreatesNil, but a NIL operand
     // still propagates as NIL via the universal NIL Projection Rule (LANG.FAILURE.PROJECT)
     // — the CreatesNil policy is about CF-budget exhaustion on irrational
     // operands, not about rejecting NIL inputs.
     for name in &["FLOOR", "ROUND"] {
         let code = format!("NIL {name}");
         let stack = run_ok(&code).await;
-        assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
-        assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
-    }
-    for code in ["NIL 1 MOD", "1 NIL MOD", "NIL NIL MOD"] {
-        let stack = run_ok(code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
         assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
     }
@@ -475,7 +449,7 @@ mod properties {
         // op total and NIL — never an error, never a definite value.
         #[test]
         fn binary_passthrough_with_nil_is_nil(a in -50i64..50) {
-            for op in ["ADD", "SUB", "MUL", "MOD", "LT", "LTE", "GT", "GTE", "EQ"] {
+            for op in ["ADD", "SUB", "MUL", "LT", "GT", "EQ"] {
                 let stack = block_on(run(&format!("{a} NIL {op}")))
                     .unwrap_or_else(|e| panic!("`{a} NIL {op}` errored: {e}"));
                 prop_assert_eq!(stack.len(), 1);

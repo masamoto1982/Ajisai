@@ -5,9 +5,7 @@
 //! `(Some, Some)` arm — but reached it by building an `ExactReal` from each
 //! operand first, and `extract_exact_real_for_comparison` clones the `Fraction`
 //! out of the `Value` to do that. Two clones and two constructions per
-//! comparison, to arrive at the two `Fraction`s the operands already held; and
-//! `ABS` pays it twice per element, since `abs_scalar` asks for the sign by
-//! comparing against a freshly built zero.
+//! comparison, to arrive at the two `Fraction`s the operands already held.
 //!
 //! `rational_pair` borrows them instead. That is only sound if the round trip it
 //! skips is the identity — `ExactReal::from_fraction(f).as_rational() == Some(f)`
@@ -86,10 +84,10 @@ mod tests {
             ("2 3 LT", "TRUE"),
             ("3 2 LT", "FALSE"),
             ("2 2 LT", "FALSE"),
-            ("2 2 LTE", "TRUE"),
+            ("2 2 GT NOT", "TRUE"),
             ("3 2 GT", "TRUE"),
             ("2 3 GT", "FALSE"),
-            ("2 2 GTE", "TRUE"),
+            ("2 2 LT NOT", "TRUE"),
             ("2 2 EQ", "TRUE"),
             ("2 3 EQ", "FALSE"),
             ("-2 3 LT", "TRUE"),
@@ -105,37 +103,6 @@ mod tests {
         ] {
             assert_eq!(answer(program).await, expected, "`{program}`");
         }
-    }
-
-    /// `ABS` is where the screen fires twice per element, so its whole sign
-    /// trichotomy is pinned — and pinned as a `Scalar`, because
-    /// `Value::from_exact_real` folds a rational back to one and a result that
-    /// stopped being a rational could no longer be stored densely.
-    #[tokio::test]
-    async fn abs_answers_the_same_and_stays_a_rational() {
-        for (program, expected) in [
-            ("5 ABS", "5/1"),
-            ("-5 ABS", "5/1"),
-            ("0 ABS", "0/1"),
-            ("-1/2 ABS", "1/2"),
-            ("1/2 ABS", "1/2"),
-        ] {
-            assert_eq!(answer(program).await, expected, "`{program}`");
-        }
-
-        // Over a vector, the whole run must come back dense — the property a
-        // result that degraded to `ExactScalar` would quietly lose.
-        let mut interp = Interpreter::new();
-        interp
-            .execute("[ -3 -1 0 2 4 ] [ ABS ] MAP")
-            .await
-            .expect("runs");
-        let result = interp.get_stack().last().cloned().expect("a result");
-        assert!(
-            matches!(result.data, crate::types::ValueData::Tensor { .. }),
-            "ABS over a vector stays dense: {result:?}"
-        );
-        assert_eq!(format!("{result}"), "[ 3/1 1/1 0/1 2/1 4/1 ]");
     }
 
     /// An exact operand must not take the screen. √8 and √2+√2 are the same

@@ -8,7 +8,7 @@
 //!
 //! The observation digest already solves the hard representation problems
 //! (`observation_digest`'s own module doc: algebraic normal forms, Vector/
-//! Tensor equivalence, `hint` vs meaning, `stackDisplay` vs value). A receipt
+//! Tensor equivalence, NIL reasons, `stackDisplay` vs value). A receipt
 //! is strictly a superset: it bundles that digest alongside everything else
 //! a verifier needs — what source, which engine, which vocabulary and
 //! outcome-space registry, which resource ceilings, and what the run

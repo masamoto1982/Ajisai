@@ -19,6 +19,8 @@ fn effect_payloads(interpreter: &Interpreter) -> Vec<&str> {
         .collect()
 }
 
+/// `MAP` is a Kernel Word; it is pinned here beside `FILTER`, whose visiting
+/// order and isolated per-element stacks it shares.
 #[tokio::test]
 async fn map_visits_in_index_order_with_isolated_stacks_and_ordered_effects() {
     let mut interpreter = Interpreter::new();
@@ -41,23 +43,6 @@ async fn filter_visits_in_index_order_and_observes_predicate_truth() {
 
     assert_eq!(effect_payloads(&interpreter), ["3/1", "1/1", "2/1"]);
     assert_eq!(rendered_stack(&interpreter), ["[ 3/1 2/1 ]"]);
-}
-
-#[tokio::test]
-async fn any_and_all_short_circuit_before_unvisited_effects() {
-    let mut any = Interpreter::new();
-    any.execute("[ 1 2 3 ] [ 'E' BIND E PRINT E 2 EQ ] ANY")
-        .await
-        .unwrap();
-    assert_eq!(effect_payloads(&any), ["1/1", "2/1"]);
-    assert_eq!(rendered_stack(&any), ["TRUE"]);
-
-    let mut all = Interpreter::new();
-    all.execute("[ 1 2 3 ] [ 'E' BIND E PRINT E 2 LT ] ALL")
-        .await
-        .unwrap();
-    assert_eq!(effect_payloads(&all), ["1/1", "2/1"]);
-    assert_eq!(rendered_stack(&all), ["FALSE"]);
 }
 
 /// `SCAN` answers the accumulator after each element, in index order, with one
@@ -119,7 +104,7 @@ async fn scan_is_lane_for_lane_where_fold_is_seed_shaped() {
 
 #[tokio::test]
 async fn higher_order_errors_restore_the_original_operand_atomically() {
-    for word in ["MAP", "FILTER", "ANY", "ALL"] {
+    for word in ["MAP", "FILTER"] {
         let mut interpreter = Interpreter::new();
         let source = format!("[ 3 1 2 ] [ UNKNOWN-CALLBACK ] {word}");
         assert!(interpreter.execute(&source).await.is_err(), "{word}");
@@ -339,49 +324,17 @@ async fn search_and_replace_are_the_one_pass_forms_of_the_window_scan() {
     assert_eq!(rendered_stack(&interpreter), ["2/1", "'abXbc'", "'bb'"]);
 }
 
-/// `RANDOM` is a function of its operands: the same seed draws the same
-/// rationals, every time, in any interpreter. That is what lets it into a
-/// language with no hidden state — and the draws are exact rationals in
-/// [0, 1), so nothing about them is approximate either.
-#[tokio::test]
-async fn random_is_a_pure_function_of_its_seed() {
-    let mut first = Interpreter::new();
-    first.execute("7 4 RANDOM").await.unwrap();
-    let mut again = Interpreter::new();
-    again.execute("7 4 RANDOM").await.unwrap();
-    assert_eq!(rendered_stack(&first), rendered_stack(&again));
-
-    let mut other_seed = Interpreter::new();
-    other_seed.execute("8 4 RANDOM").await.unwrap();
-    assert_ne!(rendered_stack(&first), rendered_stack(&other_seed));
-
-    let mut in_unit_interval = Interpreter::new();
-    in_unit_interval
-        .execute("7 64 RANDOM 'R' BIND R [ 0 LT ] ANY R [ 1 GTE ] ANY OR")
-        .await
-        .unwrap();
-    assert_eq!(rendered_stack(&in_unit_interval), ["FALSE"]);
-
-    // Beyond the space water level a well-formed request projects onto NIL
-    // rather than exhausting the host, the same answer RANGE and FILL give.
-    let mut too_many = Interpreter::new();
-    too_many.execute("7 99999999 RANDOM").await.unwrap();
-    let value = too_many.get_stack().last().expect("RANDOM result");
-    assert!(value.is_nil());
-    assert_eq!(value.nil_reason(), Some(&NilReason::SpaceExhausted));
-}
-
-/// `FORMAT` answers what `QUANTIZE` to `10^digits` followed by a decimal
+/// `FORMAT` answers what `ROUND` scaled to `10^digits` followed by a decimal
 /// spelling of the result would answer — the same rounded quantity, under the
 /// same tie rule — in one place, as text, so the rounding never re-enters
 /// arithmetic. The last digit of a computable real is settled under the
 /// comparison budget or projected, never guessed.
 #[tokio::test]
-async fn format_agrees_with_quantize_and_rounds_half_to_even() {
+async fn format_agrees_with_scaled_round() {
     let mut interpreter = Interpreter::new();
     interpreter
         .execute(
-            "2/3 2 FORMAT 2/3 100 QUANTIZE 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT PI 2 FORMAT",
+            "2/3 2 FORMAT 2/3 100 MUL ROUND 100 DIV 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT PI 2 FORMAT",
         )
         .await
         .unwrap();
@@ -440,7 +393,7 @@ async fn gcd_and_ratio_agree_with_the_kernel_spellings() {
     let mut interpreter = Interpreter::new();
     interpreter
         .execute(
-            "12 18 GCD 18 12 MOD 12 GCD \
+            "12 18 GCD 18 18 12 DIV FLOOR 12 MUL SUB 12 GCD \
              6/4 RATIO 0 GET 6/4 RATIO 1 GET DIV 3/2 EQ \
              2 SQRT RATIO NIL-REASON PI 4 GCD NIL-REASON",
         )

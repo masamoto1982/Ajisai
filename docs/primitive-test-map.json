@@ -4,10 +4,10 @@
     "docs/formalization-coverage.json"
   ],
   "summary": {
-    "primitives": 24,
-    "primitives_without_tests": 2,
-    "distinct_law_test_files": 24,
-    "distinct_conformance_cases": 167
+    "primitives": 20,
+    "primitives_without_tests": 0,
+    "distinct_law_test_files": 22,
+    "distinct_conformance_cases": 147
   },
   "primitives": [
     {
@@ -15,20 +15,16 @@
       "algebraic_family": "boolean-truth",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 17,
+      "derived_word_count": 13,
       "law_test_count": 10,
-      "conformance_case_count": 19,
+      "conformance_case_count": 15,
       "derived_words": [
-        "core.all",
-        "core.any",
         "core.comparison",
         "core.eq",
         "core.false",
         "core.filter",
         "core.gt",
-        "core.gte",
         "core.lt",
-        "core.lte",
         "core.nil-p",
         "core.order",
         "core.select",
@@ -60,11 +56,7 @@
         "core-select-chooses-lane-by-lane",
         "core-select-unknown-truth-chooses-neither",
         "core-true-literal",
-        "standard-all",
-        "standard-any",
         "standard-filter",
-        "standard-gte",
-        "standard-lte",
         "standard-max",
         "standard-min",
         "standard-order",
@@ -90,25 +82,6 @@
       ]
     },
     {
-      "id": "algebra.k3.join",
-      "algebraic_family": "boolean-truth",
-      "kind": "operation",
-      "status": "accepted",
-      "derived_word_count": 1,
-      "law_test_count": 2,
-      "conformance_case_count": 1,
-      "derived_words": [
-        "core.or"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-kleene-or-definite"
-      ]
-    },
-    {
       "id": "algebra.k3.involution",
       "algebraic_family": "boolean-truth",
       "kind": "operation",
@@ -131,15 +104,14 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 9,
-      "law_test_count": 6,
-      "conformance_case_count": 11,
+      "derived_word_count": 8,
+      "law_test_count": 5,
+      "conformance_case_count": 10,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
         "core.div",
         "core.gcd",
-        "core.mod",
         "core.mul",
         "core.pow",
         "core.ratio",
@@ -149,7 +121,6 @@
         "rust/src/interpreter/power_words_tests.rs",
         "rust/src/types/exact/transcendental_tests.rs",
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/desugar_laws.rs",
         "rust/tests/standard_derivation_laws.rs",
         "rust/tests/standard_operational_laws.rs"
       ],
@@ -162,7 +133,6 @@
         "core-pow-exact-tiers",
         "core-pow-projections",
         "standard-gcd",
-        "standard-mod",
         "standard-ratio",
         "standard-sub"
       ]
@@ -172,9 +142,9 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 19,
+      "derived_word_count": 16,
       "law_test_count": 10,
-      "conformance_case_count": 24,
+      "conformance_case_count": 21,
       "derived_words": [
         "core.atan",
         "core.bsearch",
@@ -184,15 +154,12 @@
         "core.exp",
         "core.format",
         "core.gt",
-        "core.gte",
         "core.ln",
         "core.lt",
-        "core.lte",
         "core.order",
         "core.sin",
         "module.algo.index-of",
         "module.algo.sort",
-        "module.math.abs",
         "module.math.max",
         "module.math.min"
       ],
@@ -212,7 +179,6 @@
         "core-boolean-is-not-a-number",
         "core-decided-comparison-false",
         "core-decided-comparison-true",
-        "standard-abs",
         "standard-atan",
         "standard-bsearch",
         "standard-bsearch-absent-key-projects",
@@ -222,11 +188,9 @@
         "standard-format-irrational",
         "standard-format-rejects-bad-count",
         "standard-format-ties-away-from-zero",
-        "standard-gte",
         "standard-index-of",
         "standard-ln",
         "standard-ln-domain",
-        "standard-lte",
         "standard-max",
         "standard-min",
         "standard-order",
@@ -240,31 +204,22 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
       "status": "accepted",
-      "derived_word_count": 7,
-      "law_test_count": 5,
-      "conformance_case_count": 6,
+      "derived_word_count": 4,
+      "law_test_count": 4,
+      "conformance_case_count": 1,
       "derived_words": [
-        "core.ceil",
         "core.exact-real.sqrt",
         "core.floor",
-        "core.mod",
         "core.num",
-        "core.quantize",
         "core.round"
       ],
       "law_tests": [
         "rust/src/types/exact/algebraic_tests.rs",
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/desugar_laws.rs",
         "rust/tests/standard_derivation_laws.rs",
         "rust/tests/string_laws.rs"
       ],
       "conformance_cases": [
-        "standard-ceil",
-        "standard-ceil-lifts-over-a-vector",
-        "standard-ceil-of-an-integer-is-itself",
-        "standard-mod",
-        "standard-quantize",
         "standard-round"
       ]
     },
@@ -273,41 +228,16 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 3,
-      "law_test_count": 4,
-      "conformance_case_count": 1,
-      "derived_words": [
-        "core.exact-real.sqrt",
-        "module.math.abs",
-        "module.math.neg"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/src/types/exact/algebraic_tests.rs",
-        "rust/tests/algebraic_laws.rs",
-        "rust/tests/standard_derivation_laws.rs"
-      ],
-      "conformance_cases": [
-        "standard-abs"
-      ]
-    },
-    {
-      "id": "algebra.exact-real.seeded-stream",
-      "algebraic_family": "exact-arithmetic",
-      "kind": "operation",
-      "status": "accepted",
       "derived_word_count": 1,
       "law_test_count": 1,
-      "conformance_case_count": 1,
+      "conformance_case_count": 0,
       "derived_words": [
-        "core.random"
+        "core.exact-real.sqrt"
       ],
       "law_tests": [
-        "rust/tests/standard_operational_laws.rs"
+        "rust/src/types/exact/algebraic_tests.rs"
       ],
-      "conformance_cases": [
-        "kernel-random"
-      ]
+      "conformance_cases": []
     },
     {
       "id": "algebra.exact-scalar.codepoint-sequence",
@@ -419,30 +349,24 @@
       "algebraic_family": "bubble",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 15,
-      "law_test_count": 4,
-      "conformance_case_count": 16,
+      "derived_word_count": 10,
+      "law_test_count": 3,
+      "conformance_case_count": 9,
       "derived_words": [
         "core.add",
         "core.arithmetic.rational",
-        "core.ceil",
         "core.div",
         "core.eq",
         "core.floor",
         "core.gt",
-        "core.gte",
         "core.lt",
-        "core.lte",
-        "core.mod",
         "core.mul",
-        "core.quantize",
         "core.round",
         "core.sub"
       ],
       "law_tests": [
         "rust/src/arithmetic_operation_tests.rs",
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/desugar_laws.rs",
         "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
@@ -453,13 +377,6 @@
         "core-division-by-zero-is-nil",
         "core-exact-addition",
         "core-exact-division",
-        "standard-ceil",
-        "standard-ceil-lifts-over-a-vector",
-        "standard-ceil-of-an-integer-is-itself",
-        "standard-gte",
-        "standard-lte",
-        "standard-mod",
-        "standard-quantize",
         "standard-round",
         "standard-sub"
       ]
@@ -469,12 +386,10 @@
       "algebraic_family": "structure-lift",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 32,
+      "derived_word_count": 29,
       "law_test_count": 7,
-      "conformance_case_count": 59,
+      "conformance_case_count": 56,
       "derived_words": [
-        "core.all",
-        "core.any",
         "core.bsearch",
         "core.collect",
         "core.concat",
@@ -492,7 +407,6 @@
         "core.member",
         "core.order",
         "core.put",
-        "core.random",
         "core.range",
         "core.ratio",
         "core.reshape",
@@ -540,9 +454,6 @@
         "core-shape-non-vector-error",
         "core-shape-ragged-projects",
         "core-take",
-        "kernel-random",
-        "standard-all",
-        "standard-any",
         "standard-bsearch",
         "standard-bsearch-absent-key-projects",
         "standard-bsearch-first-of-equal-keys",
@@ -582,29 +493,20 @@
       "algebraic_family": "structure-lift",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 3,
-      "law_test_count": 4,
-      "conformance_case_count": 11,
+      "derived_word_count": 2,
+      "law_test_count": 2,
+      "conformance_case_count": 5,
       "derived_words": [
         "core.map",
-        "core.rank",
         "core.structural.vector-tensor"
       ],
       "law_tests": [
         "rust/tests/higher_order_laws.rs",
-        "rust/tests/standard_operational_laws.rs",
-        "rust/tests/structural_laws.rs",
-        "rust/tests/termination_laws.rs"
+        "rust/tests/structural_laws.rs"
       ],
       "conformance_cases": [
         "core-map",
         "core-nesting-preserved",
-        "core-rank",
-        "core-rank-0-sees-the-whole-vector",
-        "core-rank-1-is-map",
-        "core-rank-negative-depth-error",
-        "core-rank-nil-target",
-        "core-rank-stops-at-a-leaf",
         "core-vector-scalar-broadcast-add",
         "core-vector-self-evaluates",
         "core-vector-singleton-broadcast-mul"
@@ -672,37 +574,13 @@
       ]
     },
     {
-      "id": "algebra.modifier.consumption.keep",
-      "algebraic_family": "modifier",
-      "kind": "operation",
-      "status": "accepted",
-      "derived_word_count": 0,
-      "law_test_count": 0,
-      "conformance_case_count": 0,
-      "derived_words": [],
-      "law_tests": [],
-      "conformance_cases": []
-    },
-    {
-      "id": "algebra.state-transformer.combinator",
-      "algebraic_family": "state-transformer",
-      "kind": "operation",
-      "status": "accepted",
-      "derived_word_count": 0,
-      "law_test_count": 0,
-      "conformance_case_count": 0,
-      "derived_words": [],
-      "law_tests": [],
-      "conformance_cases": []
-    },
-    {
       "id": "algebra.state-transformer.composition",
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 12,
-      "law_test_count": 6,
-      "conformance_case_count": 17,
+      "derived_word_count": 11,
+      "law_test_count": 4,
+      "conformance_case_count": 11,
       "derived_words": [
         "core.bind",
         "core.def",
@@ -713,7 +591,6 @@
         "core.fold",
         "core.import.name-resolution",
         "core.map",
-        "core.rank",
         "core.scan",
         "exploratory.child-runtime"
       ],
@@ -721,9 +598,7 @@
         "rust/src/interpreter/declared_outcomes_tests.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/naming_resolution_laws.rs",
-        "rust/tests/standard_operational_laws.rs",
-        "rust/tests/structural_laws.rs",
-        "rust/tests/termination_laws.rs"
+        "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
         "core-binding-does-not-cross-a-word-call",
@@ -732,12 +607,6 @@
         "core-fold",
         "core-fold-word-name",
         "core-map",
-        "core-rank",
-        "core-rank-0-sees-the-whole-vector",
-        "core-rank-1-is-map",
-        "core-rank-negative-depth-error",
-        "core-rank-nil-target",
-        "core-rank-stops-at-a-leaf",
         "core-scan",
         "core-scan-empty",
         "core-scan-nil-target",
@@ -750,12 +619,11 @@
       "algebraic_family": "dictionary",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 5,
+      "derived_word_count": 4,
       "law_test_count": 3,
-      "conformance_case_count": 13,
+      "conformance_case_count": 11,
       "derived_words": [
         "core.contract",
-        "core.defined",
         "core.digest",
         "core.import.name-resolution",
         "host.lookup"
@@ -773,8 +641,6 @@
         "core-contract-rejects-scalar",
         "core-contract-unknown-name",
         "core-contract-user-word-is-its-body",
-        "core-defined-resolves-either-tier",
-        "core-defined-string-is-not-a-name",
         "core-digest-computable-real",
         "core-digest-value-denotation",
         "core-digest-word-identity",

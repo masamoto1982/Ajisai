@@ -1,5 +1,5 @@
 use super::bigint_gcd::balanced_bigint_gcd;
-use super::fraction::{compute_gcd_i64, Fraction, FractionRepr, RoundingMode};
+use super::fraction::{compute_gcd_i64, Fraction, FractionRepr};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 
@@ -205,6 +205,12 @@ impl Fraction {
     }
 
     pub fn floor(&self) -> Fraction {
+        // Absence propagates, as it does through `add`, `sub`, `mul` and
+        // `div`: `Fraction::nil` is `0/0`, so without this an absent lane
+        // reached the division below and `[ NIL 1 ] FLOOR` aborted the process.
+        if self.is_nil() {
+            return Self::nil();
+        }
         if self.is_integer() {
             return Fraction::from_repr(self.repr.clone());
         }
@@ -232,35 +238,11 @@ impl Fraction {
         }
     }
 
-    pub fn ceil(&self) -> Fraction {
-        if self.is_integer() {
-            return Fraction::from_repr(self.repr.clone());
-        }
-
-        match &self.repr {
-            FractionRepr::Small(n, d) => {
-                let q = n / d;
-                let r = n % d;
-                let ceiled = if *n > 0 && r != 0 { q + 1 } else { q };
-                Fraction::from_repr(FractionRepr::Small(ceiled, 1))
-            }
-            FractionRepr::Big {
-                numerator,
-                denominator,
-            } => {
-                let q = numerator / denominator;
-                let r = numerator % denominator;
-                let ceiled = if *numerator > BigInt::zero() && !r.is_zero() {
-                    q + BigInt::one()
-                } else {
-                    q
-                };
-                Self::from_bigint_pair(ceiled, BigInt::one())
-            }
-        }
-    }
-
     pub fn round(&self) -> Fraction {
+        // As `floor`: an absent lane is `0/0` and must not reach the division.
+        if self.is_nil() {
+            return Self::nil();
+        }
         if self.is_integer() {
             return Fraction::from_repr(self.repr.clone());
         }
@@ -275,7 +257,7 @@ impl Fraction {
                 // Widen to i128 *before* taking the absolute value: `i64::MIN`
                 // has no positive i64 counterpart, so `i64::abs()` overflows and
                 // panics in debug (reachable from a `-9223372036854775808/d`
-                // operand, e.g. via QUANTIZE-HALF-AWAY). i128 holds it exactly.
+                // operand). i128 holds it exactly.
                 let abs_n = (*n as i128).abs();
                 let d128 = *d as i128;
                 let result = ((2 * abs_n + d128) / (2 * d128)) as i64;
@@ -300,153 +282,5 @@ impl Fraction {
                 Self::from_bigint_pair(if is_negative { -result } else { result }, BigInt::one())
             }
         }
-    }
-
-    /// Round to the nearest integer with ties resolved to the even neighbour
-    /// (banker's rounding, IEEE 754 roundTiesToEven). Unlike [`round`], which
-    /// breaks ties away from zero, this never introduces the systematic upward
-    /// bias that accumulates when many half-way values are rounded the same
-    /// direction — the property fintech ledgers rely on. The result is an
-    /// integer-valued `Fraction`.
-    pub fn round_half_even(&self) -> Fraction {
-        if self.is_integer() {
-            return Fraction::from_repr(self.repr.clone());
-        }
-        // Denominator is always normalised positive, so the sign lives in the
-        // numerator. Work in BigInt to stay exact and overflow-free for both
-        // the Small and Big reprs.
-        let num = self.numerator();
-        let den = self.denominator();
-        let q_trunc = &num / &den;
-        let r_trunc = &num - &q_trunc * &den;
-        // Adjust the truncated quotient down to the floor so the remainder `r`
-        // lands in (0, den) (it is never 0 here — that is the integer case).
-        let (mut q, r) = if r_trunc < BigInt::zero() {
-            (q_trunc - BigInt::one(), r_trunc + &den)
-        } else {
-            (q_trunc, r_trunc)
-        };
-        // Compare the fractional part r/den against 1/2 by comparing 2r to den.
-        let two_r = &r * BigInt::from(2);
-        match two_r.cmp(&den) {
-            std::cmp::Ordering::Less => {}
-            std::cmp::Ordering::Greater => q += BigInt::one(),
-            std::cmp::Ordering::Equal => {
-                // Exact half: round to the even neighbour. `q` is the lower
-                // neighbour (floor); step up only when it is odd.
-                if !(&q % BigInt::from(2)).is_zero() {
-                    q += BigInt::one();
-                }
-            }
-        }
-        Fraction::from_bigint_pair(q, BigInt::one())
-    }
-
-    /// Truncate toward zero, discarding the fractional part. Unlike [`floor`],
-    /// which goes toward negative infinity, this rounds a negative value up
-    /// toward zero. The result is an integer-valued `Fraction`.
-    pub fn trunc(&self) -> Fraction {
-        if self.is_positive() || self.is_zero() {
-            self.floor()
-        } else {
-            self.ceil()
-        }
-    }
-
-    /// Round to the nearest integer under the given [`RoundingMode`]. Each mode
-    /// dispatches to the matching directed or round-to-nearest rule.
-    pub fn round_with_mode(&self, mode: RoundingMode) -> Fraction {
-        match mode {
-            RoundingMode::HalfEven => self.round_half_even(),
-            RoundingMode::HalfAway => self.round(),
-            RoundingMode::Floor => self.floor(),
-            RoundingMode::Ceil => self.ceil(),
-            RoundingMode::Trunc => self.trunc(),
-        }
-    }
-
-    /// Quantize to a positive rational grid `step` under `mode`, returning the
-    /// pair `(q, r)` where `q` is the chosen integer multiple of `step` and
-    /// `r = self - q` is the exact residual. By construction `q + r == self`
-    /// exactly, so quantization loses nothing: the residual carries the
-    /// discarded fraction rather than dropping it silently. The caller must
-    /// ensure `step` is a strictly positive rational.
-    pub fn quantize(&self, step: &Fraction, mode: RoundingMode) -> (Fraction, Fraction) {
-        let m = self.div(step);
-        let n = m.round_with_mode(mode);
-        let q = n.mul(step);
-        let r = self.sub(&q);
-        (q, r)
-    }
-
-    pub fn modulo(&self, other: &Fraction) -> Fraction {
-        // Absence propagates, exactly as it does through `add`, `sub`, `mul`
-        // and `div`. `modulo` was the one arithmetic law without this guard,
-        // and it had to come first: `Fraction::nil` is `0/0`, so an absent
-        // operand reached the `i128` reduction below with a zero denominator
-        // and divided by it — `[ 1 NIL 3 ] [ 2 ] %` aborted the process, the
-        // same defect F-1 fixed one layer up.
-        if self.is_nil() || other.is_nil() {
-            return Self::nil();
-        }
-        if other.is_zero() {
-            panic!("Modulo by zero");
-        }
-
-        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
-            if b == 1 && d == 1 {
-                let rem = a % c;
-                let result = if rem < 0 {
-                    if c > 0 {
-                        rem + c
-                    } else {
-                        rem - c
-                    }
-                } else {
-                    rem
-                };
-                return Fraction::from_repr(FractionRepr::Small(result, 1));
-            }
-
-            let a = a as i128;
-            let b = b as i128;
-            let c = c as i128;
-            let d = d as i128;
-            let num = a * d;
-            let mod_by = c * b;
-            let den = b * d;
-            let rem = num % mod_by;
-            let result_num = if rem < 0 {
-                if mod_by > 0 {
-                    rem + mod_by
-                } else {
-                    rem - mod_by
-                }
-            } else {
-                rem
-            };
-            return Self::create_from_i128(result_num, den);
-        }
-
-        let (sn, sd): (BigInt, BigInt) = self.to_bigint_pair();
-        let (on, od): (BigInt, BigInt) = other.to_bigint_pair();
-
-        if sd.is_one() && od.is_one() {
-            let rem: BigInt = &sn % &on;
-            let result: BigInt = if rem < BigInt::zero() {
-                if on > BigInt::zero() {
-                    rem + &on
-                } else {
-                    rem - &on
-                }
-            } else {
-                rem
-            };
-            return Self::from_bigint_pair(result, BigInt::one());
-        }
-
-        let div_result: Fraction = self.div(other);
-        let floored: Fraction = div_result.floor();
-        self.sub(&other.mul(&floored))
     }
 }

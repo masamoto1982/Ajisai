@@ -2,13 +2,14 @@
 //!
 //! These encode the algebraic content of the observation function and the
 //! renderer (Phase 1): `observe(p) = (render(π_Stack ⟦p⟧ σ₀), π_Eff)` with
-//! `render : (data, role) → display` a **pure** function over **all** SPEC
-//! LANG.OBSERVATION.PROTOCOL roles, observed through the LANG.OBSERVATION.FIREWALL semantic axes only.
+//! `render : value → display` a **pure** function of the value
+//! (LANG.VALUES.DENOTATION), observed through the LANG.OBSERVATION.FIREWALL
+//! semantic axes only.
 //!
 //! Unlike `algebraic_laws.rs` — which observes through whole-stack
 //! `Value::to_string()` (a *display* surface, non-canonical per LANG.OBSERVATION.FIREWALL) — this
-//! file observes through protocol axes and treats `render` as the explicit
-//! `(data, role)` function. It is the firewall-clean basis later phases reuse
+//! file observes through protocol axes and treats `render` as an explicit
+//! function of the value. It is the firewall-clean basis later phases reuse
 //! by adding domain generators (`test_support::generators`).
 //!
 //! Every law below was checked against the reference implementation with a
@@ -17,25 +18,11 @@
 mod test_support;
 
 use ajisai_core::semantic::Capability;
-use ajisai_core::types::Interpretation;
 use proptest::prelude::*;
 use test_support::generators::*;
-use test_support::observe::{observe_axes, render, run, run_one, ALL_ROLES};
+use test_support::observe::{observe_axes, render, run, run_one};
 
 // ─────────────────────────── concrete-witness laws ───────────────────────────
-
-/// Render is genuinely role-sensitive (a positive control): it is not a
-/// constant function that ignores its role argument. A definite Boolean renders
-/// as the bare truth word under `TruthValue` but as `@1` under `Timestamp`.
-#[test]
-fn render_is_role_sensitive() {
-    let t = run_one("1");
-    assert_ne!(
-        render(&t, Interpretation::TruthValue),
-        render(&t, Interpretation::Timestamp),
-        "render must depend on its role argument"
-    );
-}
 
 /// Finding B at the observation layer: a truth value is observably **not** a
 /// number. `TRUE` carries the `truthValue` axis and the `truthValued`
@@ -48,10 +35,7 @@ fn truth_value_is_observably_not_a_number() {
     assert_eq!(one.truth_value, None);
     assert!(t.capabilities.contains(&"truthValued"));
     assert!(!one.capabilities.contains(&"truthValued"));
-    assert_ne!(
-        render(&run_one("TRUE"), Interpretation::Unassigned),
-        render(&run_one("1"), Interpretation::Unassigned),
-    );
+    assert_ne!(render(&run_one("TRUE")), render(&run_one("1")));
 }
 /// Every observed protocol string is canonical lower-camelCase (LANG.OBSERVATION.FIREWALL):
 /// nonempty, lowercase first letter, ASCII-alphanumeric only (no `_`, no `-`).
@@ -89,65 +73,26 @@ fn protocol_strings_are_lower_camel_case() {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
-    // ───────────────────────── render is a pure (data, role) function ─────────
+    // ───────────────────────── render is a pure function ─────────────────────
 
-    /// **Totality + determinism**: `render` is defined on every LANG.OBSERVATION.PROTOCOL role
-    /// for every well-formed value (the role match is exhaustive over the 8
-    /// roles) and is a deterministic pure function — two calls agree. (Probe
-    /// finding: an empty vector `[ ]` renders to the empty string, so
-    /// nonemptiness is *not* a render law; totality and determinism are.)
+    /// **Totality + determinism**: `render` is defined for every well-formed
+    /// value and is a deterministic pure function — two calls agree.
     #[test]
-    fn render_total_and_deterministic_over_all_roles(src in any_value_src()) {
+    fn render_total_and_deterministic(src in any_value_src()) {
         let v = run_one(&src);
-        for role in ALL_ROLES {
-            prop_assert_eq!(render(&v, role), render(&v, role));
-        }
+        prop_assert_eq!(render(&v), render(&v));
     }
 
-    /// **Purity / hint-independence** (LANG.OBSERVATION.PROTOCOL: "two values are displayed
-    /// identically whenever their data and role are equal"). `render(v, r)`
-    /// depends only on `(data, role)`, never on the value's stored hint, so
-    /// re-roling the carrier value leaves every rendering fixed.
-    #[test]
-    fn render_depends_only_on_data_and_role(src in any_value_src()) {
-        let v = run_one(&src);
-        let mut reroled = v.clone();
-        reroled.hint = if v.hint == Interpretation::RawNumber {
-            Interpretation::Timestamp
-        } else {
-            Interpretation::RawNumber
-        };
-        for role in ALL_ROLES {
-            prop_assert_eq!(render(&v, role), render(&reroled, role));
-        }
-    }
-
-    /// The default observation `Value::to_string()` is exactly `render` at the
-    /// value's own role: `observe`'s display half factors through `render`.
-    #[test]
-    fn default_observation_is_render_at_own_role(src in any_value_src()) {
-        let v = run_one(&src);
-        prop_assert_eq!(v.to_string(), render(&v, v.hint));
-    }
     // ───────────────────────── semantic firewall on the axes ─────────────────
 
-    /// **Structural axes are role-orthogonal** (semantic firewall): the
-    /// data-plane axes `semanticKind`, `shape`, and `origin` read only the data
-    /// and absence metadata, so assigning a display role never changes them.
+    /// **The truth axis is the Boolean domain** (LANG.VALUES.TRUTH): a value
+    /// reports `truthValue` exactly when it is a Boolean. UNKNOWN is a NIL and
+    /// reports none.
     #[test]
-    fn structural_axes_are_role_orthogonal(src in any_value_src()) {
+    fn truth_axis_is_present_exactly_on_booleans(src in any_value_src()) {
         let v = run_one(&src);
-        let mut reroled = v.clone();
-        reroled.hint = if v.hint == Interpretation::TruthValue {
-            Interpretation::Unassigned
-        } else {
-            Interpretation::TruthValue
-        };
-        let a = observe_axes(&v);
-        let b = observe_axes(&reroled);
-        prop_assert_eq!(a.semantic_kind, b.semantic_kind);
-        prop_assert_eq!(a.shape, b.shape);
-        prop_assert_eq!(a.origin, b.origin);
+        let is_boolean = matches!(v.data, ajisai_core::types::ValueData::Boolean(_));
+        prop_assert_eq!(v.truth_value().is_some(), is_boolean);
     }
 
     /// **Axis coherence** on runtime-produced values (LANG.OBSERVATION.FIREWALL: a truth-valued

@@ -37,16 +37,16 @@ mod format_json_tests {
         assert_eq!(top("1/8 2 FORMAT").await, "'0.13'");
         assert_eq!(top("3/8 2 FORMAT").await, "'0.38'");
         assert_eq!(top("-1/8 2 FORMAT").await, "'-0.13'");
-        // One rule in the language: FORMAT agrees with ROUND and QUANTIZE.
+        // One rule in the language: FORMAT agrees with ROUND.
         assert_eq!(
-            top("5/2 ROUND -5/2 ROUND 1/8 100 QUANTIZE").await,
+            top("5/2 ROUND -5/2 ROUND 1/8 100 MUL ROUND 100 DIV").await,
             "3/1 -3/1 13/100"
         );
         assert_eq!(top("-1/1000 2 FORMAT").await, "'0.00'");
         assert_eq!(top("12345 2 FORMAT").await, "'12345.00'");
         assert_eq!(top("0 3 FORMAT").await, "'0.000'");
         assert_eq!(top("2 SQRT 3 FORMAT").await, "'1.414'");
-        assert_eq!(top("2 SQRT NEG 3 FORMAT").await, "'-1.414'");
+        assert_eq!(top("2 SQRT -1 MUL 3 FORMAT").await, "'-1.414'");
         assert_eq!(top("PI 4 FORMAT").await, "'3.1416'");
         // Text, not a number: the rounded quantity never re-enters arithmetic.
         assert_eq!(error_of("1/3 2 FORMAT 1 ADD").await, "nonNumeric");

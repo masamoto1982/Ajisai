@@ -1,21 +1,20 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::{
-    extract_operands, nil_passthrough_binary, nil_passthrough_unary, push_result,
+    extract_operands, nil_passthrough_binary, push_result,
 };
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
-use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::Value;
 
 fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
 }
 
 /// `three_way_compare`, with a non-numeric operand reclassified as
-/// `nonNumeric` — ABS and MIN/MAX are the only callers of `three_way_compare`
-/// in this file, and both declare `nonNumeric`; SORT/ORDER's own wrapper in
+/// `nonNumeric` — MIN/MAX are the only callers of `three_way_compare`
+/// in this file, and they declare `nonNumeric`; SORT/ORDER's own wrapper in
 /// `sort.rs` remaps the same shared function's error to `nonComparableElement`
 /// instead, since a shared function cannot know which caller it is (Phase 2's
 /// lesson, repeated by Phase 4's `nonInteger`/`nonComparableElement` fixes).
@@ -34,8 +33,8 @@ fn compare_for_numeric(
 /// Apply a unary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
 ///
 /// The clause makes element-wise application the rule for an arithmetic Word
-/// given a vector. `NEG`, `ABS` and `SIGN` took a scalar only, so `[ -1 2 ] ABS`
-/// was an ERROR while `[ -1 2 ] 1 MUL` lifted happily — the same clause read
+/// given a vector. The unary Words once took a scalar only, so `[ 4 9 ] SQRT`
+/// was an ERROR while `[ 4 9 ] 1 MUL` lifted happily — the same clause read
 /// two ways depending on arity. A NIL lane passes through, as it does for the
 /// scalar law.
 pub(crate) fn lift_unary_numeric(
@@ -55,112 +54,6 @@ pub(crate) fn lift_unary_numeric(
     }
 }
 
-/// The scalar law of `NEG`, lifted by [`lift_unary_numeric`].
-fn neg_scalar(value: &Value) -> Result<Value> {
-    match exact_real_of(value) {
-        Some(er) => Ok(Value::from_exact_real(er.neg())),
-        None => Err(AjisaiError::declared(
-            "nonNumeric",
-            "NEG: expected a number",
-        )),
-    }
-}
-
-/// The scalar law of `ABS`, lifted by [`lift_unary_numeric`].
-///
-/// A Tier 2 operand (`PI`) compared against zero may exhaust its refinement
-/// budget without deciding a sign — `Undecided` there is the logical Unknown
-/// (LANG.VALUES.EXACT), a plain NIL rather than an error: the operand is
-/// perfectly well-formed, ABS's output domain is numeric, not truth.
-fn abs_scalar(value: &Value) -> Result<Value> {
-    let zero = Value::from_fraction(Fraction::from(0));
-    match compare_for_numeric(value, &zero)? {
-        crate::interpreter::comparison_scalar::OrderOutcome::Decided(std::cmp::Ordering::Less) => {
-            let er = exact_real_of(value).expect("comparable operand is numeric");
-            Ok(Value::from_exact_real(er.neg()))
-        }
-        crate::interpreter::comparison_scalar::OrderOutcome::Decided(_) => Ok(value.clone()),
-        crate::interpreter::comparison_scalar::OrderOutcome::Undecided(_) => Ok(
-            Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-        ),
-    }
-}
-
-/// Exact-real view of a numeric operand: a rational `Scalar` lifts to
-/// `ExactReal::Rational`; a lazy `ExactScalar` (an `AlgebraicSqrt` or `Gosper`
-/// value) is taken as-is. Non-numeric kinds return `None` — the malformed-use
-/// path.
-fn exact_real_of(value: &Value) -> Option<ExactReal> {
-    match &value.data {
-        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-        ValueData::ExactScalar(er) => Some(er.clone()),
-        _ => None,
-    }
-}
-
-/// `NEG` is the additive inverse `-x` over exact numeric values. It computes
-/// directly on the exact-real representation, so it accepts the full numeric
-/// domain including lazy continued-fraction operands (`2 SQRT NEG` is `-√2`),
-/// and is total — no comparison and therefore no `Unknown` is ever involved.
-/// NIL-passthrough; a non-numeric operand is malformed use and raises an error.
-pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
-    require_stack_top(interp, "NEG")?;
-    if nil_passthrough_unary(interp) {
-        return Ok(());
-    }
-    if record_lift::lift_unary(interp, &op_neg)? {
-        return Ok(());
-    }
-    let operands = extract_operands(interp, 1)?;
-    match lift_unary_numeric(&operands[0], &neg_scalar) {
-        Ok(result) => {
-            push_result(interp, result);
-            interp.stack.set_last_role(Interpretation::RawNumber);
-            Ok(())
-        }
-        Err(e) => {
-            restore_operands(interp, operands);
-            Err(e)
-        }
-    }
-}
-
-/// `ABS` is the absolute value `|x|`, derived from the sign and exact
-/// arithmetic (LANG.VALUES.TRUTH): it decides the order of `x` against `0` through
-/// the same budgeted comparison as the relations and negates when `x < 0`,
-/// otherwise returns `x` unchanged. It therefore accepts the full numeric
-/// domain including lazy continued-fraction operands, and over the admitted
-/// domain (LANG.VALUES.EXACT) is total and exact. When the order against `0` does not
-/// decide within the budget, the result is the logical `Unknown` (U) carrying
-/// `diagnosis.agreedPrefix`. NIL-passthrough, with NIL taking priority over a
-/// U-producing comparison (LANG.VALUES.TRUTH); a non-numeric operand raises an error.
-pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
-    require_stack_top(interp, "ABS")?;
-    if nil_passthrough_unary(interp) {
-        return Ok(());
-    }
-    if record_lift::lift_unary(interp, &op_abs)? {
-        return Ok(());
-    }
-    let operands = extract_operands(interp, 1)?;
-    match lift_unary_numeric(&operands[0], &abs_scalar) {
-        Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::RawNumber
-            };
-            push_result(interp, result);
-            interp.stack.set_last_role(role);
-            Ok(())
-        }
-        Err(e) => {
-            restore_operands(interp, operands);
-            Err(e)
-        }
-    }
-}
-
 /// `PI` pushes the Tier 2 computable real π (LANG.VALUES.EXACT): a general
 /// computable real with no algebraic normal form. It is the first Word that
 /// constructs a Tier 2 value, so comparing against it is the first
@@ -175,9 +68,7 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
 /// referential-identity shortcut.
 pub(crate) fn op_pi(interp: &mut Interpreter) -> Result<()> {
     let value = Value::from_exact_real(ExactReal::Computable(crate::types::exact::pi::pi()));
-    interp
-        .stack
-        .push_with_role(value, Interpretation::RawNumber);
+    interp.stack.push(value);
     Ok(())
 }
 
@@ -305,13 +196,7 @@ where
     };
     match lift_binary_numeric(&operands[0], &operands[1], &select) {
         Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::RawNumber
-            };
             push_result(interp, result);
-            interp.stack.set_last_role(role);
             Ok(())
         }
         Err(e) => {
@@ -359,12 +244,7 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 
     match lift_unary_numeric(&value, &sqrt_scalar) {
         Ok(result) => {
-            let role = if result.is_nil() {
-                Interpretation::Nil
-            } else {
-                Interpretation::RawNumber
-            };
-            interp.stack.push_with_role(result, role);
+            interp.stack.push(result);
             Ok(())
         }
         Err(e) => {
@@ -377,7 +257,7 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 /// The scalar law of `SQRT`, lifted by [`lift_unary_numeric`].
 fn sqrt_scalar(value: &Value) -> Result<Value> {
     let Some(f) = value.as_scalar() else {
-        // `nonNumeric` is the same declared condition `DIV`/`QUANTIZE` use for
+        // `nonNumeric` is the same declared condition `DIV` uses for
         // an operand outside the numeric domain; SQRT did not declare it
         // before this fix even though the failure is the identical shape.
         return Err(AjisaiError::declared(

@@ -37,36 +37,36 @@ async fn pi_is_a_computable_real_decisive_against_separated_rationals() {
     }
 }
 
-/// `EQ`/`LT`/`LTE`/`GT`/`GTE`: a `PI PI` pair never separates, so the
-/// comparison's budget exhausts and the result is the logical Unknown (U) —
-/// a NIL tagged `TruthValue` so `truthValue()` reports `unknown`, not an
-/// ordinary absence and never an error.
+/// `EQ`/`LT`/`GT`: a `PI PI` pair never separates, so the
+/// comparison's budget exhausts and the result is UNKNOWN — a NIL carrying
+/// `undecidable` (LANG.VALUES.TRUTH), never an error.
 #[tokio::test]
 async fn comparison_family_projects_undecidable_pi_pair_to_unknown() {
-    for name in ["EQ", "LT", "LTE", "GT", "GTE"] {
+    for name in ["EQ", "LT", "GT"] {
         let code = format!("PI PI {name}");
         let stack = run_ok(&code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
         assert!(stack[0].is_nil(), "`{code}` must produce NIL (UNKNOWN)");
         assert_eq!(
-            stack[0].truth_value(),
-            Some("unknown"),
-            "`{code}`'s NIL result must observe as truthValue `unknown`"
+            stack[0].nil_reason(),
+            Some(&crate::error::NilReason::Undecidable),
+            "`{code}`'s NIL result must carry `undecidable`"
         );
     }
 }
 
-/// `MIN`/`MAX`/`ABS`: their output domain is numeric, not truth, so an
-/// undecidable `PI PI` pair projects to a plain NIL — no `TruthValue` hint.
+/// `MIN`/`MAX`: an undecidable `PI PI` pair projects to the same NIL a
+/// comparison answers — a NIL is a NIL whatever Word produced it.
 #[tokio::test]
 async fn selecting_words_project_undecidable_pi_pair_to_plain_nil() {
     for code in ["PI PI MIN", "PI PI MAX"] {
         let stack = run_ok(code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
         assert!(stack[0].is_nil(), "`{code}` must produce NIL");
-        assert!(
-            !stack[0].is_truth_value(),
-            "`{code}`'s NIL must not carry the TruthValue role"
+        assert_eq!(
+            stack[0].truth_value(),
+            None,
+            "`{code}`'s NIL is not a Boolean"
         );
     }
 
@@ -84,9 +84,10 @@ async fn ordering_words_project_undecidable_pi_pair_to_plain_nil() {
         let stack = run_ok(code).await;
         assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
         assert!(stack[0].is_nil(), "`{code}` must produce NIL");
-        assert!(
-            !stack[0].is_truth_value(),
-            "`{code}`'s NIL must not carry the TruthValue role"
+        assert_eq!(
+            stack[0].truth_value(),
+            None,
+            "`{code}`'s NIL is not a Boolean"
         );
     }
 
@@ -102,10 +103,10 @@ async fn ordering_words_project_undecidable_pi_pair_to_plain_nil() {
 ///
 /// It did not: `Computable`'s `PartialEq` is pointer identity, so the shared
 /// pair took `pairwise_eq`'s structural shortcut and `X X EQ` answered TRUE
-/// while `X X GTE` — which equality entails — still answered UNKNOWN.
+/// while `X X LT NOT` — which equality entails — still answered UNKNOWN.
 #[tokio::test]
 async fn equality_reads_the_value_not_the_allocation() {
-    for op in ["EQ", "LT", "LTE", "GT", "GTE"] {
+    for op in ["EQ", "LT", "GT"] {
         let fresh = run_ok(&format!("PI PI {op}")).await;
         let shared = run_ok(&format!("PI 'X' BIND X X {op}")).await;
         assert!(
@@ -116,8 +117,7 @@ async fn equality_reads_the_value_not_the_allocation() {
             shared[0]
         );
         assert_eq!(
-            fresh[0].truth_value(),
-            shared[0].truth_value(),
+            fresh[0], shared[0],
             "`{op}` must not split on how the two π were made"
         );
     }

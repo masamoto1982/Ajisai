@@ -2,8 +2,8 @@
 //! are ordered and tested for equality, and what it means when they cannot be.
 //!
 //! Split out of `comparison.rs`, which keeps the comparison *Words*: the
-//! element-wise lifting, the stack fast paths, and the `LT`/`LTE`/`GT`/`GTE`/
-//! `EQ`/`NEQ` entry points. What is here is the law those Words apply, one
+//! element-wise lifting, the stack fast paths, and the `LT`/`GT`/`EQ` entry
+//! points. What is here is the law those Words apply, one
 //! scalar pair at a time, and it is where the tiers of LANG.VALUES.EXACT are
 //! distinguished: a rational pair decides by `Fraction`, a Tier 1 algebraic pair
 //! decides exactly through `ExactReal::cmp_exact`, and a Tier 2 computable pair
@@ -21,18 +21,14 @@ use crate::types::{Value, ValueData};
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum OrderingKind {
     Lt,
-    Le,
     Gt,
-    Ge,
 }
 
 impl OrderingKind {
     pub(crate) fn apply_to_fraction(self, a: &Fraction, b: &Fraction) -> bool {
         match self {
             OrderingKind::Lt => a.lt(b),
-            OrderingKind::Le => a.le(b),
             OrderingKind::Gt => a.gt(b),
-            OrderingKind::Ge => a.ge(b),
         }
     }
 
@@ -41,9 +37,7 @@ impl OrderingKind {
         use std::cmp::Ordering;
         match self {
             OrderingKind::Lt => o == Ordering::Less,
-            OrderingKind::Le => o != Ordering::Greater,
             OrderingKind::Gt => o == Ordering::Greater,
-            OrderingKind::Ge => o != Ordering::Less,
         }
     }
 }

@@ -70,7 +70,6 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
         Token::VectorEnd => bytes.push(b']'),
         Token::RecordStart => bytes.push(b'{'),
         Token::RecordEnd => bytes.push(b'}'),
-        Token::LineBreak => bytes.push(b'\n'),
     }
 }
 
@@ -79,14 +78,11 @@ pub(crate) fn encode_token(bytes: &mut Vec<u8>, tok: &Token) {
 /// bodies — e.g. the same definition exported and re-imported into another
 /// dictionary — produce the same key and can share one stored body (LANG.AUTHORITY.FREEDOM
 /// content store). Exact-rational numbers are normalized so `1` and `1/1` agree.
-pub(crate) fn body_content_key(lines: &[crate::types::ExecutionLine]) -> String {
+pub(crate) fn body_content_key(body: &[Token]) -> String {
     let mut bytes = Vec::new();
-    for line in lines {
-        bytes.push(0x1d);
-        for tok in line.body_tokens.iter() {
-            bytes.push(0x1f);
-            encode_token(&mut bytes, tok);
-        }
+    for tok in body {
+        bytes.push(0x1f);
+        encode_token(&mut bytes, tok);
     }
     content_digest(&bytes)
 }
@@ -238,59 +234,55 @@ impl Interpreter {
 
     fn build_word_shape(&self, def: &WordDefinition, user_set: &HashSet<String>) -> Vec<Atom> {
         let mut atoms = Vec::new();
-        for line in def.lines.iter() {
-            atoms.push(structural_atom(b'\n'));
-            for tok in line.body_tokens.iter() {
-                let atom = match tok {
-                    Token::Number(literal) => number_atom(literal),
-                    Token::String(s) => {
-                        let mut b = vec![b'S'];
-                        b.extend_from_slice(s.as_bytes());
-                        Atom::Raw(b)
-                    }
-                    Token::Symbol(s) => {
-                        let canon = canonicalize_core_word_name(s);
-                        match self.resolve_word_entry(&canon) {
-                            Some((resolved, rdef)) => {
-                                if def.dependencies.contains(resolved.as_ref()) {
-                                    // A user-word dependency fixed at definition time:
-                                    // encode the recorded target rather than treating a
-                                    // later same-named word as a fresh capture.
-                                    Atom::Ref(resolved.to_string())
-                                } else if rdef.is_builtin {
-                                    // Core word: stable global vocabulary,
-                                    // encoded by its canonical resolved name.
-                                    let mut b = vec![b'G'];
-                                    b.extend_from_slice(resolved.as_bytes());
-                                    Atom::Raw(b)
-                                } else if user_set.contains(resolved.as_ref()) {
-                                    // A user word not recorded in this definition's
-                                    // dependency set was not resolved when the word was
-                                    // authored. Keep it as a free symbol so adding an
-                                    // unrelated word cannot recapture existing content.
-                                    let mut b = vec![b'F'];
-                                    b.extend_from_slice(canon.as_bytes());
-                                    Atom::Raw(b)
-                                } else {
-                                    Atom::Ref(resolved.to_string())
-                                }
-                            }
-                            // Free / unresolved symbol: encoded by canonical name.
-                            None => {
+        for tok in def.body.iter() {
+            let atom = match tok {
+                Token::Number(literal) => number_atom(literal),
+                Token::String(s) => {
+                    let mut b = vec![b'S'];
+                    b.extend_from_slice(s.as_bytes());
+                    Atom::Raw(b)
+                }
+                Token::Symbol(s) => {
+                    let canon = canonicalize_core_word_name(s);
+                    match self.resolve_word_entry(&canon) {
+                        Some((resolved, rdef)) => {
+                            if def.dependencies.contains(resolved.as_ref()) {
+                                // A user-word dependency fixed at definition time:
+                                // encode the recorded target rather than treating a
+                                // later same-named word as a fresh capture.
+                                Atom::Ref(resolved.to_string())
+                            } else if rdef.is_builtin {
+                                // Core word: stable global vocabulary,
+                                // encoded by its canonical resolved name.
+                                let mut b = vec![b'G'];
+                                b.extend_from_slice(resolved.as_bytes());
+                                Atom::Raw(b)
+                            } else if user_set.contains(resolved.as_ref()) {
+                                // A user word not recorded in this definition's
+                                // dependency set was not resolved when the word was
+                                // authored. Keep it as a free symbol so adding an
+                                // unrelated word cannot recapture existing content.
                                 let mut b = vec![b'F'];
                                 b.extend_from_slice(canon.as_bytes());
                                 Atom::Raw(b)
+                            } else {
+                                Atom::Ref(resolved.to_string())
                             }
                         }
+                        // Free / unresolved symbol: encoded by canonical name.
+                        None => {
+                            let mut b = vec![b'F'];
+                            b.extend_from_slice(canon.as_bytes());
+                            Atom::Raw(b)
+                        }
                     }
-                    Token::VectorStart => structural_atom(b'['),
-                    Token::VectorEnd => structural_atom(b']'),
-                    Token::RecordStart => structural_atom(b'{'),
-                    Token::RecordEnd => structural_atom(b'}'),
-                    Token::LineBreak => structural_atom(b'\n'),
-                };
-                atoms.push(atom);
-            }
+                }
+                Token::VectorStart => structural_atom(b'['),
+                Token::VectorEnd => structural_atom(b']'),
+                Token::RecordStart => structural_atom(b'{'),
+                Token::RecordEnd => structural_atom(b'}'),
+            };
+            atoms.push(atom);
         }
         atoms
     }

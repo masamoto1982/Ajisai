@@ -119,7 +119,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 3.",
         }],
         failure_note: "",
-        related: &["SUB", "MUL", "DIV", "MOD"],
+        related: &["SUB", "MUL", "DIV"],
     },
     BuiltinLookupDoc {
         word: "SUB",
@@ -129,7 +129,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 2.",
         }],
         failure_note: "",
-        related: &["ADD", "MUL", "DIV", "MOD"],
+        related: &["ADD", "MUL", "DIV"],
     },
     BuiltinLookupDoc {
         word: "MUL",
@@ -139,7 +139,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 8.",
         }],
         failure_note: "",
-        related: &["ADD", "SUB", "DIV", "MOD"],
+        related: &["ADD", "SUB", "DIV"],
     },
     BuiltinLookupDoc {
         word: "DIV",
@@ -149,17 +149,17 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 5.",
         }],
         failure_note: "Division by zero yields a Bubble/NIL with reason\ndivisionByZero.",
-        related: &["ADD", "SUB", "MUL", "MOD"],
+        related: &["ADD", "SUB", "MUL", "FLOOR"],
     },
     BuiltinLookupDoc {
-        word: "MOD",
-        behavior: "Pops two numeric values and pushes the remainder of their\ndivision.",
+        word: "FLOOR",
+        behavior: "Pops a numeric value and pushes the greatest integer not\nabove it. The decision is exact.",
         examples: &[BuiltinExampleDoc {
-            code: "7 3 %",
-            result: "Pushes 1.",
+            code: "7 2 / FLOOR",
+            result: "Pushes 3.",
         }],
         failure_note: "",
-        related: &["DIV", "FLOOR", "ROUND"],
+        related: &["DIV", "ROUND"],
     },
     // ── Comparison ────────────────────────────────────────────────────────
     BuiltinLookupDoc {
@@ -170,7 +170,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes TRUE.",
         }],
         failure_note: "",
-        related: &["NOT", "LT", "LTE", "GT", "GTE"],
+        related: &["NOT", "LT", "GT"],
     },
     BuiltinLookupDoc {
         word: "LT",
@@ -180,7 +180,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes TRUE.",
         }],
         failure_note: "",
-        related: &["LTE", "GT", "GTE", "EQ"],
+        related: &["GT", "EQ"],
     },
     // ── Casts and text ────────────────────────────────────────────────────
     BuiltinLookupDoc {
@@ -253,7 +253,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 2 ].",
         }],
         failure_note: "",
-        related: &["MAP", "FOLD", "ANY", "ALL"],
+        related: &["MAP", "FOLD"],
     },
     BuiltinLookupDoc {
         word: "FOLD",

@@ -5,10 +5,9 @@
 // ブラウザコンソールにスタックトレースが出るので、原因解析は可能。
 
 use crate::types::value_protocol::{
-    exact_display, exact_terms, interpretation_protocol_str, value_to_protocol, ProtocolNode,
-    ProtocolValue,
+    exact_display, exact_terms, value_to_protocol, ProtocolNode, ProtocolValue,
 };
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Value, ValueData};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -123,31 +122,22 @@ fn absence_to_protocol_js(absence: &crate::semantic::AbsenceMetadata) -> JsValue
 /// `origin` here; the value domains discriminate themselves through `type`, so
 /// those axes described the same six domains a second time and no reader ever
 /// consulted them.
-fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
+fn value_semantics_to_js(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
-    // The `truthValue` axis (LANG.VALUES.TRUTH) is the only observable surface
-    // for the three-valued logic: `true` / `false` / `unknown`. It is derived
-    // from the *effective* interpretation role, because a definite boolean
-    // carries the `TruthValue` role in the semantic plane rather than on the
-    // value's own hint. Present only on truth-valued values.
-    let truth = value.truth_value_for_role(effective);
-    if let Some(truth) = truth {
+    // The `truthValue` axis (LANG.VALUES.TRUTH): present on a Boolean only.
+    // UNKNOWN is a NIL and is observed through `absence` below.
+    if let Some(truth) = value.truth_value() {
         set_prop(&obj, "truthValue", &truth.into());
     }
     if let Some(absence) = value.normalized_absence_metadata() {
         set_prop(&obj, "absence", &absence_to_protocol_js(&absence));
     }
-    // Exact-irrational firewall marker (LANG.OBSERVATION.FIREWALL): an `ExactScalar` rendered
-    // under any role other than the lossless ContinuedFraction form is shown
-    // as a *best rational approximation* (see `value_to_protocol`). Without a
-    // marker its `number` value is indistinguishable from an exact rational,
-    // which contradicts Ajisai's "no hidden truncation" guarantee. This is an
-    // additive, optional field on the `semantics` metadata bag: existing
-    // consumers ignore it; the GUI can use it to prefix an `≈`. ContinuedFraction
-    // nodes carry no `semantics` block, so they never reach here.
-    if matches!(value.data, ValueData::ExactScalar(_))
-        && effective != Interpretation::ContinuedFraction
-    {
+    // Exact-irrational firewall marker (LANG.OBSERVATION.FIREWALL): an
+    // `ExactScalar`'s `number` value is a *best rational approximation* (see
+    // `value_to_protocol`). Without a marker it is indistinguishable from an
+    // exact rational, which contradicts Ajisai's "no hidden truncation"
+    // guarantee. The GUI can use it to prefix an `≈`.
+    if matches!(value.data, ValueData::ExactScalar(_)) {
         set_prop(&obj, "approximate", &JsValue::TRUE);
     }
     // The exact value itself, when there is a short way to write it. An
@@ -174,7 +164,7 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     obj.into()
 }
 
-// The pure (Value, hint) -> protocol mapping (`ProtocolNode`,
+// The pure Value -> protocol mapping (`ProtocolNode`,
 // `value_to_protocol`) lives in `crate::types::value_protocol` so the native
 // CLI shares the exact same wire format. Extracting it out of the `JsValue`
 // glue also lets the entire decision be unit / MC/DC / property tested
@@ -186,17 +176,8 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
 /// `value_to_protocol`, which is verified natively.
 fn protocol_to_js(node: &ProtocolNode) -> JsValue {
     let obj = js_sys::Object::new();
-    set_prop(
-        &obj,
-        "displayHint",
-        &interpretation_protocol_str(node.display_hint).into(),
-    );
     if let Some(source) = &node.semantics {
-        set_prop(
-            &obj,
-            "semantics",
-            &value_semantics_to_js(source, node.display_hint),
-        );
+        set_prop(&obj, "semantics", &value_semantics_to_js(source));
     }
     set_prop(&obj, "type", &node.type_str.into());
     match &node.value {
@@ -237,6 +218,6 @@ fn protocol_to_js(node: &ProtocolNode) -> JsValue {
     obj.into()
 }
 
-pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<Interpretation>) -> JsValue {
-    protocol_to_js(&value_to_protocol(value, external_hint_opt))
+pub(crate) fn value_to_js(value: &Value) -> JsValue {
+    protocol_to_js(&value_to_protocol(value))
 }

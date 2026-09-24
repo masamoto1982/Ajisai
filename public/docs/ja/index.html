@@ -585,7 +585,7 @@
                     <p class="ref-note">角括弧<code>[</code> <code>]</code>も同じです。それ自体で1つのワードであり、前後に空白が必要です。<code>[ 1 2 ]LENGTH</code>は<code>]LENGTH</code>という不正なトークンとして拒否されるため、<code>[ 1 2 ] LENGTH</code>と書いてください。</p>
                     <p class="ref-note">Playgroundの<strong>Format</strong>ボタンは、この足りない空白を補います(実行前にも同じ整形が走るため、<code>[1 2 3]</code>はPlaygroundでは<code>[ 1 2 3 ]</code>として実行されます)。整形されるのは編集中のソースだけで、言語の規則がゆるむわけではありません。CLIやMCPに同じソースをそのまま渡せばエラーになります。</p>
                     <h3>記号ワードとトークン判定</h3>
-                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。ほとんどの記号は1文字ですが、比較系のワードには2文字の記号が2つあります。<code>&lt;=</code>が<code>LTE</code>、<code>&gt;=</code>が<code>GTE</code>にあたります。トークンが終わるのは空白のときだけで、途中で終わることは決してないため、2文字の記号があっても上の規則は何も複雑になりません。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
+                    <p>Ajisaiにおける記号は、単に記号で綴られた名前にすぎません。記号エイリアスは<code>+ - * / = &lt; &gt;</code>の7つで、いずれも1文字です。記号は名前の綴りの一種にすぎないため、たとえ複数の文字からなる記号があっても上の規則は何も複雑になりません。トークンが終わるのは空白のときだけで、途中で終わることは決してないからです。トークンの意味は先頭の文字ではなく、トークン全体の字句によって決まります。たとえば<code>1/2</code>は全体が分数リテラルとしてパースされ、単独の<code>/</code>は除算ワードの名前としてパースされます。</p>
                     <h3>コメント</h3>
                     <p><code>#</code>は行末まで続くコメントを開始します。<code>#</code>からその行の末尾までの文字は、トークン化される前に破棄されます。なお、文字列リテラルの中にある<code>#</code>は通常のテキストとして扱われるため、<code>'a # b'</code>は全体で1つの文字列です。</p>
                     <h3>具体例</h3>
@@ -601,8 +601,8 @@
                             </tbody>
                         </table>
                     </div>
-                    <h3>改行が意味を持つところ</h3>
-                    <p>基本規則として、改行はスペースと同様にトークンを区切る空白として扱われます。そのため、プログラムは好きなだけ多くの行にわたって書いてかまいません。ただし<strong>唯一の例外</strong>があります。ワード定義の本体では、<em>その本体自身の階層にある</em>改行が1つの文の終わりと次の文の始まりを意味します。<code>[ ]</code>ブロックや<code>[ ]</code>ベクトルの内部に書かれた改行はその値の内側にあり、何も区切りません。したがってブロックは何行にわたっても1つの文のままです。それ以外の場所では改行に特別な意味はなく、1行で書いても複数行に分けて書いてもまったく同じプログラムとして実行されます。</p>
+                    <h3>改行</h3>
+                    <p>改行はスペースと同じ空白で、トークンを区切る以外の意味を持ちません。プログラムは好きなだけ多くの行にわたって書いてかまわず、1行で書いても複数行に分けて書いても同じプログラムです。ワード定義の本体も同じで、改行の位置が違うだけの2つの定義は同じワードになり、<code>DIGEST</code>も一致します。改行が終わらせるのはコメントだけです。単語の先頭に書いた<code>#</code>から行末までがコメントになります。</p>
                     <h3>数値リテラル</h3>
                     <p>小数リテラルは、小数点の<strong>両側</strong>に少なくとも1桁の数字を必要とします。<code>0.5</code>や<code>5.0</code>は数ですが、<code>.5</code>や<code>5.</code>は数ではありません。この規則により小数点が数の先頭や末尾の文字になることは決してなく、単独の<code>.</code>を不完全なリテラルではなく通常の名前として安全に使えます。</p>
                     <h3>文字列リテラル</h3>
@@ -1112,7 +1112,7 @@
                 </section>
 
                 <section id="operators" class="ref-page">
-                    <h2>演算子(<code>+ - * / %</code>, <code>=</code>, <code>AND</code>)</h2>
+                    <h2>演算子(<code>+ - * /</code>, <code>=</code>, <code>AND</code>)</h2>
                     <h3 id="arithmetic">算術</h3>
                     <p>算術ワードは、ベクトル同士の要素ごとの演算として機能します。各ワードには正式な英語名が定義されており、演算記号はその糖衣構文です。</p>
                     <h3>算術ワード一覧</h3>
@@ -1126,7 +1126,6 @@
                                 <tr><td><code>SUB</code></td><td><code>-</code></td><td class="notes">減算</td></tr>
                                 <tr><td><code>MUL</code></td><td><code>*</code></td><td class="notes">乗算</td></tr>
                                 <tr><td><code>DIV</code></td><td><code>/</code></td><td class="notes">厳密な除算</td></tr>
-                                <tr><td><code>MOD</code></td><td><code>%</code></td><td class="notes">剰余</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1185,9 +1184,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>7 3 MOD</code></td>
+                                    <td><code>7 'A' BIND 3 'B' BIND A A B / FLOOR B * -</code></td>
                                     <td><code>1/1</code></td>
-                                    <td class="notes">7を3で割った余り。</td>
+                                    <td class="notes">7を3で割った余り。剰余は専用のワードを持たず、<code>a - floor(a/b)·b</code>をそのまま書く。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1199,11 +1198,11 @@
                     <h3>その他の数値演算ワード</h3>
                     <p>基本四則演算に加えて、次の数値演算ワードが用意されています。</p>
                     <ul class="ref-list">
-                        <li><strong>符号操作</strong>: <code>ABS</code>(絶対値)、<code>NEG</code>(符号反転)</li>
+                        <li><strong>符号操作</strong>: 符号反転は<code>x -1 MUL</code>、絶対値は<code>x 'X' BIND X X MUL SQRT</code>と書きます。</li>
                         <li><strong>極値</strong>: <code>MIN</code>(最小値)、<code>MAX</code>(最大値)</li>
                         <li><strong>平方根</strong>: <code>SQRT</code></li>
-                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>CEIL</code>(切り上げ)、<code>ROUND</code>(四捨五入)</li>
-                        <li><strong>量子化</strong>: <code>QUANTIZE</code>は<code>1/d</code>の最も近い倍数に丸めます。ループ処理や反復計算での使用に適したワードです。詳しくは<a href="#iterative">反復のコスト</a>を参照してください。</li>
+                        <li><strong>丸め処理</strong>: <code>FLOOR</code>(切り捨て)、<code>ROUND</code>(四捨五入)。切り上げは<code>x -1 MUL FLOOR -1 MUL</code>と書きます。</li>
+                        <li><strong>格子への丸め</strong>: <code>x d MUL 1/2 ADD FLOOR d DIV</code>は値を<code>1/d</code>の倍数に丸めます。ループ処理や反復計算で分母の肥大化を止めるのに使います。詳しくは<a href="#iterative">反復のコスト</a>を参照してください。</li>
                     </ul>
                     <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">NILの規則</a>を参照してください。</p>
                     <h3 id="powers">累乗と、整数・有理数を読む: <code>POW</code>・<code>GCD</code>・<code>RATIO</code></h3>
@@ -1320,13 +1319,11 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3>決定論的擬似乱数 <code>RANDOM</code></h3>
-                    <p class="ref-note"><code>RANDOM</code>もここにあり、他のすべてのワードと同じく1つの純粋関数です。<code>7 3 RANDOM</code>はシード<code>7</code>だけによって決まる、[0, 1)の範囲の厳密な有理数を3つ引きますが、これは毎回、どのセッションでも同じ3つを引きます。隠れた状態もホストのエントロピーもないため、厳密性や純粋性と矛盾するところは何もありません。<code>ORDER</code>と組み合わせた<code>SEED N RANDOM ORDER</code>は決定論的なシャッフルになり、読みやすい分解能で値を引きたいときは<code>QUANTIZE</code>と組み合わせます。</p>
                     <h3>ベクトルへの自動リフティング</h3>
                     <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり、<code>+</code>と同じ規則でブロードキャストします。負の値を0で打ち切るレクティファイアは<code>[ -1 2 -3 ] 0 MAX</code>と書けて<code>[ 0/1 2/1 0/1 ]</code>になり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で求まり、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>で得られます。いずれも<code>MAP</code>もブロックも不要です。これらに手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが<code>NIL</code>になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
 
                     <h3 id="comparison">比較と真偽値</h3>
-                    <p>6つの順序関係はすべてワードとして用意されています。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値であって、数ではありません。6つそれぞれに対応する記号があり、1文字のものが3つ、2文字のものが3つです。トークンが終わるのは空白または区切り文字の位置だけで、途中で終わることは決してないため、2文字の記号を使ってもトークナイザに余計なコストはかかりません。</p>
+                    <p>比較ワードは<code>EQ</code>・<code>LT</code>・<code>GT</code>の3つで、それぞれ1文字の記号<code>=</code>・<code>&lt;</code>・<code>&gt;</code>を持ちます。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値であって、数ではありません。残りの3つの関係は<code>NOT</code>で書きます。「以下」は<code>a b GT NOT</code>、「以上」は<code>a b LT NOT</code>、「等しくない」は<code>a b EQ NOT</code>です。</p>
                     <h3>比較ワード一覧</h3>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
@@ -1336,9 +1333,7 @@
                             <tbody>
                                 <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">等しい</td></tr>
                                 <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">より小さい</td></tr>
-                                <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">以下</td></tr>
                                 <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">より大きい</td></tr>
-                                <tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td class="notes">以上</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1369,9 +1364,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 1 LTE</code></td>
+                                    <td><code>1 1 GT NOT</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes"><code>LTE</code>、<code>GTE</code>は2文字の名前として使う。「等しくない」は<code>EQ NOT</code>と書く。</td>
+                                    <td class="notes">「1は1以下」。比較の結果は決定できた真偽値なので、<code>NOT</code>で否定すれば残りの関係になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1409,7 +1404,7 @@
                                 <tr>
                                     <td><code>2 SQRT 2 SQRT SUB 0 EQ</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">\(\sqrt{2} - \sqrt{2}\)はちょうど0。平方根およびその和・差・積・商は厳密に比較されるため、6つの関係は予算に頼らずに決定できる。</td>
+                                    <td class="notes">\(\sqrt{2} - \sqrt{2}\)はちょうど0。平方根およびその和・差・積・商は厳密に比較されるため、比較は予算に頼らずに決定できる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1419,12 +1414,12 @@
                         </div>
                     </div>
                     <h3>厳密な比較</h3>
-                    <p class="ref-note">この6つの関係は、有理数も平方根も含め、ワードが組み立てられるすべての値にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
+                    <p class="ref-note">比較は、有理数も平方根も含め、ワードが組み立てられるすべての値にわたって厳密に決定します。したがって比較は常に有限時間で<code>TRUE</code>か<code>FALSE</code>を返します。</p>
 
                     <h3 id="logic">論理</h3>
-                    <p>Ajisaiには<code>AND</code>、<code>OR</code>、<code>NOT</code>という3つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。3つとも綴りのまま書き、記号は持ちません。</p>
+                    <p>Ajisaiには<code>AND</code>と<code>NOT</code>という2つの論理ワードがあり、真偽値<code>TRUE</code>と<code>FALSE</code>に対する論理演算を行います。どちらも綴りのまま書き、記号は持ちません。論理和はド・モルガンの法則どおり<code>a NOT b NOT AND NOT</code>と書きます。</p>
                     <h3>NILはそのまま伝わる</h3>
-                    <p>いずれかのオペランドが<code>NIL</code>であれば、その不在はそのまま結果に伝わります。<code>NIL</code>が入れば<code>NIL</code>が出るので、もう一方のオペランドだけで答えが決まりそうな場合でも、<code>NIL</code>は結果の中に見える形で残ります。</p>
+                    <p><code>NIL</code>は真偽の位置では「不明」として読まれ、強いクリーネ論理で合成されます。もう一方のオペランドだけで答えが決まる場合はその答えになり(<code>FALSE</code>を含む<code>AND</code>は<code>FALSE</code>)、決まらない場合は<code>NIL</code>がその理由を保ったまま結果に残ります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1452,9 +1447,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>TRUE FALSE OR</code></td>
+                                    <td><code>TRUE NOT FALSE NOT AND NOT</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">確定した2つの値の論理OR。</td>
+                                    <td class="notes">確定した2つの値の論理和。<code>AND</code>と<code>NOT</code>の組み合わせで書く。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1763,7 +1758,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <p>ベクトルの<strong>形</strong>——各軸の長さを外側から並べたもの——は、要素ごとの持ち上げがオペランドを揃えるときに使っている概念です。次の5語がそれをプログラムから読み、書き換えます。<code>FLATTEN</code>と<code>DEPTH</code>は自分で書くことができません。入れ子の深さは前もって分からず、再帰も無限ループもない言語は深さの分からない構造を辿れないからです。</p>
+                    <p>ベクトルの<strong>形</strong>——各軸の長さを外側から並べたもの——は、要素ごとの持ち上げがオペランドを揃えるときに使っている概念です。次の4語がそれをプログラムから読み、書き換えます。<code>FLATTEN</code>と<code>DEPTH</code>は自分で書くことができません。入れ子の深さは前もって分からず、再帰も無限ループもない言語は深さの分からない構造を辿れないからです。</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -1774,10 +1769,10 @@
                                 <tr><td><code>RESHAPE</code></td><td><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE</code></td><td class="notes"><code>[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]</code> — 葉を順に、新しい形に組み直す。形の積が葉の数と違えばエラー。大きすぎる形は<code>NIL</code>(<code>spaceExhausted</code>)</td></tr>
                                 <tr><td><code>FLATTEN</code></td><td><code>[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN</code></td><td class="notes"><code>[ 1/1 2/1 3/1 4/1 ]</code> — どれだけ深くてもすべての軸を1本に畳む。<code>CONCAT</code>は1段だけ</td></tr>
                                 <tr><td><code>DEPTH</code></td><td><code>[ 1 [ 2 [ 3 ] ] ] DEPTH</code></td><td class="notes"><code>3/1</code> — 入れ子の深さ。数やテキストは<code>0</code>、平坦なベクトルは<code>1</code></td></tr>
-                                <tr><td><code>RANK</code></td><td><code>[ [ 1 2 ] [ 3 4 ] ] 2 [ 10 MUL ] RANK</code></td><td class="notes"><code>[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]</code> — 指定した深さの値それぞれにブロックを適用する。深さ<code>1</code>は<code>MAP</code>そのもの、<code>0</code>はベクトル全体に一度</td></tr>
                             </tbody>
                         </table>
                     </div>
+                    <p class="ref-note">深さの分かっている値それぞれにブロックを適用するには、<code>MAP</code>をその深さだけ入れ子にします。深さ2なら<code>[ [ 1 2 ] [ 3 4 ] ] [ [ 10 MUL ] MAP ] MAP</code>で、結果は<code>[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]</code>です。</p>
                     <p>まず手を伸ばすべきは<code>ORDER</code>です。<code>SORT</code>はソート後の値が<em>何であるか</em>を返し、<em>どこから来たか</em>は捨ててしまいます。<code>ORDER</code>は位置を保持します。そのためk近傍、上位kスコア、中央値の位置、ランキングのように、キーのほかにペイロードを運ぶ必要があるものは、いずれも<code>ORDER</code>に続けて<code>GET</code>という形になります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -2120,7 +2115,7 @@
                         </div>
                     </div>
                     <h3 id="format">桁数を決めて描く: <code>FORMAT</code></h3>
-                    <p>算術はどこでも丸めず、<code>STR</code>は厳密な字句を持たない数を断ります。それでも<code>1/3</code>を小数3桁で見たいことはあります。<code>FORMAT</code>がその唯一の場所です。値と桁数を受け、<code>ROUND</code>や<code>QUANTIZE</code>と同じ規則（端数がちょうど半分なら0から遠い側へ）で丸めた十進テキストを返します。丸め規則は言語に一つです。出てくるのはテキストであって数ではないので、丸めた量が算術に戻ることはありません。丸め方は固定です——選べるようにすると語が増えるだけだからです。桁数は非負の整数でなければならず（<code>invalidCount</code>）、値はスカラーでなければなりません（<code>nonNumeric</code>）。<code>PI</code>のような計算可能実数で最後の桁が予算内に決まらなければ、<code>undecidable</code>の<code>NIL</code>を投影します。</p>
+                    <p>算術はどこでも丸めず、<code>STR</code>は厳密な字句を持たない数を断ります。それでも<code>1/3</code>を小数3桁で見たいことはあります。<code>FORMAT</code>がその唯一の場所です。値と桁数を受け、<code>ROUND</code>と同じ規則（端数がちょうど半分なら0から遠い側へ）で丸めた十進テキストを返します。丸め規則は言語に一つです。出てくるのはテキストであって数ではないので、丸めた量が算術に戻ることはありません。丸め方は固定です——選べるようにすると語が増えるだけだからです。桁数は非負の整数でなければならず（<code>invalidCount</code>）、値はスカラーでなければなりません（<code>nonNumeric</code>）。<code>PI</code>のような計算可能実数で最後の桁が予算内に決まらなければ、<code>undecidable</code>の<code>NIL</code>を投影します。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2136,7 +2131,7 @@
                                 <tr>
                                     <td><code>5/2 0 FORMAT</code></td>
                                     <td><code>'3'</code></td>
-                                    <td class="notes">ちょうど半分は0から遠い側へ。<code>ROUND</code>・<code>QUANTIZE</code>と同じ、言語に一つの丸め規則。</td>
+                                    <td class="notes">ちょうど半分は0から遠い側へ。<code>ROUND</code>と同じ、言語に一つの丸め規則。</td>
                                 </tr>
                                 <tr>
                                     <td><code>2 SQRT 3 FORMAT</code></td>
@@ -2221,7 +2216,7 @@
                             <tbody>
                                 <tr><td>ワードの本体(<code>DEF</code>)</td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
                                 <tr><td><code>EXEC</code></td><td class="notes">スタック全体</td><td class="notes">積んだものすべて、いくつでも</td></tr>
-                                                                <tr><td><code>MAP</code> <code>FILTER</code> <code>ANY</code> <code>ALL</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または述語系ワードの場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
+                                                                <tr><td><code>MAP</code> <code>FILTER</code></td><td class="notes">現在の要素1つだけ</td><td class="notes">ちょうど1つ。写像後の要素、または<code>FILTER</code>の場合は真偽値。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                                 <tr><td><code>FOLD</code> <code>SCAN</code></td><td class="notes">累積値と要素の2つ</td><td class="notes">次の累積値ちょうど1つ。何も残さなければエラー。最上位より下にあるものは捨てられる</td></tr>
                             </tbody>
                         </table>
@@ -2278,7 +2273,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">複数の条件を組み合わせるときは、真偽値のベクトルどうしを<code>AND</code>・<code>OR</code>・<code>NOT</code>でつなぎます。これらも要素ごとに持ち上がります。<code>[ 3 6 9 ] [ 5 ] GT [ 3 6 9 ] [ 8 ] LT AND</code>は<code>[ FALSE TRUE FALSE ]</code>です。</p>
+                    <p class="ref-note">複数の条件を組み合わせるときは、真偽値のベクトルどうしを<code>AND</code>・<code>NOT</code>でつなぎます。これらも要素ごとに持ち上がります。<code>[ 3 6 9 ] [ 5 ] GT [ 3 6 9 ] [ 8 ] LT AND</code>は<code>[ FALSE TRUE FALSE ]</code>です。</p>
                     <h3>3つ以上に分ける</h3>
                     <p><code>SELECT</code>が選ぶのは常に2つのうちの1つです。3つ以上に分けたいときは<code>SELECT</code>を入れ子にします。上から順に試して最初に当たったものが勝つ、という読み方はしません。どちらが優先かは入れ子の形としてそのまま見えています。</p>
                     <div class="sample">
@@ -2327,9 +2322,9 @@ SELECT</code></td>
                     </div>
                     <p class="ref-note">真偽値の位置に裸の数値は書けません(<code>nonTruthValue</code>)。<code>1</code>や<code>0</code>は真偽値ではないからです(<a href="#disjoint">領域は互いに素</a>)。数値で判定したいなら比較を書いてください。<code>[ 1 ] [ 0 ] EQ NOT</code>のようにです。</p>
 
-                    <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>SCAN</code>・<code>ANY</code>・<code>ALL</code>)</h3>
+                    <h3 id="higher-order">反復(<code>MAP</code>・<code>FILTER</code>・<code>FOLD</code>・<code>SCAN</code>)</h3>
                     <p>コードブロック<code>[ ]</code>は第一級の値です。高階ワードは、ブロックや、定義済みワードの引用された名前を、ベクトルの各要素に適用します。</p>
-                    <p class="ref-note">この6つが反復のすべてです。ワードが自分自身を呼び出して繰り返す書き方はありません。<code>DEF</code>が<a href="#acyclic">循環する定義を拒否する</a>からです。したがって反復の回数は、必ず手元にある有限なベクトルの長さとして書かれており、ブロックを読む前から見えています。</p>
+                    <p class="ref-note">この4つが反復のすべてです。ワードが自分自身を呼び出して繰り返す書き方はありません。<code>DEF</code>が<a href="#acyclic">循環する定義を拒否する</a>からです。したがって反復の回数は、必ず手元にある有限なベクトルの長さとして書かれており、ブロックを読む前から見えています。</p>
                     <p class="ref-note">ブロックが残したものが、そのまま写像後の要素になります。要素数1のベクトルは、他のどんな値とも同じく要素数1のベクトルです。したがって<code>[ 1 2 ] [ 1 COLLECT ] MAP</code>は<code>[ [ 1/1 ] [ 2/1 ] ]</code>であり、<code>[ [ 1 ] [ 2 3 ] ] [ REVERSE ] MAP</code>は<code>[ [ 1/1 ] [ 3/1 2/1 ] ]</code>です。結果がたまたま短いからといって、何かがそれを展開して取り出すことはありません。点が1つしかないクラスタや、出力が1つしかない行も、最後までその形を保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
@@ -2377,7 +2372,7 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] [ [ 2 ] MOD [ 0 ] = ] FILTER</code></td>
+                                    <td><code>[ 1 2 3 4 ] [ 2 / 'M' BIND M FLOOR M = ] FILTER</code></td>
                                     <td><code>[ 2/1 4/1 ]</code></td>
                                     <td class="notes">述語がtrueになる要素を残す(ここでは偶数)。</td>
                                 </tr>
@@ -2458,9 +2453,9 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 3 5 8 ] [ [ 2 ] MOD [ 0 ] = ] ANY</code></td>
+                                    <td><code>[ 1 3 5 8 ] [ 2 / 'M' BIND M FLOOR M = ] MAP<br>FALSE [ 'B' BIND NOT B NOT AND NOT ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">少なくとも1つの要素が述語を満たせばtrue。短絡評価される。</td>
+                                    <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] [ 2 ] MEMBER</code>(<code>[ TRUE ]</code>)のほうが簡単。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2477,9 +2472,9 @@ SELECT</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 4 6 8 ] [ [ 2 ] MOD [ 0 ] = ] ALL</code></td>
+                                    <td><code>[ 2 4 6 8 ] [ 2 / 'M' BIND M FLOOR M = ] MAP<br>TRUE [ AND ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">すべての要素が述語を満たせばtrue。最初のfalseで短絡評価される。</td>
+                                    <td class="notes">「すべての要素が述語を満たすか」。<code>TRUE</code>から<code>AND</code>で畳み込む。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2601,7 +2596,7 @@ FILTER</code></td>
                     </div>
                     <p class="ref-note">これがAjisaiにおける部分適用のすべてです。そのための独立したワードはなく、必要もありません。ブロックとは、他のどんなベクトルとも同じように内容を計算できる値だからです。</p>
 
-                    <h3 id="iterative">反復のコスト(<code>QUANTIZE</code>)</h3>
+                    <h3 id="iterative">反復のコスト</h3>
                     <p>厳密算術は、ループのコストを変えます。このリファレンスの他のすべての節はプログラムが<em>何を意味するか</em>についてですが、この節はそれを繰り返すことが<em>何のコストを伴うか</em>についてです。厳密性が見返りに何かを要求してくる、唯一の場所だからです。</p>
                     <h3>コストはどこから来るのか</h3>
                     <p>厳密な有理数は分子と分母の組として格納されており、分数と分数の積は分母同士の積になります。1回掛けるだけなら何も起きません。しかしループの中で掛け続けると、分母はステップを追うごとに大きくなります。勾配降下法、ニュートン法、k-means、べき乗法、その他あらゆる反復的手法がやっているのは、まさにこれです。何も失われず、何も近似されません。数はまったく正しいままです。ただ、その桁が記録しているのは<strong>その値がどう計算されたか</strong>であり、その履歴は回を追うごとに長くなります。</p>
@@ -2614,7 +2609,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA NEG ADD ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
                                     <td><code>7282969/1250000</code></td>
                                     <td class="notes">10からの7ステップ(<code>[ 0 6 ] RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
                                 </tr>
@@ -2626,8 +2621,8 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p>問題は、どれか1つの数の大きさではなく、成長の形そのものです。同じループを21ステップ回すと<code>359418989131512359209/125000000000000000000</code>になります。21桁分の21桁で、値はおよそ2.875です。さらにステップを重ねるたびに分母は再び10倍になっていくので、答えはほとんど動かないのに、1ステップあたりのコストは際限なく上がっていきます。30回の反復なら一瞬で終わるループが、300回では這うように遅くなり得ます。</p>
-                    <h3>QUANTIZE：分解能を名指しする</h3>
-                    <p><code>QUANTIZE</code>は値を<code>1/d</code>の最も近い倍数に丸めるので、その分母は<code>d</code>の約数になり、それを超えて大きくなることは決してありません。1ステップにつき1回適用すれば、導出の履歴を捨てて値だけを保ちます。</p>
+                    <h3>分解能を名指しする</h3>
+                    <p><code>x d MUL 1/2 ADD FLOOR d DIV</code>は値を<code>1/d</code>の最も近い倍数に丸めます(ちょうど中間なら大きい側へ)。結果の分母は<code>d</code>の約数になり、それを超えて大きくなることは決してありません。1ステップにつき1回適用すれば、導出の履歴を捨てて値だけを保ちます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2636,9 +2631,9 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA NEG ADD 1000 QUANTIZE ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
                                     <td><code>2877/1000</code></td>
-                                    <td class="notes">21ステップ経っても分母は1000のまま。<code>[ 0 20 ] RANGE</code>は0から20までの21要素。量子化しない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
+                                    <td class="notes">21ステップ経っても分母は1000のまま。<code>[ 0 20 ] RANGE</code>は0から20までの21要素。丸めない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2648,7 +2643,7 @@ FILTER</code></td>
                         </div>
                     </div>
                     <p>これは近似ですが、それこそが要点です。<strong>自分で書き記した</strong>近似だからです。分解能はソース中のリテラルとして、自分で選んだ場所に書かれており、それ以降のすべての値は正確に<code>1/d</code>の倍数になります。与り知らないところで何かが丸められることはなく、答えにどれだけの精度がふさわしいかを、何かが勝手に決めることもありません。</p>
-                    <p><code>QUANTIZE</code>は、他の算術ワードと同様にベクトルに対して持ち上がるので、パラメータベクトル全体を1回の呼び出しで量子化できます。<code>d</code>が1のときはちょうど<code>ROUND</code>と同じです。</p>
+                    <p>この丸めを組み立てている<code>MUL</code>・<code>ADD</code>・<code>FLOOR</code>・<code>DIV</code>はどれもベクトルに対して持ち上がるので、パラメータベクトル全体を同じ一続きのワードで丸められます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2657,7 +2652,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 119/125 32/125 ] 10 QUANTIZE</code></td>
+                                    <td><code>[ 119/125 32/125 ] 10 MUL 1/2 ADD FLOOR 10 DIV</code></td>
                                     <td><code>[ 1/1 3/10 ]</code></td>
                                     <td class="notes">状態の形がどうであれ、1ステップにつき1回の呼び出し。</td>
                                 </tr>
@@ -2685,14 +2680,14 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr><td><code>executionLimitExceeded</code></td><td class="notes">プログラム全体が費やせる作業ステップの総量</td><td class="notes">一括操作(<code>SORT</code>や<code>GET</code>)へ書き換える、終了条件を見直す</td></tr>
-                                <tr><td><code>resourceLimitExceeded</code></td><td class="notes">1つの値そのものの大きさ(係数のビット幅、代数項の数など)</td><td class="notes"><code>QUANTIZE</code>で履歴を刈り込む、閉じた形を探す</td></tr>
+                                <tr><td><code>resourceLimitExceeded</code></td><td class="notes">1つの値そのものの大きさ(係数のビット幅、代数項の数など)</td><td class="notes"><code>1/d</code>の格子に丸めて履歴を刈り込む、閉じた形を探す</td></tr>
                                 <tr><td><code>recursionLimitExceeded</code></td><td class="notes">呼び出し連鎖(循環はしないが極端に長い、ワードがワードを呼ぶ鎖)のネストの深さ</td><td class="notes">呼び出しの連鎖を浅くする、または一括操作に書き換える</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <p><code>executionLimitExceeded</code>には、CLIの<code>ajisai run --step-limit &lt;N&gt;</code>で明示的に指定できるという特徴があります。既定値はホストの実行環境が定める実装上の選択であり、本書が固定の数として約束するものではありません。</p>
-                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「<code>QUANTIZE</code>による刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>[ 0 100001 ] RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
-                    <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>[ 0 99999 ] RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。<code>QUANTIZE</code>で刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
+                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「格子への丸めによる刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>[ 0 100001 ] RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
+                    <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>[ 0 99999 ] RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。格子に丸めて刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
 
                     <h3>具体化の上限: 理由付きのNIL</h3>
                     <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、エラーではなく理由付きの<strong><code>NIL</code></strong>になります。理由は<code>spaceExhausted</code>です。負の数や非整数のように、次元や形状の指定そのものが誤っている場合はこれとは別で、従来どおりエラーになります。</p>
@@ -2769,7 +2764,7 @@ FILTER</code></td>
                     <h3 id="acyclic">ワードは自分自身を呼び出せない</h3>
                     <p>User辞書の参照グラフは循環しません。<code>[ REC ] 'REC' DEF</code>のように、定義しようとしているワード自身の名前を本体が含む場合、<code>DEF</code>はエラーで拒否します。名前がどこに書かれていても関係ありません。本体の中に直接書かれていても、<code>MAP</code>や<code>EXEC</code>に渡す<code>[ ]</code>ブロックの内側だけに書かれていても同じです。</p>
                     <p>これは間接的な循環にも及びます。<code>A</code>が<code>B</code>を呼び出すよう定義し、続けて<code>B</code>が<code>A</code>を呼び出すよう定義しようとすると、その2つ目の<code>DEF</code>が拒否されます。<code>A</code>はすでに<code>B</code>という名前を(まだ存在しなくても)本体に含んでおり、そこへ<code>B</code>から<code>A</code>への参照を足すと<code>A</code>に戻る循環が閉じるからです。すでに存在する言葉を新しい定義が呼び出すこと自体は自由です。禁じられているのは、今まさに定義しようとしているワードへ、その連鎖が戻ってくることだけです。</p>
-                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code> <code>ANY</code> <code>ALL</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
+                    <p class="ref-note">反復はワードが自分自身を呼び出すことでは表現できません。すでに有限な<code>Vector</code>に対する<code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>SCAN</code>だけが反復の手段です。User辞書に循環がなければどのワードも自分自身を呼び出せないため、すべての評価は構造的に有限です。これは実行時のステップ予算(<a href="#limits">実行時エラー</a>で扱います)より強い性質で、予算はなお1回の評価のコストを制限しますが、予算を大きくしても止まらないプログラムというもの自体が存在しません。</p>
                     <h3>ワードの管理</h3>
                     <p><code>DEL</code>は、引用された名前でユーザー定義ワードを削除します。依存関係は追跡されており、他のワードが依存しているワードはまったく削除できません。したがって宙ぶらりんの参照は起こり得ません。先に依存している側を削除してください。</p>
                     <p class="ref-note">ワード名は大文字・小文字を区別しないので、<code>add10</code>と<code>ADD10</code>は同じワードです。慣例として<code>APPLY-GAIN</code>のような動詞-目的語の形に従います。名前がどのように定義と対応付けられるかは、<a href="#dictionaries">辞書とワードの同一性</a>で扱います。</p>
@@ -2872,8 +2867,8 @@ FILTER</code></td>
 
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は100個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この100個のワードは、<strong>54語のSemantic Kernel</strong>と<strong>46語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>MAP</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。100個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は86個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この86個のワードは、<strong>50語のSemantic Kernel</strong>と<strong>36語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。86個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -2912,9 +2907,10 @@ FILTER</code></td>
 
                     <h3>ワードの同一性</h3>
                     <p>すべてのワードは<strong>コンテンツ同一性</strong>を持ちます。これは、正規化された定義と、それが呼び出すワードたちの同一性にわたるダイジェストです。同じ同一性を持つ2つの定義は、名前が何であれ同じワードであり、定義を変更すると、それに依存するすべてのものの同一性が変わります。これが、<code>DEF</code>と<code>DEL</code>が、他の何かがまだ参照しているワードを乱すことを拒否する理由です。依存しているのはワードに対してであって、綴りに対してではないからです。</p>
-                    <h3 id="reflection">辞書と契約を言語の中から読む: <code>DEFINED?</code>・<code>DIGEST</code>・<code>CONTRACT</code></h3>
-                    <p>3つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。オペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません（<code>CONTRACT</code>だけはコードブロックも受けます）。<code>'ADD' DEFINED?</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
-                    <p><code>DEFINED?</code>は、Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかを答えます。<code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>consumption</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約です。コードブロックをそのまま渡せば、その契約を<strong>走らせずに</strong>推論します——実行前検査（<code>ajisai check --contract</code>）を言語の中から呼ぶ形であり、<code>confidence</code>と<code>gaps</code>が「検証できた／できない」を値として運びます。走らせる前に費用級を問える、という性質はここから来ます。</p>
+                    <h3 id="reflection">辞書と契約を言語の中から読む: <code>DIGEST</code>・<code>CONTRACT</code></h3>
+                    <p>2つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。ワードを名指すオペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません（<code>CONTRACT</code>はコードブロックも受けます）。<code>'ADD' CONTRACT</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
+                    <p><code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>consumption</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約です。コードブロックをそのまま渡せば、その契約を<strong>走らせずに</strong>推論します——実行前検査（<code>ajisai check --contract</code>）を言語の中から呼ぶ形であり、<code>confidence</code>と<code>gaps</code>が「検証できた／できない」を値として運びます。走らせる前に費用級を問える、という性質はここから来ます。</p>
+                    <p class="ref-note">Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかは、<code>CONTRACT</code>が契約を答えるかどうかで分かります。ワードでない名前には理由付きの<code>NIL</code>が返るので、<code>sym CONTRACT NIL? NOT</code>がその問いになります。<code>NIL?</code>はオペランドをその場に残すので、真偽値の下には契約(または<code>NIL</code>)が残ります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2923,22 +2919,12 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ ADD ] 0 GET DEFINED?</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">Coreワードは解決する。</td>
+                                    <td><code>[ TWICE ] 0 GET CONTRACT NIL? NOT</code></td>
+                                    <td><code>NIL FALSE</code></td>
+                                    <td class="notes">未定義の名前には契約がないので<code>FALSE</code>。<code>NIL?</code>が残したオペランドがその下にある。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 2 MUL ] 'TWICE' DEF [ TWICE ] 0 GET DEFINED?</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">定義したワードも同じ問いで答える。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>[ TWICE ] 0 GET DEFINED?</code></td>
-                                    <td><code>FALSE</code></td>
-                                    <td class="notes">未定義の名前は<code>FALSE</code>。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>'ADD' DEFINED?</code></td>
+                                    <td><code>'ADD' CONTRACT</code></td>
                                     <td>error</td>
                                     <td class="notes">文字列は名前ではない（<code>notASymbol</code>）。</td>
                                 </tr>
@@ -3042,7 +3028,7 @@ FILTER</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は100個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は86個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -3105,7 +3091,7 @@ FILTER</code></td>
                     </div>
 
                     <h3 id="identity-model">付録: 同一性モデル</h3>
-                    <p>Ajisaiでは<code>EQ</code>、<code>LT</code>、<code>GTE</code>のような普通の比較ワードを書けますが、言語は舞台裏でいくつもの「同じか?」という問いを別々に保っています。</p>
+                    <p>Ajisaiでは<code>EQ</code>、<code>LT</code>、<code>GT</code>のような普通の比較ワードを書けますが、言語は舞台裏でいくつもの「同じか?」という問いを別々に保っています。</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>

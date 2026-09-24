@@ -22,13 +22,13 @@ reaching for it exactly where it would have helped. The 99 Words are:
 
 | you need | Words |
 |---|---|
-| arithmetic | `ADD` `SUB` `MUL` `DIV` `MOD` `FLOOR` `CEIL` `ROUND` `QUANTIZE` `ABS` `NEG` `MIN` `MAX` `SQRT` `POW` `GCD` `RATIO` `RANDOM` |
+| arithmetic | `ADD` `SUB` `MUL` `DIV` `FLOOR` `ROUND` `MIN` `MAX` `SQRT` `POW` `GCD` `RATIO` (negate with `-1 MUL`) |
 | transcendental (computable reals, compared under a budget) | `EXP` `LN` `SIN` `COS` `ATAN` `PI` · render with `FORMAT`; `1 EXP 1 EXP EQ` is `NIL`, never a wrong answer |
-| comparison and logic | `EQ` `LT` `LTE` `GT` `GTE` (not-equal is `EQ NOT`) · `AND` `OR` `NOT` `SELECT` `TRUE` `FALSE` |
+| comparison and logic | `EQ` `LT` `GT` (not-equal is `EQ NOT`, at-most is `GT NOT`) · `AND` `NOT` (or is `a NOT b NOT AND NOT`) `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
 | collections | `SORT` `ORDER` `UNIQUE` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
 | records (keyed data) | `RECORD` `KEYS` `VALUES` `AT` `WITH` `WITHOUT` `HAS?` `MERGE` · `TALLY` `GROUP` answer Records |
-| blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` `ANY` `ALL` `RANK` |
+| blocks over a collection | `MAP` `FILTER` `FOLD` `SCAN` |
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `UPPER` `LOWER` `SEARCH` `REPLACE` `NUM` `STR` · `FORMAT` (decimal text at a stated precision, the one place rounding happens) |
 | JSON in and out | `JSON-DECODE` (object → Record, array → Vector, numbers exact) `JSON-ENCODE` (no rounding: `1/3` travels as `"1/3"`) |
 | absence | `NIL` `NIL?` `NIL-REASON` `ABSENT` (declare a reasoned NIL from your own text) |

@@ -38,7 +38,6 @@ describe('Semantic Firewall protocol payload types', () => {
         const value: Value = {
             type: 'nil',
             value: null,
-            displayHint: 'nil',
             semantics: {
                 absence
             }

@@ -176,7 +176,7 @@ mod record_words_tests {
     async fn arithmetic_and_comparison_lift_over_values() {
         assert_eq!(top(&format!("{R} 10 MUL")).await, "{ 'x' 10/1 'y' 20/1 }");
         assert_eq!(top(&format!("10 {R} SUB")).await, "{ 'x' 9/1 'y' 8/1 }");
-        assert_eq!(top(&format!("{R} NEG")).await, "{ 'x' -1/1 'y' -2/1 }");
+        assert_eq!(top(&format!("{R} -1 MUL")).await, "{ 'x' -1/1 'y' -2/1 }");
         assert_eq!(top(&format!("{R} {R} ADD")).await, "{ 'x' 2/1 'y' 4/1 }");
         assert_eq!(top(&format!("{R} 1 GT")).await, "{ 'x' FALSE 'y' TRUE }");
         assert_eq!(top(&format!("{R} 1 MAX")).await, "{ 'x' 1/1 'y' 2/1 }");
@@ -234,7 +234,7 @@ mod record_words_tests {
         );
         let interp = run(R).await;
         let value = interp.stack.last().cloned().expect("an answer");
-        let node = crate::types::value_protocol::value_to_protocol(&value, None);
+        let node = crate::types::value_protocol::value_to_protocol(&value);
         assert_eq!(node.type_str, "record");
     }
 }

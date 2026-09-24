@@ -348,39 +348,37 @@ pub(crate) fn outcome_vocabulary_for_word(
         return conservative_outcomes();
     }
     let mut outcomes = BTreeSet::new();
-    for line in def.lines.iter() {
-        for token in line.body_tokens.iter() {
-            match token {
-                Token::Symbol(symbol) => {
-                    outcomes.extend(resolve_and_collect(interp, symbol, visiting, reach));
-                }
-                // A String still names a Word for `DEF`, `DEL` and `BIND`, and
-                // this walk does not tell an operand position from a code one,
-                // so it keeps the resolved Word's vocabulary. That
-                // over-approximates — a data string spelling a Word name pulls
-                // its vocabulary in for nothing — which is the allowed
-                // direction.
-                //
-                // What a String can no longer do is make a Word *run*. The
-                // higher-order Words used to take `'NAME'` as their code
-                // operand (`[ 1 2 3 ] 'DBL' MAP`), which is why this branch
-                // first existed; that spelling is gone (see
-                // `higher_order::common::extract_executable_code`), because a
-                // name computed at run time defeated the DEF-time acyclicity
-                // check LANG.DICTIONARY.ACYCLIC's termination argument rests
-                // on. Every reachable Word is now named by a `Token::Symbol`
-                // somewhere, so the arm above carries the whole call graph.
-                Token::String(text)
-                    if interp
-                        .resolve_word_entry(&crate::core_word_aliases::canonicalize_core_word_name(
-                            text,
-                        ))
-                        .is_some() =>
-                {
-                    outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
-                }
-                _ => {}
+    for token in def.body.iter() {
+        match token {
+            Token::Symbol(symbol) => {
+                outcomes.extend(resolve_and_collect(interp, symbol, visiting, reach));
             }
+            // A String still names a Word for `DEF`, `DEL` and `BIND`, and
+            // this walk does not tell an operand position from a code one,
+            // so it keeps the resolved Word's vocabulary. That
+            // over-approximates — a data string spelling a Word name pulls
+            // its vocabulary in for nothing — which is the allowed
+            // direction.
+            //
+            // What a String can no longer do is make a Word *run*. The
+            // higher-order Words used to take `'NAME'` as their code
+            // operand (`[ 1 2 3 ] 'DBL' MAP`), which is why this branch
+            // first existed; that spelling is gone (see
+            // `higher_order::common::extract_executable_code`), because a
+            // name computed at run time defeated the DEF-time acyclicity
+            // check LANG.DICTIONARY.ACYCLIC's termination argument rests
+            // on. Every reachable Word is now named by a `Token::Symbol`
+            // somewhere, so the arm above carries the whole call graph.
+            Token::String(text)
+                if interp
+                    .resolve_word_entry(&crate::core_word_aliases::canonicalize_core_word_name(
+                        text,
+                    ))
+                    .is_some() =>
+            {
+                outcomes.extend(resolve_and_collect(interp, text, visiting, reach));
+            }
+            _ => {}
         }
     }
     visiting.remove(name);
