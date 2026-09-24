@@ -74,12 +74,6 @@
       "rationale": "MAP's element block runs with control arity of its own — the table's domain tuples only ever supply MAP's own two declared operands (a vector and a block), never a block whose *body* violates the ( x -- x ) contract MAP requires of it, since the block bodies the table writes are never anything but its own placeholder-free structure."
     },
     {
-      "id": "structureError",
-      "source": "[ 1 ] 'A' DEF\n[ A ] 'B' DEF\n'A' DEL",
-      "expect": "error:structureError",
-      "rationale": "structureError now means exactly one thing (docs/dev/auditable-kernel-work-order-2026-09.md Phase 1): a failure no Word has declared a condition for yet. DEL's dependents-conflict raise site (execute_del.rs) is exactly that — deliberately left generic in Phase 1 because DEL's contract has no definitionConflict counterpart to DEF's identical check, a words.json gap rather than a wiring bug. It needs two prior statements (define A, define B referencing A) to construct the conflict, so the one-Word table cannot reach it."
-    },
-    {
       "id": "executionLimitExceeded",
       "source": "1 1 ADD 1 ADD 1 ADD",
       "profile": {

@@ -21,7 +21,7 @@ pub struct Scalar {
 enum ScalarRepr {
     /// A rational number — the fast path.
     Float(Fraction),
-    /// An exact real backed by a continued-fraction representation.
+    /// An exact real outside the rationals: an algebraic normal form over `SQRT`.
     Exact(ExactReal),
 }
 

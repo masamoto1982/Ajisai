@@ -11,7 +11,6 @@
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Value, ValueData};
 use num_bigint::BigInt;
-use num_traits::{One, Zero};
 
 /// Pure, side-effect-free description of the protocol object consumers
 /// receive for a stack value: its `type` and `value`, plus the value to
@@ -84,17 +83,13 @@ fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
     Some(algebraic.normal_form_terms())
 }
 
-/// The exact value written short: `sqrt(2)`, `3/2*sqrt(5)`, `1/1 + sqrt(2)`.
+/// The exact value written short: `sqrt(2)`, `3/2*sqrt(5)`, `1/1+sqrt(2)`.
 ///
-/// A consumer reading an algebraic result top-down meets two renderings of the
-/// number before it meets the number, and neither is it. `stackDisplay` is the
-/// LANG.VALUES.EXACT continued fraction *truncated at a display budget* — √2 runs to
-/// `[ 1; 2, 2, … ]`, ~101 characters, ending in the truncation marker `…` —
-/// and the node's own `value` is a
-/// rational approximation, flagged `approximate`. Each is correct as what it
-/// is and misleading as what it resembles: the first looks complete and is
-/// not, the second looks exact and is not. Reading either as the value is the
-/// mistake this field removes.
+/// This is the one rendering of an algebraic value: the stack display of the
+/// scalar is this same string (`display.rs`), and the node's own `value` is a
+/// rational approximation flagged `approximate`. The field repeats it beside
+/// `exactTerms` so a consumer reading one node of a Vector has the rendering
+/// of that node without parsing the Vector's display.
 ///
 /// It is a **display**, and deliberately not called canonical: `exactTerms` is
 /// the value, this is one way of writing it, and the pairing is what says so.
@@ -109,53 +104,7 @@ fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
 /// beside it. Comparison is what decides equality here; string equality is not.
 pub(crate) fn exact_display(value: &Value) -> Option<String> {
     let terms = algebraic_normal_form(value)?;
-    // An algebraic irrational always has at least one term (a term-free normal
-    // form would have demoted to Tier 0). Writing the zero rather than an
-    // empty string keeps the field readable if that invariant ever moves.
-    if terms.is_empty() {
-        return Some("0/1".to_string());
-    }
-    let mut rendered = String::new();
-    for (index, (coefficient, radicand)) in terms.iter().enumerate() {
-        let negative = !coefficient.is_positive() && !coefficient.is_zero();
-        if index == 0 {
-            if negative {
-                rendered.push('-');
-            }
-        } else {
-            rendered.push_str(if negative { " - " } else { " + " });
-        }
-        rendered.push_str(&term_display(coefficient, radicand));
-    }
-    Some(rendered)
-}
-
-/// One `c√m` term, sign already emitted by the caller.
-///
-/// The coefficient keeps Ajisai's own `numerator/denominator` rendering rather
-/// than collapsing `2/1` to `2`: every other number the language displays is
-/// written that way, and a display that quietly switches conventions for
-/// algebraic values is a second thing to learn.
-fn term_display(coefficient: &Fraction, radicand: &BigInt) -> String {
-    let numerator = coefficient.numerator();
-    let magnitude = format!(
-        "{}/{}",
-        if numerator < BigInt::zero() {
-            -numerator
-        } else {
-            numerator
-        },
-        coefficient.denominator(),
-    );
-    // The monomial `1` keys the rational part of the normal form: there is no
-    // radical to write, only the coefficient.
-    if radicand.is_one() {
-        return magnitude;
-    }
-    if magnitude == "1/1" {
-        return format!("sqrt({radicand})");
-    }
-    format!("{magnitude}*sqrt({radicand})")
+    Some(crate::types::display::render_algebraic_terms(&terms))
 }
 
 fn number_protocol_value(f: &Fraction) -> ProtocolValue {

@@ -74,12 +74,9 @@ function resolveAjisaiBin() {
 // Domains considered and rejected, with the reason (kept here so the
 // rejection is not silently rediscovered):
 //
-//   - `scalarFraction` ('1 2 /'), meant to reach `nonInteger`: RANDOM and PUT
-//     are the only two Words declaring `nonInteger`, and both raise
-//     `structureError` for a fractional operand instead — confirmed live
-//     (`1 2 / 1 RANDOM`, `[ 1 2 3 ] 1 2 / 9 PUT`). `nonInteger` is currently
-//     unreachable by any input; this is an implementation-vs-registry gap to
-//     report, not a domain to add (Phase 3 does not fix `rust/`).
+//   - `scalarFraction` ('1 2 /'), meant to reach `nonInteger`: PUT is the
+//     only Word declaring it, and the table already observes it through
+//     PUT's existing domains, so the whole table need not carry another.
 //   - `vectorRagged` ('[ [ 1 ] [ 2 3 ] ]'), meant to reach `shapeMismatch`:
 //     a ragged vector broadcasts element-wise against a same-length flat
 //     vector instead of raising (confirmed: `[ [ 1 ] [ 2 3 ] ] [ 1 2 ] ADD`

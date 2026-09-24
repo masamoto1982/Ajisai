@@ -133,18 +133,17 @@ result of
 
 read either of these two fields, in this order:
 
-- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`. Read this
-  first. It is a display: read it, do not parse it.
+- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`, the same
+  string `stackDisplay` shows for it. Read this first. It is a display: read
+  it, do not parse it.
 - **`semantics.exactTerms`** — the value itself: a list of
   `{ numerator, denominator, radicand }` terms meaning `Σ (n/d)·√radicand`,
   arbitrary-precision integers as strings. Compute with this.
 
-They are the same fact in two shapes and always appear together. Two *other*
-fields on that same result are **not** the value, and reading either as if it
-were will mislead you:
+They are the same fact in two shapes and always appear together. One *other*
+field on that same result is **not** the value, and reading it as if it were
+will mislead you:
 
-- `stackDisplay` shows the canonical continued fraction, truncated at a display
-  budget (`[ 1; 2, 2, … ]`). It is a rendering, and an incomplete one.
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 

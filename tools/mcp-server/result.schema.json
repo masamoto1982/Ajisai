@@ -711,7 +711,7 @@
     "exactDisplay": {
      "type": "string",
      "minLength": 1,
-     "description": "The normal form as one short string: `sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)`. A display — read it, compute with `exactTerms`. It renders the stored terms faithfully, so two values `=` decides are equal may still be written differently (`sqrt(8)` and `2/1*sqrt(2)`)."
+     "description": "The normal form as one short string: `sqrt(2)`, `2/1*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)`; the same string the value's stackDisplay shows. A display — read it, compute with `exactTerms`. It renders the stored terms faithfully, so two values `=` decides are equal may still be written differently (`sqrt(8)` and `2/1*sqrt(2)`)."
     },
     "exactTerms": {
      "type": "array",

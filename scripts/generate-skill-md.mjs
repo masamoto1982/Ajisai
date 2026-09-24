@@ -273,7 +273,7 @@ const forbiddenPatterns = [
   {
     pattern: 'Parentheses ( )',
     code: '( 1 2 )',
-    why: 'Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.',
+    why: 'Reserved; not valid in source. `[ ]` is the sole bracket, for vectors and code alike.',
   },
   {
     pattern: 'Double-quoted strings',
@@ -294,20 +294,7 @@ const forbiddenPatterns = [
 function renderResult(json) {
   const parts = [];
   if (json.output.length > 0) parts.push(`prints \`${json.output.join(' ⏎ ')}\``);
-  // An algebraic slot's stack display is the LANG.VALUES.EXACT continued fraction,
-  // truncated at a display budget: √2 ran to ~194 characters ending in `...]`,
-  // which told a reader nothing about the value and left the impression that
-  // an exact square root is a complicated object. `semantics.exactDisplay`
-  // writes the same value short, and comes from the same verified `--json`
-  // run — so this substitutes a shorter true rendering, never a claim the
-  // interpreter did not make. The label says which rendering is being shown.
-  const exact = (json.stack ?? []).map((slot) => slot?.semantics?.exactDisplay ?? null);
-  if (exact.some(Boolean)) {
-    const shown = exact.map((display, index) => display ?? json.stackDisplay[index]).join('  ');
-    parts.push(`exact value: \`${shown}\` (the stack display is its continued fraction)`);
-  } else if (json.stackDisplay.length > 0) {
-    parts.push(`stack: \`${json.stackDisplay.join('  ')}\``);
-  }
+  if (json.stackDisplay.length > 0) parts.push(`stack: \`${json.stackDisplay.join('  ')}\``);
   if (parts.length === 0) parts.push('stack: (empty)');
   return parts.join('; ');
 }

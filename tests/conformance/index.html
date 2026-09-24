@@ -413,11 +413,9 @@
      cement the decided-comparison truth-value rendering discussed in the
      evaluation note. -->
 
-<!-- Exact-real observations are canonical flat continued fractions
-     (`[ a0; a1, a2, … ]`) at the language boundary. These cases deliberately
-     pin the current CF display budget so regressions to Rust Debug names,
-     sqrt(...) wrappers, or approximate ~n/d rationals are conformance
-     failures. -->
+<!-- An irrational observes as its exact normal form written as one token
+     (`sqrt(2)`, `1/1+sqrt(2)`) at the language boundary: never truncated,
+     never an approximate ~n/d rational, and one element inside a Vector. -->
 
 <!-- LANG.VALUES.EXACT / LANG.VALUES.EXACT exactness over the admitted domain D: the six relations
      are total and exact for every value the current Coreword set can
@@ -2264,6 +2262,13 @@ W</pre>
 
 <!-- LANG.VALUES.DENOTATION: a value is what it denotes, not how it was made.
      √8 and √2+√2 are built by different operations and are one value. -->
+
+<section class="ajisai-case" id="core-irrational-display-is-its-normal-form" data-category="core">
+  <h3>An irrational displays its exact normal form as one token, inside a Vector too</h3>
+  <pre class="ajisai-source">2 SQRT 1 2 SQRT ADD 2 SQRT 3 SQRT SUB 1/2 SQRT 3 2 COLLECT</pre>
+  <pre class="ajisai-expect-result">sqrt(2) 1/1+sqrt(2) sqrt(2)-sqrt(3) [ 1/2*sqrt(2) 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 
 <section class="ajisai-case" id="core-denotation-same-real-is-one-value" data-category="core">
   <h3>Values built through different histories are one value when they denote the same real</h3>

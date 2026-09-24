@@ -133,18 +133,17 @@ result of
 
 read either of these two fields, in this order:
 
-- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`. Read this
-  first. It is a display: read it, do not parse it.
+- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`, the same
+  string `stackDisplay` shows for it. Read this first. It is a display: read
+  it, do not parse it.
 - **`semantics.exactTerms`** — the value itself: a list of
   `{ numerator, denominator, radicand }` terms meaning `Σ (n/d)·√radicand`,
   arbitrary-precision integers as strings. Compute with this.
 
-They are the same fact in two shapes and always appear together. Two *other*
-fields on that same result are **not** the value, and reading either as if it
-were will mislead you:
+They are the same fact in two shapes and always appear together. One *other*
+field on that same result is **not** the value, and reading it as if it were
+will mislead you:
 
-- `stackDisplay` shows the canonical continued fraction, truncated at a display
-  budget (`[ 1; 2, 2, … ]`). It is a rendering, and an incomplete one.
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 
@@ -372,7 +371,7 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
 - Sorting is a plain Core word
   `[ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
 - Exact square root takes a bare scalar
-  `2 SQRT` → exact value: `sqrt(2)` (the stack display is its continued fraction)
+  `2 SQRT` → stack: `sqrt(2)`
 - A value used twice is named with BIND
   `5 'N' BIND N N 1 +` → stack: `5/1  6/1`
 
@@ -428,7 +427,7 @@ than it looks like it answers, which is the harder kind to notice:
 - **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Every Word consumes the operands it reads; name a value with `BIND` to use it more than once.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / SCAN.
 - **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / SCAN over an already-finite vector.
-- **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
+- **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors and code alike.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.
 

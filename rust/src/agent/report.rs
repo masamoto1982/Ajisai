@@ -327,9 +327,9 @@ mod tests {
         assert_eq!(semantics["exactTerms"][0]["numerator"], "1");
         assert_eq!(semantics["exactTerms"][0]["denominator"], "1");
         assert_eq!(semantics["exactTerms"][0]["radicand"], "2");
-        // The short rendering of those same terms. Without it the only two
-        // things a reader meets before them are a truncated continued
-        // fraction and a rational approximation.
+        // The mathematical rendering of those same terms, beside the source
+        // rendering `stackDisplay` gives and the rational approximation
+        // `value` gives.
         assert_eq!(semantics["exactDisplay"], "sqrt(2)");
     }
 }

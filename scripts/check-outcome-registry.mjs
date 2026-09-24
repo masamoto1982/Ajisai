@@ -116,6 +116,22 @@ const rustStructuralErrorCategories = new Set(errorCategoryArms.values());
 // require one for.
 rustStructuralErrorCategories.delete('divisionByZero');
 
+// `ErrorCategory::StructureError` is the second named exclusion, for the
+// opposite reason: it is the *fallback* bucket, "a failure no Word has
+// declared a condition for". Every raise site that could once reach a
+// program is now either declared at its source or remapped by its caller to
+// the Word's own `errorWhen` condition (DEL's dependents conflict was the
+// last, now `definitionConflict`), and what remains of
+// `create_structure_error` is invariant guards no input reaches. Registering
+// an outcome nothing observes would fail non-vacuity, and exempting it there
+// is exactly what Phase 2 pitfall C forbids — so the registry does not list
+// it. The variant survives in Rust as the bucket a *future* undeclared raise
+// would land in, and that is the point: if one ever reaches a program,
+// `scripts/check-outcome-bijection.mjs`'s soundness half reports an
+// unregistered `error:structureError`, and the fix is to declare the
+// condition, never to register the bucket.
+rustStructuralErrorCategories.delete('structureError');
+
 // ---------------------------------------------------------------------------
 // spec/outcomes.json
 // ---------------------------------------------------------------------------

@@ -1,8 +1,7 @@
-//! Derived rational views of an exact real: best rational approximation
-//! and canonical continued-fraction terms (LANG.VALUES.EXACT). The CF here is a
-//! **display-side derivation** from the value — floor-and-reciprocate for
-//! Tier 1 — not an internal representation. Split from `value.rs` to respect the
-//! file-size budget (the file-size budget in docs/dev/specification-implementation-rules.md).
+//! Derived rational view of an exact real: the best rational approximation
+//! within a denominator bound, by continued-fraction convergents. The CF is
+//! computed here, never stored — the value is the normal form. Split from
+//! `value.rs` to respect the file-size budget (docs/dev/specification-implementation-rules.md).
 
 use crate::types::exact::value::ExactReal;
 use crate::types::fraction::Fraction;
@@ -34,47 +33,10 @@ impl ExactReal {
             Self::Algebraic(a) => a.best_rational_approximation(max_denominator),
         }
     }
-
-    /// Canonical partial quotients for finite (rational) values; `None`
-    /// for nil and for irrationals (whose CF is infinite — use
-    /// `partial_quotients_bounded`).
-    pub fn partial_quotients(&self) -> Option<Vec<BigInt>> {
-        match self {
-            Self::Rational(f) => {
-                if f.is_nil() {
-                    return None;
-                }
-                Some(rational_partial_quotients(f.numerator(), f.denominator()))
-            }
-            Self::Algebraic(_) => None,
-        }
-    }
-
-    /// Up to `budget` canonical partial quotients, derived exactly: the
-    /// full canonical CF (truncated) for rationals, the floor-and-
-    /// reciprocate prefix for Tier 1 irrationals. The CF is a display
-    /// form derived from the value, not a representation (LANG.VALUES.EXACT).
-    pub fn partial_quotients_bounded(&self, budget: usize) -> Vec<BigInt> {
-        if budget == 0 {
-            return Vec::new();
-        }
-        match self {
-            Self::Rational(f) => {
-                if f.is_nil() {
-                    return Vec::new();
-                }
-                let mut qs = rational_partial_quotients(f.numerator(), f.denominator());
-                qs.truncate(budget);
-                qs
-            }
-            Self::Algebraic(a) => a.cf_prefix(budget),
-        }
-    }
 }
 
 /// Canonical (regular) CF of a rational, with the standard uniqueness
 /// normalization: no trailing `1` term (`[…, a, 1]` folds to `[…, a+1]`).
-/// Same expansion the retired CF module used, so displays are unchanged.
 pub(crate) fn rational_partial_quotients(mut num: BigInt, mut den: BigInt) -> Vec<BigInt> {
     debug_assert!(!den.is_zero());
     if den.is_negative() {
