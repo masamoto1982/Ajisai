@@ -172,7 +172,10 @@ impl Interpreter {
     ) -> Result<()> {
         let result = match self.apply_declared_nil_contract(word) {
             Some(decided) => decided,
-            None => self.execute_builtin_by_id(word.id),
+            None => match self.apply_declared_lift(word) {
+                Some(lifted) => lifted,
+                None => self.execute_builtin_by_id(word.id),
+            },
         };
         result.map_err(|err| err.attributed_to(word.name))
     }

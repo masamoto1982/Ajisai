@@ -20,7 +20,7 @@
 use std::borrow::Cow;
 
 use crate::error::{AjisaiError, Result};
-use crate::types::Value;
+use crate::types::{RecordData, Value};
 
 /// How one operand supplies its lanes at the current axis.
 ///
@@ -66,17 +66,80 @@ impl<'a> Lanes<'a> {
     }
 }
 
-/// Apply `scalar` to the aligned lanes of `operands`.
+/// Apply `scalar` to the aligned lanes of `operands`, every operand lifted.
 ///
-/// `scalar` sees only operands that are not Vectors at this level, so it
-/// states the scalar law alone and never repeats the alignment. Where the
-/// extents disagree the result is the `shapeMismatch` ERROR the clause
-/// requires, naming the first axis on which two operands disagree.
+/// `scalar` sees only operands that are not Vectors or Records at this
+/// level, so it states the scalar law alone and never repeats the alignment.
+/// Where the extents disagree the result is the `shapeMismatch` ERROR the
+/// clause requires, naming the first axis on which two operands disagree.
 pub(crate) fn lift_lanes<const N: usize>(
     operands: [&Value; N],
     scalar: &dyn Fn([&Value; N]) -> Result<Value>,
 ) -> Result<Value> {
-    let lanes: [Lanes; N] = operands.map(Lanes::of);
+    let mut adapter = |lanes: &[&Value]| -> Result<Value> {
+        let lanes: [&Value; N] = lanes
+            .try_into()
+            .expect("lift_lanes_dyn hands back as many operands as it was given");
+        scalar(lanes)
+    };
+    lift_lanes_dyn(&operands, &[true; N], &mut adapter)
+}
+
+/// The lifting rule over any number of operands, of which only those marked
+/// in `lifted` are aligned; the rest are handed to every lane whole.
+///
+/// A Record lifts first, in the value direction (LANG.RECORDS.STRUCTURE):
+/// lifted Records must share their key sequence, pair value by value, and
+/// every other operand — a Vector included — combines with each value. Then
+/// Vectors align lane by lane, a one-element Vector's lane reused across the
+/// others' length. What remains goes to `scalar`.
+pub(crate) fn lift_lanes_dyn(
+    operands: &[&Value],
+    lifted: &[bool],
+    scalar: &mut dyn FnMut(&[&Value]) -> Result<Value>,
+) -> Result<Value> {
+    let records: Vec<(usize, &RecordData)> = operands
+        .iter()
+        .zip(lifted)
+        .enumerate()
+        .filter_map(|(i, (v, l))| {
+            if *l {
+                v.as_record().map(|r| (i, r))
+            } else {
+                None
+            }
+        })
+        .collect();
+    if let Some((_, first)) = records.first() {
+        if let Some((_, other)) = records.iter().find(|(_, r)| !r.same_keys(first)) {
+            return Err(AjisaiError::declared(
+                "shapeMismatch",
+                format!(
+                    "expected Records with the same keys, got {} keys against {} keys that do not line up",
+                    first.len(),
+                    other.len()
+                ),
+            ));
+        }
+        let mut values = Vec::with_capacity(first.len());
+        for k in 0..first.len() {
+            let mut next: Vec<&Value> = operands.to_vec();
+            for (i, record) in &records {
+                next[*i] = &record.values()[k];
+            }
+            values.push(lift_lanes_dyn(&next, lifted, scalar)?);
+        }
+        return Ok(Value::from_record(
+            RecordData::new(first.keys().to_vec(), values)
+                .expect("the keys are one Record's own, so distinct and aligned"),
+        ));
+    }
+
+    let lanes: Vec<Lanes> = operands
+        .iter()
+        .zip(lifted)
+        .map(|(v, l)| if *l { Lanes::of(v) } else { Lanes::Scalar(v) })
+        .collect();
 
     let mut extent: Option<usize> = None;
     for lane in lanes.iter() {
@@ -100,7 +163,7 @@ pub(crate) fn lift_lanes<const N: usize>(
         // `[ TRUE ]`, because a one-element Vector is a Vector
         // (LANG.VALUES.DISJOINT) and only its contents were reused.
         if lanes.iter().any(Lanes::is_vector) {
-            let inner = descend(&lanes, 0, scalar)?;
+            let inner = descend(&lanes, 0, lifted, scalar)?;
             return Ok(Value::from_vector(vec![inner]));
         }
         return scalar(operands);
@@ -108,19 +171,17 @@ pub(crate) fn lift_lanes<const N: usize>(
 
     let mut result = Vec::with_capacity(width);
     for index in 0..width {
-        result.push(descend(&lanes, index, scalar)?);
+        result.push(descend(&lanes, index, lifted, scalar)?);
     }
     Ok(Value::from_vector(result))
 }
 
-fn descend<const N: usize>(
-    lanes: &[Lanes; N],
+fn descend(
+    lanes: &[Lanes],
     index: usize,
-    scalar: &dyn Fn([&Value; N]) -> Result<Value>,
+    lifted: &[bool],
+    scalar: &mut dyn FnMut(&[&Value]) -> Result<Value>,
 ) -> Result<Value> {
-    let mut next: [&Value; N] = [lanes[0].lane(index); N];
-    for (slot, lane) in next.iter_mut().zip(lanes.iter()) {
-        *slot = lane.lane(index);
-    }
-    lift_lanes(next, scalar)
+    let next: Vec<&Value> = lanes.iter().map(|lane| lane.lane(index)).collect();
+    lift_lanes_dyn(&next, lifted, scalar)
 }

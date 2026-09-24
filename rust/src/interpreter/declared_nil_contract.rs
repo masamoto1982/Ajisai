@@ -114,11 +114,9 @@ impl Interpreter {
         if available < arity {
             return NilContract::Run;
         }
-        match window
-            .iter()
-            .zip(roles)
-            .position(|(operand, role)| *role == OperandRole::Data && operand.is_nil())
-        {
+        match window.iter().zip(roles).position(|(operand, role)| {
+            matches!(role, OperandRole::Data | OperandRole::Leaf) && operand.is_nil()
+        }) {
             Some(offset) => NilContract::PassThrough {
                 operands: arity,
                 nil_index: operands.len() - arity + offset,

@@ -159,7 +159,7 @@ const ADVERSARIAL = [
   // computed NIL that crosses one twice comes back reasonless and reads as
   // `nil:literal` — with no NIL written anywhere in the source. Prediction
   // must admit that (word_outcome_vocabulary::close_over_nil_reason_loss).
-  '[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET',
+  '[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET',
   'NIL 1 ADD',
 ];
 

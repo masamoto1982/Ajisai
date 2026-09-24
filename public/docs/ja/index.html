@@ -877,7 +877,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 10 20 30 ] [ 5 ] GET</code></td>
+                                    <td><code>[ 10 20 30 ] 5 GET</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">有効なベクトルに対する範囲外のインデックスは<code>NIL</code>になる(理由：indexOutOfBounds)。</td>
                                 </tr>
@@ -896,7 +896,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] [ 5 ] TAKE</code></td>
+                                    <td><code>[ 1 2 3 ] 5 TAKE</code></td>
                                     <td><code>NIL</code></td>
                                     <td class="notes">あるだけより多く要求するのも「末尾を越えた位置」を指す同じ問いであり、<code>GET</code>と同じ答えになる(理由：indexOutOfBounds)。</td>
                                 </tr>
@@ -1258,7 +1258,7 @@
                         </div>
                     </div>
                     <h3>ベクトルへの自動リフティング</h3>
-                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり、<code>+</code>と同じ規則でブロードキャストします。負の値を0で打ち切るレクティファイアは<code>[ -1 2 -3 ] 0 MAX</code>と書けて<code>[ 0/1 2/1 0/1 ]</code>になり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で求まり、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>で得られます。いずれも<code>MAP</code>もブロックも不要です。これらに手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが<code>NIL</code>になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。</p>
+                    <p class="ref-note">数値演算ワードはいずれもベクトルに対して自動的に持ち上がり、<code>+</code>と同じ規則でブロードキャストします。負の値を0で打ち切るレクティファイアは<code>[ -1 2 -3 ] 0 MAX</code>と書けて<code>[ 0/1 2/1 0/1 ]</code>になり、特徴量ごとの標準偏差は分散のベクトルに対する1回の<code>SQRT</code>で求まり、2つのベクトルの要素ごとの小さい方は<code>[ 1 5 3 ] [ 4 2 6 ] MIN</code>で得られます。いずれも<code>MAP</code>もブロックも不要です。これらに手を伸ばすのは、演算そのものが数値ワードでないときだけにしましょう。<code>SQRT</code>の定義域から外れたレーンはそこだけが<code>NIL</code>になるので、<code>[ 4 -1 ] SQRT</code>はベクトル全体の失敗ではなく<code>[ 2/1 NIL ]</code>になります。この持ち上げは数値演算に限りません。文字列や真偽値など一つの値として読むオペランドを持つワードは、そこにベクトルやRecordを渡すと同じ規則で要素ごとに適用されます(<code>[ 'ab' 'c' ] UPPER</code>は<code>[ 'AB' 'C' ]</code>)。1要素のベクトルも常にベクトルとして扱われ、その要素とは見なされません。</p>
 
                     <h3 id="comparison">比較と真偽値</h3>
                     <p>比較ワードは<code>EQ</code>・<code>LT</code>・<code>GT</code>の3つで、それぞれ1文字の記号<code>=</code>・<code>&lt;</code>・<code>&gt;</code>を持ちます。結果は<strong>真偽値</strong>であり、それ自体が独自の種類の値であって、数ではありません。残りの3つの関係は<code>NOT</code>で書きます。「以下」は<code>a b GT NOT</code>、「以上」は<code>a b LT NOT</code>、「等しくない」は<code>a b EQ NOT</code>です。</p>
@@ -1448,7 +1448,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 10 20 30 ] [ 0 ] GET</code></td>
+                                    <td><code>[ 10 20 30 ] 0 GET</code></td>
                                     <td><code>10/1</code></td>
                                     <td class="notes">インデックス0は最初の要素。ベクトルとインデックスの両方が消費される。</td>
                                 </tr>
@@ -1467,7 +1467,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 10 20 30 ] [ -1 ] GET</code></td>
+                                    <td><code>[ 10 20 30 ] -1 GET</code></td>
                                     <td><code>30/1</code></td>
                                     <td class="notes">負のインデックスは末尾から数える。</td>
                                 </tr>
@@ -1479,8 +1479,8 @@
                         </div>
                     </div>
                     <h3>答えの形はインデックスの形に従う</h3>
-                    <p><code>GET</code>は、与えた数だけのインデックスを受け取ります。1つのインデックスなら要素そのものを返し、複数なら、インデックスが指定した順序での選択結果のベクトルを返します。したがって、いくつかの位置を選び出すこと、並べ替えること、逆順にすることは、いずれも1回の呼び出しで済み、何も指さないインデックスは残りを台無しにするのではなく、その位置に<code>NIL</code>を残すだけです。</p>
-                    <p class="ref-note">インデックスの並びが、書いたものではなく計算した結果であるときは、この規則を読み返してください。<em>答えの形がデータに従う</em>ということだからです。2つのインデックスによる収集はベクトルを返しますが、1つによる収集は裸の要素を返します。したがって、分割の左側やメンバーが1人しかいないクラスのように、たまたま1つの位置に絞られた選択はスカラーを返し、ベクトルを想定して書いた<code>LENGTH</code>や<code>FOLD</code>はそこで失敗します。件数によらず常にベクトルが欲しい場合は、一度に1つずつインデックスを収集し、<code>MAP</code>に結果を集めさせてください。この書き方なら、インデックス列と同じ長さのベクトルが、その長さがいくつであっても返ります。</p>
+                    <p><code>GET</code>のインデックスは、裸の整数なら要素そのものを、ベクトルなら要素ごとに持ち上がって、インデックスが指定した順序での選択結果のベクトルを返します。したがって、いくつかの位置を選び出すこと、並べ替えること、逆順にすることは、いずれも1回の呼び出しで済み、何も指さないインデックスは残りを台無しにするのではなく、その位置に<code>NIL</code>を残すだけです。</p>
+                    <p class="ref-note">答えの形はインデックスの形に従います。インデックスのベクトルは、要素が1つでもベクトルのままなので、答えも常にベクトルになります。分割の左側やメンバーが1人しかいないクラスのように、計算した選択がたまたま1つの位置に絞られても、ベクトルを想定して書いた<code>LENGTH</code>や<code>FOLD</code>はそのまま動きます。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1489,9 +1489,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 10 20 30 40 ] 'YS' BIND<br>[ 2 ] [ 1 COLLECT 'I' BIND YS I GET ] MAP</code></td>
+                                    <td><code>[ 10 20 30 40 ] [ 2 ] GET</code></td>
                                     <td><code>[ 30/1 ]</code></td>
-                                    <td class="notes">インデックスは1つだが、結果はやはりベクトル。<code>[ 2 0 ]</code>なら同じ行は<code>[ 30/1 10/1 ]</code>になるので、後続のコードは2つの形を扱う必要がない。</td>
+                                    <td class="notes">インデックスは1つだが、ベクトルで渡したので結果もベクトル。<code>[ 2 0 ]</code>なら<code>[ 30/1 10/1 ]</code>になり、後続のコードは2つの形を扱う必要がない。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1642,7 +1642,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 5 ] [ 3 ] TAKE</code></td>
+                                    <td><code>[ 1 2 3 4 5 ] 3 TAKE</code></td>
                                     <td><code>[ 1/1 2/1 3/1 ]</code></td>
                                     <td class="notes">最初のN個の要素を残す。</td>
                                 </tr>
@@ -1677,7 +1677,7 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。多くの値をまとめて問うなら<code>MEMBER</code>（<code>[ 1 2 3 ] [ 2 5 ] MEMBER</code>は<code>[ TRUE FALSE ]</code>——ベクトルを一度だけ索引化する）、昇順のベクトルなら<code>BSEARCH</code>（<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2/1 ]</code>——二分探索。区間を半分にし続ける反復は自分では書けない）を使います。<code>BSEARCH</code>は昇順でないベクトルを受けるとエラーにします。</p>
+                    <p class="ref-note">さらなる構造系のワード：<code>TAKE</code> <code>DROP</code> <code>REVERSE</code> <code>COLLECT</code> <code>FILL</code> <code>PUT</code>。<code>INDEX-OF</code>はインデックス指定の代わりに検索を行います。<code>[ 10 20 30 ] 20 INDEX-OF</code>は<code>1/1</code>になり、見つからない値はエラーではなく<code>NIL</code>になります。含まれるかどうかだけを問うなら<code>MEMBER?</code>（<code>[ 1 2 3 ] 2 MEMBER?</code>は<code>TRUE</code>）、昇順のベクトルなら<code>BSEARCH</code>（<code>[ 1 3 5 7 ] [ 5 ] BSEARCH</code>は<code>[ 2/1 ]</code>——二分探索。区間を半分にし続ける反復は自分では書けない）を使います。<code>BSEARCH</code>は昇順でないベクトルを受けるとエラーにします。</p>
 
                     <h3 id="ordering">順序付け、計数、形状</h3>
                     <p>ベクトル全体を一度に見る必要がある操作は、7つのワードでカバーされます。そのそれぞれは、他の語彙だけを使って書き下すこともできますが、書き下すと漸近的に高いコストがかかります。それだけが、これらがワードとして存在する理由です。</p>
@@ -2393,7 +2393,7 @@ SELECT</code></td>
                                 <tr>
                                     <td><code>[ 1 3 5 8 ] [ 2 / 'M' BIND M FLOOR M = ] MAP<br>FALSE [ 'B' BIND NOT B NOT AND NOT ] FOLD</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] [ 2 ] MEMBER</code>(<code>[ TRUE ]</code>)のほうが簡単。</td>
+                                    <td class="notes">「少なくとも1つの要素が述語を満たすか」。<code>MAP</code>で真偽値のベクトルにし、<code>FALSE</code>から論理和で畳み込む。特定の値を含むかどうかだけなら<code>[ 1 2 3 ] 2 MEMBER?</code>(<code>TRUE</code>)のほうが簡単。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2465,7 +2465,7 @@ SELECT</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>[ 0 ] GET</code>は最初の要素、<code>[ -1 ] GET</code>は最後の要素です。したがって<code>[ SORT [ -1 ] GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>はベクトル版のswapであり、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
+                    <p>畳み込みではなく1つの位置が必要なときは、<code>GET</code>で読み取ります。<code>0 GET</code>は最初の要素、<code>-1 GET</code>は最後の要素です。したがって<code>[ SORT -1 GET ] 'PMAX' DEF</code>は、2つの値の大きい方を答えます。<code>REVERSE</code>はベクトル版のswapであり、<code>TAKE</code>と<code>CONCAT</code>を組み合わせれば、1つのベクトルの部分から別のベクトルを組み立て直せます。</p>
                     <p class="ref-note">複製のための道具は<a href="#bindings"><code>BIND</code></a>です。値に名前を付ければ、名前を書くたびにその値が積まれるので、どんな種類の値でも必要な回数だけ使えます。</p>
 
                     <h3>データとしてのコード</h3>
@@ -2547,7 +2547,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
                                     <td><code>7282969/1250000</code></td>
                                     <td class="notes">10からの7ステップ(<code>[ 0 6 ] RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
                                 </tr>
@@ -2569,7 +2569,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT [ 0 ] GET STEP ] FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
                                     <td><code>2877/1000</code></td>
                                     <td class="notes">21ステップ経っても分母は1000のまま。<code>[ 0 20 ] RANGE</code>は0から20までの21要素。丸めない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
                                 </tr>
@@ -2750,7 +2750,7 @@ FILTER</code></td>
                     </div>
                     <h3 id="name-inside-brackets"><code>[ ]</code>の中の名前は値ではなくSymbol</h3>
                     <p>束縛で戸惑いやすいのは、ここ1箇所だけです。自分のプログラムで詰まる前に、目を通しておいてください。ベクトルリテラルの中では、裸の名前はSymbol――何かが実行するまではデータ――を表し、参照されることはありません。束縛された名前も例外ではありません。したがって<code>3 'K' BIND</code>の後、<code>[ K ]</code>は<code>[ 3/1 ]</code>ではなく、Symbol<code>K</code>を保持する要素数1のベクトル<code>[ K ]</code>です。</p>
-                    <p>これが人を戸惑わせるのは、このリファレンスのイディオムが<code>[ 0 ] GET</code>や<code>[ 3 ] TAKE</code>のように書かれているため、自然な次の一手が<code>XS [ K ] TAKE</code>になってしまうからです。そしてこれは失敗します。SymbolはTAKEが期待する整数ではないからです。意図を表す2つの書き方があります。</p>
+                    <p>これが人を戸惑わせるのは、このリファレンスのイディオムが<code>0 GET</code>や<code>3 TAKE</code>のように書かれているため、自然な次の一手が<code>XS [ K ] TAKE</code>になってしまうからです。そしてこれは失敗します。SymbolはTAKEが期待する整数ではないからです。意図を表す2つの書き方があります。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2989,9 +2989,9 @@ FILTER</code></td>
                                     <td class="notes">行列とベクトルの積：行ごとに1つの内積。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>[ 4 1 7 1 ] ORDER [ 0 ] GET</code></td>
+                                    <td><code>[ 4 1 7 1 ] ORDER 0 GET</code></td>
                                     <td><code>1/1</code></td>
-                                    <td class="notes">argmin：昇順の最初の位置。代わりに<code>[ -1 ] GET</code>を使えばargmaxになる。</td>
+                                    <td class="notes">argmin：昇順の最初の位置。代わりに<code>-1 GET</code>を使えばargmaxになる。</td>
                                 </tr>
                                 <tr>
                                     <td><code>[ 1 2 3 4 5 ] 'XS' BIND<br>XS 0 [ ADD ] FOLD XS LENGTH DIV 'M' BIND<br>XS M SUB 'D' BIND D D MUL 0 [ ADD ] FOLD XS LENGTH DIV</code></td>

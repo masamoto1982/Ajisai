@@ -269,26 +269,6 @@ async fn group_partitions_without_loss() {
         .is_err());
 }
 
-/// `MEMBER` indexes the vector once and answers every probe from that index,
-/// so a probe set of any size costs one pass over the vector; the Kernel-only
-/// spelling scans the vector once per probe. Same answer, lane for lane.
-#[tokio::test]
-async fn member_is_one_pass_and_agrees_with_index_of_per_probe() {
-    let mut interpreter = Interpreter::new();
-    interpreter
-        .execute(
-            "[ 5 7 9 ] [ 7 4 9 ] MEMBER \
-             [ 5 7 9 ] 7 INDEX-OF NIL? NOT [ 5 7 9 ] 4 INDEX-OF NIL? NOT [ 5 7 9 ] 9 INDEX-OF NIL? NOT",
-        )
-        .await
-        .unwrap();
-    let stack = rendered_stack(&interpreter);
-    assert_eq!(stack[0], "[ TRUE FALSE TRUE ]");
-    // `NIL?` consumes INDEX-OF's answer, so each probe leaves only the
-    // negated absence.
-    assert_eq!(&stack[1..], ["TRUE", "FALSE", "TRUE"]);
-}
-
 /// `BSEARCH` answers what `INDEX-OF` answers on an ascending vector — the
 /// first index of the key, or a `missingField` absence — and refuses an
 /// unsorted operand rather than answering from it.

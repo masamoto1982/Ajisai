@@ -233,11 +233,6 @@ const commonErrors = [
     code: '[ 0 ] [ 5 ] RANGE',
     fix: 'RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).',
   },
-  {
-    title: 'Vector-wrapped string passed to a cast',
-    code: "[ '42' ] NUM",
-    fix: "String casts take the bare string: `'42' NUM`.",
-  },
 ];
 
 // Programs that succeed while meaning something other than they look like they

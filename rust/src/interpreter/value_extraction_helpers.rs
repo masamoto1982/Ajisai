@@ -72,15 +72,9 @@ impl NotAnInteger {
 fn extract_integer_bigint(value: &Value) -> std::result::Result<BigInt, NotAnInteger> {
     match &value.data {
         ValueData::Scalar(f) if f.is_integer() => Ok(f.numerator()),
-        // A one-element Vector stands for its element: `[ 2 ]` is the index 2.
-        ValueData::Vector(children) if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Tensor { data, .. } if data.len() == 1 => match data.get_small_fraction(0) {
-            Some(fraction) if fraction.is_integer() => Ok(fraction.numerator()),
-            Some(fraction) => Err(NotAnInteger::of(&Value::from_fraction(fraction))),
-            None => Err(NotAnInteger {
-                got: "NIL".to_string(),
-            }),
-        },
+        // No one-element Vector stands for its element here: `[ 2 ]` is a
+        // Vector (LANG.VALUES.DISJOINT), and a Vector where an index or a
+        // count is read lifts the Word over it (LANG.COLLECTIONS.LIFT).
         _ => Err(NotAnInteger::of(value)),
     }
 }

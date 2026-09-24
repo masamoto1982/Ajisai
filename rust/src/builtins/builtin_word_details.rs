@@ -143,7 +143,7 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
         // hover says what a NIL does in each operand, not a single summary
         // that is true of some of them.
         let has = |role: OperandRole| word.operand_roles.contains(&role);
-        if has(OperandRole::Data) {
+        if has(OperandRole::Data) || has(OperandRole::Leaf) {
             lines.push("A NIL data operand passes through as the result, keeping its reason.");
         }
         if has(OperandRole::Element) {
@@ -153,6 +153,11 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
         }
         if has(OperandRole::Program) {
             lines.push("A NIL where a block, name or message belongs is an error.");
+        }
+        if has(OperandRole::Leaf) || has(OperandRole::Truth) {
+            lines.push(
+                "A Vector or Record where one value is read applies the word to each element.",
+            );
         }
         if has(OperandRole::Truth) {
             lines.push(

@@ -41,16 +41,14 @@ pub(crate) fn order_indices(items: &[Value]) -> Result<Vec<usize>> {
     }
 }
 
-/// `three_way_compare`, with a structurally non-comparable operand
-/// reclassified as `nonComparableElement` — SORT and ORDER are the only two
-/// Words that declare it; `three_way_compare`'s other callers (MIN/MAX in
-/// `math_ops.rs`) declare `nonNumeric` instead, so the shared
-/// function cannot make this remap itself (the same shared-helper lesson as
-/// Phase 2's tensor-conversion helpers and Phase 4's `nonInteger` fix).
+/// `three_way_compare`, with an operand the exact order is not defined on
+/// raised as `nonNumeric`: the order is an order of Scalars, and every Word
+/// that asks for one (LT/GT, MIN/MAX, SORT/ORDER/BSEARCH) names the fault the
+/// same way.
 pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
     three_way_compare(a, b).map_err(|e| {
         AjisaiError::declared(
-            "nonComparableElement",
+            "nonNumeric",
             format!("expected Scalar elements, got {}", e.got),
         )
     })

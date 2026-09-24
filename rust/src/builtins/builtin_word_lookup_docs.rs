@@ -51,7 +51,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "GET",
         behavior: "Pops the index vector, then the target vector, and pushes\nthe element at that zero-based index.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 10 20 30 ] [ 0 ] GET",
+            code: "[ 10 20 30 ] 0 GET",
             result: "Pushes the first element, 10.",
         }],
         failure_note: "An out-of-range index yields a Bubble/NIL with reason\nindexOutOfBounds.",
@@ -94,7 +94,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "TAKE",
         behavior: "Pops the count vector, then the target vector, and pushes\nthe first N elements (or the last N for a negative count).",
         examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
+            code: "[ 1 2 3 4 5 ] 3 TAKE",
             result: "Pushes [ 1 2 3 ].",
         }],
         failure_note: "",

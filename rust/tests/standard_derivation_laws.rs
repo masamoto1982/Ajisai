@@ -147,28 +147,28 @@ async fn collection_standards_have_kernel_only_witnesses() {
         // TAKE is the prefix (or, for a negative count, the suffix) that GET
         // and COLLECT already reach index by index.
         (
-            "[ 10 20 30 40 50 ] [ 3 ] TAKE",
-            "[ 10 20 30 40 50 ] [ 0 ] GET [ 10 20 30 40 50 ] [ 1 ] GET \
-             [ 10 20 30 40 50 ] [ 2 ] GET 3 COLLECT",
+            "[ 10 20 30 40 50 ] 3 TAKE",
+            "[ 10 20 30 40 50 ] 0 GET [ 10 20 30 40 50 ] 1 GET \
+             [ 10 20 30 40 50 ] 2 GET 3 COLLECT",
         ),
         (
-            "[ 10 20 30 40 50 ] [ -2 ] TAKE",
-            "[ 10 20 30 40 50 ] [ 3 ] GET [ 10 20 30 40 50 ] [ 4 ] GET 2 COLLECT",
+            "[ 10 20 30 40 50 ] -2 TAKE",
+            "[ 10 20 30 40 50 ] 3 GET [ 10 20 30 40 50 ] 4 GET 2 COLLECT",
         ),
         // DROP is the other half of the same cut.
         (
-            "[ 10 20 30 40 50 ] [ 3 ] DROP",
-            "[ 10 20 30 40 50 ] [ 3 ] GET [ 10 20 30 40 50 ] [ 4 ] GET 2 COLLECT",
+            "[ 10 20 30 40 50 ] 3 DROP",
+            "[ 10 20 30 40 50 ] 3 GET [ 10 20 30 40 50 ] 4 GET 2 COLLECT",
         ),
         (
-            "[ 10 20 30 40 50 ] [ -2 ] DROP",
-            "[ 10 20 30 40 50 ] [ 0 ] GET [ 10 20 30 40 50 ] [ 1 ] GET \
-             [ 10 20 30 40 50 ] [ 2 ] GET 3 COLLECT",
+            "[ 10 20 30 40 50 ] -2 DROP",
+            "[ 10 20 30 40 50 ] 0 GET [ 10 20 30 40 50 ] 1 GET \
+             [ 10 20 30 40 50 ] 2 GET 3 COLLECT",
         ),
         // REVERSE reads the same indices in descending order.
         (
             "[ 1 2 3 ] REVERSE",
-            "[ 1 2 3 ] [ 2 ] GET [ 1 2 3 ] [ 1 ] GET [ 1 2 3 ] [ 0 ] GET 3 COLLECT",
+            "[ 1 2 3 ] 2 GET [ 1 2 3 ] 1 GET [ 1 2 3 ] 0 GET 3 COLLECT",
         ),
         // INDEX-OF is a first match over GET and EQ, which is a chain of
         // SELECTs: each one answers its own index or defers to the rest, and
@@ -177,13 +177,25 @@ async fn collection_standards_have_kernel_only_witnesses() {
         // because SELECT takes its candidates before the truth that chooses.
         (
             "[ 5 7 9 ] 7 INDEX-OF",
-            "0 1 2 NIL [ 5 7 9 ] [ 2 ] GET 7 EQ SELECT \
-             [ 5 7 9 ] [ 1 ] GET 7 EQ SELECT [ 5 7 9 ] [ 0 ] GET 7 EQ SELECT",
+            "0 1 2 NIL [ 5 7 9 ] 2 GET 7 EQ SELECT \
+             [ 5 7 9 ] 1 GET 7 EQ SELECT [ 5 7 9 ] 0 GET 7 EQ SELECT",
         ),
         (
             "[ 5 7 9 ] 4 INDEX-OF",
-            "0 1 2 NIL [ 5 7 9 ] [ 2 ] GET 4 EQ SELECT \
-             [ 5 7 9 ] [ 1 ] GET 4 EQ SELECT [ 5 7 9 ] [ 0 ] GET 4 EQ SELECT",
+            "0 1 2 NIL [ 5 7 9 ] 2 GET 4 EQ SELECT \
+             [ 5 7 9 ] 1 GET 4 EQ SELECT [ 5 7 9 ] 0 GET 4 EQ SELECT",
+        ),
+        // MEMBER? is the same chain answering TRUE instead of an index, with
+        // FALSE where INDEX-OF's chain ends in NIL.
+        (
+            "[ 5 7 9 ] 7 MEMBER?",
+            "TRUE TRUE TRUE FALSE [ 5 7 9 ] 2 GET 7 EQ SELECT \
+             [ 5 7 9 ] 1 GET 7 EQ SELECT [ 5 7 9 ] 0 GET 7 EQ SELECT",
+        ),
+        (
+            "[ 5 7 9 ] 4 MEMBER?",
+            "TRUE TRUE TRUE FALSE [ 5 7 9 ] 2 GET 4 EQ SELECT \
+             [ 5 7 9 ] 1 GET 4 EQ SELECT [ 5 7 9 ] 0 GET 4 EQ SELECT",
         ),
     ] {
         equivalent(native, witness).await;
@@ -197,12 +209,12 @@ async fn text_standards_have_kernel_only_witnesses() {
         // CHARS exposes and JOIN closes again.
         (
             "'  hi  ' TRIM",
-            "'  hi  ' CHARS [ 2 ] GET '  hi  ' CHARS [ 3 ] GET 2 COLLECT JOIN",
+            "'  hi  ' CHARS 2 GET '  hi  ' CHARS 3 GET 2 COLLECT JOIN",
         ),
         (
             "'a,b,c' ',' TOKENIZE",
-            "'a,b,c' CHARS [ 0 ] GET 'a,b,c' CHARS [ 2 ] GET \
-             'a,b,c' CHARS [ 4 ] GET 3 COLLECT",
+            "'a,b,c' CHARS 0 GET 'a,b,c' CHARS 2 GET \
+             'a,b,c' CHARS 4 GET 3 COLLECT",
         ),
     ] {
         equivalent(native, witness).await;

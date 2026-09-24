@@ -6,8 +6,6 @@
 //! and `BSEARCH` halves a range until it is empty — a loop whose length depends
 //! on the data, which a language with no unbounded loop cannot write at all.
 
-use std::collections::HashSet;
-
 use super::sort::compare_for_sort;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::{self, ScanMeter};
@@ -27,10 +25,10 @@ fn non_vector(got: &Value) -> AjisaiError {
     )
 }
 
-/// `MEMBER ( [ vec ] [ probes ] -> [ truths ] )`: which probes occur in the
-/// vector, by the value equality `UNIQUE` and `INDEX-OF` use. A Vector of
-/// probes answers a Vector of truths, lane for lane; a single probe answers a
-/// single truth.
+/// `MEMBER? ( [ vec ] [ x ] -> [ TRUE | FALSE ] )`: whether `x` occurs in the
+/// vector, by the value equality `UNIQUE` and `INDEX-OF` use. The needle is
+/// one value compared, not read (an `element` operand), so a Vector needle is
+/// looked for as an element rather than taken as several needles.
 pub fn op_member(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(elements) = operands[0].as_vector_view().map(|view| view.into_owned()) else {
@@ -39,30 +37,18 @@ pub fn op_member(interp: &mut Interpreter) -> Result<()> {
         return Err(err);
     };
 
-    // One hash pass over the vector, priced as UNIQUE's is: the fixed
-    // per-element cost of finding a bucket, whatever the vocabulary size.
     let meter = ScanMeter::new(&elements);
-    let mut index: HashSet<&Value> = HashSet::with_capacity(elements.len());
     for (completed, item) in elements.iter().enumerate() {
         if let Err(e) = meter.charge_scan_of(interp, completed) {
-            drop(index);
             restore_operands(interp, operands);
             return Err(e);
         }
-        index.insert(item);
+        if *item == operands[1] {
+            interp.stack.push(Value::from_bool(true));
+            return Ok(());
+        }
     }
-
-    let answer = match operands[1].as_vector_view() {
-        Some(probes) => Value::from_vector(
-            probes
-                .iter()
-                .map(|probe| Value::from_bool(index.contains(probe)))
-                .collect(),
-        ),
-        None => Value::from_bool(index.contains(&operands[1])),
-    };
-    drop(index);
-    interp.stack.push(answer);
+    interp.stack.push(Value::from_bool(false));
     Ok(())
 }
 
@@ -74,7 +60,7 @@ enum Found {
 
 /// The first index in ascending `sorted` whose element equals `key`, by
 /// halving. `compare_for_sort` decides; a structurally non-comparable key is
-/// its `nonComparableElement`.
+/// its `nonNumeric`.
 fn lower_bound(sorted: &[Value], key: &Value) -> Result<Found> {
     let (mut lo, mut hi) = (0usize, sorted.len());
     while lo < hi {

@@ -137,14 +137,14 @@ mod num_tests {
     use crate::interpreter::Interpreter;
 
     #[tokio::test]
-    async fn test_num_parse_error_stack_restoration() {
+    async fn test_num_lifts_over_a_vector_and_projects_per_element() {
+        // A Vector where one String is read lifts NUM over its elements
+        // (LANG.COLLECTIONS.LIFT); an unparsable element projects its own NIL.
         let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ 'hello' ]").await.unwrap();
-        let result = interp.execute("NUM").await;
-        assert!(result.is_err());
+        interp.execute("[ '1' 'hello' ] NUM").await.unwrap();
         let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "Stack should be restored after parse error");
+        assert_eq!(stack.len(), 1);
+        assert_eq!(stack[0].to_string(), "[ 1/1 NIL ]");
     }
 
     #[tokio::test]
@@ -160,14 +160,14 @@ mod num_tests {
     }
 
     #[tokio::test]
-    async fn test_num_nil_error_stack_restoration() {
+    async fn test_num_error_in_one_element_restores_the_whole_operand() {
         let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ nil ]").await.unwrap();
+        interp.execute("[ '1' TRUE ]").await.unwrap();
         let result = interp.execute("NUM").await;
         assert!(result.is_err());
         let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "Stack should be restored after nil error");
+        assert_eq!(stack.len(), 1, "the lifted operand is restored whole");
+        assert_eq!(stack[0].to_string(), "[ '1' TRUE ]");
     }
 
     #[tokio::test]

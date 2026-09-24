@@ -55,7 +55,8 @@ mod format_json_tests {
     #[tokio::test]
     async fn format_refuses_malformed_use_and_restores_operands() {
         assert_eq!(error_of("'x' 2 FORMAT").await, "nonNumeric");
-        assert_eq!(error_of("[ 1 2 ] 2 FORMAT").await, "nonNumeric");
+        // A Vector value lifts FORMAT over its elements.
+        assert_eq!(top("[ 1 2 ] 2 FORMAT").await, "[ '1.00' '2.00' ]");
         assert_eq!(error_of("1 -1 FORMAT").await, "invalidCount");
         assert_eq!(error_of("1 1/2 FORMAT").await, "invalidCount");
         assert_eq!(error_of("1 'x' FORMAT").await, "invalidCount");

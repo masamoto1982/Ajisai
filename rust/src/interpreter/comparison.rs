@@ -1,6 +1,5 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::lane_lift::lift_lanes;
-use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::Interpreter;
 use crate::types::fraction::Fraction;
@@ -99,15 +98,12 @@ fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Valu
                 .unwrap_or(NilReason::Literal),
         ));
     }
-    // `unsupportedComparison`: LT/GT, the only callers of
+    // `nonNumeric`: LT/GT, the only callers of
     // `compare_lane`, declare it uniformly. EQ never reaches here —
     // `pairwise_eq` is total and raises nothing.
     compare_scalar_pair(a_val, b_val, kind)
         .map_err(|e| {
-            AjisaiError::declared(
-                "unsupportedComparison",
-                format!("expected two Scalars, got {}", e.got),
-            )
+            AjisaiError::declared("nonNumeric", format!("expected two Scalars, got {}", e.got))
         })
         .map(Value::from_bool)
 }
@@ -144,16 +140,10 @@ fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result
 }
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_lt)? {
-        return Ok(());
-    }
     apply_ordering_schema(interp, OrderingKind::Lt)
 }
 
 pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
-    if record_lift::lift_binary(interp, &op_gt)? {
-        return Ok(());
-    }
     apply_ordering_schema(interp, OrderingKind::Gt)
 }
 

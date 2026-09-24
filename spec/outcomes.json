@@ -94,7 +94,7 @@
     {
       "id": "invalidIndex",
       "kind": "declared",
-      "documentation": "GET received an index operand that is not itself a well-formed index (non-integer, wrong shape) — distinct from indexOutOfBounds, which is a well-formed index outside bounds."
+      "documentation": "An index operand (GET, PUT) is not a whole number."
     },
     {
       "id": "invalidName",
@@ -134,39 +134,14 @@
       "documentation": "A Record Word (KEYS, VALUES, AT, WITH, WITHOUT, HAS?, MERGE) was given something other than a Record where one is required. A Record is its own domain (LANG.VALUES.DISJOINT): a Vector of pairs is not a Record and nothing converts one implicitly."
     },
     {
-      "id": "nonComparableElement",
-      "kind": "declared",
-      "documentation": "SORT or ORDER met an element its comparison law cannot order."
-    },
-    {
-      "id": "nonInteger",
-      "kind": "declared",
-      "documentation": "An operand that must be a whole number carried a non-integer scalar — PUT's index."
-    },
-    {
       "id": "nonNumeric",
       "kind": "declared",
-      "documentation": "An arithmetic Word (ADD/SUB/MUL/DIV), or FORMAT, met an operand that is not a number."
+      "documentation": "An operand the Word reads as a Scalar is not one: arithmetic on a non-number, or an order asked of something the exact order is not defined on (LT/GT, MIN/MAX, SORT/ORDER/BSEARCH)."
     },
     {
       "id": "nonText",
       "kind": "declared",
-      "documentation": "A text-only Word (CHARS/TRIM/TOKENIZE/UPPER/LOWER/NUM/JSON-DECODE), or a name operand (DEF/DEL/BIND), met an operand that is not Text."
-    },
-    {
-      "id": "nonTextElement",
-      "kind": "declared",
-      "documentation": "JOIN met a vector element that cannot serve as text content — not Text, and not a number that decodes to a character code."
-    },
-    {
-      "id": "nonTextSeparator",
-      "kind": "declared",
-      "documentation": "TOKENIZE's separator operand is not Text."
-    },
-    {
-      "id": "nonTextVector",
-      "kind": "declared",
-      "documentation": "JOIN's operand is not a Vector at all (the top-level shape check, despite the name — distinct from nonTextElement's per-element check)."
+      "documentation": "An operand the Word reads as a String is not one, including an element of JOIN's Vector and TOKENIZE's separator."
     },
     {
       "id": "nonTruthValue",
@@ -176,7 +151,7 @@
     {
       "id": "nonVector",
       "kind": "declared",
-      "documentation": "A collection Word (GET/LENGTH/TAKE/CONCAT) met an operand that is not a Vector."
+      "documentation": "An operand the Word reads as a Vector is not one."
     },
     {
       "id": "notASymbol",
@@ -233,11 +208,6 @@
       "kind": "structural",
       "attribution": "machine",
       "documentation": "A name in program text did not resolve to any Word in the compiled-in vocabulary or the live dictionary."
-    },
-    {
-      "id": "unsupportedComparison",
-      "kind": "declared",
-      "documentation": "EQ/LT/GT met a pair of operands whose types have no defined comparison law."
     },
     {
       "id": "vectorLengthMismatch",

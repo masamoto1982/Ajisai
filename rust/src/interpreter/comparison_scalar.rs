@@ -14,7 +14,7 @@ use crate::types::{Value, ValueData};
 
 /// An operand the exact order is not defined on, named by its domain. Not an
 /// `AjisaiError`: each comparing Word declares its own condition for this
-/// (`nonNumeric`, `nonComparableElement`, `unsupportedComparison`), so the
+/// (`nonNumeric` today, for every one of them), so the
 /// caller names it.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct NotComparable {

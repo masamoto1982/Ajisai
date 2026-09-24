@@ -8,7 +8,7 @@ RECORD KEYS VALUES AT WITH WITHOUT HAS? MERGE
 CHARS JOIN NUM STR
 SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT BIND DEF DEL DIGEST PRINT`.split(/\s+/));
 const STANDARD = new Set(`SUB ROUND MIN MAX GCD RATIO
-TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER BSEARCH FILTER SCAN
+TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER? BSEARCH FILTER SCAN
 TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
 // The alpha Words retired in the phase-1 vocabulary freeze. `UNIQUE` is not
 // among them any more: it was cut as one of several overlapping collection
@@ -42,7 +42,7 @@ const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'opera
 const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 const DERIVATION_LAW_TEST = 'rust/tests/standard_derivation_laws.rs';
 const DERIVABLE = new Set(`SUB ROUND MIN MAX
-TAKE DROP REVERSE INDEX-OF TRIM TOKENIZE`.split(/\s+/));
+TAKE DROP REVERSE INDEX-OF MEMBER? TRIM TOKENIZE`.split(/\s+/));
 // `FORMAT` and the JSON pair are Phase 6 of the vocabulary-100 work order:
 // `FORMAT` is the one rounding boundary (a FLOOR-and-STR spelling would
 // scatter it), and JSON nesting is input-dependent repetition no definition
@@ -50,7 +50,7 @@ TAKE DROP REVERSE INDEX-OF TRIM TOKENIZE`.split(/\s+/));
 // Phase 7 closes the number concept: `GCD` is input-dependent repetition
 // (Euclid) and `RATIO` reads representation the language otherwise hides;
 // both operational.
-const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP MEMBER BSEARCH SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE GCD RATIO UPPER LOWER'.split(/\s+/));
+const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP BSEARCH SEARCH REPLACE FORMAT JSON-DECODE JSON-ENCODE GCD RATIO UPPER LOWER'.split(/\s+/));
 
 // The order in which the vocabulary would give up Words, cheapest to lose first.
 //
@@ -62,12 +62,13 @@ const OPERATIONAL = new Set('FILTER SCAN FILL SORT ORDER UNIQUE TALLY ZIP PUT GR
 // spelling, and a Kernel Word is not on the table.
 //
 // The order is use, least first, as counted in the lexicon pilot's programs
-// (tools/lexicon-emergence/runs/pilot-2026-09-23): INDEX-OF 0, REVERSE 6,
+// (tools/lexicon-emergence/runs/pilot-2026-09-23): MEMBER? 0 (as MEMBER, whose
+// one-index batch form was its only non-derivable use and is gone), INDEX-OF 0, REVERSE 6,
 // TRIM 10, TOKENIZE 12, MAX 13, MIN 14, TAKE 16, DROP 32, SUB 54 (written `-`).
 // `ROUND` is deliberately absent though it is derivable: its Kernel phrase
 // branches on the sign of its operand, which is the one of these a reader is
 // likely to write wrongly by hand.
-const RETIREMENT_QUEUE = 'INDEX-OF REVERSE TRIM TOKENIZE MAX MIN TAKE DROP SUB'.split(/\s+/);
+const RETIREMENT_QUEUE = 'MEMBER? INDEX-OF REVERSE TRIM TOKENIZE MAX MIN TAKE DROP SUB'.split(/\s+/);
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;

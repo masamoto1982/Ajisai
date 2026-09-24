@@ -65,7 +65,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 // so a block asking in as many words for a Vector of one got a
                 // scalar, and there was no way at all to map to singletons.
                 // Worse, it was silent and unequal — `[ [ 1 ] ] { REVERSE } MAP
-                // [ 0 ] GET 5 ADD` answered `6/1` where `[ 6/1 ]` is the
+                // 0 GET 5 ADD` answered `6/1` where `[ 6/1 ]` is the
                 // answer, which is exactly the quiet wrong result
                 // LANG.FAILURE.TRICHOTOMY exists to rule out.
                 Some(result_val) => {

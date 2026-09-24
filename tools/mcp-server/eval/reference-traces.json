@@ -426,7 +426,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
+    "source": "[ 1 2 3 4 5 ] 3 TAKE"
    }
   },
   {
@@ -434,7 +434,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
+    "source": "[ 1 2 3 4 5 ] 3 TAKE"
    }
   },
   {
@@ -506,7 +506,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 10 20 30 ] [ 1 ] GET"
+    "source": "[ 10 20 30 ] 1 GET"
    }
   },
   {
@@ -514,7 +514,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 10 20 30 ] [ 1 ] GET"
+    "source": "[ 10 20 30 ] 1 GET"
    }
   },
   {
@@ -602,7 +602,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
+    "source": "[ 1 2 3 ] 2 MEMBER?"
    }
   },
   {
@@ -610,7 +610,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
+    "source": "[ 1 2 3 ] 2 MEMBER?"
    }
   },
   {

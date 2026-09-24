@@ -763,11 +763,11 @@
     {
       "id": "core.member",
       "kind": "coreword",
-      "surface": "MEMBER",
+      "surface": "MEMBER?",
       "category": "vector",
       "vocabularyTier": "standard",
       "source": "spec/words.json",
-      "canonical": "MEMBER",
+      "canonical": "MEMBER?",
       "coverage_entry_id": "core.member",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",

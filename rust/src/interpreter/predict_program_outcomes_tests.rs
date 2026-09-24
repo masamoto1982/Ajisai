@@ -191,12 +191,12 @@ fn a_written_nil_predicts_its_own_literal_outcome() {
 }
 
 /// The trigger is what the program can *produce*, not what it writes:
-/// `[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET` answers `nil:literal` with no
+/// `[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET` answers `nil:literal` with no
 /// `NIL` token anywhere, because the divide-by-zero lane's reason does not
 /// survive a second lane-wise pass.
 #[test]
 fn a_computed_nil_admits_the_reasonless_one_too() {
-    let outcomes = predict("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV [ 1 ] GET");
+    let outcomes = predict("[ 1 2 ] [ 1 0 ] DIV [ 1 1 ] DIV 1 GET");
     assert!(outcomes.contains(&"nil:divisionByZero".to_string()));
     assert!(
         outcomes.contains(&"nil:literal".to_string()),

@@ -426,7 +426,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
+    "source": "[ 1 2 3 4 5 ] 3 TAKE"
    },
    "expect": {
     "/status": "ok",
@@ -506,7 +506,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 10 20 30 ] [ 1 ] GET"
+    "source": "[ 10 20 30 ] 1 GET"
    },
    "expect": {
     "/status": "ok",
@@ -602,11 +602,11 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 2 ] MEMBER"
+    "source": "[ 1 2 3 ] 2 MEMBER?"
    },
    "expect": {
     "/status": "ok",
-    "/stackDisplay/0": "[ TRUE ]"
+    "/stackDisplay/0": "TRUE"
    }
   },
   {

@@ -22,7 +22,7 @@ const names = new Set();
 function derivedNilPolicy(roles, projecting) {
   if (roles.length === 0) return 'preserveReason';
   if (roles.includes('truth')) return 'kleeneAbsorbing';
-  if (roles.includes('data')) return projecting ? 'passthroughThenProject' : 'passthrough';
+  if (roles.includes('data') || roles.includes('leaf')) return projecting ? 'passthroughThenProject' : 'passthrough';
   if (!roles.includes('element')) return projecting ? 'createsNil' : 'rejectNil';
   return 'consumeNil';
 }
@@ -37,6 +37,29 @@ for (const word of words.entries) {
   }
   if (word.vocabularyTier === 'kernel' && 'standardKind' in word) fail(`${word.name} is Kernel but declares standardKind`);
   if (!manifestNames.has(word.name)) fail(`${word.name} is absent from the frozen manifest`);
+  // A Word that tests its operands and answers a truth value is named with a
+  // trailing `?` (NIL?, HAS?, MEMBER?), and a `?` name always answers one.
+  // Relations and connectives (EQ LT GT, AND NOT SELECT) are operators, named
+  // for the operation, and exempt.
+  const answersTruth = /-> \[ (TRUE \| FALSE|bool|truths?) \]/.test(word.documentation.stackEffect);
+  const operator = ['comparison', 'booleanLogic'].includes(word.family);
+  if (!operator && answersTruth !== word.name.endsWith('?')) {
+    fail(
+      answersTruth
+        ? `${word.name} answers a truth value, so its name ends in ?`
+        : `${word.name} ends in ? but does not answer a truth value`,
+    );
+  }
+  // One notation for every stack effect: operands and results in `[ … ]`
+  // groups with inner spaces, named rather than quoted.
+  if (/\[\]|'[A-Za-z.]+'/.test(word.documentation.stackEffect)) {
+    fail(`${word.name} stack effect \`${word.documentation.stackEffect}\` must write groups as [ … ] and name operands unquoted`);
+  }
+  // A lifted operand is only meaningful for a Word with one result: the
+  // lift assembles one result per element.
+  if ((word.stack.operands ?? []).some((role) => role === 'leaf' || role === 'truth') && word.stack.outputs !== 1) {
+    fail(`${word.name} lifts over an operand but does not answer exactly one value`);
+  }
   const operands = word.stack.operands;
   if (typeof word.stack.inputs === 'number') {
     if (!Array.isArray(operands) || operands.length !== word.stack.inputs) {

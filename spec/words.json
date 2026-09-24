@@ -326,8 +326,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -336,7 +336,7 @@
         "reason": null
       },
       "errorWhen": [
-        "unsupportedComparison",
+        "nonNumeric",
         "shapeMismatch"
       ],
       "purity": "pure",
@@ -384,8 +384,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -394,7 +394,7 @@
         "reason": null
       },
       "errorWhen": [
-        "unsupportedComparison",
+        "nonNumeric",
         "shapeMismatch"
       ],
       "purity": "pure",
@@ -442,8 +442,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -500,8 +500,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -559,8 +559,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -617,8 +617,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -673,7 +673,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -728,7 +728,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -784,8 +784,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -842,8 +842,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -900,7 +900,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -955,8 +955,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -1021,8 +1021,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -1079,7 +1079,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -1136,7 +1136,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -1246,7 +1246,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -1280,10 +1280,10 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 9 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "summary": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
         "hover": "TAKE — take N elements from start or end",
-        "lookup": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 9 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
-        "syntax": "[ 1 2 3 4 5 ] [ 3 ] TAKE",
+        "lookup": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "syntax": "[ 1 2 3 4 5 ] 3 TAKE",
         "role": "Vector primitive: Take the first N or last -N elements of a vector.",
         "stackEffect": "[ vec ] [ n ] -> [ prefix ]"
       },
@@ -1303,7 +1303,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -1337,10 +1337,10 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "summary": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
         "hover": "DROP — drop N elements from start or end",
-        "lookup": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] [ 2 ] DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] [ -2 ] DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
-        "syntax": "[ 1 2 3 4 5 ] [ 2 ] DROP",
+        "lookup": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "syntax": "[ 1 2 3 4 5 ] 2 DROP",
         "role": "Vector primitive: Drop the first N or last -N elements of a vector.",
         "stackEffect": "[ vec ] [ n ] -> [ rest ]"
       },
@@ -1856,7 +1856,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonComparableElement"
+        "nonNumeric"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -1913,7 +1913,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonComparableElement"
+        "nonNumeric"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -2130,7 +2130,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data",
+          "leaf",
           "element"
         ]
       },
@@ -2141,7 +2141,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "nonInteger"
+        "invalidIndex"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -2252,7 +2252,7 @@
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "valueAbsent",
+        "when": "notFound",
         "reason": "missingField"
       },
       "errorWhen": [
@@ -2295,7 +2295,7 @@
       "standardKind": "namedPattern"
     },
     {
-      "name": "MEMBER",
+      "name": "MEMBER?",
       "aliases": [],
       "family": "collection",
       "stack": {
@@ -2336,19 +2336,19 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time.",
-        "hover": "MEMBER — which probes occur in the vector",
-        "lookup": "Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time.",
-        "syntax": "[ 1 2 3 ] [ 2 5 ] MEMBER",
-        "role": "Vector primitive: which of the probes occur in the vector, element-wise.",
-        "stackEffect": "[ vec ] [ probes ] -> [ truths ]"
+        "summary": "Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts, nested vectors and NILs as well as numbers. The needle is one value, compared rather than read, so a Vector needle is looked for as an element: `[ [ 1 ] 2 ] [ 1 ] MEMBER?` is `TRUE`. It is `INDEX-OF NIL? NOT`.",
+        "hover": "MEMBER? — whether the value occurs in the vector",
+        "lookup": "Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts, nested vectors and NILs as well as numbers. The needle is one value, compared rather than read, so a Vector needle is looked for as an element: `[ [ 1 ] 2 ] [ 1 ] MEMBER?` is `TRUE`. It is `INDEX-OF NIL? NOT`.",
+        "syntax": "[ 1 2 3 ] 2 MEMBER?",
+        "role": "Vector test: whether a value occurs in the vector.",
+        "stackEffect": "[ vec ] [ x ] -> [ TRUE | FALSE ]"
       },
       "executorKey": "Member",
       "effects": [],
       "partiality": "total",
       "category": "vector",
       "vocabularyTier": "standard",
-      "standardKind": "algorithm"
+      "standardKind": "namedPattern"
     },
     {
       "name": "BSEARCH",
@@ -2359,18 +2359,18 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "keyAbsent",
+        "when": "notFound",
         "reason": "missingField"
       },
       "errorWhen": [
         "nonVector",
         "unsortedInput",
-        "nonComparableElement"
+        "nonNumeric"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -2581,12 +2581,12 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "keyAbsent",
+        "when": "notFound",
         "reason": "missingField"
       },
       "errorWhen": [
@@ -2636,7 +2636,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data",
+          "leaf",
           "element"
         ]
       },
@@ -2691,12 +2691,12 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "keyAbsent",
+        "when": "notFound",
         "reason": "missingField"
       },
       "errorWhen": [
@@ -2746,7 +2746,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3078,7 +3078,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3140,8 +3140,8 @@
         "reason": null
       },
       "errorWhen": [
-        "nonTextVector",
-        "nonTextElement"
+        "nonVector",
+        "nonText"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -3185,7 +3185,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3239,7 +3239,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3294,7 +3294,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3349,8 +3349,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3360,7 +3360,7 @@
       },
       "errorWhen": [
         "nonText",
-        "nonTextSeparator"
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -3405,17 +3405,18 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "needleAbsent",
+        "when": "notFound",
         "reason": "missingField"
       },
       "errorWhen": [
-        "nonText"
+        "nonText",
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -3460,9 +3461,9 @@
         "inputs": 3,
         "outputs": 1,
         "operands": [
-          "data",
-          "data",
-          "data"
+          "leaf",
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3471,7 +3472,8 @@
         "reason": null
       },
       "errorWhen": [
-        "nonText"
+        "nonText",
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -3516,7 +3518,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -3620,8 +3622,8 @@
         "inputs": 2,
         "outputs": 1,
         "operands": [
-          "data",
-          "data"
+          "leaf",
+          "leaf"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3631,7 +3633,8 @@
       },
       "errorWhen": [
         "nonNumeric",
-        "invalidCount"
+        "invalidCount",
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -3678,7 +3681,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -3939,7 +3942,7 @@
         "lookup": "Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluation with category `declaredFailure` and that text as its message. This is the other half of what ABSENT gives a user Word — the trichotomy's third outcome, for a call that is wrong rather than data that did not work out. Like every ERROR it propagates and cannot be caught; a caller who wants a value to recover from asks for ABSENT instead. A non-text operand is `nonText`.",
         "syntax": "'width must be positive' FAIL",
         "role": "Control primitive: raise an ERROR of category declaredFailure with the program's text.",
-        "stackEffect": "[ 'message' ] -> [ ]"
+        "stackEffect": "[ message ] -> [ ]"
       },
       "executorKey": "Fail",
       "effects": [],
@@ -4144,7 +4147,7 @@
         "lookup": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
         "syntax": "'rate not quoted' ABSENT",
         "role": "Absence primitive: produce a NIL carrying a reason the program states.",
-        "stackEffect": "[ 'reason' ] -> [ NIL ]"
+        "stackEffect": "[ reason ] -> [ NIL ]"
       },
       "executorKey": "Absent",
       "effects": [],
@@ -4202,7 +4205,7 @@
         "lookup": "Name a value for the rest of the frame that made it. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.",
         "syntax": "[ 1 2 3 ] 'XS' BIND",
         "role": "The one way to name a value without defining a Word.",
-        "stackEffect": "[ x ] [ 'name'.. ] -> [ ]"
+        "stackEffect": "[ x ] [ name.. ] -> [ ]"
       },
       "executorKey": "Bind",
       "effects": [],
@@ -4262,7 +4265,7 @@
         "lookup": "Define a user word from a body and a name.",
         "syntax": "[ 2 * ] 'DOUBLE' DEF",
         "role": "Dictionary primitive: Define a user word from a body and a name.",
-        "stackEffect": "[ body ] [ name ] -> []"
+        "stackEffect": "[ body ] [ name ] -> [ ]"
       },
       "executorKey": "Def",
       "effects": [
@@ -4321,7 +4324,7 @@
         "lookup": "Delete a user word from the dictionary.",
         "syntax": "[ [ 1 ] ] 'W' DEF 'W' DEL",
         "role": "Dictionary primitive: Delete a user word from the dictionary.",
-        "stackEffect": "[ name ] -> []"
+        "stackEffect": "[ name ] -> [ ]"
       },
       "executorKey": "Del",
       "effects": [
