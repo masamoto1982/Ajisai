@@ -179,7 +179,11 @@ async fn a_symbol_inside_a_vector_literal_is_content_not_a_call() {
 /// one out, and the walk models it exactly.
 #[tokio::test]
 async fn a_recovery_phrase_has_a_fixed_arity() {
-    let contract = contract_for("[ 9 1 0 DIV NIL? SELECT ] 'FALLBACK' DEF", "FALLBACK").await;
+    let contract = contract_for(
+        "[ 1 0 DIV 'S' BIND 9 S S NIL? SELECT ] 'FALLBACK' DEF",
+        "FALLBACK",
+    )
+    .await;
     assert_eq!(contract.flow, fixed(0, 1));
     assert!(
         !contract

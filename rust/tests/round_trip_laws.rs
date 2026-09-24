@@ -1,9 +1,8 @@
 //! A value's display is source that rebuilds it.
 //!
-//! Ajisai renders every stack value as text a reader can copy back into the
-//! editor and run: `[ 1/1 2/1 ]`, `{ 'x' 1/1 }`, `'ab'`, `TRUE`, `NIL`,
-//! `1/3`. Every domain has a literal, so every display is one
-//! (LANG.RECORDS.STRUCTURE for the Record's own).
+//! Ajisai renders a stack value as text a reader can copy back into the
+//! editor and run wherever the value's domain has a literal: `[ 1/1 2/1 ]`,
+//! `'ab'`, `TRUE`, `NIL`, `1/3`.
 //!
 //! The law is stated by executing it: render a value, run what was rendered,
 //! and require the result to be the same value. A law about a display that is
@@ -11,9 +10,12 @@
 //! exactly what may change; this pins the property that makes the spelling
 //! worth having.
 //!
-//! Two kinds of value are deliberately out of scope, because the display does
-//! not claim to round-trip them and `display_source.rs` says so:
+//! Three kinds of value are deliberately out of scope, because the display
+//! does not claim to round-trip them and `display_source.rs` says so:
 //!
+//! - A Record renders as `{ key value … }`, which is a display, not source:
+//!   only `[ ]` delimits, and `RECORD` is how a program builds one. A Vector
+//!   holding a Record inherits this.
 //! - A Symbol renders as its bare name, which calls a Word rather than
 //!   pushing the name.
 //! - An irrational scalar renders as a continued fraction truncated at a
@@ -65,76 +67,16 @@ async fn assert_round_trips(program: &str) {
     );
 }
 
+/// A Vector renders as its own literal, and the spelling is the one a reader
+/// writes: this is the half of the law a round trip alone cannot fix, since a
+/// wrong-but-consistent spelling would round-trip too.
 #[tokio::test]
-async fn a_record_round_trips() {
-    for program in [
-        "[ 'x' 'y' ] [ 1 2 ] RECORD",
-        "{ 'x' 1 'y' 2 }",
-        "{ }",
-        "{ 'k' { 'inner' [ 1 2 ] } }",
-        "{ 1 'one' TRUE 'yes' }",
-        "[ ] [ ] RECORD",
-        "[ 'only' ] [ 42 ] RECORD",
-        "[ 'a' ] [ NIL ] RECORD",
-        "[ 'a' 'b' ] [ TRUE FALSE ] RECORD",
-        "[ 'r' ] [ 1/3 ] RECORD",
-        "[ 'v' ] [ [ 1 2 3 ] ] RECORD",
-    ] {
-        assert_round_trips(program).await;
-    }
-}
-
-#[tokio::test]
-async fn a_record_a_core_word_built_round_trips() {
-    // The shapes a program actually meets, rather than ones written by hand.
-    for program in [
-        "[ 'b' 'a' 'b' ] TALLY",
-        "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP",
-        "[ 'x' ] [ 1 ] RECORD 'y' 2 WITH",
-        "[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT",
-        "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE",
-        "'{\"a\": 1, \"b\": [true, null]}' JSON-DECODE",
-    ] {
-        assert_round_trips(program).await;
-    }
-}
-
-/// A Record inside a Vector: the case a constructor call cannot render.
-///
-/// A literal does not evaluate what is written inside it, so a Record
-/// rendered as `[ 'a' ] [ 1 ] RECORD` inside a Vector literal would read back
-/// as a three-element Vector — two Vectors and the name `RECORD` — rather
-/// than the one-element Vector it came from: a display that reads back as a
-/// *different* value, silently, which is the one failure mode worse than not
-/// round-tripping at all. A Record literal is one element, so the Vector
-/// renders as an ordinary literal and reads back as itself.
-#[tokio::test]
-async fn a_record_nested_in_a_vector_round_trips() {
-    for program in [
-        "[ 'a' ] [ 1 ] RECORD 1 COLLECT",
-        "[ 'a' ] [ 1 ] RECORD [ 'b' ] [ 2 ] RECORD 2 COLLECT",
-        "1 [ 'a' ] [ 2 ] RECORD 2 COLLECT",
-        "[ 'a' ] [ 1 ] RECORD 1 COLLECT 1 COLLECT",
-        "[ 'outer' ] [ 'a' ] [ 1 ] RECORD 1 COLLECT RECORD",
-    ] {
-        assert_round_trips(program).await;
-    }
-}
-
-/// Each collection renders as its own literal, and the spelling is the one a
-/// reader writes: this is the half of the law a round trip alone cannot fix,
-/// since a wrong-but-consistent spelling would round-trip too.
-#[tokio::test]
-async fn a_collection_renders_as_its_own_literal() {
+async fn a_vector_renders_as_its_own_literal() {
     for (program, expected) in [
         ("[ 1 2 3 ]", "[ 1/1 2/1 3/1 ]"),
         ("[ ]", "[ ]"),
         ("[ 'a' 'b' ]", "[ 'a' 'b' ]"),
         ("[ [ 1 ] [ 2 ] ]", "[ [ 1/1 ] [ 2/1 ] ]"),
-        ("[ 'x' 'y' ] [ 1 2 ] RECORD", "{ 'x' 1/1 'y' 2/1 }"),
-        ("[ ] [ ] RECORD", "{ }"),
-        ("[ 'r' ] { 'k' 1 } 1 COLLECT RECORD", "{ 'r' { 'k' 1/1 } }"),
-        ("[ 'a' ] [ 1 ] RECORD 1 COLLECT", "[ { 'a' 1/1 } ]"),
     ] {
         let rendered = run(program).await;
         assert_eq!(
@@ -146,11 +88,9 @@ async fn a_collection_renders_as_its_own_literal() {
     }
 }
 
-/// The domains that always round-tripped must keep doing so: the Record change
-/// reaches them through the shared renderer, and a regression there would be
-/// far louder than the one it was made for.
+/// Every other domain with a literal round-trips.
 #[tokio::test]
-async fn the_other_domains_still_round_trip() {
+async fn the_other_domains_round_trip() {
     for program in [
         "42",
         "-7",
@@ -164,4 +104,21 @@ async fn the_other_domains_still_round_trip() {
     ] {
         assert_round_trips(program).await;
     }
+}
+
+/// A Record displays key beside value, and the display is not source: `{` is
+/// an ordinary name, so reading it back is a call of an unknown Word.
+#[tokio::test]
+async fn a_record_displays_but_is_not_source() {
+    assert_eq!(
+        run("[ 'x' 'y' ] [ 1 2 ] RECORD").await,
+        ["{ 'x' 1/1 'y' 2/1 }"]
+    );
+    assert_eq!(run("[ ] [ ] RECORD").await, ["{ }"]);
+    assert_eq!(
+        run("[ 'a' ] [ 1 ] RECORD 1 COLLECT").await,
+        ["[ { 'a' 1/1 } ]"]
+    );
+    let mut interpreter = Interpreter::new();
+    assert!(interpreter.execute("{ 'x' 1/1 }").await.is_err());
 }

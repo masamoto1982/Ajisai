@@ -7,12 +7,12 @@
 //! diagnosis metadata that the canonical minimal-NIL model does not have, and
 //! are not in `spec/words.json`.
 //!
-//! Two invariants hold for both (see the module-level notes in
-//! `builtin_word_definitions.rs`):
+//! Two invariants hold for both:
 //!
-//!   * **Observation, not consumption.** Each word retains the inspected value
-//!     on the stack and pushes its result above it, mirroring the LENGTH/GET
-//!     inspection-word precedent of LANG.OBSERVATION.DIAGNOSIS. A diagnosis is an observation.
+//!   * **They consume what they read**, like every Word
+//!     (LANG.STACK.CONSUMPTION): the inspected value leaves the stack and the
+//!     answer takes its place. A program that needs the value afterwards names
+//!     it with `BIND`.
 //!   * **Every absence, U included.** They key off
 //!     [`Value::is_operational_nil`], which is every `Nil` value. The logical
 //!     Unknown (U) is a NIL read in truth position (LANG.VALUES.TRUTH), so it
@@ -31,24 +31,15 @@ use crate::interpreter::Interpreter;
 use crate::semantic::AbsenceMetadata;
 use crate::types::Value;
 
-/// Borrow the operational-NIL metadata of the top-of-stack value without
-/// consuming it. Returns `None` when the stack is empty *(malformed use)*, or
-/// when the top is not an operational NIL (a non-NIL value, or the logical U).
-fn peek_operational_absence(interp: &Interpreter) -> Option<&AbsenceMetadata> {
-    let top = interp.stack.last()?;
-    if !top.is_operational_nil() {
+/// The operational-NIL metadata of a value, or `None` when it is not an
+/// operational NIL.
+fn operational_absence(value: &Value) -> Option<&AbsenceMetadata> {
+    if !value.is_operational_nil() {
         return None;
     }
     // Every operational NIL has metadata; `absence_metadata` is `Some` for a
     // reasoned NIL and the literal-NIL constructor. Fall back defensively.
-    top.absence_metadata()
-}
-
-fn require_non_empty(interp: &Interpreter) -> Result<()> {
-    if interp.stack.is_empty() {
-        return Err(AjisaiError::StackUnderflow);
-    }
-    Ok(())
+    value.absence_metadata()
 }
 
 /// A protocol-string Text result, or a `notAvailable` NIL when the accessor
@@ -70,15 +61,14 @@ fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&str>) {
     }
 }
 
-/// `NIL?` — retain the value and push `TRUE` when it is an operational NIL,
+/// `NIL?` — consume the value and push `TRUE` when it was an operational NIL,
 /// `FALSE` otherwise. It checks absence only and never branches on the reason
 /// (LANG.VALUES.NIL).
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let is_absent = match interp.stack.last() {
-        Some(value) => value.is_operational_nil(),
-        None => return Err(AjisaiError::StackUnderflow),
-    };
-    interp.stack.push(Value::from_bool(is_absent));
+    let value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    interp
+        .stack
+        .push(Value::from_bool(value.is_operational_nil()));
     Ok(())
 }
 
@@ -90,8 +80,8 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
 /// with rather than the reason id: that text is the reason's parameter and,
 /// under `LANG.VALUES.NIL`, the NIL's entire observable content.
 pub fn op_nil_reason(interp: &mut Interpreter) -> Result<()> {
-    require_non_empty(interp)?;
-    let protocol: Option<String> = peek_operational_absence(interp).and_then(|absence| {
+    let value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let protocol: Option<String> = operational_absence(&value).and_then(|absence| {
         let reason = absence.reason.as_ref()?;
         Some(match (reason, absence.detail_text()) {
             (NilReason::UserDeclared, Some(detail)) => detail.to_string(),

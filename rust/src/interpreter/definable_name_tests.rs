@@ -62,24 +62,17 @@ mod tests {
         }
     }
 
-    /// The retired block syntax lexes, `{ ... }` now being the Record literal
-    /// (LANG.RECORDS.STRUCTURE), so what refuses it has moved from the lexer
-    /// to `DEF`: a definition body is a Vector, and a Record is not one.
-    ///
-    /// This is the property `test_brace_is_rejected_as_source` used to hold at
-    /// the tokenizer, kept where the refusal now lives.
+    /// A brace is an ordinary name, so a brace-block form is a call of the
+    /// undefined Word `{` and defines nothing.
     #[tokio::test]
-    async fn retired_brace_block_syntax_still_does_not_define_a_word() {
+    async fn a_brace_block_does_not_define_a_word() {
         let mut interp = Interpreter::new();
         let err = interp
             .execute("{ [ 2 ] * } 'DOUBLE' DEF")
             .await
-            .expect_err("the retired brace-block form must not define a Word")
+            .expect_err("a brace block must not define a Word")
             .to_string();
-        assert!(
-            err.contains("definition body"),
-            "the failure should name the body `DEF` wanted, got: {err}"
-        );
+        assert!(err.contains("Unknown word"), "got: {err}");
         assert!(
             !interp.user_words.contains_key("DOUBLE"),
             "the retired form must not have defined DOUBLE"
@@ -90,7 +83,7 @@ mod tests {
     /// under — the half of the allocation that reaches the dictionary.
     #[tokio::test]
     async fn a_delimiter_is_not_a_definable_name() {
-        for name in ["{", "}", "[", "]"] {
+        for name in ["[", "]"] {
             let err = def(name)
                 .await
                 .expect_err("a delimiter must not be definable")

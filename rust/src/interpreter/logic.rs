@@ -135,7 +135,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 /// `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` answers one of the two
 /// candidates per lane. The truth operand comes last because that is where
 /// every Word puts the operand that decides what it does, and because
-/// `NIL?` leaves its answer exactly there: `[ 0 ] X NIL? SELECT` reads as
+/// `NIL?` leaves its answer exactly there: `[ 0 ] X X NIL? SELECT` reads as
 /// "0 if X is absent, else X" with nothing moved on the stack.
 ///
 /// Unlike the `COND` this replaces, `SELECT` evaluates nothing and holds no

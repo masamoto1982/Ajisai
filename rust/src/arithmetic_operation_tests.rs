@@ -289,7 +289,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn a_fallback_can_replace_a_nil_that_passed_through() {
-        let interp = run("0 10 0 / 1 + NIL? SELECT").await;
+        let interp = run("10 0 / 1 + 'S' BIND 0 S S NIL? SELECT").await;
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
         assert!(

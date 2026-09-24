@@ -90,7 +90,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "42 1 0 / NIL? SELECT"
+    "source": "1 0 / 'S' BIND 42 S S NIL? SELECT"
    }
   },
   {
@@ -98,7 +98,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "42 1 0 / NIL? SELECT"
+    "source": "1 0 / 'S' BIND 42 S S NIL? SELECT"
    }
   },
   {

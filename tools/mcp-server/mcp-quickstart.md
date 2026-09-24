@@ -99,12 +99,12 @@ call still succeeds:
 
 The reason is on the value (`semantics.absence.reason`, here `divisionByZero`)
 and in `errorFlowTrace` as a `nilProduced` event. Supply a fallback with
-`NIL?` and `SELECT`. `NIL?` answers its subject *and* whether it is absent,
-which is exactly where `SELECT` reads its truth operand, so the phrase needs
-no name and no repetition:
+`BIND`, `NIL?` and `SELECT`. `NIL?` consumes its subject, like every Word,
+and answers whether it was absent, which is exactly where `SELECT` reads its
+truth operand, so name the subject once and read it twice:
 
 ```ajisai tool=compute status=ok stack="[ 99/1 ]"
-[ 99 ] 1 0 / NIL? SELECT
+1 0 / 'S' BIND [ 99 ] S S NIL? SELECT
 ```
 
 `NIL?` asks about the whole value, and a vector holding an absent lane is not

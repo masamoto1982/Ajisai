@@ -34,7 +34,7 @@
     },
     "nameCharacter": {
       "definition": "Any scalar value that is not whitespace",
-      "note": "Ajisai allocates no identifier character class, and no rejected character either. A name is whatever survives to the lexeme rules, which is why Japanese names, '.', '==', '^', '~', ';', '<=', '(', ')' and '|' are all ordinary names with no per-character rule of their own. The only characters a name cannot hold are the four delimiters of `delimiterPairs`, and they are withheld by a whole-lexeme rule rather than a per-character one: a lexeme either is exactly one delimiter or holds none. '(' and ')' were once held in reserve and a bare '|' was a retired form the tokenizer answered by name; nothing selected them but habit from other languages, and both were freed. '{' and '}' were freed with them and then allocated — as delimiters that do something the word rule does not, which is the only ground on which a character is taken."
+      "note": "Ajisai allocates no identifier character class, and no rejected character either. A name is whatever survives to the lexeme rules, which is why Japanese names, '.', '==', '^', '~', ';', '<=', '(', ')' and '|' are all ordinary names with no per-character rule of their own. The only characters a name cannot hold are the two delimiters of `delimiterPairs`, and they are withheld by a whole-lexeme rule rather than a per-character one: a lexeme either is exactly one delimiter or holds none. A character is taken only for something the word rule cannot do, and the one pair is all that needs it; '{', '}', '(' and ')' are ordinary name characters."
     }
   },
 
@@ -43,9 +43,7 @@
     { "id": "String", "carries": "the decoded contents between the delimiters" },
     { "id": "Symbol", "carries": "the lexeme as written" },
     { "id": "VectorStart", "carries": null },
-    { "id": "VectorEnd", "carries": null },
-    { "id": "RecordStart", "carries": null },
-    { "id": "RecordEnd", "carries": null }
+    { "id": "VectorEnd", "carries": null }
   ],
 
   "phases": [
@@ -83,9 +81,9 @@
     },
     {
       "id": "bracketPrecheck",
-      "summary": "A second pass over the raw text, retained for its precise diagnostics on an unbalanced delimiter of either pair.",
-      "conditions": ["unexpectedCloseBracket", "unclosedBracket", "unexpectedCloseBrace", "unclosedBrace"],
-      "note": "One stack over both pairs of `delimiterPairs`, which is what lets it name the pair in its message. This pass tracks strings and comments by character rather than by word position, so it sees a quote in the middle of a name as opening a string where the scan phase does not. That makes it a partial check by construction: it is allowed to miss an imbalance, never to invent one, because structuralValidation below runs afterwards on the real tokens and has the final say. A closer that pops the other pair's opener is where it stops rather than reports: the fault is a crossed pair, which is structuralValidation's mismatchedCodeDelimiter, and continuing on a stack that has lost an opener is how a partial pass would start inventing. Its purpose is the better message, not the verdict."
+      "summary": "A second pass over the raw text, retained for its precise diagnostics on an unbalanced delimiter.",
+      "conditions": ["unexpectedCloseBracket", "unclosedBracket"],
+      "note": "This pass tracks strings and comments by character rather than by word position, so it sees a quote in the middle of a name as opening a string where the scan phase does not. That makes it a partial check by construction: it is allowed to miss an imbalance, never to invent one, because structuralValidation below runs afterwards on the real tokens and has the final say. Its purpose is the better message, not the verdict."
     },
     {
       "id": "structuralValidation",
@@ -94,7 +92,7 @@
         "mismatchedCodeDelimiter",
         "unclosedCodeDelimiter"
       ],
-      "note": "One stack over both pairs of `delimiterPairs`: a closer whose opener is the other pair's is mismatched, which is how a crossed `[ }` is refused without a condition of its own. Because this runs on tokens, it is reached identically from source and from a Vector being read as code, which is what keeps the two entry points on one structural grammar."
+      "note": "A ']' with no '[' open is mismatched, and a '[' never closed is unclosed. Because this runs on tokens, it is reached identically from source and from a Vector being read as code, which is what keeps the two entry points on one structural grammar."
     }
   ],
 
@@ -106,14 +104,6 @@
       "openToken": "VectorStart",
       "closeToken": "VectorEnd",
       "precheck": { "unexpectedClose": "unexpectedCloseBracket", "unclosed": "unclosedBracket" }
-    },
-    {
-      "id": "record",
-      "open": "{",
-      "close": "}",
-      "openToken": "RecordStart",
-      "closeToken": "RecordEnd",
-      "precheck": { "unexpectedClose": "unexpectedCloseBrace", "unclosed": "unclosedBrace" }
     }
   ],
 
@@ -131,22 +121,10 @@
       "surface": "]"
     },
     {
-      "id": "recordStart",
-      "match": { "literal": "{" },
-      "emits": "RecordStart",
-      "surface": "{"
-    },
-    {
-      "id": "recordEnd",
-      "match": { "literal": "}" },
-      "emits": "RecordEnd",
-      "surface": "}"
-    },
-    {
       "id": "delimiterGlued",
-      "match": { "containsAny": ["[", "]", "{", "}"] },
+      "match": { "containsAny": ["[", "]"] },
       "condition": "bracketMustStandAlone",
-      "note": "Ordered after the four exact matches, so it catches every remaining lexeme in which a delimiter is glued to anything — '[1', '2]', ']^', '{1', 'a}'. A delimiter is a word like any other and must stand alone; the condition keeps its original name from when '[' and ']' were the only pair."
+      "note": "Ordered after the two exact matches, so it catches every remaining lexeme in which a delimiter is glued to anything — '[1', '2]', ']^'. A delimiter is a word like any other and must stand alone."
     },
     {
       "id": "number",
@@ -218,25 +196,9 @@
       "id": "bracketMustStandAlone",
       "phase": "scan",
       "errorCategory": "malformedSource",
-      "summary": "A lexeme contained a delimiter — '[', ']', '{' or '}' — without being exactly that delimiter.",
+      "summary": "A lexeme contained a delimiter — '[' or ']' — without being exactly that delimiter.",
       "messageContains": "must stand alone",
       "witness": "[1"
-    },
-    {
-      "id": "unexpectedCloseBrace",
-      "phase": "bracketPrecheck",
-      "errorCategory": "malformedSource",
-      "summary": "'}' appeared with no '{' open.",
-      "messageContains": "without matching '{'",
-      "witness": "}"
-    },
-    {
-      "id": "unclosedBrace",
-      "phase": "bracketPrecheck",
-      "errorCategory": "malformedSource",
-      "summary": "'{' was never closed.",
-      "messageContains": "Unclosed '{'",
-      "witness": "{"
     },
     {
       "id": "unexpectedCloseBracket",

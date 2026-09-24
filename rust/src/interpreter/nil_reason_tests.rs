@@ -126,7 +126,7 @@ async fn bare_nil_literal_is_reasoned_as_literal() {
 async fn a_fallback_replaces_a_directly_projected_nil() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 /").await.unwrap();
-    interp.execute("'X' BIND 42 X NIL? SELECT").await.unwrap();
+    interp.execute("'X' BIND 42 X X NIL? SELECT").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(stack.len(), 1, "the choice leaves exactly one value");
     assert!(
@@ -185,7 +185,10 @@ async fn nil_projection_rule_division_by_zero_without_safe_has_direct_reason() {
 #[tokio::test]
 async fn nil_projection_rule_division_by_zero_is_recoverable() {
     let mut interp = Interpreter::new();
-    interp.execute("99 10 0 / NIL? SELECT").await.unwrap();
+    interp
+        .execute("10 0 / 'S' BIND 99 S S NIL? SELECT")
+        .await
+        .unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(!top.is_nil());
     assert_eq!(format!("{}", top), "99/1");
@@ -204,7 +207,7 @@ async fn nil_projection_rule_get_out_of_range_without_safe_has_direct_reason() {
 async fn nil_projection_rule_get_out_of_range_is_recoverable() {
     let mut interp = Interpreter::new();
     interp
-        .execute("0 [ 10 20 ] [ 99 ] GET NIL? SELECT")
+        .execute("[ 10 20 ] [ 99 ] GET 'S' BIND 0 S S NIL? SELECT")
         .await
         .unwrap();
     let top = interp.get_stack().last().expect("top value");
@@ -233,7 +236,10 @@ async fn nil_projection_rule_num_parse_failure_has_direct_reason_and_fallback() 
     assert_eq!(top.nil_reason(), Some(&NilReason::InvalidEncoding));
 
     let mut interp = Interpreter::new();
-    interp.execute("0 'abc' NUM NIL? SELECT").await.unwrap();
+    interp
+        .execute("'abc' NUM 'S' BIND 0 S S NIL? SELECT")
+        .await
+        .unwrap();
     assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0/1");
 }
 

@@ -149,14 +149,15 @@ proptest! {
     }
 
     /// Absence handler: a projected NIL is replaced by the fallback, a present
-    /// value is kept (LANG.FAILURE.RECOVERY). `NIL?` answers its subject and
-    /// whether it is absent, which is exactly `SELECT`'s truth operand, so the
-    /// handler is `fallback subject NIL? SELECT` with nothing named.
+    /// value is kept (LANG.FAILURE.RECOVERY). `NIL?` consumes its subject and
+    /// answers whether it was absent, which is exactly `SELECT`'s truth
+    /// operand, so the handler names the subject once and reads it twice:
+    /// `subject 'S' BIND fallback S S NIL? SELECT`.
     #[test]
     fn absence_handler(a in small()) {
-        assert_law("absence-recovers-projection", &format!("{a} 1 0 DIV NIL? SELECT"), &format!("{a}"));
+        assert_law("absence-recovers-projection", &format!("1 0 DIV 'S' BIND {a} S S NIL? SELECT"), &format!("{a}"));
         // A present value is its own result regardless of the fallback.
-        assert_law("absence-present", &format!("999 {a} NIL? SELECT"), &format!("{a}"));
+        assert_law("absence-present", &format!("{a} 'S' BIND 999 S S NIL? SELECT"), &format!("{a}"));
     }
 }
 

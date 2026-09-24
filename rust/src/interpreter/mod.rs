@@ -118,7 +118,6 @@ mod execution_loop;
 mod execution_loop_tests;
 #[cfg(test)]
 mod execution_step_parity_tests;
-mod record_literal;
 mod value_as_code;
 pub(crate) mod vector_literal;
 

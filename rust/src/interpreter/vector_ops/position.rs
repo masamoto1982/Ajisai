@@ -74,7 +74,7 @@ fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, Vec<i64>)> {
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let (index_val, indices) = pop_index_operand(interp)?;
 
-    // `GET` declares `consumption: eat` with `[ vec ] [ idx ] -> [ elem ]`, so
+    // `GET` is `[ vec ] [ idx ] -> [ elem ]` and consumes what it reads, so
     // the vector operand leaves the stack.
     let target_val = match interp.stack.pop() {
         Some(value) => value,

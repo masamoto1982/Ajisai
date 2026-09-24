@@ -82,10 +82,10 @@ mod reflection_words_tests {
             "TRUE"
         );
         // A computable real has nothing finite to digest.
-        assert_eq!(top("PI DIGEST NIL-REASON").await, "NIL 'undecidable'");
+        assert_eq!(top("PI DIGEST NIL-REASON").await, "'undecidable'");
         assert_eq!(
             top("1 PI 2 COLLECT DIGEST NIL-REASON").await,
-            "NIL 'undecidable'"
+            "'undecidable'"
         );
     }
 
@@ -117,7 +117,7 @@ mod reflection_words_tests {
         assert_eq!(top("[ MAP ] 0 GET CONTRACT 'inputs' AT").await, "2/1");
         assert_eq!(
             top("[ SORT ] 0 GET CONTRACT KEYS").await,
-            "[ 'name' 'tier' 'inputs' 'outputs' 'consumption' 'nil' 'projection' 'errors' 'partiality' 'purity' 'determinism' 'cost' 'effects' ]"
+            "[ 'name' 'tier' 'inputs' 'outputs' 'nil' 'projection' 'errors' 'partiality' 'purity' 'determinism' 'cost' 'effects' ]"
         );
         assert_eq!(top("[ SORT ] 0 GET CONTRACT 'tier' AT").await, "'standard'");
     }
@@ -185,11 +185,8 @@ mod reflection_words_tests {
     async fn contract_projects_missing_field_for_an_unknown_name() {
         assert_eq!(
             top("[ NOPE ] 0 GET CONTRACT NIL-REASON").await,
-            "NIL 'missingField'"
+            "'missingField'"
         );
-        assert_eq!(
-            top("7 'N' BIND [ N ] 0 GET CONTRACT NIL?").await,
-            "NIL TRUE"
-        );
+        assert_eq!(top("7 'N' BIND [ N ] 0 GET CONTRACT NIL?").await, "TRUE");
     }
 }

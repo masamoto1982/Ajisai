@@ -337,7 +337,7 @@ impl Interpreter {
         let contexts = classify_vector_positions(&def.body);
         'body: for (idx, token) in def.body.iter().enumerate() {
             match token {
-                Token::Number(_) | Token::String(_) => {
+                Token::Number(_) | Token::String(_) | Token::Value(_) => {
                     flow.feed_literal();
                     sim.feed_literal();
                     cost_sim.feed_literal();
@@ -416,7 +416,7 @@ impl Interpreter {
                     cost_sim.feed_word(&DepCost::of(&dep_contract, builtin), operands);
                     acc.widen_with(&dep_contract);
                 }
-                Token::VectorStart | Token::VectorEnd | Token::RecordStart | Token::RecordEnd => {
+                Token::VectorStart | Token::VectorEnd => {
                     flow.feed_structural(token);
                     sim.feed_structural(token);
                     cost_sim.feed_structural(token);

@@ -138,10 +138,8 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
     // LANG.VALUES.NIL / LANG.OBSERVATION.DIAGNOSIS: the five diagnostic absence accessors inspect a
     // NIL rather than propagate it, so their nil_policy is ConsumesNil (the
     // OR-NIL-family "inspect or branch on NIL" classification). They are pure,
-    // total, safety-A observations that retain their inspection target, so
-    // their mass contract is Dynamic (net +1, like the LENGTH/GET
-    // inspection words of LANG.OBSERVATION.DIAGNOSIS — a Fixed contract would mis-model the
-    // retained operand for the static depth analyzer).
+    // total, safety-A observations that consume what they read, like every
+    // Word (LANG.STACK.CONSUMPTION), so their mass contract is a pinned 1 -> 1.
     for name in &["NIL?", "NIL-REASON"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
@@ -169,19 +167,16 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
             "{} must be SafetyLevel A (pure, total, deterministic)",
             name
         );
-        // The declared arity is 1 in, 2 out under `consumption: retain`:
-        // the inspected value stays and the answer is pushed above it.
-        // The hand-written table called this `Dynamic` because a bare
-        // `Fixed` could not model a retained operand — but 1->2 models it
-        // exactly, and calling it dynamic disengaged the static analyzer
-        // from a Word whose arity the specification pins.
+        // The declared arity is 1 in, 1 out: the inspected value is
+        // consumed and the answer takes its place. A program that needs the
+        // value afterwards names it with `BIND`.
         assert_eq!(
             meta.mass,
             super::MassContract::Fixed {
                 consumes: 1,
-                produces: 2
+                produces: 1
             },
-            "{} declares a pinned 1 -> 2 arity",
+            "{} declares a pinned 1 -> 1 arity",
             name
         );
     }

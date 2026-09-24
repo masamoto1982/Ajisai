@@ -58,18 +58,12 @@ mod power_words_tests {
 
     #[tokio::test]
     async fn pow_projects_what_has_no_value() {
-        assert_eq!(top("0 -1 POW NIL-REASON").await, "NIL 'divisionByZero'");
-        assert_eq!(top("0 -1/2 POW NIL-REASON").await, "NIL 'divisionByZero'");
-        assert_eq!(top("-8 1/3 POW NIL-REASON").await, "NIL 'domainMiss'");
-        assert_eq!(top("-2 PI POW NIL-REASON").await, "NIL 'domainMiss'");
-        assert_eq!(
-            top("PI PI SUB 1/3 POW NIL-REASON").await,
-            "NIL 'undecidable'"
-        );
-        assert_eq!(
-            top("2 1000000000 POW NIL-REASON").await,
-            "NIL 'spaceExhausted'"
-        );
+        assert_eq!(top("0 -1 POW NIL-REASON").await, "'divisionByZero'");
+        assert_eq!(top("0 -1/2 POW NIL-REASON").await, "'divisionByZero'");
+        assert_eq!(top("-8 1/3 POW NIL-REASON").await, "'domainMiss'");
+        assert_eq!(top("-2 PI POW NIL-REASON").await, "'domainMiss'");
+        assert_eq!(top("PI PI SUB 1/3 POW NIL-REASON").await, "'undecidable'");
+        assert_eq!(top("2 1000000000 POW NIL-REASON").await, "'spaceExhausted'");
         assert_eq!(top("NIL 2 POW").await, "NIL");
         assert_eq!(error_of("'x' 2 POW").await, "nonNumeric");
         assert_eq!(error_of("[ 1 2 ] [ 1 2 3 ] POW").await, "shapeMismatch");
@@ -86,9 +80,9 @@ mod power_words_tests {
         assert_eq!(top("0 0 GCD").await, "0/1");
         assert_eq!(top("7 0 GCD").await, "7/1");
         assert_eq!(top("[ 12 9 ] 6 GCD").await, "[ 6/1 3/1 ]");
-        assert_eq!(top("1/2 4 GCD NIL-REASON").await, "NIL 'domainMiss'");
-        assert_eq!(top("2 SQRT 4 GCD NIL-REASON").await, "NIL 'domainMiss'");
-        assert_eq!(top("PI 4 GCD NIL-REASON").await, "NIL 'undecidable'");
+        assert_eq!(top("1/2 4 GCD NIL-REASON").await, "'domainMiss'");
+        assert_eq!(top("2 SQRT 4 GCD NIL-REASON").await, "'domainMiss'");
+        assert_eq!(top("PI 4 GCD NIL-REASON").await, "'undecidable'");
         assert_eq!(error_of("'a' 4 GCD").await, "nonNumeric");
         assert_eq!(top("6/4 RATIO").await, "[ 3/1 2/1 ]");
         assert_eq!(top("-3 RATIO").await, "[ -3/1 1/1 ]");
@@ -97,8 +91,8 @@ mod power_words_tests {
             top("[ 1/2 3/4 ] RATIO").await,
             "[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]"
         );
-        assert_eq!(top("2 SQRT RATIO NIL-REASON").await, "NIL 'domainMiss'");
-        assert_eq!(top("PI RATIO NIL-REASON").await, "NIL 'undecidable'");
+        assert_eq!(top("2 SQRT RATIO NIL-REASON").await, "'domainMiss'");
+        assert_eq!(top("PI RATIO NIL-REASON").await, "'undecidable'");
         assert_eq!(error_of("'a' RATIO").await, "nonNumeric");
         // RATIO then DIV is the identity on a rational.
         assert_eq!(
@@ -123,19 +117,13 @@ mod power_words_tests {
         assert_eq!(top("PI 4 DIV COS 6 FORMAT").await, "'0.707107'");
         // sin π encloses 0 and cos π encloses −1 without ever proving
         // either, so a decimal rendering cannot settle its last digit.
-        assert_eq!(
-            top("PI SIN 10 FORMAT NIL-REASON").await,
-            "NIL 'undecidable'"
-        );
+        assert_eq!(top("PI SIN 10 FORMAT NIL-REASON").await, "'undecidable'");
         assert_eq!(top("PI COS -1 LT").await, "NIL");
         assert_eq!(top("PI COS -1 GT").await, "NIL");
         assert_eq!(top("2 SQRT SIN 6 FORMAT").await, "'0.987766'");
         assert_eq!(top("2 EXP LN 3 LT").await, "TRUE");
         // ln(exp 1) encloses 1 without proving it: even its rendering starves.
-        assert_eq!(
-            top("1 EXP LN 6 FORMAT NIL-REASON").await,
-            "NIL 'undecidable'"
-        );
+        assert_eq!(top("1 EXP LN 6 FORMAT NIL-REASON").await, "'undecidable'");
         assert_eq!(top("[ 0 1 ] EXP 0 GET").await, "1/1");
         assert_eq!(top("1 EXP 2 GT").await, "TRUE");
         assert_eq!(top("1 EXP 3 LT").await, "TRUE");
@@ -145,19 +133,16 @@ mod power_words_tests {
     async fn transcendentals_say_what_they_cannot_answer() {
         assert_eq!(top("1 EXP 1 EXP EQ").await, "NIL");
         assert_eq!(top("PI SIN 0 EQ").await, "NIL");
-        assert_eq!(top("0 LN NIL-REASON").await, "NIL 'domainMiss'");
-        assert_eq!(top("-1 LN NIL-REASON").await, "NIL 'domainMiss'");
-        assert_eq!(top("PI PI SUB LN NIL-REASON").await, "NIL 'undecidable'");
-        assert_eq!(
-            top("1000000000 EXP NIL-REASON").await,
-            "NIL 'spaceExhausted'"
-        );
+        assert_eq!(top("0 LN NIL-REASON").await, "'domainMiss'");
+        assert_eq!(top("-1 LN NIL-REASON").await, "'domainMiss'");
+        assert_eq!(top("PI PI SUB LN NIL-REASON").await, "'undecidable'");
+        assert_eq!(top("1000000000 EXP NIL-REASON").await, "'spaceExhausted'");
         assert_eq!(
             top("100000000000000000000 SIN NIL-REASON").await,
-            "NIL 'spaceExhausted'"
+            "'spaceExhausted'"
         );
         assert_eq!(top("NIL EXP").await, "NIL");
-        assert_eq!(top("1 0 DIV LN NIL-REASON").await, "NIL 'divisionByZero'");
+        assert_eq!(top("1 0 DIV LN NIL-REASON").await, "'divisionByZero'");
         for word in ["EXP", "LN", "SIN", "COS", "ATAN"] {
             assert_eq!(
                 error_of(&format!("'x' {word}")).await,

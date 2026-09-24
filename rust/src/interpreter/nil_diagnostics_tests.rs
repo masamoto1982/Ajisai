@@ -3,7 +3,7 @@
 //!
 //! Coverage follows the §15 discipline: success paths, the non-NIL path, the
 //! reason-present vs reason-absent split, protocol-string (not Rust `Debug`)
-//! output, the U firewall, source retention, and MC/DC over the two governing
+//! output, the U firewall, operand consumption, and MC/DC over the two governing
 //! decisions (`is_operational_nil` and reason `Some`/`None`).
 
 use crate::error::NilReason;
@@ -46,11 +46,10 @@ fn top_is_true(interp: &Interpreter) -> bool {
 // ── NIL? ──────────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn nil_check_is_true_for_operational_nil_and_retains_source() {
+async fn nil_check_is_true_for_operational_nil_and_consumes_it() {
     let interp = run("1 0 / NIL?").await;
     let stack = interp.get_stack();
-    assert_eq!(stack.len(), 2, "NIL? must retain the inspected value");
-    assert!(stack[0].is_nil(), "the inspected NIL is retained below");
+    assert_eq!(stack.len(), 1, "NIL? consumes the inspected value");
     assert!(top_is_true(&interp), "NIL? on an operational NIL is TRUE");
 }
 
@@ -58,9 +57,9 @@ async fn nil_check_is_true_for_operational_nil_and_retains_source() {
 async fn nil_check_is_false_for_present_value() {
     let interp = run("5 NIL?").await;
     let stack = interp.get_stack();
-    assert_eq!(stack.len(), 2, "NIL? retains the inspected value");
+    assert_eq!(stack.len(), 1, "NIL? consumes the inspected value");
     assert_eq!(
-        stack[1].as_truth(),
+        stack[0].as_truth(),
         Some(false),
         "NIL? on a present value is FALSE"
     );
@@ -78,7 +77,7 @@ async fn nil_check_is_false_for_present_value() {
 async fn nil_check_is_true_for_logical_unknown() {
     let interp = run("TRUE NIL AND NIL?").await;
     assert_eq!(
-        interp.get_stack()[1].as_truth(),
+        interp.get_stack()[0].as_truth(),
         Some(true),
         "NIL? on the logical Unknown must be TRUE: U is an absence"
     );
@@ -105,8 +104,7 @@ async fn nil_reason_survives_a_kleene_word() {
 async fn nil_reason_reports_division_by_zero_protocol_string() {
     let interp = run("1 0 / NIL-REASON").await;
     let stack = interp.get_stack();
-    assert_eq!(stack.len(), 2, "NIL-REASON must retain the inspected value");
-    assert!(stack[0].is_nil(), "the inspected NIL is retained below");
+    assert_eq!(stack.len(), 1, "NIL-REASON consumes the inspected value");
     assert_eq!(
         top_text(&interp).as_deref(),
         Some("divisionByZero"),
@@ -145,8 +143,7 @@ async fn nil_reason_of_a_written_nil_is_literal() {
 async fn nil_reason_is_nil_for_present_value() {
     let interp = run("5 NIL-REASON").await;
     assert!(top_is_nil(&interp));
-    assert_eq!(interp.get_stack()[0].as_truth(), None);
-    assert!(!interp.get_stack()[0].is_nil(), "the 5 is retained below");
+    assert_eq!(interp.get_stack().len(), 1, "the 5 is consumed");
 }
 
 /// `NIL-REASON` on the result of an exact-arithmetic comparison must yield

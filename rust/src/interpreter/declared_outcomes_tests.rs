@@ -29,10 +29,10 @@ mod declared_outcomes_tests {
     async fn absent_carries_the_reason_the_program_states() {
         assert_eq!(
             top("'rate not quoted' ABSENT NIL-REASON").await,
-            "NIL 'rate not quoted'"
+            "'rate not quoted'"
         );
-        assert_eq!(top("'why' ABSENT NIL?").await, "NIL TRUE");
-        assert_eq!(top("0 'why' ABSENT NIL? SELECT").await, "0/1");
+        assert_eq!(top("'why' ABSENT NIL?").await, "TRUE");
+        assert_eq!(top("'why' ABSENT 'S' BIND 0 S S NIL? SELECT").await, "0/1");
         let interp = run("'why' ABSENT").await;
         let value = interp.stack.last().cloned().expect("an answer");
         assert_eq!(
@@ -64,7 +64,7 @@ mod declared_outcomes_tests {
     async fn the_detail_survives_a_dense_lane() {
         assert_eq!(
             top("1 'why' ABSENT 2 COLLECT [ 1 ] GET NIL-REASON").await,
-            "NIL 'why'"
+            "'why'"
         );
     }
 

@@ -17,8 +17,8 @@
     "corewords": 86,
     "aliases": 7,
     "inputHelpers": 1,
-    "surface_forms": 6,
-    "manifestEntries": 100
+    "surface_forms": 4,
+    "manifestEntries": 98
   },
   "entries": [
     {
@@ -1716,38 +1716,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "END-VECTOR",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.left-brace",
-      "kind": "delimiter_sugar",
-      "surface": "{",
-      "concept": "BEGIN-RECORD",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "BEGIN-RECORD",
-      "coverage_entry_id": "surface.left-brace",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "BEGIN-RECORD",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.right-brace",
-      "kind": "delimiter_sugar",
-      "surface": "}",
-      "concept": "END-RECORD",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": "END-RECORD",
-      "coverage_entry_id": "surface.right-brace",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "END-RECORD",
       "classification": "Surface"
     },
     {

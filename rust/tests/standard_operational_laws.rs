@@ -282,9 +282,9 @@ async fn member_is_one_pass_and_agrees_with_index_of_per_probe() {
         .unwrap();
     let stack = rendered_stack(&interpreter);
     assert_eq!(stack[0], "[ TRUE FALSE TRUE ]");
-    // `NIL?` answers its subject together with the truth, so each probe leaves
-    // INDEX-OF's answer and the negated absence beside it.
-    assert_eq!(&stack[1..], ["1/1", "TRUE", "NIL", "FALSE", "2/1", "TRUE"]);
+    // `NIL?` consumes INDEX-OF's answer, so each probe leaves only the
+    // negated absence.
+    assert_eq!(&stack[1..], ["TRUE", "FALSE", "TRUE"]);
 }
 
 /// `BSEARCH` answers what `INDEX-OF` answers on an ascending vector — the
@@ -299,7 +299,7 @@ async fn bsearch_agrees_with_index_of_on_ascending_input_and_refuses_unsorted() 
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "NIL", "'missingField'"]
+        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "'missingField'"]
     );
 
     let mut interpreter = Interpreter::new();
@@ -376,9 +376,7 @@ async fn json_decode_and_encode_are_exact_and_compose_to_the_identity() {
             "TRUE",
             "'\"1/3\"'",
             "1/3",
-            "NIL",
             "'domainMiss'",
-            "NIL",
             "'invalidEncoding'",
         ]
     );
@@ -401,15 +399,7 @@ async fn gcd_and_ratio_agree_with_the_kernel_spellings() {
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        [
-            "6/1",
-            "6/1",
-            "TRUE",
-            "NIL",
-            "'domainMiss'",
-            "NIL",
-            "'undecidable'"
-        ]
+        ["6/1", "6/1", "TRUE", "'domainMiss'", "'undecidable'"]
     );
 }
 

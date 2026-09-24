@@ -327,8 +327,12 @@ pub enum Token {
     Symbol(Arc<str>),
     VectorStart,
     VectorEnd,
-    RecordStart,
-    RecordEnd,
+    /// A value carried into a token sequence whole. Source never produces
+    /// one: it is how the bridge that runs a Vector as code
+    /// (`interpreter::value_as_code`) hands over an element no source text
+    /// denotes — a Record, a NIL together with its reason, an exact
+    /// irrational — so running the Vector pushes that element unchanged.
+    Value(Box<Value>),
 }
 
 impl Token {

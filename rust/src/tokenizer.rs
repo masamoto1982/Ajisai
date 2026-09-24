@@ -99,8 +99,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         // else splits it, the same rule Forth applies to its own words
         // (including its bracket and comment words). No character is checked
         // for validity on the way, because there is no longer any invalid
-        // one: `(` `)` `{` `}` and a bare `|` used to be refused here and are
-        // now ordinary name characters like every other punctuation mark
+        // one: every character but whitespace is a name character
         // (`spec/grammar.json`, characterClasses.nameCharacter).
         let start = i;
         while i < chars.len() && !chars[i].is_whitespace() {
@@ -109,11 +108,10 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
 
         let token_str: String = chars[start..i].iter().collect();
 
-        // The four structural words, one pair per delimiter pair of
-        // `spec/grammar.json`: like every other Ajisai word (and like Forth's
-        // own `[` and `]`), they must stand alone, separated by whitespace. A
-        // delimiter glued to anything else — `[1`, `2]`, `[[1]]`, `{1`, `a}`
-        // — is a source error asking for the space, rather than a silently
+        // The two structural words of `spec/grammar.json`'s one delimiter
+        // pair: like every other Ajisai word (and like Forth's own `[` and
+        // `]`), they must stand alone, separated by whitespace. A delimiter
+        // glued to anything else — `[1`, `2]`, `[[1]]` — is a source error asking for the space, rather than a silently
         // accepted (and meaningless) name containing a delimiter. This is a
         // whole-lexeme rule, not a per-character one: no character is checked
         // on the way in, and a lexeme either *is* one delimiter or holds none.
@@ -124,7 +122,7 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
         }
         if token_str.contains(DELIMITERS) {
             return Err(format!(
-                "'{}' is not a valid token: '[', ']', '{{' and '}}' must stand alone, separated by whitespace, like every other Ajisai word (LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
+                "'{}' is not a valid token: '[' and ']' must stand alone, separated by whitespace, like every other Ajisai word (LANG.SOURCE.TEXT — whitespace is the sole token delimiter).",
                 token_str
             ));
         }
@@ -156,49 +154,34 @@ pub fn tokenize_with_spans(input: &str) -> Result<(Vec<Token>, Vec<SourceSpan>),
     Ok((tokens, spans))
 }
 
-/// The delimiter characters, in the pairs `spec/grammar.json` declares.
-const DELIMITERS: [char; 4] = ['[', ']', '{', '}'];
+/// The delimiter characters: the one pair `spec/grammar.json` declares.
+const DELIMITERS: [char; 2] = ['[', ']'];
 
 /// The token a lexeme that is exactly one delimiter emits.
 fn delimiter_token(lexeme: &str) -> Option<Token> {
     match lexeme {
         "[" => Some(Token::VectorStart),
         "]" => Some(Token::VectorEnd),
-        "{" => Some(Token::RecordStart),
-        "}" => Some(Token::RecordEnd),
         _ => None,
     }
 }
 
-/// The opener a closing delimiter token must find on the stack, if the token
-/// is a closer at all.
-fn opener_of(token: &Token) -> Option<Token> {
-    match token {
-        Token::VectorEnd => Some(Token::VectorStart),
-        Token::RecordEnd => Some(Token::RecordStart),
-        _ => None,
-    }
-}
-
-/// Validate the structural grammar of an already-tokenized code value.
-///
-/// One stack over both pairs, so a crossed `[ }` is mismatched rather than
-/// accepted — the property a pair-per-counter version cannot see.
+/// Validate the structural grammar of an already-tokenized code value: every
+/// `]` closes an open `[`, and every `[` is closed.
 pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
-    let mut delimiters = Vec::new();
+    let mut depth: usize = 0;
     for token in tokens {
         match token {
-            Token::VectorStart | Token::RecordStart => delimiters.push(token.clone()),
-            Token::VectorEnd | Token::RecordEnd => {
-                let innermost = delimiters.pop();
-                if innermost != opener_of(token) {
-                    return Err("mismatched code delimiter".into());
-                }
+            Token::VectorStart => depth += 1,
+            Token::VectorEnd => {
+                depth = depth
+                    .checked_sub(1)
+                    .ok_or_else(|| "mismatched code delimiter".to_string())?;
             }
             _ => {}
         }
     }
-    if !delimiters.is_empty() {
+    if depth != 0 {
         return Err("unclosed code delimiter".into());
     }
     Ok(())
@@ -223,7 +206,7 @@ pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
 /// runs afterwards on the real tokens and has the final say. It is kept for
 /// its message, which names the pair and the character.
 fn check_bracket_matching(input: &str) -> Result<(), String> {
-    let mut stack: Vec<char> = Vec::new();
+    let mut depth: usize = 0;
     let mut in_string = false;
     let mut in_comment = false;
     let chars: Vec<char> = input.chars().collect();
@@ -267,33 +250,20 @@ fn check_bracket_matching(input: &str) -> Result<(), String> {
         }
 
         match c {
-            '[' | '{' => stack.push(c),
-            ']' | '}' => {
-                let expected = if c == ']' { '[' } else { '{' };
-                match stack.pop() {
-                    Some(open) if open == expected => {}
-                    None => {
-                        return Err(format!("Unexpected '{c}' without matching '{expected}'"));
-                    }
-                    // A crossed pair: the fault is `mismatched code delimiter`,
-                    // which the token-level validator reports. This pass has
-                    // just lost an opener, so every later reading of its stack
-                    // would be a guess — stopping is how it stays incapable of
-                    // inventing a condition.
-                    Some(_) => return Ok(()),
-                }
-            }
+            '[' => depth += 1,
+            ']' => match depth.checked_sub(1) {
+                Some(d) => depth = d,
+                None => return Err("Unexpected ']' without matching '['".to_string()),
+            },
             _ => {}
         }
         i += 1;
     }
 
-    match stack.last() {
-        Some('[') => Err("Unclosed '[': expected ']'".to_string()),
-        Some('{') => Err("Unclosed '{': expected '}'".to_string()),
-        Some(other) => unreachable!("only an opener is ever pushed, got {other:?}"),
-        None => Ok(()),
+    if depth > 0 {
+        return Err("Unclosed '[': expected ']'".to_string());
     }
+    Ok(())
 }
 
 enum QuoteParseResult {

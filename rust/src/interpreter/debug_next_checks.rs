@@ -113,8 +113,8 @@ pub(crate) fn build_next_checks(
                     "checkZeroIsExpected",
                     ("Check zero is expected", "0 が正常値かを確認する"),
                     (
-                        "If 0 is a legitimate value here, choose a fallback with NIL? and SELECT, or guard the divisor.",
-                        "0 が正常値としてあり得るなら NIL? と SELECT で代替値を選ぶか、除数を事前に確認する",
+                        "If 0 is a legitimate value here, name the quotient with BIND and choose a fallback with NIL? and SELECT, or guard the divisor.",
+                        "0 が正常値としてあり得るなら商を BIND で名付け、NIL? と SELECT で代替値を選ぶか、除数を事前に確認する",
                     ),
                 ));
                 out.push(check(

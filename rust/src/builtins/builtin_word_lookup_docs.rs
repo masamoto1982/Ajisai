@@ -299,7 +299,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     },
     BuiltinLookupDoc {
         word: "NIL-REASON",
-        behavior: "Reads the top value without consuming it and pushes the\ndirect reason of an operational NIL as a protocol-string\ntext, or NIL when the value carries no reason.",
+        behavior: "Pops the top value and pushes the direct reason of an\noperational NIL as a protocol-string text, or NIL when the\nvalue carries no reason. Name the value with BIND first\nif it is needed afterwards.",
         examples: &[BuiltinExampleDoc {
             code: "1 0 / NIL-REASON",
             result: "Pushes 'divisionByZero'.",

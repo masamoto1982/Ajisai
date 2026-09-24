@@ -49,6 +49,9 @@ const EXAMPLE_NAMES = new Set([
   'DELTA', 'STEP',
   // names bound with BIND so a worked example can read a value twice
   'N', 'V', 'R', 'X',
+  // the subject the recovery phrase names once and reads twice:
+  // `subject 'S' BIND fallback S S NIL? SELECT`
+  'S',
   // identity and doubling words of the worked examples
   'ID', 'DOUBLE',
   // the doubling word of the MAP and FOLD examples. It only became visible to
@@ -112,21 +115,17 @@ const UNALLOCATED_MENTIONS = new Set([
   // it — the case this list exists for.
   'DUP', 'SWAP', 'DROP', 'ROT',
   // named once by the recovery clause to say it is retired: `OR-NIL` was the
-  // lazy NIL-coalescing directive, replaced by the `NIL? SELECT` phrase. A
+  // lazy NIL-coalescing directive, replaced by the `BIND` `NIL?` `SELECT` phrase. A
   // reader meeting it in older material needs the clause to say so.
   'OR-NIL',
   // named once beside it for the same reason: `COND` was the branch `SELECT`
   // replaced.
   'COND',
-  // the two brackets Ajisai gives no role to. `(`, `)`, `{`, `}` were carried
-  // in the vocabulary registry as reserved markers and retired forms until the
-  // per-character rule that refused them was removed; `(` and `)` are ordinary
-  // name characters now, so the registry no longer knows them and the
-  // reference names them precisely to say the language allocates them nothing.
-  // `{` and `}` are not in this list: they were allocated to the Record
-  // literal and are registered surfaces again, so a document naming them is
-  // making a claim the registry answers.
-  '(', ')',
+  // the brackets Ajisai gives no role to. They are ordinary name characters,
+  // so the registry does not know them; the reference names them to say the
+  // language allocates them nothing, and `{ }` also appears as the Record's
+  // display, which is not source.
+  '(', ')', '{', '}',
 ]);
 
 const errors = [];

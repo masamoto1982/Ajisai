@@ -91,7 +91,7 @@ impl Split {
 }
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    // `LENGTH` declares `consumption: eat` with `[ vec ] -> [ count ]`: the
+    // `LENGTH` is `[ vec ] -> [ count ]` and consumes what it reads: the
     // measured vector leaves the stack.
     let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 

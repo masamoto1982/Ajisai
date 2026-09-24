@@ -49,7 +49,7 @@ mod materialization_limit_tests {
         // recover it.
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("[ 42 ] [ 0 9999999999999 ] RANGE NIL? SELECT")
+            .execute("[ 0 9999999999999 ] RANGE 'S' BIND [ 42 ] S S NIL? SELECT")
             .await;
         assert!(
             result.is_ok(),

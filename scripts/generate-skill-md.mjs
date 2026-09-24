@@ -165,9 +165,9 @@ const canonicalExamples = [
   { title: 'FILTER keeps matching elements', code: '[ 0 10 ] RANGE [ 5 > ] FILTER' },
   { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ + ] FOLD' },
   {
-    id: 'record-literal',
-    title: 'A Record literal: each key beside the value under it',
-    code: "{ 'x' 1 'y' 2 }",
+    id: 'record-basic',
+    title: 'A Record from a Vector of keys and a Vector of values',
+    code: "[ 'x' 'y' ] [ 1 2 ] RECORD",
   },
   {
     id: 'def-basic',
@@ -390,7 +390,7 @@ function verifiedNilSection() {
   if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
   const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk('[ 99 ] 1 0 DIV NIL? SELECT');
+  const fallback = expectOk("1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT");
   if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('the fallback must replace NIL');
   // Lifted over a vector the same law projects lane by lane, so the top stays
   // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
@@ -459,7 +459,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar — **except where a Word takes an *element*** (\`PUT\`, \`GET\`, \`INDEX-OF\`): there \`[ 9 ]\` is the one-element vector itself, so writing it nests instead of storing 9, and nothing errors (§7).
 - Strings: \`'single quotes'\` (a value domain of its own, not a vector of codepoints). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
 - Code blocks are quoted programs passed to MAP / FILTER / FOLD / DEF, written as an ordinary Vector (§6) — there is no separate block bracket. SELECT is not among them: it takes values, not code.
-- Named data is a Record, written \`{ key value … }\`: \`${canonicalExampleCode('record-literal')}\`. It is not a Vector and is never code — \`{ }\` builds a value, \`[ ]\` builds a value that may also be run (§6).
+- Named data is a Record, built by \`RECORD\` from a Vector of keys and a Vector of values: \`${canonicalExampleCode('record-basic')}\`. It is not a Vector and is never code. It displays as \`{ 'x' 1/1 'y' 2/1 }\`, which is a display, not source: only \`[ ]\` delimits.
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
 - Every Word consumes the operands it reads. To use a value more than once, name it with \`BIND\` and read the name: \`5 'N' BIND N N 1 +\` leaves \`5 6\`.
@@ -478,7 +478,7 @@ pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`NIL?\` and \`SELECT\`: \`[ 99 ] 1 0 DIV NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` answers its subject *and* whether it is absent, which is exactly where \`SELECT\` wants the truth — so the phrase reads "X, or the fallback if X is absent" with nothing named and nothing repeated.
+- Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
 - Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
 - That makes the top a vector, not a NIL, so \`NIL?\` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
@@ -547,43 +547,6 @@ ${wordRows.join('\n')}
 // ---------------------------------------------------------------------------
 
 const content = buildSkillMd();
-
-// The hand-typed prose in §2/§3 explains syntax in *prose*, not through
-// `runSnippet` the way §6/§7/§8's curated examples are, and it had drifted
-// into showing `{ }` as a live block bracket while §9 listed it as a
-// delimiter — then, when braces were freed and later allocated to the Record
-// literal, into calling them invalid source characters. Both readings were
-// wrong in the same place, so what is checked here is neither: every braced
-// fragment in §2/§3 must be Ajisai source that builds a Record, run to find
-// out. A `{ ... }` presented as a block would have to answer a Record to
-// survive this, and a claim that braces are not source cannot survive it at
-// all. Scoped to §2/§3: §7's "Common errors" section legitimately embeds JSON
-// diagnostic output (`{ when: ..., why: ... }`), which is not Ajisai source.
-const syntaxSections = content.slice(content.indexOf('## 2. Minimal syntax'), content.indexOf('## 4. NIL'));
-for (const fragment of syntaxSections.matchAll(/`([^`]*[{}][^`]*)`/g)) {
-  const code = fragment[1];
-  // A fragment carrying the ellipsis is a schema, not a program: `{ key value
-  // … }` names the shape a reader fills in, so there is nothing to run. The
-  // rule still bites, because a schema cannot be the only braced fragment —
-  // the executed example beside it is what proves the shape is real.
-  if (code.includes('…')) continue;
-  const { exit, json } = runSnippet(code);
-  if (exit !== 0) {
-    fail(`SKILL.md §2/§3 shows ${JSON.stringify(code)}, which is not Ajisai source: ${json?.message}`);
-  }
-  const shown = (json.stack ?? []).map((node) => node.type).join(',');
-  if (!shown.includes('record')) {
-    fail(`SKILL.md §2/§3 shows ${JSON.stringify(code)} with braces, but it answers [${shown}] rather than a Record`);
-  }
-}
-if (!/`[^`…]*[{}][^`…]*`/.test(syntaxSections)) {
-  fail('SKILL.md §2/§3 shows no braced fragment that runs, so the Record literal it documents is unchecked');
-}
-for (const [index, line] of syntaxSections.split('\n').entries()) {
-  if (/[{}]/.test(line) && !/`[^`]*[{}]/.test(line)) {
-    fail(`SKILL.md §2/§3 (relative line ${index + 1}) mentions a brace outside a code fragment, so nothing ran it: ${line}`);
-  }
-}
 
 if (process.argv.includes('--check')) {
   const committed = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : null;

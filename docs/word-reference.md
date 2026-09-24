@@ -11,7 +11,7 @@ Push the boolean TRUE onto the stack.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **Stack:** 0 input(s) → 1 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -24,7 +24,7 @@ Push the boolean FALSE onto the stack.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **Stack:** 0 input(s) → 1 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -37,7 +37,7 @@ Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yie
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -51,7 +51,7 @@ Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through 
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -65,7 +65,7 @@ Choose between two already-computed values by a truth value: TRUE answers the fi
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `booleanLogic`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 3 input(s) → 1 output(s)
 - **NIL policy:** `kleeneAbsorbing`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -79,7 +79,7 @@ Test equality of two values.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -93,7 +93,7 @@ Test less-than comparison.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -108,7 +108,7 @@ Test greater-than comparison.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -123,7 +123,7 @@ Add two numeric values, element-wise with broadcasting.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -138,7 +138,7 @@ Subtract two numeric values, element-wise with broadcasting.
 
 - **Vocabulary tier:** Standard (`shorthand`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -153,7 +153,7 @@ Multiply two numeric values, element-wise with broadcasting.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -168,7 +168,7 @@ Divide two numeric values exactly (fractional result).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: divisorEqualsZero → divisionByZero
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -183,7 +183,7 @@ Round toward negative infinity.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -197,7 +197,7 @@ Round to nearest integer (half-up).
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -211,7 +211,7 @@ Smaller of two numbers, element-wise with broadcasting.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -225,7 +225,7 @@ Larger of two numbers, element-wise with broadcasting.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -239,7 +239,7 @@ Exact square root of a non-negative rational, element-wise over a vector. The re
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: negativeScalar → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -253,7 +253,7 @@ Exact power `x y POW`, element-wise over Vectors. An integer exponent keeps the 
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: zeroBaseNegativeExponent,negativeBaseFractionalExponent,tier2SignUndecidable,exponentTooLargeToMaterialize → divisionByZero, domainMiss, undecidable, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -267,7 +267,7 @@ The greatest common divisor of two integers, non-negative, element-wise over Vec
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: nonIntegerOperand,tier2Operand → domainMiss, undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -281,7 +281,7 @@ A rational opened into its reduced numerator and denominator, as a two-element V
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: irrationalOperand,tier2Operand → domainMiss, undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -295,7 +295,7 @@ The natural exponential `eˣ`, element-wise over Vectors. `0 EXP` is exactly `1`
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -309,7 +309,7 @@ The natural logarithm, element-wise over Vectors. `1 LN` is exactly `0`; every o
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: nonPositiveArgument,tier2SignUndecidable → domainMiss, undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -323,7 +323,7 @@ The sine of an angle in radians, element-wise over Vectors. `0 SIN` is exactly `
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -337,7 +337,7 @@ The cosine of an angle in radians, element-wise over Vectors. `0 COS` is exactly
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: argumentTooLargeToMaterialize → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -351,7 +351,7 @@ The arctangent, in radians, element-wise over Vectors: the one inverse that acco
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `exactArithmetic`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -365,7 +365,7 @@ Push π: a general computable real with no algebraic normal form (LANG.VALUES.EX
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **Stack:** 0 input(s) → 1 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -378,7 +378,7 @@ Select elements of a vector by index. One index answers with the element itself;
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -392,7 +392,7 @@ Return the number of elements in a vector.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -402,11 +402,11 @@ Return the number of elements in a vector.
 
 ## `TAKE`
 
-Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 1 2 3 ] [ 9 ] TAKE NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 9 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -420,7 +420,7 @@ Drop the first N or last -N elements of a vector and answer the rest. TAKE's cou
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -434,7 +434,7 @@ Flatten and concatenate two vectors.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -448,7 +448,7 @@ Reverse the order of vector elements.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -462,7 +462,7 @@ Collect N items off the stack into a new vector.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** variable input(s) → 1 output(s); `eat` consumption
+- **Stack:** variable input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -476,7 +476,7 @@ Generate a numeric sequence from a [start, end] pair.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -490,7 +490,7 @@ Fill a target shape with a constant value.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -504,7 +504,7 @@ The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] 
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: raggedNesting → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -518,7 +518,7 @@ Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ]
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: spaceExhausted → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -532,7 +532,7 @@ Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -546,7 +546,7 @@ How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, 
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -559,7 +559,7 @@ Return a copy of a vector sorted in ascending order.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -573,7 +573,7 @@ The indices that would sort a vector ascending; ties keep their original order.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthroughThenProject`; projection: budgetExhausted → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -587,7 +587,7 @@ The distinct elements of a vector, in first-occurrence order.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -601,7 +601,7 @@ How many times each distinct element occurs, as a Record from element to count: 
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -615,7 +615,7 @@ Bundle equal-length vectors position by position; a matrix transposes.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -625,11 +625,11 @@ Bundle equal-length vectors position by position; a matrix transposes.
 
 ## `PUT`
 
-A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT` hands it back.
+A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT` hands it back.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 3 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -643,7 +643,7 @@ Bundle values by the key at the same position, as a Record from key to the Vecto
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -657,7 +657,7 @@ Index of the first element equal to the value; Bubble/NIL if absent.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: valueAbsent → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -671,7 +671,7 @@ Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMB
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -685,7 +685,7 @@ The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `collection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: keyAbsent,budgetExhausted → missingField, undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -695,11 +695,11 @@ The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5
 
 ## `RECORD`
 
-Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. The literal `{ 'x' 1 'y' 2 }` builds the same Record from the same values, pairing its elements as it reads them; this Word is what builds one from sequences a program computed.
+Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -713,7 +713,7 @@ The keys of a Record as a Vector, in the Record's own order, so that `KEYS` and 
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -727,7 +727,7 @@ The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RE
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -737,11 +737,11 @@ The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RE
 
 ## `AT`
 
-The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `fallback R 'x' AT NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.
+The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `R 'x' AT 'S' BIND fallback S S NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: keyAbsent → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -755,7 +755,7 @@ A copy of a Record with one key set: `R 'z' 3 WITH`. A key already present keeps
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 3 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -769,7 +769,7 @@ A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Rec
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: keyAbsent → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -783,7 +783,7 @@ Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about prese
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -797,7 +797,7 @@ The union of two Records, the right one winning: `defaults overrides MERGE`. The
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -811,7 +811,7 @@ Apply a code block to each element of a vector.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -825,7 +825,7 @@ Keep only the elements for which a predicate block returns TRUE.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -839,7 +839,7 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 3 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -853,7 +853,7 @@ Reduce a vector step by step, answering the accumulator after each element rathe
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 3 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -867,7 +867,7 @@ Split a string into a vector of one-character strings.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -881,7 +881,7 @@ Join a vector of strings into a single string.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -895,7 +895,7 @@ Remove whitespace from both ends of a string.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -909,7 +909,7 @@ The String with every character mapped to its upper form under Unicode's default
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -923,7 +923,7 @@ The String with every character mapped to its lower form under Unicode's default
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -937,7 +937,7 @@ Split a string into a vector of substrings using a separator.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -951,7 +951,7 @@ The position, in characters, at which a text first occurs in another: `'hello wo
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: needleAbsent → missingField
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -965,7 +965,7 @@ Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 3 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -979,7 +979,7 @@ Parse text as a number; Bubble/NIL on parse failure.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: parseFailure → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -993,7 +993,7 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `passthrough`; projection: noExactLexemeForValue → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1006,7 +1006,7 @@ Render an exact scalar as decimal text with a stated number of digits after the 
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `text`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: lastDigitUndecidable → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1020,7 +1020,7 @@ Read JSON text into a value: an object becomes a Record keyed by its member name
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: textIsNotJson,nestingDeeperThanTheMachineHolds → invalidEncoding, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1034,7 +1034,7 @@ Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String k
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: valueHasNoJsonImage → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1047,7 +1047,7 @@ Evaluate a code block.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** 1 input(s) → variable output(s); `eat` consumption
+- **Stack:** 1 input(s) → variable output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -1057,11 +1057,11 @@ Evaluate a code block.
 
 ## `CONTRACT`
 
-The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `rejectNil`; projection: symbolNamesNoWord → missingField
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
@@ -1075,7 +1075,7 @@ Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluat
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 0 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1089,7 +1089,7 @@ Push the NIL value onto the stack.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **Stack:** 0 input(s) → 1 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1102,7 +1102,7 @@ Test whether the top value is an operational NIL (absent).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1115,7 +1115,7 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrHasNoReason → notAvailable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1124,11 +1124,11 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 
 ## `ABSENT`
 
-A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.
+A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `createsNil`; projection: always → userDeclared
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1142,7 +1142,7 @@ Name a value for the rest of the frame that made it. One name takes the whole va
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 0 output(s)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
@@ -1156,7 +1156,7 @@ Define a user word from a body and a name.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 2 input(s) → 0 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
@@ -1170,7 +1170,7 @@ Delete a user word from the dictionary.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 0 output(s)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryDelete`
@@ -1184,7 +1184,7 @@ The content identity of a Word, or the digest of a value's denotation, as text. 
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 1 output(s)
 - **NIL policy:** `consumeNil`; projection: operandCarriesAComputableReal → undecidable
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
@@ -1197,7 +1197,7 @@ Write the top stack value to the output stream, consuming it. A string is writte
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `output`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
+- **Stack:** 1 input(s) → 0 output(s)
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `effectful` / `hostRelative`
 - **Effects:** `consoleWrite`

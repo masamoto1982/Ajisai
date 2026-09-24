@@ -115,19 +115,7 @@ impl Interpreter {
                     outcomes.extend(resolve_and_collect(self, symbol, &mut visiting, &mut reach));
                 }
                 Token::VectorStart | Token::VectorEnd => flow.feed_structural(token),
-                // A Record literal is a constant, so whether it fails is
-                // decided here rather than approximated: building it answers
-                // exactly, and a literal that builds cannot fail at run time.
-                Token::RecordStart => {
-                    flow.feed_structural(token);
-                    if let Err(err) = Self::collect_record_literal(tokens, idx, 1) {
-                        outcomes.insert(format!(
-                            "error:{}",
-                            crate::error::ErrorCategory::from_error(&err).as_protocol_str()
-                        ));
-                    }
-                }
-                Token::RecordEnd => flow.feed_structural(token),
+                Token::Value(_) => flow.feed_literal(),
             }
         }
 
