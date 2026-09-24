@@ -1604,7 +1604,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 5 ] RANGE</code></td>
+                                    <td><code>1 5 RANGE</code></td>
                                     <td><code>[ 1/1 2/1 3/1 4/1 5/1 ]</code></td>
                                     <td class="notes">開始から終了までを含む整数の並び。</td>
                                 </tr>
@@ -1623,9 +1623,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 0 10 2 ] RANGE</code></td>
+                                    <td><code>0 5 RANGE 2 MUL</code></td>
                                     <td><code>[ 0/1 2/1 4/1 6/1 8/1 10/1 ]</code></td>
-                                    <td class="notes">3つめの要素があれば刻み幅になる。刻み幅が負なら降順になる。</td>
+                                    <td class="notes">刻み幅は掛け算で作る。終点が始点より小さければ降順になる。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1777,9 +1777,9 @@
                                 <tr><td><code>RECORD</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD</code></td><td class="notes"><code>{ 'x' 1/1 'y' 2/1 }</code> — キー列と値列を位置で対応付ける。長さが違えばエラー、同じキーが2回あれば<code>duplicateKey</code>のエラー(後勝ちで黙って捨てない)</td></tr>
                                 <tr><td><code>KEYS</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD KEYS</code></td><td class="notes"><code>[ 'x' 'y' ]</code> — キー列。与えた順序のまま</td></tr>
                                 <tr><td><code>VALUES</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD VALUES</code></td><td class="notes"><code>[ 1/1 2/1 ]</code> — 値列。<code>KEYS</code>と位置が揃う。ここから先はベクトルの語彙がそのまま使える</td></tr>
-                                <tr><td><code>AT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'y' AT</code></td><td class="notes"><code>2/1</code> — キーの下の値。<code>GET</code>が位置に対して行うことをキーに対して行う。ないキーは<code>NIL</code>(<code>missingField</code>)</td></tr>
+                                <tr><td><code>AT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'y' AT</code></td><td class="notes"><code>2/1</code> — キーの下の値。<code>GET</code>が位置に対して行うことをキーに対して行う。ないキーは<code>NIL</code>(<code>notFound</code>)</td></tr>
                                 <tr><td><code>WITH</code></td><td><code>[ 'x' ] [ 1 ] RECORD 'y' 2 WITH</code></td><td class="notes"><code>{ 'x' 1/1 'y' 2/1 }</code> — 1つのキーに値を与えた新しいRecord。既にあるキーは位置を動かさず値だけ替わり、ないキーは末尾に足される</td></tr>
-                                <tr><td><code>WITHOUT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT</code></td><td class="notes"><code>{ 'y' 2/1 }</code> — 1つのキーを除いた新しいRecord。ないキーを除こうとすると<code>NIL</code>(<code>missingField</code>)</td></tr>
+                                <tr><td><code>WITHOUT</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT</code></td><td class="notes"><code>{ 'y' 2/1 }</code> — 1つのキーを除いた新しいRecord。ないキーを除こうとすると<code>NIL</code>(<code>notFound</code>)</td></tr>
                                 <tr><td><code>HAS?</code></td><td><code>[ 'x' ] [ 1 ] RECORD 'x' HAS?</code></td><td class="notes"><code>TRUE</code> — キーがあるかどうか。値を読まずに答えるので、「キーがない」と「値が<code>NIL</code>」を区別できる</td></tr>
                                 <tr><td><code>MERGE</code></td><td><code>[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE</code></td><td class="notes"><code>{ 'x' 1/1 'y' 9/1 'z' 3/1 }</code> — 2つのRecordの合併。同じキーは右が勝ち、左の順序を保ち、右にしかないキーは末尾に足される。既定値に上書きを重ねる形</td></tr>
                             </tbody>
@@ -1843,7 +1843,7 @@
                         </div>
                     </div>
                     <h3 id="record-recovery">ないキーの扱い</h3>
-                    <p>ないキーを<code>AT</code>で読むのは、形は正しいが答えのない問いです。ですからエラーではなく、理由<code>missingField</code>を持つ<code>NIL</code>が返り、<a href="#recovery">回復の書き方</a>がそのまま効きます。存在そのものを問いたいときは<code>HAS?</code>を使ってください。<code>WITHOUT</code>も同じ規律で、ないキーを除こうとすると<code>NIL</code>を返します。<code>GET</code>・<code>TAKE</code>・<code>PUT</code>が範囲外の位置を投影するのと同じで、綴り間違いが黙って通ることはありません。</p>
+                    <p>ないキーを<code>AT</code>で読むのは、形は正しいが答えのない問いです。ですからエラーではなく、理由<code>notFound</code>を持つ<code>NIL</code>が返り、<a href="#recovery">回復の書き方</a>がそのまま効きます。存在そのものを問いたいときは<code>HAS?</code>を使ってください。<code>WITHOUT</code>も同じ規律で、ないキーを除こうとすると<code>NIL</code>を返します。<code>GET</code>・<code>TAKE</code>・<code>PUT</code>が範囲外の位置を投影するのと同じで、綴り間違いが黙って通ることはありません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1858,7 +1858,7 @@
                                 </tr>
                                 <tr>
                                     <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL-REASON</code></td>
-                                    <td><code>'missingField'</code></td>
+                                    <td><code>'notFound'</code></td>
                                     <td class="notes">理由はプロトコル文字列なので分岐できる。</td>
                                 </tr>
                             </tbody>
@@ -1961,7 +1961,7 @@
                                 <tr>
                                     <td><code>'hello world' 'world' SEARCH</code></td>
                                     <td><code>6/1</code></td>
-                                    <td class="notes">最初に現れる位置。<code>CHARS</code>と同じく文字で数える。見つからなければ<code>NIL</code>(<code>missingField</code>)。</td>
+                                    <td class="notes">最初に現れる位置。<code>CHARS</code>と同じく文字で数える。見つからなければ<code>NIL</code>(<code>notFound</code>)。</td>
                                 </tr>
                                 <tr>
                                     <td><code>'a-b-c' '-' '+' REPLACE</code></td>
@@ -2547,9 +2547,9 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>[ 0 6 ] RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB ] 'STEP' DEF<br>0 6 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
                                     <td><code>7282969/1250000</code></td>
-                                    <td class="notes">10からの7ステップ(<code>[ 0 6 ] RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
+                                    <td class="notes">10からの7ステップ(<code>0 6 RANGE</code>は0から6までの7要素)。分母はすでに7桁。値はおよそ5.83。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2569,9 +2569,9 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>[ 0 20 ] RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
+                                    <td><code>[ 2 SUB 1/10 MUL ] 'DELTA' DEF<br>[ 'X' BIND X X DELTA SUB 1000 MUL 1/2 ADD FLOOR 1000 DIV ] 'STEP' DEF<br>0 20 RANGE 10 [ 2 COLLECT 0 GET STEP ] FOLD</code></td>
                                     <td><code>2877/1000</code></td>
-                                    <td class="notes">21ステップ経っても分母は1000のまま。<code>[ 0 20 ] RANGE</code>は0から20までの21要素。丸めない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
+                                    <td class="notes">21ステップ経っても分母は1000のまま。<code>0 20 RANGE</code>は0から20までの21要素。丸めない場合の実行結果は2.875351&hellip;で、要求した分解能まで見れば同じ数。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2623,8 +2623,8 @@ FILTER</code></td>
                         </table>
                     </div>
                     <p><code>executionLimitExceeded</code>には、CLIの<code>ajisai run --step-limit &lt;N&gt;</code>で明示的に指定できるという特徴があります。既定値はホストの実行環境が定める実装上の選択であり、本書が固定の数として約束するものではありません。</p>
-                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「格子への丸めによる刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>[ 0 100001 ] RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
-                    <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>[ 0 99999 ] RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。格子に丸めて刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
+                    <p class="ref-note">上の3つはインタプリタが数える上限ですが、Playgroundにはもう1つ、<strong>実時間</strong>の打ち切りがあります。1回の実行が5秒を超えると、実行中のワーカーごと停止され、<code>Execution timed out after 5000 ms</code>として報告されます。これは言語の意味論でもインタプリタの予算でもなく、この画面だけが持つホスト側のガードです。上のどの名前も付かないのはそのためで、代わりに「どのガードが止めたか」「一括操作への書き換え」「格子への丸めによる刈り込み」を述べる診断が付きます。ホストごとの上限は、画面上部のビルド表示の隣にある<code>resource limits:</code>バッジにマウスを合わせると一覧できます(このガードもそこに載ります)。MCPホストはこれとは別の、より厳しい具体化上限を宣言します。同じ<code>0 100001 RANGE</code>が、Playgroundでは成功し、MCPホストでは<code>NIL</code>(<code>spaceExhausted</code>)になるのはこのためです。</p>
+                    <p class="ref-note">プログラム全体の作業量と、1つの値の大きさは別々に測られています。<code>0 99999 RANGE UNIQUE</code>のように、ステップ数としては1回でも内部で要素数ぶんの比較を行うワードがあるので、ステップ予算だけを見ていては値の重さは見えません。反復のコストの節で見た、分母が肥大化していく分数を思い出してください。格子に丸めて刈り込まずに育て続ければ、行き着く先はまさにこの<code>resourceLimitExceeded</code>です。<code>recursionLimitExceeded</code>はさらに別の性質を持ちます。<a href="#acyclic">ワードは自分自身を呼び出せません</a>から、これは再帰の深さではなく、A→B→C→…と多数の異なるワードを渡り歩く、循環しない呼び出し連鎖の深さです。</p>
 
                     <h3>具体化の上限: 理由付きのNIL</h3>
                     <p><code>RANGE</code>と<code>FILL</code>は、1回の呼び出しで生成するベクトルの大きさに上限を持ちます。要求そのものは整った形をしていても、それを超えて具体化しようとすると、エラーではなく理由付きの<strong><code>NIL</code></strong>になります。理由は<code>spaceExhausted</code>です。負の数や非整数のように、次元や形状の指定そのものが誤っている場合はこれとは別で、従来どおりエラーになります。</p>
@@ -2636,7 +2636,7 @@ FILTER</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 0 999999999999 ] RANGE NIL-REASON</code></td>
+                                    <td><code>0 999999999999 RANGE NIL-REASON</code></td>
                                     <td><code>'spaceExhausted'</code></td>
                                     <td class="notes">要求は整った形だが大きすぎるので、エラーではなく理由付きの<code>NIL</code>になる。<code>FILL</code>も同じ理由で同じ振る舞いをする。</td>
                                 </tr>
@@ -2647,7 +2647,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>[ 0 999999999999 ] RANGE 'S' BIND [ ] S S NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
+                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>0 999999999999 RANGE 'S' BIND [ ] S S NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
                 </section>
 
                 <section id="words" class="ref-page">
@@ -2887,7 +2887,7 @@ FILTER</code></td>
                                 </tr>
                                 <tr>
                                     <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>
-                                    <td><code>'missingField'</code></td>
+                                    <td><code>'notFound'</code></td>
                                     <td class="notes">ワードでない名前は理由付きの<code>NIL</code>。</td>
                                 </tr>
                             </tbody>

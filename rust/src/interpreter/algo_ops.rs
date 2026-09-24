@@ -35,7 +35,7 @@ fn pop_vector_and_target(interp: &mut Interpreter, _word: &str) -> Result<(Vec<V
 
 /// `vector value -- index`. Index of the first element equal to the target.
 /// A well-formed miss (value absent from a valid vector) projects to
-/// NIL with `reason = missingField` per the NIL Projection Rule.
+/// NIL with `reason = notFound` per the NIL Projection Rule.
 pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
     require_stack_top(interp, "INDEX-OF")?;
     let (vector, target) = pop_vector_and_target(interp, "INDEX-OF")?;
@@ -56,7 +56,7 @@ pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
         None => {
             push_result(
                 interp,
-                Value::nil_with_reason(NilReason::MissingField, Recoverability::Recoverable),
+                Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable),
             );
         }
     }

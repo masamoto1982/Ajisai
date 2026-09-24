@@ -130,9 +130,7 @@
    "required": [
     "summary",
     "hover",
-    "lookup",
     "syntax",
-    "role",
     "stackEffect"
    ],
    "properties": {
@@ -144,15 +142,7 @@
      "type": "string",
      "minLength": 1
     },
-    "lookup": {
-     "type": "string",
-     "minLength": 1
-    },
     "syntax": {
-     "type": "string",
-     "minLength": 1
-    },
-    "role": {
      "type": "string",
      "minLength": 1
     },
@@ -169,7 +159,6 @@
     "name",
     "aliases",
     "family",
-    "category",
     "stack",
     "nilPolicy",
     "projection",
@@ -210,10 +199,6 @@
       "output",
       "record"
      ]
-    },
-    "category": {
-     "type": "string",
-     "minLength": 1
     },
     "stack": {
      "type": "object",
@@ -268,22 +253,12 @@
      "description": "The conditions under which the Word raises. A condition names a state of the *input* — \"the divisor is zero\", \"the index is outside the vector\" — and not an outcome, so the schema permits the same name in one Word's `errorWhen` and another's `projection.when`. Which field it appears in is what decides the outcome, per Word, and the two are never both declared for one condition on one Word. No condition is currently declared both ways anywhere in the registry: `indexOutOfBounds` was the last one that was — `GET` projected it while `TAKE` and `PUT` raised it — and those two now project it too, so every condition in the registry has one outcome across the whole vocabulary."
     },
     "partiality": {
+     "description": "A summary of the declared outcomes, never a choice of its own (scripts/check-word-schema-migration.mjs derives it): `projecting` when the Word declares a projection; else `partial` when it runs a block (purity `conditional`) or declares an errorWhen condition spec/outcomes.json marks `repair: program`; else `total` — it raises only on an operand of the wrong kind.",
      "type": "string",
      "enum": [
       "total",
       "partial",
       "projecting"
-     ]
-    },
-    "acceptedDomain": {
-     "description": "The shape of operand the Word accepts. `partiality` says what happens to an operand the Word accepts; this says which operands those are, and the two together are what a reader needs before calling it. Omitted where the Word takes whatever its family takes.",
-     "type": "string",
-     "enum": [
-      "scalar",
-      "numeric",
-      "flatNumericVector",
-      "vector",
-      "text"
      ]
     },
     "purity": {

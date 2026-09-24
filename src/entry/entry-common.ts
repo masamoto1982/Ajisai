@@ -116,7 +116,7 @@ function setPlaygroundBadgeTooltip(lines: string[]): void {
  *
  * LANG.MACHINE.LIMITS makes limits a host safety control rather than value semantics, so
  * two conforming hosts legitimately enforce different ceilings — and they do:
- * `[ 0 100001 ] RANGE` materializes here and answers `NIL(spaceExhausted)`
+ * `0 100001 RANGE` materializes here and answers `NIL(spaceExhausted)`
  * under the MCP agent profile. That difference is only a trap when neither
  * host discloses what it applies, which is what this fixes on this side.
  * See docs/dev/mcp-host-profiles.md for the comparison.

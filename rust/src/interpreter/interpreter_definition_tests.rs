@@ -281,7 +281,7 @@ mod tests {
     async fn test_direct_recursion_hits_execution_limit() {
         let mut interp = Interpreter::new();
         interp.max_execution_steps = 64;
-        let result = interp.execute("[ 1 100 ] RANGE 0 [ ADD ] FOLD").await;
+        let result = interp.execute("1 100 RANGE 0 [ ADD ] FOLD").await;
         assert!(
             result.is_err(),
             "A 100-element fold should hit execution limit"
@@ -385,7 +385,7 @@ mod tests {
     async fn test_execution_limit_error_message() {
         let mut interp = Interpreter::new();
         interp.max_execution_steps = 64;
-        let result = interp.execute("[ 1 100 ] RANGE 0 [ ADD ] FOLD").await;
+        let result = interp.execute("1 100 RANGE 0 [ ADD ] FOLD").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(

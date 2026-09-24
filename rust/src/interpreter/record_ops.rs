@@ -40,10 +40,10 @@ fn non_record(position: &str, got: &Value) -> AjisaiError {
     )
 }
 
-/// The `missingField` absence `AT` and `WITHOUT` project for a key the
+/// The `notFound` absence `AT` and `WITHOUT` project for a key the
 /// Record does not hold.
-fn missing_field() -> Value {
-    Value::nil_with_reason(NilReason::MissingField, Recoverability::Recoverable)
+fn not_found() -> Value {
+    Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable)
 }
 
 /// Charge for hashing every key of a Record being built or rebuilt: one
@@ -118,7 +118,7 @@ pub fn op_values(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// `AT ( [ record ] [ key ] -> [ value ] )`: projects `missingField`.
+/// `AT ( [ record ] [ key ] -> [ value ] )`: projects `notFound`.
 pub fn op_at(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(record) = operands[0].as_record() else {
@@ -128,7 +128,7 @@ pub fn op_at(interp: &mut Interpreter) -> Result<()> {
     };
     let answer = match record.get(&operands[1]) {
         Some(value) => value.clone(),
-        None => missing_field(),
+        None => not_found(),
     };
     interp.stack.push(answer);
     Ok(())
@@ -156,7 +156,7 @@ pub fn op_with(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// `WITHOUT ( [ record ] [ key ] -> [ record ] )`: projects `missingField`.
+/// `WITHOUT ( [ record ] [ key ] -> [ record ] )`: projects `notFound`.
 pub fn op_without(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(record) = operands[0].as_record() else {
@@ -169,7 +169,7 @@ pub fn op_without(interp: &mut Interpreter) -> Result<()> {
             push_record(interp, next);
         }
         None => {
-            interp.stack.push(missing_field());
+            interp.stack.push(not_found());
         }
     }
     Ok(())

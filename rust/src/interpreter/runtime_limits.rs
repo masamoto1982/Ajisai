@@ -173,7 +173,7 @@ pub const COLLECTION_COPY_UNITS: u64 = 16;
 /// common refinement of their radical bases, which is nothing like a limb
 /// compare. Measured at 3.0 µs through `UNIQUE` and 3.3 µs through `SORT`
 /// (after correcting for Rust's sort detecting the already-ascending run that
-/// `[ 2 n ] RANGE { SQRT } MAP` produces) — 500 to 550 units at 6 ns each.
+/// `2 n RANGE { SQRT } MAP` produces) — 500 to 550 units at 6 ns each.
 ///
 /// Distinct from [`ALGEBRAIC_PAIR_UNITS`], which prices an algebraic *product*.
 /// A product and a comparison are different operations and the measurements

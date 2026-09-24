@@ -142,7 +142,7 @@ const ADVERSARIAL = [
   // answer `notExecutable`. They used to be the witnesses for the opposite —
   // the higher-order Words took `'NAME'` as their code operand, so a Word
   // could run with no `Token::Symbol` for it anywhere in the source, and
-  // these really raised `builtinProtection` and `wordNotFound` that way. That
+  // these really raised `protectedWord` and `wordNotFound` that way. That
   // spelling is gone: a computed name appeared in no token for the DEF-time
   // acyclicity check to read, which left LANG.DICTIONARY.ACYCLIC's termination
   // argument resting on a runtime ceiling (spec/termination.json). Kept as the

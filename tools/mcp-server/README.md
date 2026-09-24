@@ -188,7 +188,7 @@ A resource-limit failure carries `diagnosis.resourceLimit`
 entry in `mcp.limits` that fired.
 
 A ceiling can refuse a call without failing it. A well-formed generative Word
-whose result will not fit — `[ 0 100001 ] RANGE` against
+whose result will not fit — `0 100001 RANGE` against
 `materializedElements` — *projects* to NIL under the NIL Projection Rule, so
 the call is `status: ok` and there is no top-level `diagnosis` to carry
 anything. The same facts are on the value that came back instead:
@@ -236,7 +236,7 @@ reachable within `wallTimeMs` at their declared values. `golden/limits.json`
 and `docs/dev/mcp-host-profiles.md` say so explicitly rather than leaving the
 gap to be discovered.
 
-The playground applies a different, looser profile — `[ 0 100001 ] RANGE`
+The playground applies a different, looser profile — `0 100001 RANGE`
 succeeds there and answers `NIL(spaceExhausted)` here. Both hosts now publish
 what they apply, and the divergence is recorded as an explicit
 `hostDivergence` block on the golden case that shows it.

@@ -54,7 +54,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             code: "[ 10 20 30 ] 0 GET",
             result: "Pushes the first element, 10.",
         }],
-        failure_note: "An out-of-range index yields a Bubble/NIL with reason\nindexOutOfBounds.",
+        failure_note: "An out-of-range index yields a NIL with reason\nindexOutOfBounds.",
         related: &["LENGTH", "TAKE"],
     },
 
@@ -102,10 +102,10 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     },
     BuiltinLookupDoc {
         word: "RANGE",
-        behavior: "Pops a [ start end ] pair and pushes the numeric sequence\nit spans.",
+        behavior: "Pops a start and an end and pushes every integer from one\nto the other, both included.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 0 5 ] RANGE",
-            result: "Pushes the sequence from 0 to 5.",
+            code: "0 5 RANGE",
+            result: "Pushes [ 0 1 2 3 4 5 ].",
         }],
         failure_note: "",
         related: &["TAKE"],
@@ -148,7 +148,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             code: "10 2 /",
             result: "Pushes 5.",
         }],
-        failure_note: "Division by zero yields a Bubble/NIL with reason\ndivisionByZero.",
+        failure_note: "Division by zero yields a NIL with reason\ndivisionByZero.",
         related: &["ADD", "SUB", "MUL", "FLOOR"],
     },
     BuiltinLookupDoc {
@@ -190,7 +190,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             code: "'42' NUM",
             result: "Pushes 42.",
         }],
-        failure_note: "Text with no numeric reading yields a Bubble/NIL.",
+        failure_note: "Text with no numeric reading yields a NIL.",
         related: &["STR"],
     },
     BuiltinLookupDoc {
@@ -242,7 +242,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             code: "[ 1 2 3 ] [ 2 MUL ] MAP",
             result: "Pushes [ 2 4 6 ].",
         }],
-        failure_note: "An element the block cannot produce a value for follows\nthe Bubble Rule: that lane becomes a Bubble/NIL, e.g.\ndividing by zero maps the element to NIL.",
+        failure_note: "An element the block cannot produce a value for follows\nthe NIL Projection Rule: that lane becomes a NIL, e.g.\ndividing by zero maps the element to NIL.",
         related: &["FILTER", "FOLD"],
     },
     BuiltinLookupDoc {

@@ -14,7 +14,7 @@ pub enum AbsenceOrigin {
     /// directly, so a reason and its origin cannot drift apart.
     DivisionByZero,
     NilPropagation,
-    MissingField,
+    NotFound,
     InvalidEncoding,
     IndexOutOfBounds,
     /// A well-formed generative operation exceeded the space water level

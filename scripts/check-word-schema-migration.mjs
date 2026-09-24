@@ -7,6 +7,7 @@ const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
 const aliasesSource = readFileSync('rust/src/core_word_aliases.rs', 'utf8');
 const dispatchSource = readFileSync('rust/src/interpreter/execute_builtin.rs', 'utf8');
 const language = readFileSync('spec/language-semantics.md', 'utf8');
+const outcomes = JSON.parse(readFileSync('spec/outcomes.json', 'utf8'));
 
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -27,7 +28,24 @@ function derivedNilPolicy(roles, projecting) {
   return 'consumeNil';
 }
 
+// `partiality` summarizes the outcomes the Word declares, never a choice of
+// its own: a Word that can project is `projecting`; one that can raise even on
+// operands of the right kind — it runs a block, or declares a condition
+// repaired in the program (spec/outcomes.json `repair`) — is `partial`; any
+// other Word raises only on an operand of the wrong kind, and is `total`.
+const programConditions = new Set(
+  outcomes.errorCategories.filter((category) => category.repair === 'program').map((category) => category.id),
+);
+function derivedPartiality(word) {
+  if (word.projection.when !== 'never') return 'projecting';
+  if (word.purity === 'conditional' || (word.errorWhen ?? []).some((c) => programConditions.has(c))) return 'partial';
+  return 'total';
+}
+
 for (const word of words.entries) {
+  if (word.partiality !== derivedPartiality(word)) {
+    fail(`${word.name} declares partiality ${word.partiality}, but its outcomes derive ${derivedPartiality(word)}`);
+  }
   if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
   names.add(word.name);
   for (const field of required) if (!(field in word)) fail(`${word.name} lacks required field ${field}`);
@@ -41,7 +59,7 @@ for (const word of words.entries) {
   // trailing `?` (NIL?, HAS?, MEMBER?), and a `?` name always answers one.
   // Relations and connectives (EQ LT GT, AND NOT SELECT) are operators, named
   // for the operation, and exempt.
-  const answersTruth = /-> \[ (TRUE \| FALSE|bool|truths?) \]/.test(word.documentation.stackEffect);
+  const answersTruth = /-> \[ (TRUE \| FALSE|truths?) \]/.test(word.documentation.stackEffect);
   const operator = ['comparison', 'booleanLogic'].includes(word.family);
   if (!operator && answersTruth !== word.name.endsWith('?')) {
     fail(
@@ -50,10 +68,27 @@ for (const word of words.entries) {
         : `${word.name} ends in ? but does not answer a truth value`,
     );
   }
-  // One notation for every stack effect: operands and results in `[ … ]`
-  // groups with inner spaces, named rather than quoted.
-  if (/\[\]|'[A-Za-z.]+'/.test(word.documentation.stackEffect)) {
-    fail(`${word.name} stack effect \`${word.documentation.stackEffect}\` must write groups as [ … ] and name operands unquoted`);
+  // One notation for every stack effect: every operand and result in its own
+  // `[ … ]` group with inner spaces, named rather than quoted, in one
+  // vocabulary — `text` for a String, `TRUE | FALSE` for a truth value, `...`
+  // for "and more", alternatives spaced around `|`.
+  const effect = word.documentation.stackEffect;
+  const [inputs = ''] = effect.split('->');
+  if (
+    /\[\]|'[A-Za-z.]+'/.test(effect) ||
+    /\b(str|bool)\b/.test(effect) ||
+    /(?<!\.)\.\.(?!\.)/.test(effect) ||
+    /\S\||\|\S/.test(effect) ||
+    !/^(\[ .* \] )?$/.test(inputs)
+  ) {
+    fail(`${word.name} stack effect \`${effect}\` departs from the one notation (bracketed, unquoted, text, TRUE | FALSE, ...)`);
+  }
+  // Two lifted operands are aligned lane by lane (LANG.COLLECTIONS.LIFT), and
+  // two containers that do not align are `shapeMismatch`; a Word with fewer
+  // has nothing to align and does not declare it for lifting's sake.
+  const liftedCount = (word.stack.operands ?? []).filter((role) => role === 'leaf' || role === 'truth').length;
+  if (liftedCount >= 2 && !(word.errorWhen ?? []).includes('shapeMismatch')) {
+    fail(`${word.name} lifts ${liftedCount} operands but does not declare shapeMismatch`);
   }
   // A lifted operand is only meaningful for a Word with one result: the
   // lift assembles one result per element.

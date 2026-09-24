@@ -17,7 +17,7 @@ use crate::interpreter::{Interpreter, DEFAULT_MAX_EXECUTION_STEPS};
 /// as the fixed probe for the "raised limit" direction below, where the
 /// point is that an explicit `--step-limit` still works, not that it is
 /// large.
-const FOLD_PROBE: &str = "[ 1 200000 ] RANGE 0 [ ADD ] FOLD";
+const FOLD_PROBE: &str = "1 200000 RANGE 0 [ ADD ] FOLD";
 
 /// Write `source` to a unique temp file and return its path.
 fn write_program(name: &str, source: &str) -> std::path::PathBuf {
@@ -95,7 +95,7 @@ fn down_probe_exceeds_the_real_default_budget_without_step_limit() {
     // element, so `elements + elements / 10` comfortably clears the real
     // default even if per-element overhead is a small multiple of one step.
     let elements = DEFAULT_MAX_EXECUTION_STEPS + DEFAULT_MAX_EXECUTION_STEPS / 10;
-    let probe = format!("[ 1 {elements} ] RANGE 0 [ ADD ] FOLD");
+    let probe = format!("1 {elements} RANGE 0 [ ADD ] FOLD");
     let path = write_program("real-default", &probe);
     let code = run_cli(&["run", path.to_str().unwrap()]);
     let _ = std::fs::remove_file(&path);

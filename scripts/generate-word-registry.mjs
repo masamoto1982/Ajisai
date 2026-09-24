@@ -64,7 +64,6 @@ const CONTRACT_ENUMS = [
   { rustName: 'Purity', field: 'purity', doc: 'Observational purity class (LANG.CONTRACT.REGISTRY).' },
   { rustName: 'Determinism', field: 'determinism', doc: 'What the Word\'s result may depend on beyond its operands.' },
   { rustName: 'VocabularyTier', field: 'vocabularyTier', doc: 'Where the Word sits in the public Core: the Semantic Kernel or the Standard vocabulary.' },
-  { rustName: 'AcceptedDomain', field: 'acceptedDomain', doc: 'The shape of operand the Word accepts, where the specification narrows it.' },
   {
     rustName: 'CostClass',
     field: 'class',
@@ -198,15 +197,6 @@ const projectionReasons = (reason) => {
   return rustStrSlice(reasons);
 };
 
-// Families whose primitives lift their own leaf and truth operands (the
-// tensor path, and `lane_lift` for comparison and logic). Every other Word is
-// lifted by the dispatcher (`declared_lift`); the rule is the same one.
-const nativeLifting = new Set(
-  JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'))
-    .families.filter((family) => family.lifting === 'elementwise')
-    .map((family) => family.id),
-);
-
 const operandRoles = (roles) =>
   `&[${(roles ?? []).map((role) => `OperandRole::${pascal(role)}`).join(', ')}]`;
 
@@ -222,12 +212,10 @@ const rows = entries
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
         operand_roles: ${operandRoles(word.stack.operands)},
-        lifts_natively: ${nativeLifting.has(word.family)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
         projection_reasons: ${projectionReasons(word.projection.reason)},
         partiality: ${enumRef('Partiality', word.partiality)},
-        accepted_domain: ${word.acceptedDomain ? `Some(AcceptedDomain::${pascal(word.acceptedDomain)})` : 'None'},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
         cost: ${cost(word.cost)},
@@ -338,10 +326,6 @@ pub struct GeneratedWord {
     /// position (\`declared_nil_contract\`), and \`nil_policy\` is its
     /// summary.
     pub operand_roles: &'static [OperandRole],
-    /// Whether the primitive lifts its own \`leaf\` and \`truth\` operands
-    /// over Vectors and Records (its family declares \`lifting\`); otherwise
-    /// the dispatcher lifts them (\`declared_lift\`).
-    pub lifts_natively: bool,
     pub nil_policy: NilPolicy,
     /// The conditions under which a *well-formed* operand yields a reasoned
     /// NIL; empty for the Words that declare \`never\`. Distinct from
@@ -358,14 +342,6 @@ pub struct GeneratedWord {
     /// \`CONTRACT\` hands a program that asks what a Word can project.
     pub projection_reasons: &'static [&'static str],
     pub partiality: Partiality,
-    /// The operand shape the Word accepts, where the specification narrows it,
-    /// and \`None\` where the Word takes whatever its family takes.
-    ///
-    /// \`partiality\` answers "what happens to an operand this Word accepts";
-    /// without this field a reader had no way to ask which operands those are,
-    /// so \`SORT\` could read as \`total\` — always produces a result — while
-    /// rejecting a vector of strings outright.
-    pub accepted_domain: Option<AcceptedDomain>,
     pub purity: Purity,
     pub determinism: Determinism,
     /// What the Word charges on each metered resource. Read by

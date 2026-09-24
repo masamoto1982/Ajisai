@@ -10,8 +10,7 @@
         "LANG.VALUES.NIL",
         "LANG.COLLECTIONS.LIFT"
       ],
-      "truth": "threeValued",
-      "lifting": "elementwise"
+      "truth": "threeValued"
     },
     {
       "id": "comparison",
@@ -19,8 +18,7 @@
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT"
       ],
-      "decidability": "totalOverField",
-      "lifting": "elementwise"
+      "decidability": "totalOverField"
     },
     {
       "id": "exactArithmetic",
@@ -28,8 +26,7 @@
         "LANG.VALUES.EXACT",
         "LANG.COLLECTIONS.LIFT",
         "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "lifting": "elementwise"
+      ]
     },
     {
       "id": "collection",

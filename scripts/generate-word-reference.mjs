@@ -59,7 +59,7 @@ const lines = [
 for (const entry of words.entries) {
   lines.push(`## \`${entry.name}\``);
   lines.push('');
-  lines.push(entry.documentation.lookup);
+  lines.push(entry.documentation.summary);
   lines.push('');
   lines.push(`- **Vocabulary tier:** ${tierLabel(entry)}`);
   lines.push(`- **Family:** \`${entry.family}\``);

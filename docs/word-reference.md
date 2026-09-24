@@ -200,7 +200,7 @@ Round toward negative infinity.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 7/3 ] FLOOR`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+- **ERROR conditions:** `nonNumeric`
 
 ## `ROUND`
 
@@ -215,7 +215,7 @@ Round to nearest integer (half-up).
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 5/2 ] ROUND`
-- **ERROR conditions:** `nonNumeric`, `shapeMismatch`
+- **ERROR conditions:** `nonNumeric`
 
 ## `MIN`
 
@@ -369,7 +369,7 @@ Drop the first N or last -N elements of a vector and answer the rest. TAKE's cou
 
 ## `CONCAT`
 
-Flatten and concatenate two vectors.
+Join two vectors end to end: `[ 1 2 ] [ 3 ] CONCAT` is `[ 1 2 3 ]`. Elements are kept as they are — a nested Vector stays nested. Both operands must be Vectors (`nonVector`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -399,7 +399,7 @@ Reverse the order of vector elements.
 
 ## `COLLECT`
 
-Collect N items off the stack into a new vector.
+Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidCount`), and a stack holding fewer than N values is `stackUnderflow`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -413,33 +413,33 @@ Collect N items off the stack into a new vector.
 
 ## `RANGE`
 
-Generate a numeric sequence from a [start, end] pair.
+Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidRange`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 0 5 ] RANGE`
-- **ERROR conditions:** `invalidRange`
+- **Syntax:** `0 5 RANGE`
+- **ERROR conditions:** `invalidRange`, `shapeMismatch`
 
 ## `FILL`
 
-Fill a target shape with a constant value.
+A Vector of a given shape with every leaf one number: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`. The shape comes first, as in RESHAPE, and is a non-empty Vector of positive integers (`invalidShape`); the value is a number (`nonNumeric`), and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
-- **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Stack:** 2 input(s) → 1 output(s)
+- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 2 2 0 ] FILL`
-- **ERROR conditions:** `invalidShape`
+- **Syntax:** `[ 2 2 ] 0 FILL`
+- **ERROR conditions:** `invalidShape`, `nonNumeric`
 
 ## `SHAPE`
 
@@ -464,7 +464,7 @@ Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ]
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: spaceExhausted → spaceExhausted
+- **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`
@@ -607,13 +607,13 @@ Bundle values by the key at the same position, as a Record from key to the Vecto
 
 ## `INDEX-OF`
 
-Index of the first element equal to the value; Bubble/NIL if absent.
+The index of the first element equal to the value: `[ 10 20 30 ] 20 INDEX-OF` is `1`. The value is an element, compared whole, so a Vector needle looks for an equal Vector. A value the Vector does not contain projects NIL(notFound); MEMBER? asks the same question as a truth value.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `element` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
@@ -637,13 +637,13 @@ Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Members
 
 ## `BSEARCH`
 
-The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.
+The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(notFound) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
@@ -697,13 +697,13 @@ The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RE
 
 ## `AT`
 
-The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `R 'x' AT 'S' BIND fallback S S NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.
+The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `notFound`, recovered like any other: `R 'x' AT 'S' BIND fallback S S NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
@@ -727,13 +727,13 @@ A copy of a Record with one key set: `R 'z' 3 WITH`. A key already present keeps
 
 ## `WITHOUT`
 
-A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Record does not hold is not an identity but the absence `missingField` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.
+A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Record does not hold is not an identity but the absence `notFound` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
@@ -907,7 +907,7 @@ The String with every character mapped to its lower form under Unicode's default
 
 ## `TOKENIZE`
 
-Split a string into a vector of substrings using a separator.
+Split a string into a vector of substrings at every occurrence of a separator: `'a,b,c' ',' TOKENIZE` is `[ 'a' 'b' 'c' ]`. The empty separator splits between every character, as CHARS does. JOIN is the inverse for the empty separator.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
@@ -922,13 +922,13 @@ Split a string into a vector of substrings using a separator.
 
 ## `SEARCH`
 
-The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(missingField). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.
+The position, in characters, at which a text first occurs in another: `'hello world' 'world' SEARCH` is `6`, counted the way CHARS counts, and `'hello' 'z' SEARCH` is NIL(notFound). An empty needle is found at 0. This is INDEX-OF for text: spelled over CHARS it compares a window at every position, and the Word does it in one pass.
 
 - **Vocabulary tier:** Standard (`algorithm`)
 - **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `leaf`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → missingField
+- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
@@ -952,7 +952,7 @@ Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `
 
 ## `NUM`
 
-Parse text as a number; Bubble/NIL on parse failure.
+Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`. Text that spells no number — `'abc'`, `'.5'`, `'1_000'` — projects NIL(invalidEncoding). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
@@ -967,13 +967,13 @@ Parse text as a number; Bubble/NIL on parse failure.
 
 ## `STR`
 
-Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason invalidEncoding rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
+Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason domainMiss — the reason JSON-ENCODE projects for a value with no JSON image rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: noExactLexemeForValue → invalidEncoding
+- **NIL policy:** `passthroughThenProject`; projection: noExactLexemeForValue → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
@@ -1040,13 +1040,13 @@ Evaluate a code block.
 
 ## `CONTRACT`
 
-The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `program` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `createsNil`; projection: symbolNamesNoWord → missingField
+- **NIL policy:** `createsNil`; projection: symbolNamesNoWord → notFound
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`, `LANG.SOURCE.CODE`
@@ -1137,7 +1137,7 @@ Name a value for the rest of the frame that made it. One name takes the whole va
 - **Effects:** none
 - **Clauses:** `LANG.SOURCE.FRAME`, `LANG.DICTIONARY.RESOLUTION`
 - **Syntax:** `[ 1 2 3 ] 'XS' BIND`
-- **ERROR conditions:** `nonText`, `nameIsAWord`, `shapeMismatch`, `invalidName`, `protectedWord`
+- **ERROR conditions:** `nonText`, `nameConflict`, `shapeMismatch`, `invalidName`, `protectedWord`
 
 ## `DEF`
 
@@ -1152,11 +1152,11 @@ Define a user word from a body and a name.
 - **Effects:** `dictionaryWrite`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.ACYCLIC`
 - **Syntax:** `[ 2 * ] 'DOUBLE' DEF`
-- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
+- **ERROR conditions:** `invalidName`, `protectedWord`, `nameConflict`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
 
 ## `DEL`
 
-Delete a user word from the dictionary.
+Delete a User Word from the dictionary: `'INC' DEL`. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`

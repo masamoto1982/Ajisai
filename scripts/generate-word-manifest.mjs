@@ -162,7 +162,7 @@ function extractCoreWords() {
   const sourcePath = 'spec/words.json';
   const parsed = JSON.parse(readRepo(sourcePath)).entries.map((word) => ({
     name: word.name,
-    category: word.category,
+    family: word.family,
     vocabularyTier: word.vocabularyTier,
   }));
   if (parsed.length === 0) fail('no core words extracted');
@@ -172,14 +172,14 @@ function extractCoreWords() {
     const base = slug(name);
     baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1);
   }
-  return parsed.map(({ name, category, vocabularyTier }) => {
+  return parsed.map(({ name, family, vocabularyTier }) => {
     const base = slug(name);
     const dropped = name.replace(/[a-zA-Z0-9]+/g, '');
     let id = `core.${base}`;
     if (baseCounts.get(base) > 1 && dropped) {
       id = `core.${base}${dropped.includes('?') ? '-p' : `-${slug(dropped) || 'x'}`}`;
     }
-    return { id, kind: 'coreword', surface: name, category, vocabularyTier, source: sourcePath };
+    return { id, kind: 'coreword', surface: name, family, vocabularyTier, source: sourcePath };
   });
 }
 

@@ -62,6 +62,8 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("MUL", NilClass::BinaryBlanket),
     ("FLOOR", NilClass::UnaryBlanket),
     ("ROUND", NilClass::UnaryBlanket),
+    ("MIN", NilClass::BinaryBlanket),
+    ("MAX", NilClass::BinaryBlanket),
     // Order and equality decide over every number (LANG.VALUES.EXACT), so
     // the comparison words project nothing of their own.
     ("EQ", NilClass::BinaryBlanket),
@@ -72,8 +74,8 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("SELECT", NilClass::ThreeValSelect),
 ];
 
-/// Categories whose Core passthrough words this suite is responsible for.
-const COVERED_CATEGORIES: &[&str] = &["arithmetic", "comparison", "logic"];
+/// Families whose Core passthrough words this suite is responsible for.
+const COVERED_FAMILIES: &[&str] = &["exactArithmetic", "comparison", "booleanLogic"];
 
 fn lookup_class(name: &str) -> Option<NilClass> {
     CORE_PASSTHROUGH
@@ -89,14 +91,14 @@ fn core_passthrough_completeness() {
     for meta in get_builtin_word_registry() {
         let probed = meta.nil_policy == NilPolicy::Passthrough
             || meta.nil_policy == NilPolicy::KleeneAbsorbing;
-        let covered = probed && COVERED_CATEGORIES.contains(&meta.category.as_str());
+        let covered = probed && COVERED_FAMILIES.contains(&meta.family.as_str());
         if covered {
             assert!(
                 lookup_class(&meta.name).is_some(),
-                "Core passthrough/Kleene word `{}` (category {}) is not classified in \
+                "Core passthrough/Kleene word `{}` (family {}) is not classified in \
                  CORE_PASSTHROUGH; add its NIL behavior class",
                 meta.name,
-                meta.category
+                meta.family
             );
         }
     }
@@ -243,10 +245,7 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
         "2 SQRT 3 SQRT ADD STR",
         "[ 1 2 ] 2 SQRT MUL STR",
     ] {
-        assert_eq!(
-            projected_reason(code).await.as_deref(),
-            Some("invalidEncoding")
-        );
+        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
     }
 
     // An exact real that collapses to a rational *does* have a lexeme, and a

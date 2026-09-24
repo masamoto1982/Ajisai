@@ -7,7 +7,7 @@
 //! in full and letting the whole envelope exceed a host's response ceiling
 //! trades the answer for the residue, which is backwards.
 //!
-//! It was not hypothetical. `[ 1 21000 ] RANGE 1 [ * ] FOLD` is refused by the
+//! It was not hypothetical. `1 21000 RANGE 1 [ * ] FOLD` is refused by the
 //! work meter with `numericWork of 10000573 exceeds the limit of 10000000` —
 //! precisely the diagnosis an agent needs — but the failing stack holds a
 //! 21,000-element vector and an 81,649-digit partial product, so the envelope
@@ -72,7 +72,7 @@ pub(super) fn elided_error_stack(interp: &Interpreter) -> ElidedStack {
     // is *not* built for a slot the budget cannot afford is its JSON and its
     // display string — which is where the bytes are. Deciding from the node
     // instead of from the serialized text is the difference between throwing
-    // away 27 MB and never building it: `[ 0 99999 ] RANGE LENGHT` spent 1.5 s
+    // away 27 MB and never building it: `0 99999 RANGE LENGHT` spent 1.5 s
     // rendering a stack it was about to discard, close enough to `wallTimeMs`
     // that a slow host would have seen a timeout instead of its typo.
     let slots: Vec<ProtocolNode> = interp.get_stack().iter().map(value_to_protocol).collect();

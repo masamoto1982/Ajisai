@@ -322,7 +322,7 @@ mod tests {
     #[tokio::test]
     async fn compute_applies_injected_internal_cost_limits() {
         let response = compute(
-            "[ 0 11 ] RANGE",
+            "0 11 RANGE",
             ComputeOptions {
                 runtime_limits: Some(RuntimeLimits {
                     max_materialized_elements: 10,

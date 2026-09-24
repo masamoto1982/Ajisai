@@ -392,7 +392,7 @@ pub(crate) fn build_next_checks(
             }
         }
         CauseClass::ContractViolation => {
-            if matches!(category, Some(ErrorCategory::BuiltinProtection)) {
+            if matches!(category, Some(ErrorCategory::Declared("protectedWord"))) {
                 out.push(check(
                     "checkProtection",
                     ("Check protection", "保護を確認する"),

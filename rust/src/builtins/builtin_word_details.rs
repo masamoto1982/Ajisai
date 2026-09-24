@@ -2,10 +2,10 @@ use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
 use super::builtin_word_lookup_docs::lookup_builtin_lookup_doc;
 use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
 use crate::coreword_registry::Partiality;
-use crate::kernel::generated::{generated_word, AcceptedDomain, OperandRole, VocabularyTier};
+use crate::kernel::generated::{generated_word, OperandRole, VocabularyTier};
 
-/// Render the LOOKUP body for a built-in word: the four authored base
-/// sections (Category / Summary / Role / Stack Effect), the authored
+/// Render the LOOKUP body for a built-in word: the base sections (Family /
+/// Summary / Stack Effect), the authored
 /// Layer 2 sections when `builtin_word_lookup_docs.rs` carries an entry
 /// (Behavior / Examples / Failure note / Related), and the sections
 /// derived from the LANG.CONTRACT.REGISTRY contract metadata (Failure baseline, Side
@@ -22,13 +22,12 @@ pub fn lookup_builtin_detail(name: &str) -> String {
         );
     };
 
-    let mut out = render_four_section(
+    let mut out = render_sections(
         &alias_lead,
         spec.name,
         spec.stability,
-        spec.category,
+        spec.family,
         spec.summary,
-        spec.role,
         spec.stack_effect,
     );
 
@@ -121,8 +120,7 @@ fn derive_vocabulary_text(canonical: &str) -> String {
 }
 
 /// Failure baseline derived from the LANG.CONTRACT.REGISTRY contract metadata. The wording
-/// follows the specification's Bubble Rule framing (three-layer model §2.3,
-/// internally the NIL Projection Rule): well-formed operations that cannot
+/// follows the NIL Projection Rule: well-formed operations that cannot
 /// produce a value project onto NIL with a reason, while malformed usage
 /// raises an error.
 ///
@@ -132,11 +130,15 @@ fn derive_vocabulary_text(canonical: &str) -> String {
 fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
     let mut lines: Vec<&str> = Vec::new();
     match spec.partiality {
-        Partiality::Total => lines.push("Total: always produces a result."),
-        Partiality::Projecting => lines.push(
-            "Well-formed input that cannot produce a value yields a\nBubble/NIL with a reason; malformed usage raises an error.",
+        Partiality::Total => lines.push(
+            "Total: an operand of the kind it reads always produces a result;\nan operand of another kind raises the error its contract names.",
         ),
-        Partiality::Partial => lines.push("Malformed or out-of-domain usage raises an error."),
+        Partiality::Projecting => lines.push(
+            "Well-formed input that cannot produce a value yields a NIL\nwith a reason; an operand of the wrong kind raises an error.",
+        ),
+        Partiality::Partial => lines.push(
+            "May raise even on operands of the right kind: the block it runs,\nor the dictionary it changes, can refuse.",
+        ),
     }
     if let Some(word) = generated_word(canonical) {
         // One line per role the Word has (LANG.FAILURE.PASSTHROUGH), so the
@@ -164,31 +166,8 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
                 "A dominating definite operand (FALSE for AND) absorbs a NIL operand into that definite result; otherwise a NIL operand yields NIL as UNKNOWN.",
             );
         }
-        // The accepted domain qualifies everything above it. `total` says what
-        // happens to an operand the Word accepts, and read alone it promised
-        // more than any Word delivers: `SORT` reported "always produces a
-        // result" while raising on a vector of strings. Stating the domain is
-        // what makes the totality claim true as written.
-        if let Some(domain) = word.accepted_domain {
-            lines.push(accepted_domain_sentence(domain));
-        }
     }
     lines.join("\n")
-}
-
-/// The user-facing sentence for a declared accepted domain.
-fn accepted_domain_sentence(domain: AcceptedDomain) -> &'static str {
-    match domain {
-        AcceptedDomain::Scalar => "Accepts a single number. Any other shape raises an error.",
-        AcceptedDomain::Numeric => {
-            "Accepts a number, or a vector of them at any depth, applied\nelement-wise. Any other shape raises an error."
-        }
-        AcceptedDomain::FlatNumericVector => {
-            "Accepts a flat vector of numbers. A vector holding strings,\ntruth values, NIL, or nested vectors raises an error."
-        }
-        AcceptedDomain::Vector => "Accepts a vector. Any other shape raises an error.",
-        AcceptedDomain::Text => "Accepts text. Any other shape raises an error.",
-    }
 }
 
 /// Side Effects derived from the LANG.CONTRACT.REGISTRY `effects` list declared in
@@ -224,13 +203,12 @@ pub(super) fn effect_sentence(effect: &str) -> Option<&'static str> {
     }
 }
 
-pub fn render_four_section(
+pub fn render_sections(
     alias_lead: &str,
     name: &str,
     stability: &str,
-    category: &str,
+    family: &str,
     summary: &str,
-    role: &str,
     stack_effect: &str,
 ) -> String {
     let mut out = String::new();
@@ -242,16 +220,12 @@ pub fn render_four_section(
         out.push_str(&format!("# {}  ({})\n\n", name, stability));
     }
 
-    out.push_str("Category:\n");
-    push_indented(&mut out, category, "  ");
+    out.push_str("Family:\n");
+    push_indented(&mut out, family, "  ");
     out.push('\n');
 
     out.push_str("Summary:\n");
     push_indented(&mut out, summary, "  ");
-    out.push('\n');
-
-    out.push_str("Role:\n");
-    push_indented(&mut out, role, "  ");
     out.push('\n');
 
     out.push_str("Stack Effect:\n");
@@ -290,28 +264,19 @@ fn push_indented(out: &mut String, body: &str, indent: &str) {
 }
 
 #[cfg(test)]
-mod accepted_domain_render_tests {
+mod failure_text_render_tests {
     use super::lookup_builtin_detail;
 
     /// The Failure section used to promise `SORT` "always produces a result",
-    /// which is false of a vector holding a string. The declared accepted
-    /// domain is what makes the totality claim true as written.
+    /// which is false of a vector holding a string. Totality is stated over
+    /// the kind of operand the Word reads, which is what makes it true.
     #[test]
-    fn sort_states_the_shape_it_accepts() {
+    fn totality_is_stated_over_the_kind_the_word_reads() {
         let text = lookup_builtin_detail("SORT");
-        assert!(text.contains("Total: always produces a result."), "{text}");
-        assert!(text.contains("Accepts a flat vector of numbers."), "{text}");
-    }
-
-    #[test]
-    fn min_and_sqrt_state_that_they_lift() {
-        for word in ["MIN", "MAX", "SQRT"] {
-            let text = lookup_builtin_detail(word);
-            assert!(
-                text.contains("Accepts a number, or a vector of them at any depth"),
-                "{word}: {text}"
-            );
-        }
+        assert!(
+            text.contains("Total: an operand of the kind it reads always produces a result"),
+            "{text}"
+        );
     }
 
     /// A raw Rust escape once reached a reader: SQRT's Role said

@@ -347,7 +347,7 @@ mod tests {
         // Resolve plenty, through Core, through User, and across a redefinition,
         // which is every path that used to move one of these.
         interp
-            .execute("[ 0 200 ] RANGE [ INC ] MAP")
+            .execute("0 200 RANGE [ INC ] MAP")
             .await
             .expect("runs");
         interp.update_stack(Vec::new());

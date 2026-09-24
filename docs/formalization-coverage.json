@@ -1,9 +1,9 @@
 {
   "version": 1,
   "core_tier_summary": {
-    "derivation": "Deterministic, precedence-ordered: (1) semantic_role Sugar -> sugar; (2) semantic_role Exploratory -> material (child-runtime is outside the Core contract, algebra.handle.domain); (3) kind moduleword -> material (Hosted Modules, SPECIFICATION.html section 9.3); (4) otherwise the tier of the entry home algebraic_family, where observation splits to material iff derived_from includes algebra.observation.digest or algebra.handle.domain, else identity. derived_from is NOT used as the primary signal because it lists every law a word obeys (e.g. arithmetic obeys Bubble pass-through), not what the word is. See docs/dev/ajisai-minimal-core-identity.md.",
+    "derivation": "Deterministic, precedence-ordered: (1) semantic_role Sugar -> sugar; (2) semantic_role Exploratory -> material (child-runtime is outside the Core contract, algebra.handle.domain); (3) kind moduleword -> material (Hosted Modules, SPECIFICATION.html section 9.3); (4) otherwise the tier of the entry home algebraic_family, where observation splits to material iff derived_from includes algebra.observation.digest or algebra.handle.domain, else identity. derived_from is NOT used as the primary signal because it lists every law a word obeys (e.g. arithmetic obeys NIL pass-through), not what the word is. See docs/dev/ajisai-minimal-core-identity.md.",
     "tiers": {
-      "identity": "Value-space separation and the three propagation disciplines (Bubble/NIL, Kleene K3 U, structured diagnostic). Part of Minimal Core.",
+      "identity": "Value-space separation and the three propagation disciplines (NIL, Kleene K3 U, structured diagnostic). Part of Minimal Core.",
       "flow": "State-transformer monoid, modifiers, dictionary resolution. Part of Minimal Core.",
       "material": "Algorithms and hosted layers (exact arithmetic, vectors/tensors, hosted modules and effects, child runtime). Derived library / self-host targets; bound by identity laws but outside Minimal Core.",
       "sugar": "Sealed surface grammar (delimiters, symbol sugar, directives). Fixed frame, not a self-host target."
@@ -268,12 +268,12 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.bubble.domain",
-      "algebraic_family": "bubble",
+      "id": "algebra.absence.domain",
+      "algebraic_family": "absence",
       "core_tier": "identity",
       "kind": "domain",
-      "description": "Operational absence/Bubble domain for NIL values with structured reasons; disjoint from FALSE, zero, and logical UNKNOWN.",
-      "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "description": "Operational absence domain for NIL values with structured reasons; disjoint from FALSE, zero, and logical UNKNOWN.",
+      "admission_reason": "Accepted as the shared absence schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "NIL",
         "GET",
@@ -303,12 +303,12 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.bubble.passthrough",
-      "algebraic_family": "bubble",
+      "id": "algebra.absence.passthrough",
+      "algebraic_family": "absence",
       "core_tier": "identity",
       "kind": "operation",
-      "description": "Bubble monad pass-through: an operational NIL with reason propagates through a derived word unchanged.",
-      "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "description": "Absence pass-through: an operational NIL with reason propagates through a derived word unchanged.",
+      "admission_reason": "Accepted as the shared absence schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "ADD/SUB/MUL/DIV",
         "ADD",
@@ -675,13 +675,13 @@
         "core-division-by-zero-is-nil"
       ],
       "status": "Formalized",
-      "notes": "Primitive operational absence; distinct from FALSE, numeric zero, and logical UNKNOWN. Reasoned NIL/Bubble values propagate through NIL-passthrough words.",
+      "notes": "Primitive operational absence; distinct from FALSE, numeric zero, and logical UNKNOWN. Reasoned NIL values propagate through NIL-passthrough words.",
       "semantic_role": "Primitive",
       "primitive": true,
       "derived_from": [
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
-      "algebraic_family": "bubble",
+      "algebraic_family": "absence",
       "core_tier": "identity"
     },
     {
@@ -706,7 +706,7 @@
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.bubble.domain",
+        "algebra.absence.domain",
         "algebra.k3.domain"
       ],
       "algebraic_family": "observation",
@@ -733,7 +733,7 @@
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "algebraic_family": "observation",
       "core_tier": "identity"
@@ -760,9 +760,9 @@
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
-      "algebraic_family": "bubble",
+      "algebraic_family": "absence",
       "core_tier": "identity"
     },
     {
@@ -838,7 +838,7 @@
       "primitive": false,
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material"
@@ -859,12 +859,12 @@
         "core-exact-addition"
       ],
       "status": "Formalized",
-      "notes": "Exact-real addition as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
+      "notes": "Exact-real addition as a bihomographic arithmetic word; NIL operands pass through unchanged.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
@@ -887,12 +887,12 @@
         "standard-sub"
       ],
       "status": "Formalized",
-      "notes": "Exact-real subtraction as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
+      "notes": "Exact-real subtraction as a bihomographic arithmetic word; NIL operands pass through unchanged.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
@@ -920,7 +920,7 @@
       "primitive": false,
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
@@ -948,7 +948,7 @@
       "primitive": false,
       "derived_from": [
         "algebra.exact-real.bihomographic",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
@@ -968,12 +968,12 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "FLOOR — exact-real integer projection toward negative infinity. Projecting failures create NIL/Bubble observations.",
+      "notes": "FLOOR — exact-real integer projection toward negative infinity. Projecting failures create NIL observations.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material"
@@ -995,12 +995,12 @@
         "standard-round"
       ],
       "status": "Formalized",
-      "notes": "ROUND — exact-real nearest-integer projection without float round trips. Projecting failures create NIL/Bubble observations.",
+      "notes": "ROUND — exact-real nearest-integer projection without float round trips. Projecting failures create NIL observations.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
@@ -1060,7 +1060,7 @@
       "derived_from": [
         "algebra.exact-real.order",
         "algebra.k3.domain",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "observation",
       "core_tier": "identity",
@@ -1087,7 +1087,7 @@
       "derived_from": [
         "algebra.exact-real.order",
         "algebra.k3.domain",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "observation",
       "core_tier": "identity",
@@ -1114,7 +1114,7 @@
       "derived_from": [
         "algebra.exact-real.order",
         "algebra.k3.domain",
-        "algebra.bubble.passthrough"
+        "algebra.absence.passthrough"
       ],
       "algebraic_family": "observation",
       "core_tier": "identity",
@@ -1325,7 +1325,7 @@
         "core-contract-rejects-scalar"
       ],
       "status": "Formalized",
-      "notes": "Answers a Core Word's registered contract from the generated registry as a Record, and a User Word's or a bare block's inferred contract through the one inference ajisai check --contract runs (word_contract.rs, infer_word_contract / infer_contract_for_block), in one shape (contract_record.rs). A block is never evaluated. A Symbol naming nothing projects missingField; an operand that is neither a Symbol nor a block is notASymbol. Absorbed PROBE after the vocabulary-100 review.",
+      "notes": "Answers a Core Word's registered contract from the generated registry as a Record, and a User Word's or a bare block's inferred contract through the one inference ajisai check --contract runs (word_contract.rs, infer_word_contract / infer_contract_for_block), in one shape (contract_record.rs). A block is never evaluated. A Symbol naming nothing projects notFound; an operand that is neither a Symbol nor a block is notASymbol. Absorbed PROBE after the vocabulary-100 review.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -1541,12 +1541,12 @@
         "core-get-zero-index"
       ],
       "status": "Formalized",
-      "notes": "Indexed projection over vectors/tensors; out-of-range indices project to NIL/Bubble while preserving the source vector observation.",
+      "notes": "Indexed projection over vectors/tensors; out-of-range indices project to NIL while preserving the source vector observation.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material"
@@ -2091,7 +2091,7 @@
         "standard-search-empty-needle"
       ],
       "status": "Formalized",
-      "notes": "First occurrence of a codepoint sequence inside another, as a character position; absent projects missingField.",
+      "notes": "First occurrence of a codepoint sequence inside another, as a character position; absent projects notFound.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2146,13 +2146,13 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "Parses text/codepoint sequences into exact numbers; malformed numeric text projects to NIL/Bubble.",
+      "notes": "Parses text/codepoint sequences into exact numbers; malformed numeric text projects to NIL.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.exact-real.continued-fraction",
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "algebraic_family": "exact-scalar",
       "core_tier": "material"
@@ -2700,13 +2700,13 @@
         "standard-index-of"
       ],
       "status": "Formalized",
-      "notes": "Projects the first equal element position from an indexed sequence, or Bubble/NIL if absent.",
+      "notes": "Projects the first equal element position from an indexed sequence, or NIL if absent.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.order",
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material",
@@ -2759,13 +2759,13 @@
         "standard-bsearch-unsorted-raises"
       ],
       "status": "Formalized",
-      "notes": "First index of each key in an ascending vector by halving, after one pass that checks the order; an absent key projects missingField.",
+      "notes": "First index of each key in an ascending vector by halving, after one pass that checks the order; an absent key projects notFound.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.order",
-        "algebra.bubble.domain"
+        "algebra.absence.domain"
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material",
@@ -2867,7 +2867,7 @@
         "core-at-missing-key-projects-missing-field"
       ],
       "status": "Formalized",
-      "notes": "The value under a key in constant expected time; an absent key projects missingField.",
+      "notes": "The value under a key in constant expected time; an absent key projects notFound.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2919,7 +2919,7 @@
         "core-without-missing-key-projects-missing-field"
       ],
       "status": "Formalized",
-      "notes": "A copy with one key removed; an absent key projects missingField, as GET/TAKE/PUT project a position outside the Vector.",
+      "notes": "A copy with one key removed; an absent key projects notFound, as GET/TAKE/PUT project a position outside the Vector.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [

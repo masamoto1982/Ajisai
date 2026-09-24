@@ -20,7 +20,7 @@ async fn input_driven_arithmetic_is_exactly_linear_in_numeric_work() {
     // A bare `ADD` takes its operands from the word's inputs, so the meter's
     // limb-width charge really does grow with input: linear, and provably
     // attained. It never loops internally (const steps) and touches no
-    // collection — measured, `[ 0 400 ] RANGE 2 MUL` charges 401 numericWork
+    // collection — measured, `0 400 RANGE 2 MUL` charges 401 numericWork
     // and zero collectionWork beyond the RANGE itself.
     let cost = cost_of("[ ADD ] 'A' DEF", "A").await;
     assert_eq!(cost.steps, (CostClass::Const, true));
@@ -43,8 +43,8 @@ async fn literal_operands_refine_a_linear_charge_to_const() {
 #[tokio::test]
 async fn value_driven_materializer_is_unbounded_over_input_size() {
     // Regression: RANGE's collectionWork is set by its operand's *value*, not
-    // its size — measured, `[ 0 10 ] RANGE` charges 187 and `[ 0 20000 ]
-    // RANGE` charges 340,017 against the very same 2-element operand. Calling
+    // its size — measured, `0 10 RANGE` charges 187 and `0 20000 RANGE`
+    // charges 340,017 against two bounds of the very same size. Calling
     // that `linear` let a false declaration verify. `word_space` classifies
     // this pair the same way for the same reason.
     let cost = cost_of("[ RANGE ] 'MK' DEF", "MK").await;
@@ -59,7 +59,7 @@ async fn a_literal_operand_pins_even_a_value_driven_materializer() {
     // The two fixes have to land together: making RANGE `Unbounded` without
     // the refinement would turn the *true* declaration `cost collection=const`
     // on a literal-driven range into a false error instead.
-    let cost = cost_of("[ [ 0 10 ] RANGE ] 'K' DEF", "K").await;
+    let cost = cost_of("[ 0 10 RANGE ] 'K' DEF", "K").await;
     assert_eq!(cost.collection, (CostClass::Const, true));
 }
 

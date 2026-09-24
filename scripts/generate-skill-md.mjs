@@ -120,7 +120,7 @@ function buildWordTable() {
       const contract = contracts.get(entry.canonical);
       if (!contract) fail(`no contract found for coreword ${entry.surface}`);
       const syntax = contract.documentation.syntax ? ` — e.g. \`${contract.documentation.syntax}\`` : '';
-      rows.push(`| \`${entry.surface}\` | ${entry.category} | ${contract.documentation.summary}${syntax} |`);
+      rows.push(`| \`${entry.surface}\` | ${entry.family} | ${contract.documentation.summary}${syntax} |`);
     } else if (entry.canonical) {
       const escaped = entry.surface.replace(/\|/g, '\\|');
       const concept = entry.canonical.replace(/\|/g, '\\|');
@@ -158,11 +158,11 @@ const canonicalExamples = [
   { title: 'Remainder: name the operands, then a - b * floor(a/b)', code: "10 'A' BIND 3 'B' BIND A A B / FLOOR B * -" },
   { title: 'Comparison pushes a boolean', code: '1 2 <' },
   { title: 'Comparison lifts over vectors element-wise', code: '[ 1 2 ] [ 3 1 ] <' },
-  { title: 'Range: one vector [ start end ] (inclusive)', code: '[ 0 5 ] RANGE' },
-  { title: 'Range with step: [ start end step ]', code: '[ 0 10 2 ] RANGE' },
-  { title: 'Fill a tensor: [ shape... value ]', code: '[ 2 2 7 ] FILL' },
-  { title: 'MAP with a [ ] code block', code: '[ 0 4 ] RANGE [ [ 2 ] * ] MAP' },
-  { title: 'FILTER keeps matching elements', code: '[ 0 10 ] RANGE [ 5 > ] FILTER' },
+  { title: 'Range: start end, both included', code: '0 5 RANGE' },
+  { title: 'A stride is a multiplication of a range', code: '0 5 RANGE 2 MUL' },
+  { title: 'Fill a shape with one number: [ shape ] value', code: '[ 2 2 ] 7 FILL' },
+  { title: 'MAP with a [ ] code block', code: '0 4 RANGE [ [ 2 ] * ] MAP' },
+  { title: 'FILTER keeps matching elements', code: '0 10 RANGE [ 5 > ] FILTER' },
   { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] [ + ] FOLD' },
   {
     id: 'record-basic',
@@ -229,9 +229,9 @@ const commonErrors = [
     fix: "NUM accepts strings: `'42' NUM`. There is no boolean→number cast.",
   },
   {
-    title: 'Old two-vector RANGE form',
-    code: '[ 0 ] [ 5 ] RANGE',
-    fix: 'RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).',
+    title: 'Old one-vector RANGE form',
+    code: '[ 0 5 ] RANGE',
+    fix: 'RANGE takes two bounds: `0 5 RANGE`. A stride is a multiplication: `0 5 RANGE 2 MUL`.',
   },
 ];
 
@@ -368,9 +368,9 @@ function renderForbiddenPatterns() {
 
 function verifiedNilSection() {
   // Verify the documented NIL behavior against the real CLI before writing it.
-  const bubble = expectOk('1 0 DIV');
-  if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
-  const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
+  const projected = expectOk('1 0 DIV');
+  if (projected.stackDisplay.join(' ') !== 'NIL') fail('division by zero must project to NIL');
+  const event = projected.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
   const fallback = expectOk("1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT");
   if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('the fallback must replace NIL');
@@ -454,7 +454,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 ## 4. NIL — absence is a value, not an exception
 
-Failed partial operations *bubble*: \`1 0 DIV\` succeeds (exit 0) and
+Failed partial operations *project to NIL*: \`1 0 DIV\` succeeds (exit 0) and
 pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
@@ -462,7 +462,7 @@ value itself carries \`semantics.absence.reason\` on the stack.
 - Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
 - Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
 - That makes the top a vector, not a NIL, so \`NIL?\` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
-- NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
+- NIL flows through later operations (NIL projection rule); check for it where it matters instead of letting it propagate to the end.
 
 ## 5. Exactness — comparison decides over the algebraic field
 
@@ -517,7 +517,7 @@ ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
 
-| word | category | summary |
+| word | family | summary |
 |---|---|---|
 ${wordRows.join('\n')}
 `;

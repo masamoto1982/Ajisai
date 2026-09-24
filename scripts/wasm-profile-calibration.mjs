@@ -117,7 +117,7 @@ const cascade = (f) => PAIRS.slice(0, f).map(([l, r], i) => `${l} SQRT ${r} SQRT
 const NUMERIC = [
     // The floor candidate: one charged unit per lane, a machine-word add
     // inside a tensor kernel, with nothing else to amortize it.
-    ['dense tensor lanes (100k) x80', '[ 0 99999 ] RANGE', ' 1 +'.repeat(80)],
+    ['dense tensor lanes (100k) x80', '0 99999 RANGE', ' 1 +'.repeat(80)],
     // 19, not 20: the twentieth multiplication crosses the MCP profile's
     // `bigintBits` (272,133 against 262,144), which is the very boundary
     // `profile_liveness_tests` pins. Measuring under a real profile means
@@ -129,20 +129,20 @@ const NUMERIC = [
 
 const COLLECTION = [
     // Repetition counts are capped by the MCP profile's 20,000,000
-    // `collectionWork`, which the *setup* also spends: `[ 0 99999 ] RANGE`
+    // `collectionWork`, which the *setup* also spends: `0 99999 RANGE`
     // charges 1,700,000 before a single measured Word runs.
-    ['REVERSE 100k x10', '[ 0 99999 ] RANGE', ' REVERSE'.repeat(10)],
-    ['UNIQUE 100k all-distinct x5', '[ 0 99999 ] RANGE', ' UNIQUE'.repeat(5)],
+    ['REVERSE 100k x10', '0 99999 RANGE', ' REVERSE'.repeat(10)],
+    ['UNIQUE 100k all-distinct x5', '0 99999 RANGE', ' UNIQUE'.repeat(5)],
     // Built with FILL, not `RANGE { 1 MOD } MAP`: the MAP costs 100,000
     // execution steps, and a setup that large and that variable swamps the
     // few milliseconds nine hash-hitting UNIQUE passes actually take.
-    ['UNIQUE 100k d=1 x9', '[ 100000 7 ] FILL', ' UNIQUE'.repeat(9)],
-    ['SORT 100k x5', '[ 0 99999 ] RANGE', ' SORT'.repeat(5)],
-    ['TALLY 100k all-distinct x5', '[ 0 99999 ] RANGE', ' TALLY'.repeat(5)],
+    ['UNIQUE 100k d=1 x9', '[ 100000 ] 7 FILL', ' UNIQUE'.repeat(9)],
+    ['SORT 100k x5', '0 99999 RANGE', ' SORT'.repeat(5)],
+    ['TALLY 100k all-distinct x5', '0 99999 RANGE', ' TALLY'.repeat(5)],
     // Wide elements: an equality probe walks limbs, and this was by far the
     // dearest per-element shape on native. If any collection path is the WASM
     // floor, it is a candidate.
-    ['UNIQUE 4k x 4096-digit x2', `[ 1 4000 ] RANGE { ${wide} * } MAP`, ' UNIQUE'.repeat(2)],
+    ['UNIQUE 4k x 4096-digit x2', `1 4000 RANGE { ${wide} * } MAP`, ' UNIQUE'.repeat(2)],
 ];
 
 const STEPS = [
@@ -160,7 +160,7 @@ const STEPS = [
     // used to be written as a self-calling trampoline; LANG.DICTIONARY.ACYCLIC
     // refuses a self-call, so the same per-iteration cost is paid by a MAP over
     // a materialized Vector instead.
-    ['user-word call x200k', "[ [ 7 ] + ] 'STEP' DEF", `[ 1 200000 ] RANGE [ STEP ] MAP`],
+    ['user-word call x200k', "[ [ 7 ] + ] 'STEP' DEF", `1 200000 RANGE [ STEP ] MAP`],
 ];
 
 async function section(title, meter, cases) {

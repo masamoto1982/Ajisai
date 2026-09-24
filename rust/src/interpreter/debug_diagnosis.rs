@@ -201,7 +201,6 @@ impl CauseClass {
             ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
             ErrorCategory::ShapeMismatch => CauseClass::ShapeMismatch,
             ErrorCategory::MalformedSource => CauseClass::SourceForm,
-            ErrorCategory::NameConflict => CauseClass::ContractViolation,
             // LANG.MACHINE.LIMITS calls the step and recursion budgets host
             // safety controls rather than language semantics, and the two
             // answers differ: "the program is wrong" is fixed by rewriting it,
@@ -211,9 +210,8 @@ impl CauseClass {
             ErrorCategory::ExecutionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::ResourceLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
-            ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
             // A cyclic DEF is a static shape rejected before anything runs —
-            // the same kind of fault as `NameConflict`, not a runtime resource
+            // the same kind of fault as `nameConflict`, not a runtime resource
             // question.
             ErrorCategory::SelfReferentialDefinition => CauseClass::ContractViolation,
             // The registry named the condition at the raise site, so the class
@@ -243,7 +241,7 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         // distinction `ResourceLimit` exists for.
         NilReason::SpaceExhausted => CauseClass::ResourceLimit,
         NilReason::IndexOutOfBounds => CauseClass::Index,
-        NilReason::MissingField | NilReason::InvalidEncoding => CauseClass::ValueShape,
+        NilReason::NotFound | NilReason::InvalidEncoding => CauseClass::ValueShape,
         NilReason::NotAvailable => CauseClass::Environment,
         // Absence that no operation produced — a `NIL` in source, or one that
         // has passed through a dense lane, which carries presence but no
@@ -431,9 +429,7 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         Some(ErrorCategory::UnknownWord)
         | Some(ErrorCategory::StackUnderflow)
         | Some(ErrorCategory::MalformedSource)
-        | Some(ErrorCategory::NameConflict)
         | Some(ErrorCategory::SelfReferentialDefinition) => "fixProgram",
-        Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
         Some(ErrorCategory::ExecutionLimitExceeded)
         | Some(ErrorCategory::RecursionLimitExceeded) => "addBudgetOrFixRecursion",
         // A size ceiling is not fixed by letting the program run longer: the

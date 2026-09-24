@@ -182,10 +182,10 @@ mod reflection_words_tests {
     }
 
     #[tokio::test]
-    async fn contract_projects_missing_field_for_an_unknown_name() {
+    async fn contract_projects_not_found_for_an_unknown_name() {
         assert_eq!(
             top("[ NOPE ] 0 GET CONTRACT NIL-REASON").await,
-            "'missingField'"
+            "'notFound'"
         );
         assert_eq!(top("7 'N' BIND [ N ] 0 GET CONTRACT NIL?").await, "TRUE");
     }

@@ -7,7 +7,7 @@ const stableStringify = (value: unknown): string => JSON.stringify(value ?? null
 //
 // This used to compare `JSON.stringify(before.stack)` with the same of
 // `after.stack`. That is two full serializations of the stack on every single
-// run, and a stack is not small by construction: `[ 1 200000 ] RANGE` is a
+// run, and a stack is not small by construction: `1 200000 RANGE` is a
 // legal program whose one value holds two hundred thousand elements, and
 // stringifying it twice cost the better part of a second of frozen main thread
 // for an answer that a length mismatch settles immediately. A structural walk

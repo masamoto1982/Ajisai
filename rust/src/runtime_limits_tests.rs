@@ -122,7 +122,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         interp
-            .execute("[ 0 100 ] RANGE")
+            .execute("0 100 RANGE")
             .await
             .expect("RANGE over the injected element cap must project onto NIL, not error");
         assert_eq!(
@@ -139,7 +139,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         interp
-            .execute("[ 100 100 ] FILL")
+            .execute("[ 100 ] 100 FILL")
             .await
             .expect("FILL over the injected element cap must project onto NIL, not error");
         assert_eq!(
@@ -159,7 +159,7 @@ mod runtime_limits_tests {
         });
         assert_eq!(
             {
-                interp.execute("[ 0 100 ] RANGE").await.ok();
+                interp.execute("0 100 RANGE").await.ok();
                 top_nil_reason(&interp)
             },
             Some(crate::error::NilReason::SpaceExhausted),
@@ -249,7 +249,7 @@ mod runtime_limits_tests {
     #[tokio::test]
     async fn ordinary_programs_pass_under_default_limits() {
         let mut interp = Interpreter::new();
-        assert!(interp.execute("[ 0 5 ] RANGE").await.is_ok());
+        assert!(interp.execute("0 5 RANGE").await.is_ok());
         let mut interp2 = Interpreter::new();
         assert!(interp2.execute("123456789 2 *").await.is_ok());
         // Ordinary exact arithmetic (√2·√2 = 2, √2+√3) is untouched.

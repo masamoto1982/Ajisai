@@ -19,48 +19,24 @@ fn concat_values(left: &Value, right: &Value) -> Value {
     Value::from_vector(elements)
 }
 
-fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
-    let child = args_val
-        .child(index)
-        .ok_or_else(|| AjisaiError::declared("invalidRange", format!("expected a {}", label)))?;
-    let bigint = extract_bigint_from_value(&child).map_err(|_| {
-        AjisaiError::declared("invalidRange", format!("the {} must be an integer", label))
+/// One bound of `RANGE`: an integer the machine can count to. Anything else —
+/// a fraction, a String, a Boolean — names no position in an integer sequence,
+/// so it is the malformed use `invalidRange` declares. A Vector never reaches
+/// here: `leaf` operands are lifted by the dispatcher first.
+fn parse_range_bound(bound: &Value, label: &str) -> Result<i64> {
+    let bigint = extract_bigint_from_value(bound).map_err(|_| {
+        AjisaiError::declared(
+            "invalidRange",
+            format!(
+                "the {} must be an integer, got {}",
+                label,
+                bound.domain_name()
+            ),
+        )
     })?;
     bigint
         .to_i64()
         .ok_or_else(|| AjisaiError::declared("invalidRange", format!("the {} is too large", label)))
-}
-
-fn parse_range_args(args_val: &Value) -> Result<(i64, i64, i64)> {
-    if !args_val.is_vector() {
-        return Err(AjisaiError::declared(
-            "invalidRange",
-            format!(
-                "expected [ start end ] or [ start end step ], got {}",
-                args_val.domain_name()
-            ),
-        ));
-    }
-
-    let n = args_val.len();
-    if !(2..=3).contains(&n) {
-        return Err(AjisaiError::declared(
-            "invalidRange",
-            format!("expected [ start end ] or [ start end step ], got {n} element(s)"),
-        ));
-    }
-
-    let start = parse_range_bound(args_val, 0, "start")?;
-    let end = parse_range_bound(args_val, 1, "end")?;
-    let step = if n == 3 {
-        parse_range_bound(args_val, 2, "step")?
-    } else if start <= end {
-        1
-    } else {
-        -1
-    };
-
-    Ok((start, end, step))
 }
 
 /// `CONCAT` — join the top two vectors (SPEC: `2 -> 1`, `errorWhen:
@@ -152,42 +128,36 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// `start end RANGE` — every integer from `start` to `end`, both included,
+/// counting down when `end` is below `start`: `0 3 RANGE` is `[ 0 1 2 3 ]`,
+/// `3 0 RANGE` is `[ 3 2 1 0 ]`. There is no step operand: a stride is a
+/// multiplication of this sequence (`0 3 RANGE 3 MUL`), so the bounds alone
+/// decide the direction and no pair of bounds describes an infinite sequence.
 pub fn op_range(interp: &mut Interpreter) -> Result<()> {
-    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let (start, end, step) = match parse_range_args(&args_val) {
-        Ok(values) => values,
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+    let end_val = interp.stack.pop().expect("length checked");
+    let start_val = interp.stack.pop().expect("length checked");
+    let bounds = parse_range_bound(&start_val, "start")
+        .and_then(|start| parse_range_bound(&end_val, "end").map(|end| (start, end)));
+    let (start, end) = match bounds {
+        Ok(bounds) => bounds,
         Err(error) => {
-            interp.stack.push(args_val);
+            interp.stack.push(start_val);
+            interp.stack.push(end_val);
             return Err(error);
         }
     };
-
-    if step == 0 {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::declared(
-            "invalidRange",
-            "RANGE step cannot be 0",
-        ));
-    }
-
-    if (start < end && step < 0) || (start > end && step > 0) {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::declared(
-            "invalidRange",
-            "RANGE would create an infinite sequence (check start, end, and step values)",
-        ));
-    }
+    let step: i64 = if start <= end { 1 } else { -1 };
 
     // Guard against unbounded materialization before allocating. RANGE loops
     // internally, so it counts as one execution step and bypasses the
-    // step-count backstop; an input like `[ 0 9999999999999 ] RANGE` would
+    // step-count backstop; an input like `0 9999999999999 RANGE` would
     // otherwise drive the process into an OOM abort (a WASM trap in the
     // playground) instead of a recoverable error. Count the elements in i128
     // so the span arithmetic cannot overflow for extreme i64 bounds.
-    let span = (end as i128 - start as i128).unsigned_abs();
-    let stride = (step as i128).unsigned_abs();
-    let element_count = span / stride + 1;
+    let element_count = (end as i128 - start as i128).unsigned_abs() + 1;
     // CS5: the cap is the injectable per-interpreter ceiling (folded into
     // `RuntimeLimits`), so tests can fire this guard with a tiny limit and
     // child runtimes inherit it — same behavior and message as before.
@@ -198,8 +168,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         // well-formed operation that cannot produce a value within budget. The
         // NIL Projection Rule projects it onto a diagnosable NIL (reason
         // `spaceExhausted`) so a pipeline can recover it with a chosen fallback,
-        // instead of a channel error that halts evaluation. The malformed cases
-        // above (zero step, infinite direction) remain ordinary errors.
+        // instead of a channel error that halts evaluation.
         interp
             .stack
             .push(crate::interpreter::space_projection::space_exhausted_nil(
@@ -213,25 +182,26 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     // Materializing an element costs what copying one costs: the elements are
     // freshly built rather than cloned, but they are the same boxed values, and
     // a program can ask for them as often as it likes. Charged before the
-    // allocation, with the argument put back on a refusal.
+    // allocation, with the bounds put back on a refusal.
     if let Err(e) =
         crate::interpreter::collection_meter::charge_materialization(interp, element_count as usize)
     {
-        interp.stack.push(args_val);
+        interp.stack.push(start_val);
+        interp.stack.push(end_val);
         return Err(e);
     }
 
-    // Built as columns, not as boxed lanes. `parse_range_args` answers in
+    // Built as columns, not as boxed lanes. `parse_range_bound` answers in
     // `i64`, so *every* value RANGE can produce is an `i64` with denominator 1
     // and no lane absent — a 1-D pure-integer dense tensor is not a guess about
     // this result, it is what the result is. Building `Vec<Value>` instead
     // boxed each lane into a 96-byte `Value` wrapping a 64-byte `Fraction` to
     // carry 8 bytes of integer, and then every Word downstream had to decline
     // its dense fast path because the dense representation had been thrown away
-    // at construction: `[ 0 262143 ] RANGE` spent 9.9 ms laying out 25 MB to
+    // at construction: `0 262143 RANGE` spent 9.9 ms laying out 25 MB to
     // describe 2 MB of numbers.
     //
-    // `element_count` is exact (`span / stride + 1` counts the lanes the
+    // `element_count` is exact (`|end - start| + 1` counts the lanes the
     // comparison loops below used to visit), so the count drives the loop and
     // the bound comparison is gone with it. `saturating_add` matters only on the
     // final, unused step past the last lane, where `current += step` could

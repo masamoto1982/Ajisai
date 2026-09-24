@@ -395,7 +395,7 @@ const impatient = createBackend({ wallTimeMs: 1 });
 if (impatient) {
   let timedOut = null;
   try {
-    await impatient.compute("[ 0 99999 ] RANGE SORT LENGTH");
+    await impatient.compute("0 99999 RANGE SORT LENGTH");
   } catch (error) {
     timedOut = error;
   }
@@ -561,7 +561,7 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
   // every limit check increments.
   const spent = await client.callTool({
     name: "compute",
-    arguments: { source: "[ 1 20 ] RANGE 1 [ * ] FOLD" },
+    arguments: { source: "1 20 RANGE 1 [ * ] FOLD" },
   });
   const usage = spent.structuredContent?.resourceUsage;
   check(
@@ -583,14 +583,14 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
   );
 
   // An error report's answer is its diagnosis; the stack is residual state.
-  // `[ 0 99999 ] RANGE LENGHT` is a one-character typo holding a
+  // `0 99999 RANGE LENGHT` is a one-character typo holding a
   // 100,000-element vector, which serialized in full is ~27 MB — so before the
   // stack was elided the whole result became `responseTooLarge` and the reader
   // was told its answer was too big rather than that it had misspelled
   // `LENGTH`. The residue is what gives way, never the reason.
   const hugeResidue = await client.callTool({
     name: "compute",
-    arguments: { source: "[ 0 99999 ] RANGE LENGHT" },
+    arguments: { source: "0 99999 RANGE LENGHT" },
   });
   const hugeResidueBytes = Buffer.byteLength(
     JSON.stringify(hugeResidue.structuredContent ?? {}),

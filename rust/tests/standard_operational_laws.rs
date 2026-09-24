@@ -73,7 +73,7 @@ async fn scan_walks_in_index_order_and_answers_one_lane_per_element() {
     // The same answer, derived: fold each prefix from the start.
     let mut derived = Interpreter::new();
     derived
-        .execute("[ 3 1 2 ] 'V' BIND [ 1 3 ] RANGE [ 'K' BIND V K TAKE 0 [ ADD ] FOLD ] MAP")
+        .execute("[ 3 1 2 ] 'V' BIND 1 3 RANGE [ 'K' BIND V K TAKE 0 [ ADD ] FOLD ] MAP")
         .await
         .unwrap();
     assert_eq!(rendered_stack(&derived), ["[ 3/1 4/1 6/1 ]"]);
@@ -121,8 +121,8 @@ async fn higher_order_errors_restore_the_original_operand_atomically() {
 #[tokio::test]
 async fn fill_checks_overflow_and_ceiling_before_materializing() {
     for source in [
-        "[ 1000000 1000000 7 ] FILL",
-        "[ 99999999 99999999 99999999 1 ] FILL",
+        "[ 1000000 1000000 ] 7 FILL",
+        "[ 99999999 99999999 99999999 ] 1 FILL",
     ] {
         let mut interpreter = Interpreter::new();
         interpreter.execute(source).await.unwrap();
@@ -270,7 +270,7 @@ async fn group_partitions_without_loss() {
 }
 
 /// `BSEARCH` answers what `INDEX-OF` answers on an ascending vector — the
-/// first index of the key, or a `missingField` absence — and refuses an
+/// first index of the key, or a `notFound` absence — and refuses an
 /// unsorted operand rather than answering from it.
 #[tokio::test]
 async fn bsearch_agrees_with_index_of_on_ascending_input_and_refuses_unsorted() {
@@ -281,7 +281,7 @@ async fn bsearch_agrees_with_index_of_on_ascending_input_and_refuses_unsorted() 
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "'missingField'"]
+        ["[ 1/1 3/1 NIL ]", "1/1", "3/1", "'notFound'"]
     );
 
     let mut interpreter = Interpreter::new();

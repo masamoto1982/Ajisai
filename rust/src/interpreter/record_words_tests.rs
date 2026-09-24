@@ -87,11 +87,11 @@ mod record_words_tests {
     }
 
     #[tokio::test]
-    async fn at_answers_by_key_and_projects_missing_field() {
+    async fn at_answers_by_key_and_projects_not_found() {
         assert_eq!(top(&format!("{R} 'y' AT")).await, "2/1");
         assert_eq!(
             reason(&format!("{R} 'z' AT")).await.as_deref(),
-            Some("missingField")
+            Some("notFound")
         );
         assert_eq!(
             top(&format!("{R} 'z' AT 'S' BIND 0 S S NIL? SELECT")).await,
@@ -125,7 +125,7 @@ mod record_words_tests {
         assert_eq!(top(&format!("{R} 'x' WITHOUT")).await, "{ 'y' 2/1 }");
         assert_eq!(
             reason(&format!("{R} 'z' WITHOUT")).await.as_deref(),
-            Some("missingField")
+            Some("notFound")
         );
     }
 

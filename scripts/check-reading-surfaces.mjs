@@ -69,7 +69,7 @@ const EXAMPLE_NAMES = new Set([
   'N',
   // the reflection clause's worked example: TWICE is defined and asked about
   // by DIGEST and CONTRACT; NOPE is written precisely because it is
-  // never defined, to show CONTRACT projecting missingField for it.
+  // never defined, to show CONTRACT projecting notFound for it.
   'TWICE', 'NOPE',
 ]);
 

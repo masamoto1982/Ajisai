@@ -15,9 +15,9 @@ async fn space_of(src: &str, name: &str) -> (SpaceClass, bool) {
 
 #[tokio::test]
 async fn literal_operand_range_is_const_and_exact() {
-    // The marquee case: `[ 0 10 ] RANGE` materializes a length set by a
+    // The marquee case: `0 10 RANGE` materializes a length set by a
     // compile-time-literal pair, so its footprint is input-independent.
-    let (class, exact) = space_of("[ [ 0 10 ] RANGE ] 'A' DEF", "A").await;
+    let (class, exact) = space_of("[ 0 10 RANGE ] 'A' DEF", "A").await;
     assert_eq!(class, SpaceClass::Const);
     assert!(
         exact,
@@ -39,7 +39,7 @@ async fn input_operand_range_is_unbounded_and_exact() {
 
 #[tokio::test]
 async fn literal_operand_fill_is_const_but_input_fill_is_unbounded() {
-    let (lit_class, lit_exact) = space_of("[ [ 2 2 0 ] FILL ] 'F' DEF", "F").await;
+    let (lit_class, lit_exact) = space_of("[ [ 2 2 ] 0 FILL ] 'F' DEF", "F").await;
     assert_eq!(lit_class, SpaceClass::Const);
     assert!(lit_exact);
 
@@ -104,8 +104,7 @@ async fn unresolved_dependency_degrades_without_a_false_witness() {
 async fn const_chain_composes_through_a_user_word() {
     // A user word wrapping a literal RANGE is const; a word calling it stays
     // const (the dependency's proven const bound composes).
-    let (class, exact) =
-        space_of("[ [ 0 10 ] RANGE ] 'BASE' DEF [ BASE ] 'WRAP' DEF", "WRAP").await;
+    let (class, exact) = space_of("[ 0 10 RANGE ] 'BASE' DEF [ BASE ] 'WRAP' DEF", "WRAP").await;
     assert_eq!(class, SpaceClass::Const);
     assert!(exact);
 }

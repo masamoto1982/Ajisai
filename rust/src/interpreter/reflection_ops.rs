@@ -94,7 +94,7 @@ pub(crate) fn op_digest(interp: &mut Interpreter) -> Result<()> {
 
 /// `CONTRACT ( [ symbol | code ] -> [ record ] )`: the registered contract of
 /// a Core Word, the inferred contract of a User Word or of a block (never
-/// evaluated); `missingField` for a Symbol naming neither.
+/// evaluated); `notFound` for a Symbol naming neither.
 pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     if let Some(elements) = operand.as_vector_view() {
@@ -127,7 +127,7 @@ pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
     match answer {
         Some(record) => interp.stack.push(record),
         None => interp.stack.push(Value::nil_with_reason(
-            NilReason::MissingField,
+            NilReason::NotFound,
             Recoverability::Recoverable,
         )),
     }

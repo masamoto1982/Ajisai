@@ -46,8 +46,8 @@ pub const MAX_VECTOR_NESTING_DEPTH: usize = 256;
 /// (`RANGE`, `FILL`, ...) may materialize in one call. Such words loop
 /// internally to build a vector/tensor, so they each count as a *single*
 /// execution step and therefore bypass `DEFAULT_MAX_EXECUTION_STEPS`. Without
-/// this guard an input like `[ 0 9999999999999 ] RANGE` or
-/// `[ 1000000 1000000 7 ] FILL` drives an unbounded allocation that aborts the
+/// this guard an input like `0 9999999999999 RANGE` or
+/// `[ 1000000 1000000 ] 7 FILL` drives an unbounded allocation that aborts the
 /// process with an OOM instead of a diagnosable `AjisaiError`.
 ///
 /// CS5: this is now the *default* for [`RuntimeLimits::max_materialized_elements`]

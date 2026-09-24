@@ -83,7 +83,7 @@ fn lower_bound(sorted: &[Value], key: &Value) -> Result<Found> {
 /// an ascending vector. The order is checked first — one pass — because a
 /// binary search over unordered data would answer something rather than
 /// nothing, and an unsorted operand is the program being wrong about its own
-/// data (`unsortedInput`). A key that is not there is a `missingField` lane.
+/// data (`unsortedInput`). A key that is not there is a `notFound` lane.
 pub fn op_bsearch(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(sorted) = operands[0].as_vector_view().map(|view| view.into_owned()) else {
@@ -119,9 +119,7 @@ pub fn op_bsearch(interp: &mut Interpreter) -> Result<()> {
 
     let lane = |found: Found| match found {
         Found::At(index) => Value::from_int(index as i64),
-        Found::Absent => {
-            Value::nil_with_reason(NilReason::MissingField, Recoverability::Recoverable)
-        }
+        Found::Absent => Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable),
     };
     let answer = match operands[1].as_vector_view() {
         Some(keys) => {

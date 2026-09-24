@@ -1,7 +1,7 @@
 // How much of a stack value the Stack area draws.
 //
 // The interpreter's materialization ceiling bounds what a generative Word may
-// build, not what the host can draw. `[ 1 500000 ] RANGE` sits well inside that
+// build, not what the host can draw. `1 500000 RANGE` sits well inside that
 // ceiling and is an ordinary, correct program — and rendering it drew one DOM
 // node per element, locking the browser tab for tens of seconds with no way to
 // abort, clear the editor, or read the result. A safety mechanism that stops

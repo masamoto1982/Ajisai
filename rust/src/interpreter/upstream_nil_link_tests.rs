@@ -10,7 +10,7 @@ use crate::interpreter::upstream_nil_link::UPSTREAM_NIL_CHECK;
 
 /// The agent host profile, which is the one this link exists for: its
 /// materialization ceiling is 100,000, where the interpreter default is
-/// 1,000,000, so `[ 0 100001 ] RANGE` projects here and simply succeeds under
+/// 1,000,000, so `0 100001 RANGE` projects here and simply succeeds under
 /// the default. Running these against the default profile would have made the
 /// resource case pass by never failing at all.
 async fn report(source: &str) -> serde_json::Value {
@@ -55,7 +55,7 @@ fn evidence(report: &serde_json::Value) -> Vec<String> {
 /// a block — here `EXEC`.
 #[tokio::test]
 async fn a_space_ceiling_reaches_the_top_level_diagnosis() {
-    let report = report("[ 0 100001 ] RANGE EXEC").await;
+    let report = report("0 100001 RANGE EXEC").await;
     assert_eq!(report["status"], "error");
 
     let codes = check_codes(&report);

@@ -109,18 +109,16 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
             "{} must be Pure (LANG.OBSERVATION.DIAGNOSIS)",
             name
         );
-        assert_eq!(
-            meta.partiality,
-            Partiality::Total,
-            "{} must be Total — a well-formed observation never raises (LANG.VALUES.NIL)",
-            name
-        );
-        assert_eq!(
-            meta.safety_level,
-            SafetyLevel::A,
-            "{} must be SafetyLevel A (pure, total, deterministic)",
-            name
-        );
+        // Neither raises on any operand. `NIL?` always answers a truth;
+        // `NIL-REASON` answers NIL(notAvailable) for a value with no reason,
+        // which is a projection, so it is `projecting` and safety B.
+        let (partiality, safety) = if *name == "NIL?" {
+            (Partiality::Total, SafetyLevel::A)
+        } else {
+            (Partiality::Projecting, SafetyLevel::B)
+        };
+        assert_eq!(meta.partiality, partiality, "{}", name);
+        assert_eq!(meta.safety_level, safety, "{}", name);
         // The declared arity is 1 in, 1 out: the inspected value is
         // consumed and the answer takes its place. A program that needs the
         // value afterwards names it with `BIND`.
