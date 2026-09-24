@@ -19,7 +19,7 @@ Ajisai is built from ten concepts. Everything below is one of them, or a consequ
 <li>Three outcomes: a value, a reasoned absence, or an error.</li>
 <li>A stack of values and vectors of values.</li>
 <li>Code blocks, evaluated only when a Word asks for it.</li>
-<li>One modifier axis: consume or keep.</li>
+<li>One consumption rule: a Word consumes what it reads, and <code>BIND</code> names a value for reuse.</li>
 <li>A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity.</li>
 <li>A machine-readable contract for every Word.</li>
 <li>A pre-execution check of user declarations against those contracts.</li>
@@ -91,7 +91,7 @@ Kernel and Standard are both ordinary Core Words in one flat dictionary, reached
 <h3 id="lang-source-text">LANG.SOURCE.TEXT — Source domain</h3>
 
 <p>
-A program is Unicode text tokenized by the sealed Ajisai lexical grammar. Tokens distinguish literals, canonical Words, aliases, modifier forms, code blocks, vectors, definitions, and deletion.
+A program is Unicode text tokenized by the sealed Ajisai lexical grammar. Tokens distinguish literals, canonical Words, aliases, code blocks, vectors, definitions, and deletion.
 </p>
 
 <p>
@@ -123,7 +123,7 @@ Normalization does not merge distinct value tags, invent dictionary entries, or 
 <h3 id="lang-source-desugar">LANG.SOURCE.DESUGAR — Surface forms</h3>
 
 <p>
-Desugaring is deterministic and semantics-preserving. Modifier punctuation and the registered delimiter forms lower to canonical concepts before evaluation.
+Desugaring is deterministic and semantics-preserving. Aliases and the registered delimiter forms lower to canonical concepts before evaluation.
 </p>
 
 <p>
@@ -293,7 +293,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-failure-recovery">LANG.FAILURE.RECOVERY — Recovery</h3>
 
-<p>Recovery is a phrase, not a form of its own. <code>NIL?</code> answers its subject together with whether that subject is absent, which is exactly what <code>SELECT</code> reads as its truth operand, so <code>fallback subject NIL? SELECT</code> chooses the subject when it is present and the fallback when it is not — with nothing named, nothing written twice, and the fallback an ordinary operand computed before the choice like every other operand. The question is asked of the whole value: a Vector holding an absent lane is present, so a lane recovered inside a Vector is recovered there rather than around it. A retired Word, <code>OR-NIL</code>, made the same choice lazily by skipping the following source unit unevaluated; it was the last construct in the language whose meaning depended on source position, and the last one whose stack height a reader of the contract could not predict.</p>
+<p>Recovery is a phrase, not a form of its own. <code>NIL?</code> answers its subject together with whether that subject is absent, which is exactly what <code>SELECT</code> reads as its truth operand, so <code>fallback subject NIL? SELECT</code> chooses the subject when it is present and the fallback when it is not — with nothing named, nothing written twice, and the fallback an ordinary operand computed before the choice like every other operand. The question is asked of the whole value: a Vector holding an absent lane is present, so a lane recovered inside a Vector is recovered there rather than around it.</p>
 
 <p>Recovery does not erase absence from already emitted output.</p>
 
@@ -309,7 +309,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-collections-higher">LANG.COLLECTIONS.HIGHER — Higher-order evaluation</h3>
 
-<p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>SCAN</code>, <code>ANY</code>, <code>ALL</code>, and <code>RANK</code> evaluate their code operand (LANG.SOURCE.CODE) once per visited element, in index order, with the block's stack effect isolated to its own operands. <code>RANK</code> is <code>MAP</code> at a stated depth: it descends that many levels into the vector, stopping early at a leaf, evaluates the block once on each value reached, and rebuilds the structure above them — depth 1 is <code>MAP</code>, depth 0 evaluates the block once on the whole vector. That is how a block reaches an inner axis without a second modifier axis (LANG.STACK.CONSUMPTION).</p>
+<p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>SCAN</code>, <code>ANY</code>, <code>ALL</code>, and <code>RANK</code> evaluate their code operand (LANG.SOURCE.CODE) once per visited element, in index order, with the block's stack effect isolated to its own operands. <code>RANK</code> is <code>MAP</code> at a stated depth: it descends that many levels into the vector, stopping early at a leaf, evaluates the block once on each value reached, and rebuilds the structure above them — depth 1 is <code>MAP</code>, depth 0 evaluates the block once on the whole vector.</p>
 
 <p><code>FOLD</code> and <code>SCAN</code> are one walk over the elements, carrying an accumulator the block rewrites at each one; they differ in which accumulators the walk answers with. <code>FOLD</code> answers the last, so a walk with nothing to visit answers the seed it was given. <code>SCAN</code> answers every one of them, one per visited element and the seed not among them, so a walk with nothing to visit answers no elements and an absent collection answers that same absence. This is the one shape a computation carrying state from one element to the next can take, because a Word cannot call itself (LANG.DICTIONARY.ACYCLIC) and there is no unbounded loop.</p>
 
@@ -398,7 +398,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-conformance-families">LANG.CONFORMANCE.FAMILIES — Family laws</h3>
 
-<p>Every semantic family has law tests for arity, the consumption modifier, NIL policy, projection, ERROR boundaries, lifting, purity, and effects as applicable. Every Word contract has at least one conformance path to its family and clause IDs.</p>
+<p>Every semantic family has law tests for arity, consumption, NIL policy, projection, ERROR boundaries, lifting, purity, and effects as applicable. Every Word contract has at least one conformance path to its family and clause IDs.</p>
 
 <h3 id="lang-conformance-change">LANG.CONFORMANCE.CHANGE — Change discipline</h3>
 

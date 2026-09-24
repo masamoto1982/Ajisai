@@ -489,42 +489,6 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.modifier.consumption.keep",
-      "algebraic_family": "modifier",
-      "core_tier": "flow",
-      "kind": "operation",
-      "description": "Consumption policy that preserves operands; one axis of the modifier combinator.",
-      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "KEEP"
-      ],
-      "can_derive": [
-        "KEEP"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "algebra.state-transformer.combinator",
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
-      "kind": "operation",
-      "description": "Combinator that transforms a base state transformer (region x consumption x reconstruction).",
-      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "KEEP",
-        "STAK",
-        "TOP",
-        "EAT"
-      ],
-      "can_derive": [
-        "KEEP",
-        "STAK",
-        "TOP",
-        "EAT"
-      ],
-      "status": "accepted"
-    },
-    {
       "id": "algebra.state-transformer.composition",
       "algebraic_family": "state-transformer",
       "core_tier": "flow",

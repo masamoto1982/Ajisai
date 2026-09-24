@@ -40,7 +40,6 @@ const allowedAlgebraicFamilies = new Set([
   'exact-arithmetic',
   'boolean-truth',
   'bubble',
-  'modifier',
   'structure-lift',
   'hosted-effect',
   'syntax-sugar',

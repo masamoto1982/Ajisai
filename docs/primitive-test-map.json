@@ -4,8 +4,8 @@
     "docs/formalization-coverage.json"
   ],
   "summary": {
-    "primitives": 24,
-    "primitives_without_tests": 2,
+    "primitives": 22,
+    "primitives_without_tests": 0,
     "distinct_law_test_files": 24,
     "distinct_conformance_cases": 167
   },
@@ -670,30 +670,6 @@
         "standard-fill",
         "standard-group"
       ]
-    },
-    {
-      "id": "algebra.modifier.consumption.keep",
-      "algebraic_family": "modifier",
-      "kind": "operation",
-      "status": "accepted",
-      "derived_word_count": 0,
-      "law_test_count": 0,
-      "conformance_case_count": 0,
-      "derived_words": [],
-      "law_tests": [],
-      "conformance_cases": []
-    },
-    {
-      "id": "algebra.state-transformer.combinator",
-      "algebraic_family": "state-transformer",
-      "kind": "operation",
-      "status": "accepted",
-      "derived_word_count": 0,
-      "law_test_count": 0,
-      "conformance_case_count": 0,
-      "derived_words": [],
-      "law_tests": [],
-      "conformance_cases": []
     },
     {
       "id": "algebra.state-transformer.composition",
