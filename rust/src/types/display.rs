@@ -92,8 +92,8 @@ pub(super) fn format_fraction(f: &Fraction) -> String {
 
 /// Display an `ExactReal`. A rational writes as `numerator/denominator`;
 /// an algebraic irrational writes its normal form as one token —
-/// `sqrt(2)`, `1/2*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` — the same
-/// string the host protocol's `exactDisplay` carries. It is a display, not
+/// `sqrt(2)`, `1/2*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)`, rendering the
+/// same terms the host protocol's `exactTerms` carries. It is a display, not
 /// source: no literal denotes an irrational, and a Vector literal would read
 /// `2 SQRT` as a number and a Symbol. Written without spaces so that inside a
 /// Vector it still reads as one element. Nothing is truncated or

@@ -131,29 +131,27 @@ result of
 2 SQRT
 ```
 
-read either of these two fields, in this order:
+the two fields to read are:
 
-- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`, the same
-  string `stackDisplay` shows for it. Read this first. It is a display: read
-  it, do not parse it.
+- **`stackDisplay`** — the value written as one token: `"sqrt(2)"`,
+  `"1/2*sqrt(2)"`, `"1/1+sqrt(2)"`. It is exact and never truncated. It is a
+  display: read it, do not parse it.
 - **`semantics.exactTerms`** — the value itself: a list of
   `{ numerator, denominator, radicand }` terms meaning `Σ (n/d)·√radicand`,
   arbitrary-precision integers as strings. Compute with this.
 
-They are the same fact in two shapes and always appear together. One *other*
-field on that same result is **not** the value, and reading it as if it were
-will mislead you:
+The display renders exactly these terms. One *other* field on that same result
+is **not** the value, and reading it as if it were will mislead you:
 
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 
-Neither `exactDisplay` nor `exactTerms` appears on a plain rational or a vector
-of rationals — there is no radical to write, and `stackDisplay` is already
-exact for those.
+`exactTerms` does not appear on a plain rational or a vector of rationals —
+there is no radical to write, and `stackDisplay` is already the whole value.
 
-One caution about `exactDisplay`: it writes the stored form faithfully, so two
+One caution about the display: it writes the stored form faithfully, so two
 values that *are* equal can be written differently — `8 SQRT` gives
-`"sqrt(8)"` and `2 SQRT 2 SQRT +` gives `"2/1*sqrt(2)"`. Never compare these
+`sqrt(8)` and `2 SQRT 2 SQRT +` gives `2/1*sqrt(2)`. Never compare these
 strings to decide equality. Ask Ajisai, which decides on the exact value:
 
 ```ajisai tool=compute status=ok stack="TRUE"

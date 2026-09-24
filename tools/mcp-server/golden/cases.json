@@ -60,7 +60,7 @@
         "/stack/0/value/0/semantics/exactTerms/0/numerator": "1",
         "/stack/0/value/0/semantics/exactTerms/0/denominator": "1",
         "/stack/0/value/0/semantics/exactTerms/0/radicand": "2",
-        "/stack/0/value/0/semantics/exactDisplay": "sqrt(2)"
+        "/stackDisplay/0": "[ sqrt(2) ]"
       }
     },
     {
@@ -68,10 +68,10 @@
       "source": "1 2 / SQRT",
       "expect": {
         "/status": "ok",
-        "/stack/0/semantics/exactDisplay": "1/2*sqrt(2)",
         "/stack/0/semantics/exactTerms/0/numerator": "1",
         "/stack/0/semantics/exactTerms/0/denominator": "2",
-        "/stack/0/semantics/exactTerms/0/radicand": "2"
+        "/stack/0/semantics/exactTerms/0/radicand": "2",
+        "/stackDisplay/0": "1/2*sqrt(2)"
       }
     },
     {
@@ -79,9 +79,9 @@
       "source": "2 SQRT 3 SQRT +",
       "expect": {
         "/status": "ok",
-        "/stack/0/semantics/exactDisplay": "sqrt(2)+sqrt(3)",
         "/stack/0/semantics/exactTerms/0/radicand": "2",
-        "/stack/0/semantics/exactTerms/1/radicand": "3"
+        "/stack/0/semantics/exactTerms/1/radicand": "3",
+        "/stackDisplay/0": "sqrt(2)+sqrt(3)"
       }
     },
     {
@@ -92,7 +92,6 @@
         "/stackDisplay/0": "1/1"
       },
       "expectAbsent": [
-        "/stack/0/semantics/exactDisplay",
         "/stack/0/semantics/exactTerms",
         "/stack/0/semantics/approximate"
       ]
@@ -105,8 +104,6 @@
         "/stackDisplay/0": "[ 5/1 7/1 9/1 ]"
       },
       "expectAbsent": [
-        "/stack/0/semantics/exactDisplay",
-        "/stack/0/value/0/semantics/exactDisplay",
         "/stack/0/value/0/semantics/exactTerms"
       ]
     },
@@ -217,7 +214,7 @@
         "/resourceUsage/numericWork": 20,
         "/runtimeMetrics/executionSteps": 22
       },
-      "comment": "RANGE and FOLD are one step each and the block's `*` runs twenty times: 22. Pinned as an exact number because the defect was a constant \u2014 every program reported 0 \u2014 so only an exact expectation catches a regression to one."
+      "comment": "RANGE and FOLD are one step each and the block's `*` runs twenty times: 22. Pinned as an exact number because the defect was a constant — every program reported 0 — so only an exact expectation catches a regression to one."
     }
   ]
 }

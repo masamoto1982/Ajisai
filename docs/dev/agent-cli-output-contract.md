@@ -406,7 +406,6 @@ normal form:
   "value": { "numerator": "768398401", "denominator": "543339720" },
   "semantics": {
     "approximate": true,
-    "exactDisplay": "sqrt(2)",
     "exactTerms": [
       { "numerator": "1", "denominator": "1", "radicand": "2" }
     ]
@@ -418,16 +417,14 @@ normal form:
 present, the `value` rational is a display compatibility view and is not the
 canonical value.
 
-`exactDisplay` is the same normal form written as one short string —
-`sqrt(2)`, `2/1*sqrt(2)`, `1/1 + sqrt(2)`, `sqrt(2) - sqrt(3)` — and is present
-in exactly the cases `exactTerms` is. It exists because the two other
-renderings of an algebraic value on the same report are each misleading as what
-they resemble: `stackDisplay` is the LANG.VALUES.EXACT continued fraction *truncated
-at a display budget* (√2 runs to ~194 characters and ends in `...]`), and
-`value` is a rational approximation. It is a display: read it, compute with
-`exactTerms`. Because it renders the stored normal form faithfully, two values
-`=` decides are equal can still be written differently (`sqrt(8)` and
-`2/1*sqrt(2)`); comparison decides equality, string comparison does not.
+`stackDisplay` writes the same normal form as one token — `sqrt(2)`,
+`2/1*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` — exact and never truncated. It
+is a display: read it, compute with `exactTerms`. Because it renders the
+stored normal form faithfully, two values `=` decides are equal can still be
+written differently (`sqrt(8)` and `2/1*sqrt(2)`); comparison decides
+equality, string comparison does not. There is no separate short-rendering
+field: an `exactDisplay` once carried this string when `stackDisplay` was a
+truncated continued fraction, and was removed once the two became the same.
 
 ### Diagnosis and error flow
 

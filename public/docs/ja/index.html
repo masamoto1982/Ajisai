@@ -799,7 +799,7 @@
                     <p>無理数には表示形式が2つあり、どちらを見ているかで見た目が変わります。</p>
                     <ul class="ref-list">
                         <li><strong>Playgroundのスタック領域</strong>は、値の正規形をそのまま根号で描きます。<code>2 SQRT</code>は<code>√2</code>、<code>8 SQRT 1 ADD 2 DIV</code>は<code>1/2 + 1/2√8</code>です(<code>√8</code>は<code>2√2</code>へ簡約されません)。</li>
-                        <li><strong>正規形トークン</strong>は、値の正規形を空白なしの一つのトークンとして書いた表示です。<code>2 SQRT</code>は<code>sqrt(2)</code>、<code>1 2 SQRT ADD</code>は<code>1/1+sqrt(2)</code>、<code>2 SQRT 3 SQRT SUB</code>は<code>sqrt(2)-sqrt(3)</code>です。打ち切りも近似もなく、ベクトルの中でも一要素として読めます。CLIやMCPホストの<code>stackDisplay</code>と<code>exactDisplay</code>がこの形式です。</li>
+                        <li><strong>正規形トークン</strong>は、値の正規形を空白なしの一つのトークンとして書いた表示です。<code>2 SQRT</code>は<code>sqrt(2)</code>、<code>1 2 SQRT ADD</code>は<code>1/1+sqrt(2)</code>、<code>2 SQRT 3 SQRT SUB</code>は<code>sqrt(2)-sqrt(3)</code>です。打ち切りも近似もなく、ベクトルの中でも一要素として読めます。CLIやMCPホストの<code>stackDisplay</code>がこの形式で、同じ項は<code>semantics.exactTerms</code>に構造化されて並びます。</li>
                     </ul>
                     <p class="ref-note">どちらも表示専用の出力であり、ソースコードの構文ではありません。<code>sqrt(2)</code>をプログラムに書いても未知の名前です。<code>(</code> <code>)</code>は構文ではなく名前の文字なので、プログラム中に書いても括弧としては働きません。</p>
 

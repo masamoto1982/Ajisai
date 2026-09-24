@@ -72,39 +72,15 @@ pub(crate) fn exact_terms(value: &Value) -> Option<Vec<ProtocolExactTerm>> {
 /// The multiquadratic normal form Σ c_m √m behind an algebraic scalar, or
 /// `None` for every other value.
 ///
-/// Both `exact_terms` and `exact_display` derive from this one extraction, so
-/// the wire never carries a short rendering of terms it did not also send, or
-/// terms without the rendering — the two fields are one fact in two shapes.
+/// `exact_terms` reads it for the wire, and the stack display renders the
+/// same terms (`display::render_algebraic_terms`), so the rendering a reader
+/// sees and the terms a consumer computes with are one extraction.
 fn algebraic_normal_form(value: &Value) -> Option<Vec<(Fraction, BigInt)>> {
     let ValueData::ExactScalar(crate::types::exact::ExactReal::Algebraic(algebraic)) = &value.data
     else {
         return None;
     };
     Some(algebraic.normal_form_terms())
-}
-
-/// The exact value written short: `sqrt(2)`, `3/2*sqrt(5)`, `1/1+sqrt(2)`.
-///
-/// This is the one rendering of an algebraic value: the stack display of the
-/// scalar is this same string (`display.rs`), and the node's own `value` is a
-/// rational approximation flagged `approximate`. The field repeats it beside
-/// `exactTerms` so a consumer reading one node of a Vector has the rendering
-/// of that node without parsing the Vector's display.
-///
-/// It is a **display**, and deliberately not called canonical: `exactTerms` is
-/// the value, this is one way of writing it, and the pairing is what says so.
-/// Read it; do not parse it. Term order is the normal form's own ascending
-/// radicand order, so the string is deterministic and identical across hosts.
-///
-/// It renders the stored normal form faithfully, which means it inherits that
-/// form's one surprise: `8 SQRT` stores as `{1/1, 8}` and `2 SQRT 2 SQRT +` as
-/// `{2/1, 2}`, so two values Ajisai's `=` decides are equal — and they are —
-/// can be written `sqrt(8)` and `2/1*sqrt(2)`. Reducing the display would only
-/// move the discrepancy, by making the string disagree with the `exactTerms`
-/// beside it. Comparison is what decides equality here; string equality is not.
-pub(crate) fn exact_display(value: &Value) -> Option<String> {
-    let terms = algebraic_normal_form(value)?;
-    Some(crate::types::display::render_algebraic_terms(&terms))
 }
 
 fn number_protocol_value(f: &Fraction) -> ProtocolValue {

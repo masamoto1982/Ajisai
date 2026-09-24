@@ -162,8 +162,7 @@ mod error_stack_tests {
             .find(|node| node.get("elided").is_some())
             .expect("something was elided");
         assert!(
-            elided["semantics"].get("exactTerms").is_none()
-                && elided["semantics"].get("exactDisplay").is_none(),
+            elided["semantics"].get("exactTerms").is_none(),
             "the exact form is the value, and an elided slot carries no value"
         );
         assert_eq!(

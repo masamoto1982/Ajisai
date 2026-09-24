@@ -239,7 +239,6 @@ fn elided_node_json(node: &ProtocolNode, approx_bytes: usize, elements: Option<u
         let mut semantics = semantics_json(source);
         if let Some(object) = semantics.as_object_mut() {
             object.remove("exactTerms");
-            object.remove("exactDisplay");
         }
         obj.insert("semantics".into(), semantics);
     }

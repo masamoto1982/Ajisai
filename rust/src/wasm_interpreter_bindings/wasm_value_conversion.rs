@@ -4,9 +4,7 @@
 // それでも万一 set が失敗した場合は console_error_panic_hook 経由で
 // ブラウザコンソールにスタックトレースが出るので、原因解析は可能。
 
-use crate::types::value_protocol::{
-    exact_display, exact_terms, value_to_protocol, ProtocolNode, ProtocolValue,
-};
+use crate::types::value_protocol::{exact_terms, value_to_protocol, ProtocolNode, ProtocolValue};
 use crate::types::{Value, ValueData};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -133,16 +131,10 @@ fn value_semantics_to_js(value: &Value) -> JsValue {
     if matches!(value.data, ValueData::ExactScalar(_)) {
         set_prop(&obj, "approximate", &JsValue::TRUE);
     }
-    // The exact value itself, when there is a short way to write it. An
-    // algebraic irrational is *stored* as the multiquadratic normal form
-    // Σ c_m √m (LANG.VALUES.EXACT), so these pairs are the number rather than a view of
-    // it, and a host given them can draw `√3` or `1/2 + 1/3√5` instead of
-    // reading the source form back or settling for an approximation.
-    // Additive and optional: a host that ignores it sees exactly what it saw
-    // before.
-    if let Some(display) = exact_display(value) {
-        set_prop(&obj, "exactDisplay", &display.into());
-    }
+    // The exact value itself. An algebraic irrational is *stored* as the
+    // multiquadratic normal form Σ c_m √m (LANG.VALUES.EXACT), so these terms
+    // are the number rather than a view of it, and a host given them can draw
+    // `√3` or `1/2 + 1/3√5` instead of settling for an approximation.
     if let Some(exact_terms) = exact_terms(value) {
         let terms = js_sys::Array::new();
         for exact_term in exact_terms {
