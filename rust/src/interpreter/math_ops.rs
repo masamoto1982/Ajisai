@@ -19,12 +19,9 @@ fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
 /// instead, since a shared function cannot know which caller it is (Phase 2's
 /// lesson, repeated by Phase 4's `nonInteger`/`nonComparableElement` fixes).
 fn compare_for_numeric(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
-    match crate::interpreter::comparison_scalar::three_way_compare(a, b) {
-        Err(AjisaiError::StructureError { expected, .. }) if expected == "scalar value" => {
-            Err(AjisaiError::declared("nonNumeric", "expected a number"))
-        }
-        other => other,
-    }
+    crate::interpreter::comparison_scalar::three_way_compare(a, b).map_err(|e| {
+        AjisaiError::declared("nonNumeric", format!("expected a Scalar, got {}", e.got))
+    })
 }
 
 /// Apply a unary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
@@ -231,7 +228,10 @@ fn sqrt_scalar(value: &Value) -> Result<Value> {
         // before this fix even though the failure is the identical shape.
         return Err(AjisaiError::declared(
             "nonNumeric",
-            "SQRT: expected a number, got a non-numeric value",
+            format!(
+                "expected a rational Scalar, got {}",
+                crate::types::display::describe_operand(value)
+            ),
         ));
     };
     // `from_exact_real` collapses a rational result back to Scalar.

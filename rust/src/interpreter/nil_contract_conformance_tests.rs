@@ -36,7 +36,7 @@
 //! quietly.
 
 use crate::interpreter::Interpreter;
-use crate::kernel::generated::{Arity, NilPolicy, GENERATED_WORDS};
+use crate::kernel::generated::{Arity, OperandRole, GENERATED_WORDS};
 
 /// What a NIL operand produced, observed through the public outcome only.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -87,26 +87,22 @@ async fn observe(program: &str) -> Outcome {
     }
 }
 
-/// The outcome the specification's `nilPolicy` requires for a NIL operand.
+/// The outcome the declared operand roles require when *every* operand is a
+/// reasoned NIL (LANG.FAILURE.PASSTHROUGH).
 ///
-/// Only the policies that constrain a NIL *input* are probed. `createsNil`,
-/// `consumeNil` and `inspectNil` describe what the Word does with non-NIL
-/// operands or how it inspects NIL-ness, so they place no obligation here.
-fn required(policy: NilPolicy) -> Option<Outcome> {
-    match policy {
-        // A projected NIL flows downstream and stays diagnosable, so the
-        // reason must survive (LANG.FAILURE.PASSTHROUGH).
-        NilPolicy::Passthrough | NilPolicy::PassthroughThenProject | NilPolicy::PreserveReason => {
-            Some(Outcome::NilWithReason)
-        }
-        NilPolicy::RejectNil => Some(Outcome::Error),
-        NilPolicy::CreatesNil | NilPolicy::ConsumeNil => None,
-        // `kleeneAbsorbing` (strong-Kleene `AND`) only decides to a
-        // definite value when a dominating operand (FALSE) is present;
-        // this blanket probe fills every operand position with NIL, so no
-        // dominating operand exists and the result must still be a reasoned
-        // NIL standing for UNKNOWN (LANG.VALUES.TRUTH).
-        NilPolicy::KleeneAbsorbing => Some(Outcome::NilWithReason),
+/// A NIL where a block, name or message belongs is malformed use whatever
+/// else is absent, so a `program` position decides first. Otherwise a `data`
+/// position passes the NIL through with its reason, and a `truth` position
+/// reads it as UNKNOWN, which is that same reasoned NIL. A Word whose
+/// operands are all `element`s takes a NIL as an ordinary value, so what it
+/// answers is its own business and this probe places no obligation on it.
+fn required(roles: &[OperandRole]) -> Option<Outcome> {
+    if roles.contains(&OperandRole::Program) {
+        Some(Outcome::Error)
+    } else if roles.contains(&OperandRole::Data) || roles.contains(&OperandRole::Truth) {
+        Some(Outcome::NilWithReason)
+    } else {
+        None
     }
 }
 
@@ -129,7 +125,7 @@ fn declared_nil_policy_is_honored_at_runtime() {
     let mut probed = 0_usize;
 
     for word in GENERATED_WORDS {
-        let Some(want) = required(word.nil_policy) else {
+        let Some(want) = required(word.operand_roles) else {
             continue;
         };
         // Data-dependent arity has no fixed operand count to fill with NIL.
@@ -153,9 +149,9 @@ fn declared_nil_policy_is_honored_at_runtime() {
                 word.name
             )),
             None if got != want => violations.push(format!(
-                "{}: spec/words.json declares `{}`, which requires {want:?}, but observed {got:?}",
+                "{}: spec/words.json declares operands {:?}, which require {want:?}, but observed {got:?}",
                 word.name,
-                word.nil_policy.as_spec_str()
+                word.operand_roles
             )),
             None => {}
         }
@@ -189,29 +185,22 @@ fn divergence_baseline_does_not_grow() {
     );
 }
 
-/// `rejectNil` is declared once per Word, so it binds **every** operand
-/// position, not just the receiver. The blanket probe above fills all operands
-/// with NIL, which for the search Words trips the vector-operand rejection
-/// first and hides the needle position — so that position gets its own probe.
-///
-/// `CONTAINS` is documented as "true if a vector contains an element **equal
-/// to** the given value", yet answered `FALSE` for a NIL needle, asserting that
-/// nothing equals NIL. `EQ` disagrees: `NIL EQ NIL` is NIL, not TRUE, so the
-/// aggregate answer is *unknown*, not false — the Word contradicted the
-/// operation it is defined in terms of. It now rejects, per its declaration.
-///
-/// `INDEX-OF` declares `createsNil`, not `rejectNil`, so the guard leaves it
-/// alone and it still answers a reasoned NIL for an absent needle. Pinned here
-/// so the difference between the two declarations stays visible.
+/// A search Word's needle is an `element`: it is compared, not read, so an
+/// absent needle is looked for like any other value — the NIL whose reason
+/// matches — rather than passed through or refused.
 #[test]
-fn search_words_reject_a_nil_needle() {
+fn a_search_needle_is_an_element() {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("tokio current-thread runtime");
 
     for (program, current) in [
-        ("[ 1 ] 1 0 DIV CONTAINS", Outcome::Error),
+        // Found: the Vector holds a NIL with the same reason.
+        ("1 0 DIV 1 COLLECT 1 0 DIV MEMBER", Outcome::Value),
+        ("1 0 DIV 1 COLLECT 1 0 DIV INDEX-OF", Outcome::Value),
+        // Not found: MEMBER answers FALSE, INDEX-OF projects `valueAbsent`.
+        ("[ 1 ] 1 0 DIV MEMBER", Outcome::Value),
         ("[ 1 ] 1 0 DIV INDEX-OF", Outcome::NilWithReason),
     ] {
         assert_eq!(
@@ -261,7 +250,7 @@ fn passthrough_unwinds_the_operand_window() {
 /// A Word wrapped in a user-defined Word runs through the compiled plan rather
 /// than the interpreter's dispatch, and that second path skipped the guard
 /// entirely: `[ LENGTH ] 'LEN' DEF 1 0 DIV LEN` answered `0` for the length of
-/// a NIL while `1 0 DIV LENGTH` rejected it, and SORT and STR likewise reverted
+/// a NIL while `1 0 DIV LENGTH` answered differently, and SORT and STR likewise reverted
 /// to their pre-guard behavior one call deep.
 ///
 /// Compiling a body is required to be unobservable (LANG.AUTHORITY.FREEDOM), so
@@ -277,10 +266,10 @@ fn the_declared_contract_binds_the_compiled_path_too() {
         .expect("tokio current-thread runtime");
 
     for (word, want) in [
-        // rejectNil
-        ("LENGTH", Outcome::Error),
-        ("CONCAT", Outcome::Error),
-        // passthrough
+        // A NIL in a program position is refused.
+        ("EXEC", Outcome::Error),
+        // A NIL in a data position passes through.
+        ("LENGTH", Outcome::NilWithReason),
         ("SORT", Outcome::NilWithReason),
         ("STR", Outcome::NilWithReason),
     ] {

@@ -219,7 +219,8 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
     };
 
     if let Err(message) = check_structure(&tokens) {
-        let category = ErrorCategory::StructureError;
+        // The same category `run` reports for an unbalanced bracket.
+        let category = ErrorCategory::MalformedSource;
         let diagnosis = DebugDiagnosis::from_error_category(
             ErrorPhase::ParseStructure,
             None,

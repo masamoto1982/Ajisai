@@ -90,8 +90,16 @@ mod search_words_tests {
     #[tokio::test]
     async fn bsearch_checks_the_order_first() {
         raises("[ 3 1 2 ] [ 2 ] BSEARCH", "BSEARCH").await;
-        raises("[ 1 'a' ] 1 BSEARCH", "comparable").await;
-        raises("[ 1 2 3 ] 'a' BSEARCH", "comparable").await;
+        raises(
+            "[ 1 'a' ] 1 BSEARCH",
+            "expected Scalar elements, got String",
+        )
+        .await;
+        raises(
+            "[ 1 2 3 ] 'a' BSEARCH",
+            "expected Scalar elements, got String",
+        )
+        .await;
     }
 
     #[tokio::test]

@@ -16,11 +16,12 @@ where
     })?;
 
     if !target_val.is_vector() {
+        let got = target_val.domain_name();
         interp.stack.push(target_val);
         interp.stack.push(arg_to_restore.clone());
         return Err(AjisaiError::declared(
             "nonVector",
-            "expected a Vector, got a non-vector value",
+            format!("expected a Vector, got {got}"),
         ));
     }
 
@@ -44,10 +45,11 @@ where
     let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if !target_val.is_vector() {
+        let got = target_val.domain_name();
         interp.stack.push(target_val);
         return Err(AjisaiError::declared(
             "nonVector",
-            "expected a Vector, got a non-vector value",
+            format!("expected a Vector, got {got}"),
         ));
     }
 

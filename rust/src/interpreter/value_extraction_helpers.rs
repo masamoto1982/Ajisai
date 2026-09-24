@@ -52,60 +52,48 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     }
 }
 
-fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
-    match &value.data {
-        ValueData::Text(_) => Err(AjisaiError::create_structure_error("integer", "string")),
-        ValueData::Record(_) => Err(AjisaiError::create_structure_error("integer", "record")),
-        ValueData::Scalar(f) => {
-            if !f.is_integer() {
-                return Err(AjisaiError::create_structure_error("integer", "fraction"));
-            }
-            Ok(f.numerator())
+/// An operand that is not an integer, described for the message the caller
+/// raises. Not an `AjisaiError`: GET, TAKE, PUT, COLLECT and RANGE each
+/// declare their own condition for it (`invalidIndex`, `invalidCount`,
+/// `nonInteger`, `invalidRange`), so the caller names it.
+#[derive(Debug, Clone)]
+pub(crate) struct NotAnInteger {
+    pub got: String,
+}
+
+impl NotAnInteger {
+    fn of(value: &Value) -> Self {
+        NotAnInteger {
+            got: crate::types::display::describe_operand(value),
         }
-        ValueData::Nil => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "NIL",
-        )),
-        ValueData::Vector(children) if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Vector(_) => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "multi-element vector",
-        )),
-        ValueData::Tensor { data, .. } => {
-            if data.len() == 1 {
-                let fraction = data
-                    .get_small_fraction(0)
-                    .ok_or_else(|| AjisaiError::create_structure_error("integer", "NIL"))?;
-                if !fraction.is_integer() {
-                    return Err(AjisaiError::create_structure_error("integer", "fraction"));
-                }
-                Ok(fraction.numerator())
-            } else {
-                Err(AjisaiError::create_structure_error(
-                    "single-element value with integer",
-                    "multi-element vector",
-                ))
-            }
-        }
-        ValueData::ExactScalar(_) => Err(AjisaiError::create_structure_error(
-            "integer",
-            "irrational exact real",
-        )),
-        ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "code block",
-        )),
     }
 }
 
-pub(crate) fn extract_integer_from_value(value: &Value) -> Result<i64> {
-    let n = extract_integer_bigint(value)?;
-    n.to_i64().ok_or_else(|| {
-        AjisaiError::create_structure_error("an integer within i64 range", "a larger integer")
-    })
+fn extract_integer_bigint(value: &Value) -> std::result::Result<BigInt, NotAnInteger> {
+    match &value.data {
+        ValueData::Scalar(f) if f.is_integer() => Ok(f.numerator()),
+        // A one-element Vector stands for its element: `[ 2 ]` is the index 2.
+        ValueData::Vector(children) if children.len() == 1 => extract_integer_bigint(&children[0]),
+        ValueData::Tensor { data, .. } if data.len() == 1 => match data.get_small_fraction(0) {
+            Some(fraction) if fraction.is_integer() => Ok(fraction.numerator()),
+            Some(fraction) => Err(NotAnInteger::of(&Value::from_fraction(fraction))),
+            None => Err(NotAnInteger {
+                got: "NIL".to_string(),
+            }),
+        },
+        _ => Err(NotAnInteger::of(value)),
+    }
 }
 
-pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
+pub(crate) fn extract_integer_from_value(value: &Value) -> std::result::Result<i64, NotAnInteger> {
+    extract_integer_bigint(value)?
+        .to_i64()
+        .ok_or_else(|| NotAnInteger::of(value))
+}
+
+pub(crate) fn extract_bigint_from_value(
+    value: &Value,
+) -> std::result::Result<BigInt, NotAnInteger> {
     extract_integer_bigint(value)
 }
 
@@ -121,7 +109,7 @@ pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
         return Err(AjisaiError::declared(
             "nonText",
-            "expected a name (String), got Nil",
+            "expected a name (String), got NIL",
         ));
     }
 
@@ -129,7 +117,7 @@ pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
         Some(name) => Ok(name.to_uppercase()),
         None => Err(AjisaiError::declared(
             "nonText",
-            "expected a name (String), got a non-text value",
+            format!("expected a name (String), got {}", value.domain_name()),
         )),
     }
 }

@@ -64,12 +64,8 @@
               "description": "true when the node is an irrational scalar (LANG.VALUES.EXACT), whose `value` is therefore a best rational approximation. Never present otherwise.",
               "const": true
             },
-            "exactDisplay": {
-              "description": "A short human-readable string for an ExactScalar's exact multiquadratic normal form (e.g. a square-root expression), alongside the approximated `value`.",
-              "type": "string"
-            },
             "exactTerms": {
-              "description": "The same normal form as exactDisplay, structured for computation: one term per {numerator, denominator, radicand}.",
+              "description": "An ExactScalar's exact multiquadratic normal form, structured for computation: one term per {numerator, denominator, radicand}. The stack display writes the same terms as one token (`sqrt(2)`, `1/1+sqrt(2)`).",
               "type": "array",
               "items": {
                 "type": "object",

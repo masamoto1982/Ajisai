@@ -196,7 +196,6 @@ impl CauseClass {
     pub fn from_error_category(category: &ErrorCategory) -> Self {
         match category {
             ErrorCategory::StackUnderflow => CauseClass::StackShape,
-            ErrorCategory::StructureError => CauseClass::ValueShape,
             ErrorCategory::UnknownWord => CauseClass::TypoOrUnknownName,
             ErrorCategory::DivisionByZero => CauseClass::Domain,
             ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
@@ -427,7 +426,6 @@ fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
 fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'static str {
     match category {
         Some(ErrorCategory::DivisionByZero)
-        | Some(ErrorCategory::StructureError)
         | Some(ErrorCategory::ShapeMismatch)
         | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
         Some(ErrorCategory::UnknownWord)

@@ -97,7 +97,10 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             None => {
                 return Err(AjisaiError::declared(
                     "invalidDefinitionBody",
-                    "DEF: expected a Vector [ ... ] definition body, got a non-vector value",
+                    format!(
+                        "expected a Vector [ ... ] definition body, got {}",
+                        def_val.domain_name()
+                    ),
                 ));
             }
         },
@@ -199,7 +202,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     if tokens.is_empty() {
         return Err(AjisaiError::declared(
             "invalidDefinitionBody",
-            "DEF: expected a non-empty definition body, got an empty body",
+            "expected a non-empty definition body, got an empty body",
         ));
     }
 

@@ -472,9 +472,9 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-failure-passthrough">LANG.FAILURE.PASSTHROUGH — NIL passthrough</h3>
 
-<p>For a passthrough family, an input NIL flows to the registered output position without changing its reason. Passthrough does not re-run a projection condition and does not relabel the absence.</p>
+<p>What a Word does with a NIL operand follows from what it does with that operand, and from nothing else. Each operand position has one role, declared per Word as <code>stack.operands</code> in <code>spec/words.json</code>. A <strong>data</strong> operand is read: an absent one is the result, flowing to the output position without changing its reason; the primitive does not run, no projection condition is re-run or relabels it, and when several data operands are absent the leftmost is the result. An <strong>element</strong> is carried without being read (a value stored, bound, printed, encoded or inspected, an accumulator, a needle compared by equality): a NIL there is an ordinary value (LANG.VALUES.NIL). A <strong>program</strong> operand is a block the Word evaluates, a name it binds, defines, deletes or looks up, or a message it raises: it cannot be absent, so a NIL there is malformed use, raising the condition the Word declares for any other operand that does not belong there, and this is decided before any data operand passes through. A <strong>truth</strong> operand reads a NIL as UNKNOWN (LANG.VALUES.TRUTH).</p>
 
-<p>A non-passthrough Word handles NIL only as its family or contract states.</p>
+<p>A Word's <code>nilPolicy</code> summarises its roles and is never a choice of its own, so two Words that treat an operand alike treat a NIL there alike. A Word of data-dependent arity declares no roles and states its NIL handling in its contract.</p>
 
 <h3 id="lang-failure-recovery">LANG.FAILURE.RECOVERY — Recovery</h3>
 

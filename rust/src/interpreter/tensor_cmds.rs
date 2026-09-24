@@ -18,7 +18,7 @@ pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
 
 use super::tensor_ops::{apply_unary_flat_with_metrics, build_nested_value};
 
-fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G, op_name: &str) -> Result<()>
+fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G) -> Result<()>
 where
     F: Fn(&Fraction) -> Fraction + Copy,
     G: Fn(&ExactReal) -> ExactReal,
@@ -30,10 +30,11 @@ where
     let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if val.is_nil() {
+        let got = val.domain_name();
         interp.stack.push(val);
         return Err(AjisaiError::declared(
             "nonNumeric",
-            format!("{} requires number or vector", op_name),
+            format!("expected a Scalar or a Vector, got {got}"),
         ));
     }
 
@@ -65,7 +66,7 @@ where
             }
             Err(AjisaiError::declared(
                 "nonNumeric",
-                format!("{} requires number or vector", op_name),
+                format!("expected a Scalar or a Vector, got {}", lane.domain_name()),
             ))
         };
         return match crate::interpreter::math_ops::lift_unary_numeric(&val, &scalar_op) {
@@ -90,16 +91,17 @@ where
                 interp.stack.push(val);
                 return Err(AjisaiError::declared(
                     "nonNumeric",
-                    format!("{} requires number or vector", op_name),
+                    "expected a Scalar or a Vector of Scalars",
                 ));
             }
         }
     }
 
+    let got = val.domain_name();
     interp.stack.push(val);
     Err(AjisaiError::declared(
         "nonNumeric",
-        format!("{} requires number or vector", op_name),
+        format!("expected a Scalar or a Vector, got {got}"),
     ))
 }
 
@@ -118,7 +120,6 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
         interp,
         |f| f.floor(),
         |er| er.floor().expect("a number has a floor"),
-        "FLOOR",
     )
 }
 
@@ -130,7 +131,6 @@ pub fn op_round(interp: &mut Interpreter) -> Result<()> {
         interp,
         |f| f.round(),
         |er| er.round().expect("a number has a nearest integer"),
-        "ROUND",
     )
 }
 
@@ -141,7 +141,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(args_val);
         return Err(AjisaiError::declared(
             "invalidShape",
-            "FILL: expected a [ shape... value ] vector, got NIL",
+            "expected a [ shape... value ] vector, got NIL",
         ));
     }
 
@@ -152,7 +152,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::declared(
             "invalidShape",
             format!(
-                "FILL: expected a [ shape... value ] vector of at least 2 elements, got a vector of {} element(s)",
+                "expected a [ shape... value ] Vector of at least 2 elements, got {} element(s)",
                 n
             ),
         ));
@@ -164,7 +164,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(args_val);
             return Err(AjisaiError::declared(
                 "invalidShape",
-                "FILL: expected a scalar as the last element of [ shape... value ], got a non-scalar value",
+                "expected a Scalar as the last element of [ shape... value ]",
             ));
         }
     };
@@ -182,7 +182,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(args_val);
                 return Err(AjisaiError::declared(
                     "invalidShape",
-                    "FILL: expected positive integer dimensions, got invalid dimension",
+                    "expected positive integer dimensions, got invalid dimension",
                 ));
             }
         };

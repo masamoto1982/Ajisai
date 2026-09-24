@@ -151,30 +151,27 @@ rather than a retry loop the caller has to write.
 
 ### Reading an algebraic value
 
-`2 SQRT` answers with four renderings of one number, and two of them mislead.
-On the stack node, read either of:
+`2 SQRT` answers with the value, a rendering of it, and an approximation.
+On the stack node, read:
 
 | field | what it is |
 |---|---|
-| `semantics.exactDisplay` | the value written short: `"sqrt(2)"`, `"2/1*sqrt(2)"`, `"sqrt(2)-sqrt(3)"` — the same string `stackDisplay` shows for it |
+| `stackDisplay` | the value written as one token: `"sqrt(2)"`, `"2/1*sqrt(2)"`, `"sqrt(2)-sqrt(3)"`, exact and never truncated |
 | `semantics.exactTerms` | the value itself: `Σ (numerator/denominator)·√radicand`, arbitrary-precision integers as strings |
 
-They are one fact in two shapes, derived from the same extraction, and the
-result schema requires each whenever the other is present — so a reader never
-has to decide which to believe. Compute with `exactTerms`; `exactDisplay` is a
-display, meant to be read rather than parsed.
+The display renders exactly the terms beside it. Compute with `exactTerms`;
+the display is meant to be read rather than parsed.
 
-The one that misleads is the one a consumer meets first: the node's own
-`value` is a rational approximation flagged `semantics.approximate`, so it
-looks exact and is not. `exactDisplay` is what makes reading it unnecessary.
+The one that misleads is the node's own `value`: a rational approximation
+flagged `semantics.approximate`, so it looks exact and is not.
 
-`exactDisplay` renders the stored normal form faithfully, which means equal
-values can be written differently: `8 SQRT` gives `"sqrt(8)"` and
-`2 SQRT 2 SQRT +` gives `"2/1*sqrt(2)"`, and `=` decides they are the same
+The display renders the stored normal form faithfully, which means equal
+values can be written differently: `8 SQRT` gives `sqrt(8)` and
+`2 SQRT 2 SQRT +` gives `2/1*sqrt(2)`, and `=` decides they are the same
 number. Reducing the display would only move the discrepancy, by making the
 string disagree with the `exactTerms` beside it. Comparison decides equality
-here; string comparison does not. Neither field appears on a rational or a
-vector of rationals, whose `stackDisplay` is already exact.
+here; string comparison does not. `exactTerms` does not appear on a rational
+or a vector of rationals, whose `stackDisplay` is already the whole value.
 
 ### Diagnostics
 

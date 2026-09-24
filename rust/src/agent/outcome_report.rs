@@ -43,7 +43,7 @@ pub(crate) fn predict_outcomes(source: &str) -> OutcomeReport {
         return exact("error:malformedSource", &probe);
     };
     if check_structure(&tokens).is_err() {
-        return exact("error:structureError", &probe);
+        return exact("error:malformedSource", &probe);
     }
     let (mut interp, _names) = build_definitions_interpreter(source);
     let mut prediction = interp.predict_program_outcomes(&tokens);

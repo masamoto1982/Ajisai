@@ -15,6 +15,18 @@ const familyIds = new Set(families.families.map((family) => family.id));
 const manifestNames = new Set(manifest.entries.map((entry) => entry.canonical));
 const names = new Set();
 
+// `nilPolicy` is a summary of the operand roles (LANG.FAILURE.PASSTHROUGH),
+// never a choice of its own: two Words that treat their operands alike treat
+// a NIL alike. The summary names the strongest role present, in the order a
+// NIL meets them at dispatch.
+function derivedNilPolicy(roles, projecting) {
+  if (roles.length === 0) return 'preserveReason';
+  if (roles.includes('truth')) return 'kleeneAbsorbing';
+  if (roles.includes('data')) return projecting ? 'passthroughThenProject' : 'passthrough';
+  if (!roles.includes('element')) return projecting ? 'createsNil' : 'rejectNil';
+  return 'consumeNil';
+}
+
 for (const word of words.entries) {
   if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
   names.add(word.name);
@@ -25,6 +37,19 @@ for (const word of words.entries) {
   }
   if (word.vocabularyTier === 'kernel' && 'standardKind' in word) fail(`${word.name} is Kernel but declares standardKind`);
   if (!manifestNames.has(word.name)) fail(`${word.name} is absent from the frozen manifest`);
+  const operands = word.stack.operands;
+  if (typeof word.stack.inputs === 'number') {
+    if (!Array.isArray(operands) || operands.length !== word.stack.inputs) {
+      fail(`${word.name} declares ${word.stack.inputs} input(s) but ${operands?.length ?? 'no'} operand role(s)`);
+    } else if (word.nilPolicy !== derivedNilPolicy(operands, word.projection.when !== 'never')) {
+      fail(
+        `${word.name} declares nilPolicy ${word.nilPolicy}, but its operand roles [${operands.join(', ')}] ` +
+          `derive ${derivedNilPolicy(operands, word.projection.when !== 'never')}`,
+      );
+    }
+  } else if (operands !== undefined) {
+    fail(`${word.name} has data-dependent arity and must not declare operand roles`);
+  }
   for (const clause of word.clauses) if (!language.includes(`${clause} —`)) fail(`${word.name} references missing clause ${clause}`);
 
   // The executor key used to be written a second time on the Rust spec entry,

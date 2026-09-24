@@ -336,7 +336,7 @@ pub(crate) fn op_json_decode(interp: &mut Interpreter) -> Result<()> {
         restore(interp, operand);
         return Err(AjisaiError::declared(
             "nonText",
-            "JSON-DECODE: expected a String of JSON text",
+            "expected a String of JSON text",
         ));
     };
     // One pass over the text, charged before it runs.

@@ -30,7 +30,7 @@ fn operand_truth(value: &Value) -> Result<bool> {
     value.as_truth().ok_or_else(|| {
         AjisaiError::declared(
             "nonTruthValue",
-            "expected a truth value, got a non-truth value",
+            format!("expected a truth value, got {}", value.domain_name()),
         )
     })
 }

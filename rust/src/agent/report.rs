@@ -12,9 +12,7 @@ use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, ResourceUsage, RuntimeMetrics};
 use crate::semantic::AbsenceMetadata;
-use crate::types::value_protocol::{
-    exact_display, exact_terms, value_to_protocol, ProtocolNode, ProtocolValue,
-};
+use crate::types::value_protocol::{exact_terms, value_to_protocol, ProtocolNode, ProtocolValue};
 use crate::types::{Value, ValueData};
 use serde_json::{json, Map, Value as Json};
 
@@ -284,12 +282,8 @@ pub(super) fn semantics_json(value: &Value) -> Json {
     if matches!(value.data, ValueData::ExactScalar(_)) {
         obj.insert("approximate".into(), json!(true));
     }
-    // The same normal form in two shapes: the terms a consumer computes with,
-    // and one short string a reader can take in. Emitted together because they
-    // are derived together — see `value_protocol::exact_display`.
-    if let Some(display) = exact_display(value) {
-        obj.insert("exactDisplay".into(), json!(display));
-    }
+    // The terms a consumer computes with. The rendering a reader takes in is
+    // the stack display, which writes these same terms (`sqrt(2)`).
     if let Some(terms) = exact_terms(value) {
         obj.insert(
             "exactTerms".into(),
@@ -327,9 +321,7 @@ mod tests {
         assert_eq!(semantics["exactTerms"][0]["numerator"], "1");
         assert_eq!(semantics["exactTerms"][0]["denominator"], "1");
         assert_eq!(semantics["exactTerms"][0]["radicand"], "2");
-        // The mathematical rendering of those same terms, beside the source
-        // rendering `stackDisplay` gives and the rational approximation
-        // `value` gives.
-        assert_eq!(semantics["exactDisplay"], "sqrt(2)");
+        // The rendering is the stack display's, not a second field here.
+        assert!(semantics.get("exactDisplay").is_none());
     }
 }

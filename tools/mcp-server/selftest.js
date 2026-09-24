@@ -246,18 +246,17 @@ check(
     preface.includes(token)
   ),
 );
-// The short rendering only helps if the section teaching algebraic values
-// reaches it before the two renderings that mislead, so the order is part of
-// the fix rather than a stylistic choice. Scoped to that section: `§2` names
-// `stackDisplay` first for good reason, and that is not what this is about.
+// The algebraic section teaches the exact terms before the approximation that
+// misleads, so the order is part of the guidance rather than a stylistic
+// choice.
 const algebraicSection = preface
   .split(/^## /m)
-  .find((section) => section.includes("exactDisplay")) ?? "";
+  .find((section) => section.includes("exactTerms") && section.includes("approximate")) ?? "";
 check(
-  "the quickstart reaches the short algebraic rendering before the misleading ones",
-  algebraicSection.indexOf("exactDisplay") <= algebraicSection.indexOf("exactTerms") &&
-    algebraicSection.indexOf("exactDisplay") < algebraicSection.indexOf("stackDisplay") &&
-    algebraicSection.includes("approximate"),
+  "the quickstart teaches the exact terms before the approximation",
+  algebraicSection.length > 0 &&
+    algebraicSection.indexOf("exactTerms") < algebraicSection.indexOf("approximate") &&
+    algebraicSection.includes("stackDisplay"),
 );
 
 // Every example in the hand-written preface runs against the live backend. The
@@ -330,10 +329,10 @@ for (const goldenCase of golden.cases) {
   );
   // A field that must *not* be there. `expect` cannot say this: a missing
   // pointer and a pointer holding `null` both stringify to the same thing, so
-  // "absent" and "present and null" were indistinguishable. `exactDisplay` and
-  // `exactTerms` are meaningless on a rational — a short algebraic rendering
-  // of a number that has no radical would be a field inviting a reader to
-  // wonder what it means — and this is what pins their absence.
+  // "absent" and "present and null" were indistinguishable. `exactTerms` is
+  // meaningless on a rational — terms of a number that has no radical would
+  // be a field inviting a reader to wonder what it means — and this is what
+  // pins its absence.
   const unexpected = (goldenCase.expectAbsent ?? []).filter(
     (pointer) => atPointer(observed.structuredContent, pointer) !== undefined,
   );
@@ -499,13 +498,11 @@ if (compute.structuredContent?.error?.code === "backendUnavailable") {
       exactTerm?.denominator === "1" &&
       exactTerm?.radicand === "2",
   );
-  // The same normal form written short, and `stackDisplay` shows the same
-  // string for the whole slot; only `value` (a rational approximation) is
-  // not the number.
+  // `stackDisplay` writes those same terms; only `value` (a rational
+  // approximation) is not the number.
   check(
-    "compute writes the algebraic value short beside the terms it renders",
-    sqrt?.semantics?.exactDisplay === "sqrt(2)" &&
-      compute.structuredContent?.stackDisplay?.[0] === "[ sqrt(2) ]",
+    "compute renders the algebraic value from the terms it carries",
+    compute.structuredContent?.stackDisplay?.[0] === "[ sqrt(2) ]",
   );
   check(
     "compute reports engine provenance and applied limits",

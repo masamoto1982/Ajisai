@@ -227,6 +227,18 @@
       },
       "outputs": {
        "$ref": "#/$defs/arity"
+      },
+      "operands": {
+       "description": "What the Word does with each operand, first-pushed first (LANG.FAILURE.PASSTHROUGH). `data`: the Word reads it, so an absent operand makes the result that absence. `element`: the Word carries it without reading it, so a NIL is an ordinary value. `program`: a block it evaluates, a name it binds, defines or looks up, or a message it raises, so a NIL there is malformed use. `truth`: read in truth position, where a NIL is UNKNOWN (LANG.VALUES.TRUTH). Present exactly when `inputs` is a fixed count, with one role per operand.",
+       "type": "array",
+       "items": {
+        "enum": [
+         "data",
+         "element",
+         "program",
+         "truth"
+        ]
+       }
       }
      },
      "additionalProperties": false

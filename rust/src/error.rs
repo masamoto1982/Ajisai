@@ -147,7 +147,6 @@ impl ResourceLimit {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorCategory {
     StackUnderflow,
-    StructureError,
     UnknownWord,
     DivisionByZero,
     VectorLengthMismatch,
@@ -173,7 +172,6 @@ impl ErrorCategory {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             ErrorCategory::StackUnderflow => "stackUnderflow",
-            ErrorCategory::StructureError => "structureError",
             ErrorCategory::UnknownWord => "unknownWord",
             ErrorCategory::DivisionByZero => "divisionByZero",
             ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
@@ -192,7 +190,6 @@ impl ErrorCategory {
     pub fn from_error(err: &AjisaiError) -> Self {
         match err {
             AjisaiError::StackUnderflow => ErrorCategory::StackUnderflow,
-            AjisaiError::StructureError { .. } => ErrorCategory::StructureError,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
             AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
             AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
@@ -259,10 +256,6 @@ impl NilReason {
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
     StackUnderflow,
-    StructureError {
-        expected: String,
-        got: String,
-    },
     UnknownWord(String),
     DivisionByZero,
     VectorLengthMismatch {
@@ -342,17 +335,17 @@ pub enum AjisaiError {
     DeclaredCondition {
         condition: &'static str,
         message: String,
+        /// The Word the failure belongs to, attached once by the dispatcher
+        /// as the error leaves that Word (`execute_generated_word`). The
+        /// message itself never spells the Word's name: every declared
+        /// message is written "expected …, got …", and `Display` prefixes the
+        /// name, so every one reads `WORD: expected …` and no raise site can
+        /// forget, misspell, or borrow another Word's name.
+        word: Option<&'static str>,
     },
 }
 
 impl AjisaiError {
-    pub fn create_structure_error(expected: &str, got: &str) -> Self {
-        AjisaiError::StructureError {
-            expected: expected.to_string(),
-            got: got.to_string(),
-        }
-    }
-
     /// Raise the named condition from the failing Word's `errorWhen`.
     ///
     /// `condition` has to be a condition that Word declares — the diagnosis
@@ -367,6 +360,28 @@ impl AjisaiError {
         AjisaiError::DeclaredCondition {
             condition,
             message: message.into(),
+            word: None,
+        }
+    }
+
+    /// Attach the Word a declared failure belongs to, if none is attached
+    /// yet. The innermost Word wins: an error raised by `ADD` inside a `MAP`
+    /// block is `ADD`'s, and `MAP` passing it on does not relabel it.
+    ///
+    /// `declaredFailure` is the program's own text (`FAIL`), so it is left as
+    /// the program wrote it.
+    pub fn attributed_to(self, name: &'static str) -> Self {
+        match self {
+            AjisaiError::DeclaredCondition {
+                condition,
+                message,
+                word: None,
+            } if condition != "declaredFailure" => AjisaiError::DeclaredCondition {
+                condition,
+                message,
+                word: Some(name),
+            },
+            other => other,
         }
     }
 }
@@ -375,9 +390,6 @@ impl fmt::Display for AjisaiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AjisaiError::StackUnderflow => write!(f, "Stack underflow"),
-            AjisaiError::StructureError { expected, got } => {
-                write!(f, "Structure error: expected {}, got {}", expected, got)
-            }
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
@@ -449,6 +461,11 @@ impl fmt::Display for AjisaiError {
             AjisaiError::BuiltinProtection { word, operation } => {
                 write!(f, "Cannot {} built-in word: {}", operation, word)
             }
+            AjisaiError::DeclaredCondition {
+                message,
+                word: Some(word),
+                ..
+            } => write!(f, "{}: {}", word, message),
             AjisaiError::DeclaredCondition { message, .. } => write!(f, "{}", message),
         }
     }

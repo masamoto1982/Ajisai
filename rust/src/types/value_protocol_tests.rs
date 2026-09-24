@@ -119,19 +119,16 @@ fn algebraic_exact_terms_are_lossless_decimal_strings() {
     );
 }
 
-/// `exactDisplay` renders the same normal form `exactTerms` carries, in
-/// mathematical notation. `stackDisplay` writes the same value as Ajisai
-/// source; the node's own `value` is an approximation.
-///
-/// Every rendering decision is pinned here rather than through the CLI,
-/// because both host serializers call this one function and neither adds any
-/// formatting of its own.
+/// The stack display of an algebraic value writes the same normal form
+/// `exactTerms` carries, as one short token; the node's own `value` is an
+/// approximation. There is no second rendering field: every host shows the
+/// stack display, so this pins it.
 #[test]
-fn algebraic_exact_display_writes_the_normal_form_short() {
+fn algebraic_stack_display_writes_the_normal_form_short() {
     use crate::types::exact::ExactReal;
-    use crate::types::value_protocol::{exact_display, exact_terms};
+    use crate::types::value_protocol::exact_terms;
 
-    let display = |value: &Value| exact_display(value).expect("an algebraic value renders short");
+    let display = |value: &Value| value.to_string();
     let sqrt_of = |n: i64| {
         Value::from_exact_real(
             ExactReal::from_sqrt_rational(frac(n)).expect("a supported algebraic square root"),
@@ -157,16 +154,14 @@ fn algebraic_exact_display_writes_the_normal_form_short() {
     };
     assert_eq!(display(&two_sqrt2), "2/1*sqrt(2)");
 
-    // Present exactly when `exactTerms` is: one fact in two shapes, so a
-    // reader is never left choosing which field to believe.
+    // Only an algebraic value carries terms.
     for value in [scalar(3), vector(vec![scalar(1)]), Value::nil()] {
-        assert_eq!(exact_display(&value), None, "{value:?} has no normal form");
         assert_eq!(exact_terms(&value), None, "{value:?} has no normal form");
     }
 
     // The stored form is rendered faithfully, including the case where two
     // equal values hold different terms. Reducing `sqrt(8)` to `2/1*sqrt(2)`
-    // here would make the string disagree with the `exactTerms` beside it.
+    // here would make the display disagree with the `exactTerms` beside it.
     assert_eq!(display(&sqrt_of(8)), "sqrt(8)");
 }
 

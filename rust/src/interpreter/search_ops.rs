@@ -20,10 +20,10 @@ fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
     interp.stack.extend(operands);
 }
 
-fn non_vector(word: &str) -> AjisaiError {
+fn non_vector(got: &Value) -> AjisaiError {
     AjisaiError::declared(
         "nonVector",
-        format!("{word}: expected a Vector, got a non-vector value"),
+        format!("expected a Vector, got {}", got.domain_name()),
     )
 }
 
@@ -34,8 +34,9 @@ fn non_vector(word: &str) -> AjisaiError {
 pub fn op_member(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(elements) = operands[0].as_vector_view().map(|view| view.into_owned()) else {
+        let err = non_vector(&operands[0]);
         restore_operands(interp, operands);
-        return Err(non_vector("MEMBER"));
+        return Err(err);
     };
 
     // One hash pass over the vector, priced as UNIQUE's is: the fixed
@@ -100,8 +101,9 @@ fn lower_bound(sorted: &[Value], key: &Value) -> Result<Found> {
 pub fn op_bsearch(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(sorted) = operands[0].as_vector_view().map(|view| view.into_owned()) else {
+        let err = non_vector(&operands[0]);
         restore_operands(interp, operands);
-        return Err(non_vector("BSEARCH"));
+        return Err(err);
     };
 
     // The order check walks the vector once; priced like INDEX-OF's miss.
@@ -118,7 +120,7 @@ pub fn op_bsearch(interp: &mut Interpreter) -> Result<()> {
                 restore_operands(interp, operands);
                 return Err(AjisaiError::declared(
                     "unsortedInput",
-                    "BSEARCH: expected an ascending Vector, got one that is not in order",
+                    "expected an ascending Vector, got one that is not in order",
                 ));
             }
             Ok(_) => {}

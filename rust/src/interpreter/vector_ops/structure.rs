@@ -22,23 +22,23 @@ fn concat_values(left: &Value, right: &Value) -> Value {
 fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
     let child = args_val
         .child(index)
-        .ok_or_else(|| AjisaiError::declared("invalidRange", format!("RANGE missing {}", label)))?;
+        .ok_or_else(|| AjisaiError::declared("invalidRange", format!("expected a {}", label)))?;
     let bigint = extract_bigint_from_value(&child).map_err(|_| {
-        AjisaiError::declared(
-            "invalidRange",
-            format!("RANGE {} must be an integer", label),
-        )
+        AjisaiError::declared("invalidRange", format!("the {} must be an integer", label))
     })?;
-    bigint.to_i64().ok_or_else(|| {
-        AjisaiError::declared("invalidRange", format!("RANGE {} is too large", label))
-    })
+    bigint
+        .to_i64()
+        .ok_or_else(|| AjisaiError::declared("invalidRange", format!("the {} is too large", label)))
 }
 
 fn parse_range_args(args_val: &Value) -> Result<(i64, i64, i64)> {
     if !args_val.is_vector() {
         return Err(AjisaiError::declared(
             "invalidRange",
-            "RANGE requires [start end] or [start end step]",
+            format!(
+                "expected [ start end ] or [ start end step ], got {}",
+                args_val.domain_name()
+            ),
         ));
     }
 
@@ -46,7 +46,7 @@ fn parse_range_args(args_val: &Value) -> Result<(i64, i64, i64)> {
     if !(2..=3).contains(&n) {
         return Err(AjisaiError::declared(
             "invalidRange",
-            "RANGE requires [start end] or [start end step]",
+            format!("expected [ start end ] or [ start end step ], got {n} element(s)"),
         ));
     }
 
@@ -85,7 +85,11 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let base = interp.stack.len() - 2;
     let operands: Vec<Value> = interp.stack.split_off(base).into_values();
 
-    if operands.iter().any(|operand| !operand.is_vector()) {
+    if let Some(got) = operands
+        .iter()
+        .find(|operand| !operand.is_vector())
+        .map(|operand| operand.domain_name())
+    {
         // The operands were already taken off; put them back so the
         // stack a reader inspects after the error is the one they wrote.
         for operand in operands {
@@ -93,7 +97,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         }
         return Err(AjisaiError::declared(
             "nonVector",
-            "CONCAT: expected two Vectors, got a non-vector operand",
+            format!("expected two Vectors, got {got}"),
         ));
     }
 
@@ -251,10 +255,11 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
     let count_bigint = match extract_bigint_from_value(&count_val) {
         Ok(bi) => bi,
         Err(_) => {
+            let got = crate::types::display::describe_operand(&count_val);
             interp.stack.push(count_val);
             return Err(AjisaiError::declared(
                 "invalidCount",
-                "COLLECT: expected an integer count, got another format",
+                format!("expected an integer count, got {got}"),
             ));
         }
     };

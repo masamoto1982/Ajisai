@@ -20,13 +20,14 @@ fn pop_vector_and_target(interp: &mut Interpreter, _word: &str) -> Result<(Vec<V
             Ok((vector, operands[1].clone()))
         }
         None => {
+            let got = operands[0].domain_name();
             restore_operands(interp, operands);
             // A noun phrase, not a sentence: the template around it already
             // says "expected _, got _", and the failing Word's name is the
             // diagnosis locus rather than part of the message.
             Err(AjisaiError::declared(
                 "nonVector",
-                "INDEX-OF: expected a Vector, got a non-vector value",
+                format!("expected a Vector, got {got}"),
             ))
         }
     }

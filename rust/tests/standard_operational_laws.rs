@@ -97,9 +97,11 @@ async fn scan_is_lane_for_lane_where_fold_is_seed_shaped() {
     absent_scan.execute("NIL 7 [ ADD ] SCAN").await.unwrap();
     assert_eq!(rendered_stack(&absent_scan), ["NIL"]);
 
+    // An absent Vector is data to both (LANG.FAILURE.PASSTHROUGH): the
+    // absence is the result, not the seed standing in for an empty fold.
     let mut absent_fold = Interpreter::new();
     absent_fold.execute("NIL 7 [ ADD ] FOLD").await.unwrap();
-    assert_eq!(rendered_stack(&absent_fold), ["7/1"]);
+    assert_eq!(rendered_stack(&absent_fold), ["NIL"]);
 }
 
 #[tokio::test]

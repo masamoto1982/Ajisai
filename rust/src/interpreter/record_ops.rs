@@ -31,11 +31,12 @@ fn push_record(interp: &mut Interpreter, record: RecordData) {
     interp.stack.push(Value::from_record(record));
 }
 
-/// The declared `nonRecord` condition, naming the Word and the position.
-fn non_record(word: &str, position: &str) -> AjisaiError {
+/// The declared `nonRecord` condition, naming the position and what was
+/// found there.
+fn non_record(position: &str, got: &Value) -> AjisaiError {
     AjisaiError::declared(
         "nonRecord",
-        format!("{word}: expected a Record as {position}, got a non-record value"),
+        format!("expected a Record as {position}, got {}", got.domain_name()),
     )
 }
 
@@ -73,7 +74,7 @@ pub fn op_record(interp: &mut Interpreter) -> Result<()> {
             RecordBuildError::DuplicateKey { first, second } => AjisaiError::declared(
                 "duplicateKey",
                 format!(
-                    "RECORD: the key at position {second} repeats the key at position {first}; \
+                    "the key at position {second} repeats the key at position {first}; \
                      a Record holds each key once"
                 ),
             ),
@@ -95,8 +96,9 @@ pub fn op_record(interp: &mut Interpreter) -> Result<()> {
 pub fn op_keys(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     let Some(record) = operand.as_record() else {
+        let err = non_record("its operand", &operand);
         restore(interp, operand);
-        return Err(non_record("KEYS", "its operand"));
+        return Err(err);
     };
     let keys = Value::from_vector(record.keys().to_vec());
     interp.stack.push(keys);
@@ -107,8 +109,9 @@ pub fn op_keys(interp: &mut Interpreter) -> Result<()> {
 pub fn op_values(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     let Some(record) = operand.as_record() else {
+        let err = non_record("its operand", &operand);
         restore(interp, operand);
-        return Err(non_record("VALUES", "its operand"));
+        return Err(err);
     };
     let values = Value::from_vector(record.values().to_vec());
     interp.stack.push(values);
@@ -119,8 +122,9 @@ pub fn op_values(interp: &mut Interpreter) -> Result<()> {
 pub fn op_at(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(record) = operands[0].as_record() else {
+        let err = non_record("the first operand", &operands[0]);
         restore_all(interp, operands);
-        return Err(non_record("AT", "the first operand"));
+        return Err(err);
     };
     let answer = match record.get(&operands[1]) {
         Some(value) => value.clone(),
@@ -138,12 +142,14 @@ pub fn op_at(interp: &mut Interpreter) -> Result<()> {
 pub fn op_with(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 3)?;
     let Some(record) = operands[0].as_record() else {
+        let err = non_record("the first operand", &operands[0]);
         restore_all(interp, operands);
-        return Err(non_record("WITH", "the first operand"));
+        return Err(err);
     };
     if operands[1].is_operational_nil() {
+        let err = non_record("the key", &operands[1]);
         restore_all(interp, operands);
-        return Err(non_record("WITH", "the key (got NIL)"));
+        return Err(err);
     }
     let next = record.with(operands[1].clone(), operands[2].clone());
     push_record(interp, next);
@@ -154,8 +160,9 @@ pub fn op_with(interp: &mut Interpreter) -> Result<()> {
 pub fn op_without(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(record) = operands[0].as_record() else {
+        let err = non_record("the first operand", &operands[0]);
         restore_all(interp, operands);
-        return Err(non_record("WITHOUT", "the first operand"));
+        return Err(err);
     };
     match record.without(&operands[1]) {
         Some(next) => {
@@ -172,8 +179,9 @@ pub fn op_without(interp: &mut Interpreter) -> Result<()> {
 pub fn op_has(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(record) = operands[0].as_record() else {
+        let err = non_record("the first operand", &operands[0]);
         restore_all(interp, operands);
-        return Err(non_record("HAS?", "the first operand"));
+        return Err(err);
     };
     let present = record.has(&operands[1]);
     interp.stack.push(Value::from_bool(present));
@@ -184,13 +192,14 @@ pub fn op_has(interp: &mut Interpreter) -> Result<()> {
 pub fn op_merge(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let (Some(left), Some(right)) = (operands[0].as_record(), operands[1].as_record()) else {
-        let position = if operands[0].as_record().is_none() {
-            "the first operand"
+        let (position, got) = if operands[0].as_record().is_none() {
+            ("the first operand", &operands[0])
         } else {
-            "the second operand"
+            ("the second operand", &operands[1])
         };
+        let err = non_record(position, got);
         restore_all(interp, operands);
-        return Err(non_record("MERGE", position));
+        return Err(err);
     };
     if let Err(e) = charge_key_scan(interp, right.keys()) {
         restore_all(interp, operands);

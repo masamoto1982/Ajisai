@@ -92,8 +92,8 @@ pub(super) fn format_fraction(f: &Fraction) -> String {
 
 /// Display an `ExactReal`. A rational writes as `numerator/denominator`;
 /// an algebraic irrational writes its normal form as one token —
-/// `sqrt(2)`, `1/2*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` — the same
-/// string the host protocol's `exactDisplay` carries. It is a display, not
+/// `sqrt(2)`, `1/2*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)`, rendering the
+/// same terms the host protocol's `exactTerms` carries. It is a display, not
 /// source: no literal denotes an irrational, and a Vector literal would read
 /// `2 SQRT` as a number and a Symbol. Written without spaces so that inside a
 /// Vector it still reads as one element. Nothing is truncated or
@@ -139,6 +139,16 @@ pub(crate) fn render_algebraic_terms(terms: &[(Fraction, BigInt)]) -> String {
         }
     }
     out
+}
+
+/// What an error message says it got: a Scalar by its value, because for a
+/// count or an index the wrong number is the whole fault (`got 1/2`), and
+/// every other operand by its domain (`got String`).
+pub fn describe_operand(value: &Value) -> String {
+    match &value.data {
+        ValueData::Scalar(_) | ValueData::ExactScalar(_) => value.to_string(),
+        _ => value.domain_name().to_string(),
+    }
 }
 
 /// Render a value for an **output** boundary (`PRINT`, LANG.EFFECTS.OUTPUT).

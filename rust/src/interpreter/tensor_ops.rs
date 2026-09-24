@@ -35,17 +35,17 @@ impl FlatTensor {
     /// Every caller reaches this only through the arithmetic-broadcast
     /// machinery (`apply_lane_wise_broadcast`, `apply_binary_broadcast_with_metrics`)
     /// on behalf of ADD/SUB/MUL/DIV, which all declare
-    /// `nonNumeric` uniformly — so a non-numeric operand's `StructureError`
+    /// `nonNumeric` uniformly — so a non-numeric operand's error
     /// is remapped directly here, not at each caller.
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
-            ValueData::Nil => Err(AjisaiError::create_structure_error(
-                "a non-NIL value",
-                "NIL",
+            ValueData::Nil => Err(AjisaiError::declared(
+                "nonNumeric",
+                "expected a Scalar or a Vector, got NIL",
             )),
             ValueData::Text(_) => Err(AjisaiError::declared(
                 "nonNumeric",
-                "expected a number or vector, got a string",
+                "expected a Scalar or a Vector, got String",
             )),
             // A Record never reaches the flat kernels: `record_lift` peels
             // it value by value first, so one here is a route error.
@@ -96,12 +96,13 @@ impl FlatTensor {
         } else {
             shape.iter().product()
         };
-        if data.len() != expected {
-            return Err(AjisaiError::create_structure_error(
-                &format!("{} element(s) for shape {:?}", expected, shape),
-                &format!("{} element(s)", data.len()),
-            ));
-        }
+        // Every caller builds `data` from `shape`, so a mismatch is a
+        // broadcast bug, not an operand the program could have written.
+        assert_eq!(
+            data.len(),
+            expected,
+            "a flat tensor holds exactly the elements its shape {shape:?} names"
+        );
         let strides: Vec<usize> = compute_strides(&shape);
         Ok(Self {
             data,
@@ -346,12 +347,12 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy + Sync,
 {
     if a.is_nil() || b.is_nil() {
-        // Defensive: callers pass through a NIL operand before reaching here
-        // (LANG.FAILURE.PASSTHROUGH), so this is an invariant guard rather
-        // than a condition any Word's contract names.
-        return Err(AjisaiError::create_structure_error(
-            "two non-NIL operands to broadcast",
-            "a NIL operand",
+        // Defensive: the dispatcher passes a NIL operand through before a
+        // numeric Word runs (LANG.FAILURE.PASSTHROUGH). Every caller declares
+        // `nonNumeric`, and a NIL is not a Scalar.
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            "expected a Scalar or a Vector, got NIL",
         ));
     }
 
@@ -444,9 +445,9 @@ where
         }
         None => {
             let Some(f) = broadcast_leaf(val) else {
-                return Err(AjisaiError::create_structure_error(
-                    "number or vector",
-                    "non-numeric value",
+                return Err(AjisaiError::declared(
+                    "nonNumeric",
+                    format!("expected a Scalar or a Vector, got {}", val.domain_name()),
                 ));
             };
             Ok(Value::from_fraction(op(&f)))

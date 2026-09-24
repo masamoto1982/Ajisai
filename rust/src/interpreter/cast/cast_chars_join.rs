@@ -1,7 +1,4 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::cast::cast_value_helpers::{
-    is_boolean_value, is_number_value, try_char_from_value,
-};
 use crate::interpreter::Interpreter;
 use crate::types::Value;
 
@@ -9,11 +6,11 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let Some(text) = val.as_text() else {
-        let got = describe_domain(&val);
+        let got = val.domain_name();
         interp.stack.push(val);
         return Err(AjisaiError::declared(
             "nonText",
-            format!("CHARS: expected String, got {got}"),
+            format!("expected a String, got {got}"),
         ));
     };
 
@@ -29,77 +26,34 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let Some(children) = val.as_vector_view().map(|v| v.into_owned()) else {
-        let got = describe_domain(&val);
+        let got = val.domain_name();
         interp.stack.push(val);
         return Err(AjisaiError::declared(
             "nonTextVector",
-            format!("JOIN: expected Vector, got {got}"),
+            format!("expected a Vector, got {got}"),
         ));
     };
 
+    // Only Strings: a String is a value domain of its own, not a Vector of
+    // code points (LANG.VALUES.DISJOINT), and CHARS, JOIN's inverse, yields
+    // one-character Strings. Taking an integer as a code point here was the
+    // one place a number still stood for a character, and nothing produced
+    // one to pass.
     let mut result = String::new();
     for (i, elem) in children.iter().enumerate() {
-        // A String element contributes its content; an integer element is
-        // taken as a code point, which is what `core-join-mixed-text-and-
-        // codepoints` pins. Accepting both is a Word-level choice about JOIN's
-        // input domains, not a claim that the two are the same value.
-        if let Some(text) = elem.as_text() {
-            result.push_str(text);
-            continue;
-        }
-
-        if is_number_value(elem) {
-            match try_char_from_value(elem) {
-                Some(c) => {
-                    result.push(c);
-                    continue;
-                }
-                None => {
-                    interp.stack.push(val);
-                    return Err(AjisaiError::declared(
-                        "nonTextElement",
-                        format!("JOIN: invalid character code at index {}", i),
-                    ));
-                }
-            }
-        }
-
-        let type_name = if elem.is_nil() {
-            "nil"
-        } else if is_boolean_value(elem) {
-            "boolean"
-        } else {
-            "other format"
+        let Some(text) = elem.as_text() else {
+            let got = elem.domain_name();
+            interp.stack.push(val);
+            return Err(AjisaiError::declared(
+                "nonTextElement",
+                format!("expected a Vector of Strings, got {got} at index {i}"),
+            ));
         };
-        interp.stack.push(val);
-        return Err(AjisaiError::declared(
-            "nonTextElement",
-            format!(
-                "JOIN: all elements must be strings, found {} at index {}",
-                type_name, i
-            ),
-        ));
+        result.push_str(text);
     }
 
     interp.stack.push(Value::from_string(&result));
     Ok(())
-}
-
-/// The operand's domain, named for an error message.
-fn describe_domain(val: &Value) -> &'static str {
-    if val.is_nil() {
-        "Nil"
-    } else if val.is_text() {
-        "String"
-    } else if is_number_value(val) {
-        "Number"
-    } else if is_boolean_value(val) {
-        "Boolean"
-    } else if val.is_vector() {
-        "Vector"
-    } else {
-        "other format"
-    }
 }
 
 #[cfg(test)]

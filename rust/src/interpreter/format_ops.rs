@@ -104,17 +104,18 @@ fn spell(n: &BigInt, digits: u64) -> String {
 pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
     let operands = extract_operands(interp, 2)?;
     let Some(x) = exact_real_of(&operands[0]) else {
+        let got = operands[0].domain_name();
         restore_all(interp, operands);
         return Err(AjisaiError::declared(
             "nonNumeric",
-            "FORMAT: expected an exact scalar as the value, got a non-numeric operand",
+            format!("expected a Scalar as the value, got {got}"),
         ));
     };
     let Some(digits) = digit_count(&operands[1]) else {
         restore_all(interp, operands);
         return Err(AjisaiError::declared(
             "invalidCount",
-            "FORMAT: expected a non-negative integer digit count",
+            "expected a non-negative integer digit count",
         ));
     };
     // Every digit is a decimal place of big-integer work.

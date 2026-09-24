@@ -48,15 +48,6 @@ pub(crate) fn format_fraction_to_string(f: &Fraction) -> String {
     }
 }
 
-pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
-    let f: &Fraction = val.as_scalar()?;
-    let code: i64 = f.to_i64()?;
-    if !(0..=0x10FFFF).contains(&code) {
-        return None;
-    }
-    char::from_u32(code as u32)
-}
-
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
     if value.is_nil() {
         return "NIL".to_string();

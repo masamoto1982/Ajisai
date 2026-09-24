@@ -66,7 +66,7 @@ async fn a_named_condition_is_one_the_word_declares() {
         ("42 CONTRACT", "CONTRACT"),
         ("[ 1 2 ] 5 MAP", "MAP"),
         ("TRUE NUM", "NUM"),
-        ("NIL NUM", "NUM"),
+        ("NIL EXEC", "EXEC"),
         ("[ 0 5 0 ] RANGE", "RANGE"),
         ("[ 5 0 1 ] RANGE", "RANGE"),
         ("[ 'y' ] [ 'n' ] 1 SELECT", "SELECT"),

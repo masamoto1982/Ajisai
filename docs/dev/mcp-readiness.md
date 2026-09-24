@@ -204,8 +204,10 @@ Completed:
   corpus and engine, so that gate is exact rather than machine-dependent.
   Diagnosis-observation and diagnosis-driven repair rates were re-scored after
   the change and are unmoved.
-- **An algebraic value can be read without decoding anything.**
-  `semantics.exactDisplay` writes the multiquadratic normal form as one short
+- **An algebraic value can be read without decoding anything.** *(Superseded:
+  once `stackDisplay` itself rendered the normal form as one exact token,
+  `exactDisplay` duplicated it and was removed; the record below is kept as
+  history.)* `semantics.exactDisplay` wrote the multiquadratic normal form as one short
   string — `sqrt(2)`, `2/1*sqrt(2)`, `1/1+sqrt(2)`, `sqrt(2)-sqrt(3)` —
   beside the `exactTerms` it renders. Both derive from a single extraction in
   `value_protocol.rs`, both host serializers emit them together, and

@@ -170,10 +170,11 @@ impl Interpreter {
         &mut self,
         word: &'static crate::kernel::generated::GeneratedWord,
     ) -> Result<()> {
-        if let Some(decided) = self.apply_declared_nil_contract(word) {
-            return decided;
-        }
-        self.execute_builtin_by_id(word.id)
+        let result = match self.apply_declared_nil_contract(word) {
+            Some(decided) => decided,
+            None => self.execute_builtin_by_id(word.id),
+        };
+        result.map_err(|err| err.attributed_to(word.name))
     }
 
     /// Run the primitive for a Word's canonical identity.

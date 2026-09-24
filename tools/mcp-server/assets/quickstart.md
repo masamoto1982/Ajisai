@@ -131,29 +131,27 @@ result of
 2 SQRT
 ```
 
-read either of these two fields, in this order:
+the two fields to read are:
 
-- **`semantics.exactDisplay`** — the value written short: `"sqrt(2)"`, the same
-  string `stackDisplay` shows for it. Read this first. It is a display: read
-  it, do not parse it.
+- **`stackDisplay`** — the value written as one token: `"sqrt(2)"`,
+  `"1/2*sqrt(2)"`, `"1/1+sqrt(2)"`. It is exact and never truncated. It is a
+  display: read it, do not parse it.
 - **`semantics.exactTerms`** — the value itself: a list of
   `{ numerator, denominator, radicand }` terms meaning `Σ (n/d)·√radicand`,
   arbitrary-precision integers as strings. Compute with this.
 
-They are the same fact in two shapes and always appear together. One *other*
-field on that same result is **not** the value, and reading it as if it were
-will mislead you:
+The display renders exactly these terms. One *other* field on that same result
+is **not** the value, and reading it as if it were will mislead you:
 
 - `value.numerator / value.denominator` is a rational *approximation*, marked
   `semantics.approximate: true`. It is a convenience, not the number.
 
-Neither `exactDisplay` nor `exactTerms` appears on a plain rational or a vector
-of rationals — there is no radical to write, and `stackDisplay` is already
-exact for those.
+`exactTerms` does not appear on a plain rational or a vector of rationals —
+there is no radical to write, and `stackDisplay` is already the whole value.
 
-One caution about `exactDisplay`: it writes the stored form faithfully, so two
+One caution about the display: it writes the stored form faithfully, so two
 values that *are* equal can be written differently — `8 SQRT` gives
-`"sqrt(8)"` and `2 SQRT 2 SQRT +` gives `"2/1*sqrt(2)"`. Never compare these
+`sqrt(8)` and `2 SQRT 2 SQRT +` gives `2/1*sqrt(2)`. Never compare these
 strings to decide equality. Ask Ajisai, which decides on the exact value:
 
 ```ajisai tool=compute status=ok stack="TRUE"
@@ -394,7 +392,7 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: SELECT is `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.
 - **SELECT needs a truth value, not a number** — `[ 'y' ] [ 'n' ] 1 SELECT`
-  → exit 1, `message: "expected a truth value, got a non-truth value"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "SELECT: expected a truth value, got Scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] EQ NOT`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
@@ -402,15 +400,15 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkDisagreeingAxis`.
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
-  → exit 1, `message: "NUM: expected String, got Boolean"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "NUM: expected a String, got Boolean"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: NUM accepts strings: `'42' NUM`. There is no boolean→number cast.
 - **Old two-vector RANGE form** — `[ 0 ] [ 5 ] RANGE`
-  → exit 1, `message: "RANGE requires [start end] or [start end step]"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "RANGE: expected [ start end ] or [ start end step ], got 1 element(s)"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).
 - **Vector-wrapped string passed to a cast** — `[ '42' ] NUM`
-  → exit 1, `message: "NUM: expected String input"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "NUM: expected a String, got Vector"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: String casts take the bare string: `'42' NUM`.
 

@@ -38,7 +38,7 @@ pub(super) fn elements_of(value: &Value, expected: &str) -> Result<Vec<Value>> {
         // six, unlike Phase 2's shared-helper cases, so the remap is safe here.
         None => Err(AjisaiError::declared(
             "nonVector",
-            format!("expected {}, got a non-vector value", expected),
+            format!("expected {}, got {}", expected, value.domain_name()),
         )),
     }
 }

@@ -8,10 +8,20 @@
 //! algebraic field decides exactly through `ExactReal::cmp_exact`. Every pair
 //! decides.
 
-use crate::error::{AjisaiError, Result};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
+
+/// An operand the exact order is not defined on, named by its domain. Not an
+/// `AjisaiError`: each comparing Word declares its own condition for this
+/// (`nonNumeric`, `nonComparableElement`, `unsupportedComparison`), so the
+/// caller names it.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct NotComparable {
+    pub got: &'static str,
+}
+
+type Result<T> = std::result::Result<T, NotComparable>;
 
 /// One of the four ordering comparisons. Carries the dispatch decision
 /// through the scalar-comparison helper, which keeps the Fraction fast path
@@ -94,8 +104,7 @@ pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<std::cmp
     }
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
-    a.cmp_exact(&b)
-        .ok_or_else(|| AjisaiError::create_structure_error("scalar value", "NIL"))
+    a.cmp_exact(&b).ok_or(NotComparable { got: "NIL" })
 }
 
 /// Extract an `ExactReal` view of a value's scalar content for
@@ -118,31 +127,17 @@ pub(crate) fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
             // Provide best rational approximation for contexts requiring a Fraction
             use num_bigint::BigInt;
             er.best_rational_approximation(&BigInt::from(1_000_000_000u64))
-                .ok_or_else(|| {
-                    AjisaiError::create_structure_error("scalar value", "non-rational ExactReal")
-                })
+                .ok_or(NotComparable { got: "Scalar" })
         }
-        ValueData::Text(_) => Err(AjisaiError::create_structure_error(
-            "scalar value",
-            "string",
-        )),
         // A Vector never reaches the scalar law: `lift_comparison` peels it
         // element-wise first. A one-element Vector used to project to its sole
         // element here, which made `[ 3 ] 4 LT` answer `TRUE` — a collapse
         // LANG.COLLECTIONS.LIFT forbids ("a scalar combines with every element
         // of a vector"), and one that contradicts a singleton Vector not being
         // its element (LANG.VALUES.DISJOINT).
-        ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record(_) => Err(
-            AjisaiError::create_structure_error("scalar value", "non-scalar value"),
-        ),
-        ValueData::Nil => Err(AjisaiError::create_structure_error(
-            "scalar value",
-            "non-scalar value",
-        )),
-        ValueData::Boolean(_) | ValueData::Symbol(_) => Err(AjisaiError::create_structure_error(
-            "scalar value",
-            "non-scalar value",
-        )),
+        _ => Err(NotComparable {
+            got: val.domain_name(),
+        }),
     }
 }
 
