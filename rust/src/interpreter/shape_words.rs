@@ -90,10 +90,11 @@ fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     let value = take_operand(interp)?;
     if !is_vector_value(&value) {
+        let got = value.domain_name();
         restore(interp, value);
         return Err(AjisaiError::declared(
             "nonVector",
-            "SHAPE: expected a Vector, got a non-vector value",
+            format!("expected a Vector, got {got}"),
         ));
     }
     let answer = match rectangular_shape(&value) {
@@ -179,7 +180,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
             put_back(interp, target, shape_val);
             return Err(AjisaiError::declared(
                 "invalidShape",
-                "RESHAPE: expected a shape — a Vector of positive integers — got an invalid shape",
+                "expected a shape: a non-empty Vector of positive integers",
             ));
         }
     };
@@ -210,7 +211,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::declared(
             "invalidShape",
             format!(
-                "RESHAPE: the shape holds {} element(s) but the Vector has {} leaf value(s)",
+                "the shape holds {} element(s) but the Vector has {} leaf value(s)",
                 total,
                 leaves.len()
             ),

@@ -105,12 +105,13 @@ fn run_accumulator_walk(
     }
 
     if !is_vector_value(&target_val) {
+        let got = target_val.domain_name();
         interp.stack.push(target_val);
         interp.stack.push(init_val);
         interp.stack.push(code_val);
         return Err(AjisaiError::declared(
             "nonVector",
-            format!("{word}: expected a Vector, got a non-vector value"),
+            format!("expected a Vector, got {got}"),
         ));
     }
 
@@ -149,7 +150,7 @@ fn run_accumulator_walk(
                 None => {
                     error = Some(AjisaiError::declared(
                         "blockContractViolation",
-                        format!("{word}: expected return value, got empty stack"),
+                        "expected the block to leave one value, and it left none",
                     ));
                     break;
                 }

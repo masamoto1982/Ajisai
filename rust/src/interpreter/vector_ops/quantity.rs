@@ -65,13 +65,6 @@ enum Split {
 }
 
 impl Split {
-    fn name(self) -> &'static str {
-        match self {
-            Split::Take => "TAKE",
-            Split::Drop => "DROP",
-        }
-    }
-
     fn bounds(self, len: usize, count: i64) -> Option<(usize, usize)> {
         match self {
             Split::Take => compute_take_bounds(len, count),
@@ -108,10 +101,11 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
             // was the third most expensive linear Word in the family.
             target_val.len()
         } else {
+            let got = target_val.domain_name();
             interp.stack.push(target_val);
             return Err(AjisaiError::declared(
                 "nonVector",
-                "LENGTH: expected a Vector, got a non-vector value",
+                format!("expected a Vector, got {got}"),
             ));
         }
     };
@@ -132,22 +126,17 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
 /// with, so they are one executor: same operand reading, same `invalidCount`
 /// on a count that is not an integer, same projection past the end.
 fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
-    let word = split.name();
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let count = match extract_integer_from_value(&count_val) {
         Ok(v) => v,
         // `invalidCount`: TAKE's own declared condition for a count operand
         // that isn't a well-formed integer.
-        Err(AjisaiError::StructureError { got, .. }) => {
+        Err(e) => {
             interp.stack.push(count_val);
             return Err(AjisaiError::declared(
                 "invalidCount",
-                format!("{word}: expected an integer count, got {got}"),
+                format!("expected an integer count, got {}", e.got),
             ));
-        }
-        Err(e) => {
-            interp.stack.push(count_val);
-            return Err(e);
         }
     };
 

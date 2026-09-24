@@ -50,10 +50,12 @@ fn evidence(report: &serde_json::Value) -> Vec<String> {
 }
 
 /// The reported case: a resource ceiling two Words upstream reached the top
-/// level only as "LENGTH got a Nil".
+/// level only as "got NIL" from the Word that refused it. A NIL flows through
+/// every `data` operand, so the Word that refuses it is one whose operand is
+/// a block — here `EXEC`.
 #[tokio::test]
 async fn a_space_ceiling_reaches_the_top_level_diagnosis() {
-    let report = report("[ 0 100001 ] RANGE LENGTH").await;
+    let report = report("[ 0 100001 ] RANGE EXEC").await;
     assert_eq!(report["status"], "error");
 
     let codes = check_codes(&report);
@@ -83,7 +85,7 @@ async fn a_space_ceiling_reaches_the_top_level_diagnosis() {
 /// the NIL-flow rule and not a special case for the resource ceiling.
 #[tokio::test]
 async fn a_division_by_zero_reaches_the_top_level_diagnosis_too() {
-    let report = report("1 0 / LENGTH").await;
+    let report = report("1 0 / EXEC").await;
     let detail = report["diagnosis"]["nextChecks"][0]["detail"]["en"]
         .as_str()
         .expect("english detail");
@@ -113,12 +115,12 @@ async fn a_genuine_type_error_is_left_alone() {
     );
 }
 
-/// A NIL the program wrote down is not a fault. `NIL LENGTH` is a type error
+/// A NIL the program wrote down is not a fault. `NIL EXEC` is a type error
 /// whose cause is the source line in front of the reader, so sending them
 /// "upstream" would be sending them nowhere.
 #[tokio::test]
 async fn a_written_nil_is_not_reported_as_an_upstream_cause() {
-    let report = report("NIL LENGTH").await;
+    let report = report("NIL EXEC").await;
     assert_eq!(report["status"], "error");
     assert!(
         !check_codes(&report).contains(&UPSTREAM_NIL_CHECK.to_string()),

@@ -246,7 +246,7 @@ NIL / ExactScalar（`2 SQRT`）の 5 形を通す。表を再生成して当該�
 
 #### 落とし穴 D：DIV と QUANTIZE はスカラー経路が別にある
 
-`arithmetic_division.rs` の `create_structure_error("number", "string")` と
+`arithmetic_division.rs` の汎用構造エラー（"number" を期待し "string" を得たもの）と
 `tensor_cmds.rs` の QUANTIZE 系（`single-element number` を期待する箇所）は、
 Phase 1 の第二波で直した broadcast 経路とは**別の入口**である。`1 'a' DIV` と
 `1 'a' QUANTIZE` を実行して確認すること。
@@ -287,7 +287,9 @@ BIND が既に宣言している `shapeMismatch` に該当するが、**structur
 1. `docs/semantics-table.json` から `error:structureError` のセルを Word 別・
    入力タプル別に抽出し、作業リストを作る（§0.2 の表が出発点）。
 2. Word ごとに、その generic を出している raise site を特定する。
-   `grep -rn "create_structure_error" rust/src` が入口。
+   当時は汎用構造エラーの生成関数を grep するのが入口だった。この汎用エラーは
+   すべての raise site が宣言済み条件になった後に型ごと削除され、
+   `structureError` も outcome registry から退役した。
 3. 落とし穴 B の手順で「ヘルパー直し」か「ラッパー」かを決める。
 4. 落とし穴 A で `declared()` か専用変種かを決める。
 5. 直したら**必ず CLI で実行**して `aiDiagnostic.kind` を確認する。

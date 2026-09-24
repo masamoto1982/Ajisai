@@ -21,6 +21,8 @@ mod declared_outcomes;
 mod declared_outcomes_tests;
 pub mod epoch;
 pub mod error_flow_trace;
+#[cfg(test)]
+mod error_message_format_tests;
 pub mod execute_def;
 pub mod execute_del;
 #[cfg(test)]

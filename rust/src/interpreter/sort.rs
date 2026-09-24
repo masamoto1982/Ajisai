@@ -48,15 +48,12 @@ pub(crate) fn order_indices(items: &[Value]) -> Result<Vec<usize>> {
 /// function cannot make this remap itself (the same shared-helper lesson as
 /// Phase 2's tensor-conversion helpers and Phase 4's `nonInteger` fix).
 pub(super) fn compare_for_sort(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
-    match three_way_compare(a, b) {
-        Err(AjisaiError::StructureError { expected, .. }) if expected == "scalar value" => {
-            Err(AjisaiError::declared(
-                "nonComparableElement",
-                "expected a comparable scalar element",
-            ))
-        }
-        other => other,
-    }
+    three_way_compare(a, b).map_err(|e| {
+        AjisaiError::declared(
+            "nonComparableElement",
+            format!("expected Scalar elements, got {}", e.got),
+        )
+    })
 }
 
 /// Sort a flat pure-integer dense buffer by sorting its numerator column.
@@ -114,16 +111,11 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     let children = match val.as_vector_view() {
         Some(view) => view,
         None => {
+            let got = val.domain_name();
             interp.stack.push(val);
-            // `expected` and `got` are the two halves of one sentence
-            // ("Structure error: expected _, got _"), so each is a noun
-            // phrase. A whole sentence here rendered as "expected SORT:
-            // expected vector, got non-vector value, got other format" — the
-            // Word's name belongs to the diagnosis locus, which already
-            // carries it.
             return Err(AjisaiError::declared(
                 "nonVector",
-                "SORT: expected a Vector, got a non-vector value",
+                format!("expected a Vector, got {got}"),
             ));
         }
     };

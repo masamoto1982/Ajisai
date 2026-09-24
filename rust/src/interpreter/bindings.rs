@@ -225,7 +225,7 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 };
                 return Err(AjisaiError::declared(
                     "shapeMismatch",
-                    format!("BIND: {} names cannot destructure {}", several.len(), what),
+                    format!("{} names cannot destructure {}", several.len(), what),
                 ));
             }
             for (position, name) in several.iter().enumerate() {
@@ -250,7 +250,10 @@ fn binding_names(value: &Value) -> Result<Vec<String>> {
     let Some(children) = value.as_vector() else {
         return Err(AjisaiError::declared(
             "nonText",
-            "BIND: expected a name (String) or a Vector of names, got a non-text, non-vector value",
+            format!(
+                "expected a name (String) or a Vector of names, got {}",
+                value.domain_name()
+            ),
         ));
     };
     children
@@ -261,7 +264,10 @@ fn binding_names(value: &Value) -> Result<Vec<String>> {
             } else {
                 Err(AjisaiError::declared(
                     "nonText",
-                    "BIND: expected each name to be a String, got a non-text value",
+                    format!(
+                        "expected each name to be a String, got {}",
+                        child.domain_name()
+                    ),
                 ))
             }
         })

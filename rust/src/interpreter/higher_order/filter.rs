@@ -28,11 +28,12 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     }
 
     if !is_vector_value(&target_val) {
+        let got = target_val.domain_name();
         interp.stack.push(target_val);
         interp.stack.push(code_val);
         return Err(AjisaiError::declared(
             "nonVector",
-            "FILTER: expected a Vector, got a non-vector value",
+            format!("expected a Vector, got {got}"),
         ));
     }
 
@@ -62,7 +63,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     None => {
                         error = Some(AjisaiError::declared(
                             "blockContractViolation",
-                            "FILTER: expected boolean value, got empty stack",
+                            "expected the predicate block to leave one truth value, and it left none",
                         ));
                         break;
                     }

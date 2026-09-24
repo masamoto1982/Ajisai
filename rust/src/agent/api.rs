@@ -165,7 +165,8 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
         }
     };
     if let Err(message) = check_structure(&tokens) {
-        let category = ErrorCategory::StructureError;
+        // The same category `run` reports for an unbalanced bracket.
+        let category = ErrorCategory::MalformedSource;
         let diagnosis = DebugDiagnosis::from_error_category(
             ErrorPhase::ParseStructure,
             None,
@@ -286,8 +287,7 @@ impl OutcomesResponse {
 /// Predict the finite set of outcome ids `source` could produce without
 /// executing it (`docs/dev/auditable-kernel-work-order-2026-09.md` Phase 5).
 /// Always succeeds — an unresolvable program still has an exact, single
-/// predicted outcome (`error:malformedSource`, `error:structureError`, or
-/// `error:unknownWord`); see `outcome_report::predict_outcomes`.
+/// predicted outcome (`error:malformedSource` or `error:unknownWord`); see `outcome_report::predict_outcomes`.
 pub fn predict_outcomes(source: &str) -> OutcomesResponse {
     OutcomesResponse {
         report: outcome_report::predict_outcomes(source),

@@ -123,14 +123,18 @@ fn leaf(interp: &mut Interpreter, operands: Vec<Value>, op: WordOp) -> Result<Va
     for operand in operands {
         interp.stack.push(operand);
     }
-    let outcome = op(interp).and_then(|()| {
-        if interp.stack.len() != base + 1 {
-            return Err(AjisaiError::create_structure_error(
-                "one result from a lifted Word",
-                "a different stack height",
-            ));
-        }
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
+    let outcome = op(interp).map(|()| {
+        // Every Word lifted over a Record's values has one declared output,
+        // so this is the arity the registry states, not a check on input.
+        assert_eq!(
+            interp.stack.len(),
+            base + 1,
+            "a Word lifted over a Record's values leaves exactly one result"
+        );
+        interp
+            .stack
+            .pop()
+            .expect("the result just asserted to be there")
     });
     interp.stack.truncate(base);
     outcome

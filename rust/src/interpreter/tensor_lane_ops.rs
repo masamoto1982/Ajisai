@@ -143,12 +143,12 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Value> + Copy,
 {
     if a.is_nil() || b.is_nil() {
-        // Defensive: callers pass through a NIL operand before reaching here
-        // (LANG.FAILURE.PASSTHROUGH), so this is an invariant guard rather
-        // than a condition any Word's contract names.
-        return Err(AjisaiError::create_structure_error(
-            "two non-NIL operands to broadcast",
-            "a NIL operand",
+        // Defensive: the dispatcher passes a NIL operand through before a
+        // numeric Word runs (LANG.FAILURE.PASSTHROUGH). Every caller declares
+        // `nonNumeric`, and a NIL is not a Scalar.
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            "expected a Scalar or a Vector, got NIL",
         ));
     }
 
@@ -206,7 +206,14 @@ where
     let (Some(fa), Some(fb)) = (broadcast_leaf(a), broadcast_leaf(b)) else {
         return Err(AjisaiError::declared(
             "nonNumeric",
-            "expected a number or vector, got a non-numeric value",
+            format!(
+                "expected a Scalar or a Vector, got {}",
+                if broadcast_leaf(a).is_none() {
+                    a.domain_name()
+                } else {
+                    b.domain_name()
+                }
+            ),
         ));
     };
     op(&fa, &fb)

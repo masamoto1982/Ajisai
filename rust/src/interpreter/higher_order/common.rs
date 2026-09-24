@@ -52,7 +52,10 @@ pub(crate) fn extract_executable_code(
     // refusing the String closes the path rather than narrowing it.
     Err(AjisaiError::declared(
         "notExecutable",
-        "expected a Vector ([ ... ]) as the code operand, got another value",
+        format!(
+            "expected a Vector ([ ... ]) as the code operand, got {}",
+            val.domain_name()
+        ),
     ))
 }
 
@@ -74,7 +77,10 @@ pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool>
 
     Err(AjisaiError::declared(
         "nonTruthValue",
-        "expected a truth value from the predicate block, got a non-truth value",
+        format!(
+            "expected a truth value from the predicate block, got {}",
+            condition_result.domain_name()
+        ),
     ))
 }
 

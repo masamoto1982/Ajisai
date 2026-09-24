@@ -59,8 +59,9 @@ mod format_json_tests {
         assert_eq!(error_of("1 -1 FORMAT").await, "invalidCount");
         assert_eq!(error_of("1 1/2 FORMAT").await, "invalidCount");
         assert_eq!(error_of("1 'x' FORMAT").await, "invalidCount");
-        assert_eq!(error_of("NIL 2 FORMAT").await, "nonNumeric");
-        assert_eq!(error_of("1 NIL FORMAT").await, "invalidCount");
+        // Both operands are data: an absent one passes through.
+        assert_eq!(top("NIL 2 FORMAT NIL?").await, "TRUE");
+        assert_eq!(top("1 NIL FORMAT NIL?").await, "TRUE");
         let mut interp = Interpreter::new();
         let _ = interp.execute("1 -1 FORMAT").await;
         assert_eq!(interp.stack.len(), 2);
@@ -106,7 +107,7 @@ mod format_json_tests {
             );
         }
         assert_eq!(error_of("5 JSON-DECODE").await, "nonText");
-        assert_eq!(error_of("NIL JSON-DECODE").await, "nonText");
+        assert_eq!(top("NIL JSON-DECODE NIL?").await, "TRUE");
         assert_eq!(top("'[1]' 'S' BIND S S JSON-DECODE").await, "'[1]' [ 1/1 ]");
     }
 

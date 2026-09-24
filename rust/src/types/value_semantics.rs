@@ -301,6 +301,21 @@ impl Value {
         }
     }
 
+    /// The value's domain, spelled as LANG.VALUES.DISJOINT spells it. Every
+    /// error message names an operand's domain through this, so a reader
+    /// meets one vocabulary for the seven domains and no other.
+    pub fn domain_name(&self) -> &'static str {
+        match &self.data {
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => "Scalar",
+            ValueData::Boolean(_) => "Boolean",
+            ValueData::Text(_) => "String",
+            ValueData::Vector(_) | ValueData::Tensor { .. } => "Vector",
+            ValueData::Record(_) => "Record",
+            ValueData::Nil => "NIL",
+            ValueData::Symbol(_) => "Symbol",
+        }
+    }
+
     #[inline]
     pub fn is_scalar(&self) -> bool {
         matches!(self.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))

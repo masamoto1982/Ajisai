@@ -141,6 +141,16 @@ pub(crate) fn render_algebraic_terms(terms: &[(Fraction, BigInt)]) -> String {
     out
 }
 
+/// What an error message says it got: a Scalar by its value, because for a
+/// count or an index the wrong number is the whole fault (`got 1/2`), and
+/// every other operand by its domain (`got String`).
+pub fn describe_operand(value: &Value) -> String {
+    match &value.data {
+        ValueData::Scalar(_) | ValueData::ExactScalar(_) => value.to_string(),
+        _ => value.domain_name().to_string(),
+    }
+}
+
 /// Render a value for an **output** boundary (`PRINT`, LANG.EFFECTS.OUTPUT).
 ///
 /// The stack projection shows a String wrapped in `'...'` so the

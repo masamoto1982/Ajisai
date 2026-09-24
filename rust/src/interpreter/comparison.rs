@@ -103,11 +103,11 @@ fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Valu
     // `compare_lane`, declare it uniformly. EQ never reaches here —
     // `pairwise_eq` is total and raises nothing.
     compare_scalar_pair(a_val, b_val, kind)
-        .map_err(|e| match e {
-            AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
-                AjisaiError::declared("unsupportedComparison", "expected comparable operands")
-            }
-            other => other,
+        .map_err(|e| {
+            AjisaiError::declared(
+                "unsupportedComparison",
+                format!("expected two Scalars, got {}", e.got),
+            )
         })
         .map(Value::from_bool)
 }

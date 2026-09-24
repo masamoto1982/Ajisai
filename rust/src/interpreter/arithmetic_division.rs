@@ -85,7 +85,7 @@ pub(crate) fn apply_division_schema(
         if left_is_text || right_is_text {
             return Err(AjisaiError::declared(
                 "nonNumeric",
-                "DIV: expected a number, got a string",
+                "expected a Scalar, got String",
             ));
         }
     }

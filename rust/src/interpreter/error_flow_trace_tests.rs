@@ -242,26 +242,6 @@ mod attribution_tests {
         assert_eq!(diagnosis.where_.word.as_deref(), Some("S"));
         assert_eq!(evidence(&diagnosis, "insideWords"), Some("MAP"));
     }
-
-    /// Each half of `expected _, got _` is a noun phrase, never a whole
-    /// sentence — a raise site that passed a sentence as the first half used
-    /// to render "expected SORT: expected vector, got non-vector value, got
-    /// other format". `SORT` itself no longer reaches this path (its
-    /// non-vector operand now names the declared condition `nonVector`
-    /// directly), so this exercises `create_structure_error`'s own rendering
-    /// discipline instead of routing through a specific Word.
-    #[test]
-    fn a_structure_error_renders_as_one_sentence() {
-        let message =
-            crate::error::AjisaiError::create_structure_error("vector", "non-vector value")
-                .to_string();
-        assert_eq!(
-            message,
-            "Structure error: expected vector, got non-vector value"
-        );
-        assert_eq!(message.matches("expected").count(), 1);
-        assert_eq!(message.matches("got").count(), 1);
-    }
 }
 
 /// An error carries where in the source it happened, so a reader is sent to a

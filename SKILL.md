@@ -148,7 +148,7 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck code: `checkDeclaredArity`.
   Fix: SELECT is `[ whenTrue ] [ whenFalse ] [ mask ] SELECT` — push both candidates before the test that chooses between them: `[ 'big' ] [ 'small' ] [ 5 ] [ 3 ] GT SELECT`. It chooses between values, never running either one, so an effect goes after it: `... SELECT PRINT`.
 - **SELECT needs a truth value, not a number** — `[ 'y' ] [ 'n' ] 1 SELECT`
-  → exit 1, `message: "expected a truth value, got a non-truth value"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "SELECT: expected a truth value, got Scalar"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: The third operand must be TRUE, FALSE or an absence — a scalar is not a truth value (§4). Write the test: `[ 1 ] [ 0 ] EQ NOT`.
 - **Broadcast shape mismatch** — `[ 1 2 ] [ 1 2 3 ] +`
@@ -156,15 +156,15 @@ cannot produce a value produces NIL (§4); a malformed one raises an error.
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkDisagreeingAxis`.
   Fix: Elementwise ops need equal or broadcastable shapes (scalar `[ 5 ]` broadcasts; `[2]` vs `[3]` does not).
 - **NUM casts strings, not booleans** — `TRUE NUM`
-  → exit 1, `message: "NUM: expected String, got Boolean"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "NUM: expected a String, got Boolean"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: NUM accepts strings: `'42' NUM`. There is no boolean→number cast.
 - **Old two-vector RANGE form** — `[ 0 ] [ 5 ] RANGE`
-  → exit 1, `message: "RANGE requires [start end] or [start end step]"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "RANGE: expected [ start end ] or [ start end step ], got 1 element(s)"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: RANGE takes one vector: `[ 0 5 ] RANGE` (or `[ start end step ]`).
 - **Vector-wrapped string passed to a cast** — `[ '42' ] NUM`
-  → exit 1, `message: "NUM: expected String input"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
+  → exit 1, `message: "NUM: expected a String, got Vector"`, `diagnosis: { when: "executeWord", why: "valueShape" }`,
   `aiDiagnostic.recoverability: "fixInput"`, first nextCheck code: `checkFiredCondition`.
   Fix: String casts take the bare string: `'42' NUM`.
 

@@ -198,6 +198,9 @@ const projectionReasons = (reason) => {
   return rustStrSlice(reasons);
 };
 
+const operandRoles = (roles) =>
+  `&[${(roles ?? []).map((role) => `OperandRole::${pascal(role)}`).join(', ')}]`;
+
 const variants = entries.map((word) => `    ${word.executorKey},`).join('\n');
 
 const rows = entries
@@ -209,6 +212,7 @@ const rows = entries
         family: ${enumRef('Family', word.family)},
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
+        operand_roles: ${operandRoles(word.stack.operands)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
         projection_reasons: ${projectionReasons(word.projection.reason)},
@@ -241,6 +245,19 @@ ${variants}
 }
 
 ${enumBlocks}
+
+/// What a Word does with one operand (LANG.FAILURE.PASSTHROUGH).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum OperandRole {
+    /// Read by the Word: an absent operand makes the result that absence.
+    Data,
+    /// Carried without being read: a NIL is an ordinary value here.
+    Element,
+    /// A block, a name, or a message: a NIL here is malformed use.
+    Program,
+    /// Read in truth position, where a NIL is UNKNOWN (LANG.VALUES.TRUTH).
+    Truth,
+}
 
 /// Stack arity as declared in spec/words.json: an exact count, or one of the
 /// data-dependent markers the specification names.
@@ -302,6 +319,11 @@ pub struct GeneratedWord {
     pub family: Family,
     pub stack_inputs: Arity,
     pub stack_outputs: Arity,
+    /// What the Word does with each operand, first-pushed first; empty for a
+    /// data-dependent arity. The declared NIL contract reads this position by
+    /// position (\`declared_nil_contract\`), and \`nil_policy\` is its
+    /// summary.
+    pub operand_roles: &'static [OperandRole],
     pub nil_policy: NilPolicy,
     /// The conditions under which a *well-formed* operand yields a reasoned
     /// NIL; empty for the Words that declare \`never\`. Distinct from

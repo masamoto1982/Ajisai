@@ -11,7 +11,6 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "truth": "threeValued",
-      "nilPolicy": "contractSpecific",
       "lifting": "elementwise"
     },
     {
@@ -20,8 +19,7 @@
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT"
       ],
-      "decidability": "totalOverField",
-      "nilPolicy": "passthroughThenProject"
+      "decidability": "totalOverField"
     },
     {
       "id": "exactArithmetic",
@@ -30,7 +28,6 @@
         "LANG.COLLECTIONS.LIFT",
         "LANG.FAILURE.TRICHOTOMY"
       ],
-      "nilPolicy": "passthroughThenProject",
       "lifting": "elementwise"
     },
     {
@@ -40,7 +37,6 @@
         "LANG.COLLECTIONS.LIFT",
         "LANG.MACHINE.LIMITS"
       ],
-      "nilPolicy": "contractSpecific",
       "budgetOutcome": "reasonedNil"
     },
     {
@@ -55,8 +51,7 @@
       "clauses": [
         "LANG.VALUES.DISJOINT",
         "LANG.FAILURE.TRICHOTOMY"
-      ],
-      "nilPolicy": "contractSpecific"
+      ]
     },
     {
       "id": "control",
@@ -71,8 +66,7 @@
       "clauses": [
         "LANG.VALUES.NIL",
         "LANG.FAILURE.RECOVERY"
-      ],
-      "nilPolicy": "inspectOrRecover"
+      ]
     },
     {
       "id": "dictionary",
@@ -97,7 +91,6 @@
         "LANG.VALUES.DISJOINT",
         "LANG.MACHINE.LIMITS"
       ],
-      "nilPolicy": "contractSpecific",
       "keyOrder": "insertion",
       "budgetOutcome": "reasonedNil"
     }

@@ -116,7 +116,8 @@ mod record_words_tests {
             top(&format!("{R} 'REC' BIND REC 'z' 3 WITH REC")).await,
             "{ 'x' 1/1 'y' 2/1 'z' 3/1 } { 'x' 1/1 'y' 2/1 }"
         );
-        assert_eq!(error_of(&format!("{R} NIL 1 WITH")).await, "nonRecord");
+        // The key is data: an absent key passes through.
+        assert_eq!(top(&format!("{R} NIL 1 WITH NIL?")).await, "TRUE");
     }
 
     #[tokio::test]

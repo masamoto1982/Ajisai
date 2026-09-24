@@ -29,11 +29,12 @@ fn exact_real_of(value: &Value) -> Option<ExactReal> {
     }
 }
 
-fn non_numeric(word: &str) -> AjisaiError {
-    AjisaiError::declared(
-        "nonNumeric",
-        format!("{word}: expected a number, got a non-numeric value"),
-    )
+fn non_numeric(operands: &[&Value]) -> AjisaiError {
+    let got = operands
+        .iter()
+        .find(|operand| exact_real_of(operand).is_none())
+        .map_or("NIL", |operand| operand.domain_name());
+    AjisaiError::declared("nonNumeric", format!("expected a Scalar, got {got}"))
 }
 
 fn nil(reason: NilReason, recoverability: Recoverability) -> Value {
@@ -42,7 +43,7 @@ fn nil(reason: NilReason, recoverability: Recoverability) -> Value {
 
 fn pow_scalar(x: &Value, y: &Value) -> Result<Value> {
     let (Some(base), Some(exponent)) = (exact_real_of(x), exact_real_of(y)) else {
-        return Err(non_numeric("POW"));
+        return Err(non_numeric(&[x, y]));
     };
     Ok(match base.pow(&exponent) {
         PowOutcome::Value(er) => Value::from_exact_real(er),
@@ -69,7 +70,7 @@ fn non_numeric_value() -> Value {
 
 fn gcd_scalar(a: &Value, b: &Value) -> Result<Value> {
     if exact_real_of(a).is_none() || exact_real_of(b).is_none() {
-        return Err(non_numeric("GCD"));
+        return Err(non_numeric(&[a, b]));
     }
     match (integer_of(a), integer_of(b)) {
         (Ok(x), Ok(y)) => Ok(Value::from_fraction(Fraction::new(
@@ -91,7 +92,7 @@ fn ratio_scalar(value: &Value) -> Result<Value> {
             ])
         }
         Some(ExactReal::Algebraic(_)) => nil(NilReason::DomainMiss, Recoverability::Recoverable),
-        None => return Err(non_numeric("RATIO")),
+        None => return Err(non_numeric(&[value])),
     })
 }
 

@@ -40,20 +40,8 @@ fn not_a_symbol(word: &str, got: &str) -> AjisaiError {
     };
     AjisaiError::declared(
         "notASymbol",
-        format!("{word}: expected {accepted}, got {got}; a String is text, not a name"),
+        format!("expected {accepted}, got {got}; a String is text, not a name"),
     )
-}
-
-fn describe(value: &Value) -> &'static str {
-    match &value.data {
-        ValueData::Text(_) => "a String",
-        ValueData::Nil => "NIL",
-        ValueData::Boolean(_) => "a Boolean",
-        ValueData::Scalar(_) | ValueData::ExactScalar(_) => "a number",
-        ValueData::Vector(_) | ValueData::Tensor { .. } => "a Vector",
-        ValueData::Record(_) => "a Record",
-        ValueData::Symbol(_) => "a Symbol",
-    }
 }
 
 /// The name a Symbol resolves under: aliases folded, case folded.
@@ -124,7 +112,7 @@ pub(crate) fn op_contract(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     let Some(name) = symbol_name(&operand) else {
-        let got = describe(&operand);
+        let got = crate::types::Value::domain_name(&operand);
         restore(interp, operand);
         return Err(not_a_symbol("CONTRACT", got));
     };

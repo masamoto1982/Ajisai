@@ -26,11 +26,12 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     }
 
     if !is_vector_value(&target_val) {
+        let got = target_val.domain_name();
         interp.stack.push(target_val);
         interp.stack.push(code_val);
         return Err(AjisaiError::declared(
             "nonVector",
-            "MAP: expected a Vector, got a non-vector value",
+            format!("expected a Vector, got {got}"),
         ));
     }
 
@@ -73,7 +74,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 None => {
                     error = Some(AjisaiError::declared(
                         "blockContractViolation",
-                        "MAP: expected return value, got empty stack",
+                        "expected the block to leave one value, and it left none",
                     ));
                     break;
                 }

@@ -51,8 +51,9 @@ pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCal
     let Some(word) = call.word else {
         return interp.execute_builtin_direct(&call.name);
     };
-    if let Some(decided) = interp.apply_declared_nil_contract(word) {
-        return decided;
-    }
-    interp.execute_builtin_by_id(word.id)
+    let result = match interp.apply_declared_nil_contract(word) {
+        Some(decided) => decided,
+        None => interp.execute_builtin_by_id(word.id),
+    };
+    result.map_err(|err| err.attributed_to(word.name))
 }

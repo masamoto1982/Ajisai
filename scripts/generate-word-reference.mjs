@@ -64,6 +64,9 @@ for (const entry of words.entries) {
   lines.push(`- **Vocabulary tier:** ${tierLabel(entry)}`);
   lines.push(`- **Family:** \`${entry.family}\``);
   lines.push(`- **Stack:** ${stackArity(entry.stack.inputs)} input(s) → ${stackArity(entry.stack.outputs)} output(s)`);
+  if (Array.isArray(entry.stack.operands) && entry.stack.operands.length > 0) {
+    lines.push(`- **Operands:** ${entry.stack.operands.map((role) => `\`${role}\``).join(', ')} (LANG.FAILURE.PASSTHROUGH)`);
+  }
   lines.push(`- **NIL policy:** \`${entry.nilPolicy}\`; projection: ${projection(entry)}`);
   lines.push(`- **Purity / determinism:** \`${entry.purity}\` / \`${entry.determinism}\``);
   lines.push(`- **Effects:** ${entry.effects.length ? entry.effects.map((effect) => `\`${effect}\``).join(', ') : 'none'}`);

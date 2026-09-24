@@ -1,7 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::cast::cast_value_helpers::{
-    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr, is_boolean_value,
-    is_number_value,
+    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr, is_number_value,
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
 use crate::interpreter::Interpreter;
@@ -104,27 +103,9 @@ fn convert_value_to_number(val: &Value) -> Result<Value> {
     // A number is not Text: NUM parses, it does not pass through. Accepting
     // numbers here would make NUM's `nonText` contract false for exactly the
     // operand kind a caller is most likely to pass by mistake.
-    if is_number_value(val) {
-        return Err(AjisaiError::declared(
-            "nonText",
-            "NUM: expected String, got Number",
-        ));
-    }
-    if is_boolean_value(val) {
-        return Err(AjisaiError::declared(
-            "nonText",
-            "NUM: expected String, got Boolean",
-        ));
-    }
-    if val.is_nil() {
-        return Err(AjisaiError::declared(
-            "nonText",
-            "NUM: expected String, got Nil",
-        ));
-    }
     Err(AjisaiError::declared(
         "nonText",
-        "NUM: expected String input",
+        format!("expected a String, got {}", val.domain_name()),
     ))
 }
 

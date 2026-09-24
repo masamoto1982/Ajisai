@@ -1,8 +1,8 @@
 use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
 use super::builtin_word_lookup_docs::lookup_builtin_lookup_doc;
 use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
-use crate::coreword_registry::{NilPolicy, Partiality};
-use crate::kernel::generated::{generated_word, AcceptedDomain, VocabularyTier};
+use crate::coreword_registry::Partiality;
+use crate::kernel::generated::{generated_word, AcceptedDomain, OperandRole, VocabularyTier};
 
 /// Render the LOOKUP body for a built-in word: the four authored base
 /// sections (Category / Summary / Role / Stack Effect), the authored
@@ -139,19 +139,25 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
         Partiality::Partial => lines.push("Malformed or out-of-domain usage raises an error."),
     }
     if let Some(word) = generated_word(canonical) {
-        match word.nil_policy {
-            NilPolicy::Passthrough | NilPolicy::PassthroughThenProject => {
-                lines.push("NIL operands pass through as NIL, keeping their reason.")
-            }
-            NilPolicy::CreatesNil => {}
-            NilPolicy::RejectNil => lines.push("NIL operands are rejected with an error."),
-            NilPolicy::ConsumeNil => lines.push("Accepts NIL operands as data."),
-            NilPolicy::PreserveReason => {
-                lines.push("A NIL value keeps its reason through this word.")
-            }
-            NilPolicy::KleeneAbsorbing => lines.push(
+        // One line per role the Word has (LANG.FAILURE.PASSTHROUGH), so the
+        // hover says what a NIL does in each operand, not a single summary
+        // that is true of some of them.
+        let has = |role: OperandRole| word.operand_roles.contains(&role);
+        if has(OperandRole::Data) {
+            lines.push("A NIL data operand passes through as the result, keeping its reason.");
+        }
+        if has(OperandRole::Element) {
+            lines.push(
+                "A NIL it only carries (a stored, bound or compared value) is an ordinary value.",
+            );
+        }
+        if has(OperandRole::Program) {
+            lines.push("A NIL where a block, name or message belongs is an error.");
+        }
+        if has(OperandRole::Truth) {
+            lines.push(
                 "A dominating definite operand (FALSE for AND) absorbs a NIL operand into that definite result; otherwise a NIL operand yields NIL as UNKNOWN.",
-            ),
+            );
         }
         // The accepted domain qualifies everything above it. `total` says what
         // happens to an operand the Word accepts, and read alone it promised

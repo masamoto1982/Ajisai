@@ -16,10 +16,11 @@ use crate::types::Value;
 pub fn op_absent(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     let Some(text) = operand.as_text() else {
+        let got = operand.domain_name();
         restore(interp, operand);
         return Err(AjisaiError::declared(
             "nonText",
-            "ABSENT: expected a String reason, got a non-text value",
+            format!("expected a String reason, got {got}"),
         ));
     };
     let absence = Value::nil_user_declared(text);
@@ -32,10 +33,11 @@ pub fn op_absent(interp: &mut Interpreter) -> Result<()> {
 pub fn op_fail(interp: &mut Interpreter) -> Result<()> {
     let operand = take_operand(interp)?;
     let Some(text) = operand.as_text() else {
+        let got = operand.domain_name();
         restore(interp, operand);
         return Err(AjisaiError::declared(
             "nonText",
-            "FAIL: expected a String message, got a non-text value",
+            format!("expected a String message, got {got}"),
         ));
     };
     let message = text.to_string();

@@ -14,13 +14,12 @@ use crate::types::Value;
 /// itself (the same shared-helper lesson as `nonInteger`'s `PUT`
 /// fix).
 fn require_index_operand(value: &Value) -> Result<i64> {
-    match extract_integer_from_value(value) {
-        Err(AjisaiError::StructureError { got, .. }) => Err(AjisaiError::declared(
+    extract_integer_from_value(value).map_err(|e| {
+        AjisaiError::declared(
             "invalidIndex",
-            format!("GET: expected a well-formed index, got {}", got),
-        )),
-        other => other,
-    }
+            format!("expected a well-formed index, got {}", e.got),
+        )
+    })
 }
 
 /// Every index the operand names, in the order it names them.
@@ -51,7 +50,7 @@ fn index_list(value: &Value) -> Result<Vec<i64>> {
             let child = value.child(position).ok_or_else(|| {
                 AjisaiError::declared(
                     "invalidIndex",
-                    "GET: expected a well-formed index, got an absent element",
+                    "expected a well-formed index, got an absent element",
                 )
             })?;
             require_index_operand(&child)
@@ -85,11 +84,12 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     };
 
     if !target_val.is_vector() {
+        let got = target_val.domain_name();
         interp.stack.push(target_val);
         interp.stack.push(index_val);
         return Err(AjisaiError::declared(
             "nonVector",
-            "GET: expected a Vector, got a non-vector value",
+            format!("expected a Vector, got {got}"),
         ));
     }
 

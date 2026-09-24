@@ -333,7 +333,6 @@ mod diagnosis_vocabulary_is_real {
         let categories = [
             None,
             Some(ErrorCategory::StackUnderflow),
-            Some(ErrorCategory::StructureError),
             Some(ErrorCategory::UnknownWord),
             Some(ErrorCategory::DivisionByZero),
             Some(ErrorCategory::VectorLengthMismatch),

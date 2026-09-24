@@ -461,7 +461,7 @@
   <h3>CONCAT rejects a String: it is a Vector Word, and String is not a Vector</h3>
   <pre class="ajisai-source">'ab' 'cd' CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -483,7 +483,7 @@
   <h3>A one-character String is not a one-element Vector either</h3>
   <pre class="ajisai-source">'ab' 'c' CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -491,7 +491,7 @@
   <h3>LENGTH rejects a String: character count is reached through CHARS</h3>
   <pre class="ajisai-source">'abc' LENGTH</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">LENGTH: expected a Vector, got a non-vector value</pre>
+  <pre class="ajisai-expect-error">LENGTH: expected a Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -499,7 +499,7 @@
   <h3>GET rejects a String rather than answering a bare code point</h3>
   <pre class="ajisai-source">'abc' 1 GET</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">GET: expected a Vector, got a non-vector value</pre>
+  <pre class="ajisai-expect-error">GET: expected a Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -514,7 +514,7 @@
   <h3>CONCAT refuses a non-vector operand (errorWhen: nonVector)</h3>
   <pre class="ajisai-source">[ 1 2 ] TRUE CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got Boolean</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -522,7 +522,7 @@
   <h3>CONCAT takes exactly two operands; a trailing scalar is not a count</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 3 4 ] 2 CONCAT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got a non-vector operand</pre>
+  <pre class="ajisai-expect-error">CONCAT: expected two Vectors, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -623,7 +623,7 @@
        the block finishes with an empty stack. -->
   <pre class="ajisai-source">[ 1 2 ] [ PRINT ] MAP</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">MAP: expected return value, got empty stack</pre>
+  <pre class="ajisai-expect-error">MAP: expected the block to leave one value, and it left none</pre>
   <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span></div>
 </section>
 
@@ -657,7 +657,7 @@
   <h3>A FILTER predicate that yields a Scalar names the declared condition nonTruthValue</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 1 ] FILTER</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a truth value from the predicate block, got a non-truth value</pre>
+  <pre class="ajisai-expect-error">FILTER: expected a truth value from the predicate block, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -669,7 +669,7 @@
   <h3>AND rejects a Scalar operand: 1 is not TRUE</h3>
   <pre class="ajisai-source">1 1 AND</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a truth value, got a non-truth value</pre>
+  <pre class="ajisai-expect-error">AND: expected a truth value, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -677,7 +677,7 @@
   <h3>NOT rejects a Scalar operand: 0 is not FALSE</h3>
   <pre class="ajisai-source">0 NOT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a truth value, got a non-truth value</pre>
+  <pre class="ajisai-expect-error">NOT: expected a truth value, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1108,11 +1108,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-num-rejects-nil" data-category="core">
-  <h3>NUM rejects a NIL operand with a channel error (not passthrough, LANG.FAILURE.PASSTHROUGH)</h3>
-  <pre class="ajisai-source">NIL NUM</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">NUM: expected String, got Nil</pre>
+<section class="ajisai-case" id="core-num-passes-a-nil-through" data-category="core">
+  <h3>NUM reads its operand as data, so an absent operand passes through with its reason (LANG.FAILURE.PASSTHROUGH)</h3>
+  <pre class="ajisai-source">0 0 DIV NUM NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1120,7 +1119,7 @@
   <h3>NUM parses Text only: a number operand is nonText, not a passthrough</h3>
   <pre class="ajisai-source">5 NUM</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">NUM: expected String, got Number</pre>
+  <pre class="ajisai-expect-error">NUM: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1159,10 +1158,11 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-join-codepoints" data-category="core">
-  <h3>JOIN interprets a numeric vector as code points</h3>
+<section class="ajisai-case" id="core-join-rejects-codepoints" data-category="core">
+  <h3>JOIN takes Strings only: a number is not a code point (LANG.VALUES.DISJOINT)</h3>
   <pre class="ajisai-source">[ 104 105 ] JOIN</pre>
-  <pre class="ajisai-expect-result">'hi'</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector of Strings, got Scalar at index 0</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1207,30 +1207,22 @@
   <h3>JOIN has no separator operand: a String on top is the target, not a separator</h3>
   <pre class="ajisai-source">[ 'A' 'B' 'C' ] ',' JOIN</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: expected Vector, got String</pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-join-mixed-text-and-codepoints" data-category="core">
-  <h3>JOIN appends Text elements as content and integer elements as code points</h3>
-  <pre class="ajisai-source">[ 'AJIS' 65 73 ] JOIN</pre>
+<section class="ajisai-case" id="core-join-chars-round-trip" data-category="core">
+  <h3>JOIN inverts CHARS: every element CHARS yields is a one-character String</h3>
+  <pre class="ajisai-source">'AJISAI' CHARS JOIN</pre>
   <pre class="ajisai-expect-result">'AJISAI'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-join-rejects-boolean-element" data-category="core">
-  <h3>JOIN rejects a non-Text, non-code-point element as malformed use</h3>
+  <h3>JOIN rejects a non-String element as malformed use</h3>
   <pre class="ajisai-source">[ 'A' TRUE ] JOIN</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: all elements must be strings, found boolean at index 1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-join-rejects-invalid-codepoint" data-category="core">
-  <h3>JOIN rejects a numeric element outside the valid code-point range</h3>
-  <pre class="ajisai-source">[ 'A' -3 ] JOIN</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: invalid character code at index 1</pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector of Strings, got Boolean at index 1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1284,7 +1276,7 @@
   <h3>JOIN of a bare scalar is a type error</h3>
   <pre class="ajisai-source">5 JOIN</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">JOIN: expected Vector, got Number</pre>
+  <pre class="ajisai-expect-error">JOIN: expected a Vector, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1299,7 +1291,7 @@
   <h3>TRIM of a non-Text operand is a type error</h3>
   <pre class="ajisai-source">5 TRIM</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">TRIM: expected String, got Number</pre>
+  <pre class="ajisai-expect-error">TRIM: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1321,7 +1313,7 @@
   <h3>TOKENIZE of a non-Text subject is a type error</h3>
   <pre class="ajisai-source">5 'a' TOKENIZE</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">TOKENIZE: expected String, got Number</pre>
+  <pre class="ajisai-expect-error">TOKENIZE: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1664,10 +1656,10 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-fold-nil-target-returns-init" data-category="core">
-  <h3>FOLD of a NIL target yields the initial accumulator unchanged</h3>
-  <pre class="ajisai-source">NIL 42 [ ADD ] FOLD</pre>
-  <pre class="ajisai-expect-result">42/1</pre>
+<section class="ajisai-case" id="core-fold-nil-target-passes-through" data-category="core">
+  <h3>FOLD of an absent Vector is that absence, not the initial accumulator: the Vector is data (LANG.FAILURE.PASSTHROUGH)</h3>
+  <pre class="ajisai-source">0 0 DIV 42 [ ADD ] FOLD NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1675,7 +1667,7 @@ W</pre>
   <h3>MAP of a non-vector, non-NIL target names the declared condition nonVector</h3>
   <pre class="ajisai-source">5 [ 2 MUL ] MAP</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">MAP: expected a Vector, got a non-vector value</pre>
+  <pre class="ajisai-expect-error">MAP: expected a Vector, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1720,7 +1712,7 @@ W</pre>
   <h3>EXEC rejects a Scalar: data is never code (errorWhen: notExecutable)</h3>
   <pre class="ajisai-source">5 EXEC</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">EXEC: expected a Vector ([ ... ]) as the code operand, got another value</pre>
+  <pre class="ajisai-expect-error">EXEC: expected a Vector ([ ... ]) as the code operand, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2168,7 +2160,7 @@ W</pre>
   <h3>Arithmetic rejects a String rather than operating on its code points</h3>
   <pre class="ajisai-source">'A' 1 ADD</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a number or vector</pre>
+  <pre class="ajisai-expect-error">ADD: expected a Scalar or a Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2183,7 +2175,7 @@ W</pre>
   <h3>A Word name is a String, not a Vector of its code points</h3>
   <pre class="ajisai-source">[ 1 ADD ] [ 73 78 67 ] DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">expected a name (String), got a non-text value</pre>
+  <pre class="ajisai-expect-error">DEF: expected a name (String), got Vector</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2285,7 +2277,7 @@ W</pre>
   <h3>SQRT of a non-rational radicand is malformed use</h3>
   <pre class="ajisai-source">2 SQRT SQRT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">SQRT: expected a number, got a non-numeric value</pre>
+  <pre class="ajisai-expect-error">SQRT: expected a rational Scalar, got sqrt(2)</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2769,7 +2761,7 @@ W</pre>
   <h3>UPPER refuses a non-String operand</h3>
   <pre class="ajisai-source">42 UPPER</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">UPPER: expected String</pre>
+  <pre class="ajisai-expect-error">UPPER: expected a String, got Scalar</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

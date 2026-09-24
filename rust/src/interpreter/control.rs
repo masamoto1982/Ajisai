@@ -29,10 +29,11 @@ fn exec_block(interp: &mut Interpreter) -> Result<()> {
     let target: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let Some(elements) = target.as_vector_view() else {
+        let got = target.domain_name();
         interp.stack.push(target);
         return Err(AjisaiError::declared(
             "notExecutable",
-            "EXEC: expected a Vector ([ ... ]) as the code operand, got another value",
+            format!("expected a Vector ([ ... ]) as the code operand, got {got}"),
         ));
     };
     let tokens = match crate::interpreter::value_as_code::value_elements_to_tokens(&elements) {

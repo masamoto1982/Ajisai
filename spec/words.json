@@ -7,7 +7,8 @@
       "family": "booleanLogic",
       "stack": {
         "inputs": 0,
-        "outputs": 1
+        "outputs": 1,
+        "operands": []
       },
       "nilPolicy": "preserveReason",
       "projection": {
@@ -54,7 +55,8 @@
       "family": "booleanLogic",
       "stack": {
         "inputs": 0,
-        "outputs": 1
+        "outputs": 1,
+        "operands": []
       },
       "nilPolicy": "preserveReason",
       "projection": {
@@ -101,7 +103,11 @@
       "family": "booleanLogic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "truth",
+          "truth"
+        ]
       },
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
@@ -152,7 +158,10 @@
       "family": "booleanLogic",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "truth"
+        ]
       },
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
@@ -202,7 +211,12 @@
       "family": "booleanLogic",
       "stack": {
         "inputs": 3,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "element",
+          "element",
+          "truth"
+        ]
       },
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
@@ -255,7 +269,11 @@
       "family": "comparison",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -306,7 +324,11 @@
       "family": "comparison",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -360,7 +382,11 @@
       "family": "comparison",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -414,7 +440,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -468,7 +498,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -523,7 +557,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -577,7 +615,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -629,7 +671,10 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -681,7 +726,10 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -734,7 +782,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -788,7 +840,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -842,9 +898,12 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "negativeScalar",
         "reason": "domainMiss"
@@ -894,7 +953,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -956,7 +1019,11 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1010,7 +1077,10 @@
       "family": "exactArithmetic",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
@@ -1063,9 +1133,13 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "indexOutOfBounds",
         "reason": "indexOutOfBounds"
@@ -1115,9 +1189,12 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -1166,9 +1243,13 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "indexOutOfBounds",
         "reason": "indexOutOfBounds"
@@ -1219,9 +1300,13 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "indexOutOfBounds",
         "reason": "indexOutOfBounds"
@@ -1272,9 +1357,13 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -1323,9 +1412,12 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -1427,9 +1519,12 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "materializationBudgetExceeded",
         "reason": "spaceExhausted"
@@ -1478,9 +1573,12 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "materializationBudgetExceeded",
         "reason": "spaceExhausted"
@@ -1530,9 +1628,12 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "raggedNesting",
         "reason": "domainMiss"
@@ -1581,9 +1682,13 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "spaceExhausted",
         "reason": "spaceExhausted"
@@ -1634,9 +1739,12 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -1685,9 +1793,12 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "consumeNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -1733,7 +1844,10 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1787,7 +1901,10 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1841,7 +1958,10 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1894,7 +2014,10 @@
       "family": "record",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -1947,7 +2070,10 @@
       "family": "collection",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2001,9 +2127,14 @@
       "family": "collection",
       "stack": {
         "inputs": 3,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data",
+          "element"
+        ]
       },
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "indexOutOfBounds",
         "reason": "indexOutOfBounds"
@@ -2055,7 +2186,11 @@
       "family": "record",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2109,9 +2244,13 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "element"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "valueAbsent",
         "reason": "missingField"
@@ -2161,7 +2300,11 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "element"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2213,9 +2356,13 @@
       "family": "collection",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "keyAbsent",
         "reason": "missingField"
@@ -2268,9 +2415,13 @@
       "family": "record",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2321,7 +2472,10 @@
       "family": "record",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2371,7 +2525,10 @@
       "family": "record",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2421,9 +2578,13 @@
       "family": "record",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "keyAbsent",
         "reason": "missingField"
@@ -2472,9 +2633,14 @@
       "family": "record",
       "stack": {
         "inputs": 3,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data",
+          "element"
+        ]
       },
-      "nilPolicy": "consumeNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2522,9 +2688,13 @@
       "family": "record",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "keyAbsent",
         "reason": "missingField"
@@ -2573,7 +2743,11 @@
       "family": "record",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
       "nilPolicy": "passthrough",
       "projection": {
@@ -2623,9 +2797,13 @@
       "family": "record",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2673,9 +2851,13 @@
       "family": "higherOrder",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "program"
+        ]
       },
-      "nilPolicy": "consumeNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2724,9 +2906,13 @@
       "family": "higherOrder",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "program"
+        ]
       },
-      "nilPolicy": "consumeNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2777,9 +2963,14 @@
       "family": "higherOrder",
       "stack": {
         "inputs": 3,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "element",
+          "program"
+        ]
       },
-      "nilPolicy": "consumeNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2828,9 +3019,14 @@
       "family": "higherOrder",
       "stack": {
         "inputs": 3,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "element",
+          "program"
+        ]
       },
-      "nilPolicy": "consumeNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2880,9 +3076,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2930,9 +3129,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -2981,9 +3183,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -3032,9 +3237,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -3084,9 +3292,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -3136,9 +3347,13 @@
       "family": "text",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -3188,9 +3403,13 @@
       "family": "text",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "needleAbsent",
         "reason": "missingField"
@@ -3239,9 +3458,14 @@
       "family": "text",
       "stack": {
         "inputs": 3,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -3290,9 +3514,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "parseFailure",
         "reason": "invalidEncoding"
@@ -3340,9 +3567,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "passthrough",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "noExactLexemeForValue",
         "reason": "invalidEncoding"
@@ -3388,9 +3618,13 @@
       "family": "text",
       "stack": {
         "inputs": 2,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data",
+          "data"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
         "reason": null
@@ -3442,9 +3676,12 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "data"
+        ]
       },
-      "nilPolicy": "createsNil",
+      "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": [
           "textIsNotJson",
@@ -3501,7 +3738,10 @@
       "family": "text",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "element"
+        ]
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3551,7 +3791,10 @@
       "family": "control",
       "stack": {
         "inputs": 1,
-        "outputs": "variable"
+        "outputs": "variable",
+        "operands": [
+          "program"
+        ]
       },
       "nilPolicy": "rejectNil",
       "projection": {
@@ -3601,9 +3844,12 @@
       "family": "control",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "program"
+        ]
       },
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "createsNil",
       "projection": {
         "when": "symbolNamesNoWord",
         "reason": "missingField"
@@ -3653,7 +3899,10 @@
       "family": "control",
       "stack": {
         "inputs": 1,
-        "outputs": 0
+        "outputs": 0,
+        "operands": [
+          "program"
+        ]
       },
       "nilPolicy": "rejectNil",
       "projection": {
@@ -3704,7 +3953,8 @@
       "family": "absence",
       "stack": {
         "inputs": 0,
-        "outputs": 1
+        "outputs": 1,
+        "operands": []
       },
       "nilPolicy": "preserveReason",
       "projection": {
@@ -3752,7 +4002,10 @@
       "family": "absence",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "element"
+        ]
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3800,7 +4053,10 @@
       "family": "absence",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "element"
+        ]
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3848,7 +4104,10 @@
       "family": "absence",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "program"
+        ]
       },
       "nilPolicy": "createsNil",
       "projection": {
@@ -3899,7 +4158,11 @@
       "family": "dictionary",
       "stack": {
         "inputs": 2,
-        "outputs": 0
+        "outputs": 0,
+        "operands": [
+          "element",
+          "program"
+        ]
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -3953,7 +4216,11 @@
       "family": "dictionary",
       "stack": {
         "inputs": 2,
-        "outputs": 0
+        "outputs": 0,
+        "operands": [
+          "program",
+          "program"
+        ]
       },
       "nilPolicy": "rejectNil",
       "projection": {
@@ -4011,7 +4278,10 @@
       "family": "dictionary",
       "stack": {
         "inputs": 1,
-        "outputs": 0
+        "outputs": 0,
+        "operands": [
+          "program"
+        ]
       },
       "nilPolicy": "rejectNil",
       "projection": {
@@ -4067,7 +4337,10 @@
       "family": "dictionary",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 1,
+        "operands": [
+          "element"
+        ]
       },
       "nilPolicy": "consumeNil",
       "projection": {
@@ -4116,9 +4389,12 @@
       "family": "output",
       "stack": {
         "inputs": 1,
-        "outputs": 0
+        "outputs": 0,
+        "operands": [
+          "element"
+        ]
       },
-      "nilPolicy": "preserveReason",
+      "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
         "reason": null

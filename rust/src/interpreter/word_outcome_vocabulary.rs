@@ -65,10 +65,9 @@ const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 /// (not any specific Word's own declared `errorWhen`) — the fixed,
 /// non-`Declared` `ErrorCategory` variants, read through the real
 /// `as_protocol_str()` so this can never drift from the wire spelling.
-/// `DivisionByZero` and `StructureError` are excluded: neither is a
-/// registered outcome category (`scripts/check-outcome-registry.mjs`'s two
-/// documented exclusions — the first diagnostic-trace-only, the second the
-/// undeclared-failure bucket no program reaches).
+/// `DivisionByZero` is excluded: it is not a registered outcome category at
+/// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
+/// diagnostic-trace-only).
 fn structural_error_categories() -> [ErrorCategory; 11] {
     [
         ErrorCategory::StackUnderflow,

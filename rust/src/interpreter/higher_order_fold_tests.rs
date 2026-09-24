@@ -32,15 +32,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fold_nil_returns_initial() {
+    async fn test_fold_of_an_absent_vector_is_that_absence() {
+        // The Vector is data (LANG.FAILURE.PASSTHROUGH): an absent one is the
+        // result, not the initial accumulator standing in for an empty fold.
         let mut interp = Interpreter::new();
-        let result = interp.execute("NIL [ 42 ] [ + ] FOLD").await;
-        assert!(
-            result.is_ok(),
-            "FOLD on NIL should return initial: {:?}",
-            result
-        );
-        assert_eq!(top_scalar_i64(&interp), 42);
+        interp.execute("NIL [ 42 ] [ + ] FOLD").await.unwrap();
+        assert!(interp.stack.last().is_some_and(|v| v.is_nil()));
     }
     /// `&` resolves to the same contract and executor as `AND`
     /// (LANG.SOURCE.NORMALIZE), including inside a predicate block.
