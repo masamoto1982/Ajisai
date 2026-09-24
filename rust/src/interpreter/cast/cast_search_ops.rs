@@ -32,7 +32,7 @@ fn texts(interp: &mut Interpreter, count: usize) -> Result<Vec<String>> {
 }
 
 /// `SEARCH ( [ text ] [ needle ] -> [ index ] )`: the character position at
-/// which `needle` first occurs, counted as `CHARS` counts; `missingField`
+/// which `needle` first occurs, counted as `CHARS` counts; `notFound`
 /// when it does not occur. An empty needle is found at 0.
 pub fn op_search(interp: &mut Interpreter) -> Result<()> {
     let texts = texts(interp, 2)?;
@@ -43,7 +43,7 @@ pub fn op_search(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(Value::from_int(position as i64));
         }
         None => interp.stack.push(Value::nil_with_reason(
-            NilReason::MissingField,
+            NilReason::NotFound,
             Recoverability::Recoverable,
         )),
     }

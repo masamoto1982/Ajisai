@@ -49,15 +49,16 @@ fn convert_value_to_string(val: &Value) -> Result<Value> {
         }
     }
 
-    // No lexeme exists, so there is no text to answer with. `STR` projects the
-    // same reason `NUM` projects for text that denotes no number: the two are
-    // inverses, and this is the direction of the round trip that has no
-    // encoding. A program that wants a rational stand-in writes one out —
+    // No lexeme exists, so there is no text to answer with. The value is
+    // well-formed and outside what text can spell, so `STR` projects
+    // `domainMiss` — the reason `JSON-ENCODE` projects for a value with no JSON
+    // image; `invalidEncoding` belongs to the reading direction, text that
+    // spells nothing. A program that wants a rational stand-in writes one out —
     // `10000 MUL ROUND 10000 DIV` — where the denominator is the caller's
     // choice and the approximation is visible in the source.
     if has_no_exact_lexeme(val) {
         return Ok(Value::nil_with_reason(
-            NilReason::InvalidEncoding,
+            NilReason::DomainMiss,
             Recoverability::Recoverable,
         ));
     }

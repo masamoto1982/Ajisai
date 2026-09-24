@@ -9,12 +9,11 @@ use crate::coreword_registry::Partiality;
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
     pub name: &'static str,
-    pub category: &'static str,
+    pub family: &'static str,
     pub summary: &'static str,
     #[allow(dead_code)]
     pub hover_summary: &'static str,
     pub hover_syntax: &'static str,
-    pub role: &'static str,
     pub stack_effect: &'static str,
     pub stability: &'static str,
     pub partiality: Partiality,
@@ -35,11 +34,10 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
                     .expect("generated documentation must name a canonical Word");
                 BuiltinSpec {
                     name: doc.name,
-                    category: doc.category,
+                    family: doc.family,
                     summary: doc.summary,
                     hover_summary: doc.hover_summary,
                     hover_syntax: doc.hover_syntax,
-                    role: doc.role,
                     stack_effect: doc.stack_effect,
                     stability: crate::coreword_registry::stability_from_contract(word),
                     partiality: crate::coreword_registry::partiality_from_contract(word),
@@ -112,9 +110,8 @@ mod tests {
 
         for (doc, spec) in generated.iter().zip(super::builtin_specs()) {
             assert_eq!(doc.name, spec.name);
-            assert_eq!(doc.category, spec.category, "{} category", doc.name);
+            assert_eq!(doc.family, spec.family, "{} family", doc.name);
             assert_eq!(doc.summary, spec.summary, "{} summary", doc.name);
-            assert_eq!(doc.role, spec.role, "{} role", doc.name);
             assert_eq!(
                 doc.stack_effect, spec.stack_effect,
                 "{} stack_effect",
@@ -152,8 +149,7 @@ mod tests {
     fn builtin_specs_have_required_lookup_content() {
         for spec in super::builtin_specs() {
             assert!(!spec.summary.is_empty(), "{} missing summary", spec.name);
-            assert!(!spec.role.is_empty(), "{} missing role", spec.name);
-            assert!(!spec.category.is_empty(), "{} missing category", spec.name);
+            assert!(!spec.family.is_empty(), "{} missing family", spec.name);
             assert!(
                 !spec.stack_effect.is_empty(),
                 "{} missing stack_effect",
@@ -199,9 +195,8 @@ mod tests {
         };
         for spec in super::builtin_specs() {
             check("summary", spec.name, spec.summary);
-            check("role", spec.name, spec.role);
             check("stack_effect", spec.name, spec.stack_effect);
-            check("category", spec.name, spec.category);
+            check("family", spec.name, spec.family);
         }
     }
 }

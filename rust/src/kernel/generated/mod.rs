@@ -8,16 +8,15 @@
 //! Coreword registry takes stack arity, purity and determinism from here, so
 //! `spec/words.json` is the only place those facts are written down.
 //!
-//! What is still hand-written on `BuiltinSpec` is prose and runtime-local
-//! classification — documentation text, `category`, `partiality`,
-//! `safety_level`, `safe_preview` — none of which the specification declares.
-//! No canonical fact is written down twice.
+//! What `BuiltinSpec` adds is prose and what follows from the contract —
+//! documentation text, `safety_level`, `safe_preview`. No canonical fact is
+//! written down twice.
 
 mod word_registry;
 
 pub use word_registry::{
-    AcceptedDomain, Arity, CostAxis, CostClass, Determinism, Family, GeneratedWord, NilPolicy,
-    OperandRole, Partiality, Purity, VocabularyTier, WordCost, WordId, GENERATED_WORDS,
+    Arity, CostAxis, CostClass, Determinism, Family, GeneratedWord, NilPolicy, OperandRole,
+    Partiality, Purity, VocabularyTier, WordCost, WordId, GENERATED_WORDS,
 };
 
 /// The declared contract for a Word, by canonical name.
@@ -56,7 +55,6 @@ macro_rules! serialize_as_spec_str {
 }
 
 serialize_as_spec_str!(
-    AcceptedDomain,
     Family,
     NilPolicy,
     Partiality,

@@ -2,7 +2,7 @@
 //! holding.
 //!
 //! The case these exist for: the work meter refuses
-//! `[ 1 21000 ] RANGE 1 [ * ] FOLD` and names `numericWork`, but the stack at
+//! `1 21000 RANGE 1 [ * ] FOLD` and names `numericWork`, but the stack at
 //! that moment holds a 21,000-element vector and an 81,649-digit partial
 //! product. Serialized in full that is 5.7 MB, which a host response ceiling
 //! turns into "your answer was too big" — the opposite of what the program
@@ -32,7 +32,7 @@ mod error_stack_tests {
     }
 
     /// The source whose refusal used to be unreportable.
-    const RUNAWAY_FOLD: &str = "[ 1 21000 ] RANGE 1 [ * ] FOLD";
+    const RUNAWAY_FOLD: &str = "1 21000 RANGE 1 [ * ] FOLD";
 
     #[tokio::test]
     async fn a_refusal_reports_its_resource_rather_than_its_residue() {
@@ -127,7 +127,7 @@ mod error_stack_tests {
     async fn a_successful_result_is_never_elided() {
         // A success *is* its stack. Truncating it would change the answer, so
         // an oversized success stays oversized and the host says so.
-        let report = agent_json("[ 0 20000 ] RANGE").await;
+        let report = agent_json("0 20000 RANGE").await;
         assert_eq!(report["status"], "ok");
         assert!(report["stackElided"].is_null());
         assert!(

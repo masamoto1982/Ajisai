@@ -68,18 +68,16 @@ const WORDS_JSON: &str = include_str!("../../../spec/words.json");
 /// `DivisionByZero` is excluded: it is not a registered outcome category at
 /// all (`scripts/check-outcome-registry.mjs`'s documented exclusion —
 /// diagnostic-trace-only).
-fn structural_error_categories() -> [ErrorCategory; 11] {
+fn structural_error_categories() -> [ErrorCategory; 9] {
     [
         ErrorCategory::StackUnderflow,
         ErrorCategory::UnknownWord,
         ErrorCategory::VectorLengthMismatch,
         ErrorCategory::ShapeMismatch,
         ErrorCategory::MalformedSource,
-        ErrorCategory::NameConflict,
         ErrorCategory::ExecutionLimitExceeded,
         ErrorCategory::ResourceLimitExceeded,
         ErrorCategory::RecursionLimitExceeded,
-        ErrorCategory::BuiltinProtection,
         ErrorCategory::SelfReferentialDefinition,
     ]
 }
@@ -270,9 +268,7 @@ impl Reachability {
 /// raise sites for that category in the engine, read off the source rather
 /// than inferred from the name:
 ///
-/// - `nameConflict`, `selfReferentialDefinition` — `interpreter::execute_def`
-///   only.
-/// - `builtinProtection` — `execute_def` and `execute_del`.
+/// - `selfReferentialDefinition` — `interpreter::execute_def` only.
 ///
 /// `recursionLimitExceeded` is gated too but on a different predicate (any
 /// User-Word activation, since `execute_builtin` raises it on `call_depth`),
@@ -283,11 +279,7 @@ impl Reachability {
 /// modules, and narrowing them would mean modelling which of those a program
 /// reaches — a different and much larger claim than "this program contains no
 /// `DEF`".
-const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 3] = [
-    ("error:nameConflict", &["DEF"]),
-    ("error:selfReferentialDefinition", &["DEF"]),
-    ("error:builtinProtection", &["DEF", "DEL"]),
-];
+const GATED_STRUCTURAL_IDS: [(&str, &[&str]); 1] = [("error:selfReferentialDefinition", &["DEF"])];
 
 /// Every structural error category (see `structural_error_categories`),
 /// except `stackUnderflow` (given a precise, flow-sensitive answer by

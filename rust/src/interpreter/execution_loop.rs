@@ -43,7 +43,7 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         // and `PUT` stopped raising it: no Word raises past-the-end any more,
         // so the reason names a projection and nothing else.
         NilReason::IndexOutOfBounds
-        | NilReason::MissingField
+        | NilReason::NotFound
         | NilReason::InvalidEncoding
         | NilReason::SpaceExhausted
         | NilReason::DomainMiss

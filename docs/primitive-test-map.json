@@ -285,8 +285,8 @@
       ]
     },
     {
-      "id": "algebra.bubble.domain",
-      "algebraic_family": "bubble",
+      "id": "algebra.absence.domain",
+      "algebraic_family": "absence",
       "kind": "domain",
       "status": "accepted",
       "derived_word_count": 8,
@@ -335,8 +335,8 @@
       ]
     },
     {
-      "id": "algebra.bubble.passthrough",
-      "algebraic_family": "bubble",
+      "id": "algebra.absence.passthrough",
+      "algebraic_family": "absence",
       "kind": "operation",
       "status": "accepted",
       "derived_word_count": 10,

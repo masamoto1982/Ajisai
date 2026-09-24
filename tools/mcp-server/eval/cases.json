@@ -378,7 +378,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 0 4 ] RANGE"
+    "source": "0 4 RANGE"
    },
    "expect": {
     "/status": "ok",
@@ -538,7 +538,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 2 2 0 ] FILL"
+    "source": "[ 2 2 ] 0 FILL"
    },
    "expect": {
     "/status": "ok",
@@ -827,7 +827,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
+    "source": "0 99998 RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
    },
    "expect": {
     "/status": "error",
@@ -861,7 +861,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 0 100001 ] RANGE"
+    "source": "0 100001 RANGE"
    },
    "expect": {
     "/status": "ok",
@@ -878,7 +878,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD"
+    "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    },
    "expect": {
     "/status": "error",

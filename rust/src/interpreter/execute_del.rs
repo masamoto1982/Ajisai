@@ -15,15 +15,15 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let word_name = upper_name.clone();
 
     if interp.core_vocabulary.contains_key(&word_name) {
-        return Err(AjisaiError::BuiltinProtection {
-            word: word_name,
-            operation: "delete".into(),
-        });
+        return Err(AjisaiError::declared(
+            "protectedWord",
+            format!("Cannot delete Core Word '{}'", word_name),
+        ));
     }
 
     // A reserved alias or syntax token that names no Core Word entry at all —
     // canonicalization above leaves it unchanged, so it reached here rather
-    // than the `BuiltinProtection` branch — is still not a name `DEL` may
+    // than the Core-Word branch above — is still not a name `DEL` may
     // target: the input helper `'` and the tokenizer-level `|` have no
     // dictionary entry to delete, but they are not undefined either. Checked
     // against the un-canonicalized `name`, the same gap `DEF`'s identical

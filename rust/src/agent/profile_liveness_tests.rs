@@ -307,7 +307,7 @@ mod profile_liveness_tests {
         // the *work* ceiling has to bind first, because a vector this size is
         // legal and it is what is done to it that is not.
         //
-        // `[ 0 99999 ] RANGE UNIQUE` was the MCP witness before the
+        // `0 99999 RANGE UNIQUE` was the MCP witness before the
         // de-quadraticization follow-up (`Value: Hash` turned the scan family's
         // O(n×distinct) linear scan into an O(n)-average `HashMap` lookup):
         // 100,000 all-distinct machine words now costs about 3.4M of the 20M
@@ -330,7 +330,7 @@ mod profile_liveness_tests {
         // source string.
         for profile in [mcp_profile(), playground_profile()] {
             let source = format!(
-                "[ 0 {} ] RANGE{}",
+                "0 {} RANGE{}",
                 profile.collection_vector_max,
                 " UNIQUE".repeat(profile.collection_reps_to_cross)
             );
@@ -357,7 +357,7 @@ mod profile_liveness_tests {
         // bounding the wrong thing.
         for profile in [mcp_profile(), playground_profile()] {
             let max_element_index = profile.limits.max_materialized_elements - 1;
-            let source = format!("[ 0 {max_element_index} ] RANGE REVERSE LENGTH");
+            let source = format!("0 {max_element_index} RANGE REVERSE LENGTH");
             let (resource, _, _) = refused_by(&profile, &source).await;
             assert_eq!(
                 resource, "<none: the program succeeded>",

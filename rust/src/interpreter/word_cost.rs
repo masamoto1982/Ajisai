@@ -11,7 +11,7 @@
 //!
 //! A dependency's class is refined against the operand provenance that walk
 //! already computes, so a compile-time-literal operand collapses a class the
-//! same way it does for space (`[ 0 10 ] RANGE`). The provenance is *read
+//! same way it does for space (`0 10 RANGE`). The provenance is *read
 //! from* `SpaceSim` (`word_space::OperandProfile`) rather than tracked a
 //! second time here: one slot stack, two bounds. This is what upholds the
 //! "never a false error" invariant `word_space.rs`'s module comment states —
@@ -110,9 +110,9 @@ impl CostBound {
 ///   between every pair, so it is `superlinear` in the worst case. `RANGE` and
 ///   `FILL` are the value-driven materializers: a *numeric operand's value*
 ///   sets the materialized length, so the charge is unbounded as a function of
-///   input **size** — measured, `[ 0 10 ] RANGE` charges 187 and
-///   `[ 0 20000 ] RANGE` charges 340,017 against the same 2-element operand;
-///   `[ 300 300 0 ] FILL` charges 1,530,000. A compile-time literal operand
+///   input **size** — measured, `0 10 RANGE` charges 187 and
+///   `0 20000 RANGE` charges 340,017 against two bounds of the same size;
+///   `[ 300 300 ] 0 FILL` charges 1,530,000. A compile-time literal operand
 ///   pins the amount, which `CostSim::feed_word` refines back down to `const`.
 ///   `CONTRACT` walks a block's tokens in the same single pass `REFLECT` does —
 ///   resolving each call's dependency contracts, never evaluating the block

@@ -26,19 +26,19 @@
       "rationale": "No domain representative is a reserved Core Word alias, so the table never reaches naming_convention_checker::check_reserved_word_name's refusal. '+' is reserved as an alias of ADD."
     },
     {
-      "id": "nameIsAWord",
-      "source": "1 'ADD' BIND",
-      "expect": "error:nameIsAWord",
-      "rationale": "BIND's name-position domain representatives are never a live Core or User Word name, so the table never reaches check_bindable_name's Core/User-Word refusal. 'ADD' is a Core Word."
-    },
-    {
-      "id": "builtinProtection",
+      "id": "protectedWordCore",
       "source": "[ 1 ] 'ADD' DEF",
-      "expect": "error:builtinProtection",
-      "rationale": "Same gap as nameIsAWord, on DEF's side: no domain representative names a live Core Word, so op_def_inner's core_vocabulary refusal never fires in the table. Redefining ADD is the witness."
+      "expect": "error:protectedWord",
+      "rationale": "No domain representative names a live Core Word, so op_def_inner's Core-vocabulary refusal never fires in the table. Redefining ADD is the witness."
     },
     {
       "id": "nameConflict",
+      "source": "1 'ADD' BIND",
+      "expect": "error:nameConflict",
+      "rationale": "BIND's name-position domain representatives are never a live Core or User Word name, so the table never reaches check_bindable_name's refusal. 'ADD' is a Core Word."
+    },
+    {
+      "id": "nameConflictFromDef",
       "source": "1 'X' BIND\n[ 1 ] 'X' DEF",
       "expect": "error:nameConflict",
       "rationale": "Requires two statements sharing state (a live binding, then a DEF of the same name) — the exhaustive table only ever runs one Word against fresh domain literals, so no single cell can set up a binding for a second statement to conflict with."
@@ -123,6 +123,12 @@
       "source": "'ADD' CONTRACT",
       "expect": "error:notASymbol",
       "rationale": "The exhaustive table hands CONTRACT every domain representative, so the category is reached there too; stated beside its registry entry because the String case is the one a reader will try first, and the one LANG.DICTIONARY.ACYCLIC forbids answering."
+    },
+    {
+      "id": "spaceExhausted",
+      "source": "0 999999999999 RANGE",
+      "expect": "nil:spaceExhausted",
+      "rationale": "The table's domain representatives are small numbers, so no RANGE cell asks for more elements than the machine materializes. A pair of bounds a trillion apart is the witness."
     }
   ]
 }

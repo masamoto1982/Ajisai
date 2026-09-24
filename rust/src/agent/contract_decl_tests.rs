@@ -278,7 +278,7 @@ mod contract_decl_tests {
         assert_eq!(exit_code(literal_add), 0);
 
         // A literal-driven range materializes a compile-time-fixed length.
-        let literal_range = "[ [ 0 10 ] RANGE ] 'K' DEF\n#:contract K cost collection=const";
+        let literal_range = "[ 0 10 RANGE ] 'K' DEF\n#:contract K cost collection=const";
         assert_eq!(contract_decls(literal_range)["outcome"], "value");
 
         // And a genuinely size-driven word still verifies at `linear`.

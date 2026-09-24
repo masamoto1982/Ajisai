@@ -15,11 +15,7 @@ fn aq_ver_007_a_metadata_exists_for_all_builtin_words() {
     assert!(!registry.is_empty(), "registry must not be empty");
     for word in registry {
         assert!(!word.name.is_empty(), "name must not be empty");
-        assert!(
-            !word.category.is_empty(),
-            "{} has empty category",
-            word.name
-        );
+        assert!(!word.family.is_empty(), "{} has empty family", word.name);
         // Purity is generated from the schema's enum, so "is this a valid
         // class" is a type-level fact now. What still needs asserting is
         // that the declaration reached the registry.

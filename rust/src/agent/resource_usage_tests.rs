@@ -47,8 +47,8 @@ mod resource_usage_tests {
         for source in [
             "2 3 / 1 3 / +",
             "[ [ 2 ] * ] 'DOUBLE' DEF [ 3 ] DOUBLE",
-            "[ 1 20 ] RANGE 1 [ * ] FOLD",
-            "[ 1 20 ] RANGE [ [ 2 ] * ] MAP",
+            "1 20 RANGE 1 [ * ] FOLD",
+            "1 20 RANGE [ [ 2 ] * ] MAP",
         ] {
             let report = agent_json(source).await;
             assert!(
@@ -63,8 +63,8 @@ mod resource_usage_tests {
     async fn more_work_reports_more_steps() {
         // Not merely non-zero: the number has to move with the work, or it is
         // a constant dressed up as a measurement.
-        let short = steps(&agent_json("[ 1 10 ] RANGE 1 [ * ] FOLD").await);
-        let long = steps(&agent_json("[ 1 200 ] RANGE 1 [ * ] FOLD").await);
+        let short = steps(&agent_json("1 10 RANGE 1 [ * ] FOLD").await);
+        let long = steps(&agent_json("1 200 RANGE 1 [ * ] FOLD").await);
         assert!(
             long > short * 10,
             "twenty times the fold must cost far more steps, got {long} against {short}"
@@ -81,8 +81,7 @@ mod resource_usage_tests {
         // step count this test means to exercise ever grows): 200 outer
         // iterations each folding 999 inner elements costs on the order of
         // 200,000 steps while every one `RANGE` ever produces stays at 999.
-        let report =
-            agent_json("[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD").await;
+        let report = agent_json("1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD").await;
         assert_eq!(report["status"], "error");
         let limit = report["diagnosis"]["resourceLimit"]["limit"]
             .as_u64()
@@ -100,7 +99,7 @@ mod resource_usage_tests {
 
     #[tokio::test]
     async fn numeric_work_is_reported_beside_the_steps() {
-        let report = agent_json("[ 1 20 ] RANGE 1 [ * ] FOLD").await;
+        let report = agent_json("1 20 RANGE 1 [ * ] FOLD").await;
         assert!(
             report["resourceUsage"]["numericWork"]
                 .as_u64()
@@ -122,7 +121,7 @@ mod resource_usage_tests {
         // longer dominates the price the way it did — both succeed now, and
         // the gap between them is only the cost of copying every new value
         // into the result rather than an O(n×distinct) amplification.
-        let uniform = agent_json("[ 0 15999 ] RANGE [ 0 MUL ] MAP UNIQUE LENGTH").await;
+        let uniform = agent_json("0 15999 RANGE [ 0 MUL ] MAP UNIQUE LENGTH").await;
         assert_eq!(uniform["status"], "ok");
         let uniform_work = uniform["resourceUsage"]["collectionWork"]
             .as_u64()
@@ -132,7 +131,7 @@ mod resource_usage_tests {
             "a scan of 16,000 elements charged nothing"
         );
 
-        let distinct = agent_json("[ 0 15999 ] RANGE UNIQUE LENGTH").await;
+        let distinct = agent_json("0 15999 RANGE UNIQUE LENGTH").await;
         assert_eq!(distinct["status"], "ok");
         let distinct_work = distinct["resourceUsage"]["collectionWork"]
             .as_u64()
@@ -168,7 +167,7 @@ mod resource_usage_tests {
         // property: each key is a budget the host declares, so an agent can
         // subtract. A key here with no ceiling behind it would be an optimizer
         // counter in the wrong object.
-        let report = agent_json("[ 1 20 ] RANGE 1 [ * ] FOLD").await;
+        let report = agent_json("1 20 RANGE 1 [ * ] FOLD").await;
         let usage = report["resourceUsage"]
             .as_object()
             .expect("resourceUsage is an object");
@@ -190,7 +189,7 @@ mod resource_usage_tests {
     async fn the_compatibility_alias_agrees_with_the_resource_it_mirrors() {
         // `runtimeMetrics.executionSteps` stays where it was — removing a field
         // is what a schema version is for — and now carries the same reading.
-        let report = agent_json("[ 1 20 ] RANGE 1 [ * ] FOLD").await;
+        let report = agent_json("1 20 RANGE 1 [ * ] FOLD").await;
         assert_eq!(
             report["runtimeMetrics"]["executionSteps"], report["resourceUsage"]["executionSteps"],
             "one counter, however many places report it"

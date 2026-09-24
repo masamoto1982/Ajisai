@@ -28100,6 +28100,359 @@
     {
       "word": "RANGE",
       "inputs": [
+        "scalarOne",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarOne",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "booleanTrue",
         "scalarOne"
       ],
       "outcome": "error:invalidRange"
@@ -28107,6 +28460,7 @@
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "scalarZero"
       ],
       "outcome": "error:invalidRange"
@@ -28114,6 +28468,7 @@
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "scalarNegative"
       ],
       "outcome": "error:invalidRange"
@@ -28121,6 +28476,7 @@
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "scalarLarge"
       ],
       "outcome": "error:invalidRange"
@@ -28128,6 +28484,7 @@
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "booleanTrue"
       ],
       "outcome": "error:invalidRange"
@@ -28135,6 +28492,7 @@
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "textShort"
       ],
       "outcome": "error:invalidRange"
@@ -28142,27 +28500,31 @@
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "value"
+      "outcome": "error:invalidRange"
     },
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "value"
+      "outcome": "error:invalidRange"
     },
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "nil:spaceExhausted"
+      "outcome": "error:invalidRange"
     },
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "nilLiteral"
       ],
       "outcome": "nil:literal"
@@ -28170,13 +28532,543 @@
     {
       "word": "RANGE",
       "inputs": [
+        "booleanTrue",
         "codeBlock"
       ],
       "outcome": "error:invalidRange"
     },
     {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "error:shapeMismatch"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "error:invalidRange"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "RANGE",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "scalarOne"
       ],
       "outcome": "error:invalidShape"
@@ -28184,6 +29076,7 @@
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "scalarZero"
       ],
       "outcome": "error:invalidShape"
@@ -28191,6 +29084,7 @@
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "scalarNegative"
       ],
       "outcome": "error:invalidShape"
@@ -28198,6 +29092,7 @@
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "scalarLarge"
       ],
       "outcome": "error:invalidShape"
@@ -28205,34 +29100,39 @@
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "error:nonNumeric"
     },
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "textShort"
       ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarOne",
+        "vectorPair"
+      ],
       "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
       "inputs": [
-        "vectorPair"
-      ],
-      "outcome": "value"
-    },
-    {
-      "word": "FILL",
-      "inputs": [
+        "scalarOne",
         "vectorTriple"
       ],
-      "outcome": "value"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "vectorHuge"
       ],
       "outcome": "error:invalidShape"
@@ -28240,6 +29140,7 @@
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "nilLiteral"
       ],
       "outcome": "nil:literal"
@@ -28247,9 +29148,890 @@
     {
       "word": "FILL",
       "inputs": [
+        "scalarOne",
         "codeBlock"
       ],
       "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "scalarOne"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "scalarZero"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "scalarNegative"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "scalarLarge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
+        "codeBlock"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "scalarOne"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "scalarZero"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "scalarNegative"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "scalarLarge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarNegative",
+        "codeBlock"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "scalarOne"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "scalarZero"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "scalarNegative"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "scalarLarge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarLarge",
+        "codeBlock"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "scalarOne"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "scalarZero"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "scalarNegative"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "scalarLarge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "booleanTrue",
+        "codeBlock"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "scalarOne"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "scalarZero"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "scalarNegative"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "scalarLarge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "textShort",
+        "codeBlock"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorPair",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorTriple",
+        "codeBlock"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "scalarOne"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "scalarZero"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "scalarNegative"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "scalarLarge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "vectorTriple"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "vectorHuge"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "vectorHuge",
+        "codeBlock"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "scalarOne"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "scalarZero"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "scalarNegative"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "scalarLarge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "booleanTrue"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "textShort"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "vectorPair"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "vectorTriple"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "vectorHuge"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "nilLiteral",
+        "codeBlock"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "scalarOne"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "scalarZero"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "booleanTrue"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "textShort"
+      ],
+      "outcome": "error:nonNumeric"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "vectorTriple"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "vectorHuge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "nilLiteral"
+      ],
+      "outcome": "nil:literal"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "codeBlock",
+        "codeBlock"
+      ],
+      "outcome": "value"
     },
     {
       "word": "SHAPE",
@@ -43324,7 +45106,7 @@
         "vectorPair",
         "scalarZero"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43332,7 +45114,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43340,7 +45122,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43348,7 +45130,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43356,7 +45138,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43364,7 +45146,7 @@
         "vectorPair",
         "vectorPair"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43372,7 +45154,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43380,7 +45162,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43388,7 +45170,7 @@
         "vectorPair",
         "nilLiteral"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43396,7 +45178,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43412,7 +45194,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43420,7 +45202,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43428,7 +45210,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43436,7 +45218,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43444,7 +45226,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43452,7 +45234,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43460,7 +45242,7 @@
         "vectorTriple",
         "vectorTriple"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43468,7 +45250,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43476,7 +45258,7 @@
         "vectorTriple",
         "nilLiteral"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43484,7 +45266,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43492,7 +45274,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43508,7 +45290,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43516,7 +45298,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43524,7 +45306,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43532,7 +45314,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43540,7 +45322,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43548,7 +45330,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43556,7 +45338,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43564,7 +45346,7 @@
         "vectorHuge",
         "nilLiteral"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43572,7 +45354,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43676,7 +45458,7 @@
         "codeBlock",
         "scalarZero"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43684,7 +45466,7 @@
         "codeBlock",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43692,7 +45474,7 @@
         "codeBlock",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43700,7 +45482,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43708,7 +45490,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43716,7 +45498,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43724,7 +45506,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43732,7 +45514,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43740,7 +45522,7 @@
         "codeBlock",
         "nilLiteral"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "INDEX-OF",
@@ -43748,7 +45530,7 @@
         "codeBlock",
         "codeBlock"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "MEMBER?",
@@ -45260,7 +47042,7 @@
         "vectorPair",
         "scalarZero"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45268,7 +47050,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45276,7 +47058,7 @@
         "vectorPair",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45348,7 +47130,7 @@
         "vectorTriple",
         "scalarZero"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45356,7 +47138,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45364,7 +47146,7 @@
         "vectorTriple",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45428,7 +47210,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45444,7 +47226,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45452,7 +47234,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45612,7 +47394,7 @@
         "codeBlock",
         "scalarZero"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45620,7 +47402,7 @@
         "codeBlock",
         "scalarNegative"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",
@@ -45628,7 +47410,7 @@
         "codeBlock",
         "scalarLarge"
       ],
-      "outcome": "nil:missingField"
+      "outcome": "nil:notFound"
     },
     {
       "word": "BSEARCH",

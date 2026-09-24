@@ -42,7 +42,7 @@ mod ordering_ops_tests {
 
     #[tokio::test]
     async fn a_dense_scan_keeps_its_result_dense() {
-        for source in ["[ 3 1 3 1 2 ] UNIQUE", "[ 0 7 ] RANGE UNIQUE"] {
+        for source in ["[ 3 1 3 1 2 ] UNIQUE", "0 7 RANGE UNIQUE"] {
             assert!(
                 top_is_dense(source).await,
                 "`{source}` must keep its result in columns"
@@ -60,7 +60,7 @@ mod ordering_ops_tests {
             ("[ 9 5 9 1 5 ] UNIQUE", "[ 9 5 1 ]"),
             ("[ -1 2 -1 ] UNIQUE", "[ -1 2 ]"),
             ("[ 7 7 7 ] UNIQUE", "[ 7 ]"),
-            ("[ 0 4 ] RANGE UNIQUE", "[ 0 1 2 3 4 ]"),
+            ("0 4 RANGE UNIQUE", "[ 0 1 2 3 4 ]"),
         ] {
             assert_eq!(
                 equals(source, expected).await,
@@ -78,7 +78,7 @@ mod ordering_ops_tests {
             ("[ 3 1 3 1 2 ] TALLY", "[ 3 1 2 ] [ 2 2 1 ] RECORD"),
             ("[ 9 5 9 1 5 ] TALLY", "[ 9 5 1 ] [ 2 2 1 ] RECORD"),
             ("[ 7 7 7 ] TALLY", "[ 7 ] [ 3 ] RECORD"),
-            ("[ 0 4 ] RANGE TALLY", "[ 0 1 2 3 4 ] [ 1 1 1 1 1 ] RECORD"),
+            ("0 4 RANGE TALLY", "[ 0 1 2 3 4 ] [ 1 1 1 1 1 ] RECORD"),
         ] {
             assert_eq!(
                 equals(source, expected).await,
@@ -115,10 +115,10 @@ mod ordering_ops_tests {
         for word in ["UNIQUE", "TALLY"] {
             assert_eq!(
                 equals(
-                    &format!("[ 0 99 ] RANGE [ 1/7 MUL FLOOR ] MAP {word}"),
+                    &format!("0 99 RANGE [ 1/7 MUL FLOOR ] MAP {word}"),
                     &format!(
-                        "[ 0 49 ] RANGE [ 1/7 MUL FLOOR ] MAP \
-                         [ 50 99 ] RANGE [ 1/7 MUL FLOOR ] MAP CONCAT {word}"
+                        "0 49 RANGE [ 1/7 MUL FLOOR ] MAP \
+                         50 99 RANGE [ 1/7 MUL FLOOR ] MAP CONCAT {word}"
                     )
                 )
                 .await,
@@ -136,21 +136,17 @@ mod ordering_ops_tests {
         // `(x - 5)^2` over 0..9 is 25 16 9 4 1 0 1 4 9 16: not monotone, so
         // neither direction of the input is a sorted order.
         assert!(
-            top_is_dense("[ 0 9 ] RANGE [ 5 SUB 2 POW ] MAP").await,
+            top_is_dense("0 9 RANGE [ 5 SUB 2 POW ] MAP").await,
             "the operand must take the dense route this test is about"
         );
         assert_eq!(
-            equals(
-                "[ 0 9 ] RANGE [ 5 SUB 2 POW ] MAP UNIQUE",
-                "[ 25 16 9 4 1 0 ]"
-            )
-            .await,
+            equals("0 9 RANGE [ 5 SUB 2 POW ] MAP UNIQUE", "[ 25 16 9 4 1 0 ]").await,
             Some(true),
             "first occurrence in the input order"
         );
         assert_eq!(
             equals(
-                "[ 0 9 ] RANGE [ 5 SUB 2 POW ] MAP REVERSE UNIQUE",
+                "0 9 RANGE [ 5 SUB 2 POW ] MAP REVERSE UNIQUE",
                 "[ 16 9 4 1 0 25 ]"
             )
             .await,
@@ -170,10 +166,7 @@ mod ordering_ops_tests {
             // 1/3 2/3 1 4/3 are four distinct values whose numerators are
             // 1 2 3 4 — and whose *denominators* differ, so a numerator-keyed
             // scan would be answering a different question.
-            (
-                "[ 1 4 ] RANGE [ 3 DIV ] MAP UNIQUE",
-                "[ 1 4 ] RANGE [ 3 DIV ] MAP",
-            ),
+            ("1 4 RANGE [ 3 DIV ] MAP UNIQUE", "1 4 RANGE [ 3 DIV ] MAP"),
             ("[ 1 NIL 1 ] UNIQUE", "[ 1 NIL ]"),
             ("[ 'b' 'a' 'b' ] UNIQUE", "[ 'b' 'a' ]"),
             ("[ [ 1 2 ] [ 1 2 ] [ 3 4 ] ] UNIQUE", "[ [ 1 2 ] [ 3 4 ] ]"),

@@ -509,7 +509,6 @@
     "purity",
     "determinism",
     "cost",
-    "category",
     "documentation"
    ],
    "description": "One canonical entry of the generated `spec/words.json` registry, reproduced verbatim.",
@@ -525,9 +524,6 @@
      }
     },
     "family": {
-     "type": "string"
-    },
-    "category": {
      "type": "string"
     },
     "vocabularyTier": {
@@ -633,13 +629,7 @@
       "hover": {
        "type": "string"
       },
-      "lookup": {
-       "type": "string"
-      },
       "syntax": {
-       "type": "string"
-      },
-      "role": {
        "type": "string"
       },
       "stackEffect": {

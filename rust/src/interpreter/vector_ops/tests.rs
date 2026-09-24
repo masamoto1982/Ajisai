@@ -6,44 +6,27 @@ use crate::interpreter::Interpreter;
 async fn test_range_basic_stacktop() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 0 5 ] RANGE").await;
+    let result = interp.execute("0 5 RANGE").await;
     assert!(result.is_ok(), "RANGE should succeed: {:?}", result);
 
     assert_eq!(interp.stack.len(), 1);
 }
 
 #[tokio::test]
-async fn test_range_with_step() {
+async fn test_range_counts_down_when_end_is_below_start() {
     let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 0 10 2 ] RANGE").await;
-    assert!(
-        result.is_ok(),
-        "RANGE with step should succeed: {:?}",
-        result
+    interp.execute("3 0 RANGE").await.unwrap();
+    assert_eq!(
+        format!("{}", interp.stack.last().unwrap()),
+        "[ 3/1 2/1 1/1 0/1 ]"
     );
-
-    assert_eq!(interp.stack.len(), 1);
-}
-
-#[tokio::test]
-async fn test_range_descending() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 10 0 -2 ] RANGE").await;
-    assert!(
-        result.is_ok(),
-        "RANGE descending should succeed: {:?}",
-        result
-    );
-    assert_eq!(interp.stack.len(), 1);
 }
 
 #[tokio::test]
 async fn test_range_single_element() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 5 5 ] RANGE").await;
+    let result = interp.execute("5 5 RANGE").await;
     assert!(
         result.is_ok(),
         "RANGE single element should succeed: {:?}",
@@ -52,45 +35,26 @@ async fn test_range_single_element() {
     assert_eq!(interp.stack.len(), 1);
 }
 
+/// A bound that is not an integer names no position in an integer sequence:
+/// `invalidRange`, with both bounds put back where the program wrote them.
 #[tokio::test]
-async fn test_range_error_step_zero_restores_stack_stacktop() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 0 10 0 ] RANGE").await;
-    assert!(result.is_err(), "RANGE with step=0 should fail");
-
-    assert_eq!(
-        interp.stack.len(),
-        1,
-        "Arguments should be restored on error"
-    );
+async fn test_range_non_integer_bound_restores_both_operands() {
+    for code in ["0 1/2 RANGE", "'a' 5 RANGE"] {
+        let mut interp = Interpreter::new();
+        let result = interp.execute(code).await;
+        assert!(result.is_err(), "{code} should fail");
+        assert_eq!(interp.stack.len(), 2, "{code}: both bounds restored");
+    }
 }
 
+/// Both bounds are leaves, so a Vector of bounds lifts to one sequence each.
 #[tokio::test]
-async fn test_range_error_step_zero_restores_stack_stack_mode() {
+async fn test_range_lifts_over_a_vector_of_bounds() {
     let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 0 10 0 ] .. RANGE").await;
-    assert!(result.is_err(), "RANGE stack mode with step=0 should fail");
-
+    interp.execute("[ 0 1 ] 2 RANGE").await.unwrap();
     assert_eq!(
-        interp.stack.len(),
-        1,
-        "Arguments should be restored on error in stack mode"
-    );
-}
-
-#[tokio::test]
-async fn test_range_error_infinite_restores_stack() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 0 10 -1 ] RANGE").await;
-    assert!(result.is_err(), "RANGE with infinite sequence should fail");
-
-    assert_eq!(
-        interp.stack.len(),
-        1,
-        "Arguments should be restored on infinite error"
+        format!("{}", interp.stack.last().unwrap()),
+        "[ [ 0/1 1/1 2/1 ] [ 1/1 2/1 ] ]"
     );
 }
 
@@ -138,13 +102,7 @@ async fn range_equals_literal(range: &str, literal: &str) -> Option<bool> {
 
 #[tokio::test]
 async fn range_results_are_dense_tensors() {
-    for code in [
-        "[ 0 5 ] RANGE",
-        "[ 0 10 2 ] RANGE",
-        "[ 10 0 -2 ] RANGE",
-        "[ 5 5 ] RANGE",
-        "[ -3 3 ] RANGE",
-    ] {
+    for code in ["0 5 RANGE", "10 0 RANGE", "5 5 RANGE", "-3 3 RANGE"] {
         assert!(
             range_lands_a_dense_tensor(code).await,
             "`{code}` must build i64 columns, not boxed per-lane Values"
@@ -158,14 +116,11 @@ async fn range_lanes_are_the_numbers_the_literal_spells() {
     // explicit step that does not divide the span evenly, a descending step,
     // a single-element range, and a span crossing zero.
     for (range, literal) in [
-        ("[ 0 5 ] RANGE", "[ 0 1 2 3 4 5 ]"),
-        ("[ 0 10 2 ] RANGE", "[ 0 2 4 6 8 10 ]"),
-        ("[ 0 9 2 ] RANGE", "[ 0 2 4 6 8 ]"),
-        ("[ 10 0 -2 ] RANGE", "[ 10 8 6 4 2 0 ]"),
-        ("[ 10 1 -3 ] RANGE", "[ 10 7 4 1 ]"),
-        ("[ 5 5 ] RANGE", "[ 5 ]"),
-        ("[ -3 3 ] RANGE", "[ -3 -2 -1 0 1 2 3 ]"),
-        ("[ 3 -3 ] RANGE", "[ 3 2 1 0 -1 -2 -3 ]"),
+        ("0 5 RANGE", "[ 0 1 2 3 4 5 ]"),
+        ("10 7 RANGE", "[ 10 9 8 7 ]"),
+        ("5 5 RANGE", "[ 5 ]"),
+        ("-3 3 RANGE", "[ -3 -2 -1 0 1 2 3 ]"),
+        ("3 -3 RANGE", "[ 3 2 1 0 -1 -2 -3 ]"),
     ] {
         assert_eq!(
             range_equals_literal(range, literal).await,
@@ -181,12 +136,10 @@ async fn range_lanes_are_the_numbers_the_literal_spells() {
 #[tokio::test]
 async fn range_length_matches_the_counted_span() {
     for (code, expected) in [
-        ("[ 0 5 ] RANGE LENGTH", 6),
-        ("[ 0 10 2 ] RANGE LENGTH", 6),
-        ("[ 0 9 2 ] RANGE LENGTH", 5),
-        ("[ 10 1 -3 ] RANGE LENGTH", 4),
-        ("[ 5 5 ] RANGE LENGTH", 1),
-        ("[ -3 3 ] RANGE LENGTH", 7),
+        ("0 5 RANGE LENGTH", 6),
+        ("10 7 RANGE LENGTH", 4),
+        ("5 5 RANGE LENGTH", 1),
+        ("-3 3 RANGE LENGTH", 7),
     ] {
         let mut interp = Interpreter::new();
         interp
@@ -224,7 +177,7 @@ async fn reverse_keeps_a_flat_dense_result_dense() {
     // boxed per-lane `Value`s and hand back an AoS `Vector`, which left every
     // Word downstream to decline its own dense path.
     assert!(
-        range_lands_a_dense_tensor("[ 0 7 ] RANGE REVERSE").await,
+        range_lands_a_dense_tensor("0 7 RANGE REVERSE").await,
         "a flat dense REVERSE must stay dense"
     );
     assert!(
@@ -237,7 +190,7 @@ async fn reverse_keeps_a_flat_dense_result_dense() {
 async fn reverse_produces_the_reversed_sequence() {
     for (reversed, literal) in [
         ("[ 1 2 3 4 5 6 7 8 ] REVERSE", "[ 8 7 6 5 4 3 2 1 ]"),
-        ("[ 0 5 ] RANGE REVERSE", "[ 5 4 3 2 1 0 ]"),
+        ("0 5 RANGE REVERSE", "[ 5 4 3 2 1 0 ]"),
         ("[ 5 ] REVERSE", "[ 5 ]"),
         // Rational lanes: the columns reverse together, so 1/3 2/3 1 4/3
         // becomes 4/3 1 2/3 1/3 rather than pairing a numerator with the
@@ -259,7 +212,7 @@ async fn reverse_produces_the_reversed_sequence() {
 async fn reverse_twice_restores_the_original() {
     for source in [
         "[ 1 2 3 4 5 6 7 8 ]",
-        "[ 0 20 3 ] RANGE",
+        "20 0 RANGE",
         "[ 1 NIL 3 4 5 6 7 8 ]",
         "[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]",
         "[ 'a' 'b' 'c' ]",

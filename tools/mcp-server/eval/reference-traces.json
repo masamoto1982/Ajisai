@@ -378,7 +378,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 4 ] RANGE"
+    "source": "0 4 RANGE"
    }
   },
   {
@@ -386,7 +386,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 4 ] RANGE"
+    "source": "0 4 RANGE"
    }
   },
   {
@@ -538,7 +538,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 2 2 0 ] FILL"
+    "source": "[ 2 2 ] 0 FILL"
    }
   },
   {
@@ -546,7 +546,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 2 2 0 ] FILL"
+    "source": "[ 2 2 ] 0 FILL"
    }
   },
   {
@@ -826,7 +826,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
+    "source": "0 99998 RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
    }
   },
   {
@@ -834,7 +834,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 99998 ] RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
+    "source": "0 99998 RANGE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE UNIQUE LENGTH"
    }
   },
   {
@@ -858,7 +858,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 100001 ] RANGE"
+    "source": "0 100001 RANGE"
    }
   },
   {
@@ -866,7 +866,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 0 100001 ] RANGE"
+    "source": "0 100001 RANGE"
    }
   },
   {
@@ -874,7 +874,7 @@
    "language": "en",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD"
+    "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    }
   },
   {
@@ -882,7 +882,7 @@
    "language": "ja",
    "selectedTool": "compute",
    "arguments": {
-    "source": "[ 1 200 ] RANGE 0 [ [ 1 999 ] RANGE 0 [ ADD ] FOLD ADD ] FOLD"
+    "source": "1 200 RANGE 0 [ 1 999 RANGE 0 [ ADD ] FOLD ADD ] FOLD"
    }
   },
   {

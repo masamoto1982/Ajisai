@@ -4,7 +4,7 @@
 //! A collection Word loops inside Rust. `executionSteps` prices word count and
 //! charges it one step; the work meter prices arithmetic and it performs none;
 //! `materializedElements` bounds how big its operand may be but says nothing
-//! about what is done to it. So `[ 0 99999 ] RANGE UNIQUE` spent 45 seconds as
+//! about what is done to it. So `0 99999 RANGE UNIQUE` spent 45 seconds as
 //! one step of a hundred-thousand-step budget, and every declared ceiling
 //! stayed silent.
 //!

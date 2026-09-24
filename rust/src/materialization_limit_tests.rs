@@ -31,7 +31,7 @@ mod materialization_limit_tests {
     #[tokio::test]
     async fn range_projects_unbounded_count_onto_a_space_ceiling() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 0 9999999999999 ] RANGE").await;
+        let result = interp.execute("0 9999999999999 RANGE").await;
         assert!(
             result.is_ok(),
             "an over-budget RANGE must project onto NIL, not error: {result:?}"
@@ -49,7 +49,7 @@ mod materialization_limit_tests {
         // recover it.
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("[ 0 9999999999999 ] RANGE 'S' BIND [ 42 ] S S NIL? SELECT")
+            .execute("0 9999999999999 RANGE 'S' BIND [ 42 ] S S NIL? SELECT")
             .await;
         assert!(
             result.is_ok(),
@@ -65,7 +65,7 @@ mod materialization_limit_tests {
     #[tokio::test]
     async fn range_accepts_ordinary_size() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 0 5 ] RANGE").await;
+        let result = interp.execute("0 5 RANGE").await;
         assert!(result.is_ok(), "small RANGE should still succeed");
         assert_eq!(
             top_nil_reason(&interp),
@@ -80,7 +80,7 @@ mod materialization_limit_tests {
         // while computing the over-budget element count, and the result
         // projects onto NIL.
         let mut interp = Interpreter::new();
-        let program = format!("[ {} {} ] RANGE", i64::MIN, i64::MAX);
+        let program = format!("{} {} RANGE", i64::MIN, i64::MAX);
         let result = interp.execute(&program).await;
         assert!(
             result.is_ok(),
@@ -91,20 +91,20 @@ mod materialization_limit_tests {
 
     #[tokio::test]
     async fn range_infinite_direction_is_still_an_error() {
-        // A malformed range (wrong direction / would never terminate) is not a
-        // budget miss; it remains an ordinary channel error.
+        // A malformed range (a bound that is not an integer) is not a budget
+        // miss; it remains an ordinary channel error.
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 5 0 1 ] RANGE").await;
+        let result = interp.execute("0 1/2 RANGE").await;
         assert!(
             result.is_err(),
-            "an infinite-direction RANGE stays a malformed-use error"
+            "a non-integer RANGE bound stays a malformed-use error"
         );
     }
 
     #[tokio::test]
     async fn fill_projects_oversized_product_onto_a_space_ceiling() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1000000 1000000 7 ] FILL").await;
+        let result = interp.execute("[ 1000000 1000000 ] 7 FILL").await;
         assert!(
             result.is_ok(),
             "a billion-element FILL must project onto NIL, not error: {result:?}"
@@ -119,7 +119,7 @@ mod materialization_limit_tests {
         // projects onto NIL.
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("[ 99999999 99999999 99999999 1 ] FILL")
+            .execute("[ 99999999 99999999 99999999 ] 1 FILL")
             .await;
         assert!(
             result.is_ok(),
@@ -131,7 +131,7 @@ mod materialization_limit_tests {
     #[tokio::test]
     async fn fill_accepts_ordinary_shape() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 2 2 7 ] FILL").await;
+        let result = interp.execute("[ 2 2 ] 7 FILL").await;
         assert!(result.is_ok(), "small FILL should still succeed");
         assert_eq!(
             top_nil_reason(&interp),

@@ -44,7 +44,7 @@ mod sort_tests {
     async fn a_dense_integer_sort_stays_dense() {
         for source in [
             "[ 5 3 9 1 7 2 8 4 ] SORT",
-            "[ 0 7 ] RANGE REVERSE SORT",
+            "0 7 RANGE REVERSE SORT",
             "[ 7 ] SORT",
         ] {
             assert!(
@@ -58,7 +58,7 @@ mod sort_tests {
     async fn a_dense_integer_sort_orders_ascending() {
         for (sorted, expected) in [
             ("[ 5 3 9 1 7 2 8 4 ] SORT", "[ 1 2 3 4 5 7 8 9 ]"),
-            ("[ 0 7 ] RANGE REVERSE SORT", "[ 0 7 ] RANGE"),
+            ("0 7 RANGE REVERSE SORT", "0 7 RANGE"),
             // Negatives: sorting the numerator column must respect sign, not
             // magnitude.
             ("[ 3 -1 0 -5 2 ] SORT", "[ -5 -1 0 2 3 ]"),
@@ -85,8 +85,8 @@ mod sort_tests {
     async fn the_two_routes_answer_alike() {
         assert_eq!(
             equals(
-                "[ 0 99 ] RANGE REVERSE SORT",
-                "[ 0 49 ] RANGE [ 50 99 ] RANGE CONCAT SORT"
+                "0 99 RANGE REVERSE SORT",
+                "0 49 RANGE 50 99 RANGE CONCAT SORT"
             )
             .await,
             Some(true),
@@ -107,8 +107,8 @@ mod sort_tests {
     async fn rational_lanes_keep_the_comparison_route_and_sort_by_value() {
         assert_eq!(
             equals(
-                "[ 1 4 ] RANGE [ 3 DIV ] MAP REVERSE SORT",
-                "[ 1 4 ] RANGE [ 3 DIV ] MAP"
+                "1 4 RANGE [ 3 DIV ] MAP REVERSE SORT",
+                "1 4 RANGE [ 3 DIV ] MAP"
             )
             .await,
             Some(true),

@@ -6,7 +6,7 @@
 //! execution-free token walk the contract inference already performs
 //! (`word_contract.rs`). The domain is deliberately provenance-aware: a
 //! materializer whose operand is a compile-time literal contributes `const`
-//! (`[ 0 10 ] RANGE` is input-independent), while the same word fed an input
+//! (`0 10 RANGE` is input-independent), while the same word fed an input
 //! value is provably `unbounded` (`X RANGE` materializes a length set by the
 //! *value* of `X`). Everything the simulation cannot prove degrades to a sound
 //! upper bound with `exact = false`, so the declaration checker can only raise
@@ -136,7 +136,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
 /// `Dynamic` but whose *stack* arity is nonetheless fixed and known here. This
 /// lets the simulation inspect the operand provenance of the value-driven
 /// materializers — where a compile-time-literal operand collapses the class
-/// from `Unbounded` to `Const` (`[ 0 10 ] RANGE`) — even though their `mass`
+/// from `Unbounded` to `Const` (`0 10 RANGE`) — even though their `mass`
 /// is conservatively `Dynamic`. Every other Dynamic-mass word is soundly
 /// handled by the degrade-on-dynamic path.
 fn space_arity_override(id: WordId) -> Option<(u16, u16)> {

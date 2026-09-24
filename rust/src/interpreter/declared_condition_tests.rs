@@ -9,7 +9,9 @@
 //! vocabulary rather than Word by Word.
 
 use crate::error::ErrorCategory;
-use crate::interpreter::debug_declared_checks::cause_class_for_declared_condition;
+use crate::interpreter::debug_declared_checks::{
+    cause_class_for_declared_condition, repair_for_declared_condition,
+};
 use crate::interpreter::debug_diagnosis::CauseClass;
 use crate::interpreter::error_flow_trace::ErrorFlowEventKind;
 use crate::interpreter::Interpreter;
@@ -54,6 +56,36 @@ fn declared_condition_vocabulary_is_classified() {
     );
 }
 
+/// `spec/outcomes.json` says which conditions are repaired in the program
+/// (`repair: "program"`), and `partiality` is derived from it; the diagnosis
+/// says the same thing through the cause class. The two are one fact, so they
+/// may not disagree for any condition a Word declares.
+#[test]
+fn declared_repair_agrees_with_the_diagnosis() {
+    let outcomes: serde_json::Value =
+        serde_json::from_str(include_str!("../../../spec/outcomes.json")).unwrap();
+    let program: std::collections::HashSet<&str> = outcomes["errorCategories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| c["repair"] == "program")
+        .filter_map(|c| c["id"].as_str())
+        .collect();
+    for condition in GENERATED_WORDS
+        .iter()
+        .flat_map(|word| word.error_when.iter().copied())
+    {
+        let diagnosed =
+            repair_for_declared_condition(&cause_class_for_declared_condition(condition));
+        let declared = if program.contains(condition) {
+            "fixProgram"
+        } else {
+            "fixInput"
+        };
+        assert_eq!(diagnosed, declared, "{condition}");
+    }
+}
+
 /// The condition a raise names has to be one the raising Word declares.
 /// Naming a condition the contract does not carry would answer in a vocabulary
 /// the caller cannot look up.
@@ -67,8 +99,8 @@ async fn a_named_condition_is_one_the_word_declares() {
         ("[ 1 2 ] 5 MAP", "MAP"),
         ("TRUE NUM", "NUM"),
         ("NIL EXEC", "EXEC"),
-        ("[ 0 5 0 ] RANGE", "RANGE"),
-        ("[ 5 0 1 ] RANGE", "RANGE"),
+        ("0 1/2 RANGE", "RANGE"),
+        ("'a' 5 RANGE", "RANGE"),
         ("[ 'y' ] [ 'n' ] 1 SELECT", "SELECT"),
         ("[ 1 2 ] [ 3 4 5 ] [ TRUE FALSE ] SELECT", "SELECT"),
     ] {

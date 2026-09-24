@@ -134,60 +134,44 @@ pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     )
 }
 
+/// `[ shape ] value FILL` — a Vector of the given shape, every leaf `value`:
+/// `[ 2 3 ] 0 FILL` is two rows of three zeros. The shape comes first and the
+/// value second, the order `RESHAPE` takes its data and its shape in; the
+/// value is a `leaf`, so a Vector of values lifts to one filled Vector each.
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
-    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    if args_val.is_nil() {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::declared(
-            "invalidShape",
-            "expected a [ shape... value ] vector, got NIL",
-        ));
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
-
-    let n = args_val.len();
-
-    if n < 2 {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::declared(
-            "invalidShape",
-            format!(
-                "expected a [ shape... value ] Vector of at least 2 elements, got {} element(s)",
-                n
-            ),
-        ));
-    }
-
-    let fill_value = match args_val.child(n - 1).and_then(|v| v.as_scalar().cloned()) {
-        Some(f) => f,
-        None => {
-            interp.stack.push(args_val);
-            return Err(AjisaiError::declared(
-                "invalidShape",
-                "expected a Scalar as the last element of [ shape... value ]",
-            ));
-        }
+    let value_val = interp.stack.pop().expect("length checked");
+    let shape_val = interp.stack.pop().expect("length checked");
+    let restore = |interp: &mut Interpreter, shape_val: Value, value_val: Value| {
+        interp.stack.push(shape_val);
+        interp.stack.push(value_val);
     };
 
-    let shape_len = n - 1;
+    let Some(fill_value) = value_val.as_scalar().cloned() else {
+        let got = value_val.domain_name();
+        restore(interp, shape_val, value_val);
+        return Err(AjisaiError::declared(
+            "nonNumeric",
+            format!("expected a Scalar to fill with, got {got}"),
+        ));
+    };
 
-    let mut shape = Vec::with_capacity(shape_len);
-    for i in 0..shape_len {
-        let dim_child = args_val
-            .child(i)
-            .expect("FILL: child index in 0..len must be valid");
-        let dim = match dim_child.as_scalar().and_then(|f| f.as_usize()) {
-            Some(d) if d > 0 => d,
-            Some(_) | None => {
-                interp.stack.push(args_val);
-                return Err(AjisaiError::declared(
-                    "invalidShape",
-                    "expected positive integer dimensions, got invalid dimension",
-                ));
-            }
-        };
-        shape.push(dim);
-    }
+    let dims = match shape_val.as_vector_view() {
+        Some(items) if !items.is_empty() => items
+            .iter()
+            .map(|d| d.as_scalar().and_then(|f| f.as_usize()).filter(|d| *d > 0))
+            .collect::<Option<Vec<usize>>>(),
+        _ => None,
+    };
+    let Some(shape) = dims else {
+        restore(interp, shape_val, value_val);
+        return Err(AjisaiError::declared(
+            "invalidShape",
+            "expected a non-empty Vector of positive integers as the shape",
+        ));
+    };
 
     // Compute the element count with overflow protection and reject anything
     // beyond the materialization cap before allocating. `shape.iter().product()`
@@ -219,7 +203,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     };
     if let Err(e) = crate::interpreter::collection_meter::charge_materialization(interp, total_size)
     {
-        interp.stack.push(args_val);
+        restore(interp, shape_val, value_val);
         return Err(e);
     }
 

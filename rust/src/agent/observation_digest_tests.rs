@@ -80,7 +80,7 @@ mod observation_digest_tests {
             Value::from_string(""),
             Value::from_string("A"),
             Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown),
-            Value::nil_with_reason(NilReason::MissingField, Recoverability::Unknown),
+            Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown),
             sqrt_of(2),
             sqrt_of(3),
             sqrt_of(12),
@@ -197,7 +197,7 @@ mod observation_digest_tests {
     #[test]
     fn nil_reasons_separate_digests() {
         let division = Value::nil_with_reason(NilReason::DivisionByZero, Recoverability::Unknown);
-        let missing = Value::nil_with_reason(NilReason::MissingField, Recoverability::Unknown);
+        let missing = Value::nil_with_reason(NilReason::NotFound, Recoverability::Unknown);
         assert_ne!(division, missing);
         assert_ne!(digest_of(&division), digest_of(&missing));
     }

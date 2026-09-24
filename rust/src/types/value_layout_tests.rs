@@ -7,7 +7,7 @@
 //! inlined a 256-byte `DebugDiagnosis`: a summary string, an evidence list, a
 //! next-check list and a candidate list, reserved in full on every value
 //! whether or not it was absent. A vector of 262,144 numbers moved 90 MB to
-//! carry 19 MB of numerators, and `[ 0 262143 ] RANGE` took 89.8 ms; boxed, the
+//! carry 19 MB of numerators, and `0 262143 RANGE` took 89.8 ms; boxed, the
 //! same line takes 9.9 ms.
 //!
 //! These are layout assertions, not wall clocks (`work_meter_calibration_tests`

@@ -5,7 +5,7 @@ use super::builtin_word_definitions::{builtin_specs, lookup_builtin_spec};
 use super::builtin_word_details::lookup_builtin_detail;
 use super::builtin_word_lookup_docs::builtin_lookup_docs;
 
-const REQUIRED_SECTIONS: &[&str] = &["Category:", "Summary:", "Role:", "Stack Effect:"];
+const REQUIRED_SECTIONS: &[&str] = &["Family:", "Summary:", "Stack Effect:"];
 
 /// Sections every builtin now renders, authored entry or not: the
 /// derived template (three-layer model §3.4) on top of the four base
@@ -141,14 +141,13 @@ fn lookup_reports_the_vocabulary_tier() {
 
 #[test]
 fn nil_projection_rule_words_describe_nil_not_only_errors() {
-    // The three-layer model (§2.3) requires GET / DIV / NUM / CHR to
-    // describe their Bubble/NIL cases (the specification's term for a
-    // reasoned NIL) separately from contract errors.
+    // GET / DIV / NUM describe their NIL cases separately from contract
+    // errors.
     for word in ["GET", "DIV", "NUM"] {
         let body = lookup_builtin_detail(word);
         assert!(
-            body.contains("Bubble/NIL"),
-            "{} LOOKUP body must describe its Bubble/NIL case:\n{}",
+            body.contains("NIL"),
+            "{} LOOKUP body must describe its NIL case:\n{}",
             word,
             body
         );

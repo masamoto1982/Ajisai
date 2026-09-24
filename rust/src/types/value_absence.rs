@@ -13,11 +13,11 @@ use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 /// reason, which gave the pairing two sources and let them disagree: `DIV` by
 /// zero reported `reason = divisionByZero` with `origin = executionFailure`,
 /// contradicting `AbsenceOrigin::DivisionByZero`'s own documentation, and
-/// `INDEX-OF` did the same to `missingField`. Deriving here means a new reason
+/// `INDEX-OF` did the same to `notFound`. Deriving here means a new reason
 /// gets its origin by adding one arm, and gets it everywhere at once.
 fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
     match reason {
-        NilReason::MissingField => AbsenceOrigin::MissingField,
+        NilReason::NotFound => AbsenceOrigin::NotFound,
         NilReason::InvalidEncoding => AbsenceOrigin::InvalidEncoding,
         NilReason::IndexOutOfBounds => AbsenceOrigin::IndexOutOfBounds,
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
@@ -82,7 +82,7 @@ impl Value {
     }
 
     /// Create a reasoned NIL for the NIL Projection Rule (the specification's
-    /// "Bubble Rule"): well-formed operations that cannot produce a value
+    /// "NIL Projection Rule"): well-formed operations that cannot produce a value
     /// return a reasoned NIL directly with an explicit reason.
     ///
     /// The origin follows from the reason via [`absence_origin_for_reason`] and

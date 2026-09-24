@@ -49,7 +49,7 @@ fn every_check_carries_a_code_and_both_locales() {
         Some(ErrorCategory::ExecutionLimitExceeded),
         Some(ErrorCategory::ResourceLimitExceeded),
         Some(ErrorCategory::RecursionLimitExceeded),
-        Some(ErrorCategory::BuiltinProtection),
+        Some(ErrorCategory::Declared("protectedWord")),
     ];
     for why in &classes {
         for category in &categories {
@@ -338,18 +338,18 @@ mod diagnosis_vocabulary_is_real {
             Some(ErrorCategory::VectorLengthMismatch),
             Some(ErrorCategory::ShapeMismatch),
             Some(ErrorCategory::MalformedSource),
-            Some(ErrorCategory::NameConflict),
+            Some(ErrorCategory::Declared("nameConflict")),
             Some(ErrorCategory::ExecutionLimitExceeded),
             Some(ErrorCategory::ResourceLimitExceeded),
             Some(ErrorCategory::RecursionLimitExceeded),
-            Some(ErrorCategory::BuiltinProtection),
+            Some(ErrorCategory::Declared("protectedWord")),
             Some(ErrorCategory::SelfReferentialDefinition),
             Some(ErrorCategory::Declared("divisorEqualsZero")),
         ];
         let reasons = [
             None,
             Some(NilReason::DivisionByZero),
-            Some(NilReason::MissingField),
+            Some(NilReason::NotFound),
             Some(NilReason::InvalidEncoding),
             Some(NilReason::IndexOutOfBounds),
             Some(NilReason::SpaceExhausted),

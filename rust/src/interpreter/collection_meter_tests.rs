@@ -80,8 +80,8 @@ mod collection_meter_tests {
         // Hash` turned that scan into one hash-and-lookup per element, so the
         // charge now tracks element count; distinctness only adds the small,
         // linear cost of copying every new value into the result.
-        let uniform = charged_by("[ 0 3999 ] RANGE [ 0 MUL ] MAP UNIQUE").await;
-        let distinct = charged_by("[ 0 3999 ] RANGE UNIQUE").await;
+        let uniform = charged_by("0 3999 RANGE [ 0 MUL ] MAP UNIQUE").await;
+        let distinct = charged_by("0 3999 RANGE UNIQUE").await;
         assert!(
             distinct < uniform * 3,
             "distinctness must no longer dominate the price the way the O(n×d) \
@@ -94,11 +94,11 @@ mod collection_meter_tests {
         // `UNIQUE`, `TALLY` and `GROUP` run one scan between them, so a program
         // cannot get the quadratic for free by asking for it under a different
         // name.
-        let unique = charged_by("[ 0 999 ] RANGE UNIQUE").await;
-        let tally = charged_by("[ 0 999 ] RANGE TALLY").await;
+        let unique = charged_by("0 999 RANGE UNIQUE").await;
+        let tally = charged_by("0 999 RANGE TALLY").await;
         assert_eq!(unique, tally, "one scan, however it is spelled");
 
-        let group = charged_by("[ 0 999 ] RANGE [ 0 999 ] RANGE GROUP").await;
+        let group = charged_by("0 999 RANGE 0 999 RANGE GROUP").await;
         assert!(
             group > unique,
             "`GROUP` scans the keys and copies the values, so it cannot cost \
@@ -110,8 +110,8 @@ mod collection_meter_tests {
     async fn an_element_that_is_a_vector_costs_what_its_leaves_cost() {
         // Equality on a nested element is a loop over that element, so "one
         // element" is only a unit of work when the elements are scalars.
-        let flat = charged_by("[ 0 199 ] RANGE UNIQUE").await;
-        let nested = charged_by("[ 0 199 ] RANGE [ [ 1 16 ] RANGE + ] MAP UNIQUE").await;
+        let flat = charged_by("0 199 RANGE UNIQUE").await;
+        let nested = charged_by("0 199 RANGE [ 1 16 RANGE + ] MAP UNIQUE").await;
         assert!(
             nested > flat * 8,
             "sixteen leaves per element must cost more than one: {nested} \
@@ -131,8 +131,8 @@ mod collection_meter_tests {
         // the per-element copy cost (shared by both sides, dominated by the
         // width-independent `COLLECTION_COPY_UNITS`) no longer gets diluted
         // by an O(n) amplification that hit both sides equally.
-        let rational = charged_by_word("[ 2 121 ] RANGE", "UNIQUE").await;
-        let algebraic = charged_by_word("[ 2 121 ] RANGE [ SQRT ] MAP", "UNIQUE").await;
+        let rational = charged_by_word("2 121 RANGE", "UNIQUE").await;
+        let algebraic = charged_by_word("2 121 RANGE [ SQRT ] MAP", "UNIQUE").await;
         assert!(
             algebraic > rational * 30,
             "an algebraic element must be priced as one: {algebraic} against \
@@ -146,10 +146,10 @@ mod collection_meter_tests {
         // width of an element moves. Multiplying by the wide literal is what
         // makes the elements genuine BigInts rather than machine words — the
         // step where the measured cost jumps twelvefold.
-        let narrow = charged_by_word("[ 1 200 ] RANGE [ 1/101 MUL FLOOR 1 + ] MAP", "UNIQUE").await;
+        let narrow = charged_by_word("1 200 RANGE [ 1/101 MUL FLOOR 1 + ] MAP", "UNIQUE").await;
         let wide = charged_by_word(
             &format!(
-                "[ 1 200 ] RANGE [ 1/101 MUL FLOOR 1 + {} * ] MAP",
+                "1 200 RANGE [ 1/101 MUL FLOOR 1 + {} * ] MAP",
                 "9".repeat(512)
             ),
             "UNIQUE",
@@ -172,7 +172,7 @@ mod collection_meter_tests {
         // representation and not the other would make it observable — the same
         // hole the arithmetic meter was closed for.
         let literal = charged_by_word("[ 1 2 3 4 5 6 7 8 ]", "REVERSE").await;
-        let generated = charged_by_word("[ 1 8 ] RANGE", "REVERSE").await;
+        let generated = charged_by_word("1 8 RANGE", "REVERSE").await;
         assert_eq!(
             literal, generated,
             "eight elements is eight elements: {literal} against {generated}"
@@ -186,7 +186,7 @@ mod collection_meter_tests {
         // elements — which is the reason this test exists as well as the reason
         // the charge is zero.
         assert_eq!(
-            charged_by_word("[ 1 1000 ] RANGE", "LENGTH").await,
+            charged_by_word("1 1000 RANGE", "LENGTH").await,
             0,
             "an O(1) Word must add nothing to the meter"
         );
@@ -197,8 +197,8 @@ mod collection_meter_tests {
         // `GET` and `TAKE` copy a part. Pricing them by the operand's length
         // would charge for elements they never touch, which is the difference
         // between a ceiling and a tax on holding a large vector.
-        let whole = charged_by_word("[ 1 1000 ] RANGE", "REVERSE").await;
-        let part = charged_by_word("[ 1 1000 ] RANGE", "3 TAKE").await;
+        let whole = charged_by_word("1 1000 RANGE", "REVERSE").await;
+        let part = charged_by_word("1 1000 RANGE", "3 TAKE").await;
         assert!(
             part * 10 < whole,
             "taking three of a thousand must cost far less than touching all \
@@ -211,7 +211,7 @@ mod collection_meter_tests {
     #[tokio::test]
     async fn the_quadratic_scan_is_refused_by_name() {
         assert_eq!(
-            refused_under("[ 0 4999 ] RANGE UNIQUE", 100_000).await,
+            refused_under("0 4999 RANGE UNIQUE", 100_000).await,
             Some(ResourceLimit::CollectionWork),
             "a scan past the budget must name the budget it passed"
         );
@@ -233,7 +233,7 @@ mod collection_meter_tests {
             ..RuntimeLimits::default()
         });
         interp
-            .execute("[ 0 5799 ] RANGE")
+            .execute("0 5799 RANGE")
             .await
             .expect("building the vector is inside the budget for this test");
         let before = interp.get_stack().len();
@@ -271,7 +271,7 @@ mod collection_meter_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute("[ 0 9999 ] RANGE UNIQUE")
+            .execute("0 9999 RANGE UNIQUE")
             .await
             .expect_err("ten thousand distinct values is past this budget");
         let AjisaiError::ResourceLimitExceeded {
@@ -305,7 +305,7 @@ mod collection_meter_tests {
             ..RuntimeLimits::default()
         });
         retry
-            .execute(&format!("[ 0 {} ] RANGE UNIQUE", progress.completed - 1))
+            .execute(&format!("0 {} RANGE UNIQUE", progress.completed - 1))
             .await
             .unwrap_or_else(|e| {
                 panic!(
@@ -327,7 +327,7 @@ mod collection_meter_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute("[ 0 9999 ] RANGE")
+            .execute("0 9999 RANGE")
             .await
             .expect_err("materializing ten thousand elements is past this budget");
         let AjisaiError::ResourceLimitExceeded { progress, .. } = err else {
@@ -341,7 +341,7 @@ mod collection_meter_tests {
         // The other half of a live ceiling. A scan whose charge is inside the
         // budget has to run, or the number is not the number it says it is.
         assert_eq!(
-            refused_under("[ 0 99 ] RANGE UNIQUE", 1_000_000).await,
+            refused_under("0 99 RANGE UNIQUE", 1_000_000).await,
             None,
             "a hundred distinct elements is 5,000 probes and must be allowed"
         );
@@ -353,20 +353,20 @@ mod collection_meter_tests {
         // this meter was added to close, and the way it comes back is a new
         // Word landing in the family without a call to the meter.
         for source in [
-            "[ 1 32 ] RANGE",
-            "[ 1 32 ] RANGE REVERSE",
-            "[ 1 32 ] RANGE 4 TAKE",
-            "[ 1 32 ] RANGE [ 1 2 ] CONCAT",
-            "[ 1 32 ] RANGE 0 7 PUT",
-            "[ 1 32 ] RANGE [ 0 1 ] GET",
-            "[ 1 32 ] RANGE SORT",
-            "[ 1 32 ] RANGE ORDER",
-            "[ 1 32 ] RANGE UNIQUE",
-            "[ 1 32 ] RANGE TALLY",
-            "[ 1 32 ] RANGE [ 1 32 ] RANGE GROUP",
-            "[ 1 32 ] RANGE [ 1 32 ] RANGE 2 COLLECT ZIP",
-            "[ 1 32 ] RANGE -1 INDEX-OF",
-            "[ 4 4 0 ] FILL",
+            "1 32 RANGE",
+            "1 32 RANGE REVERSE",
+            "1 32 RANGE 4 TAKE",
+            "1 32 RANGE [ 1 2 ] CONCAT",
+            "1 32 RANGE 0 7 PUT",
+            "1 32 RANGE [ 0 1 ] GET",
+            "1 32 RANGE SORT",
+            "1 32 RANGE ORDER",
+            "1 32 RANGE UNIQUE",
+            "1 32 RANGE TALLY",
+            "1 32 RANGE 1 32 RANGE GROUP",
+            "1 32 RANGE 1 32 RANGE 2 COLLECT ZIP",
+            "1 32 RANGE -1 INDEX-OF",
+            "[ 4 4 ] 0 FILL",
         ] {
             assert!(
                 charged_by(source).await > 0,
@@ -418,9 +418,9 @@ mod collection_meter_tests {
         // `[ m n DIV MUL FLOOR ] MAP` sends 0..n-1 onto exactly 0..m-1.
         let fold = modulo.map_or(String::new(), |m| format!(" [ {m} {n} DIV MUL FLOOR ] MAP"));
         (
-            format!("[ 0 {} ] RANGE{fold} REVERSE", n - 1),
+            format!("0 {} RANGE{fold} REVERSE", n - 1),
             format!(
-                "[ 0 {} ] RANGE{fold} [ {half} {} ] RANGE{fold} CONCAT",
+                "0 {} RANGE{fold} {half} {} RANGE{fold} CONCAT",
                 half - 1,
                 n - 1
             ),
@@ -432,9 +432,9 @@ mod collection_meter_tests {
         for n in [8usize, 100, 1000] {
             let half = n / 2;
             // Dense: a range reversed is a flat `Tensor`.
-            let dense = format!("[ 0 {} ] RANGE REVERSE", n - 1);
+            let dense = format!("0 {} RANGE REVERSE", n - 1);
             // Nested: `CONCAT` does not promote, so this stays a `Vector`.
-            let nested = format!("[ 0 {} ] RANGE [ {half} {} ] RANGE CONCAT", half - 1, n - 1);
+            let nested = format!("0 {} RANGE {half} {} RANGE CONCAT", half - 1, n - 1);
             assert_eq!(
                 charge_of_appending("SORT", &dense).await,
                 charge_of_appending("SORT", &nested).await,
@@ -448,8 +448,8 @@ mod collection_meter_tests {
     /// times as much.
     #[tokio::test]
     async fn sorting_more_elements_costs_more_than_linearly() {
-        let small = charge_of_appending("SORT", "[ 0 99 ] RANGE REVERSE").await;
-        let large = charge_of_appending("SORT", "[ 0 999 ] RANGE REVERSE").await;
+        let small = charge_of_appending("SORT", "0 99 RANGE REVERSE").await;
+        let large = charge_of_appending("SORT", "0 999 RANGE REVERSE").await;
         assert!(
             large > small.saturating_mul(10),
             "1000 elements charged {large} against 100 elements' {small},              which is at most linear — the log factor is missing"

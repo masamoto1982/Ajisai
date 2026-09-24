@@ -18,9 +18,9 @@
 //! its own. Two witnesses in `spec/outcome-witnesses.json` proved this the
 //! hard way during development: `resourceLimitExceeded` fires on a numeric
 //! literal alone (`999...9`), with no Word call anywhere to attribute it
-//! to, and `builtinProtection`/`nameConflict`/`definitionConflict` all fire on
-//! programs whose every individual Word call (`DEF`, `DEF` again,
-//! `DEF`+`DEL`) has a perfectly ordinary declared vocabulary that simply
+//! to, and `definitionConflict` fires on
+//! programs whose every individual Word call (`DEF`, `DEF` again)
+//! has a perfectly ordinary declared vocabulary that simply
 //! does not list them. Modeling exactly
 //! when each is reachable (the real profile's numeric-literal-digit ceiling
 //! against the literal's actual digit count, for instance) is a sound

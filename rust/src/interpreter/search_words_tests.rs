@@ -74,16 +74,13 @@ mod search_words_tests {
         }
         assert_eq!(
             reason("[ 1 3 5 7 ] 4 BSEARCH").await.as_deref(),
-            Some("missingField")
+            Some("notFound")
         );
         assert_eq!(
             top("[ 1 3 5 7 ] [ 4 5 ] BSEARCH 0 GET NIL-REASON").await,
-            "'missingField'"
+            "'notFound'"
         );
-        assert_eq!(
-            reason("[ ] 4 BSEARCH").await.as_deref(),
-            Some("missingField")
-        );
+        assert_eq!(reason("[ ] 4 BSEARCH").await.as_deref(), Some("notFound"));
     }
 
     /// The order is checked before the search: an unsorted operand is the
@@ -115,7 +112,7 @@ mod search_words_tests {
         }
         assert_eq!(
             reason("'hello' 'z' SEARCH").await.as_deref(),
-            Some("missingField")
+            Some("notFound")
         );
         raises("'hello' 1 SEARCH", "SEARCH").await;
     }

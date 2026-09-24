@@ -5,7 +5,7 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NilReason {
     DivisionByZero,
-    MissingField,
+    NotFound,
     InvalidEncoding,
     IndexOutOfBounds,
     // `LogicallyUnknown` was retired: no `NilReason` value represents the
@@ -152,14 +152,12 @@ pub enum ErrorCategory {
     VectorLengthMismatch,
     ShapeMismatch,
     MalformedSource,
-    NameConflict,
     ExecutionLimitExceeded,
     /// A named `RuntimeLimits` ceiling other than the step budget. Separate
     /// from `ExecutionLimitExceeded` so "the program never terminated" and
     /// "one value grew past the declared size ceiling" stop sharing an answer.
     ResourceLimitExceeded,
     RecursionLimitExceeded,
-    BuiltinProtection,
     SelfReferentialDefinition,
     /// The condition the failing Word's `errorWhen` declares for this state.
     /// Its protocol spelling *is* the declared condition name, so a reader who
@@ -177,11 +175,9 @@ impl ErrorCategory {
             ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
             ErrorCategory::ShapeMismatch => "shapeMismatch",
             ErrorCategory::MalformedSource => "malformedSource",
-            ErrorCategory::NameConflict => "nameConflict",
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
-            ErrorCategory::BuiltinProtection => "builtinProtection",
             ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
             ErrorCategory::Declared(condition) => condition,
         }
@@ -195,11 +191,9 @@ impl ErrorCategory {
             AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
             AjisaiError::ShapeMismatch { .. } => ErrorCategory::ShapeMismatch,
             AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
-            AjisaiError::NameConflict(_) => ErrorCategory::NameConflict,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
-            AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
             AjisaiError::SelfReferentialDefinition { .. } => {
                 ErrorCategory::SelfReferentialDefinition
             }
@@ -212,7 +206,7 @@ impl NilReason {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             NilReason::DivisionByZero => "divisionByZero",
-            NilReason::MissingField => "missingField",
+            NilReason::NotFound => "notFound",
             NilReason::InvalidEncoding => "invalidEncoding",
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
             NilReason::SpaceExhausted => "spaceExhausted",
@@ -229,7 +223,7 @@ impl NilReason {
     /// and `from_protocol_str` follows without another table to update.
     pub const ALL: &'static [NilReason] = &[
         NilReason::DivisionByZero,
-        NilReason::MissingField,
+        NilReason::NotFound,
         NilReason::InvalidEncoding,
         NilReason::IndexOutOfBounds,
         NilReason::SpaceExhausted,
@@ -280,11 +274,6 @@ pub enum AjisaiError {
     /// writing, not in any value, so it belongs to neither the value-shape nor
     /// the user-logic families.
     MalformedSource(String),
-    /// A name was asked to mean two things at once — `BIND` to a name a Word
-    /// already holds, or `DEF` to a name a live binding holds. The two name
-    /// spaces are disjoint by rule (LANG.DICTIONARY.RESOLUTION), so this is a
-    /// rule the program broke, not a value that came out wrong.
-    NameConflict(String),
     ExecutionLimitExceeded {
         limit: usize,
     },
@@ -317,10 +306,6 @@ pub enum AjisaiError {
     SelfReferentialDefinition {
         word: String,
         cycle: Vec<String>,
-    },
-    BuiltinProtection {
-        word: String,
-        operation: String,
     },
     /// A raise the failing Word's own registry entry already names: `condition`
     /// is one of the conditions its `errorWhen` declares, spelled the way
@@ -407,7 +392,6 @@ impl fmt::Display for AjisaiError {
                 )
             }
             AjisaiError::MalformedSource(msg) => write!(f, "{}", msg),
-            AjisaiError::NameConflict(msg) => write!(f, "{}", msg),
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
             }
@@ -457,9 +441,6 @@ impl fmt::Display for AjisaiError {
                     word,
                     cycle.join(" -> ")
                 )
-            }
-            AjisaiError::BuiltinProtection { word, operation } => {
-                write!(f, "Cannot {} built-in word: {}", operation, word)
             }
             AjisaiError::DeclaredCondition {
                 message,

@@ -22,8 +22,8 @@ mod tests {
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("Cannot redefine built-in word"),
-            "Expected error message to contain 'Cannot redefine built-in word', got: {}",
+            err_msg.contains("Cannot redefine Core Word"),
+            "Expected error message to contain 'Cannot redefine Core Word', got: {}",
             err_msg
         );
     }
@@ -251,7 +251,7 @@ mod tests {
             );
             let err_msg = result.unwrap_err().to_string();
             assert!(
-                err_msg.contains("Cannot redefine built-in word"),
+                err_msg.contains("Cannot redefine Core Word"),
                 "Expected error for {}, got: {}",
                 word,
                 err_msg
@@ -271,7 +271,7 @@ mod tests {
                 panic!("a Core Word must not be offered as a definition to load: {text}")
             }
         };
-        for section in ["# GET", "Category:", "Summary:", "Role:", "Stack Effect:"] {
+        for section in ["# GET", "Family:", "Summary:", "Stack Effect:"] {
             assert!(
                 loaded.contains(section),
                 "a Core Word's entry must include '{}' section, got: {}",
@@ -514,8 +514,8 @@ mod tests {
         );
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("Cannot redefine built-in word"),
-            "Expected BuiltinProtection error, got: {}",
+            err_msg.contains("Cannot redefine Core Word"),
+            "Expected protectedWord error, got: {}",
             err_msg
         );
     }

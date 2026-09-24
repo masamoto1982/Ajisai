@@ -68,8 +68,8 @@ mod tests {
                 "`{body}` inside a Word costs the same plus the five calls"
             );
 
-            // `[ 0 4 ] RANGE` is two dispatches of its own, then `MAP` is a third.
-            let via_block = steps("", &format!("[ 0 4 ] RANGE [ {body} ] MAP")).await;
+            // `0 4 RANGE` is two dispatches of its own, then `MAP` is a third.
+            let via_block = steps("", &format!("0 4 RANGE [ {body} ] MAP")).await;
             assert_eq!(
                 via_block,
                 inline + 2,
@@ -115,7 +115,7 @@ mod tests {
             (
                 "inside a block",
                 String::new(),
-                format!("[ 0 19 ] RANGE [ {body} ] MAP"),
+                format!("0 19 RANGE [ {body} ] MAP"),
             ),
         ] {
             let mut interp = Interpreter::new();

@@ -2,10 +2,10 @@
 //! operands (LANG.COLLECTIONS.LIFT).
 //!
 //! A `leaf` operand is read as one Scalar, String or Boolean, so a container
-//! there means "apply the Word to each element". The arithmetic, comparison
-//! and logic families lift natively (the tensor path and `lane_lift`);
-//! every other Word with a lifted operand is lifted here, through the same
-//! `lift_lanes_dyn`, so one rule decides how `[ 'a' 'b' ] UPPER`,
+//! there means "apply the Word to each element". Every Word with a lifted
+//! operand is lifted here, through `lift_lanes_dyn`, except the few whose
+//! primitive already runs the same lift faster itself ([`LIFTS_NATIVELY`]);
+//! one rule decides how `[ 'a' 'b' ] UPPER`,
 //! `[ 1 2 ] 10 ADD` and `R [ 'x' 'y' ] AT` combine their elements. Each
 //! element runs through the full dispatcher, so the NIL roles, the declared
 //! conditions and the cost charges are exactly the Word's own.
@@ -16,6 +16,16 @@ use crate::types::Value;
 
 use super::lane_lift::lift_lanes_dyn;
 use super::Interpreter;
+
+/// The primitives that lift their own `leaf` and `truth` operands: the tensor
+/// path of exact arithmetic, and `lane_lift` for comparison and logic. This is
+/// an implementation choice, not part of any contract — the specification says
+/// only which operands lift — and `rust/tests/lifting_laws.rs` holds these to
+/// the same answers the dispatcher's lift gives every other Word.
+const LIFTS_NATIVELY: &[&str] = &[
+    "ADD", "SUB", "MUL", "DIV", "FLOOR", "ROUND", "MIN", "MAX", "SQRT", "POW", "GCD", "RATIO",
+    "LT", "GT", "AND", "NOT", "SELECT",
+];
 
 fn is_container(value: &Value) -> bool {
     value.is_vector() || value.as_record().is_some()
@@ -29,7 +39,7 @@ impl Interpreter {
         &mut self,
         word: &'static GeneratedWord,
     ) -> Option<Result<()>> {
-        if word.lifts_natively {
+        if LIFTS_NATIVELY.contains(&word.name) {
             return None;
         }
         let Arity::Fixed(arity) = word.stack_inputs else {

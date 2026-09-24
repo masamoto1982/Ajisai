@@ -41,6 +41,8 @@ fn samples(word: &str) -> Option<(Vec<&'static str>, Vec<&'static str>)> {
         "SEARCH" => pair(&["'ab'", "'b'"], &["'cd'", "'c'"]),
         "REPLACE" => pair(&["'ab'", "'a'", "'x'"], &["'cd'", "'c'", "'y'"]),
         "FORMAT" => pair(&["1/3", "2"], &["2/3", "1"]),
+        "RANGE" => pair(&["0", "2"], &["3", "1"]),
+        "FILL" => pair(&["[ 2 ]", "0"], &["[ 2 ]", "1"]),
         _ => None,
     }
 }

@@ -3,8 +3,8 @@
 //! The contract half of that — stack arity, NIL policy, purity, determinism —
 //! is **not** written here. It is read from `kernel::generated`, projected from
 //! `spec/words.json`, and this module joins it with the runtime-local
-//! classifications that the specification does not declare (`category`,
-//! `partiality`, `safety_level`, `safe_preview`).
+//! classifications derived from it (`partiality`, `safety_level`,
+//! `safe_preview`).
 //!
 //! Two of the vocabularies that used to be declared in this file were narrower
 //! than the canonical ones and mislabelled Words as a result: the hand-written
@@ -50,7 +50,7 @@ pub enum WordProfile {
 #[serde(rename_all = "camelCase")]
 pub struct CorewordMetadata {
     pub name: String,
-    pub category: String,
+    pub family: String,
     /// Declared in `spec/words.json`.
     pub purity: Purity,
     /// Declared in `spec/words.json`, in the specification's own spelling.
@@ -152,7 +152,7 @@ fn core_word_metadata(word: &GeneratedWord) -> CorewordMetadata {
         .unwrap_or_else(|| panic!("declared Word {} has no runtime spec entry", word.name));
     CorewordMetadata {
         name: word.name.to_string(),
-        category: spec.category.to_lowercase(),
+        family: spec.family.to_string(),
         purity: word.purity,
         effects: word.effects.iter().map(|e| e.to_string()).collect(),
         determinism: word.determinism,

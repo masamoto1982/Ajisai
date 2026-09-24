@@ -62,7 +62,7 @@ impl AbsenceOrigin {
             AbsenceOrigin::Literal => "literal",
             AbsenceOrigin::DivisionByZero => "divisionByZero",
             AbsenceOrigin::NilPropagation => "nilPropagation",
-            AbsenceOrigin::MissingField => "missingField",
+            AbsenceOrigin::NotFound => "notFound",
             AbsenceOrigin::InvalidEncoding => "invalidEncoding",
             AbsenceOrigin::IndexOutOfBounds => "indexOutOfBounds",
             AbsenceOrigin::SpaceBudget => "spaceBudget",
