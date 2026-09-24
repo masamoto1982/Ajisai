@@ -11,7 +11,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::math_ops::lift_unary_numeric;
 use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactReal, Transcendental};
 use crate::types::{Interpretation, Value, ValueData};
@@ -72,9 +72,7 @@ pub(crate) fn unary(
             Ok(())
         }
         Err(e) => {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.extend(operands);
-            }
+            interp.stack.extend(operands);
             Err(e)
         }
     }

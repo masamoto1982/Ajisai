@@ -17,7 +17,7 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_operands;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::{RecordData, Value};
 
 type WordOp<'a> = &'a dyn Fn(&mut Interpreter) -> Result<()>;
@@ -59,30 +59,22 @@ pub(crate) fn lift_binary(interp: &mut Interpreter, op: WordOp) -> Result<bool> 
     })
 }
 
-/// Run `lift` over consumed operands with the scratch stack in consume mode,
-/// then push the result or put the operands back on an ERROR.
+/// Run `lift` over consumed operands, then push the result or put the
+/// operands back on an ERROR.
 fn run_lift(
     interp: &mut Interpreter,
     operands: Vec<Value>,
     lift: &dyn Fn(&mut Interpreter, &[Value]) -> Result<Value>,
 ) -> Result<bool> {
-    let mode = interp.consumption_mode;
-    // The leaves run the Word itself; each must eat its scratch operands
-    // whatever mode the outer Word was invoked in, which the outer
-    // `extract_operands` above has already honoured.
-    interp.consumption_mode = ConsumptionMode::Consume;
     let result = lift(interp, &operands);
-    interp.consumption_mode = mode;
     match result {
         Ok(value) => {
             interp.stack.push(value);
             Ok(true)
         }
         Err(e) => {
-            if mode != ConsumptionMode::Keep {
-                for operand in operands {
-                    interp.stack.push(operand);
-                }
+            for operand in operands {
+                interp.stack.push(operand);
             }
             Err(e)
         }

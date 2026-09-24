@@ -5,7 +5,7 @@ use crate::error::Result;
 use crate::types::{Interpretation, Token, Value, WordDefinition};
 
 use super::compiled_call::{execute_compiled_call, CompiledCall};
-use super::{ConsumptionMode, EpochSnapshot, Interpreter};
+use super::{EpochSnapshot, Interpreter};
 
 #[derive(Debug, Clone)]
 pub struct CompiledPlan {
@@ -36,7 +36,6 @@ pub enum CompiledOp {
     /// and keeps lines with literal vectors on the compiled path instead of
     /// forcing them onto the interpreter via `FallbackToken`.
     PushVectorLiteral(Value, Interpretation),
-    SetConsumptionKeep,
     CallBuiltin(Arc<CompiledCall>),
     CallUserWord(String),
     CallQualifiedWord {
@@ -58,7 +57,6 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
 
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
-        "KEEP" => CompiledOp::SetConsumptionKeep,
         "TRUE" => CompiledOp::PushWordLiteral(Value::from_bool(true), "TRUE"),
         "FALSE" => CompiledOp::PushWordLiteral(Value::from_bool(false), "FALSE"),
         "NIL" => CompiledOp::PushWordLiteral(Value::nil(), "NIL"),
@@ -264,12 +262,6 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
     }
 }
 
-fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
-    if true {
-        interp.reset_execution_modes();
-    }
-}
-
 /// `Interpreter::execute_nested_block` from a compiled plan instead of from
 /// tokens.
 ///
@@ -338,7 +330,6 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                     .stack
                     .push_with_role(v.clone(), Interpretation::Unassigned);
             }
-            CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(call) => {
                 // The step and the call are one dispatch, so one failure record
                 // covers both. Charging with `?` instead would let the ceiling's
@@ -358,22 +349,15 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 // word-hint table so the compiled route leaves the same
                 // `(value, role)` observation (LANG.OBSERVATION.PROTOCOL).
                 super::execution_loop::apply_word_hint_override(interp, &call.name);
-                // `post_call_cleanup` with the mode-preservation answer
-                // precomputed at compile time (no per-call uppercase scan).
-                if !call.mode_preserving {
-                    interp.reset_execution_modes();
-                }
             }
             CompiledOp::CallUserWord(name) => {
                 interp.execute_word_core(name)?;
                 super::execution_loop::apply_word_hint_override(interp, name);
-                post_call_cleanup(interp, name);
             }
             CompiledOp::CallQualifiedWord { namespace, word } => {
                 let full_name = format!("{}@{}", namespace, word);
                 interp.execute_word_core(&full_name)?;
                 super::execution_loop::apply_word_hint_override(interp, &full_name);
-                post_call_cleanup(interp, &full_name);
             }
             CompiledOp::LineBreak | CompiledOp::FallbackToken(_) => {}
         }

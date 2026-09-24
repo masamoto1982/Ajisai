@@ -190,36 +190,6 @@ async fn a_recovery_phrase_has_a_fixed_arity() {
     );
 }
 
-#[tokio::test]
-async fn keep_is_applied_as_a_modifier_not_as_an_arity() {
-    // `KEEP`'s registry arity is ( 0 -- 0 ); it makes the *next* Word read its
-    // operands without consuming them. Each expectation below is the stack the
-    // body actually leaves at run time.
-    for (body, consumes, produces) in [
-        // `2 3 KEEP ADD` leaves `2 3 5`.
-        ("KEEP ADD", 2, 3),
-        ("2 3 KEEP ADD", 0, 3),
-        // A second KEEP is idempotent, and the flag survives an intervening
-        // literal, so `2 3 KEEP 4 ADD` leaves `2 3 4 7`.
-        ("2 3 KEEP KEEP ADD", 0, 3),
-        ("2 3 KEEP 4 ADD", 0, 4),
-        ("[ 1 2 ] KEEP LENGTH", 0, 2),
-        // The modifier reaches exactly one Word: `2 3 KEEP ADD ADD` leaves `2 8`.
-        ("2 3 KEEP ADD ADD", 0, 2),
-        // Pending at the end of a body is a no-op, as it is at run time.
-        ("1 KEEP", 0, 1),
-    ] {
-        let source = format!("[ {body} ] 'W' DEF");
-        let contract = contract_for(&source, "W").await;
-        assert_eq!(contract.flow, fixed(consumes, produces), "body: {body}");
-        assert_eq!(
-            contract.confidence,
-            ContractConfidence::Complete,
-            "body: {body}"
-        );
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Code-operand classification regression tests (`word_contract_widen.rs`).
 //

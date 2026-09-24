@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-    analyzeStackModifiers,
     applyExecutionAreaState,
     type ApplyAreaStateDeps,
     type LayoutState,
@@ -31,41 +30,6 @@ const makeDeps = (mobileMode: boolean, state: LayoutState): ApplyAreaStateDeps =
         switchDictionarySheet: vi.fn(),
     };
 };
-
-describe('analyzeStackModifiers', () => {
-    it('defaults to EAT when no modifier token is present', () => {
-        expect(analyzeStackModifiers('1 2 ADD')).toEqual({ keep: false });
-        expect(analyzeStackModifiers('')).toEqual({ keep: false });
-    });
-
-    it('reads the KEEP modifier', () => {
-        expect(analyzeStackModifiers('KEEP ADD')).toEqual({ keep: true });
-        expect(analyzeStackModifiers('[ 1 ] keep ADD')).toEqual({ keep: true });
-    });
-
-    // KEEP carries no symbol, so none of the retired punctuation spellings paints
-    // the stack as if a modifier were in force. A name that merely contains the
-    // word is not the modifier either.
-    it('does not read a retired spelling or a longer name as a modifier', () => {
-        for (const source of ['. ADD', '.. ADD', ', ADD', ',, ADD', '; ADD', ';; ADD', 'KEEP-ALL ADD']) {
-            expect(analyzeStackModifiers(source)).toEqual({ keep: false });
-        }
-    });
-
-    it('never mistakes a number for a modifier', () => {
-        expect(analyzeStackModifiers('0.5 ADD')).toEqual({ keep: false });
-        expect(analyzeStackModifiers('3.14 ADD')).toEqual({ keep: false });
-        expect(analyzeStackModifiers('1/2 ADD')).toEqual({ keep: false });
-        // A truncated decimal is not a number either, and still not a modifier.
-        expect(analyzeStackModifiers('.5 ADD')).toEqual({ keep: false });
-        expect(analyzeStackModifiers('5. ADD')).toEqual({ keep: false });
-    });
-
-    it('treats the axis as triggered if any token selects the non-default', () => {
-        expect(analyzeStackModifiers('1 KEEP ADD 2 SUB')).toEqual({ keep: true });
-        expect(analyzeStackModifiers('1 ADD 2 SUB')).toEqual({ keep: false });
-    });
-});
 
 describe('applyExecutionAreaState', () => {
     beforeEach(() => {

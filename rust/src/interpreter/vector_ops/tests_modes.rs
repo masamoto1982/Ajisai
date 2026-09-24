@@ -1,4 +1,4 @@
-//! Test suite for `crate::interpreter::vector_ops` under modifier modes.
+//! Test suite for `crate::interpreter::vector_ops` operand consumption.
 
 use crate::interpreter::Interpreter;
 
@@ -72,23 +72,6 @@ async fn test_get_consume_mode() {
 }
 
 #[tokio::test]
-async fn test_get_keep_mode() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 10 20 30 ] [ 0 ] KEEP GET").await;
-    assert!(
-        result.is_ok(),
-        "GET with keep mode should succeed: {:?}",
-        result
-    );
-    assert_eq!(
-        interp.stack.len(),
-        3,
-        "GET in keep mode should preserve target, index, and add result"
-    );
-}
-
-#[tokio::test]
 async fn test_length_consume_mode() {
     let mut interp = Interpreter::new();
 
@@ -102,81 +85,23 @@ async fn test_length_consume_mode() {
 }
 
 #[tokio::test]
-async fn test_length_keep_mode() {
+async fn test_get_returns_the_element() {
     let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 1 2 3 4 5 ] KEEP LENGTH").await;
-    assert!(
-        result.is_ok(),
-        "LENGTH with keep mode should succeed: {:?}",
-        result
-    );
-    assert_eq!(
-        interp.stack.len(),
-        2,
-        "LENGTH in keep mode should preserve target and add result"
-    );
-}
-
-#[tokio::test]
-async fn test_reverse_keep_mode() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 3 1 2 ] KEEP REVERSE").await;
-    assert!(
-        result.is_ok(),
-        "REVERSE with keep mode should succeed: {:?}",
-        result
-    );
-    assert_eq!(
-        interp.stack.len(),
-        2,
-        "REVERSE in keep mode should preserve original and add result"
-    );
-}
-
-#[tokio::test]
-async fn test_take_keep_mode() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 1 2 3 4 5 ] [ 3 ] KEEP TAKE").await;
-    assert!(
-        result.is_ok(),
-        "TAKE with keep mode should succeed: {:?}",
-        result
-    );
-    assert_eq!(
-        interp.stack.len(),
-        3,
-        "TAKE in keep mode should preserve target, args, and add result"
-    );
-}
-
-#[tokio::test]
-async fn test_get_keep_mode_preserves_all_operands() {
-    let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 20 30 ] [ 0 ] KEEP GET").await;
-    assert!(result.is_ok(), "GET KEEP should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 3, "target + index + result");
-
-    assert!(interp.stack[0].is_vector());
-    assert!(interp.stack[1].is_vector());
-    let result_scalar = interp.stack[2]
+    let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
+    assert!(result.is_ok(), "GET should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 1, "only the element remains");
+    let result_scalar = interp.stack[0]
         .as_scalar()
         .expect("result should be scalar");
     assert_eq!(result_scalar.to_i64(), Some(10));
 }
 
 #[tokio::test]
-async fn test_print_keep_mode() {
+async fn test_print_outputs_and_consumes() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 42 ] KEEP PRINT").await;
-    assert!(result.is_ok(), "PRINT KEEP should succeed: {:?}", result);
-    assert_eq!(
-        interp.stack.len(),
-        1,
-        "PRINT in keep mode should preserve value on stack"
-    );
+    let result = interp.execute("[ 42 ] PRINT").await;
+    assert!(result.is_ok(), "PRINT should succeed: {:?}", result);
+    assert!(interp.stack.is_empty(), "PRINT consumes its operand");
     assert!(
         interp.output_buffer.contains("42/1"),
         "PRINT should output the value, got: {}",
@@ -185,54 +110,25 @@ async fn test_print_keep_mode() {
 }
 
 #[tokio::test]
-async fn test_floor_keep_mode() {
+async fn test_floor_consumes_operand() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 3.7 ] KEEP FLOOR").await;
-    assert!(result.is_ok(), "FLOOR KEEP should succeed: {:?}", result);
-    assert_eq!(
-        interp.stack.len(),
-        2,
-        "FLOOR in keep mode should preserve original and add result"
-    );
+    let result = interp.execute("[ 3.7 ] FLOOR").await;
+    assert!(result.is_ok(), "FLOOR should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 1, "FLOOR leaves only its result");
 }
 
 #[tokio::test]
-async fn test_mod_keep_mode() {
+async fn test_mod_consumes_both_operands() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 3 ] KEEP MOD").await;
-    assert!(result.is_ok(), "MOD KEEP should succeed: {:?}", result);
-    assert_eq!(
-        interp.stack.len(),
-        3,
-        "MOD in keep mode should preserve both operands and add result"
-    );
+    let result = interp.execute("[ 10 ] [ 3 ] MOD").await;
+    assert!(result.is_ok(), "MOD should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 1, "MOD leaves only its result");
 }
 
 #[tokio::test]
-async fn test_percent_alias_keep_mode() {
+async fn test_percent_alias_consumes_both_operands() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 3 ] KEEP %").await;
-    assert!(result.is_ok(), "% KEEP should succeed: {:?}", result);
-    assert_eq!(
-        interp.stack.len(),
-        3,
-        "% alias in keep mode should preserve both operands and add result"
-    );
-}
-
-#[tokio::test]
-async fn test_modes_auto_reset_after_execution() {
-    let mut interp = Interpreter::new();
-
-    let result1 = interp.execute("[ 1 ] [ 2 ] KEEP +").await;
-    assert!(result1.is_ok());
-    assert_eq!(interp.stack.len(), 3);
-
-    let result2 = interp.execute("+").await;
-    assert!(result2.is_ok());
-    assert_eq!(
-        interp.stack.len(),
-        2,
-        "After auto-reset, + should consume operands"
-    );
+    let result = interp.execute("[ 10 ] [ 3 ] %").await;
+    assert!(result.is_ok(), "% should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 1, "% alias leaves only its result");
 }

@@ -59,7 +59,7 @@ const pascal = (value) =>
 // declaration) and the runtime therefore has to read back.
 const CONTRACT_ENUMS = [
   { rustName: 'Family', field: 'family', doc: 'Semantic family the Word selects its shared laws from.' },
-  { rustName: 'Consumption', field: 'consumption', doc: 'How the Word treats its operands under the default mode (LANG.MODIFIERS.CONSUMPTION).' },
+  { rustName: 'Consumption', field: 'consumption', doc: 'How the Word treats its operands under the default mode (LANG.STACK.CONSUMPTION).' },
   { rustName: 'NilPolicy', field: 'nilPolicy', doc: 'How the Word behaves when an operand is NIL (LANG.FAILURE.PASSTHROUGH).' },
   { rustName: 'Partiality', field: 'partiality', doc: 'Whether well-formed application is total, partial, or NIL-projecting.' },
   { rustName: 'Purity', field: 'purity', doc: 'Observational purity class (LANG.CONTRACT.REGISTRY).' },

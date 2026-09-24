@@ -78,10 +78,6 @@
     {
       "word": "COLLECT",
       "reason": "variableArity"
-    },
-    {
-      "word": "KEEP",
-      "reason": "modifierNotWord"
     }
   ],
   "cells": [

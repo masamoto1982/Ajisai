@@ -5,9 +5,9 @@
 // originally chosen by type in docs/dev/competitive-advantage-work-order-2026-08.md
 // Phase 2).
 //
-// 100 Words in one flat dictionary with no imports means the language's whole
+// 99 Words in one flat dictionary with no imports means the language's whole
 // input/outcome surface is finite. Excluding the variable/control-arity Words
-// (COLLECT, EXEC, OR-NIL) and the KEEP modifier leaves the rest with a
+// (COLLECT, EXEC, OR-NIL) leaves the rest with a
 // fixed integer arity; every (Word, domain tuple) pair is run through the
 // real `ajisai` CLI and its outcome recorded as a stable id — never the
 // human-readable `message`, which can be reworded without changing meaning.
@@ -133,8 +133,7 @@ function* domainTuples(arity) {
 // ---------------------------------------------------------------------------
 // Word selection (Step 2.2, pitfalls A/B). `stack.inputs` is a plain integer
 // for every Word except COLLECT/EXEC/OR-NIL (a JSON string: "variable" or
-// "control" in the current spec/words.json); KEEP has a numeric arity (0) but
-// is a modifier applied to the next Word, not a Word to expand on its own.
+// "control" in the current spec/words.json).
 // This is not a hardcoded list (Phase 3 pitfall E): whichever Words currently
 // have non-numeric `stack.inputs` are excluded, whatever their names are.
 // ---------------------------------------------------------------------------
@@ -158,10 +157,6 @@ function selectWords(words) {
   const excluded = [];
   const domainWords = [];
   for (const word of words) {
-    if (word.name === 'KEEP') {
-      excluded.push({ word: word.name, reason: 'modifierNotWord' });
-      continue;
-    }
     if (typeof word.stack.inputs !== 'number') {
       excluded.push({ word: word.name, reason: arityExclusionReason(word) });
       continue;

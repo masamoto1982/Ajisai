@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 
@@ -31,18 +31,8 @@ pub(crate) fn apply_unary_cast(
     interp: &mut Interpreter,
     convert: fn(&Value) -> Result<Value>,
 ) -> Result<()> {
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
     let hint: Interpretation = interp.stack.last_role();
-    let value: Value = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let value: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     match convert(&value) {
         Ok(result) => {
@@ -54,9 +44,7 @@ pub(crate) fn apply_unary_cast(
             Ok(())
         }
         Err(error) => {
-            if !is_keep_mode {
-                interp.stack.push_with_role(value, hint);
-            }
+            interp.stack.push_with_role(value, hint);
             Err(error)
         }
     }

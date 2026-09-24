@@ -75,15 +75,6 @@
       "nilPolicy": "inspectOrRecover"
     },
     {
-      "id": "stackModifier",
-      "clauses": [
-        "LANG.MODIFIERS.CONSUMPTION"
-      ],
-      "axes": [
-        "consumption"
-      ]
-    },
-    {
       "id": "dictionary",
       "clauses": [
         "LANG.DICTIONARY.RESOLUTION",

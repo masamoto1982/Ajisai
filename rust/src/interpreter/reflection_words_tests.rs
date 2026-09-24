@@ -135,7 +135,6 @@ mod reflection_words_tests {
             "[ 'consoleWrite' ]"
         );
         assert_eq!(top("[ MAP ] 0 GET CONTRACT 'inputs' AT").await, "2/1");
-        assert_eq!(top("[ KEEP ] 0 GET CONTRACT 'name' AT").await, "'KEEP'");
         assert_eq!(
             top("[ SORT ] 0 GET CONTRACT KEYS").await,
             "[ 'name' 'tier' 'inputs' 'outputs' 'consumption' 'nil' 'projection' 'errors' 'partiality' 'purity' 'determinism' 'cost' 'effects' ]"
@@ -190,14 +189,12 @@ mod reflection_words_tests {
     }
 
     #[tokio::test]
-    async fn contract_keeps_the_block_and_restores_a_bad_operand() {
-        assert_eq!(top("[ 1 ] KEEP CONTRACT 'inputs' AT").await, "[ 1/1 ] 0/1");
-        for source in [
-            "1 CONTRACT",
-            "1 KEEP CONTRACT",
-            "NIL CONTRACT",
-            "NIL KEEP CONTRACT",
-        ] {
+    async fn contract_reads_the_block_and_restores_a_bad_operand() {
+        assert_eq!(
+            top("[ 1 ] 'B' BIND B B CONTRACT 'inputs' AT").await,
+            "[ 1/1 ] 0/1"
+        );
+        for source in ["1 CONTRACT", "NIL CONTRACT"] {
             let mut interp = Interpreter::new();
             assert!(interp.execute(source).await.is_err(), "accepted {source}");
             assert_eq!(interp.stack.len(), 1, "operand was not restored: {source}");
@@ -213,15 +210,6 @@ mod reflection_words_tests {
         assert_eq!(
             top("7 'N' BIND [ N ] 0 GET CONTRACT NIL?").await,
             "NIL TRUE"
-        );
-    }
-
-    #[tokio::test]
-    async fn keep_retains_the_symbol() {
-        assert_eq!(top("[ ADD ] 0 GET KEEP DEFINED?").await, "ADD TRUE");
-        assert_eq!(
-            top("[ ADD ] 0 GET KEEP CONTRACT 'name' AT").await,
-            "ADD 'ADD'"
         );
     }
 }

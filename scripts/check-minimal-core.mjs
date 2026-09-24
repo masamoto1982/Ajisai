@@ -6,7 +6,7 @@ ADD MUL DIV FLOOR NEG SQRT POW PI
 GET LENGTH CONCAT COLLECT RANGE FOLD SHAPE RESHAPE FLATTEN DEPTH RANK
 RECORD KEYS VALUES AT WITH WITHOUT HAS? MERGE
 CHARS JOIN NUM STR
-SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT KEEP BIND DEF DEL DEFINED? DIGEST PRINT RANDOM`.split(/\s+/));
+SELECT EXEC CONTRACT FAIL NIL NIL? NIL-REASON ABSENT BIND DEF DEL DEFINED? DIGEST PRINT RANDOM`.split(/\s+/));
 const STANDARD = new Set(`OR LTE GTE SUB MOD CEIL ROUND QUANTIZE ABS MIN MAX GCD RATIO EXP LN SIN COS ATAN
 TAKE DROP REVERSE FILL SORT ORDER UNIQUE TALLY ZIP PUT GROUP INDEX-OF MEMBER BSEARCH MAP FILTER SCAN ANY ALL
 TRIM TOKENIZE SEARCH REPLACE UPPER LOWER FORMAT JSON-DECODE JSON-ENCODE`.split(/\s+/));
@@ -43,8 +43,8 @@ const OPERATIONAL = new Set('MAP FILTER SCAN ANY ALL FILL SORT ORDER UNIQUE TALL
 
 // The ten Words held as the alpha's room to grow, cheapest to lose first.
 //
-// The vocabulary is full at 100 and stays there, so an addition has to take a
-// slot from something. Rather than cut ten Words now on the chance that ten
+// The vocabulary is held at 99 (100 until KEEP was retired), so an addition
+// has to take a slot from something. Rather than cut ten Words now on the chance that ten
 // candidates appear, the ten that *would* go are named here in the order they
 // would go, and a candidate takes the head of this list. The room is the same
 // either way; the difference is that nobody writes `X Y X Y LT SELECT` in
@@ -83,10 +83,10 @@ for (const name of setDifference(KERNEL, kernelWords)) errors.push(`${name}: mis
 for (const name of setDifference(kernelWords, KERNEL)) errors.push(`${name}: unexpected Semantic Kernel classification`);
 for (const name of setDifference(STANDARD, standardWords)) errors.push(`${name}: missing Standard classification`);
 for (const name of setDifference(standardWords, STANDARD)) errors.push(`${name}: unexpected Standard classification`);
-if (kernelWords.size !== 54) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 54`);
+if (kernelWords.size !== 53) errors.push(`Semantic Kernel has ${kernelWords.size} Words; expected 53`);
 if (standardWords.size !== 46) errors.push(`Standard vocabulary has ${standardWords.size} Words; expected 46`);
 
-if (words.length !== 100) errors.push(`canonical inventory has ${words.length} Words; expected 100`);
+if (words.length !== 99) errors.push(`canonical inventory has ${words.length} Words; expected 99`);
 for (const name of REMOVED) if (wordNames.has(name)) errors.push(`${name}: removed Word remains canonical`);
 
 for (const word of words) {

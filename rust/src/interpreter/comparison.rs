@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
@@ -74,10 +74,8 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
         return false;
     };
     let decided = kind.apply_to_fraction(&a.fraction, &b.fraction);
-    if interp.consumption_mode == ConsumptionMode::Consume {
-        interp.stack.pop();
-        interp.stack.pop();
-    }
+    interp.stack.pop();
+    interp.stack.pop();
     push_boolean_result(interp, decided);
     record_fastpath_hit(interp);
     true
@@ -88,10 +86,8 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
         return false;
     };
     let eq = a.fraction == b.fraction;
-    if interp.consumption_mode == ConsumptionMode::Consume {
-        interp.stack.pop();
-        interp.stack.pop();
-    }
+    interp.stack.pop();
+    interp.stack.pop();
     push_boolean_result(interp, if invert { !eq } else { eq });
     record_fastpath_hit(interp);
     true
@@ -144,22 +140,12 @@ fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Valu
 }
 
 fn apply_binary_comparison(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let (a_val, b_val) = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        let a_val = interp.stack[stack_len - 2].clone();
-        let b_val = interp.stack[stack_len - 1].clone();
-        (a_val, b_val)
-    } else {
-        let b_val = interp.stack.pop().unwrap();
-        let a_val = interp.stack.pop().unwrap();
-        (a_val, b_val)
-    };
+    let b_val = interp.stack.pop().unwrap();
+    let a_val = interp.stack.pop().unwrap();
 
     match lift_comparison(&a_val, &b_val, kind) {
         Ok(result) => {
@@ -167,10 +153,8 @@ fn apply_binary_comparison(interp: &mut Interpreter, kind: OrderingKind) -> Resu
             Ok(())
         }
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-            }
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
             Err(e)
         }
     }
@@ -301,22 +285,12 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
         return Ok(());
     }
 
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let (a_val, b_val) = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        let a_val = interp.stack[stack_len - 2].clone();
-        let b_val = interp.stack[stack_len - 1].clone();
-        (a_val, b_val)
-    } else {
-        let b_val = interp.stack.pop().unwrap();
-        let a_val = interp.stack.pop().unwrap();
-        (a_val, b_val)
-    };
+    let b_val = interp.stack.pop().unwrap();
+    let a_val = interp.stack.pop().unwrap();
 
     match pairwise_eq(&a_val, &b_val) {
         ScalarCmp::Decided(eq) => push_boolean_result(interp, if invert { !eq } else { eq }),

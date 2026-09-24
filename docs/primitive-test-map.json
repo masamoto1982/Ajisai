@@ -5,9 +5,9 @@
   ],
   "summary": {
     "primitives": 24,
-    "primitives_without_tests": 0,
+    "primitives_without_tests": 2,
     "distinct_law_test_files": 24,
-    "distinct_conformance_cases": 168
+    "distinct_conformance_cases": 167
   },
   "primitives": [
     {
@@ -387,7 +387,7 @@
         "rust/src/interpreter/declared_outcomes_tests.rs",
         "rust/src/interpreter/nil_diagnostics_tests.rs",
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/contract_modifier_laws.rs",
+        "rust/tests/contract_consumption_laws.rs",
         "rust/tests/observation_laws.rs",
         "rust/tests/standard_derivation_laws.rs",
         "rust/tests/standard_operational_laws.rs",
@@ -509,7 +509,7 @@
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
         "rust/src/interpreter/power_words_tests.rs",
-        "rust/tests/contract_modifier_laws.rs",
+        "rust/tests/contract_consumption_laws.rs",
         "rust/tests/higher_order_laws.rs",
         "rust/tests/standard_derivation_laws.rs",
         "rust/tests/standard_operational_laws.rs",
@@ -676,36 +676,24 @@
       "algebraic_family": "modifier",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 1,
-      "law_test_count": 1,
-      "conformance_case_count": 1,
-      "derived_words": [
-        "core.modifier.keep"
-      ],
-      "law_tests": [
-        "rust/tests/contract_modifier_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-keep-modifier"
-      ]
+      "derived_word_count": 0,
+      "law_test_count": 0,
+      "conformance_case_count": 0,
+      "derived_words": [],
+      "law_tests": [],
+      "conformance_cases": []
     },
     {
       "id": "algebra.state-transformer.combinator",
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 1,
-      "law_test_count": 1,
-      "conformance_case_count": 1,
-      "derived_words": [
-        "core.modifier.keep"
-      ],
-      "law_tests": [
-        "rust/tests/contract_modifier_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-keep-modifier"
-      ]
+      "derived_word_count": 0,
+      "law_test_count": 0,
+      "conformance_case_count": 0,
+      "derived_words": [],
+      "law_tests": [],
+      "conformance_cases": []
     },
     {
       "id": "algebra.state-transformer.composition",

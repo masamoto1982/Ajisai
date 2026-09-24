@@ -18,7 +18,7 @@ use crate::interpreter::arithmetic_meter::check_result_size;
 use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::Value;
@@ -106,7 +106,6 @@ pub(crate) fn apply_division_schema(
             ));
         }
     }
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let operands = extract_operands(interp, 2)?;
     let a_val = &operands[0];
     let b_val = &operands[1];
@@ -154,10 +153,8 @@ pub(crate) fn apply_division_schema(
             Ok(())
         }
         Err(error) => {
-            if !is_keep_mode {
-                for val in operands {
-                    interp.stack.push(val);
-                }
+            for val in operands {
+                interp.stack.push(val);
             }
             Err(error)
         }

@@ -334,13 +334,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-keep-modifier" data-category="core">
-  <h3>KEEP retains operands and also pushes the result</h3>
-  <pre class="ajisai-source">3 4 KEEP ADD</pre>
-  <pre class="ajisai-expect-result">3/1 4/1 7/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <section class="ajisai-case" id="core-absence-fallback" data-category="core">
   <h3>A chosen fallback turns a division-by-zero Bubble into a value</h3>
   <pre class="ajisai-source">99 1 0 / NIL? SELECT</pre>
@@ -437,7 +430,7 @@
 
 <!-- ===================== CORE: SIGNATURES & PARTIALITY ===================== -->
 <!-- These cases pin stack signatures, consumption, and rounding/error rules
-     that LANG.MODIFIERS.CONSUMPTION, LANG.OBSERVATION.DIAGNOSIS, LANG.VALUES.EXACT,
+     that LANG.STACK.CONSUMPTION, LANG.OBSERVATION.DIAGNOSIS, LANG.VALUES.EXACT,
      LANG.VALUES.DISJOINT and LANG.FAILURE.PROJECT now state
      normatively, so that an independent port reproduces them exactly. -->
 
@@ -1082,13 +1075,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-passthrough-keeps-operands-under-keep" data-category="core">
-  <h3>KEEP retains the operand a passthrough Word would have eaten, bubble on top</h3>
-  <pre class="ajisai-source">1 0 DIV KEEP SORT</pre>
-  <pre class="ajisai-expect-result">NIL NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
 <!-- ===================== CORE: CREATES-NIL PROJECTIONS (LANG.FAILURE.PASSTHROUGH, LANG.FAILURE.PROJECT) ===================== -->
 
 <section class="ajisai-case" id="core-get-out-of-bounds-reason" data-category="core">
@@ -1566,49 +1552,22 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- ===================== CORE: THE MODIFIER AXIS ===================== -->
-<!-- There is one modifier axis, consumption: a Word consumes the operands it
-     reads unless KEEP is in force. -->
+<!-- ===================== CORE: CONSUMPTION (LANG.STACK.CONSUMPTION) ===================== -->
+<!-- A Word consumes the operands it reads, and nothing modifies this. A value
+     used more than once is named with BIND. -->
 
-<section class="ajisai-case" id="core-keep-on-comparison" data-category="core">
-  <h3>KEEP retains comparison operands beneath the Boolean result</h3>
-  <pre class="ajisai-source">3 4 KEEP LT</pre>
-  <pre class="ajisai-expect-result">3/1 4/1 TRUE</pre>
+<section class="ajisai-case" id="core-bind-reuses-a-value" data-category="core">
+  <h3>A value used twice is named with BIND (LANG.STACK.CONSUMPTION)</h3>
+  <pre class="ajisai-source">5 'N' BIND N N 1 +</pre>
+  <pre class="ajisai-expect-result">5/1 6/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-keep-on-unary-vector-word" data-category="core">
-  <h3>KEEP retains the operand of a unary vector word</h3>
-  <pre class="ajisai-source">[ 1 2 ] KEEP REVERSE</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 ] [ 2/1 1/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-keep-on-a-word-with-no-result" data-category="core">
-  <h3>KEEP retains the operands of a Word that answers with nothing</h3>
-  <pre class="ajisai-source">5 KEEP 'X' BIND X</pre>
-  <pre class="ajisai-expect-result">5/1 'X' 5/1</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-keep-on-exec-modifies-the-call" data-category="core">
-  <h3>KEEP modifies the EXEC call, not the first Word inside its block (LANG.MODIFIERS.CONSUMPTION)</h3>
-  <pre class="ajisai-source">[ 3 ] [ 1 + ] KEEP EXEC</pre>
-  <pre class="ajisai-expect-result">[ 3/1 ] [ 1/1 + ] [ 4/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-keep-on-higher-order-word" data-category="core">
-  <h3>KEEP on a higher-order Word retains the collection it walks</h3>
-  <pre class="ajisai-source">[ 1 2 ] KEEP [ 2 MUL ] MAP</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 ] [ 2/1 4/1 ]</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-keep-on-predicate-higher-order-word" data-category="core">
-  <h3>The same rule holds for the predicate higher-order Words</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] KEEP [ 1 GT ] ANY</pre>
-  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] TRUE</pre>
+<section class="ajisai-case" id="core-keep-is-not-a-word" data-category="core">
+  <h3>KEEP is not a Word: nothing modifies consumption (LANG.STACK.CONSUMPTION)</h3>
+  <pre class="ajisai-source">3 4 KEEP ADD</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Unknown word</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2380,7 +2339,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-map-carries-its-block-effects" data-category="core">
   <h3>MAP emits its block's output effects in index order</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ KEEP PRINT ] MAP</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 'E' BIND E PRINT E ] MAP</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span><span class="ajisai-effect" data-kind="print" data-payload="2/1"></span><span class="ajisai-effect" data-kind="print" data-payload="3/1"></span></div>
 </section>
@@ -3068,7 +3027,7 @@ W</pre>
 
 <section class="ajisai-case" id="standard-json-encode-lexeme-string" data-category="core">
   <h3>JSON-ENCODE writes a rational with no finite decimal as its lexeme, never rounded</h3>
-  <pre class="ajisai-source">1/3 JSON-ENCODE KEEP JSON-DECODE NUM</pre>
+  <pre class="ajisai-source">1/3 JSON-ENCODE 'J' BIND J J JSON-DECODE NUM</pre>
   <pre class="ajisai-expect-result">'"1/3"' 1/3</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -3082,7 +3041,7 @@ W</pre>
 
 <section class="ajisai-case" id="standard-json-round-trip" data-category="core">
   <h3>JSON-DECODE after JSON-ENCODE is the identity on the JSON image</h3>
-  <pre class="ajisai-source">[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ</pre>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD 'R' BIND R R JSON-ENCODE JSON-DECODE EQ</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>

@@ -18,7 +18,7 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 100 Words are:
+reaching for it exactly where it would have helped. The 99 Words are:
 
 | you need | Words |
 |---|---|
@@ -32,7 +32,7 @@ reaching for it exactly where it would have helped. The 100 Words are:
 | text | `CHARS` `JOIN` `TOKENIZE` `TRIM` `UPPER` `LOWER` `SEARCH` `REPLACE` `NUM` `STR` · `FORMAT` (decimal text at a stated precision, the one place rounding happens) |
 | JSON in and out | `JSON-DECODE` (object → Record, array → Vector, numbers exact) `JSON-ENCODE` (no rounding: `1/3` travels as `"1/3"`) |
 | absence | `NIL` `NIL?` `NIL-REASON` `ABSENT` (declare a reasoned NIL from your own text) |
-| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `FAIL` (raise a declared ERROR) · `PRINT` `KEEP` |
+| naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `FAIL` (raise a declared ERROR) · `PRINT` |
 | reflection | `DEFINED?` (does a Symbol name a Word) `DIGEST` (content identity of a Word, denotation digest of a value) `CONTRACT` (a Word's or a block's contract as a Record, inferred without running it; `'cost' AT` before running it) |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
@@ -280,7 +280,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Named data is a Record, written `{ key value … }`: `{ 'x' 1 'y' 2 }`. It is not a Vector and is never code — `{ }` builds a value, `[ ]` builds a value that may also be run (§6).
 - Define a user word with a body Vector, then a `'NAME'` string, then `DEF`, then call `NAME`: `[ [ 1 ] [ 2 ] + ] 'MY-SUM' DEF MY-SUM` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
-- One modifier, prefixing the *next word only*: `KEEP` (do not consume operands). Consumption is the default.
+- Every Word consumes the operands it reads. To use a value more than once, name it with `BIND` and read the name: `5 'N' BIND N N 1 +` leaves `5 6`.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration
@@ -377,8 +377,8 @@ produce a value produces NIL (§4); a malformed one raises an error.
   `[ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
 - Exact square root takes a bare scalar
   `2 SQRT` → exact value: `sqrt(2)` (the stack display is its continued fraction)
-- The KEEP modifier makes the next word non-consuming
-  `[ 5 ] KEEP PRINT` → prints `[ 5/1 ]`; stack: `[ 5/1 ]`
+- A value used twice is named with BIND
+  `5 'N' BIND N N 1 +` → stack: `5/1  6/1`
 
 ## 7. Common errors — actual CLI output, and the fix
 
@@ -429,7 +429,7 @@ than it looks like it answers, which is the harder kind to notice:
 
 ## 8. Forbidden patterns (each verified to fail)
 
-- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.
+- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Every Word consumes the operands it reads; name a value with `BIND` to use it more than once.
 - **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords, and no loops. Branch with SELECT over two values; iterate with MAP / FILTER / FOLD / ANY / ALL.
 - **A word calling itself** (`[ REC ] 'REC' DEF` fails) — The User dictionary is acyclic: `DEF` refuses a body that names the word being defined, directly or through other user words, so this fails at definition time rather than the call. Repetition is expressed only through MAP / FILTER / FOLD / ANY / ALL over an already-finite vector.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved; not valid in source. `[ ]` is the sole bracket, for vectors, code, and continued-fraction display alike.
@@ -439,8 +439,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-100 canonical Words in one flat Core dictionary, of which
-54 form the Semantic Kernel and 46 are Standard Words. Both are
+99 canonical Words in one flat Core dictionary, of which
+53 form the Semantic Kernel and 46 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -540,7 +540,6 @@ no module system and nothing to import.
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
 | `ABSENT` | absence | A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong. — e.g. `'rate not quoted' ABSENT` |
-| `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `KEEP +` |
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `[ [ 1 ] ] 'W' DEF 'W' DEL` |

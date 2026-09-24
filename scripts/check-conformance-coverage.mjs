@@ -49,7 +49,6 @@ for (const e of manifest.entries) {
   }
 }
 sugarMap.set(';', ['TOP', 'EAT']);
-sugarMap.set(';;', ['STAK', 'KEEP']);
 
 function decodeEntities(value) {
   return value
@@ -80,11 +79,8 @@ for (const src of sources) {
   const tokens = new Set();
   for (let tok of src.split(/\s+/)) {
     if (!tok) continue;
-    // fused modifier sugar: ';;ADD' covers STAK KEEP ADD, ';ADD' TOP EAT ADD
-    if (tok.startsWith(';;') && tok.length > 2) {
-      seen.add('STAK'); seen.add('KEEP');
-      tok = tok.slice(2);
-    } else if (tok.startsWith(';') && tok.length > 1) {
+    // fused modifier sugar: ';ADD' covers TOP EAT ADD
+    if (tok.startsWith(';') && tok.length > 1) {
       seen.add('TOP'); seen.add('EAT');
       tok = tok.slice(1);
     }

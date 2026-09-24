@@ -1667,32 +1667,6 @@
       "native_retention_reason": "An enclosure generator for a transcendental function is a series with a rigorous remainder; no definition over the field can write one."
     },
     {
-      "id": "core.modifier.keep",
-      "kind": "modifier",
-      "surface": "KEEP",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §6",
-        "SPECIFICATION.html §13"
-      ],
-      "law_tests": [
-        "rust/tests/contract_modifier_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-keep-modifier"
-      ],
-      "status": "Formalized",
-      "notes": "Consumption modifier that preserves operands and pushes the result.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.modifier.consumption.keep",
-        "algebra.state-transformer.combinator"
-      ],
-      "algebraic_family": "modifier",
-      "core_tier": "flow"
-    },
-    {
       "id": "core.select",
       "kind": "coreword",
       "surface": "SELECT",
@@ -2091,7 +2065,7 @@
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
-        "rust/tests/contract_modifier_laws.rs"
+        "rust/tests/contract_consumption_laws.rs"
       ],
       "conformance_cases": [
         "core-get-negative-index",

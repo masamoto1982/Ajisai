@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
@@ -9,9 +9,7 @@ fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
 }
 
 fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.extend(operands);
-    }
+    interp.stack.extend(operands);
 }
 
 fn pop_vector_and_target(interp: &mut Interpreter, _word: &str) -> Result<(Vec<Value>, Value)> {

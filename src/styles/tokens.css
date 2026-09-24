@@ -90,16 +90,12 @@
     --color-stack:          oklch(47.9% 0.220 328.4);   /* #990099 magenta */
 
     /* --- Stack operand-highlight backgrounds ----------------------------- */
-    /* The Stack fills operand nodes with a background whose
-       color carries the consumption axis (LANG.MODIFIERS.CONSUMPTION): EAT a very pale warm red
-       (operands are removed after the operation), KEEP a very pale teal-green
-       (operands are retained). A background fill — rather than a text-color
-       change — leaves the bracket depth-colors that show Vector nesting intact.
-       The tints are kept faint so the magenta Stack ink stays legible, and are
-       separated in lightness as well as hue so they read apart under
-       color-vision deficiency, in keeping with the CVD-safe palette above. */
+    /* The Stack fills the operand node with a very pale warm red: a Word
+       consumes its operands (LANG.STACK.CONSUMPTION). A background fill —
+       rather than a text-color change — leaves the bracket depth-colors that
+       show Vector nesting intact, and the tint is kept faint so the magenta
+       Stack ink stays legible. */
     --color-consume-eat:  oklch(94% 0.035 25);    /* very pale warm red   */
-    --color-consume-keep: oklch(96% 0.030 165);   /* very pale teal-green */
 
     /* --- Hydrangea hue anchors (移ろい reference swatches) ---------------- */
     --hue-blue-purple: oklch(90% 0.085 265);

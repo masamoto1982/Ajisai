@@ -1,5 +1,5 @@
 // Regression for the auto-transition fault: running a pure stack program such
-// as the Reference's `3 4 KEEP ADD` pulled the right column to the Dictionary
+// as the Reference's `3 4 ADD` pulled the right column to the Dictionary
 // instead of the Stack.
 //
 // The cause was name addressing, not the layout rule. The dictionary has two
@@ -108,7 +108,7 @@ describe('collectUserWords', () => {
 });
 
 describe('execution round trip with user words present', () => {
-    it('keeps the user words and reports a stack-only change for `3 4 KEEP ADD`', () => {
+    it('keeps the user words and reports a stack-only change for `3 4 ADD`', () => {
         const main = createFakeInterpreter();
         const worker = createFakeInterpreter();
         main.words.set('ADD10', '10 ADD');

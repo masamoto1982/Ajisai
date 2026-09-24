@@ -435,15 +435,6 @@ mod ai_first_comparison_tests {
     }
 
     // ── stack-mode sequence properties ───────────────────────────────────
-
-    // ── KEEP modifier preserves operands ─────────────────────────────────
-
-    #[tokio::test]
-    async fn gt_keep_mode_preserves_both_operands() {
-        let interp = run("2 1 KEEP GT").await;
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 3, "KEEP must retain both operands plus result");
-    }
 }
 
 #[cfg(test)]

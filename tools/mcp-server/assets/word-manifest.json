@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 100,
-    "semanticKernelWords": 54,
+    "canonicalWords": 99,
+    "semanticKernelWords": 53,
     "standardWords": 46,
-    "corewords": 100,
+    "corewords": 99,
     "aliases": 10,
     "inputHelpers": 1,
     "surface_forms": 6,
-    "manifestEntries": 117
+    "manifestEntries": 116
   },
   "entries": [
     {
@@ -1686,24 +1686,6 @@
       "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.domain"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.keep",
-      "kind": "coreword",
-      "surface": "KEEP",
-      "category": "modifier",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "KEEP",
-      "coverage_entry_id": "core.modifier.keep",
-      "semantic_role": "Derived",
-      "algebraic_family": "modifier",
-      "core_tier": "flow",
-      "derived_from": [
-        "algebra.modifier.consumption.keep",
-        "algebra.state-transformer.combinator"
       ],
       "classification": "Core"
     },

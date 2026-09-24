@@ -40,26 +40,8 @@
 //! contract (a proof, which may license an error), while `unmodelled` records
 //! that this simulation gave up (a gap, which may only produce a note). The
 //! same split `word_space` draws between a bound and its `exact` witness.
-//!
-//! # `KEEP` is a modifier, not a Word with an arity
-//!
-//! `KEEP` carries the registry arity `( 0 -- 0 )`, because it is not a Word
-//! that moves values: it prefixes the next Word and makes that Word read its
-//! operands without consuming them (`LANG.MODIFIERS.CONSUMPTION`). Applying
-//! its `( 0 -- 0 )` and then the next Word's arity unchanged describes
-//! neither. Measured: `2 3 KEEP ADD` leaves `2 3 5`, so a body of
-//! `KEEP ADD` is `( 2 -- 3 )` — while the old walk inferred `( 2 -- 1 )` and rejected the
-//! true declaration as a violation.
-//!
-//! The modifier is therefore held as a pending flag and applied to the next
-//! Word as `( c -- c + p )`. The flag survives literals, line breaks and
-//! delimiters, and a second `KEEP` is idempotent — all three measured
-//! (`2 3 KEEP 4 ADD` leaves `2 3 4 7`; `2 3 KEEP\nADD` and
-//! `2 3 KEEP KEEP ADD` both leave `2 3 5`). A flag still pending at the end
-//! of a body is a no-op there too (`1 KEEP` leaves `1`).
 
 use super::word_contract::ContractFlow;
-use crate::kernel::generated::{generated_word, WordId};
 use crate::types::Token;
 
 /// Execution-free stack-flow simulation over a word body's token stream, fed
@@ -79,8 +61,6 @@ pub(crate) struct FlowSim {
     /// Simulated stack height contributed by the body so far.
     height: u16,
     vector_depth: u32,
-    /// A `KEEP` has been read and applies to the next Word.
-    pending_keep: bool,
 }
 
 impl FlowSim {
@@ -133,27 +113,20 @@ impl FlowSim {
         }
     }
 
-    /// A resolved dependency call, by canonical name so the one modifier can
-    /// be recognized as a modifier rather than applied as an arity.
-    pub(crate) fn feed_word(&mut self, name: &str, flow: &ContractFlow) {
+    /// A resolved dependency call: it consumes its operands and pushes its
+    /// results.
+    pub(crate) fn feed_word(&mut self, flow: &ContractFlow) {
         if self.in_literal() {
             return;
         }
-        if is_keep_modifier(name) {
-            self.pending_keep = true;
-            return;
-        }
-        let keep = std::mem::take(&mut self.pending_keep);
         let ContractFlow::Fixed { consumes, produces } = flow else {
             self.dynamic = true;
             return;
         };
         if self.height < *consumes {
             self.required = self.required.saturating_add(consumes - self.height);
-            // Under `KEEP` the operands stay: the ones just charged to
-            // `required` are now sitting beneath the result, not gone.
-            self.height = if keep { *consumes } else { 0 };
-        } else if !keep {
+            self.height = 0;
+        } else {
             self.height -= consumes;
         }
         self.height = self.height.saturating_add(*produces);
@@ -174,7 +147,6 @@ impl FlowSim {
     pub(crate) fn abandon_line(&mut self) {
         self.dynamic = true;
         self.vector_depth = 0;
-        self.pending_keep = false;
     }
 
     /// The inferred flow, plus whether the simulation gave up reaching it. A
@@ -192,16 +164,6 @@ impl FlowSim {
         };
         (flow, unmodelled)
     }
-}
-
-/// Whether a canonical Word name is the consumption modifier. Read through the
-/// generated registry rather than compared as a string, the way
-/// `word_space::builtin_space_for` reads its own classification.
-fn is_keep_modifier(name: &str) -> bool {
-    matches!(
-        generated_word(name).map(|word| word.id),
-        Some(WordId::SetConsumptionKeep)
-    )
 }
 
 /// Names a `BIND` in the body made. The rest of the body reads each as one

@@ -8,7 +8,7 @@
 //! `FOLD`/`ANY`/`ALL`) all reach a Vector value that needs to run as
 //! instructions. Rather than a second execution loop keyed on `&[Value]`,
 //! this converts the elements back to tokens and hands them to the existing,
-//! already-correct loop (tail-call elimination, `KEEP` handling, error
+//! already-correct loop (tail-call elimination, error
 //! diagnosis context) — the same design `REFLECT` used for its canonical
 //! wire format before this unification removed it.
 //!

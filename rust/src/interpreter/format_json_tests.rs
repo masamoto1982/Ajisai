@@ -64,7 +64,10 @@ mod format_json_tests {
         let mut interp = Interpreter::new();
         let _ = interp.execute("1 -1 FORMAT").await;
         assert_eq!(interp.stack.len(), 2);
-        assert_eq!(top("1/3 2 KEEP FORMAT").await, "1/3 2/1 '0.33'");
+        assert_eq!(
+            top("1/3 'X' BIND 2 'N' BIND X N X N FORMAT").await,
+            "1/3 2/1 '0.33'"
+        );
     }
 
     #[tokio::test]
@@ -104,7 +107,7 @@ mod format_json_tests {
         }
         assert_eq!(error_of("5 JSON-DECODE").await, "nonText");
         assert_eq!(error_of("NIL JSON-DECODE").await, "nonText");
-        assert_eq!(top("'[1]' KEEP JSON-DECODE").await, "'[1]' [ 1/1 ]");
+        assert_eq!(top("'[1]' 'S' BIND S S JSON-DECODE").await, "'[1]' [ 1/1 ]");
     }
 
     #[tokio::test]
@@ -148,10 +151,10 @@ mod format_json_tests {
             "[ ]",
             "{ }",
         ] {
-            // KEEP holds the value under its text; DECODE rebuilds it beside
-            // it, and EQ takes both.
+            // BIND holds the value; DECODE rebuilds it beside a second
+            // reading of it, and EQ takes both.
             assert_eq!(
-                top(&format!("{value} KEEP JSON-ENCODE JSON-DECODE EQ")).await,
+                top(&format!("{value} 'V' BIND V V JSON-ENCODE JSON-DECODE EQ")).await,
                 "TRUE",
                 "{value}"
             );
@@ -160,6 +163,9 @@ mod format_json_tests {
         // string, and comes back as that String: NUM recovers the number,
         // and no digit was rounded on the way.
         assert_eq!(top("1/3 JSON-ENCODE JSON-DECODE").await, "'1/3'");
-        assert_eq!(top("1/3 KEEP JSON-ENCODE JSON-DECODE NUM EQ").await, "TRUE");
+        assert_eq!(
+            top("1/3 'V' BIND V V JSON-ENCODE JSON-DECODE NUM EQ").await,
+            "TRUE"
+        );
     }
 }

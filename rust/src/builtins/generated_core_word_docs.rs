@@ -849,15 +849,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "'rate not quoted' ABSENT",
     },
     GeneratedCoreWordDoc {
-        name: "KEEP",
-        category: "modifier",
-        summary: "Set the consumption mode to keep operands.",
-        role: "Modifier that preserves operands while appending the next word's result.",
-        stack_effect: "operands preserved; result pushed",
-        hover_summary: "KEEP — keep operands and append result",
-        hover_syntax: "KEEP +",
-    },
-    GeneratedCoreWordDoc {
         name: "BIND",
         category: "dictionary",
         summary: "Name a value for the rest of the frame that made it.",

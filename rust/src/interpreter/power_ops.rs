@@ -18,7 +18,7 @@ use crate::interpreter::math_ops::{lift_binary_numeric, lift_unary_numeric};
 use crate::interpreter::record_lift;
 use crate::interpreter::transcendental_ops::exact_real_of;
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactReal, PowOutcome};
 use crate::types::fraction::Fraction;
@@ -96,9 +96,7 @@ fn ratio_scalar(value: &Value) -> Result<Value> {
 }
 
 fn restore(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.extend(operands);
-    }
+    interp.stack.extend(operands);
 }
 
 fn finish(interp: &mut Interpreter, result: Value) {

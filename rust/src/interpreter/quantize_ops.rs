@@ -7,7 +7,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::record_lift;
 use crate::interpreter::tensor_cmds::op_round;
 use crate::interpreter::value_extraction_helpers::{create_number_value, nil_passthrough_binary};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 
@@ -82,7 +82,6 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let keep: bool = interp.consumption_mode == ConsumptionMode::Keep;
     let top: usize = interp.stack.len() - 1;
     let denominator_operand: Value = interp.stack[top].clone();
 
@@ -92,9 +91,7 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
     let denominator: Fraction = match single_rational_operand(&denominator_operand)? {
         Some(d) if d.is_integer() && d.is_positive() => d,
         _ => {
-            if !keep {
-                interp.stack.truncate(top - 1);
-            }
+            interp.stack.truncate(top - 1);
             interp
                 .stack
                 .push(Value::nil_with_reason_unknown(NilReason::DomainMiss));
@@ -108,15 +105,11 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
     let subject_role: Interpretation = interp.stack.role_at(top - 1);
     let restore: crate::types::Stack = interp.stack.clone();
 
-    if !keep {
-        interp.stack.truncate(top - 1);
-    }
+    interp.stack.truncate(top - 1);
     interp.stack.push_with_role(subject, subject_role);
     interp.stack.push(create_number_value(denominator.clone()));
 
-    let saved_mode = std::mem::replace(&mut interp.consumption_mode, ConsumptionMode::Consume);
     let outcome = quantize_on_stack(interp, &denominator);
-    interp.consumption_mode = saved_mode;
 
     match outcome {
         Ok(()) => Ok(()),

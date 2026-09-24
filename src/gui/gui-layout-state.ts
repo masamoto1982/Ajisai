@@ -5,28 +5,6 @@ import type { GUIElements } from './gui-dom-cache';
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
-// The modifier carries no symbol: `KEEP` is its only spelling. Matching a whole
-// token keeps a user word whose name merely contains "keep" from reading as the
-// modifier.
-const STACK_MODIFIER_TOKEN = /(?:^|\s)(KEEP)(?=\s|$)/gi;
-
-export interface StackModifierState {
-    /** KEEP consumption: operands are retained rather than eaten. */
-    readonly keep: boolean;
-}
-
-// Mirror the runtime default (LANG.MODIFIERS.CONSUMPTION): a Word consumes the
-// operands it reads. There is exactly one modifier axis, so a program is
-// summarized by whether *any* token selects the non-default — matching the
-// existing "any occurrence wins" behavior of the highlight.
-export const analyzeStackModifiers = (content: string): StackModifierState => {
-    let keep = false;
-    for (const _match of content.matchAll(STACK_MODIFIER_TOKEN)) {
-        keep = true;
-    }
-    return { keep };
-};
-
 // Plain-text placeholder cheat sheet shown in the empty editor. Desktop lists
 // keyboard shortcuts; mobile lists the equivalent touch gestures. A non-empty
 // placeholder also drives the :placeholder-shown CSS that hides the inline
@@ -255,18 +233,12 @@ export const applyExecutionAreaState = (
     syncSelectorState(deps.elements, deps.state.currentLeftMode, deps.state.currentRightMode);
 };
 
-export const updateHighlights = (elements: GUIElements, content: string): void => {
-    const { keep } = analyzeStackModifiers(content);
+export const updateHighlights = (elements: GUIElements, _content: string): void => {
     const classes = elements.stackDisplay.classList;
 
-    // A Word takes its operands from the top of the stack, so the top item is
-    // what the highlight paints.
+    // A Word takes its operands from the top of the stack and consumes them
+    // (LANG.STACK.CONSUMPTION), so the top item is what the highlight paints.
     classes.add('highlight-top');
-
-    // The consumption axis is the fill color on that operand: KEEP means the
-    // operands remain, the default EAT that they are removed.
-    classes.toggle('consume-keep', keep);
-    classes.toggle('consume-eat', !keep);
 
     classes.remove('blink-all');
     classes.remove('blink-top');

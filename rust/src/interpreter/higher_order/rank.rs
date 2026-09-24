@@ -2,15 +2,14 @@
 //!
 //! `MAP` walks the outermost axis and nothing below it, so a block could not
 //! reach an inner axis at all — the one gap in an otherwise complete vector
-//! vocabulary, and the one APL closes with a rank operator. Ajisai has one
-//! modifier axis (LANG.MODIFIERS.CONSUMPTION) and keeps it: the depth is an
-//! operand of one Word rather than a modifier on every Word, which is the
+//! vocabulary, and the one APL closes with a rank operator. Here the depth is
+//! an operand of one Word rather than a modifier on every Word, which is the
 //! whole of the difference between this and a rank *axis*.
 
 use super::common::{execute_executable_code, extract_executable_code, ExecutableCode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::{Stack, Value};
 
 /// `RANK ( [ vec ] [ n ] [ body ] -> [ result ] )`: descend `n` levels into
@@ -53,24 +52,12 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-    let target_val: Value = if is_keep_mode {
-        match interp.stack.last().cloned() {
-            Some(target) => target,
-            None => {
-                interp.stack.push(depth_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-        }
-    } else {
-        match interp.stack.pop() {
-            Some(target) => target,
-            None => {
-                interp.stack.push(depth_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
+    let target_val: Value = match interp.stack.pop() {
+        Some(target) => target,
+        None => {
+            interp.stack.push(depth_val);
+            interp.stack.push(code_val);
+            return Err(AjisaiError::StackUnderflow);
         }
     };
 
@@ -81,9 +68,7 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     if !is_vector_value(&target_val) {
-        if !is_keep_mode {
-            interp.stack.push(target_val);
-        }
+        interp.stack.push(target_val);
         interp.stack.push(depth_val);
         interp.stack.push(code_val);
         return Err(AjisaiError::declared(
@@ -108,9 +93,7 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(target_val);
-            }
+            interp.stack.push(target_val);
             interp.stack.push(depth_val);
             interp.stack.push(code_val);
             Err(e)
