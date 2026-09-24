@@ -1,5 +1,4 @@
-//! Integer rounding, continued-fraction derivation, and the observation
-//! adapter for Tier 1 values.
+//! Integer rounding and continued-fraction derivation for algebraic values.
 //!
 //! The continued fraction is **derived** here for display and rational
 //! approximation — it is no longer an internal representation. Because a
@@ -8,7 +7,6 @@
 //! iteration, exactly, to any requested depth.
 
 use crate::types::exact::algebraic::{Algebraic, AlgebraicResult};
-use crate::types::exact::observation::{Observation, RatInterval, Refine, Water};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -192,34 +190,5 @@ impl Algebraic {
             };
         }
         best.map(|(h, k)| Fraction::new(h, k))
-    }
-
-    /// Open this value as an observation process (Tier 1 adapter).
-    pub fn observe(&self) -> AlgebraicObservation {
-        AlgebraicObservation {
-            value: self.clone(),
-            bits: 8,
-        }
-    }
-}
-
-/// Tier 1 as an [`Observation`]: nested enclosures from `bounds`,
-/// narrowed deterministically by the water spent. The value is
-/// irrational, so refinement always reports `Narrower` — never
-/// `Settled`, never `Starved` (Tier 1 cannot starve).
-pub struct AlgebraicObservation {
-    value: Algebraic,
-    bits: u64,
-}
-
-impl Observation for AlgebraicObservation {
-    fn current_interval(&self) -> Option<RatInterval> {
-        let (lo, hi) = self.value.bounds(self.bits);
-        Some(RatInterval::new(lo, hi))
-    }
-
-    fn refine(&mut self, w: Water) -> Refine {
-        self.bits = self.bits.saturating_add(w.0);
-        Refine::Narrower
     }
 }

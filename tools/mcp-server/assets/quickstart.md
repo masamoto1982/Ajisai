@@ -18,12 +18,11 @@ which call to make.
 ## 0. What it does, in one table
 
 Ajisai is more than arithmetic, and a caller who assumes otherwise stops
-reaching for it exactly where it would have helped. The 99 Words are:
+reaching for it exactly where it would have helped. The 80 Words are:
 
 | you need | Words |
 |---|---|
 | arithmetic | `ADD` `SUB` `MUL` `DIV` `FLOOR` `ROUND` `MIN` `MAX` `SQRT` `POW` `GCD` `RATIO` (negate with `-1 MUL`) |
-| transcendental (computable reals, compared under a budget) | `EXP` `LN` `SIN` `COS` `ATAN` `PI` · render with `FORMAT`; `1 EXP 1 EXP EQ` is `NIL`, never a wrong answer |
 | comparison and logic | `EQ` `LT` `GT` (not-equal is `EQ NOT`, at-most is `GT NOT`) · `AND` `NOT` (or is `a NOT b NOT AND NOT`) `SELECT` `TRUE` `FALSE` |
 | vectors | arithmetic broadcasts element-wise; no separate vector Words |
 | collections | `SORT` `ORDER` `UNIQUE` `ZIP` `RANGE` `FILL` `TAKE` `DROP` `CONCAT` `REVERSE` `LENGTH` `GET` `PUT` `INDEX-OF` `MEMBER` `BSEARCH` `COLLECT` · `SHAPE` `RESHAPE` `FLATTEN` `DEPTH` |
@@ -33,7 +32,7 @@ reaching for it exactly where it would have helped. The 99 Words are:
 | JSON in and out | `JSON-DECODE` (object → Record, array → Vector, numbers exact) `JSON-ENCODE` (no rounding: `1/3` travels as `"1/3"`) |
 | absence | `NIL` `NIL?` `NIL-REASON` `ABSENT` (declare a reasoned NIL from your own text) |
 | naming, control, output | `DEF` `BIND` `DEL` · `EXEC` `FAIL` (raise a declared ERROR) · `PRINT` |
-| reflection | `DEFINED?` (does a Symbol name a Word) `DIGEST` (content identity of a Word, denotation digest of a value) `CONTRACT` (a Word's or a block's contract as a Record, inferred without running it; `'cost' AT` before running it) |
+| reflection | `DIGEST` (content identity of a Word, denotation digest of a value) `CONTRACT` (a Word's or a block's contract as a Record, inferred without running it; `'cost' AT` before running it) |
 
 **Word names are exact and case-sensitive, and this is the whole list.** Do not
 invent one: `vec-add`, `group-by` and `nil-or` are not Ajisai, and a name that
@@ -306,7 +305,7 @@ value itself carries `semantics.absence.reason` on the stack.
 Numbers are exact rationals, closed under `SQRT`. Arithmetic never rounds,
 coefficients are arbitrary-precision, and **every comparison of two scalars
 built from rationals and `SQRT` decides**: there is no budget, no refinement
-limit, and no undecided outcome over that field.
+limit, and no undecided outcome.
 
 ```ajisai
 8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
@@ -315,18 +314,18 @@ limit, and no undecided outcome over that field.
 → stack `TRUE` (exit 0). Values built through different
 histories are the same value when they denote the same real.
 
-`PI` is the one value outside that field: a general computable real with no
-algebraic normal form. Comparing two independently-built `PI` values can
-exhaust the comparison's refinement budget without deciding:
+That field is the whole numeric domain. `POW` answers inside it — an integer
+exponent, or `p/2` over a non-negative rational — and projects NIL for any
+other exponent rather than leave it:
 
 ```ajisai
-PI PI EQ
+8 1/3 POW NIL-REASON
 ```
 
-→ stack `NIL` (exit 0, a NIL with reason `undecidable`). Truth has
-three values: `TRUE`, `FALSE`, and this logical UNKNOWN, which is also what a
-NIL operand reads as in a truth position (§4). An operation that cannot
-produce a value produces NIL (§4); a malformed one raises an error.
+→ stack `'domainMiss'` (exit 0). Truth has three values: `TRUE`,
+`FALSE`, and the logical UNKNOWN, which is what a NIL operand reads as in a
+truth position (§4) — no comparison produces it of its own. An operation that
+cannot produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)
 
@@ -436,8 +435,8 @@ than it looks like it answers, which is the harder kind to notice:
 ## 9. Word quick reference
 
 Generated from `docs/word-manifest.json` — the complete inventory:
-86 canonical Words in one flat Core dictionary, of which
-50 form the Semantic Kernel and 36 are Standard Words. Both are
+80 canonical Words in one flat Core dictionary, of which
+49 form the Semantic Kernel and 31 are Standard Words. Both are
 ordinary Core Words called by their plain names; the split is a design
 classification, not a namespace. A word absent here does not exist. There is
 no module system and nothing to import.
@@ -461,15 +460,9 @@ no module system and nothing to import.
 | `MIN` | math | Smaller of two numbers, element-wise with broadcasting. — e.g. `1 2 MIN` |
 | `MAX` | math | Larger of two numbers, element-wise with broadcasting. — e.g. `1 2 MAX` |
 | `SQRT` | math | Exact square root of a non-negative rational, element-wise over a vector. — e.g. `2 SQRT` |
-| `POW` | math | Exact power `x y POW`, element-wise over Vectors. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `PI 2 POW` is π² as a computable real. An exponent `p/2` stays in the field — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2√2` — and a rational exponent whose root the base takes exactly answers the rational (`8 1/3 POW` is `2`). Every other exponent, an irrational one included, is `exp(y·ln x)`: a computable real compared under a budget. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under a fractional exponent has no real value and projects `domainMiss`; a Tier 2 base or exponent whose sign the budget cannot settle projects `undecidable`; an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar. — e.g. `2 10 POW` |
-| `GCD` | math | The greatest common divisor of two integers, non-negative, element-wise over Vectors: `12 18 GCD` is `6`, `0 0 GCD` is `0`. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every rational reduced, so the Word only exposes it. A non-integer operand — a fraction or an irrational — projects `domainMiss`; a computable real, whose integrality the budget cannot decide, projects `undecidable`. — e.g. `12 18 GCD` |
-| `RATIO` | math | A rational opened into its reduced numerator and denominator, as a two-element Vector with the denominator positive: `6/4 RATIO` is `[ 3 2 ]`, `-3 RATIO` is `[ -3 1 ]`, element-wise over Vectors. The language advertises exact rationals; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (`2 SQRT`) has no numerator and projects `domainMiss`; a computable real, which the budget cannot prove rational, projects `undecidable`. — e.g. `6/4 RATIO` |
-| `EXP` | math | The natural exponential `eˣ`, element-wise over Vectors. `0 EXP` is exactly `1`; every other result is a computable real (LANG.VALUES.EXACT): construction is constant-time, and the cost is paid when the value is observed — a comparison refines a rigorous rational enclosure and answers UNKNOWN when its budget runs out, never a wrong order. `1 EXP 20 FORMAT` shows twenty correct digits of e; `1 EXP 1 EXP EQ` is `NIL`, because two computable reals are never proven equal. An argument so large that the enclosure would not fit the machine projects `spaceExhausted`. — e.g. `1 EXP 5 FORMAT` |
-| `LN` | math | The natural logarithm, element-wise over Vectors. `1 LN` is exactly `0`; every other result is a computable real compared under a budget (LANG.VALUES.EXACT). Zero and negative arguments have no real logarithm and project `domainMiss`; a computable real argument whose sign the budget cannot separate from zero projects `undecidable`. `10 LN 2 LN DIV` is `log₂ 10`, and `x LN y MUL EXP` is `x y POW` written out. — e.g. `10 LN 5 FORMAT` |
-| `SIN` | math | The sine of an angle in radians, element-wise over Vectors. `0 SIN` is exactly `0`; every other result is a computable real (LANG.VALUES.EXACT), so `PI SIN` is a value enclosing 0 that no budget proves to be 0: `PI SIN 0 EQ` is `NIL`, and even `PI SIN 10 FORMAT` projects `undecidable`, because no digit count settles a value that may lie on either side of zero. `PI 3 DIV SIN 6 FORMAT` is `'0.866025'`. The argument is reduced by multiples of 2π through π's own 512-bit enclosure; an argument so large that the reduction would leave nothing projects `spaceExhausted`. — e.g. `1 SIN 5 FORMAT` |
-| `COS` | math | The cosine of an angle in radians, element-wise over Vectors. `0 COS` is exactly `1`; every other result is a computable real (LANG.VALUES.EXACT) compared under a budget, so `PI COS` encloses −1 without ever proving it: `PI COS -1 EQ` and `PI COS -1 LT` are both `NIL`, while `PI 4 DIV COS 6 FORMAT` is `'0.707107'`. The argument is reduced by multiples of 2π through π's own 512-bit enclosure; an argument so large that the reduction would leave nothing projects `spaceExhausted`. — e.g. `1 COS 5 FORMAT` |
-| `ATAN` | math | The arctangent, in radians, element-wise over Vectors: the one inverse that accompanies `SIN` and `COS`, total over every real. `0 ATAN` is exactly `0`; every other result is a computable real (LANG.VALUES.EXACT), so `1 ATAN 4 MUL` is a value enclosing π that no budget proves equal to `PI`. `y x DIV ATAN` gives the angle of a point in the right half-plane. — e.g. `1 ATAN 4 MUL 6 FORMAT` |
-| `PI` | constant | The Tier 2 computable real π. — e.g. `PI` |
+| `POW` | math | Exact power `x y POW`, element-wise over Vectors, answered inside the exact field. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`. An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2√2`. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`); an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar. — e.g. `2 10 POW` |
+| `GCD` | math | The greatest common divisor of two integers, non-negative, element-wise over Vectors: `12 18 GCD` is `6`, `0 0 GCD` is `0`. Euclid's algorithm is input-dependent repetition, which a definition cannot write in a language that repeats only over a Vector that already exists; the machine already runs it to keep every rational reduced, so the Word only exposes it. A non-integer operand — a fraction or an irrational — projects `domainMiss`. — e.g. `12 18 GCD` |
+| `RATIO` | math | A rational opened into its reduced numerator and denominator, as a two-element Vector with the denominator positive: `6/4 RATIO` is `[ 3 2 ]`, `-3 RATIO` is `[ -3 1 ]`, element-wise over Vectors. The language advertises exact rationals; this is the Word that reads their two parts back, and because the answer is a Vector, arithmetic lifts over it as it does over any other. An irrational (`2 SQRT`) has no numerator and projects `domainMiss`. — e.g. `6/4 RATIO` |
 | `GET` | vector | Select elements of a vector by index. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. `TAKE` and `PUT` answer the same condition the same way, so past-the-end is one outcome across the whole vocabulary. — e.g. `[ 10 20 30 ] [ 0 2 ] GET` |
 | `LENGTH` | vector | Return the number of elements in a vector. — e.g. `[ 1 2 3 ] LENGTH` |
 | `TAKE` | vector | Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 9 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong. — e.g. `[ 1 2 3 4 5 ] [ 3 ] TAKE` |
@@ -492,7 +485,7 @@ no module system and nothing to import.
 | `GROUP` | record | Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length. — e.g. `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `MEMBER` | vector | Which probes occur in the vector, answered element-wise: `[ 1 2 3 ] [ 2 5 ] MEMBER` is `[ TRUE FALSE ]`, and a single probe answers a single truth. Membership is value equality, the equality UNIQUE and INDEX-OF use, so it works on texts and nested vectors as well as numbers. Written as `INDEX-OF NIL? NOT` per probe it is one scan of the vector for every probe, O(m·n); the Word indexes the vector once and answers each probe in constant time. — e.g. `[ 1 2 3 ] [ 2 5 ] MEMBER` |
-| `BSEARCH` | vector | The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write. A comparison that exhausts its budget (LANG.VALUES.EXACT) projects `undecidable`. — e.g. `[ 1 3 5 7 ] [ 5 ] BSEARCH` |
+| `BSEARCH` | vector | The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5 ] BSEARCH` is `[ 2 ]`, a single key answers a single index, and a key that is not there is a NIL(missingField) lane. The vector must be in ascending order; one that is not raises `unsortedInput`, since a binary search over unordered data would answer something rather than nothing. Checking the order is one pass over the vector, and each key then costs O(log n), so m keys cost O(n + m log n) against INDEX-OF's O(m·n) — and halving a range until it is empty is a loop whose length depends on the data, which a language with no unbounded loop cannot write. — e.g. `[ 1 3 5 7 ] [ 5 ] BSEARCH` |
 | `RECORD` | record | Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD` |
 | `KEYS` | record | The keys of a Record as a Vector, in the Record's own order, so that `KEYS` and `VALUES` line up position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD KEYS` is `[ 'x' 'y' ]`. Key order is part of a Record's observable structure, so this Vector is one exact thing, not a set in some arbitrary order. A Vector or any other non-Record operand is an ERROR: a Record is not a Vector and nothing converts between them implicitly. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD KEYS` |
 | `VALUES` | record | The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES` is `[ 1/1 2/1 ]`. This is the bridge from the Record domain back to the Vector domain — from here every Vector Word applies — and `RECORD` is the bridge the other way, so `R KEYS R VALUES RECORD` rebuilds `R`. A non-Record operand is an ERROR. — e.g. `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES` |
@@ -515,7 +508,7 @@ no module system and nothing to import.
 | `REPLACE` | cast | Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `'a+b+c'`. Occurrences are found left to right and do not overlap, and an empty `from` matches nothing, so the text comes back unchanged rather than growing without bound. Spelled over CHARS and JOIN this is a scan with a window at every position; the Word is the one pass. — e.g. `'a-b-c' '-' '+' REPLACE` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `FORMAT` | cast | Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). A computable real whose refinement budget cannot settle the last digit projects `undecidable`. — e.g. `1/3 5 FORMAT` |
+| `FORMAT` | cast | Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties. — e.g. `1/3 5 FORMAT` |
 | `JSON-DECODE` | cast | Read JSON text into a value: an object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1'` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past what the machine holds projects `spaceExhausted`, the outcome of every materialization past a ceiling. A non-String operand is an ERROR (`nonText`). — e.g. `'{"a": 1, "b": [true, null]}' JSON-DECODE` |
 | `JSON-ENCODE` | cast | Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String keys becomes an object in key order, a Vector an array, a String a string, a Boolean `true`/`false`, a NIL `null`. A rational with a finite decimal spelling (a denominator of the form 2^a·5^b) is written as a JSON number exactly — `1/4` is `0.25` — and every other rational is written as its Ajisai lexeme inside a string, `1/3` as `"1/3"`, so no digit is ever rounded away: the encoder is not a place a value silently loses precision. A value with no JSON image — a Symbol, an irrational, a Record with a non-String key — projects `domainMiss`. Decoding what this Word writes gives back the value it was given, and a rational written as a lexeme comes back as that String, from which `NUM` recovers the number. — e.g. `[ 'a' ] [ 1 ] RECORD JSON-ENCODE` |
 | `EXEC` | control | Evaluate a code block. — e.g. `[ 1 2 ADD ] EXEC` |
@@ -528,7 +521,7 @@ no module system and nothing to import.
 | `BIND` | dictionary | Name a value for the rest of the frame that made it. — e.g. `[ 1 2 3 ] 'XS' BIND` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `[ 2 * ] 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `[ [ 1 ] ] 'W' DEF 'W' DEL` |
-| `DIGEST` | dictionary | The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. A computable real (`PI`) has no finite canonical form to digest, so a value carrying one projects `undecidable`. — e.g. `[ ADD ] 0 GET DIGEST` |
+| `DIGEST` | dictionary | The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing. — e.g. `[ ADD ] 0 GET DIGEST` |
 | `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |

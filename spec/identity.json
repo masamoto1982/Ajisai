@@ -51,35 +51,12 @@
       ]
     },
     {
-      "id": "scalarComputableReal",
-      "subject": "Two scalars of which at least one is a general computable real",
-      "procedure": "Refine a bounding interval until the two separate, or until the comparison budget is spent.",
-      "decides": ["same", "different", "unknown"],
-      "total": false,
-      "unknownArrivesAs": {
-        "kind": "nilReason",
-        "reason": "undecidable"
-      },
-      "note": "The only level whose `unknown` is a value the program can hold: the comparison yields NIL carrying `undecidable`, which reads as the logical UNKNOWN of LANG.VALUES.TRUTH. This is the language already doing what the law asks — a procedure that could not decide says so rather than guessing.",
-      "witnesses": [
-        {
-          "source": "PI PI EQ",
-          "expect": "nil:undecidable",
-          "note": "Two independently constructed computable reals with identical enclosures never separate, so refinement starves. Answering FALSE here would be wrong, and answering TRUE would be unjustified."
-        }
-      ]
-    },
-    {
       "id": "recordDenotation",
       "subject": "Two Records",
       "procedure": "Compare the key sequences position by position, then the value sequences, each pair by the procedure its own domain provides.",
-      "decides": ["same", "different", "unknown"],
-      "total": false,
-      "unknownArrivesAs": {
-        "kind": "nilReason",
-        "reason": "undecidable"
-      },
-      "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by WITH in one order is different from one built in another, and construction history beyond that is unobservable. Where a key or a value is a computable real the pair inherits scalarComputableReal's `unknown`, and one undecided pair with every other pair equal makes the whole comparison UNKNOWN — never `different`.",
+      "decides": ["same", "different"],
+      "total": true,
+      "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by WITH in one order is different from one built in another, and construction history beyond that is unobservable. Every key and value is compared by a procedure that decides, so the Record comparison decides too.",
       "witnesses": [
         {
           "source": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD EQ",
@@ -90,11 +67,6 @@
           "source": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'x' ] [ 2 1 ] RECORD EQ",
           "expect": "FALSE",
           "note": "The same correspondence in a different key order is a different Record: order is observable structure, as it is for a Vector."
-        },
-        {
-          "source": "[ 'x' ] PI 1 COLLECT RECORD [ 'x' ] PI 1 COLLECT RECORD EQ",
-          "expect": "nil:undecidable",
-          "note": "The one undecided pair is a computable real, so the Record comparison answers what that pair answers."
         }
       ]
     },

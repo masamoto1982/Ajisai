@@ -47,7 +47,7 @@ mod format_json_tests {
         assert_eq!(top("0 3 FORMAT").await, "'0.000'");
         assert_eq!(top("2 SQRT 3 FORMAT").await, "'1.414'");
         assert_eq!(top("2 SQRT -1 MUL 3 FORMAT").await, "'-1.414'");
-        assert_eq!(top("PI 4 FORMAT").await, "'3.1416'");
+        assert_eq!(top("2 SQRT 3 SQRT ADD 4 FORMAT").await, "'3.1463'");
         // Text, not a number: the rounded quantity never re-enters arithmetic.
         assert_eq!(error_of("1/3 2 FORMAT 1 ADD").await, "nonNumeric");
     }
@@ -128,7 +128,7 @@ mod format_json_tests {
         assert_eq!(top("[ ] JSON-ENCODE").await, "'[]'");
         for no_image in [
             "2 SQRT",
-            "PI",
+            "2 SQRT 3 SQRT ADD",
             "[ ADD ] 0 GET",
             "[ 1 ] [ 2 ] RECORD",
             "[ 1 2 SQRT ]",

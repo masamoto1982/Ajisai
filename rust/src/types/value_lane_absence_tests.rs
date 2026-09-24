@@ -147,7 +147,7 @@ fn a_tensors_absent_lane_keeps_its_reason_across_the_boundary() {
         value.data
     );
 
-    let encoded = encode_stack(std::iter::once(&value)).expect("a tensor encodes");
+    let encoded = encode_stack(std::iter::once(&value));
     let decoded = decode_stack(&encoded).expect("it decodes");
     let restored = &decoded[0];
 

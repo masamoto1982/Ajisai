@@ -402,20 +402,10 @@ mod ai_first_comparison_tests {
 }
 
 #[cfg(test)]
-mod comparison_budget_infrastructure_tests {
+mod ordering_decision_tests {
     use crate::interpreter::Interpreter;
-    // Phase 6 infrastructure for LANG.VALUES.EXACT's partial-quotient
-    // budget. Every Ajisai scalar currently on the stack is still
-    // a `Fraction`, so the ordering ops always decide and never
-    // project Undecidable. These tests pin the *current* behavior
-    // against regression as the refactor lands, and assert that the
-    // Undecidable / ComparisonBudget plumbing (NilReason +
-    // AbsenceOrigin) is wired correctly so Phase 7's non-Rational
-    // ExactReals will surface NIL with the right metadata when they
-    // exhaust the budget.
-    use crate::error::NilReason;
-    use crate::semantic::AbsenceOrigin;
-    use crate::types::Value;
+    // The ordering Words decide every pair of numbers (LANG.VALUES.EXACT);
+    // a NIL operand passes through.
 
     async fn run(source: &str) -> Interpreter {
         let mut interp = Interpreter::new();
@@ -447,22 +437,6 @@ mod comparison_budget_infrastructure_tests {
         assert!(!bool_of(&interp));
     }
 
-    // ── NIL projection contract for the Undecidable case ─────────────────
-
-    #[tokio::test]
-    async fn undecidable_nil_carries_comparison_budget_origin() {
-        // We can't yet drive the comparison path into the Undecidable
-        // branch via runtime source (no non-Rational ExactReal scalar
-        // is constructable yet — Phase 7 introduces that), so this
-        // test pins the helper that the comparison.rs refactor calls:
-        // building NIL with reason `Undecidable` must yield the
-        // LANG.VALUES.EXACT origin `ComparisonBudget`.
-        let v = Value::nil_with_reason_unknown(NilReason::Undecidable);
-        let absence = v.absence_metadata().expect("nil carries absence");
-        assert_eq!(absence.reason, Some(NilReason::Undecidable));
-        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
-    }
-
     // ── NIL passthrough is unchanged ─────────────────────────────────────
 
     #[tokio::test]
@@ -478,36 +452,13 @@ mod comparison_budget_infrastructure_tests {
     }
 }
 
-/// Phase 7 — EQ Undecidable-NIL plumbing.
-///
-/// Phase 6 (PR #904) wired the `Undecidable` / `ComparisonBudget`
-/// projection through the ordering path (`LT` / `GT`) and explicitly left `EQ` for Phase 7. This module
-/// pins the new dispatch shape:
-///
-/// 1. `pairwise_eq` is three-valued (`Option<bool>`): rational
-///    operands always decide; non-Rational `ExactReal` operands run
-///    through `ExactReal::eq_with_budget` and may surface `None`.
-/// 2. `apply_equality` projects `None` to the LANG.VALUES.EXACT Undecidable
-///    NIL via the existing `push_undecidable_nil` helper.
-/// 3. A vector-lifted `EQ` short-circuits on the first
-///    NIL-producing pair (LANG.VALUES.EXACT).
-///
-/// We can't yet construct a non-Rational `ExactReal` scalar value
-/// from Ajisai source — `ValueData::Scalar` is still `Fraction`-
-/// backed — so these tests:
-///
-/// * regress the rational-operand fast path through EQ for
-///   value equality, reduced-form equality, and structural fallback;
-/// * pin the dispatch helpers (`ExactReal::eq_with_budget`) so the
-///   non-Rational branch is exercised at the type-level boundary
-///   that `apply_equality` will route through once subsequent phases
-///   replace the scalar storage.
+/// `EQ` decides every pair of numbers (LANG.VALUES.EXACT): rational operands
+/// by `Fraction` equality, anything reaching the algebraic field through the
+/// total `ExactReal::cmp_exact`.
 #[cfg(test)]
-mod phase_seven_eq_budget_tests {
-    use crate::error::NilReason;
+mod eq_decision_tests {
     use crate::interpreter::Interpreter;
-    use crate::semantic::AbsenceOrigin;
-    use crate::types::exact::{ExactCmp, ExactReal};
+    use crate::types::exact::ExactReal;
     use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
 
@@ -583,7 +534,7 @@ mod phase_seven_eq_budget_tests {
     //
     // These cover the exact comparison that `pairwise_eq` /
     // `scalar_pair_eq` route through whenever at least one operand is
-    // non-Rational: total and budget-free over Tier ≤ 1.
+    // non-Rational: total over the field.
 
     fn rational(n: i64, d: i64) -> ExactReal {
         ExactReal::Rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
@@ -593,7 +544,7 @@ mod phase_seven_eq_budget_tests {
     fn exact_real_cmp_decides_equal_rationals() {
         assert_eq!(
             rational(2, 4).cmp_exact(&rational(1, 2)),
-            ExactCmp::Decided(std::cmp::Ordering::Equal)
+            Some(std::cmp::Ordering::Equal)
         );
     }
 
@@ -601,7 +552,7 @@ mod phase_seven_eq_budget_tests {
     fn exact_real_cmp_decides_unequal_rationals() {
         assert_eq!(
             rational(1, 2).cmp_exact(&rational(2, 3)),
-            ExactCmp::Decided(std::cmp::Ordering::Less)
+            Some(std::cmp::Ordering::Less)
         );
     }
 
@@ -614,22 +565,7 @@ mod phase_seven_eq_budget_tests {
                 .expect("sqrt(2) constructible");
         assert_eq!(
             sqrt_two.cmp_exact(&rational(7, 5)),
-            ExactCmp::Decided(std::cmp::Ordering::Greater)
+            Some(std::cmp::Ordering::Greater)
         );
-    }
-
-    // ── Undecidable-NIL helper still has the LANG.VALUES.EXACT origin ───────────────
-    //
-    // `apply_equality` projects the `None` branch through
-    // `push_undecidable_nil` — the same helper the ordering path
-    // already uses. The contract is identical, so any future EQ /
-    // EQ Undecidable NIL surfaces the LANG.VALUES.EXACT metadata.
-
-    #[tokio::test]
-    async fn eq_undecidable_nil_carries_comparison_budget_origin() {
-        let v = crate::types::Value::nil_with_reason_unknown(NilReason::Undecidable);
-        let absence = v.absence_metadata().expect("nil carries absence");
-        assert_eq!(absence.reason, Some(NilReason::Undecidable));
-        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
     }
 }

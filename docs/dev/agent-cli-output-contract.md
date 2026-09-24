@@ -57,7 +57,7 @@ Both commands emit schema version 1:
   "resourceUsage": {},
   "contractDecls": null,
   "stackElided": null,
-  "observationDigest": null,
+  "observationDigest": "#89ab...",
   "receipt": null
 }
 ```
@@ -250,8 +250,8 @@ counters for one fact, and the reported one was the one that was always zero.
 
 ### `observationDigest`
 
-A single `#`-prefixed 64-lowercase-hex BLAKE3 digest of the whole observation,
-or `null`. Two runs agree on this field exactly when they agree on everything
+A single `#`-prefixed 64-lowercase-hex BLAKE3 digest of the whole observation.
+Two runs agree on this field exactly when they agree on everything
 an agent can observe: `status`, the stack (bottom to top, by value — not by
 representation), `PRINT` output in order, the user dictionary (each word's
 normalized name and its content identity, sorted by name), and the error
@@ -282,10 +282,6 @@ it merely fails to prove they agree at that resolution. Every other domain
 (rational, boolean, string, code block, NIL, vector, tensor) digests
 injectively.
 
-`observationDigest` is `null` exactly when the observation contains a Tier 2
-`ExactReal::Computable` scalar (lazily refined, no canonical finite
-representation) anywhere in the stack. No current Word constructs one.
-
 The byte grammar is tagged (`AJISAI-OBS-1`, `rust/src/agent/observation_digest.rs`).
 Changing the grammar is not a backward-compatible change even though it adds
 no JSON field and does not move `SCHEMA_VERSION`: a value that used to digest
@@ -300,10 +296,8 @@ the broader question a third party asks after the fact: run this exact
 (`registryDigest`), under this `limitProfile`, and you get exactly this
 `outcomeStatus`, this `observationDigest`, having spent exactly this
 `resourceUsage` — verifiable without re-running anything, by re-deriving the
-same digest from the same seven inputs. `null` under the same conditions
-`observationDigest` is: `check`/`infer-contracts` never execute (nothing to
-receipt) and a Tier 2 result (`observationDigest` itself `null`) carries no
-receipt rather than one built over an unhashed observation.
+same digest from the same seven inputs. `null` for `check`/`infer-contracts`, which never
+execute and so have nothing to receipt.
 
 ```json
 {
@@ -438,7 +432,7 @@ at a display budget* (√2 runs to ~194 characters and ends in `...]`), and
 ### Diagnosis and error flow
 
 `diagnosis` is a structured failure explanation with `when`, `why`, `summary`,
-`where`, `evidence`, `nextChecks`, `agreedPrefix`, `candidates`, and
+`where`, `evidence`, `nextChecks`, `candidates`, and
 `resourceLimit`. `aiDiagnostic` is its machine-oriented classification and
 carries `candidates` and `resourceLimit` too. Consumers must treat new
 protocol-string variants as opaque values rather than rejecting the report.

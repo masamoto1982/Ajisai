@@ -45,7 +45,6 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         NilReason::IndexOutOfBounds
         | NilReason::MissingField
         | NilReason::InvalidEncoding
-        | NilReason::Undecidable
         | NilReason::SpaceExhausted
         | NilReason::DomainMiss
         | NilReason::NotAvailable

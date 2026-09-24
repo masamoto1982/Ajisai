@@ -4,7 +4,6 @@
 //! comparison, and the derived CF against known expansions.
 
 use crate::types::exact::algebraic::{Algebraic, AlgebraicResult};
-use crate::types::exact::observation::{Observation, Water};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::cmp::Ordering;
@@ -277,21 +276,16 @@ fn best_rational_approximation_returns_principal_convergents() {
 }
 
 #[test]
-fn observation_adapter_narrows_monotonically() {
+fn enclosures_narrow_monotonically_around_the_value() {
     let sqrt2 = sqrt_irr(2, 1);
-    let mut obs = sqrt2.observe();
-    let first = obs.current_interval().expect("Tier 1 always encloses");
-    assert!(
-        first.lo.lt(&first.hi),
-        "irrational enclosure is not a point"
-    );
-    assert_eq!(obs.refine(Water(24)), crate::types::exact::Refine::Narrower);
-    let second = obs.current_interval().expect("still enclosed");
-    assert!(second.is_within(&first), "refinement is monotone");
-    assert!(second.width().lt(&first.width()), "refinement narrows");
+    let (lo1, hi1) = sqrt2.bounds(8);
+    assert!(lo1.lt(&hi1), "irrational enclosure is not a point");
+    let (lo2, hi2) = sqrt2.bounds(32);
+    assert!(lo1.le(&lo2) && hi2.le(&hi1), "deeper bounds nest");
+    assert!(hi2.sub(&lo2).lt(&hi1.sub(&lo1)), "deeper bounds narrow");
     // The enclosure straddles the true value: lo < √2 < hi ⇔ lo² < 2 < hi².
-    assert!(second.lo.mul(&second.lo).lt(&frac(2, 1)));
-    assert!(second.hi.mul(&second.hi).gt(&frac(2, 1)));
+    assert!(lo2.mul(&lo2).lt(&frac(2, 1)));
+    assert!(hi2.mul(&hi2).gt(&frac(2, 1)));
 }
 
 /// The normal form is the value, and `normal_form_terms` hands it out in the

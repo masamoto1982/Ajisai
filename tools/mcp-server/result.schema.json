@@ -477,12 +477,6 @@
       "$ref": "#/$defs/debugCheck"
      }
     },
-    "agreedPrefix": {
-     "type": [
-      "integer",
-      "null"
-     ]
-    },
     "candidates": {
      "type": "array",
      "description": "Known Words closest to an unrecognized name, best match first. Empty for every other cause class.",

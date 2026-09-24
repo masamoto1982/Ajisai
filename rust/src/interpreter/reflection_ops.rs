@@ -99,16 +99,8 @@ pub(crate) fn op_digest(interp: &mut Interpreter) -> Result<()> {
             Resolved::User => interp.word_identity(&canonical).cloned(),
         }
     });
-    let digest = word_identity.or_else(|| value_digest(&operand));
-    match digest {
-        Some(digest) => interp.stack.push(Value::from_string(&digest)),
-        // A computable real has no finite canonical form to digest: the
-        // same outcome its comparison reaches when refinement runs out.
-        None => interp.stack.push(Value::nil_with_reason(
-            NilReason::Undecidable,
-            Recoverability::Retryable,
-        )),
-    }
+    let digest = word_identity.unwrap_or_else(|| value_digest(&operand));
+    interp.stack.push(Value::from_string(&digest));
     Ok(())
 }
 

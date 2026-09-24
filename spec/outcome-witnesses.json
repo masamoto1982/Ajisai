@@ -101,12 +101,6 @@
       "rationale": "max_numeric_literal_digits (4,096, identical on every host profile per docs/dev/mcp-host-profiles.md) is a property of one literal's own text, which none of the table's domain representatives are long enough to cross — a 4,097-digit literal is the cheapest possible witness and needs no profile override."
     },
     {
-      "id": "undecidable",
-      "source": "PI PI EQ",
-      "expect": "nil:undecidable",
-      "rationale": "Requires a Tier 2 (PI) comparison operand, which is not one of the table's 11 domain representatives (Phase 2 pitfall B: adding a 12th PI domain would multiply the whole table's cell count and its generation cost for one reason alone). Two independently-constructed computable reals with identical enclosures never separate within the comparison budget, so PI PI EQ starves deterministically — no hand-computed digits required (rust/src/interpreter/tier2_undecidable_conformance_tests.rs already pins this exact program)."
-    },
-    {
       "id": "unknownWord",
       "source": "FROBNICATE",
       "expect": "error:unknownWord",

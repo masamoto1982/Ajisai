@@ -798,7 +798,7 @@
                     <h3>無理数の描画形式と構文規則</h3>
                     <p>無理数には表示形式が2つあり、どちらを見ているかで見た目が変わります。</p>
                     <ul class="ref-list">
-                        <li><strong>Playgroundのスタック領域</strong>は、値の正規形をそのまま根号で描きます。<code>2 SQRT</code>は<code>√2</code>、<code>8 SQRT 1 ADD 2 DIV</code>は<code>1/2 + 1/2√8</code>です(<code>√8</code>は<code>2√2</code>へ簡約されません)。正規形を持たない値、すなわち<code>PI</code>のような一般の計算可能実数は、有理数による近似であることを示す<code>≈</code>を付けて描かれます。</li>
+                        <li><strong>Playgroundのスタック領域</strong>は、値の正規形をそのまま根号で描きます。<code>2 SQRT</code>は<code>√2</code>、<code>8 SQRT 1 ADD 2 DIV</code>は<code>1/2 + 1/2√8</code>です(<code>√8</code>は<code>2√2</code>へ簡約されません)。</li>
                         <li><strong>連分数形式</strong>は、値そのものから導出される正準表示です。古典的な記法どおり<code>[ 1; 2, 2, 2, … ]</code>のように平坦な形で書かれ、表示用の予算で打ち切られた場合は末尾に<code>…</code>が付きます。CLIやMCPホストの<code>stackDisplay</code>がこの形式です。</li>
                     </ul>
                     <p class="ref-note">どちらも表示専用の出力であり、ソースコードの構文ではありません。連分数形式が使う括弧も<code>[</code> <code>]</code>です。<code>(</code> <code>)</code>は構文ではなく名前の文字なので、プログラム中に書いても括弧としては働きません。</p>
@@ -1206,8 +1206,8 @@
                     </ul>
                     <p class="ref-note">ゼロ除算が発生してもプログラムはクラッシュせず、該当する要素だけが<code>NIL</code>になります。詳しくは<a href="#nil">NILの規則</a>を参照してください。</p>
                     <h3 id="powers">累乗と、整数・有理数を読む: <code>POW</code>・<code>GCD</code>・<code>RATIO</code></h3>
-                    <p><code>x y POW</code>は、答えを保持できる<strong>最も安い層</strong>で答えます。整数の指数なら底の層に留まり（<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>）、指数が<code>p/2</code>なら体の中に留まり（<code>2 1/2 POW</code>は<code>2 SQRT</code>とまったく同じ値）、底が厳密にその根を持つ有理数ならその有理数を答えます（<code>8 1/3 POW</code>は<code>2</code>）。それ以外の指数——無理数の指数も含めて——では<code>exp(y·ln x)</code>、つまり計算可能実数になります。<code>0</code>の負のべきは<code>divisionByZero</code>、負の底の分数べきは実数の答えを持たないので<code>domainMiss</code>、符号が予算内に決まらない計算可能実数は<code>undecidable</code>を投影します。</p>
-                    <p><code>GCD</code>は2つの整数の最大公約数を非負で答えます。ユークリッドの互除法は入力依存の反復であり、すでにあるベクトルの上でしか反復しないこの言語では定義で書けません——機械はすべての有理数を既約に保つためにこの計算を常に行っており、このワードはそれを見えるようにするだけです。<code>RATIO</code>は有理数を既約の分子と分母の2要素ベクトルに開きます。答えがベクトルなので、算術はそのまま持ち上がります。整数でない引数（<code>GCD</code>）や無理数（<code>RATIO</code>）は<code>domainMiss</code>、計算可能実数は整数性・有理性を予算内に証明できないので<code>undecidable</code>を投影します。</p>
+                    <p><code>x y POW</code>は、厳密な体の中で答えます。整数の指数なら底の層に留まり（<code>2 10 POW</code>は<code>1024</code>、<code>2 SQRT 2 POW</code>は<code>2</code>）、非負の有理数の底に対する指数<code>p/2</code>なら平方根のべきとして体の中に留まります（<code>2 1/2 POW</code>は<code>2 SQRT</code>とまったく同じ値）。それ以外の指数——分母が1でも2でもない指数、無理数の底に対する<code>p/2</code>、無理数の指数——は体の外に出るので、答えが有理数になる場合（<code>8 1/3 POW</code>）も含めて<code>domainMiss</code>を投影します。<code>0</code>の負のべきは<code>divisionByZero</code>、負の底の<code>p/2</code>べきは実数の答えを持たないので<code>domainMiss</code>、機械が保持できないほど大きな指数は<code>spaceExhausted</code>を投影します。</p>
+                    <p><code>GCD</code>は2つの整数の最大公約数を非負で答えます。ユークリッドの互除法は入力依存の反復であり、すでにあるベクトルの上でしか反復しないこの言語では定義で書けません——機械はすべての有理数を既約に保つためにこの計算を常に行っており、このワードはそれを見えるようにするだけです。<code>RATIO</code>は有理数を既約の分子と分母の2要素ベクトルに開きます。答えがベクトルなので、算術はそのまま持ち上がります。整数でない引数（<code>GCD</code>）や無理数（<code>RATIO</code>）は<code>domainMiss</code>を投影します。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1226,19 +1226,14 @@
                                     <td class="notes">指数<code>p/2</code>は体の中：<code>SQRT</code>と同じ値。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>8 1/3 POW</code></td>
-                                    <td><code>2/1</code></td>
-                                    <td class="notes">厳密な根は有理数として答える。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>2 1/3 POW 6 FORMAT</code></td>
-                                    <td><code>'1.259921'</code></td>
-                                    <td class="notes">それ以外は計算可能実数。<code>FORMAT</code>で桁数を決めて見る。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>-8 1/3 POW NIL-REASON</code></td>
+                                    <td><code>8 1/3 POW NIL-REASON</code></td>
                                     <td><code>'domainMiss'</code></td>
-                                    <td class="notes">負の底の分数べきに実数の答えはない。</td>
+                                    <td class="notes">立方根は体の外。答えが有理数でも投影する。</td>
+                                </tr>
+                                <tr>
+                                    <td><code>-2 1/2 POW NIL-REASON</code></td>
+                                    <td><code>'domainMiss'</code></td>
+                                    <td class="notes">負の底の<code>p/2</code>べきに実数の答えはない。</td>
                                 </tr>
                                 <tr>
                                     <td><code>12 18 GCD</code></td>
@@ -1254,63 +1249,6 @@
                                     <td><code>2 SQRT RATIO NIL-REASON</code></td>
                                     <td><code>'domainMiss'</code></td>
                                     <td class="notes">無理数に分子はない。</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
-                        </div>
-                    </div>
-                    <h3 id="transcendental">超越関数: <code>EXP</code>・<code>LN</code>・<code>SIN</code>・<code>COS</code>・<code>ATAN</code></h3>
-                    <p>自然指数、自然対数、正弦・余弦（引数はラジアン）、逆正接の5語です。答えが有理数になる点（<code>0 EXP</code>は<code>1</code>、<code>1 LN</code>は<code>0</code>、<code>0 SIN</code>は<code>0</code>）ではその有理数を、それ以外では<code>PI</code>と同じ<strong>計算可能実数</strong>を答えます。構築は定数時間で、費用は値を観測するときに払います。比較は有理数の区間を予算の範囲で絞り込み、分離できれば決め、できなければ<code>undecidable</code>の<code>NIL</code>（真理位置ではUNKNOWN）を答えます。間違った順序を答えることは決してありません。2つの計算可能実数が等しいことは決して証明されないので、<code>1 EXP 1 EXP EQ</code>も<code>1 ATAN 4 MUL PI EQ</code>も<code>NIL</code>です。同じ理由で、<code>PI SIN</code>は0を包囲しますが0だとは証明できず、<code>PI SIN 0 EQ</code>も<code>PI SIN 10 FORMAT</code>も<code>undecidable</code>を投影します——0のどちら側にあるかを機械が言えない値に、桁を並べて見せることはしません。</p>
-                    <p>包囲は厳密です。どの語も浮動小数点を使わず、方向付きの固定小数点演算で級数を評価し、剰余は教科書の上界で足します。<code>LN</code>は0以下の引数に<code>domainMiss</code>を、引数の符号が予算内に決まらない計算可能実数に<code>undecidable</code>を投影します。<code>EXP</code>と<code>SIN</code>・<code>COS</code>は、機械が包囲を保持できないほど大きな引数に<code>spaceExhausted</code>を投影します。<code>ATAN</code>は全域です。</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>サンプルコード</th><th>期待値</th><th>注記</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 EXP 10 FORMAT</code></td>
-                                    <td><code>'2.7182818285'</code></td>
-                                    <td class="notes">e を10桁で。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>10 LN 6 FORMAT</code></td>
-                                    <td><code>'2.302585'</code></td>
-                                    <td class="notes">自然対数。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>10 LN 2 LN DIV 3 GT</code></td>
-                                    <td><code>TRUE</code></td>
-                                    <td class="notes">log₂ 10 は 3 より大きいと決まる。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>PI 3 DIV SIN 6 FORMAT</code></td>
-                                    <td><code>'0.866025'</code></td>
-                                    <td class="notes">引数はラジアン。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>1 ATAN 4 MUL 8 FORMAT</code></td>
-                                    <td><code>'3.14159265'</code></td>
-                                    <td class="notes">4·atan 1 は π を包囲する。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>1 EXP 1 EXP EQ</code></td>
-                                    <td><code>NIL</code></td>
-                                    <td class="notes">計算可能実数どうしの等しさは証明されない。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>0 LN NIL-REASON</code></td>
-                                    <td><code>'domainMiss'</code></td>
-                                    <td class="notes">0 以下に対数はない。</td>
-                                </tr>
-                                <tr>
-                                    <td><code>0 EXP</code></td>
-                                    <td><code>1/1</code></td>
-                                    <td class="notes">答えが有理数になる点では有理数。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2115,7 +2053,7 @@
                         </div>
                     </div>
                     <h3 id="format">桁数を決めて描く: <code>FORMAT</code></h3>
-                    <p>算術はどこでも丸めず、<code>STR</code>は厳密な字句を持たない数を断ります。それでも<code>1/3</code>を小数3桁で見たいことはあります。<code>FORMAT</code>がその唯一の場所です。値と桁数を受け、<code>ROUND</code>と同じ規則（端数がちょうど半分なら0から遠い側へ）で丸めた十進テキストを返します。丸め規則は言語に一つです。出てくるのはテキストであって数ではないので、丸めた量が算術に戻ることはありません。丸め方は固定です——選べるようにすると語が増えるだけだからです。桁数は非負の整数でなければならず（<code>invalidCount</code>）、値はスカラーでなければなりません（<code>nonNumeric</code>）。<code>PI</code>のような計算可能実数で最後の桁が予算内に決まらなければ、<code>undecidable</code>の<code>NIL</code>を投影します。</p>
+                    <p>算術はどこでも丸めず、<code>STR</code>は厳密な字句を持たない数を断ります。それでも<code>1/3</code>を小数3桁で見たいことはあります。<code>FORMAT</code>がその唯一の場所です。値と桁数を受け、<code>ROUND</code>と同じ規則（端数がちょうど半分なら0から遠い側へ）で丸めた十進テキストを返します。丸め規則は言語に一つです。出てくるのはテキストであって数ではないので、丸めた量が算術に戻ることはありません。丸め方は固定です——選べるようにすると語が増えるだけだからです。桁数は非負の整数でなければならず（<code>invalidCount</code>）、値はスカラーでなければなりません（<code>nonNumeric</code>）。無理数でも体の順序が最後の桁まで決めるので、桁を推測することはありません。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2139,9 +2077,9 @@
                                     <td class="notes">無理数も体の全順序で最終桁が決まる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>PI 4 FORMAT</code></td>
-                                    <td><code>'3.1416'</code></td>
-                                    <td class="notes">計算可能実数は比較予算の下で決める。</td>
+                                    <td><code>2 SQRT 3 SQRT ADD 4 FORMAT</code></td>
+                                    <td><code>'3.1463'</code></td>
+                                    <td class="notes">項が複数の無理数も、最終桁は厳密に決まる。</td>
                                 </tr>
                                 <tr>
                                     <td><code>1/3 2 FORMAT 1 ADD</code></td>
@@ -2665,8 +2603,7 @@ FILTER</code></td>
                     </div>
                     <h3>閉じた形はループに勝る</h3>
                     <p>反復法に手を伸ばす前に、その問題に閉じた形があるかどうかを確かめてください。厳密算術においては、閉じた形は単に速いだけでなく、種類の異なる答えになるからです。最小二乗法、有理数のペナルティを使うリッジ回帰、k近傍法、有理確率上のナイーブベイズ、ジニ分割による決定木、パーセプトロン、単体法は、いずれも反復を伴わない厳密な解を持ちます。そしてAjisaiは、係数を最も近い表現可能な浮動小数点数としてではなく、まさにその有理数として返します。<code>529/532</code>として返ってくる<code>R²</code>は言語の不備によるものではなく、それが答えなのです。</p>
-                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しません。Ajisaiはそれらを丸めた有理数で偽らず、<a href="#transcendental">計算可能実数</a>として返します。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。</p>
-                    <p class="ref-note">代数的数の外側にある値は、<code>PI</code>と、<code>EXP</code>・<code>LN</code>・<code>SIN</code>・<code>COS</code>・<code>ATAN</code>、そしてそれ以外の指数の<code>POW</code>が積みます。いずれも代数的正規形を持たない一般の計算可能実数であり、算術も比較もそのまま書けますが、性質が2つ異なります。第一に、比較は有理数の区間を必要なだけ絞り込んで判定するため、予算内で判定しきれない比較は、真偽が決まらないまま理由<code>undecidable</code>の<code>NIL</code>になります。<code>PI 3 GT</code>は<code>TRUE</code>ですが、<code>PI PI EQ</code>は<code>NIL</code>です。第二に、この値はセッションに保存できません。Playgroundは実行結果をスタックに保存する形で持ち回るため、計算可能実数を含む結果は「プログラムは実行できたが、セッションには残せない」と報告され、スタックは実行前のまま保たれます。</p>
+                    <p class="ref-note">指数関数、対数関数、三角関数、任意のべき乗といった超越関数には、有理数の答えは存在しません。Ajisaiはそれらを丸めた有理数で偽らず、そもそも扱いません。<code>SQRT</code>は、この言語が<strong>代数的数</strong>として厳密に構成する唯一の無理数であり、整数指数と<code>p/2</code>の指数の<code>POW</code>はその体の中に留まります。数の領域はこの体がすべてなので、どの比較も有限時間で<code>TRUE</code>か<code>FALSE</code>に決まります。</p>
 
                     <h3>もう一つのコスト: ホストの安全制御</h3>
                     <p>ここまでのコストは、正しく書けたプログラムでも厳密算術そのものから自然に積み上がっていくものでした。これとは別に、ホストが計算資源を守るために設けている複数の上限があります。どれも言語の意味論ではなくホスト側の安全制御であり、具体的な数値は実装が定めます。同じソースでも、より大きな上限を宣言したホストでは通ることがあります。ただし、超過したときにどちらの結果になるかは決まっていて、1つの値そのものの生成が上限を超えれば理由付きの<strong><code>NIL</code></strong>に、実行そのものが続けられないほど超えれば<strong>エラー</strong>になり評価が停止します。</p>
@@ -2867,8 +2804,8 @@ FILTER</code></td>
 
                     <h3 id="dictionaries">辞書とワードの同一性</h3>
                     <h3>2つの階層: <code>Core</code>と<code>User</code></h3>
-                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は86個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
-                    <p>この86個のワードは、<strong>50語のSemantic Kernel</strong>と<strong>36語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。86個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
+                    <p>辞書には<strong>2つの階層</strong>があり、それがすべてです。<strong>Core</strong>は80個の正準なワードを保持し、封印されています。Coreの名前を再定義したり削除したりすることはできません。<strong>User</strong>は、<code>DEF</code>で定義したすべてを保持します。</p>
+                    <p>この80個のワードは、<strong>49語のSemantic Kernel</strong>と<strong>31語のStandardワード</strong>に分かれます。Kernelのワードは、ある種類の値を組み立てたり観察したりするものか、何かを行う唯一の明示的な方法であるものです。後者にはコードブロックの実行、NILからの回復、辞書の変更、出力が含まれます。Standardのワードは、<code>SUB</code>、<code>MIN</code>、<code>SORT</code>、<code>TRIM</code>のように、頻出する発想に1つの固定された名前と契約を与えます。この区分は、あるワードが設計の中のどこに位置するかを教えてくれるだけであり、それを使う方法には何も変えません。86個すべては同じ1つのフラットな辞書の中にある普通のCoreワードであり、平易な名前で参照でき、契約・例・エラー条件も同じです。各ワードの階層は<a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/word-reference.md" target="_blank" rel="noopener noreferrer">Word Reference</a>に一覧があり、そのワードを調べたときにも表示されます。</p>
                     <h3>ワードを調べる</h3>
                     <p>カーソルをワードの上に置いて<code>Ctrl+Alt+L</code>を押すと、PlaygroundはOutput領域に辞書から答えます。Coreワードならそのリファレンス項目、自分で定義したワードならその<code>DEF</code>を、どちらも同じように「読むための文章」として表示します。エディタに戻して編集する形ではありません。これはプログラムが行うことではなく、エディタが行うことです。何も積まれず、何も消費されず、答えは値ではなく文章なので、プログラムがここで呼び出せるワードはありません。</p>
                     <p>ショートカットのみで存在する操作はほかに3つあります。Resetの<code>Ctrl+Alt+Enter</code>、Stack clearの<code>Ctrl+Alt+S</code>、Editor clearの<code>Ctrl+Alt+E</code>で、それぞれセッション全体、スタック、この入力欄のテキストを破棄します。これら4つはいずれも入力して実行したりプログラムから呼んだりできません。<code>RESET</code>や<code>LOOKUP</code>という名前のワードがあったとしても、それはほかの名前と同じ普通のワードです。</p>
@@ -3028,7 +2965,7 @@ FILTER</code></td>
 
                 <section id="patterns" class="ref-page">
                     <h2>よくあるパターン</h2>
-                    <p>Ajisaiの語彙は86個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
+                    <p>Ajisaiの語彙は80個のワードで、意図的に小さく保たれています。ユーザー定義が<em>同じコストで</em>表現できるワードは、Coreには属しません。そのため、最小値の位置を求めるargminや緩和ループのように、他の言語では専用のワードとして用意されがちな処理も、ここでは短いフレーズの組み合わせとして書きます。よく使うものを以下にまとめます。それぞれ検証済みであり、2回以上使うなら自分の<code>DEF</code>の本体として上出来です。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

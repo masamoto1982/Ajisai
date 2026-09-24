@@ -1,13 +1,11 @@
 //! `POW`, `GCD`, `RATIO` — the Words that close the number concept
-//! (LANG.VALUES.EXACT, Phase 7 of the vocabulary-100 work order).
+//! (LANG.VALUES.EXACT).
 //!
 //! `POW` is the kernel's `ExactReal::pow` lifted like every binary
 //! arithmetic Word. `GCD` exposes the reduction the machine already performs
 //! on every rational, and `RATIO` reads a rational's two parts back as a
 //! Vector, so that arithmetic lifts over the answer. Both refuse what is not
-//! a rational integer or rational: an irrational projects `domainMiss`, and
-//! a computable real — whose integrality or rationality no budget proves —
-//! projects `undecidable`.
+//! a rational integer or rational: an irrational projects `domainMiss`.
 
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -16,13 +14,20 @@ use num_traits::Signed;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::math_ops::{lift_binary_numeric, lift_unary_numeric};
 use crate::interpreter::record_lift;
-use crate::interpreter::transcendental_ops::exact_real_of;
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactReal, PowOutcome};
 use crate::types::fraction::Fraction;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
+
+fn exact_real_of(value: &Value) -> Option<ExactReal> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+        ValueData::ExactScalar(er) => Some(er.clone()),
+        _ => None,
+    }
+}
 
 fn non_numeric(word: &str) -> AjisaiError {
     AjisaiError::declared(
@@ -43,7 +48,6 @@ fn pow_scalar(x: &Value, y: &Value) -> Result<Value> {
         PowOutcome::Value(er) => Value::from_exact_real(er),
         PowOutcome::DivisionByZero => nil(NilReason::DivisionByZero, Recoverability::Recoverable),
         PowOutcome::DomainMiss => nil(NilReason::DomainMiss, Recoverability::Recoverable),
-        PowOutcome::Undecidable => nil(NilReason::Undecidable, Recoverability::Retryable),
         PowOutcome::SpaceExhausted => nil(NilReason::SpaceExhausted, Recoverability::Unknown),
     })
 }
@@ -52,9 +56,6 @@ fn pow_scalar(x: &Value, y: &Value) -> Result<Value> {
 fn integer_of(value: &Value) -> std::result::Result<BigInt, Value> {
     match exact_real_of(value) {
         Some(ExactReal::Rational(q)) if q.is_integer() => Ok(q.numerator()),
-        Some(ExactReal::Computable(_)) => {
-            Err(nil(NilReason::Undecidable, Recoverability::Retryable))
-        }
         Some(_) => Err(nil(NilReason::DomainMiss, Recoverability::Recoverable)),
         None => Err(non_numeric_value()),
     }
@@ -90,7 +91,6 @@ fn ratio_scalar(value: &Value) -> Result<Value> {
             ])
         }
         Some(ExactReal::Algebraic(_)) => nil(NilReason::DomainMiss, Recoverability::Recoverable),
-        Some(ExactReal::Computable(_)) => nil(NilReason::Undecidable, Recoverability::Retryable),
         None => return Err(non_numeric("RATIO")),
     })
 }

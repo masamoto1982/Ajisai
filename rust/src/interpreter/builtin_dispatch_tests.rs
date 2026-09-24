@@ -104,14 +104,8 @@ mod tests {
                     "`{operand} {}` must report the same outcome by either route",
                     word.name
                 );
-                // Rendered, not structural. `Stack`'s `PartialEq` reaches
-                // `Computable`'s, which is *pointer identity* — equality of two
-                // computable reals being undecidable — so two independently
-                // built `PI`s compare unequal while printing the same. That is
-                // construction history, which LANG.VALUES.DENOTATION makes
-                // unreadable from a value and LANG.AUTHORITY.FREEDOM lists among
-                // the things no program may observe. Comparing what a program
-                // can see is the comparison this gate is about.
+                // Rendered, not structural: what a program can see is the
+                // comparison this gate is about (LANG.VALUES.DENOTATION).
                 assert_eq!(
                     rendered(&by_entry),
                     rendered(&by_name),

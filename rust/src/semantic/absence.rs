@@ -4,8 +4,7 @@ use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AbsenceOrigin {
     Literal,
-    /// Division by zero (or by a value indistinguishable from zero within the
-    /// comparison budget) produced a reasoned NIL under the NIL Projection Rule
+    /// Division by zero produced a reasoned NIL under the NIL Projection Rule
     /// (LANG.FAILURE.PROJECT). Used together with `NilReason::DivisionByZero`.
     ///
     /// Every construction path reaches this through
@@ -18,10 +17,6 @@ pub enum AbsenceOrigin {
     MissingField,
     InvalidEncoding,
     IndexOutOfBounds,
-    /// Continued-fraction comparison exhausted its partial-quotient
-    /// budget without resolving the order of the two operands per
-    /// LANG.VALUES.EXACT. Used together with `NilReason::Undecidable`.
-    ComparisonBudget,
     /// A well-formed generative operation exceeded the space water level
     /// (`max_materialized_elements`) and was projected to NIL under the
     /// NIL Projection Rule (LANG.FAILURE.PROJECT). Used together with

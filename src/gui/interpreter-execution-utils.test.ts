@@ -21,7 +21,6 @@ import {
     collectUserWords,
     createExecutionSnapshot,
     describeFailedRunOutput,
-    describeSnapshotRefusal,
     describeTimeoutDiagnosis,
     resolveExecutionException,
     syncInterpreterState
@@ -215,43 +214,6 @@ describe('describeFailedRunOutput', () => {
         } as ExecuteResult);
 
         expect(reported.startsWith('Rolled back 1 dictionary change: GY.')).toBe(true);
-    });
-});
-
-// A value the snapshot codec refuses (`PI`, and anything built from it, is a
-// Tier-2 computable real) fails *after* the program has already produced it.
-// Reported as the program's own failure, `PI` read as a Word that does not
-// work: the answer the run had computed never reached the reader, and the
-// message named a persistence concept the language never mentions.
-describe('a run whose result cannot be snapshotted', () => {
-    it('keeps the pre-run stack instead of restoring an empty one', () => {
-        const main = createFakeInterpreter();
-        main.setStack([num(1), num(2)]);
-
-        syncInterpreterState(main, {
-            status: 'OK',
-            stack: [num(3)],
-            stackSnapshotError: 'cannot persist a Tier-2 computable exact real'
-        } as ExecuteResult);
-
-        // Not the run's stack, and not an empty one either: the session is
-        // exactly as it was, which is the answer a failed run also gets.
-        expect(main.collect_stack()).toEqual([num(1), num(2)]);
-    });
-
-    it('says the run succeeded and only its result stops here', () => {
-        const explained = describeSnapshotRefusal({
-            status: 'OK',
-            stackSnapshotError: 'cannot persist a Tier-2 computable exact real'
-        } as ExecuteResult);
-
-        expect(explained).toContain('The program ran and produced its result');
-        expect(explained).toContain('cannot persist a Tier-2 computable exact real');
-        expect(explained).toContain('The stack is unchanged from before the run.');
-    });
-
-    it('explains nothing for an ordinary successful run', () => {
-        expect(describeSnapshotRefusal({ status: 'OK' } as ExecuteResult)).toBeNull();
     });
 });
 

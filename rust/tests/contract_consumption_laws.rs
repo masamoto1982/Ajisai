@@ -224,15 +224,15 @@ fn key_word_contracts_match_spec_7_14() {
     assert_eq!(div.nil_policy, NilPolicy::PassthroughThenProject);
     assert_eq!(div.safety_level, SafetyLevel::B);
 
-    // EQ/LT declare `passthroughThenProject`, not a blanket `passthrough`:
-    // a NIL operand passes through unchanged, and a Tier 2 (`PI`) pair that
-    // exhausts its comparison budget projects onto the logical Unknown
-    // (LANG.VALUES.EXACT).
+    // EQ/LT declare a blanket `passthrough` and are total: a NIL operand
+    // passes through unchanged, and order and equality decide over every
+    // number the language holds (LANG.VALUES.EXACT), so they project nothing
+    // of their own.
     for cmp in ["EQ", "LT"] {
         let m = c(cmp);
-        assert_eq!(m.partiality, Partiality::Projecting, "{cmp}");
-        assert_eq!(m.nil_policy, NilPolicy::PassthroughThenProject, "{cmp}");
-        assert_eq!(m.safety_level, SafetyLevel::B, "{cmp}");
+        assert_eq!(m.partiality, Partiality::Total, "{cmp}");
+        assert_eq!(m.nil_policy, NilPolicy::Passthrough, "{cmp}");
+        assert_eq!(m.safety_level, SafetyLevel::A, "{cmp}");
     }
 
     // `AND`/`NOT` declare `kleeneAbsorbing`, not a blanket `passthrough`:

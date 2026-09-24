@@ -76,18 +76,8 @@ export const detectExecutionSurfaceChanges = (
     // changes Output even when the program emitted no text of its own.
     const hasError = result.status !== 'OK' || Boolean(result.error);
 
-    // A result the session cannot carry (`PI` alone: a Tier-2 computable exact
-    // real) is explained by a host-written line into Output, and that line is
-    // the only account of where the answer went. It is not part of
-    // `result.output` and the run did not fail, so both tests above miss it:
-    // the run succeeded, produced no output of its own and left the stack as
-    // it was, which read as "nothing changed" and left the left column on
-    // Input. The reader was then told nothing at all — the very reading the
-    // refusal text exists to prevent.
-    const refusedSnapshot = Boolean(result.stackSnapshotError);
-
     return {
-        outputChanged: hasError || refusedSnapshot || Boolean((result.output ?? '').trim()),
+        outputChanged: hasError || Boolean((result.output ?? '').trim()),
         stackChanged: !checkValuesEqual(before.stack, after.stack),
         dictionaryChanged: userWordsChanged,
         // Defining your own word lands on the 'user' sheet.

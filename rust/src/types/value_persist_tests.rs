@@ -14,7 +14,7 @@ use std::str::FromStr;
 
 /// Round-trip one value as a single stack slot and return the decoded value.
 fn roundtrip(value: &Value) -> Value {
-    let json = encode_stack(std::iter::once(value)).expect("encode_stack");
+    let json = encode_stack(std::iter::once(value));
     let mut decoded = decode_stack(&json).expect("decode_stack");
     assert_eq!(decoded.len(), 1, "single slot in, single slot out");
     decoded.pop().unwrap()
@@ -113,7 +113,7 @@ fn multi_slot_stack_round_trips_in_order() {
         sqrt(2),
         Value::from_vector_promoted(vec![Value::from_number(Fraction::from(9))]),
     ];
-    let json = encode_stack(values.iter()).expect("encode");
+    let json = encode_stack(values.iter());
     let decoded = decode_stack(&json).expect("decode");
     assert_eq!(decoded, values);
 }
@@ -134,7 +134,7 @@ fn multi_slot_stack_round_trips_in_order() {
 /// Encode a tensor, then rewrite its columns on the wire the way a corrupted or
 /// hand-edited payload would, and decode that.
 fn decode_tampered_tensor(value: &Value, from: &str, to: &str) -> Value {
-    let json = encode_stack(std::iter::once(value)).expect("encode_stack");
+    let json = encode_stack(std::iter::once(value));
     assert!(
         json.contains(from),
         "payload did not contain `{from}`: {json}"
