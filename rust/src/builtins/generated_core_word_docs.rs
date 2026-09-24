@@ -554,7 +554,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "TOKENIZE",
         category: "cast",
-        summary: "Split a string into a vector of substrings using a separator.",
+        summary: "Split a string into a vector of substrings using a separator; the empty separator splits between every character.",
         role: "Cast primitive: Split a string into a vector of substrings using a separator.",
         stack_effect: "[ str ] [ sep ] -> [ parts ]",
         hover_summary: "TOKENIZE — split string by separator",
@@ -707,7 +707,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "DEL",
         category: "dictionary",
-        summary: "Delete a user word from the dictionary.",
+        summary: "Delete a user word from the dictionary; ERROR while other words still reference it.",
         role: "Dictionary primitive: Delete a user word from the dictionary.",
         stack_effect: "[ name ] -> []",
         hover_summary: "DEL — delete user word",

@@ -68,7 +68,7 @@
     {
       "id": "definitionConflict",
       "kind": "declared",
-      "documentation": "DEF named a word the dictionary already binds in a way this definition cannot resolve."
+      "documentation": "DEF or DEL asked for a dictionary change its existing bindings refuse: DEF named a word the dictionary already binds in a way this definition cannot resolve, or DEL named a word other words still reference."
     },
     {
       "id": "duplicateKey",

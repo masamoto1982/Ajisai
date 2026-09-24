@@ -171,6 +171,10 @@ fn encode_value(bytes: &mut Vec<u8>, value: &Value) {
                 .map(|r| r.as_protocol_str())
                 .unwrap_or("");
             write_str(bytes, reason);
+            // An ABSENT NIL is identified by its Text (LANG.VALUES.NIL), so
+            // the detail is part of the identity, exactly as `Value::hash`
+            // and `PartialEq` treat it.
+            write_str(bytes, value.absence_detail().unwrap_or(""));
         }
         ValueData::Boolean(b) => {
             bytes.push(b'B');

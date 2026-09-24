@@ -42,6 +42,7 @@ use crate::interpreter::{HostEffect, Interpreter};
 use crate::types::{Token, Value};
 use observation_digest::{observation_digest, ObservationDigestInput};
 use report::Report;
+use std::collections::HashMap;
 
 /// Options shared across agent operations. `json` only matters to the native
 /// CLI's own text-vs-JSON command rendering; the agent operations in this
@@ -191,14 +192,29 @@ pub(crate) struct ResolvedWords {
     /// definitions the same source introduces — nothing else knows them, since
     /// static checking never executes the `DEF`.
     pub locally_defined: Vec<String>,
+    /// Unknown words that some *other* frame of the same file binds: a name
+    /// written inside a DEF body but bound at the top level, or the reverse.
+    /// The runtime refuses these with its "bound in another frame" message,
+    /// and `check` says the same thing instead of a bare "unknown word".
+    pub bound_elsewhere: Vec<String>,
 }
 
 /// Best-effort static resolution: a word resolves when it is a builtin, a
-/// canonical alias, or a word the file itself defines via DEF.
+/// canonical alias, a word the file itself defines via DEF, or a name a
+/// `BIND` in the same frame region binds.
+///
+/// Frame regions follow `bindings.rs`'s rule: a binding is reachable in the
+/// frame that made it and in the blocks written there, never inside a Word
+/// called from it. Statically, a Word body is the block a `] 'NAME' DEF`
+/// closes; every token outside such a body belongs to the run's own frame,
+/// and every token inside one belongs to that body's frame. Blocks a Core
+/// Word evaluates (`EXEC`, `MAP`, `FOLD`) are transparent at runtime, so this
+/// does not open a region for them — which is also why order within a region
+/// does not matter: a block may be bound first and evaluated later.
 pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedWords {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
 
-    let mut locally_known: HashSet<String> = HashSet::new();
+    let mut defined: HashSet<String> = HashSet::new();
     // Pre-pass: `'NAME' DEF` definitions anywhere in the file (definitions may
     // be referenced before they appear, e.g. mutual recursion between user
     // words).
@@ -215,21 +231,27 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
             })
             .collect();
         if next_words.iter().any(|w| w == "DEF") {
-            locally_known.insert(text.to_uppercase());
+            defined.insert(text.to_uppercase());
         }
     }
+
+    // Region of each token: 0 is the run's frame; a DEF body's region is the
+    // index of its opening `[`, and nested DEF bodies get their own.
+    let regions = frame_regions(tokens);
 
     // Every `BIND` makes bindings rather than Words — one name (`'N' BIND`)
     // or several (`[ 'A' 'B' ] BIND`). They are not in the dictionary, and
     // `check` resolves without running, so without this every bound name read
     // as an unknown Word and `check` refused programs that run.
+    let mut bound: HashMap<usize, HashSet<String>> = HashMap::new();
     for (i, token) in tokens.iter().enumerate() {
         if !matches!(token, Token::Symbol(s) if normalize_word(s) == "BIND") {
             continue;
         }
+        let region = regions[i];
         match i.checked_sub(1).map(|j| (j, &tokens[j])) {
             Some((_, Token::String(name))) => {
-                locally_known.insert(name.to_uppercase());
+                bound.entry(region).or_default().insert(name.to_uppercase());
             }
             Some((close, Token::VectorEnd)) => {
                 let mut depth = 0usize;
@@ -243,7 +265,7 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
                             }
                         }
                         Token::String(name) if depth == 1 => {
-                            locally_known.insert(name.to_uppercase());
+                            bound.entry(region).or_default().insert(name.to_uppercase());
                         }
                         _ => {}
                     }
@@ -254,26 +276,83 @@ pub(crate) fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> ResolvedW
     }
 
     let mut unknown: Vec<String> = Vec::new();
+    let mut bound_elsewhere: Vec<String> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
-    for token in tokens {
+    for (i, token) in tokens.iter().enumerate() {
         let Token::Symbol(symbol) = token else {
             continue;
         };
         let normalized = normalize_word(symbol);
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
+        let bound_here = bound
+            .get(&regions[i])
+            .is_some_and(|names| names.contains(canonical.as_ref()));
         let resolved = interp.core_vocabulary.contains_key(canonical.as_ref())
             || crate::coreword_registry::get_coreword_metadata(&canonical).is_some()
-            || locally_known.contains(canonical.as_ref());
+            || defined.contains(canonical.as_ref())
+            || bound_here;
         if !resolved && seen.insert(canonical.to_string()) {
+            if bound
+                .values()
+                .any(|names| names.contains(canonical.as_ref()))
+            {
+                bound_elsewhere.push(canonical.to_string());
+            }
             unknown.push(canonical.into_owned());
         }
     }
-    let mut locally_defined: Vec<String> = locally_known.into_iter().collect();
+    let mut locally_defined: Vec<String> = defined
+        .into_iter()
+        .chain(bound.into_values().flatten())
+        .collect();
     locally_defined.sort();
+    locally_defined.dedup();
     ResolvedWords {
         unknown,
         locally_defined,
+        bound_elsewhere,
     }
+}
+
+/// The frame region of every token (see [`resolve_words`]). Assumes the
+/// bracket structure already passed [`check_structure`].
+fn frame_regions(tokens: &[Token]) -> Vec<usize> {
+    // Match every `[` to its `]` first, so a block can be recognised as a
+    // DEF body from its opening side.
+    let mut close_of: HashMap<usize, usize> = HashMap::new();
+    let mut open_stack: Vec<usize> = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        match token {
+            Token::VectorStart => open_stack.push(i),
+            Token::VectorEnd => {
+                if let Some(open) = open_stack.pop() {
+                    close_of.insert(open, i);
+                }
+            }
+            _ => {}
+        }
+    }
+    let is_def_body = |open: usize| -> bool {
+        let Some(&close) = close_of.get(&open) else {
+            return false;
+        };
+        matches!(tokens.get(close + 1), Some(Token::String(_)))
+            && matches!(tokens.get(close + 2), Some(Token::Symbol(s)) if normalize_word(s) == "DEF")
+    };
+
+    let mut regions = Vec::with_capacity(tokens.len());
+    // (region id, index of the `]` that ends it)
+    let mut region_stack: Vec<(usize, usize)> = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        while region_stack.last().is_some_and(|(_, end)| *end < i) {
+            region_stack.pop();
+        }
+        if matches!(token, Token::VectorStart) && is_def_body(i) {
+            region_stack.push((i + 1, close_of[&i]));
+        }
+        regions.push(region_stack.last().map_or(0, |(id, _)| *id));
+    }
+    regions
 }
 
 /// Poll the interpreter future to completion. `Interpreter::execute` is

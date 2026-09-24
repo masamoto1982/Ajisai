@@ -1118,6 +1118,14 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-num-rejects-number" data-category="core">
+  <h3>NUM parses Text only: a number operand is nonText, not a passthrough</h3>
+  <pre class="ajisai-source">5 NUM</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">NUM: expected String, got Number</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-str-integer" data-category="core">
   <h3>STR renders an exact integer as Text</h3>
   <pre class="ajisai-source">42 STR</pre>
@@ -1300,6 +1308,13 @@
 <section class="ajisai-case" id="core-tokenize-by-separator" data-category="core">
   <h3>TOKENIZE splits Text by a separator into substrings</h3>
   <pre class="ajisai-source">'a,b,c' ',' TOKENIZE</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'b' 'c' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-tokenize-empty-separator" data-category="core">
+  <h3>TOKENIZE with the empty separator splits between every character, as SEARCH and REPLACE read the empty pattern</h3>
+  <pre class="ajisai-source">'abc' '' TOKENIZE</pre>
   <pre class="ajisai-expect-result">[ 'a' 'b' 'c' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1487,6 +1502,14 @@
   <h3>A value used twice is named with BIND (LANG.STACK.CONSUMPTION)</h3>
   <pre class="ajisai-source">5 'N' BIND N N 1 +</pre>
   <pre class="ajisai-expect-result">5/1 6/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-bind-destructure-mismatch" data-category="core">
+  <h3>BIND destructuring is exact: a name count that differs from the element count is shapeMismatch</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 'A' 'B' ] BIND</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">BIND: 2 names cannot destructure a Vector of 3 elements</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1764,6 +1787,13 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-digest-absent-text" data-category="core">
+  <h3>DIGEST of an ABSENT NIL includes its Text: two ABSENT NILs are the same value exactly when their Texts are equal (LANG.VALUES.NIL)</h3>
+  <pre class="ajisai-source">'a' ABSENT DIGEST 'b' ABSENT DIGEST EQ 'a' ABSENT DIGEST 'a' ABSENT DIGEST EQ</pre>
+  <pre class="ajisai-expect-result">FALSE TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- CONTRACT reads the registry from inside the language
      (LANG.CONTRACT.REGISTRY); for a User Word it is the contract inferred
      from the body (LANG.CONTRACT.CHECK), in one shape. -->
@@ -1893,6 +1923,14 @@ W</pre>
   <pre class="ajisai-source">'NOPE' DEL</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">Word 'NOPE' is not defined</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-del-referenced-word-error" data-category="core">
+  <h3>DEL of a word another word still references is definitionConflict (LANG.DICTIONARY.MUTATION)</h3>
+  <pre class="ajisai-source">[ 2 MUL ] 'D2' DEF [ D2 D2 ] 'D4' DEF 'D2' DEL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Cannot delete 'D2': referenced by D4</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

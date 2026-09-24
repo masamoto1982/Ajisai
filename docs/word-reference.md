@@ -1093,7 +1093,7 @@ Delete a user word from the dictionary.
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
 - **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
-- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`
+- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`, `definitionConflict`
 
 ## `DIGEST`
 

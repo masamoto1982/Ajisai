@@ -190,7 +190,15 @@ pub fn check(source: &str, verify_contracts: bool) -> AgentResponse {
     let resolved = resolve_words(&interp, &tokens);
     let unknown = &resolved.unknown;
     if let Some(first) = unknown.first() {
-        let message = format!("Unknown words: {}", unknown.join(", "));
+        let mut message = format!("Unknown words: {}", unknown.join(", "));
+        if !resolved.bound_elsewhere.is_empty() {
+            message.push_str(&format!(
+                ". {} is bound in another frame: a binding is reachable in the frame that made it \
+                 and in the blocks written there, never inside a Word it calls — pass the value \
+                 as an operand instead",
+                resolved.bound_elsewhere.join(", ")
+            ));
+        }
         let category = ErrorCategory::UnknownWord;
         let mut diagnosis = DebugDiagnosis::from_error_category(
             ErrorPhase::ResolveWord,

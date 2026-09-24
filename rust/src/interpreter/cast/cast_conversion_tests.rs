@@ -82,10 +82,9 @@ mod tests {
             BigInt::one(),
         )));
         let result = op_num(&mut interp);
-        assert!(result.is_ok());
-        if let Some(val) = interp.stack.last() {
-            assert!(is_number_value(val));
-        }
+        // NUM parses Text and nothing else: a number operand is `nonText`,
+        // as the contract declares, not a passthrough.
+        assert!(result.is_err());
 
         interp.stack.clear();
         interp.stack.push(Value::from_bool(true));
