@@ -13,14 +13,12 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::{self, ScanMeter};
 use crate::interpreter::comparison_scalar::OrderOutcome;
 use crate::interpreter::value_extraction_helpers::extract_operands;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
 fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.extend(operands);
-    }
+    interp.stack.extend(operands);
 }
 
 fn non_vector(word: &str) -> AjisaiError {

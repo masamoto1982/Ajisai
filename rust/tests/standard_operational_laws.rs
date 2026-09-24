@@ -23,7 +23,7 @@ fn effect_payloads(interpreter: &Interpreter) -> Vec<&str> {
 async fn map_visits_in_index_order_with_isolated_stacks_and_ordered_effects() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] [ KEEP PRINT 10 ADD ] MAP")
+        .execute("[ 3 1 2 ] [ 'E' BIND E PRINT E 10 ADD ] MAP")
         .await
         .unwrap();
 
@@ -35,7 +35,7 @@ async fn map_visits_in_index_order_with_isolated_stacks_and_ordered_effects() {
 async fn filter_visits_in_index_order_and_observes_predicate_truth() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] [ KEEP PRINT 1 GT ] FILTER")
+        .execute("[ 3 1 2 ] [ 'E' BIND E PRINT E 1 GT ] FILTER")
         .await
         .unwrap();
 
@@ -46,14 +46,14 @@ async fn filter_visits_in_index_order_and_observes_predicate_truth() {
 #[tokio::test]
 async fn any_and_all_short_circuit_before_unvisited_effects() {
     let mut any = Interpreter::new();
-    any.execute("[ 1 2 3 ] [ KEEP PRINT 2 EQ ] ANY")
+    any.execute("[ 1 2 3 ] [ 'E' BIND E PRINT E 2 EQ ] ANY")
         .await
         .unwrap();
     assert_eq!(effect_payloads(&any), ["1/1", "2/1"]);
     assert_eq!(rendered_stack(&any), ["TRUE"]);
 
     let mut all = Interpreter::new();
-    all.execute("[ 1 2 3 ] [ KEEP PRINT 2 LT ] ALL")
+    all.execute("[ 1 2 3 ] [ 'E' BIND E PRINT E 2 LT ] ALL")
         .await
         .unwrap();
     assert_eq!(effect_payloads(&all), ["1/1", "2/1"]);
@@ -77,7 +77,7 @@ async fn any_and_all_short_circuit_before_unvisited_effects() {
 async fn scan_walks_in_index_order_and_answers_one_lane_per_element() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 3 1 2 ] 0 [ KEEP PRINT ADD ] SCAN")
+        .execute("[ 3 1 2 ] 0 [ 'E' BIND E PRINT E ADD ] SCAN")
         .await
         .unwrap();
 
@@ -182,7 +182,7 @@ async fn order_is_the_stable_permutation_sort_applies() {
     // Applying the permutation reproduces SORT exactly.
     let mut applied = Interpreter::new();
     applied
-        .execute("[ 18 13 1 1 13 2 ] KEEP ORDER GET")
+        .execute("[ 18 13 1 1 13 2 ] 'V' BIND V V ORDER GET")
         .await
         .unwrap();
     let mut sorted = Interpreter::new();
@@ -357,7 +357,7 @@ async fn random_is_a_pure_function_of_its_seed() {
 
     let mut in_unit_interval = Interpreter::new();
     in_unit_interval
-        .execute("7 64 RANDOM KEEP [ 0 LT ] ANY 'BELOW' BIND [ 1 GTE ] ANY")
+        .execute("7 64 RANDOM 'R' BIND R [ 0 LT ] ANY R [ 1 GTE ] ANY OR")
         .await
         .unwrap();
     assert_eq!(rendered_stack(&in_unit_interval), ["FALSE"]);
@@ -408,8 +408,8 @@ async fn json_decode_and_encode_are_exact_and_compose_to_the_identity() {
         .execute(
             "'{\"a\": 0.1, \"b\": [true, null, \"x\"]}' JSON-DECODE 'a' AT 10 MUL \
              [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD JSON-ENCODE \
-             [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD KEEP JSON-ENCODE JSON-DECODE EQ \
-             1/3 JSON-ENCODE KEEP JSON-DECODE NUM \
+             [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD 'V' BIND V V JSON-ENCODE JSON-DECODE EQ \
+             1/3 JSON-ENCODE 'J' BIND J J JSON-DECODE NUM \
              2 SQRT JSON-ENCODE NIL-REASON \
              '[1,' JSON-DECODE NIL-REASON",
         )

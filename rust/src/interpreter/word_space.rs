@@ -135,9 +135,6 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // operand's value sets the length, so it takes the runtime water level
         // rather than a static bound.
         Random => (Unbounded, true),
-        // `KEEP` never reaches a primitive: the execution loop interprets it
-        // against the source stream, so it materializes nothing.
-        SetConsumptionKeep => (Const, false),
     }
 }
 

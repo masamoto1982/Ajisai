@@ -101,7 +101,6 @@ impl Interpreter {
         self.dependents.clear();
         self.output_buffer.clear();
         self.host_effects.clear();
-        self.reset_execution_modes();
         self.pending_tokens = None;
         self.pending_token_index = 0;
         self.pending_word_descriptions.clear();

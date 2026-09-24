@@ -13,29 +13,19 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::{charge_comparison_sort, ScanMeter};
 use crate::interpreter::sort::order_indices;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, RecordData, Value, ValueData};
 use std::collections::HashMap;
 
-/// Take the Word's single operand, honouring `KEEP`.
+/// Take the Word's single operand off the stack.
 pub(super) fn take_operand(interp: &mut Interpreter) -> Result<Value> {
-    if interp.consumption_mode == ConsumptionMode::Keep {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
-    }
+    interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
 }
 
-/// Put an operand back when the Word failed and did consume it.
+/// Put an operand back when the Word failed after consuming it.
 pub(super) fn restore(interp: &mut Interpreter, value: Value) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.push(value);
-    }
+    interp.stack.push(value);
 }
 
 /// The elements of a vector operand, or a structure error naming what came
@@ -337,15 +327,12 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
-    let keep = interp.consumption_mode == ConsumptionMode::Keep;
     let keys_value = interp.stack.pop().expect("checked by len()");
     let values_value = interp.stack.pop().expect("checked by len()");
 
     let put_back = |interp: &mut Interpreter, values: &Value, keys: &Value| {
-        if !keep {
-            interp.stack.push(values.clone());
-            interp.stack.push(keys.clone());
-        }
+        interp.stack.push(values.clone());
+        interp.stack.push(keys.clone());
     };
 
     let values = match elements_of(&values_value, "vector as first operand") {
@@ -401,10 +388,6 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    if keep {
-        interp.stack.push(values_value);
-        interp.stack.push(keys_value);
-    }
     let (keys, buckets): (Vec<Value>, Vec<Value>) = groups
         .into_iter()
         .map(|(key, bucket)| (key, Value::from_vector(bucket)))

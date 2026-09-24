@@ -16,16 +16,14 @@ use super::ordering_ops::{elements_of, restore, take_operand};
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::ScanMeter;
 use crate::interpreter::value_extraction_helpers::extract_operands;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, RecordBuildError, RecordData, Value};
 
-/// Put a Word's consumed operands back, in order, when it did consume them.
+/// Put a Word's consumed operands back, in order.
 fn restore_all(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        for operand in operands {
-            interp.stack.push(operand);
-        }
+    for operand in operands {
+        interp.stack.push(operand);
     }
 }
 

@@ -23,9 +23,6 @@ pub struct CompiledCall {
     /// `None` for a name the registry does not know — the fallback path reports
     /// it as an unknown word.
     pub word: Option<&'static GeneratedWord>,
-    /// Precomputed `modules::is_mode_preserving_word(name)` so the post-call
-    /// cleanup skips the per-call uppercase allocation.
-    pub mode_preserving: bool,
 }
 
 impl CompiledCall {
@@ -33,7 +30,6 @@ impl CompiledCall {
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(name).into_owned();
         let word = generated_word(&canonical);
         Self {
-            mode_preserving: false,
             word,
             name: canonical,
         }

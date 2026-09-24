@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, normalize_index};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::Value;
 
@@ -72,16 +72,11 @@ fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, Vec<i64>)> {
 }
 
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, indices) = pop_index_operand(interp)?;
 
     // `GET` declares `consumption: eat` with `[ vec ] [ idx ] -> [ elem ]`, so
-    // the vector operand leaves the stack unless `KEEP` is in force.
-    let target_val = match if is_keep_mode {
-        interp.stack.last().cloned()
-    } else {
-        interp.stack.pop()
-    } {
+    // the vector operand leaves the stack.
+    let target_val = match interp.stack.pop() {
         Some(value) => value,
         None => {
             interp.stack.push(index_val);
@@ -90,9 +85,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     };
 
     if !target_val.is_vector() {
-        if !is_keep_mode {
-            interp.stack.push(target_val);
-        }
+        interp.stack.push(target_val);
         interp.stack.push(index_val);
         return Err(AjisaiError::declared(
             "nonVector",
@@ -106,9 +99,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     if let Err(e) =
         crate::interpreter::collection_meter::charge_copy_of(interp, &target_val, indices.len())
     {
-        if !is_keep_mode {
-            interp.stack.push(target_val);
-        }
+        interp.stack.push(target_val);
         interp.stack.push(index_val);
         return Err(e);
     }
@@ -134,9 +125,6 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         several => Value::from_vector(several.iter().map(|index| select(*index)).collect()),
     };
 
-    if is_keep_mode {
-        interp.stack.push(index_val);
-    }
     interp.stack.push(result_elem);
     Ok(())
 }

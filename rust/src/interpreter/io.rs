@@ -1,23 +1,11 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{ConsumptionMode, HostEffect, Interpreter};
+use crate::interpreter::{HostEffect, Interpreter};
 use crate::types::Value;
 use std::fmt::Write;
 
-fn extract_value_for_print(interp: &mut Interpreter, keep_mode: bool) -> Result<Value> {
-    if keep_mode {
-        return interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow);
-    }
-    interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
-}
-
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
     interp.run_effect_schema(|interp| {
-        let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-        let val = extract_value_for_print(interp, is_keep_mode)?;
+        let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
         // PRINT is an output boundary: a Text-role value is emitted as its raw
         // character content, without the `'...'` quotes the Stack projection
         // uses to mark it as a string (LANG.EFFECTS.OUTPUT).
@@ -83,18 +71,6 @@ mod tests {
         assert_eq!(interp.collect_output().trim(), "TRUE");
     }
 
-    /// PRINT consumes only the top value; KEEP (`,,`) prints the raw text and
-    /// leaves the quoted string on the stack.
-    #[tokio::test]
-    async fn test_print_keep_mode_leaves_string_on_stack() {
-        let mut interp = Interpreter::new();
-        interp.execute("'TEST' KEEP PRINT").await.unwrap();
-        assert_eq!(interp.collect_output().trim(), "TEST");
-        assert_eq!(interp.stack.len(), 1);
-        // The value still renders with its Stack-projection quotes.
-        assert_eq!(interp.stack.last().unwrap().to_string(), "'TEST'");
-    }
-
     /// A string nested inside a collection stays a string: printing a vector
     /// of strings shows them quoted, never as their codepoint fractions. Only
     /// the outer `'...'` of a top-level string is a display affordance.
@@ -110,9 +86,7 @@ mod tests {
     #[tokio::test]
     async fn test_print_mixed_vector_renders_each_role() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 'mix' 42 ] KEEP PRINT").await.unwrap();
+        interp.execute("[ 'mix' 42 ] PRINT").await.unwrap();
         assert_eq!(interp.collect_output().trim(), "[ 'mix' 42/1 ]");
-        // The Stack projection shows the same structure.
-        assert_eq!(interp.stack.last().unwrap().to_string(), "[ 'mix' 42/1 ]");
     }
 }

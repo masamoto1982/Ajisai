@@ -15,7 +15,7 @@ use super::tensor_cmds::checked_shape_product;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::collection_meter::charge_materialization;
 use crate::interpreter::value_extraction_helpers::is_vector_value;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};
 
@@ -148,29 +148,16 @@ pub fn op_flatten(interp: &mut Interpreter) -> Result<()> {
 /// leaf count — nothing is padded or repeated — and a well-formed shape too
 /// large to materialize projects `spaceExhausted`, as `FILL` and `RANGE` do.
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
-    let keep = interp.consumption_mode == ConsumptionMode::Keep;
     let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let target = if keep {
-        match interp.stack.last().cloned() {
-            Some(target) => target,
-            None => {
-                interp.stack.push(shape_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-        }
-    } else {
-        match interp.stack.pop() {
-            Some(target) => target,
-            None => {
-                interp.stack.push(shape_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
+    let target = match interp.stack.pop() {
+        Some(target) => target,
+        None => {
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::StackUnderflow);
         }
     };
     let put_back = |interp: &mut Interpreter, target: Value, shape_val: Value| {
-        if !keep {
-            interp.stack.push(target);
-        }
+        interp.stack.push(target);
         interp.stack.push(shape_val);
     };
 
@@ -203,10 +190,6 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         _ => {
             // The same projection FILL makes for the same reason: a
             // well-formed request the host declines (LANG.COLLECTIONS.BUDGET).
-            // Under KEEP the operands stay, as on the success path.
-            if keep {
-                interp.stack.push(shape_val);
-            }
             interp
                 .stack
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
@@ -239,9 +222,6 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     let result = regroup(&leaves, &shape);
-    if keep {
-        interp.stack.push(shape_val);
-    }
     interp.stack.push(result);
     Ok(())
 }

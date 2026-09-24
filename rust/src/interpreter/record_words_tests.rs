@@ -121,11 +121,11 @@ mod record_words_tests {
             top(&format!("{R} 'z' 3 WITH KEYS")).await,
             "[ 'x' 'y' 'z' ]"
         );
-        // The operand is a value: it is not changed by WITH, and KEEP retains
-        // all three operands beside the answer.
+        // The operand is a value: it is not changed by WITH, so the bound
+        // Record reads unchanged after the answer.
         assert_eq!(
-            top(&format!("{R} 'z' 3 KEEP WITH")).await,
-            "{ 'x' 1/1 'y' 2/1 } 'z' 3/1 { 'x' 1/1 'y' 2/1 'z' 3/1 }"
+            top(&format!("{R} 'REC' BIND REC 'z' 3 WITH REC")).await,
+            "{ 'x' 1/1 'y' 2/1 'z' 3/1 } { 'x' 1/1 'y' 2/1 }"
         );
         assert_eq!(error_of(&format!("{R} NIL 1 WITH")).await, "nonRecord");
     }
@@ -195,8 +195,8 @@ mod record_words_tests {
             "shapeMismatch"
         );
         assert_eq!(
-            top(&format!("{R} 2 KEEP MUL")).await,
-            "{ 'x' 1/1 'y' 2/1 } 2/1 { 'x' 2/1 'y' 4/1 }"
+            top(&format!("{R} 'REC' BIND REC REC 2 MUL")).await,
+            "{ 'x' 1/1 'y' 2/1 } { 'x' 2/1 'y' 4/1 }"
         );
     }
 

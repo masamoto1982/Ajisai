@@ -6,7 +6,7 @@ use crate::interpreter::tensor_lane_ops::apply_lane_wise_broadcast;
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, nil_passthrough_binary, nil_passthrough_unary,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
@@ -46,22 +46,10 @@ where
         return Ok(());
     }
 
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let val: Value = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if val.is_nil() {
-        if !is_keep_mode {
-            interp.stack.push(val);
-        }
+        interp.stack.push(val);
         return Err(AjisaiError::declared(
             "nonNumeric",
             format!("{} requires number or vector", op_name),
@@ -95,9 +83,7 @@ where
                 return Ok(());
             }
             Err(_) => {
-                if !is_keep_mode {
-                    interp.stack.push(val);
-                }
+                interp.stack.push(val);
                 return Err(AjisaiError::declared(
                     "nonNumeric",
                     format!("{} requires number or vector", op_name),
@@ -106,9 +92,7 @@ where
         }
     }
 
-    if !is_keep_mode {
-        interp.stack.push(val);
-    }
+    interp.stack.push(val);
     Err(AjisaiError::declared(
         "nonNumeric",
         format!("{} requires number or vector", op_name),
@@ -178,10 +162,8 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                     // it that way; `MOD` raised, which made one condition mean
                     // two things depending on which Word wrapped the same
                     // division.
-                    if interp.consumption_mode != ConsumptionMode::Keep {
-                        interp.stack.pop();
-                        interp.stack.pop();
-                    }
+                    interp.stack.pop();
+                    interp.stack.pop();
                     interp.stack.push(division_by_zero_projection());
                     return Ok(());
                 }
@@ -192,10 +174,8 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                     .div(&b)
                     .and_then(|q| q.floor())
                     .map(|fl| a.sub(&b.mul(&fl)));
-                if interp.consumption_mode != ConsumptionMode::Keep {
-                    interp.stack.pop();
-                    interp.stack.pop();
-                }
+                interp.stack.pop();
+                interp.stack.pop();
                 match modulo {
                     Some(result) => interp.stack.push(Value::from_exact_real(result)),
                     None => push_undecidable_nil(interp),
@@ -218,27 +198,9 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
+    let b_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let b_val: Value = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
-
-    let a_val = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        if stack_len < 2 {
-            return Err(AjisaiError::StackUnderflow);
-        }
-        interp.stack[stack_len - 2].clone()
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let result = apply_binary_broadcast_with_metrics(
         &a_val,
@@ -264,10 +226,8 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-            }
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
             Err(e)
         }
     }
@@ -345,11 +305,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             // `usize`) is a well-formed operation that cannot materialize within
             // budget. The NIL Projection Rule projects it onto a diagnosable NIL
             // (reason `spaceExhausted`), recoverable with a chosen fallback, instead of
-            // a channel error. Under KEEP the operands are retained as on the
-            // success path.
-            if interp.consumption_mode == ConsumptionMode::Keep {
-                interp.stack.push(args_val);
-            }
+            // a channel error.
             interp
                 .stack
                 .push(crate::interpreter::space_projection::space_exhausted_nil(
@@ -369,10 +325,6 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
 
     let result = build_nested_value(&data, &shape);
-
-    if interp.consumption_mode == ConsumptionMode::Keep {
-        interp.stack.push(args_val);
-    }
 
     interp.stack.push(result);
     Ok(())

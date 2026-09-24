@@ -23,7 +23,7 @@ use std::cmp::Ordering;
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::extract_operands;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::{ExactCmp, ExactReal, DEFAULT_COMPARISON_WATER};
 use crate::types::fraction::Fraction;
@@ -36,10 +36,8 @@ use crate::types::{Interpretation, Value, ValueData};
 const MAX_DIGITS: u64 = 1 << 16;
 
 fn restore_all(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        for operand in operands {
-            interp.stack.push(operand);
-        }
+    for operand in operands {
+        interp.stack.push(operand);
     }
 }
 

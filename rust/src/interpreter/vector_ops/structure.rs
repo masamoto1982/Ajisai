@@ -2,7 +2,7 @@ use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_no_arg;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_bigint_from_value;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
@@ -83,26 +83,18 @@ fn parse_range_args(args_val: &Value) -> Result<(i64, i64, i64)> {
 /// dispatch NIL guard, which clamps its window to the declared arity of 2 and
 /// so could not see the operands a longer count would reach.
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
 
     let base = interp.stack.len() - 2;
-    let operands: Vec<Value> = if is_keep_mode {
-        interp.stack.as_slice()[base..].to_vec()
-    } else {
-        interp.stack.split_off(base).into_values()
-    };
+    let operands: Vec<Value> = interp.stack.split_off(base).into_values();
 
     if operands.iter().any(|operand| !operand.is_vector()) {
-        // Consuming mode already took the operands off; put them back so the
+        // The operands were already taken off; put them back so the
         // stack a reader inspects after the error is the one they wrote.
-        if !is_keep_mode {
-            for operand in operands {
-                interp.stack.push(operand);
-            }
+        for operand in operands {
+            interp.stack.push(operand);
         }
         return Err(AjisaiError::declared(
             "nonVector",
@@ -120,10 +112,8 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
                 .copies(operands[1].len()),
         );
     if let Err(e) = crate::interpreter::collection_meter::charge(interp, units) {
-        if !is_keep_mode {
-            for operand in operands {
-                interp.stack.push(operand);
-            }
+        for operand in operands {
+            interp.stack.push(operand);
         }
         return Err(e);
     }
@@ -133,11 +123,9 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     crate::interpreter::collection_meter::charge_stacktop_copy(interp, |len| len)?;
 
-    let reversed = with_stacktop_vector_target_no_arg(interp, is_keep_mode, |vector_val| {
+    let reversed = with_stacktop_vector_target_no_arg(interp, |vector_val| {
         // A flat dense buffer reverses as columns. The nested route below
         // unpacked the tensor into one boxed `Value` per lane, reversed *those*,
         // and handed back an AoS `Vector` — so reversing 262,144 numbers cost

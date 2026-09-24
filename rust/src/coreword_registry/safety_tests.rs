@@ -33,14 +33,8 @@ fn aq_ver_007_a_metadata_exists_for_all_builtin_words() {
 
 /// A `pure` Word declares no effects and is safe to preview.
 ///
-/// Determinism used to be asserted here too, on the reasoning that a pure
-/// Word must be reproducible. The canonical declarations disagree, and they
-/// are right: `EAT` and `KEEP` are `pure` — they compute nothing and touch
-/// no value — yet `stateRelative`, because what they do is change the
-/// consumption mode the *next* Word runs under. Purity and determinism are
-/// separate axes in the specification, and the hand-written table conflated
-/// them by carrying determinism as a bool that nobody had a reason to set
-/// false for a pure Word.
+/// Determinism is not asserted here: purity and determinism are separate
+/// axes in the specification, and a pure Word may still be `stateRelative`.
 #[test]
 fn aq_ver_007_b_pure_words_declare_no_effects_and_are_safe_to_preview() {
     let registry = get_builtin_word_registry();

@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::comparison_scalar::{three_way_compare, OrderOutcome};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Value, ValueData};
 use std::cell::RefCell;
@@ -149,25 +149,13 @@ fn dense_integer_sort(interp: &mut Interpreter, value: &Value) -> Result<Option<
 }
 
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let val: Value = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     match dense_integer_sort(interp, &val) {
         Ok(Some(())) => return Ok(()),
         Ok(None) => {}
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(val);
-            }
+            interp.stack.push(val);
             return Err(e);
         }
     }
@@ -178,9 +166,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     let children = match val.as_vector_view() {
         Some(view) => view,
         None => {
-            if !is_keep_mode {
-                interp.stack.push(val);
-            }
+            interp.stack.push(val);
             // `expected` and `got` are the two halves of one sentence
             // ("Structure error: expected _, got _"), so each is a noun
             // phrase. A whole sentence here rendered as "expected SORT:
@@ -204,9 +190,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     // sense the arithmetic meter's is.
     if let Err(e) = crate::interpreter::collection_meter::charge_comparison_sort(interp, &children)
     {
-        if !is_keep_mode {
-            interp.stack.push(val);
-        }
+        interp.stack.push(val);
         return Err(e);
     }
 
@@ -221,9 +205,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
         SortAttempt::Malformed(e) => {
-            if !is_keep_mode {
-                interp.stack.push(val);
-            }
+            interp.stack.push(val);
             Err(e)
         }
     }

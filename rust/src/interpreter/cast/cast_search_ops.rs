@@ -7,7 +7,7 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::cast::cast_value_helpers::is_string_value;
 use crate::interpreter::value_extraction_helpers::{extract_operands, value_as_string};
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
@@ -20,9 +20,7 @@ fn texts(interp: &mut Interpreter, word: &str, count: usize) -> Result<Vec<Strin
             .map(|operand| value_as_string(operand).unwrap_or_default())
             .collect());
     }
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.extend(operands);
-    }
+    interp.stack.extend(operands);
     Err(AjisaiError::declared(
         "nonText",
         format!("{word}: expected Strings, got a non-text value"),

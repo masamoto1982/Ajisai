@@ -105,7 +105,7 @@ impl Interpreter {
                         let canonical =
                             crate::core_word_aliases::canonicalize_core_word_name(symbol);
                         match self.infer_word_contract(&canonical) {
-                            Some(contract) => flow.feed_word(&canonical, &contract.flow),
+                            Some(contract) => flow.feed_word(&contract.flow),
                             None => flow.go_dynamic(),
                         }
                     }

@@ -4971,54 +4971,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "KEEP",
-      "aliases": [],
-      "family": "stackModifier",
-      "stack": {
-        "inputs": 0,
-        "outputs": 0
-      },
-      "consumption": "none",
-      "nilPolicy": "preserveReason",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [],
-      "purity": "pure",
-      "determinism": "stateRelative",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": false
-        }
-      },
-      "clauses": [
-        "LANG.MODIFIERS.CONSUMPTION"
-      ],
-      "documentation": {
-        "summary": "Set the consumption mode to keep operands.",
-        "hover": "KEEP — keep operands and append result",
-        "lookup": "Set the consumption mode to keep operands.",
-        "syntax": "KEEP +",
-        "role": "Modifier that preserves operands while appending the next word's result.",
-        "stackEffect": "operands preserved; result pushed"
-      },
-      "executorKey": "SetConsumptionKeep",
-      "effects": [],
-      "partiality": "total",
-      "category": "modifier",
-      "vocabularyTier": "kernel"
-    },
-    {
       "name": "BIND",
       "aliases": [],
       "family": "dictionary",

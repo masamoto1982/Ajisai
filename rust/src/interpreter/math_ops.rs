@@ -3,7 +3,7 @@ use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, nil_passthrough_unary, push_result,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -172,7 +172,7 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
 /// singleton: two separately-built computable reals are conservatively
 /// unequal (`Computable`'s own `PartialEq` is process identity, never a
 /// value's), so `PI PI EQ` is a genuine, deterministic Unknown rather than a
-/// referential-identity shortcut. Arity 0, so `KEEP` has nothing to keep.
+/// referential-identity shortcut.
 pub(crate) fn op_pi(interp: &mut Interpreter) -> Result<()> {
     let value = Value::from_exact_real(ExactReal::Computable(crate::types::exact::pi::pi()));
     interp
@@ -338,9 +338,7 @@ pub(crate) fn op_max(interp: &mut Interpreter) -> Result<()> {
 }
 
 fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.extend(operands);
-    }
+    interp.stack.extend(operands);
 }
 
 /// `SQRT`: the exact square root of a non-negative rational, and the only Word
@@ -357,15 +355,7 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_sqrt)? {
         return Ok(());
     }
-    let value = if interp.consumption_mode == ConsumptionMode::Keep {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     match lift_unary_numeric(&value, &sqrt_scalar) {
         Ok(result) => {
@@ -378,9 +368,7 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
         Err(e) => {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.push(value);
-            }
+            interp.stack.push(value);
             Err(e)
         }
     }

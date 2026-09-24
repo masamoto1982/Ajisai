@@ -58,12 +58,6 @@ pub const MAX_VECTOR_NESTING_DEPTH: usize = 256;
 pub const MAX_MATERIALIZED_ELEMENTS: usize =
     super::runtime_limits::DEFAULT_MAX_MATERIALIZED_ELEMENTS;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ConsumptionMode {
-    Consume,
-    Keep,
-}
-
 /// Counters describing how the runtime went about its work: which cache
 /// answered, which fast path fired, how often a plan was rebuilt.
 ///
@@ -147,7 +141,6 @@ pub struct Interpreter {
     /// seven definitions and only noticed when `LOOKUP` answered
     /// `Unknown word`. Cleared at the start of each top-level run.
     pub(crate) dictionary_changes_this_run: Vec<String>,
-    pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
@@ -212,7 +205,7 @@ pub struct Interpreter {
     pub(crate) defer_identity_recompute: bool,
 
     /// A `DEF` body's own written tokens, captured lexically when a literal
-    /// precedes `<name> [KEEP] DEF` (`execution_loop.rs`, `execute_def.rs`).
+    /// precedes `<name> DEF` (`execution_loop.rs`, `execute_def.rs`).
     pub(crate) pending_def_body_tokens: Option<Vec<crate::types::Token>>,
 
     /// `#:contract NAME ...` directive text scanned out of the raw source at
@@ -254,7 +247,7 @@ pub struct Interpreter {
 
     /// When true (default), StackTop scalar-scalar arithmetic and comparison can
     /// bypass the tensor broadcast wrapper for bare scalars and same-shape
-    /// singleton tensor/vector wrappers in Consume and Keep modes. Disable via
+    /// singleton tensor/vector wrappers. Disable via
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
 }
@@ -281,7 +274,6 @@ impl Interpreter {
             host_env,
             binding_scopes: vec![super::bindings::BindingScope::root()],
             dictionary_changes_this_run: Vec::new(),
-            consumption_mode: ConsumptionMode::Consume,
             disable_no_change_check: true,
             pending_tokens: None,
             pending_token_index: 0,
@@ -443,14 +435,6 @@ impl Interpreter {
             execution_epoch: self.execution_epoch,
         }
     }
-    pub(crate) fn update_consumption_mode(&mut self, mode: ConsumptionMode) {
-        self.consumption_mode = mode;
-    }
-
-    pub(crate) fn reset_execution_modes(&mut self) {
-        self.consumption_mode = ConsumptionMode::Consume;
-    }
-
     pub(crate) fn normalize_symbol<'a>(symbol: &'a str) -> std::borrow::Cow<'a, str> {
         match symbol {
             "%" => std::borrow::Cow::Borrowed("MOD"),

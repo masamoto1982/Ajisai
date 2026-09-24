@@ -129,13 +129,4 @@ mod shape_words_tests {
             assert_eq!(top(code).await, want, "`{code}`");
         }
     }
-
-    /// KEEP retains the collection RANK walks and nothing else, as for MAP.
-    #[tokio::test]
-    async fn keep_retains_only_the_collection() {
-        assert_eq!(
-            top("[ 1 2 ] KEEP 1 [ 10 MUL ] RANK").await,
-            "[ 1/1 2/1 ] [ 10/1 20/1 ]"
-        );
-    }
 }

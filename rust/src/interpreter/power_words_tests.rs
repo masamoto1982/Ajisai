@@ -73,7 +73,10 @@ mod power_words_tests {
         assert_eq!(top("NIL 2 POW").await, "NIL");
         assert_eq!(error_of("'x' 2 POW").await, "nonNumeric");
         assert_eq!(error_of("[ 1 2 ] [ 1 2 3 ] POW").await, "shapeMismatch");
-        assert_eq!(top("2 3 KEEP POW").await, "2/1 3/1 8/1");
+        assert_eq!(
+            top("2 'A' BIND 3 'B' BIND A B A B POW").await,
+            "2/1 3/1 8/1"
+        );
     }
 
     #[tokio::test]
@@ -165,7 +168,7 @@ mod power_words_tests {
             let _ = interp.execute(&format!("'x' {word}")).await;
             assert_eq!(interp.stack.len(), 1, "{word} must restore its operand");
         }
-        assert_eq!(top("1 KEEP EXP 2 GT").await, "1/1 TRUE");
+        assert_eq!(top("1 'X' BIND X X EXP 2 GT").await, "1/1 TRUE");
     }
 
     #[tokio::test]

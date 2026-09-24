@@ -318,7 +318,7 @@ mod tokenizer_regression_tests_2 {
     fn test_multiline_vector_body_allowed() {
         // A `[ ]` body may span multiple lines, with each internal line break
         // preserved as a statement separator inside it.
-        let input = "[ KEEP [ 1 ] =\n[ 10 ] ] 'CHECK_ONE' DEF";
+        let input = "[ LENGTH [ 1 ] =\n[ 10 ] ] 'CHECK_ONE' DEF";
         let result = tokenize(input);
         assert!(result.is_ok(), "multi-line vector body should tokenize");
         assert!(

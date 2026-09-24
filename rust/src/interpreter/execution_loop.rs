@@ -4,10 +4,10 @@ use crate::types::{ExecutionLine, Interpretation, Token, Value, ValueData};
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::{create_number_value, is_vector_value};
-use super::{ConsumptionMode, Interpreter};
+use super::Interpreter;
 
 /// If the bracketed literal spanning `tokens[start..start+consumed)` is
-/// immediately followed (no tokens between) by `<name-string> [KEEP] DEF`,
+/// immediately followed (no tokens between) by `<name-string> DEF`,
 /// return its inner tokens (brackets excluded) — the body `DEF` is about to
 /// define, as written. `None` on any mismatch, which just means this literal
 /// is not a `DEF` body written in place — see `pending_def_body_tokens`'s
@@ -22,11 +22,6 @@ fn def_body_tokens_if_literal_precedes_def(
         return None;
     }
     j += 1;
-    if matches!(tokens.get(j), Some(Token::Symbol(s))
-        if crate::core_word_aliases::canonicalize_core_word_name(s).as_ref() == "KEEP")
-    {
-        j += 1;
-    }
     match tokens.get(j) {
         Some(Token::Symbol(s))
             if crate::core_word_aliases::canonicalize_core_word_name(s).as_ref() == "DEF" =>
@@ -316,7 +311,7 @@ impl Interpreter {
                     // `control_cond.rs::op_cond`'s doc comment for why.
                     let (values, consumed, element_hint) =
                         Self::collect_bracketed_with_depth(execute_tokens, i, 1)?;
-                    // A literal immediately followed by `<name> [KEEP] DEF`
+                    // A literal immediately followed by `<name> DEF`
                     // is that DEF's body — captured here, as written, for
                     // `op_def` to prefer over re-deriving it from the Value
                     // just built (see `pending_def_body_tokens`'s doc
@@ -340,34 +335,22 @@ impl Interpreter {
                     if track_source_position && canonical.as_ref() != s.as_ref() {
                         self.current_source_word = Some(std::sync::Arc::clone(s));
                     }
-                    match canonical.as_ref() {
-                        "KEEP" => {
-                            self.update_consumption_mode(ConsumptionMode::Keep);
-                        }
-                        _ => {
-                            let upper = canonical;
+                    {
+                        let upper = canonical;
 
-                            let stack_len_before = self.stack.len();
-                            match self.execute_word_core(upper.as_ref()) {
-                                Ok(()) => {
-                                    trace_direct_nil_produced(
-                                        self,
-                                        upper.as_ref(),
-                                        stack_len_before,
-                                    );
-                                    apply_word_hint_override(self, upper.as_ref());
-                                }
-                                Err(err) => {
-                                    self.record_word_dispatch_failure(
-                                        upper.as_ref(),
-                                        &err,
-                                        stack_len_before,
-                                    );
-                                    return Err(err);
-                                }
+                        let stack_len_before = self.stack.len();
+                        match self.execute_word_core(upper.as_ref()) {
+                            Ok(()) => {
+                                trace_direct_nil_produced(self, upper.as_ref(), stack_len_before);
+                                apply_word_hint_override(self, upper.as_ref());
                             }
-                            if true {
-                                self.reset_execution_modes();
+                            Err(err) => {
+                                self.record_word_dispatch_failure(
+                                    upper.as_ref(),
+                                    &err,
+                                    stack_len_before,
+                                );
+                                return Err(err);
                             }
                         }
                     }

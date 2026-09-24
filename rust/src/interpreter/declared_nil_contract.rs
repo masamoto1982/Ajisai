@@ -11,7 +11,7 @@ use crate::error::{AjisaiError, Result};
 use crate::kernel::generated::{Arity, GeneratedWord, NilPolicy};
 use crate::types::Value;
 
-use super::{ConsumptionMode, Interpreter};
+use super::Interpreter;
 
 /// What a Word's declared `nilPolicy` requires of the operands on the stack,
 /// decided before its primitive is reached.
@@ -276,16 +276,12 @@ impl Interpreter {
     }
 
     /// Yield the NIL at stack index `nil_index` as the Word's result without
-    /// running its primitive, unwinding the declared operand window under the
-    /// active consumption mode (LANG.MODIFIERS.CONSUMPTION): `EAT` removes the operands, `KEEP`
-    /// leaves them in place. The NIL is copied out before the unwind, since
-    /// the unwind is what removes it.
+    /// running its primitive, removing the declared operand window. The NIL is
+    /// copied out before the unwind, since the unwind is what removes it.
     fn pass_nil_through(&mut self, operands: usize, nil_index: usize) {
         let result = Value::nil_inheriting_absence_from(&self.stack[nil_index]);
-        if self.consumption_mode == ConsumptionMode::Consume {
-            let remaining = self.stack.len() - operands;
-            self.stack.drain(remaining..);
-        }
+        let remaining = self.stack.len() - operands;
+        self.stack.drain(remaining..);
         self.stack.push(result);
     }
 

@@ -156,34 +156,6 @@ fn unsupported_or_semantically_sensitive_shapes_fall_back() {
 }
 
 #[test]
-fn keep_mode_fast_path_preserves_operands_and_pushes_result() {
-    // The shaped comparison forms (`[ 3 ] [ 4 ] KEEP >`) moved out of this
-    // list with the singleton fast path; they lift now.
-    for src in [
-        "3 4 KEEP ADD",
-        "[ 3 ] [ 4 ] KEEP ADD",
-        "3 4 KEEP >",
-        "3 3 KEEP =",
-    ] {
-        let (on, off) = assert_on_equals_off(src);
-        assert!(
-            on.runtime_metrics().scalar_fastpath_count >= 1,
-            "expected KEEP scalar fast path to fire for: {src}"
-        );
-        assert_eq!(
-            off.runtime_metrics().scalar_fastpath_count,
-            0,
-            "disabled scalar fast path should not count for: {src}"
-        );
-        assert_eq!(
-            on.get_stack().len(),
-            3,
-            "KEEP fast path must retain both operands and push one result for: {src}"
-        );
-    }
-}
-
-#[test]
 fn direct_singleton_vector_fast_path_matches_baseline() {
     // Arithmetic only. The comparison family no longer has a singleton fast
     // path: a one-element Vector is not its element (LANG.VALUES.DISJOINT), so

@@ -5,7 +5,6 @@ const schema = JSON.parse(readFileSync('spec/words.schema.json', 'utf8'));
 const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'));
 const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
 const aliasesSource = readFileSync('rust/src/core_word_aliases.rs', 'utf8');
-const compiledPlanSource = readFileSync('rust/src/interpreter/compiled_plan.rs', 'utf8');
 const dispatchSource = readFileSync('rust/src/interpreter/execute_builtin.rs', 'utf8');
 const language = readFileSync('spec/language-semantics.md', 'utf8');
 
@@ -34,11 +33,8 @@ for (const word of words.entries) {
   // that the key reaches a runtime arm. The compiler already requires the
   // dispatch match to be total over `WordId`; this catches the case a total
   // match cannot, a Word folded into a neighbour's arm by mistake.
-  const compiledModifiers = new Set(['KEEP']);
   const directive = new Set();
-  if (compiledModifiers.has(word.name)) {
-    if (!compiledPlanSource.includes(`CompiledOp::${word.executorKey}`)) fail(`${word.name} compiled executorKey drift`);
-  } else if (directive.has(word.name)) {
+  if (directive.has(word.name)) {
     if (word.executorKey !== 'LazyNextUnitFallback') fail(`${word.name} executorKey drift`);
   } else if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
     fail(`${word.name} has no dispatch arm for WordId::${word.executorKey}`);

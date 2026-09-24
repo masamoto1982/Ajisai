@@ -181,7 +181,7 @@ export const TOOLS = [
     // of leaving "out of domain" to be inferred.
     description:
       "Execute a bounded Ajisai program and return its stack. Ajisai is postfix (RPN) and its numbers are exact rationals closed under square root — no floats, so results are reproducible and comparisons decide. " +
-      "Its 100 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT POW GCD RATIO), transcendentals as computable reals compared under a budget (EXP LN SIN COS ATAN PI — render them with FORMAT), comparison (EQ LT LTE GT GTE — not-equal is EQ NOT), boolean logic (AND OR NOT), " +
+      "Its 99 Words cover arithmetic (ADD SUB MUL DIV MOD FLOOR CEIL ROUND ABS NEG MIN MAX SQRT POW GCD RATIO), transcendentals as computable reals compared under a budget (EXP LN SIN COS ATAN PI — render them with FORMAT), comparison (EQ LT LTE GT GTE — not-equal is EQ NOT), boolean logic (AND OR NOT), " +
       "vectors — arithmetic broadcasts element-wise — collections (SORT ORDER UNIQUE ZIP RANGE FILL TAKE DROP CONCAT REVERSE LENGTH GET PUT INDEX-OF MEMBER BSEARCH SHAPE RESHAPE FLATTEN DEPTH), " +
       "records — keyed data, built by RECORD from a key vector and a value vector, read by AT/KEYS/VALUES/HAS?, rewritten by WITH/WITHOUT/MERGE; TALLY and GROUP answer Records — " +
       "higher-order blocks (MAP FILTER FOLD SCAN ANY ALL RANK), text (CHARS JOIN TOKENIZE TRIM UPPER LOWER SEARCH REPLACE NUM STR FORMAT), JSON (JSON-DECODE JSON-ENCODE — objects are Records, numbers exact, nothing rounded), absence (NIL NIL? NIL-REASON ABSENT), control (SELECT EXEC FAIL), reflection (DEFINED? DIGEST CONTRACT — a Word's or a block's contract as a Record, inferred without running it), plus DEF to name your own. " +

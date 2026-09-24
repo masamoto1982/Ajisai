@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **100 Words**, of which **54** form the Semantic Kernel and **46** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **99 Words**, of which **53** form the Semantic Kernel and **46** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -1306,19 +1306,6 @@ A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` ans
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.RECOVERY`
 - **Syntax:** `'rate not quoted' ABSENT`
 - **ERROR conditions:** `nonText`
-
-## `KEEP`
-
-Set the consumption mode to keep operands.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `stackModifier`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Effects:** none
-- **Clauses:** `LANG.MODIFIERS.CONSUMPTION`
-- **Syntax:** `KEEP +`
 
 ## `BIND`
 

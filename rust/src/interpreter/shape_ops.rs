@@ -7,7 +7,7 @@
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value};
@@ -130,40 +130,27 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 3 {
         return Err(AjisaiError::StackUnderflow);
     }
-    let keep = interp.consumption_mode == ConsumptionMode::Keep;
     let replacement = interp.stack.pop().expect("checked by len()");
     let index_value = interp.stack.pop().expect("checked by len()");
     let target = interp.stack.pop().expect("checked by len()");
-
-    let restore_all = |interp: &mut Interpreter, target: Value, index: Value, value: Value| {
-        if keep {
-            interp.stack.push(target);
-            interp.stack.push(index);
-            interp.stack.push(value);
-        }
-    };
 
     // `PUT` answers with a copy of the vector, one element replaced, so it
     // copies the whole thing however small the edit is.
     if let Err(e) =
         crate::interpreter::collection_meter::charge_copy_of(interp, &target, target.len())
     {
-        if !keep {
-            interp.stack.push(target);
-            interp.stack.push(index_value);
-            interp.stack.push(replacement);
-        }
+        interp.stack.push(target);
+        interp.stack.push(index_value);
+        interp.stack.push(replacement);
         return Err(e);
     }
 
     let mut items = match target.as_vector_view() {
         Some(view) => view.into_owned(),
         None => {
-            if !keep {
-                interp.stack.push(target);
-                interp.stack.push(index_value);
-                interp.stack.push(replacement);
-            }
+            interp.stack.push(target);
+            interp.stack.push(index_value);
+            interp.stack.push(replacement);
             return Err(AjisaiError::declared(
                 "nonVector",
                 "PUT: expected a Vector, got a non-vector value",
@@ -174,11 +161,9 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
     let raw_index = match require_integer_operand(&index_value) {
         Ok(index) => index,
         Err(e) => {
-            if !keep {
-                interp.stack.push(target);
-                interp.stack.push(index_value);
-                interp.stack.push(replacement);
-            }
+            interp.stack.push(target);
+            interp.stack.push(index_value);
+            interp.stack.push(replacement);
             return Err(e);
         }
     };
@@ -197,7 +182,6 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
         // it answers with the whole Vector and so has no single slot to empty
         // — but the absence is of the *answer*, not of a slot, and that is
         // what a reasoned NIL says.
-        restore_all(interp, target, index_value, replacement);
         interp.stack.push(Value::nil_with_reason(
             NilReason::IndexOutOfBounds,
             Recoverability::Recoverable,
@@ -205,8 +189,7 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    items[position as usize] = replacement.clone();
-    restore_all(interp, target, index_value, replacement);
+    items[position as usize] = replacement;
     interp
         .stack
         .push_with_role(Value::from_vector(items), Interpretation::Unassigned);
@@ -247,15 +230,12 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
-    let keep = interp.consumption_mode == ConsumptionMode::Keep;
     let count_value = interp.stack.pop().expect("checked by len()");
     let seed_value = interp.stack.pop().expect("checked by len()");
 
     let put_back = |interp: &mut Interpreter, seed: &Value, count: &Value| {
-        if !keep {
-            interp.stack.push(seed.clone());
-            interp.stack.push(count.clone());
-        }
+        interp.stack.push(seed.clone());
+        interp.stack.push(count.clone());
     };
 
     let seed = match require_integer_operand(&seed_value) {
@@ -285,10 +265,6 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
     // with reason `spaceExhausted`, recoverable with a chosen fallback, rather than driving
     // the host into an allocation failure.
     if count as usize > interp.runtime_limits.max_materialized_elements {
-        if keep {
-            interp.stack.push(seed_value);
-            interp.stack.push(count_value);
-        }
         interp
             .stack
             .push(crate::interpreter::space_projection::space_exhausted_nil(
@@ -318,10 +294,6 @@ pub fn op_random(interp: &mut Interpreter) -> Result<()> {
         })
         .collect();
 
-    if keep {
-        interp.stack.push(seed_value);
-        interp.stack.push(count_value);
-    }
     interp
         .stack
         .push_with_role(Value::from_vector(draws), Interpretation::Unassigned);

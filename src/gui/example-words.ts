@@ -1,11 +1,5 @@
 import type { UserWord } from '../wasm-interpreter-types';
 
-// `KEEP` is spelled out. It used to have the symbol `,,`, which every one of
-// these definitions was written against; once every symbol became one
-// character `,,` stopped being a name the dictionary holds, so the seeded
-// words defined fine (a body is only tokenized at DEF time) and then failed
-// with "Unknown word: ,," the moment they ran.
-//
 // These four words exist for one demonstration: a Word button's border colour
 // shows what a Word depends on, and that is only visible once one seeded word
 // calls others. GREET over the three SAY words is the whole of it, so nothing
@@ -16,15 +10,15 @@ export const EXAMPLE_USER_WORDS: UserWord[] = [
     // deleting any of them ripples up to GREET through the dependency graph.
     {
         name: 'SAY-HELLO',
-        definition: "'Hello' KEEP PRINT",
+        definition: "'Hello' PRINT",
     },
     {
         name: 'SAY-WORLD',
-        definition: "'World' KEEP PRINT",
+        definition: "'World' PRINT",
     },
     {
         name: 'SAY-BANG',
-        definition: "'!' KEEP PRINT",
+        definition: "'!' PRINT",
     },
     {
         name: 'GREET',

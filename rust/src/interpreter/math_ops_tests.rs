@@ -112,17 +112,6 @@ mod tests {
             "ABS of text should be a malformed-use error"
         );
     }
-    #[tokio::test]
-    async fn keep_mode_retains_operands() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("3 8 KEEP MIN")
-            .await
-            .expect("keep mode should succeed");
-        assert_eq!(interp.stack.len(), 3, "operands retained plus result");
-        assert_eq!(interp.stack[2].as_scalar().unwrap().to_i64().unwrap(), 3);
-    }
-
     /// LANG.COLLECTIONS.LIFT makes element-wise application the rule for an
     /// arithmetic Word given a vector. `MIN`, `MAX` and `SQRT` were the three
     /// that did not follow it, so a rectifier (`[ .. ] 0 MAX`), a clipped

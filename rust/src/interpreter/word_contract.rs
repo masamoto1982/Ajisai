@@ -405,7 +405,7 @@ impl Interpreter {
                                 }
                             }
                         };
-                        flow.feed_word(&dep_name, &dep_contract.flow);
+                        flow.feed_word(&dep_contract.flow);
                         let builtin = dep_def.is_builtin;
                         // One slot model, two bounds: the space walk computes
                         // the operand provenance and the cost walk refines

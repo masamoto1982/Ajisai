@@ -12,7 +12,7 @@ use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, push_result,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::kernel::arithmetic as kernel_arithmetic;
 use crate::kernel::{KernelValue, Scalar as KernelScalar};
 use crate::types::exact::ExactReal;
@@ -75,10 +75,8 @@ impl ExactArithmeticSchema {
 }
 
 fn consume_stacktop_binary(interp: &mut Interpreter) {
-    if interp.consumption_mode != ConsumptionMode::Keep {
-        interp.stack.pop();
-        interp.stack.pop();
-    }
+    interp.stack.pop();
+    interp.stack.pop();
 }
 
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
@@ -287,10 +285,8 @@ fn push_scalar_fastpath_result(
     // sane size. Without this the chain above grows without any ceiling naming
     // itself.
     check_result_size(interp, &result)?;
-    if interp.consumption_mode == ConsumptionMode::Consume {
-        interp.stack.pop();
-        interp.stack.pop();
-    }
+    interp.stack.pop();
+    interp.stack.pop();
     push_result(interp, result);
     interp.runtime_metrics.scalar_fastpath_count = interp
         .runtime_metrics
@@ -634,8 +630,6 @@ fn apply_binary_arithmetic<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy + Sync,
 {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     let operands = extract_operands(interp, 2)?;
     let a_val = &operands[0];
     let b_val = &operands[1];
@@ -649,10 +643,8 @@ where
     let result = match computed {
         Ok(r) => r,
         Err(e) => {
-            if !is_keep_mode {
-                for val in operands {
-                    interp.stack.push(val);
-                }
+            for val in operands {
+                interp.stack.push(val);
             }
             return Err(e);
         }

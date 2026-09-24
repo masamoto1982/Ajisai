@@ -190,7 +190,7 @@ const canonicalExamples = [
   { title: 'PRINT pops and emits to output (not the stack)', code: '[ 1 2 3 ] PRINT' },
   { title: 'Sorting is a plain Core word', code: '[ 3 1 2 ] SORT' },
   { title: 'Exact square root takes a bare scalar', code: '2 SQRT' },
-  { title: 'The KEEP modifier makes the next word non-consuming', code: '[ 5 ] KEEP PRINT' },
+  { title: 'A value used twice is named with BIND', code: "5 'N' BIND N N 1 +" },
 ];
 
 const commonErrors = [
@@ -259,7 +259,7 @@ const forbiddenPatterns = [
   {
     pattern: 'DUP / SWAP / DROP / OVER / ROT',
     code: 'DUP',
-    why: 'Forth-style stack shufflers do not exist. Use `KEEP` when the next word must retain its operands; consumption is the default.',
+    why: 'Forth-style stack shufflers do not exist. Every Word consumes the operands it reads; name a value with `BIND` to use it more than once.',
   },
   {
     pattern: 'IF / ELSE / THEN / WHILE',
@@ -463,7 +463,7 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 - Named data is a Record, written \`{ key value … }\`: \`${canonicalExampleCode('record-literal')}\`. It is not a Vector and is never code — \`{ }\` builds a value, \`[ ]\` builds a value that may also be run (§6).
 - Define a user word with a body Vector, then a \`'NAME'\` string, then \`DEF\`, then call \`NAME\`: \`${canonicalExampleCode('def-basic')}\` (§6). Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
-- One modifier, prefixing the *next word only*: \`KEEP\` (do not consume operands). Consumption is the default.
+- Every Word consumes the operands it reads. To use a value more than once, name it with \`BIND\` and read the name: \`5 'N' BIND N N 1 +\` leaves \`5 6\`.
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration

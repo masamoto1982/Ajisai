@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::lane_lift::lift_lanes;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::{Interpretation, Value};
 
 /// The truth value of a `booleanLogic` operand.
@@ -149,24 +149,12 @@ fn push_truth_result(interp: &mut Interpreter, result: Value) {
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    let val = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let result = match lift_lanes([&val], &|[x]| compute_inverted_value(x)) {
         Ok(v) => v,
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(val);
-            }
+            interp.stack.push(val);
             return Err(e);
         }
     };
@@ -176,31 +164,18 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let (a_val, b_val) = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        (
-            interp.stack[stack_len - 2].clone(),
-            interp.stack[stack_len - 1].clone(),
-        )
-    } else {
-        let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        (a_val, b_val)
-    };
+    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let result = match lifted_boolean_binary(true, &a_val, &b_val) {
         Ok(v) => v,
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-            }
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
             return Err(e);
         }
     };
@@ -209,31 +184,18 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let (a_val, b_val) = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        (
-            interp.stack[stack_len - 2].clone(),
-            interp.stack[stack_len - 1].clone(),
-        )
-    } else {
-        let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        (a_val, b_val)
-    };
+    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let result = match lifted_boolean_binary(false, &a_val, &b_val) {
         Ok(v) => v,
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-            }
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
             return Err(e);
         }
     };
@@ -255,36 +217,22 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 /// of its own. There is no else-clause to reach and no clause set to exhaust
 /// — two candidates and a truth are total by construction.
 pub fn op_select(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
     if interp.stack.len() < 3 {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let (when_true, when_false, mask) = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        (
-            interp.stack[stack_len - 3].clone(),
-            interp.stack[stack_len - 2].clone(),
-            interp.stack[stack_len - 1].clone(),
-        )
-    } else {
-        let mask = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        let when_false = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        let when_true = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        (when_true, when_false, mask)
-    };
+    let mask = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let when_false = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let when_true = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let result = match lift_lanes([&when_true, &when_false, &mask], &|[t, f, m]| {
         compute_selection(t, f, m)
     }) {
         Ok(v) => v,
         Err(e) => {
-            if !is_keep_mode {
-                interp.stack.push(when_true);
-                interp.stack.push(when_false);
-                interp.stack.push(mask);
-            }
+            interp.stack.push(when_true);
+            interp.stack.push(when_false);
+            interp.stack.push(mask);
             return Err(e);
         }
     };

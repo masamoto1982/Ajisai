@@ -6,7 +6,7 @@
 //! the report. Every one of those needs a value more than once, and the stack
 //! answers only for the value on top.
 //!
-//! `KEEP` duplicates, which sounds like enough and is not. Copy a value, derive
+//! Duplicating a value sounds like enough and is not. Copy a value, derive
 //! something from the upper copy, and the derived value lands *on* the lower
 //! copy — the second use is now buried under the first result and cannot be
 //! reached. Three copies do not help: consuming the first buries the second.
@@ -23,9 +23,6 @@
 //! name is text in the body like every other name.
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{
-    keep_mode_operands, restore_keep_mode_operands,
-};
 use crate::types::{Interpretation, Value};
 use std::collections::HashMap;
 
@@ -185,11 +182,6 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    // `KEEP` has no exception for a Word that answers with nothing: under it
-    // the subject and the name stay where they were, and the name is bound as
-    // well. See `keep_mode_operands`.
-    let kept = keep_mode_operands(interp, 2);
-
     let (name_value, name_role) = interp.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
     let names = match binding_names(&name_value).and_then(|names| {
         for name in &names {
@@ -240,7 +232,6 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
             }
         }
     }
-    restore_keep_mode_operands(interp, kept);
     Ok(())
 }
 

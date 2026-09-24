@@ -5,7 +5,7 @@
 // defined without complaint and fails only when the user runs it.
 //
 // That is how every SAY word and GREET came to fail with "Unknown word: ,,"
-// on first launch: `,,` was the symbol for KEEP, and it was retired when every
+// on first launch: `,,` was the symbol of a modifier, and it was retired when every
 // symbol became one character.
 //
 // These tests check the shape of every token the seed data ships, so retired

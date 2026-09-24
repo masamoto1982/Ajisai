@@ -129,10 +129,4 @@ mod search_words_tests {
         }
         raises("'a' 'b' 3 REPLACE", "REPLACE").await;
     }
-
-    #[tokio::test]
-    async fn keep_retains_the_operands() {
-        assert_eq!(top("[ 1 2 ] KEEP 2 MEMBER").await, "[ 1/1 2/1 ] 2/1 TRUE");
-        assert_eq!(top("'ab' KEEP 'b' SEARCH").await, "'ab' 'b' 1/1");
-    }
 }

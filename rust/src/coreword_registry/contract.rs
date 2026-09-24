@@ -6,10 +6,9 @@
 use crate::kernel::generated::{Arity, GeneratedWord};
 use serde::Serialize;
 
-/// Static mass contract: a word's flow-mass relationship under the
-/// default target/consume mode. `consumes` operands are read and `produces` results
-/// are pushed; under `KEEP` the `consumes` operands are additionally retained
-/// (LANG.MODIFIERS.CONSUMPTION). This is the machine-readable form of the "arity /
+/// Static mass contract: a word's flow-mass relationship. `consumes` operands
+/// are read and removed, and `produces` results are pushed
+/// (LANG.STACK.CONSUMPTION). This is the machine-readable form of the "arity /
 /// consumption / production / bifurcation" declaration; the NIL-projection part
 /// of LANG.MACHINE.WORD is carried by `nil_policy`.
 ///

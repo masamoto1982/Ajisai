@@ -47,7 +47,9 @@ const EXAMPLE_NAMES = new Set([
   'ADDW', 'PSUM', 'PDIFF', 'PMAX',
   // the relaxation loop of the Iterative Numerics clause
   'DELTA', 'STEP',
-  // the identity word the Stack clause uses to show KEEP copying any value
+  // names bound with BIND so a worked example can read a value twice
+  'N', 'V', 'R', 'X',
+  // identity and doubling words of the worked examples
   'ID', 'DOUBLE',
   // the doubling word of the MAP and FOLD examples. It only became visible to
   // this check when those examples stopped spelling their code operand as the

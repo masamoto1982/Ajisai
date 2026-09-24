@@ -225,13 +225,12 @@ fn search_words_reject_a_nil_needle() {
 /// Rejection is safe by construction — it runs nothing and touches no stack —
 /// but passing a projected NIL through has to *produce* the result and unwind
 /// the operands itself, so the guard takes over a duty the executors used to
-/// discharge: honoring the consumption mode (LANG.MODIFIERS.CONSUMPTION). `EAT` replaces the
-/// declared operand window with the projected NIL; `KEEP` leaves the window
-/// in place and stacks the projected NIL above it. Both are pinned for a
+/// discharge: consuming the operands (LANG.STACK.CONSUMPTION). The declared
+/// operand window is replaced with the projected NIL. This is pinned for a
 /// unary and a binary Word, together with the depth of the stack the guard
 /// leaves behind.
 #[test]
-fn passthrough_unwinds_the_operand_window_under_both_consumption_modes() {
+fn passthrough_unwinds_the_operand_window() {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -240,10 +239,8 @@ fn passthrough_unwinds_the_operand_window_under_both_consumption_modes() {
     for (program, depth) in [
         // Unary: SORT eats its vector, so only the projected NIL is left.
         ("1 0 DIV SORT", 1),
-        ("1 0 DIV KEEP SORT", 2),
-        // Binary: ADD eats both operands. Under KEEP both survive.
+        // Binary: ADD eats both operands.
         ("1 0 DIV 1 ADD", 1),
-        ("1 0 DIV 1 KEEP ADD", 3),
         // The projected NIL need not be the receiver: any operand position
         // carries it.
         ("1 1 0 DIV ADD", 1),

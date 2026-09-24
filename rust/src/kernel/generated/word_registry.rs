@@ -102,7 +102,6 @@ pub enum WordId {
     NilCheck,
     NilReason,
     Absent,
-    SetConsumptionKeep,
     Bind,
     Def,
     Del,
@@ -134,8 +133,6 @@ pub enum Family {
     Control,
     /// `absence`
     Absence,
-    /// `stackModifier`
-    StackModifier,
     /// `dictionary`
     Dictionary,
     /// `output`
@@ -156,7 +153,6 @@ impl Family {
             Family::Text => "text",
             Family::Control => "control",
             Family::Absence => "absence",
-            Family::StackModifier => "stackModifier",
             Family::Dictionary => "dictionary",
             Family::Output => "output",
             Family::Record => "record",
@@ -164,7 +160,7 @@ impl Family {
     }
 }
 
-/// How the Word treats its operands under the default mode (LANG.MODIFIERS.CONSUMPTION).
+/// How the Word treats its operands under the default mode (LANG.STACK.CONSUMPTION).
 ///
 /// Generated from the `consumption` enum in spec/words.schema.json: every value the
 /// specification admits is a variant, so the implementation vocabulary cannot be
@@ -3816,41 +3812,6 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         effects: &[],
         error_when: &["nonText"],
         syntax: Some("'rate not quoted' ABSENT"),
-    },
-    GeneratedWord {
-        id: WordId::SetConsumptionKeep,
-        name: "KEEP",
-        aliases: &[],
-        family: Family::StackModifier,
-        stack_inputs: Arity::Fixed(0),
-        stack_outputs: Arity::Fixed(0),
-        consumption: Consumption::None,
-        nil_policy: NilPolicy::PreserveReason,
-        projection: &[],
-        projection_reasons: &[],
-        partiality: Partiality::Total,
-        accepted_domain: None,
-        purity: Purity::Pure,
-        determinism: Determinism::StateRelative,
-        cost: WordCost {
-            steps: CostAxis {
-                class: CostClass::Const,
-                exact: true,
-            },
-            numeric: CostAxis {
-                class: CostClass::Const,
-                exact: false,
-            },
-            collection: CostAxis {
-                class: CostClass::Const,
-                exact: false,
-            },
-        },
-        vocabulary_tier: VocabularyTier::Kernel,
-        standard_kind: None,
-        effects: &[],
-        error_when: &[],
-        syntax: Some("KEEP +"),
     },
     GeneratedWord {
         id: WordId::Bind,
