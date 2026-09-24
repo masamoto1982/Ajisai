@@ -327,20 +327,20 @@ async fn search_and_replace_are_the_one_pass_forms_of_the_window_scan() {
 /// `FORMAT` answers what `ROUND` scaled to `10^digits` followed by a decimal
 /// spelling of the result would answer — the same rounded quantity, under the
 /// same tie rule — in one place, as text, so the rounding never re-enters
-/// arithmetic. The last digit of a computable real is settled under the
-/// comparison budget or projected, never guessed.
+/// arithmetic. The last digit of an irrational is decided exactly, never
+/// guessed.
 #[tokio::test]
 async fn format_agrees_with_scaled_round() {
     let mut interpreter = Interpreter::new();
     interpreter
         .execute(
-            "2/3 2 FORMAT 2/3 100 MUL ROUND 100 DIV 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT PI 2 FORMAT",
+            "2/3 2 FORMAT 2/3 100 MUL ROUND 100 DIV 5/2 0 FORMAT 7/2 0 FORMAT 2 SQRT 3 FORMAT 2 SQRT 3 SQRT ADD 2 FORMAT",
         )
         .await
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["'0.67'", "67/100", "'3'", "'4'", "'1.414'", "'3.14'"]
+        ["'0.67'", "67/100", "'3'", "'4'", "'1.414'", "'3.15'"]
     );
 
     let mut interpreter = Interpreter::new();
@@ -393,39 +393,13 @@ async fn gcd_and_ratio_agree_with_the_kernel_spellings() {
         .execute(
             "12 18 GCD 18 18 12 DIV FLOOR 12 MUL SUB 12 GCD \
              6/4 RATIO 0 GET 6/4 RATIO 1 GET DIV 3/2 EQ \
-             2 SQRT RATIO NIL-REASON PI 4 GCD NIL-REASON",
+             2 SQRT RATIO NIL-REASON 1/2 4 GCD NIL-REASON",
         )
         .await
         .unwrap();
     assert_eq!(
         rendered_stack(&interpreter),
-        ["6/1", "6/1", "TRUE", "'domainMiss'", "'undecidable'"]
-    );
-}
-
-/// The transcendental Words answer computable reals whose enclosures a
-/// comparison refines under the water budget: decisive against separated
-/// rationals, honestly UNKNOWN against values they cannot be told from, and
-/// exact where the argument makes the answer rational.
-#[tokio::test]
-async fn transcendentals_decide_against_rationals_and_starve_against_themselves() {
-    let mut interpreter = Interpreter::new();
-    interpreter
-        .execute(
-            "1 EXP 2 GT 1 EXP 3 LT 1 EXP 1 EXP EQ 0 EXP \
-             10 LN 2 LN DIV 3 GT 1 LN \
-             PI 2 DIV SIN 1 LT 0 SIN 0 COS PI COS -1 LT \
-             1 ATAN 4 MUL PI EQ 0 ATAN \
-             2 1/3 POW 3 POW 2 EQ 8 1/3 POW 2 1/2 POW 2 SQRT EQ",
-        )
-        .await
-        .unwrap();
-    assert_eq!(
-        rendered_stack(&interpreter),
-        [
-            "TRUE", "TRUE", "NIL", "1/1", "TRUE", "0/1", "NIL", "0/1", "1/1", "NIL", "NIL", "0/1",
-            "NIL", "2/1", "TRUE",
-        ]
+        ["6/1", "6/1", "TRUE", "'domainMiss'", "'domainMiss'"]
     );
 }
 

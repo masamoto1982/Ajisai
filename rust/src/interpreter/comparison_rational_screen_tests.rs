@@ -12,8 +12,7 @@
 //! — and only *complete* if nothing but a plain rational takes the screen. Both
 //! are pinned here, the first directly and the second by leaving every other
 //! shape to answer through the route that can: an algebraic pair decides exactly
-//! (√8 vs √2+√2), and a computable pair may honestly fail to
-//! (LANG.VALUES.EXACT).
+//! (√8 vs √2+√2, LANG.VALUES.EXACT).
 
 #[cfg(test)]
 mod tests {

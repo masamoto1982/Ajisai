@@ -123,7 +123,7 @@
     }
    },
    "additionalProperties": false,
-   "description": "The conditions under which a well-formed operand yields a reasoned NIL. `when` accepts a list because a Word can project for more than one reason: `GCD` answers NIL both for a non-integer operand and for a Tier 2 operand whose integrality it cannot decide. `reason` already accepted a list; a single condition may still be written as a bare string. As with `errorWhen`, a condition here names a state of the input rather than an outcome; this field is what says the outcome is a projection."
+   "description": "The conditions under which a well-formed operand yields a reasoned NIL. `when` accepts a list because a Word can project for more than one reason: `POW` answers NIL both for a zero base under a negative exponent and for an exponent that leaves the exact field. `reason` already accepted a list; a single condition may still be written as a bare string. As with `errorWhen`, a condition here names a state of the input rather than an outcome; this field is what says the outcome is a projection."
   },
   "documentation": {
    "type": "object",

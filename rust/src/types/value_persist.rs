@@ -147,8 +147,8 @@ enum PersistData {
 
 // ---- Value <-> wire ----
 
-fn encode_data(data: &ValueData) -> Result<PersistData, String> {
-    Ok(match data {
+fn encode_data(data: &ValueData) -> PersistData {
+    match data {
         ValueData::Boolean(b) => PersistData::Bool { v: *b },
         ValueData::Scalar(f) => {
             let (n, d) = frac_to_parts(f);
@@ -159,34 +159,27 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
                 let (n, d) = frac_to_parts(f);
                 PersistData::ExactRat { n, d }
             }
-            _ => match er.algebraic_terms() {
-                Some(terms) => PersistData::ExactAlg {
-                    terms: terms
-                        .iter()
-                        .map(|(m, c)| {
-                            let (n, d) = frac_to_parts(c);
-                            PersistTerm {
-                                m: m.to_string(),
-                                n,
-                                d,
-                            }
-                        })
-                        .collect(),
-                },
-                // `PI` (and any arithmetic built from it) reaches this arm: Tier
-                // 2 persistence round-tripping is out of scope for now, so it
-                // stays a graceful error rather than a silent lossy encoding.
-                None => return Err("cannot persist a Tier-2 computable exact real".to_string()),
+            ExactReal::Algebraic(_) => PersistData::ExactAlg {
+                terms: er
+                    .algebraic_terms()
+                    .expect("an algebraic value has normal-form terms")
+                    .iter()
+                    .map(|(m, c)| {
+                        let (n, d) = frac_to_parts(c);
+                        PersistTerm {
+                            m: m.to_string(),
+                            n,
+                            d,
+                        }
+                    })
+                    .collect(),
             },
         },
         ValueData::Text(text) => PersistData::Text {
             s: text.to_string(),
         },
         ValueData::Vector(items) => PersistData::Vector {
-            items: items
-                .iter()
-                .map(encode_value)
-                .collect::<Result<Vec<_>, _>>()?,
+            items: items.iter().map(encode_value).collect(),
         },
         ValueData::Tensor { data, shape } => PersistData::Tensor {
             nums: data.numerators.clone(),
@@ -212,21 +205,13 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
         },
         ValueData::Nil => PersistData::Nil { r: None, ud: None },
         ValueData::Record(record) => PersistData::Record {
-            keys: record
-                .keys()
-                .iter()
-                .map(encode_value)
-                .collect::<Result<Vec<_>, _>>()?,
-            values: record
-                .values()
-                .iter()
-                .map(encode_value)
-                .collect::<Result<Vec<_>, _>>()?,
+            keys: record.keys().iter().map(encode_value).collect(),
+            values: record.values().iter().map(encode_value).collect(),
         },
         ValueData::Symbol(name) => PersistData::Symbol {
             name: name.to_string(),
         },
-    })
+    }
 }
 
 fn decode_data(data: &PersistData) -> Result<ValueData, String> {
@@ -311,8 +296,8 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
     })
 }
 
-fn encode_value(value: &Value) -> Result<PersistData, String> {
-    let mut d = encode_data(&value.data)?;
+fn encode_value(value: &Value) -> PersistData {
+    let mut d = encode_data(&value.data);
     // The reason lives on `Value`, not in `ValueData`, so it is attached here
     // rather than inside `encode_data`.
     if let PersistData::Nil { r, ud } = &mut d {
@@ -321,7 +306,7 @@ fn encode_value(value: &Value) -> Result<PersistData, String> {
             .map(|reason| reason.as_protocol_str().to_string());
         *ud = value.absence_detail().map(str::to_string);
     }
-    Ok(d)
+    d
 }
 
 fn decode_value(value: &PersistData) -> Result<Value, String> {
@@ -346,11 +331,9 @@ fn decode_value(value: &PersistData) -> Result<Value, String> {
 // ---- Public stack codec (WASM boundary) ----
 
 /// Serialize the stack values to the lossless JSON persistence string.
-pub(crate) fn encode_stack<'a>(values: impl Iterator<Item = &'a Value>) -> Result<String, String> {
-    let wire: Vec<PersistData> = values
-        .map(encode_value)
-        .collect::<Result<Vec<_>, String>>()?;
-    serde_json::to_string(&wire).map_err(|e| e.to_string())
+pub(crate) fn encode_stack<'a>(values: impl Iterator<Item = &'a Value>) -> String {
+    let wire: Vec<PersistData> = values.map(encode_value).collect();
+    serde_json::to_string(&wire).expect("the persistence wire format always serializes")
 }
 
 /// Deserialize a lossless persistence string back into stack values.

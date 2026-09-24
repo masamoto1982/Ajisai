@@ -411,11 +411,10 @@ function verifiedExactnessSection() {
   // different histories compare equal when they denote the same real.
   const json = expectOk('8 SQRT 2 SQRT 2 SQRT + =');
   if (json.stackDisplay.join(' ') !== 'TRUE') fail('sqrt(8) must equal sqrt(2)+sqrt(2)');
-  // PI is the one Tier 2 value: a comparison against it can exhaust its
-  // refinement budget and yield the logical UNKNOWN instead of deciding.
-  const undecided = expectOk('PI PI EQ');
-  if (undecided.stackDisplay.join(' ') !== 'NIL') fail('PI PI EQ must be undecidable (NIL)');
-  return { decided: json.stackDisplay.join(' '), undecided: undecided.stackDisplay.join(' ') };
+  // POW answers inside the field and nowhere else: a cube root leaves it.
+  const outside = expectOk('8 1/3 POW NIL-REASON');
+  if (outside.stackDisplay.join(' ') !== "'domainMiss'") fail('8 1/3 POW must project domainMiss');
+  return { decided: json.stackDisplay.join(' '), outside: outside.stackDisplay.join(' ') };
 }
 
 // ---------------------------------------------------------------------------
@@ -488,7 +487,7 @@ value itself carries \`semantics.absence.reason\` on the stack.
 Numbers are exact rationals, closed under \`SQRT\`. Arithmetic never rounds,
 coefficients are arbitrary-precision, and **every comparison of two scalars
 built from rationals and \`SQRT\` decides**: there is no budget, no refinement
-limit, and no undecided outcome over that field.
+limit, and no undecided outcome.
 
 \`\`\`ajisai
 8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
@@ -497,18 +496,18 @@ limit, and no undecided outcome over that field.
 → stack \`${exactness.decided}\` (exit 0). Values built through different
 histories are the same value when they denote the same real.
 
-\`PI\` is the one value outside that field: a general computable real with no
-algebraic normal form. Comparing two independently-built \`PI\` values can
-exhaust the comparison's refinement budget without deciding:
+That field is the whole numeric domain. \`POW\` answers inside it — an integer
+exponent, or \`p/2\` over a non-negative rational — and projects NIL for any
+other exponent rather than leave it:
 
 \`\`\`ajisai
-PI PI EQ
+8 1/3 POW NIL-REASON
 \`\`\`
 
-→ stack \`${exactness.undecided}\` (exit 0, a NIL with reason \`undecidable\`). Truth has
-three values: \`TRUE\`, \`FALSE\`, and this logical UNKNOWN, which is also what a
-NIL operand reads as in a truth position (§4). An operation that cannot
-produce a value produces NIL (§4); a malformed one raises an error.
+→ stack \`${exactness.outside}\` (exit 0). Truth has three values: \`TRUE\`,
+\`FALSE\`, and the logical UNKNOWN, which is what a NIL operand reads as in a
+truth position (§4) — no comparison produces it of its own. An operation that
+cannot produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)
 

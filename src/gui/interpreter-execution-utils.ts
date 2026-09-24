@@ -65,23 +65,6 @@ export const describeFailedRunOutput = (result: ExecuteResult): string => {
     return output ? `${output.replace(/\n*$/, '')}\n${correction}` : correction;
 };
 
-// What a run that succeeded but cannot be carried into the session has to say,
-// or null when there is nothing to explain.
-//
-// The snapshot is taken after the program has already run, so its refusal is
-// not the program's failure — reporting it as one is how `PI` came to look like
-// a Word that does not work. The session keeps its pre-run stack (see
-// `syncInterpreterState`), which is the same answer a failed run gets, so this
-// says both halves: the run worked, and its result stops here.
-export const describeSnapshotRefusal = (result: ExecuteResult): string | null => {
-    if (!result?.stackSnapshotError) return null;
-    return [
-        'The program ran and produced its result, but the session cannot keep it: ',
-        result.stackSnapshotError,
-        '. The stack is unchanged from before the run.'
-    ].join('');
-};
-
 // The diagnosis a wall-clock stop can answer with.
 //
 // Every other refusal is built by the interpreter, which knows the Word, the
@@ -164,11 +147,6 @@ export const syncInterpreterState = (
     result: ExecuteResult
 ): void => {
     if (!result || result.error) return;
-    // A result that could not be snapshotted is not applied at all: the
-    // observation format is never restored from (LANG.OBSERVATION.FIREWALL), so applying a
-    // snapshot-less state would replace the session's stack with an empty one
-    // — losing what the user had, on top of the value the run just made.
-    if (result.stackSnapshotError) return;
     applyInterpreterSnapshot(interpreter, {
         stack: result.stack,
         // The worker's lossless snapshot is what restores the post-run stack

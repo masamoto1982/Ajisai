@@ -1,11 +1,10 @@
 //! Derived rational views of an exact real: best rational approximation
 //! and canonical continued-fraction terms (LANG.VALUES.EXACT). The CF here is a
 //! **display-side derivation** from the value — floor-and-reciprocate for
-//! Tier 1, the certain common prefix of a refined enclosure for Tier 2 —
-//! not an internal representation. Split from `value.rs` to respect the
+//! Tier 1 — not an internal representation. Split from `value.rs` to respect the
 //! file-size budget (the file-size budget in docs/dev/specification-implementation-rules.md).
 
-use crate::types::exact::value::{ExactReal, TIER2_INTERNAL_WATER};
+use crate::types::exact::value::ExactReal;
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -33,22 +32,6 @@ impl ExactReal {
                 )
             }
             Self::Algebraic(a) => a.best_rational_approximation(max_denominator),
-            Self::Computable(c) => {
-                // Serialization-boundary approximation for a Tier 2 value:
-                // refine to the internal cap and take the midpoint's best
-                // convergent. Deterministic; consumers already see the
-                // `approximate` marker for any non-rational ExactScalar.
-                let iv = c.enclosure_at(TIER2_INTERNAL_WATER);
-                let two = Fraction::new(BigInt::from(2), BigInt::one());
-                let mid = iv.lo.add(&iv.hi).div(&two);
-                if &mid.denominator() <= max_denominator {
-                    return Some(mid);
-                }
-                convergent_within(
-                    &rational_partial_quotients(mid.numerator(), mid.denominator()),
-                    max_denominator,
-                )
-            }
         }
     }
 
@@ -63,7 +46,7 @@ impl ExactReal {
                 }
                 Some(rational_partial_quotients(f.numerator(), f.denominator()))
             }
-            Self::Algebraic(_) | Self::Computable(_) => None,
+            Self::Algebraic(_) => None,
         }
     }
 
@@ -85,29 +68,6 @@ impl ExactReal {
                 qs
             }
             Self::Algebraic(a) => a.cf_prefix(budget),
-            Self::Computable(c) => {
-                // Certain CF prefix of a Tier 2 value: terms shared by both
-                // endpoints of a refined enclosure. The set of reals with a
-                // given CF prefix is an interval, so a prefix carried by
-                // both endpoints holds for the enclosed value. Endpoint CFs
-                // terminate, and a terminating final term is not stable
-                // under perturbation, so each endpoint's last term is
-                // dropped before intersecting. Often empty — displayed as
-                // the undetermined-CF marker `[ … ]`.
-                let iv = c.enclosure_at(budget as u64);
-                let mut lo_cf = rational_partial_quotients(iv.lo.numerator(), iv.lo.denominator());
-                let mut hi_cf = rational_partial_quotients(iv.hi.numerator(), iv.hi.denominator());
-                lo_cf.pop();
-                hi_cf.pop();
-                let mut out = Vec::new();
-                for (a, b) in lo_cf.iter().zip(hi_cf.iter()) {
-                    if a != b || out.len() >= budget {
-                        break;
-                    }
-                    out.push(a.clone());
-                }
-                out
-            }
         }
     }
 }

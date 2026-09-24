@@ -65,7 +65,6 @@ impl AbsenceOrigin {
             AbsenceOrigin::MissingField => "missingField",
             AbsenceOrigin::InvalidEncoding => "invalidEncoding",
             AbsenceOrigin::IndexOutOfBounds => "indexOutOfBounds",
-            AbsenceOrigin::ComparisonBudget => "comparisonBudget",
             AbsenceOrigin::SpaceBudget => "spaceBudget",
             AbsenceOrigin::DomainMiss => "domainMiss",
             AbsenceOrigin::NotAvailable => "notAvailable",

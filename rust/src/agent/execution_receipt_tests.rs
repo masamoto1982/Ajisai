@@ -95,20 +95,6 @@ fn an_error_outcome_still_gets_a_receipt() {
     assert_eq!(response["receipt"]["outcomeStatus"], "error");
 }
 
-/// Pitfall C: a Tier 2 (`PI`) result already forces `observationDigest` to
-/// `null` (`observation_digest`'s own module doc); the receipt must inherit
-/// that refusal rather than certify an observation it never actually hashed.
-#[test]
-fn a_tier_2_result_has_no_receipt() {
-    let response = block_on(compute("PI", ComputeOptions::default())).to_json();
-    assert_eq!(response["status"], "ok");
-    assert!(
-        response["observationDigest"].is_null(),
-        "response: {response}"
-    );
-    assert!(response["receipt"].is_null(), "response: {response}");
-}
-
 /// `check`/`infer-contracts` never execute, so they have nothing to
 /// receipt — `Report::receipt`'s own doc comment states this; pinned here so
 /// a future change does not silently start attaching one.

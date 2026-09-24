@@ -1,16 +1,15 @@
 //! The scalar comparison law of LANG.VALUES.EXACT — how two numeric operands
-//! are ordered and tested for equality, and what it means when they cannot be.
+//! are ordered and tested for equality.
 //!
 //! Split out of `comparison.rs`, which keeps the comparison *Words*: the
 //! element-wise lifting, the stack fast paths, and the `LT`/`GT`/`EQ` entry
-//! points. What is here is the law those Words apply, one
-//! scalar pair at a time, and it is where the tiers of LANG.VALUES.EXACT are
-//! distinguished: a rational pair decides by `Fraction`, a Tier 1 algebraic pair
-//! decides exactly through `ExactReal::cmp_exact`, and a Tier 2 computable pair
-//! may honestly fail to decide at all.
+//! points. What is here is the law those Words apply, one scalar pair at a
+//! time: a rational pair decides by `Fraction`, and any pair reaching the
+//! algebraic field decides exactly through `ExactReal::cmp_exact`. Every pair
+//! decides.
 
 use crate::error::{AjisaiError, Result};
-use crate::types::exact::{ExactCmp, ExactReal};
+use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
@@ -42,15 +41,6 @@ impl OrderingKind {
     }
 }
 
-/// Result of a three-valued scalar comparison (LANG.VALUES.TRUTH): a decided
-/// boolean, or the logical `Unknown` (U). Tier ≤ 1 operands always decide;
-/// `Undecided` is reached only when a Tier 2 operand's (`PI`'s)
-/// refinement budget exhausts without separating the pair.
-pub(crate) enum ScalarCmp {
-    Decided(bool),
-    Undecided,
-}
-
 /// The two rationals a pair of operands compares as, borrowed rather than built.
 ///
 /// All three routes below already end in a `Fraction` comparison when both
@@ -61,11 +51,10 @@ pub(crate) enum ScalarCmp {
 /// two `Fraction`s the operands already held. A `ValueData::Scalar` *is* a
 /// rational, so this borrows them.
 ///
-/// Only that one shape is screened. `ExactScalar` (Tier 1 algebraic, Tier 2
-/// computable), `Text`, `Vector` and the rest fall through to the general route,
-/// which is the only one that can answer for them — an algebraic pair through
-/// the total `ExactReal::cmp_exact`, a computable pair possibly starving, which
-/// LANG.VALUES.EXACT makes the honest answer rather than a false one. A nil
+/// Only that one shape is screened. `ExactScalar` (Tier 1 algebraic), `Text`,
+/// `Vector` and the rest fall through to the general route, which is the only
+/// one that can answer for them — an algebraic pair through the total
+/// `ExactReal::cmp_exact`. A nil
 /// `Fraction` (the 0-denominator sentinel) falls through too: it is not a
 /// rational, and this is not the place to decide what comparing one means.
 pub(crate) fn rational_pair<'a>(
@@ -81,70 +70,39 @@ pub(crate) fn rational_pair<'a>(
 /// Compare two scalar values under an ordering kind. Returns `Err(_)` for
 /// structurally-non-comparable operands. Both-rational operands take the
 /// Fraction fast path; an algebraic pair decides through the total
-/// `ExactReal::cmp_exact`. A Tier 2 operand (`PI`) may exhaust its
-/// refinement budget without separating — `Undecided`, not an error.
+/// `ExactReal::cmp_exact`.
 pub(crate) fn compare_scalar_pair(
     a_val: &Value,
     b_val: &Value,
     kind: OrderingKind,
-) -> Result<ScalarCmp> {
+) -> Result<bool> {
     if let Some((a, b)) = rational_pair(a_val, b_val) {
-        return Ok(ScalarCmp::Decided(kind.apply_to_fraction(a, b)));
+        return Ok(kind.apply_to_fraction(a, b));
     }
-    let a = extract_exact_real_for_comparison(a_val)?;
-    let b = extract_exact_real_for_comparison(b_val)?;
-    Ok(match (a.as_rational(), b.as_rational()) {
-        (Some(af), Some(bf)) => ScalarCmp::Decided(kind.apply_to_fraction(af, bf)),
-        _ => match a.cmp_exact(&b) {
-            ExactCmp::Decided(o) => ScalarCmp::Decided(kind.apply_ordering(o)),
-            ExactCmp::Starved { .. } | ExactCmp::Absent => ScalarCmp::Undecided,
-        },
-    })
+    Ok(kind.apply_ordering(three_way_compare(a_val, b_val)?))
 }
 
-/// Outcome of a three-way order comparison shared by the
-/// comparison-dependent words of LANG.VALUES.TRUTH (`MIN`, `MAX`, `SORT`).
-/// `Decided` carries the exact `a` vs `b` ordering. `Undecided` is
-/// reserved for Tier 2 observations that cannot separate within their
-/// water (and the defensive absent-operand fallback); it carries the
-/// refinement-step diagnosis the caller projects to the logical
-/// `Unknown` (U) with `diagnosis.agreedPrefix`. Tier ≤ 1 operands never
-/// produce it.
-pub(crate) enum OrderOutcome {
-    Decided(std::cmp::Ordering),
-    Undecided(usize),
-}
-
-/// Three-way order of two scalar values (LANG.VALUES.EXACT). Returns `Err(_)`
-/// for structurally non-comparable operands (the malformed-use path).
-/// Both-`Rational` operands take the exact `Fraction` fast path; any pair
-/// involving a Tier 1 algebraic decides through the total, budget-free
+/// Three-way order of two scalar values (LANG.VALUES.EXACT), shared by the
+/// comparison-dependent words (`MIN`, `MAX`, `SORT`, `ORDER`, `BSEARCH`).
+/// Returns `Err(_)` for structurally non-comparable operands (the
+/// malformed-use path). Both-`Rational` operands take the exact `Fraction`
+/// fast path; any pair involving an algebraic decides through the total
 /// `ExactReal::cmp_exact`.
-pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<OrderOutcome> {
+pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<std::cmp::Ordering> {
     if let Some((a, b)) = rational_pair(a_val, b_val) {
-        return Ok(OrderOutcome::Decided(a.cmp(b)));
+        return Ok(a.cmp(b));
     }
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
-    Ok(match (a.as_rational(), b.as_rational()) {
-        (Some(af), Some(bf)) => OrderOutcome::Decided(af.cmp(bf)),
-        _ => match a.cmp_exact(&b) {
-            ExactCmp::Decided(o) => OrderOutcome::Decided(o),
-            ExactCmp::Starved { steps } => OrderOutcome::Undecided(steps),
-            ExactCmp::Absent => OrderOutcome::Undecided(0),
-        },
-    })
+    a.cmp_exact(&b)
+        .ok_or_else(|| AjisaiError::create_structure_error("scalar value", "NIL"))
 }
 
 /// Extract an `ExactReal` view of a value's scalar content for
 /// comparison. Scalar (`Fraction`-backed) values lift to
 /// `ExactReal::Rational`; singleton Vector / Tensor values also
 /// project to their sole scalar. Non-scalar shapes and non-numeric
-/// kinds error. When a future migration replaces
-/// `ValueData::Scalar(Fraction)` with an `ExactReal`-backed
-/// representation, this helper is the single point that needs to
-/// surface the new variant, and `compare_scalar_pair` / `pairwise_eq`
-/// will route it through the budgeted CF path automatically.
+/// kinds error.
 pub(crate) fn extract_exact_real_for_comparison(val: &Value) -> Result<ExactReal> {
     if let ValueData::ExactScalar(er) = &val.data {
         return Ok(er.clone());
@@ -192,28 +150,18 @@ pub(crate) fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
 /// via `Fraction` `PartialEq` — value equality on canonical reduced
 /// rationals. Anything mixing in a Tier 1 algebraic decides through the
 /// total `ExactReal::cmp_exact` — equal values built through different
-/// histories (√8 vs √2+√2) decide `Equal` exactly. A pair involving a Tier 2
-/// operand may starve: equality of two computable reals is fundamentally
-/// undecidable (`types::exact::computable`), so `Undecided` here is never a
-/// false `FALSE` the way it briefly was — it is the honest answer.
-pub(crate) fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
+/// histories (√8 vs √2+√2) decide `Equal` exactly.
+pub(crate) fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> bool {
     if let Some((a, b)) = rational_pair(a_val, b_val) {
-        return ScalarCmp::Decided(a == b);
+        return a == b;
     }
-    let (a, b) = match (
+    match (
         extract_exact_real_for_comparison(a_val),
         extract_exact_real_for_comparison(b_val),
     ) {
-        (Ok(a), Ok(b)) => (a, b),
+        (Ok(a), Ok(b)) => a.cmp_exact(&b) == Some(std::cmp::Ordering::Equal),
         // Only Scalar/ExactScalar operands route here, so extraction
         // does not fail in practice; treat any failure as unequal.
-        _ => return ScalarCmp::Decided(false),
-    };
-    match (a.as_rational(), b.as_rational()) {
-        (Some(af), Some(bf)) => ScalarCmp::Decided(af == bf),
-        _ => match a.cmp_exact(&b) {
-            ExactCmp::Decided(o) => ScalarCmp::Decided(o == std::cmp::Ordering::Equal),
-            ExactCmp::Starved { .. } | ExactCmp::Absent => ScalarCmp::Undecided,
-        },
+        _ => false,
     }
 }

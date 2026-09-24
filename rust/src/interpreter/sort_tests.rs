@@ -1,8 +1,7 @@
 //! What `SORT` answers, and in what representation.
 //!
 //! A flat pure-integer dense buffer sorts by sorting its numerator column: every
-//! comparison decides (nothing there is a Tier 2 real that could exhaust its
-//! refinement budget, and nothing is non-comparable), and equal integers are
+//! comparison decides (nothing there is non-comparable), and equal integers are
 //! indistinguishable, so the stability of the permutation sort the comparison
 //! route runs is not observable. Everything else keeps that route, and the tests
 //! below pin both halves of that split — the fast one for its answers, the slow

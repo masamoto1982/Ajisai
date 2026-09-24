@@ -18,10 +18,7 @@ fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
 /// `sort.rs` remaps the same shared function's error to `nonComparableElement`
 /// instead, since a shared function cannot know which caller it is (Phase 2's
 /// lesson, repeated by Phase 4's `nonInteger`/`nonComparableElement` fixes).
-fn compare_for_numeric(
-    a: &Value,
-    b: &Value,
-) -> Result<crate::interpreter::comparison_scalar::OrderOutcome> {
+fn compare_for_numeric(a: &Value, b: &Value) -> Result<std::cmp::Ordering> {
     match crate::interpreter::comparison_scalar::three_way_compare(a, b) {
         Err(AjisaiError::StructureError { expected, .. }) if expected == "scalar value" => {
             Err(AjisaiError::declared("nonNumeric", "expected a number"))
@@ -52,24 +49,6 @@ pub(crate) fn lift_unary_numeric(
         None if value.is_nil() => Ok(value.clone()),
         None => scalar_op(value),
     }
-}
-
-/// `PI` pushes the Tier 2 computable real π (LANG.VALUES.EXACT): a general
-/// computable real with no algebraic normal form. It is the first Word that
-/// constructs a Tier 2 value, so comparing against it is the first
-/// source-reachable way a comparison's refinement budget can actually
-/// exhaust — every value the rest of the vocabulary can build (Tier 0
-/// rationals, Tier 1 algebraics) decides in finite time.
-///
-/// Freshly constructed on every call, deliberately not memoized as a shared
-/// singleton: two separately-built computable reals are conservatively
-/// unequal (`Computable`'s own `PartialEq` is process identity, never a
-/// value's), so `PI PI EQ` is a genuine, deterministic Unknown rather than a
-/// referential-identity shortcut.
-pub(crate) fn op_pi(interp: &mut Interpreter) -> Result<()> {
-    let value = Value::from_exact_real(ExactReal::Computable(crate::types::exact::pi::pi()));
-    interp.stack.push(value);
-    Ok(())
 }
 
 /// Apply a binary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
@@ -165,14 +144,10 @@ pub(crate) fn lift_binary_numeric(
 }
 
 /// `MIN` / `MAX` select one of two numeric operands by the order relation
-/// (LANG.VALUES.TRUTH). They accept the full numeric domain, including lazy
-/// continued-fraction operands, and decide the order through the same
-/// budgeted comparison as the relations. When the comparison decides, the
-/// selected operand is returned unchanged (preserving its exact
-/// representation). When it does not decide within the budget, the result is
-/// the logical `Unknown` (U) carrying `diagnosis.agreedPrefix` — the program
-/// cannot be told which operand is the min/max when their order is unknown.
-/// NIL-passthrough, with NIL taking priority over a U-producing comparison.
+/// (LANG.VALUES.TRUTH). They accept the full numeric domain, algebraic
+/// operands included, and decide the order through the same exact comparison
+/// as the relations, which always decides. The selected operand is returned
+/// unchanged (preserving its exact representation). NIL-passthrough.
 /// Element-wise over vectors, by [`lift_binary_numeric`].
 fn apply_selecting<F>(interp: &mut Interpreter, word: &str, pick_left: F) -> Result<()>
 where
@@ -185,14 +160,8 @@ where
     }
     let operands = extract_operands(interp, 2)?;
     let select = |a: &Value, b: &Value| -> Result<Value> {
-        match compare_for_numeric(a, b)? {
-            crate::interpreter::comparison_scalar::OrderOutcome::Decided(ord) => {
-                Ok(if pick_left(ord) { a.clone() } else { b.clone() })
-            }
-            crate::interpreter::comparison_scalar::OrderOutcome::Undecided(_) => Ok(
-                Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable),
-            ),
-        }
+        let ord = compare_for_numeric(a, b)?;
+        Ok(if pick_left(ord) { a.clone() } else { b.clone() })
     };
     match lift_binary_numeric(&operands[0], &operands[1], &select) {
         Ok(result) => {

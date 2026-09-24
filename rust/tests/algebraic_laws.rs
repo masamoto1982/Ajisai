@@ -133,7 +133,7 @@ proptest! {
         );
     }
 
-    /// Exact finite comparisons are dual observations over the shared budgeted-order primitive.
+    /// Exact finite comparisons are dual observations over the shared exact-order primitive.
     #[test]
     fn comparison_dualities(a in small(), b in small()) {
         assert_law("lt-gt-dual", &format!("{a} {b} LT"), &format!("{b} {a} GT"));
@@ -174,20 +174,14 @@ fn integer_projection_examples() {
 // ─────────────────── Strong Kleene three-valued logic K3 (§4) ───────────────────
 //
 // K3 laws are checked exhaustively over the truth domain {TRUE, FALSE, U}.
-// `U` is produced by an undecidable continued-fraction comparison
-// (LANG.VALUES.EXACT): `2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ` compares the composed
-// Gosper value (√2+1) − (√2+1) against 0 and exhausts the budget. (Plain
-// √2 − √2 now collapses to an exact 0 in closed form and would decide.)
+// `U` is a NIL read in truth position (LANG.VALUES.TRUTH): every comparison
+// over the numbers decides, so the bare `NIL` is how a program writes it.
 // Each law renders both sides through the identical path,
 // so the equation is independent of how a truth value is displayed (finding B).
 
 /// The three truth-domain generators as Ajisai source fragments.
 fn truths() -> [(&'static str, &'static str); 3] {
-    [
-        ("T", "TRUE"),
-        ("F", "FALSE"),
-        ("U", "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
-    ]
+    [("T", "TRUE"), ("F", "FALSE"), ("U", "NIL")]
 }
 
 #[test]

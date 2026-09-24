@@ -12,20 +12,17 @@
 //!
 //! The decision is exact at every tier. A rational scales and rounds
 //! outright. An algebraic irrational compares its scaled fraction part against
-//! one half through the field's total order, which never ties. A computable
-//! real refines under the default comparison water and, when the last digit
-//! does not settle, projects `undecidable` — the outcome its comparisons
-//! already reach when refinement runs out — rather than guess a digit.
+//! one half through the field's total order, which never ties. Every digit
+//! is therefore decided; none is guessed.
 
 use num_bigint::BigInt;
 use num_traits::{One, Signed};
 use std::cmp::Ordering;
 
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_operands;
 use crate::interpreter::Interpreter;
-use crate::semantic::Recoverability;
-use crate::types::exact::{ExactCmp, ExactReal, DEFAULT_COMPARISON_WATER};
+use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
@@ -58,40 +55,26 @@ fn digit_count(value: &Value) -> Option<u64> {
     (n <= BigInt::from(MAX_DIGITS)).then(|| n.to_string().parse().ok())?
 }
 
-/// What settling the last digit produced.
-enum Rounded {
-    Integer(BigInt),
-    Undecidable,
-}
-
 /// `x * 10^digits`, rounded to an integer with a tie away from zero.
-fn round_scaled(x: &ExactReal, digits: u64) -> Rounded {
+fn round_scaled(x: &ExactReal, digits: u64) -> BigInt {
     let scale = Fraction::new(BigInt::from(10).pow(digits as u32), BigInt::one());
     if let Some(f) = x.as_rational() {
-        let rounded = f.mul(&scale).round();
-        return Rounded::Integer(rounded.numerator());
+        return f.mul(&scale).round().numerator();
     }
     let scaled = x.mul(&ExactReal::from_fraction(scale));
-    let Some(floor) = scaled.floor() else {
-        return Rounded::Undecidable;
-    };
+    let floor = scaled.floor().expect("an algebraic value has a floor");
     let floor_int = floor
         .as_rational()
         .expect("a floor is an integer")
         .numerator();
     let fraction_part = scaled.sub(&floor);
     let half = ExactReal::from_fraction(Fraction::new(BigInt::one(), BigInt::from(2)));
-    match fraction_part.cmp_within(&half, DEFAULT_COMPARISON_WATER) {
-        ExactCmp::Decided(Ordering::Less) => Rounded::Integer(floor_int),
-        ExactCmp::Decided(Ordering::Greater) => Rounded::Integer(floor_int + 1),
+    match fraction_part.cmp_exact(&half) {
+        Some(Ordering::Less) => floor_int,
         // A tie cannot occur for an irrational, but the rule is stated all
         // the same: away from zero.
-        ExactCmp::Decided(Ordering::Equal) => Rounded::Integer(if floor_int.is_negative() {
-            floor_int
-        } else {
-            floor_int + 1
-        }),
-        ExactCmp::Starved { .. } | ExactCmp::Absent => Rounded::Undecidable,
+        Some(Ordering::Equal) if floor_int.is_negative() => floor_int,
+        _ => floor_int + 1,
     }
 }
 
@@ -139,12 +122,7 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
         restore_all(interp, operands);
         return Err(e);
     }
-    match round_scaled(&x, digits) {
-        Rounded::Integer(n) => interp.stack.push(Value::from_string(&spell(&n, digits))),
-        Rounded::Undecidable => interp.stack.push(Value::nil_with_reason(
-            NilReason::Undecidable,
-            Recoverability::Retryable,
-        )),
-    }
+    let n = round_scaled(&x, digits);
+    interp.stack.push(Value::from_string(&spell(&n, digits)));
     Ok(())
 }

@@ -14,7 +14,7 @@ mod observation_digest_tests {
     use num_bigint::BigInt;
     use std::collections::HashSet;
 
-    fn digest_of(value: &Value) -> Option<String> {
+    fn digest_of(value: &Value) -> String {
         let stack = [value.clone()];
         observation_digest(ObservationDigestInput {
             status: "ok",
@@ -310,7 +310,7 @@ mod observation_digest_tests {
         let start = std::time::Instant::now();
         let digest = digest_of(&value);
         let elapsed = start.elapsed();
-        assert!(digest.is_some());
+        assert!(digest.starts_with('#'));
         assert!(
             elapsed < std::time::Duration::from_secs(2),
             "digesting a {terms}-term algebraic value took {elapsed:?} (debug build); \

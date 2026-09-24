@@ -91,14 +91,14 @@ pub(crate) fn error_report(
         error_category,
     });
     let resource_usage = interp.resource_usage();
-    let receipt = source.and_then(|source| {
+    let receipt = source.map(|source| {
         execution_receipt::build_receipt(
             source,
             interp.runtime_limits(),
             interp.max_execution_steps(),
             "error",
             &resource_usage,
-            digest.as_deref(),
+            &digest,
         )
     });
     Report {

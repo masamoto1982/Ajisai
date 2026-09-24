@@ -57,77 +57,31 @@ fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
 }
 
 #[test]
-fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
-    // LANG.CONTRACT.REGISTRY: the comparison primitives are
-    // Projecting/PassthroughThenProject/B. They are Projecting because a
-    // Tier 2 (`PI`) pair can exhaust its comparison-refinement budget
-    // (LANG.VALUES.EXACT) without deciding — that genuine incomparability projects onto
-    // UNKNOWN, a NIL carrying `undecidable` (LANG.VALUES.TRUTH). They are
-    // PassthroughThenProject because they still pass a NIL operand through
-    // first (LANG.FAILURE.PASSTHROUGH), and only then may project the budget-exhaustion case.
-    for name in &["EQ", "LT", "GT"] {
+fn aq_ver_contract_f_comparison_and_rounding_words_are_total() {
+    // LANG.CONTRACT.REGISTRY / LANG.VALUES.EXACT: order, equality and integer
+    // rounding decide over every number the language holds — the rationals and
+    // the algebraic field `SQRT` builds — so the comparison and rounding
+    // primitives have no projection to declare. Like ADD/SUB/MUL they pass a
+    // NIL operand through (LANG.FAILURE.PASSTHROUGH) and are otherwise total.
+    for name in &["EQ", "LT", "GT", "FLOOR", "ROUND", "ADD", "SUB", "MUL"] {
         let meta =
             get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
         assert_eq!(
             meta.partiality,
-            Partiality::Projecting,
-            "{} must be Projecting (LANG.CONTRACT.REGISTRY)",
+            Partiality::Total,
+            "{} must be Total (LANG.VALUES.EXACT)",
             name
         );
-        assert_eq!(
-            meta.nil_policy,
-            NilPolicy::PassthroughThenProject,
-            "{} must be PassthroughThenProject (LANG.CONTRACT.REGISTRY)",
-            name
-        );
-        assert_eq!(
-            meta.safety_level,
-            SafetyLevel::B,
-            "{} must be SafetyLevel B",
-            name
-        );
-    }
-}
-
-#[test]
-fn aq_ver_contract_g_rounding_creates_nil_under_undecidable() {
-    // FLOOR/ROUND operate on ExactScalar (CF) operands whose
-    // partial-quotient budget can exhaust, yielding an Undecidable NIL
-    // (LANG.VALUES.EXACT). They are therefore Projecting/CreatesNil/B, matching
-    // DIV and the comparison words. ADD/SUB/MUL stay Total because their
-    // CF arithmetic always yields a value (never a budget miss).
-    for name in &["FLOOR", "ROUND"] {
-        let meta =
-            get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
-        assert_eq!(
-            meta.partiality,
-            Partiality::Projecting,
-            "{} must be Projecting (LANG.VALUES.EXACT)",
-            name
-        );
-        assert_eq!(
-            meta.nil_policy,
-            NilPolicy::PassthroughThenProject,
-            "{} passes a NIL through and projects a budget miss (LANG.VALUES.EXACT)",
-            name
-        );
-        assert_eq!(
-            meta.safety_level,
-            SafetyLevel::B,
-            "{} must be SafetyLevel B",
-            name
-        );
-    }
-
-    // ADD/SUB/MUL stay plain `passthrough`: their ExactReal arithmetic
-    // always produces a value, so there is no projection to declare.
-    for name in &["ADD", "SUB", "MUL"] {
-        let meta =
-            get_coreword_metadata(name).unwrap_or_else(|| panic!("{} must be in registry", name));
         assert_eq!(
             meta.nil_policy,
             NilPolicy::Passthrough,
-            "{} must stay Passthrough (CF arithmetic is total)",
+            "{} must be Passthrough (LANG.FAILURE.PASSTHROUGH)",
+            name
+        );
+        assert_eq!(
+            meta.safety_level,
+            SafetyLevel::A,
+            "{} must be SafetyLevel A",
             name
         );
     }

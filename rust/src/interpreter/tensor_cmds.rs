@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::{create_number_value, nil_passthrough_unary};
 use crate::interpreter::Interpreter;
@@ -16,22 +16,12 @@ pub(super) fn checked_shape_product(shape: &[usize]) -> Option<usize> {
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
 }
 
-/// Push a LANG.VALUES.EXACT Undecidable NIL. Used when an exact-real (CF)
-/// arithmetic word cannot resolve its result within the partial-quotient
-/// budget; the NIL Projection Rule (LANG.FAILURE.PROJECT) places NIL on the stack instead
-/// of raising an error, matching the comparison-budget exhaustion path.
-fn push_undecidable_nil(interp: &mut Interpreter) {
-    interp
-        .stack
-        .push(Value::nil_with_reason_unknown(NilReason::Undecidable));
-}
-
 use super::tensor_ops::{apply_unary_flat_with_metrics, build_nested_value};
 
 fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction) -> Fraction + Copy,
-    G: Fn(&ExactReal) -> Option<ExactReal>,
+    G: Fn(&ExactReal) -> ExactReal,
 {
     if nil_passthrough_unary(interp) {
         return Ok(());
@@ -55,15 +45,10 @@ where
         }
     }
 
-    // ExactScalar path: exact irrational via CF (LANG.VALUES.EXACT). When the
-    // CF stream exhausts its partial-quotient budget the result is
-    // undecidable, so project to a NIL (LANG.VALUES.EXACT, LANG.FAILURE.PROJECT)
-    // instead of raising an error — matching the comparison-budget path.
+    // ExactScalar path: an algebraic irrational, whose floor and rounding
+    // are decidable (LANG.VALUES.EXACT).
     if let ValueData::ExactScalar(er) = &val.data {
-        match exact_op(er) {
-            Some(result) => interp.stack.push(Value::from_exact_real(result)),
-            None => push_undecidable_nil(interp),
-        }
+        interp.stack.push(Value::from_exact_real(exact_op(er)));
         return Ok(());
     }
 
@@ -76,10 +61,7 @@ where
                 return Ok(create_number_value(op(f)));
             }
             if let ValueData::ExactScalar(er) = &lane.data {
-                return Ok(match exact_op(er) {
-                    Some(result) => Value::from_exact_real(result),
-                    None => Value::nil_with_reason_unknown(NilReason::Undecidable),
-                });
+                return Ok(Value::from_exact_real(exact_op(er)));
             }
             Err(AjisaiError::declared(
                 "nonNumeric",
@@ -132,14 +114,24 @@ pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_floor)? {
         return Ok(());
     }
-    apply_unary_math(interp, |f| f.floor(), |er| er.floor(), "FLOOR")
+    apply_unary_math(
+        interp,
+        |f| f.floor(),
+        |er| er.floor().expect("a number has a floor"),
+        "FLOOR",
+    )
 }
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_round)? {
         return Ok(());
     }
-    apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
+    apply_unary_math(
+        interp,
+        |f| f.round(),
+        |er| er.round().expect("a number has a nearest integer"),
+        "ROUND",
+    )
 }
 
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {

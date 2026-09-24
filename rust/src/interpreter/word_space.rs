@@ -95,7 +95,7 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // `Digest` a fixed-length text after walking its operand once.
         Contract | Digest => (Const, false),
         NilCheck | NilReason | Absent | Fail => (Const, false),
-        True | False | Nil | Pi => (Const, false),
+        True | False | Nil => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse | Flatten | Reshape => (Linear, true),
         // Shape observations: an answer bounded by the operand's rank.
@@ -118,9 +118,8 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         Print => (Linear, false),
         // The Words promoted out of the deleted MATH and ALGO modules.
         Min | Max | Sqrt => (Linear, false),
-        // The numeric Words of Phase 7: element-wise like the rest of the
-        // family; a transcendental answer is one lazy enclosure per lane.
-        Pow | Gcd | Ratio | Exp | Ln | Sin | Cos | Atan => (Linear, false),
+        // The number-closing Words: element-wise like the rest of the family.
+        Pow | Gcd | Ratio => (Linear, false),
         Sort | Order => (Linear, true),
         IndexOf | Member | Bsearch => (Linear, false),
         // Ordering, grouping and shape Words: the result is bounded by the

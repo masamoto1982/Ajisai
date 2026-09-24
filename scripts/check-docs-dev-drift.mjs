@@ -133,6 +133,15 @@ const KNOWN_FALSE_POSITIVES = new Set([
   'semantic-spine-migration-plan.md::Interpretation::Text',
   'vocabulary-100-work-order-2026-09.md::Interpretation::Timestamp',
   'vocabulary-100-work-order-2026-09.md::apply_word_hint_override',
+
+  // The computable-real tier (`ExactReal::Computable`, built by `PI` and the
+  // transcendental Words) and the `undecidable` reason its comparisons
+  // projected have since been deleted: the numeric domain is the exact field
+  // `SQRT` builds, where every comparison decides. These memos record the
+  // pitfalls the digest and receipt had to respect while that tier existed.
+  'competitive-advantage-work-order-2026-08.md::ExactReal::Computable',
+  'auditable-kernel-work-order-2026-09.md::ExactReal::Computable',
+  'auditable-kernel-work-order-2026-09.md::NilReason::Undecidable',
 ]);
 
 function parseIndexScope() {

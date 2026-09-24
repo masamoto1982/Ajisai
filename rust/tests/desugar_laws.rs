@@ -115,9 +115,7 @@ fn arithmetic_alias_preserves_nil_absence_metadata() {
 fn comparison_alias_decides_composed_equality_identically() {
     // The bare relations are total over the admitted domain (LANG.VALUES.EXACT /
     // LANG.VALUES.EXACT): (√2+1)−(√2+1) EQ 0 decides TRUE, and the `=` alias observes
-    // identically. (This law formerly pinned the UNKNOWN diagnosis here;
-    // with comparison total over D, UNKNOWN is confined to COMPARE-WITHIN,
-    // which has no alias sugar to desugar.)
+    // identically.
     let lhs = "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 =";
     let rhs = "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
     let alias = observed(lhs);

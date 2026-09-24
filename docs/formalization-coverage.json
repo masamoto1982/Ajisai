@@ -15,7 +15,7 @@
     "entry_counts": {
       "flow": 10,
       "identity": 18,
-      "material": 48,
+      "material": 42,
       "sugar": 22
     }
   },
@@ -113,11 +113,11 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.exact-real.budgeted-order",
+      "id": "algebra.exact-real.order",
       "algebraic_family": "exact-arithmetic",
       "core_tier": "identity",
       "kind": "operation",
-      "description": "Budgeted exact-real ordering; decides <, =, > within a budget or yields the logical U.",
+      "description": "Exact-real ordering; decides <, =, > over the whole exact field.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "EQ/LT/GT",
@@ -569,21 +569,6 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.exact-real.computable-real",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "kind": "construction",
-      "description": "A general computable real given as a monotonically-refining nested rational-interval stream with no closed algebraic normal form; equality and order over it are only semi-decidable, so the budgeted comparison (algebra.exact-real.budgeted-order) genuinely reaches U rather than always deciding.",
-      "admission_reason": "Accepted because no composition of the existing vocabulary reaches a value outside the multiquadratic field (LANG.VALUES.EXACT): every other Word decides in finite time through an exhibited normal form, so widening past that field needs a genuinely new construction rather than a derived one.",
-      "introduced_by": [
-        "PI"
-      ],
-      "can_derive": [
-        "PI"
-      ],
-      "status": "accepted"
-    },
-    {
       "id": "algebra.record.keyed-correspondence",
       "algebraic_family": "record",
       "core_tier": "identity",
@@ -795,7 +780,7 @@
         "core-kleene-and-definite"
       ],
       "status": "Formalized",
-      "notes": "Strong Kleene conjunction over TRUE/FALSE/UNKNOWN. The U rows require a Tier 2 operand no current word constructs; they are pinned by native logic tests.",
+      "notes": "Strong Kleene conjunction over TRUE/FALSE/UNKNOWN. The U rows arise from a NIL read in truth position; they are pinned by native logic tests.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -1036,14 +1021,15 @@
       "conformance_cases": [
         "core-decided-comparison-true",
         "core-decided-comparison-false",
-        "core-boolean-is-not-a-number"
+        "core-boolean-is-not-a-number",
+        "core-field-order-decides"
       ],
       "status": "Formalized",
-      "notes": "Decided comparisons produce Boolean observations; budgeted equality can produce UNKNOWN.",
+      "notes": "Comparisons over the exact field always decide and produce Boolean observations.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "algebraic_family": "observation",
@@ -1072,13 +1058,13 @@
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "observation",
       "core_tier": "identity",
-      "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq"
+      "implementation_schema": "exact_order_projection(EQ) via pairwise_eq/scalar_pair_eq"
     },
     {
       "id": "core.lt",
@@ -1095,11 +1081,11 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "Budgeted exact-real strict less-than projected into the K3 truth domain; undecidable comparisons yield UNKNOWN.",
+      "notes": "Exact-real strict less-than projected into the K3 truth domain; it always decides.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
@@ -1122,11 +1108,11 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "Greater-than is the operand-dual of LT over the shared budgeted-order primitive.",
+      "notes": "Greater-than is the operand-dual of LT over the shared exact order primitive.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
@@ -1168,21 +1154,19 @@
         "SPECIFICATION.html §7.2"
       ],
       "law_tests": [
-        "rust/src/types/exact/transcendental_tests.rs",
         "rust/src/interpreter/power_words_tests.rs"
       ],
       "conformance_cases": [
         "core-pow-exact-tiers",
-        "core-pow-computable-real",
+        "core-pow-outside-the-field",
         "core-pow-projections"
       ],
       "status": "Formalized",
-      "notes": "Exact power in the cheapest tier that holds it (power.rs): integer exponents by square-and-multiply in the base's tier, p/2 exponents in the field through SQRT, exact rational roots by integer nth roots, everything else as exp(y·ln x). Projects divisionByZero, domainMiss, undecidable and spaceExhausted as the contract declares.",
+      "notes": "Exact power inside the exact field (power.rs): integer exponents by square-and-multiply in the base's tier, p/2 exponents over a non-negative rational base in the field through SQRT; every other exponent leaves the field and projects domainMiss. Projects divisionByZero, domainMiss and spaceExhausted as the contract declares.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.bihomographic",
-        "algebra.exact-real.computable-real"
+        "algebra.exact-real.bihomographic"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "identity"
@@ -1204,7 +1188,7 @@
         "standard-gcd"
       ],
       "status": "Formalized",
-      "notes": "The greatest common divisor of two integers, the reduction the machine already runs on every rational; non-integers project domainMiss, computable reals undecidable.",
+      "notes": "The greatest common divisor of two integers, the reduction the machine already runs on every rational; non-integers project domainMiss.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -1232,7 +1216,7 @@
         "standard-ratio"
       ],
       "status": "Formalized",
-      "notes": "A rational's reduced numerator and denominator as a two-element Vector; irrationals project domainMiss, computable reals undecidable.",
+      "notes": "A rational's reduced numerator and denominator as a two-element Vector; irrationals project domainMiss.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -1243,158 +1227,6 @@
       "core_tier": "material",
       "standard_relation": "operational",
       "native_retention_reason": "Reads the reduced representation the language keeps but exposes through no other Word; nothing in the vocabulary can write it."
-    },
-    {
-      "id": "core.exp",
-      "kind": "coreword",
-      "surface": "EXP",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
-      ],
-      "law_tests": [
-        "rust/src/types/exact/transcendental_tests.rs",
-        "rust/tests/standard_operational_laws.rs",
-        "rust/src/interpreter/power_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "standard-exp",
-        "standard-transcendental-starves-honestly"
-      ],
-      "status": "Formalized",
-      "notes": "The natural exponential as a Tier 2 computable real: a 512-bit base enclosure from the directed fixed-point Taylor series with argument halving (series.rs), outward-rounded per step like π (transcendental.rs). Exact at 0; spaceExhausted past the argument bound.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "operational",
-      "native_retention_reason": "An enclosure generator for a transcendental function is a series with a rigorous remainder; no definition over the field can write one."
-    },
-    {
-      "id": "core.ln",
-      "kind": "coreword",
-      "surface": "LN",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
-      ],
-      "law_tests": [
-        "rust/src/types/exact/transcendental_tests.rs",
-        "rust/tests/standard_operational_laws.rs",
-        "rust/src/interpreter/power_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "standard-ln",
-        "standard-ln-domain"
-      ],
-      "status": "Formalized",
-      "notes": "The natural logarithm as a computable real via the atanh series with dyadic reduction and a cached ln 2; non-positive arguments project domainMiss, an undecidable Tier 2 sign projects undecidable. Exact at 1.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "operational",
-      "native_retention_reason": "An enclosure generator for a transcendental function is a series with a rigorous remainder; no definition over the field can write one."
-    },
-    {
-      "id": "core.sin",
-      "kind": "coreword",
-      "surface": "SIN",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
-      ],
-      "law_tests": [
-        "rust/src/types/exact/transcendental_tests.rs",
-        "rust/tests/standard_operational_laws.rs",
-        "rust/src/interpreter/power_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "standard-sin-cos"
-      ],
-      "status": "Formalized",
-      "notes": "The sine as a computable real: the argument reduced by 2kπ through π's 512-bit enclosure, the Taylor series with its Lagrange remainder, and the image of the argument's enclosure through the Lipschitz constant 1. Exact at 0.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "operational",
-      "native_retention_reason": "An enclosure generator for a transcendental function is a series with a rigorous remainder; no definition over the field can write one."
-    },
-    {
-      "id": "core.cos",
-      "kind": "coreword",
-      "surface": "COS",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
-      ],
-      "law_tests": [
-        "rust/src/types/exact/transcendental_tests.rs",
-        "rust/tests/standard_operational_laws.rs",
-        "rust/src/interpreter/power_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "standard-sin-cos"
-      ],
-      "status": "Formalized",
-      "notes": "The cosine as a computable real, by the same reduction and series as SIN. Exact at 0.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "operational",
-      "native_retention_reason": "An enclosure generator for a transcendental function is a series with a rigorous remainder; no definition over the field can write one."
-    },
-    {
-      "id": "core.atan",
-      "kind": "coreword",
-      "surface": "ATAN",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §3.1",
-        "SPECIFICATION.html §7.2"
-      ],
-      "law_tests": [
-        "rust/src/types/exact/transcendental_tests.rs",
-        "rust/tests/standard_operational_laws.rs",
-        "rust/src/interpreter/power_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "standard-atan"
-      ],
-      "status": "Formalized",
-      "notes": "The arctangent as a computable real: reduced through π/2 − atan(1/x) and atan ½ + atan z, then the alternating series bounded by its first omitted term. Total; exact at 0.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "standard_relation": "operational",
-      "native_retention_reason": "An enclosure generator for a transcendental function is a series with a rigorous remainder; no definition over the field can write one."
     },
     {
       "id": "core.select",
@@ -2366,11 +2198,11 @@
         "standard-format-rejects-bad-count"
       ],
       "status": "Formalized",
-      "notes": "The one rounding boundary: a scalar rendered as decimal text at a stated digit count, a tie away from zero as ROUND and QUANTIZE round, exact at every tier; a computable real whose last digit does not settle under the comparison budget projects undecidable rather than guess.",
+      "notes": "The one rounding boundary: a scalar rendered as decimal text at a stated digit count, a tie away from zero as ROUND and QUANTIZE round, exact at every tier: the field decides every digit.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "exact-scalar",
@@ -2611,11 +2443,10 @@
       ],
       "conformance_cases": [
         "core-digest-word-identity",
-        "core-digest-value-denotation",
-        "core-digest-computable-real"
+        "core-digest-value-denotation"
       ],
       "status": "Formalized",
-      "notes": "Exposes the content identity the dictionary already keeps (word_identity.rs) for a Symbol naming a Word, and the denotation digest of any other value through the observation digest's own value encoder (observation_digest.rs, value_digest), so equal values digest alike whatever built them. A computable real has no finite form and projects undecidable.",
+      "notes": "Exposes the content identity the dictionary already keeps (word_identity.rs) for a Symbol naming a Word, and the denotation digest of any other value through the observation digest's own value encoder (observation_digest.rs, value_digest), so equal values digest alike whatever built them.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2672,12 +2503,12 @@
         "standard-sort"
       ],
       "status": "Formalized",
-      "notes": "Sorts indexed sequences by the budgeted order observation; undecidable comparisons project to K3 Unknown rather than a partial order.",
+      "notes": "Sorts indexed sequences by the exact order observation, which decides every pair.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "algebraic_family": "structure-lift",
@@ -2701,12 +2532,12 @@
         "standard-order"
       ],
       "status": "Formalized",
-      "notes": "The stable ascending permutation of an indexed sequence under the budgeted order observation; SORT is this permutation applied.",
+      "notes": "The stable ascending permutation of an indexed sequence under the exact order observation; SORT is this permutation applied.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "algebraic_family": "structure-lift",
@@ -2874,7 +2705,7 @@
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.bubble.domain"
       ],
       "algebraic_family": "structure-lift",
@@ -2929,12 +2760,12 @@
         "standard-bsearch-unsorted-raises"
       ],
       "status": "Formalized",
-      "notes": "First index of each key in an ascending vector by halving, after one pass that checks the order; an absent key projects missingField, an undecidable comparison projects undecidable.",
+      "notes": "First index of each key in an ascending vector by halving, after one pass that checks the order; an absent key projects missingField.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.bubble.domain"
       ],
       "algebraic_family": "structure-lift",
@@ -3163,14 +2994,15 @@
         "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
-        "standard-min"
+        "standard-min",
+        "core-field-min-selects"
       ],
       "status": "Formalized",
-      "notes": "Selects the smaller operand using budgeted order, projecting undecidable comparisons to Unknown.",
+      "notes": "Selects the smaller operand using the exact order, which always decides.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "algebraic_family": "exact-arithmetic",
@@ -3195,11 +3027,11 @@
         "standard-max"
       ],
       "status": "Formalized",
-      "notes": "Selects the larger operand using budgeted order, projecting undecidable comparisons to Unknown.",
+      "notes": "Selects the larger operand using the exact order, which always decides.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "algebraic_family": "exact-arithmetic",
@@ -3480,37 +3312,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "STRING-QUOTE"
-    },
-    {
-      "id": "core.pi",
-      "kind": "coreword",
-      "surface": "PI",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html LANG.VALUES.EXACT",
-        "SPECIFICATION.html LANG.VALUES.TRUTH"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/tier2_undecidable_conformance_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-pi-is-a-computable-real",
-        "core-pi-decides-against-a-separated-rational",
-        "core-pi-pi-eq-is-unknown",
-        "core-pi-pi-lt-is-unknown",
-        "core-pi-pi-min-is-nil",
-        "core-pi-equality-ignores-construction-history",
-        "core-pi-equality-entails-its-order"
-      ],
-      "status": "Formalized",
-      "notes": "The sole present witness of a general computable real (LANG.VALUES.EXACT): the first Word that constructs a value outside the multiquadratic field, so a comparison against it can genuinely exhaust its budget and yield UNKNOWN. Built by Machin's formula with rigorous alternating-series error bounds, no floating point. Freshly constructed on every call, never memoized as a shared singleton, so PI PI EQ is a genuine budget exhaustion rather than a referential-identity shortcut. Persisting a Tier 2 value is out of scope for now and errors gracefully (rust/src/types/value_persist.rs). Equality involving this tier routes to the budgeted comparison rather than a structural answer: Computable's PartialEq/Hash are allocation identity, which LANG.VALUES.DENOTATION and LANG.AUTHORITY.FREEDOM forbid as an observable discriminant. The hash-keyed collection Words (UNIQUE/TALLY/GROUP/INDEX-OF) still bucket through that identity and are the open follow-up.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.computable-real"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
     }
   ],
   "unclassified_allowlist": []

@@ -3,24 +3,13 @@ use crate::interpreter::lane_lift::lift_lanes;
 use crate::interpreter::record_lift;
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::Interpreter;
-use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
-use super::comparison_scalar::{compare_scalar_pair, scalar_pair_eq, OrderingKind, ScalarCmp};
+use super::comparison_scalar::{compare_scalar_pair, scalar_pair_eq, OrderingKind};
 
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
     interp.stack.push(Value::from_bool(result));
-}
-
-/// UNKNOWN from a comparison that could not decide: a NIL carrying
-/// `undecidable` (LANG.VALUES.TRUTH — UNKNOWN is NIL read in truth position).
-fn undecidable_truth_value() -> Value {
-    Value::nil_with_reason(NilReason::Undecidable, Recoverability::Retryable)
-}
-
-fn push_undecidable_result(interp: &mut Interpreter) {
-    interp.stack.push(undecidable_truth_value());
 }
 
 struct ScalarFastOperand {
@@ -111,17 +100,16 @@ fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Valu
         ));
     }
     // `unsupportedComparison`: LT/GT, the only callers of
-    // `compare_lane`, declare it uniformly. EQ/NEQ never reach here —
+    // `compare_lane`, declare it uniformly. EQ never reaches here —
     // `pairwise_eq` is total and raises nothing.
-    match compare_scalar_pair(a_val, b_val, kind).map_err(|e| match e {
-        AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
-            AjisaiError::declared("unsupportedComparison", "expected comparable operands")
-        }
-        other => other,
-    })? {
-        ScalarCmp::Decided(b) => Ok(Value::from_bool(b)),
-        ScalarCmp::Undecided => Ok(undecidable_truth_value()),
-    }
+    compare_scalar_pair(a_val, b_val, kind)
+        .map_err(|e| match e {
+            AjisaiError::StructureError { expected, .. } if expected == "scalar value" => {
+                AjisaiError::declared("unsupportedComparison", "expected comparable operands")
+            }
+            other => other,
+        })
+        .map(Value::from_bool)
 }
 
 fn apply_binary_comparison(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
@@ -174,7 +162,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// Pairwise equality. Every pair decides: the structural Vector / Tensor paths
-/// are total, as is scalar comparison.
+/// are total, as is scalar comparison over the field.
 ///
 /// Equality is *structural over disjoint domains* (LANG.VALUES.DISJOINT): two
 /// values are "never equal merely because their encodings resemble one
@@ -189,62 +177,22 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
 /// (LANG.VALUES.NIL: "the reason is the entire observable content of a NIL").
 /// The `ValueData` comparison below cannot see a reason — `ValueData::Nil`
 /// carries none — so NIL pairs are decided before it, on the reason itself.
-fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
+fn pairwise_eq(a_val: &Value, b_val: &Value) -> bool {
     if a_val.is_nil() || b_val.is_nil() {
-        return ScalarCmp::Decided(
-            a_val.is_nil() && b_val.is_nil() && a_val.nil_reason() == b_val.nil_reason(),
-        );
+        return a_val.is_nil() && b_val.is_nil() && a_val.nil_reason() == b_val.nil_reason();
     }
-    // A Tier 2 operand makes `ValueData` equality answer from allocation
-    // identity, so it may not settle anything (`Value::carries_computable`).
-    let tier2 = a_val.carries_computable() || b_val.carries_computable();
-    if !tier2 && a_val.data == b_val.data {
-        return ScalarCmp::Decided(true);
+    if a_val.data == b_val.data {
+        return true;
     }
     match (&a_val.data, &b_val.data) {
         (ValueData::Scalar(_), ValueData::Scalar(_))
         | (ValueData::ExactScalar(_), ValueData::ExactScalar(_))
         | (ValueData::ExactScalar(_), ValueData::Scalar(_))
         | (ValueData::Scalar(_), ValueData::ExactScalar(_)) => scalar_pair_eq(a_val, b_val),
-        (ValueData::Vector(x), ValueData::Vector(y)) if tier2 => vector_pair_eq(x, y),
-        // Two Records are one value when their key sequences and their value
-        // sequences are (LANG.RECORDS.STRUCTURE); a Tier 2 value in either
-        // sequence makes the answer as undecidable as it is for Vectors.
-        (ValueData::Record(x), ValueData::Record(y)) if tier2 => {
-            match vector_pair_eq(x.keys(), y.keys()) {
-                ScalarCmp::Decided(false) => ScalarCmp::Decided(false),
-                keys => match (keys, vector_pair_eq(x.values(), y.values())) {
-                    (_, ScalarCmp::Decided(false)) => ScalarCmp::Decided(false),
-                    (ScalarCmp::Decided(true), ScalarCmp::Decided(true)) => {
-                        ScalarCmp::Decided(true)
-                    }
-                    _ => ScalarCmp::Undecided,
-                },
-            }
-        }
         // Disjoint domains are unequal whatever they carry
-        // (LANG.VALUES.DISJOINT), so Tier 2 does not make them undecidable.
-        _ => ScalarCmp::Decided(false),
+        // (LANG.VALUES.DISJOINT).
+        _ => false,
     }
-}
-
-/// Element-wise equality of two Tier 2-carrying Vectors, combined as the
-/// Kleene conjunction the truth domain already uses: one unequal element (or
-/// a length difference) settles FALSE, and only an otherwise-equal pair with
-/// an undecided element is UNKNOWN.
-fn vector_pair_eq(x: &[Value], y: &[Value]) -> ScalarCmp {
-    if x.len() != y.len() {
-        return ScalarCmp::Decided(false);
-    }
-    let mut answer = ScalarCmp::Decided(true);
-    for (p, q) in x.iter().zip(y.iter()) {
-        match pairwise_eq(p, q) {
-            ScalarCmp::Decided(false) => return ScalarCmp::Decided(false),
-            ScalarCmp::Decided(true) => {}
-            ScalarCmp::Undecided => answer = ScalarCmp::Undecided,
-        }
-    }
-    answer
 }
 
 fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
@@ -263,9 +211,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
     let b_val = interp.stack.pop().unwrap();
     let a_val = interp.stack.pop().unwrap();
 
-    match pairwise_eq(&a_val, &b_val) {
-        ScalarCmp::Decided(eq) => push_boolean_result(interp, if invert { !eq } else { eq }),
-        ScalarCmp::Undecided => push_undecidable_result(interp),
-    }
+    let eq = pairwise_eq(&a_val, &b_val);
+    push_boolean_result(interp, if invert { !eq } else { eq });
     Ok(())
 }

@@ -38,7 +38,6 @@ pub struct DiagnosisObservation {
     pub where_kind: &'static str,
     pub word: Option<String>,
     pub why: &'static str,
-    pub agreed_prefix: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -95,7 +94,6 @@ pub fn observe_axes(v: &Value) -> AxisObservation {
                 where_kind: diagnosis.where_.kind.as_protocol_str(),
                 word: diagnosis.where_.word.clone(),
                 why: diagnosis.why.as_protocol_str(),
-                agreed_prefix: diagnosis.agreed_prefix,
             }),
     });
     AxisObservation {

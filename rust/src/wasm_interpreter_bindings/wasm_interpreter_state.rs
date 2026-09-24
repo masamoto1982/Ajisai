@@ -242,7 +242,7 @@ impl AjisaiInterpreter {
     /// values. The payload is an opaque JSON string produced by
     /// `crate::types::value_persist`.
     #[wasm_bindgen]
-    pub fn snapshot_stack(&self) -> Result<String, String> {
+    pub fn snapshot_stack(&self) -> String {
         crate::types::value_persist::encode_stack(self.interpreter.get_stack().iter())
     }
 

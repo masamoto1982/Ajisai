@@ -16,8 +16,8 @@ fn builtin_outcomes_include_value_and_declared_errors() {
 fn builtin_outcomes_include_declared_nil_projections() {
     let outcomes = builtin_outcomes_for("DIV");
     assert!(outcomes.contains("nil:divisionByZero"));
-    let outcomes = builtin_outcomes_for("FLOOR");
-    assert!(outcomes.contains("nil:undecidable"));
+    let outcomes = builtin_outcomes_for("POW");
+    assert!(outcomes.contains("nil:domainMiss"));
 }
 
 #[test]

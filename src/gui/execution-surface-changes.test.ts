@@ -70,21 +70,6 @@ describe('detectExecutionSurfaceChanges', () => {
         expect(changes.outputChanged).toBe(true);
     });
 
-    // `PI` alone: the run succeeds, prints nothing, and leaves the stack
-    // untouched because its result cannot be snapshotted. The host's account of
-    // that goes to Output, so Output is where the layout has to move; without
-    // this the run looked like it changed nothing and the explanation stayed on
-    // a surface the reader was not on.
-    it('treats a refused stack snapshot as an Output change', () => {
-        const changes = detectExecutionSurfaceChanges(
-            view(),
-            view(),
-            okResult({ stackSnapshotError: 'cannot persist a Tier-2 computable exact real' })
-        );
-        expect(changes.outputChanged).toBe(true);
-        expect(changes.stackChanged).toBe(false);
-    });
-
     it('treats real program output as an Output change', () => {
         const changes = detectExecutionSurfaceChanges(
             view(),

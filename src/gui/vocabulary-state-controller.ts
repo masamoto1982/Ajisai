@@ -244,8 +244,8 @@ export const createVocabularyManager = (
         matched.forEach(wordData => {
             const name = wordData[0] as string;
             // The payload is `(name, hover summary, example)` and only the
-            // example was ever read, so hovering `SIN` answered `1 SIN 5
-            // FORMAT` and left what the Word *is* to a separate lookup the
+            // example was ever read, so hovering `POW` answered `2 10
+            // POW` and left what the Word *is* to a separate lookup the
             // reader had to know about (Ctrl+Alt+L). The summary is one
             // authored line per Word, from the same generated docs that
             // lookup prints, and it was already here.

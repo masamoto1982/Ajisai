@@ -379,7 +379,7 @@ mod collection_meter_tests {
     //
     // `SORT` over a flat pure-integer dense buffer sorts its numerator column
     // instead of materializing a boxed `Value` per lane and ordering a
-    // permutation through the budgeted comparison. That is a representation
+    // permutation through the exact comparison. That is a representation
     // decision, and this module's subject is a price that must not turn on one.
     //
     // Measured as a *delta*, not as a total: the two programs that put the same
