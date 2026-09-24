@@ -9,7 +9,6 @@
         "inputs": 0,
         "outputs": 1
       },
-      "consumption": "none",
       "nilPolicy": "preserveReason",
       "projection": {
         "when": "never",
@@ -57,7 +56,6 @@
         "inputs": 0,
         "outputs": 1
       },
-      "consumption": "none",
       "nilPolicy": "preserveReason",
       "projection": {
         "when": "never",
@@ -105,7 +103,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
         "when": "never",
@@ -157,7 +154,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
         "when": "never",
@@ -208,7 +204,6 @@
         "inputs": 3,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "kleeneAbsorbing",
       "projection": {
         "when": "never",
@@ -262,7 +257,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "budgetExhausted",
@@ -314,7 +308,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "budgetExhausted",
@@ -369,7 +362,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "budgetExhausted",
@@ -424,7 +416,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -479,7 +470,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -535,7 +525,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -590,7 +579,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "divisorEqualsZero",
@@ -643,7 +631,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "integerProjectionUndecidable",
@@ -696,7 +683,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "integerProjectionUndecidable",
@@ -750,7 +736,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "budgetExhausted",
@@ -805,7 +790,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "budgetExhausted",
@@ -860,7 +844,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "negativeScalar",
@@ -913,7 +896,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": [
@@ -977,7 +959,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": [
@@ -1038,7 +1019,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": [
@@ -1098,7 +1078,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "argumentTooLargeToMaterialize",
@@ -1152,7 +1131,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": [
@@ -1212,7 +1190,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "argumentTooLargeToMaterialize",
@@ -1266,7 +1243,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "argumentTooLargeToMaterialize",
@@ -1320,7 +1296,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -1374,7 +1349,6 @@
         "inputs": 0,
         "outputs": 1
       },
-      "consumption": "none",
       "nilPolicy": "preserveReason",
       "projection": {
         "when": "never",
@@ -1422,7 +1396,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "indexOutOfBounds",
@@ -1475,7 +1448,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -1527,7 +1499,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "indexOutOfBounds",
@@ -1559,9 +1530,9 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 1 2 3 ] [ 9 ] TAKE NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "summary": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 9 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
         "hover": "TAKE — take N elements from start or end",
-        "lookup": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 1 2 3 ] [ 9 ] TAKE NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "lookup": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] [ 9 ] TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] [ 9 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
         "syntax": "[ 1 2 3 4 5 ] [ 3 ] TAKE",
         "role": "Vector primitive: Take the first N or last -N elements of a vector.",
         "stackEffect": "[ vec ] [ n ] -> [ prefix ]"
@@ -1581,7 +1552,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "indexOutOfBounds",
@@ -1635,7 +1605,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -1687,7 +1656,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -1740,7 +1708,6 @@
         "inputs": "variable",
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -1793,7 +1760,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "materializationBudgetExceeded",
@@ -1845,7 +1811,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "materializationBudgetExceeded",
@@ -1898,7 +1863,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "raggedNesting",
@@ -1950,7 +1914,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "spaceExhausted",
@@ -2004,7 +1967,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -2056,7 +2018,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -2105,7 +2066,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "budgetExhausted",
@@ -2160,7 +2120,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthroughThenProject",
       "projection": {
         "when": "budgetExhausted",
@@ -2215,7 +2174,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -2269,7 +2227,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -2323,7 +2280,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -2378,7 +2334,6 @@
         "inputs": 3,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "indexOutOfBounds",
@@ -2410,9 +2365,9 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT` hands it back.",
+        "summary": "A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT` hands it back.",
         "hover": "A copy of a vector with the element at one index replaced.",
-        "lookup": "A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT` hands it back.",
+        "lookup": "A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT` hands it back.",
         "syntax": "[ 1 2 3 ] 1 9 PUT",
         "role": "Single-position update, without rebuilding the vector by hand.",
         "stackEffect": "[ vec ] [ idx ] [ x ] -> [ vec ]"
@@ -2433,7 +2388,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -2488,7 +2442,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "valueAbsent",
@@ -2541,7 +2494,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -2594,7 +2546,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": [
@@ -2656,7 +2607,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -2710,7 +2660,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -2761,7 +2710,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -2812,7 +2760,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "keyAbsent",
@@ -2843,9 +2790,9 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `fallback R 'x' AT NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.",
+        "summary": "The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `R 'x' AT 'S' BIND fallback S S NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.",
         "hover": "AT — the value under a key, or the absence missingField",
-        "lookup": "The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `fallback R 'x' AT NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.",
+        "lookup": "The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `missingField`, recovered like any other: `R 'x' AT 'S' BIND fallback S S NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.",
         "syntax": "[ 'x' 'y' ] [ 1 2 ] RECORD 'x' AT",
         "role": "Record primitive: the value under a key.",
         "stackEffect": "[ record ] [ key ] -> [ value ]"
@@ -2864,7 +2811,6 @@
         "inputs": 3,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -2915,7 +2861,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "keyAbsent",
@@ -2967,7 +2912,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "never",
@@ -3018,7 +2962,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3069,7 +3012,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -3121,7 +3063,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -3175,7 +3116,6 @@
         "inputs": 3,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -3227,7 +3167,6 @@
         "inputs": 3,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -3280,7 +3219,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3331,7 +3269,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3383,7 +3320,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3435,7 +3371,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3488,7 +3423,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3541,7 +3475,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3594,7 +3527,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "needleAbsent",
@@ -3646,7 +3578,6 @@
         "inputs": 3,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -3698,7 +3629,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "parseFailure",
@@ -3749,7 +3679,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
         "when": "noExactLexemeForValue",
@@ -3798,7 +3727,6 @@
         "inputs": 2,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "lastDigitUndecidable",
@@ -3853,7 +3781,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": [
@@ -3913,7 +3840,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "valueHasNoJsonImage",
@@ -3964,7 +3890,6 @@
         "inputs": 1,
         "outputs": "variable"
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -4015,7 +3940,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "symbolNamesNoWord",
@@ -4047,9 +3971,9 @@
         "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
+        "summary": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
         "hover": "CONTRACT — the contract of a Word or a block, as a Record",
-        "lookup": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `consumption` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
+        "lookup": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `missingField`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
         "syntax": "[ ADD ] 0 GET CONTRACT",
         "role": "Control primitive: the registered or inferred contract of a Word or a block, as a Record.",
         "stackEffect": "[ symbol | code ] -> [ record ]"
@@ -4068,7 +3992,6 @@
         "inputs": 1,
         "outputs": 0
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -4120,7 +4043,6 @@
         "inputs": 0,
         "outputs": 1
       },
-      "consumption": "none",
       "nilPolicy": "preserveReason",
       "projection": {
         "when": "never",
@@ -4167,9 +4089,8 @@
       "family": "absence",
       "stack": {
         "inputs": 1,
-        "outputs": 2
+        "outputs": 1
       },
-      "consumption": "retain",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -4201,8 +4122,8 @@
         "hover": "NIL? — test whether a value is absent",
         "lookup": "Test whether the top value is an operational NIL (absent).",
         "syntax": "1 0 / NIL?",
-        "role": "Diagnostic predicate: TRUE when the retained value is absent, FALSE otherwise. Never branches on the reason (LANG.VALUES.NIL).",
-        "stackEffect": "[ x ] -> [ x ] [ bool ]"
+        "role": "Diagnostic predicate: TRUE when the value it consumes is absent, FALSE otherwise. Never branches on the reason (LANG.VALUES.NIL).",
+        "stackEffect": "[ x ] -> [ bool ]"
       },
       "executorKey": "NilCheck",
       "effects": [],
@@ -4216,9 +4137,8 @@
       "family": "absence",
       "stack": {
         "inputs": 1,
-        "outputs": 2
+        "outputs": 1
       },
-      "consumption": "retain",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "valueIsNotOperationalNilOrHasNoReason",
@@ -4251,7 +4171,7 @@
         "lookup": "Read the direct reason of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-REASON",
         "role": "Diagnostic accessor: the lowerCamelCase reason protocol string (LANG.VALUES.NIL), or NIL when there is no reason or the value is not an operational NIL.",
-        "stackEffect": "[ x ] -> [ x ] [ text|NIL ]"
+        "stackEffect": "[ x ] -> [ text|NIL ]"
       },
       "executorKey": "NilReason",
       "effects": [],
@@ -4267,7 +4187,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "createsNil",
       "projection": {
         "when": "always",
@@ -4298,9 +4217,9 @@
         "LANG.FAILURE.RECOVERY"
       ],
       "documentation": {
-        "summary": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
+        "summary": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
         "hover": "ABSENT — a NIL carrying a reason the program states",
-        "lookup": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `fallback subject NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
+        "lookup": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
         "syntax": "'rate not quoted' ABSENT",
         "role": "Absence primitive: produce a NIL carrying a reason the program states.",
         "stackEffect": "[ 'reason' ] -> [ NIL ]"
@@ -4319,7 +4238,6 @@
         "inputs": 2,
         "outputs": 0
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
@@ -4374,7 +4292,6 @@
         "inputs": 2,
         "outputs": 0
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -4433,7 +4350,6 @@
         "inputs": 1,
         "outputs": 0
       },
-      "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
         "when": "never",
@@ -4489,7 +4405,6 @@
         "inputs": 1,
         "outputs": 1
       },
-      "consumption": "eat",
       "nilPolicy": "consumeNil",
       "projection": {
         "when": "operandCarriesAComputableReal",
@@ -4539,7 +4454,6 @@
         "inputs": 1,
         "outputs": 0
       },
-      "consumption": "eat",
       "nilPolicy": "preserveReason",
       "projection": {
         "when": "never",

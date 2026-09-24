@@ -91,21 +91,22 @@ async fn an_address_that_lands_is_untouched() {
 
 /// Nothing a caller wanted preserved is lost by projecting. `PUT` answers
 /// with the whole Vector, which was the standing argument for raising on a
-/// miss — but the Vector is one the caller wrote, so `NIL?` and `SELECT` hand
-/// it back in one phrase and the absence stays inspectable until they do.
+/// miss — but the Vector is one the caller wrote, so `BIND`, `NIL?` and
+/// `SELECT` hand it back in one phrase and the absence stays inspectable until
+/// they do.
 #[tokio::test]
 async fn a_projected_address_is_recovered_in_one_phrase() {
     assert_eq!(
         format!(
             "{}",
-            top_of("[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT").await
+            top_of("[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT").await
         ),
         "[ 1/1 2/1 3/1 ]"
     );
     assert_eq!(
         format!(
             "{}",
-            top_of("[ 1 2 3 ] [ 1 2 3 ] [ 5 ] TAKE NIL? SELECT").await
+            top_of("[ 1 2 3 ] [ 5 ] TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT").await
         ),
         "[ 1/1 2/1 3/1 ]"
     );

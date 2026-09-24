@@ -100,7 +100,7 @@ mod tests {
             // the fallback rather than a lowered op.
             ("[ 1 2 ] [ 'X' BIND X X ADD ] MAP", "[ 2/1 4/1 ]"),
             (
-                "[ 1 2 ] [ 'E' BIND 7 E 0 DIV NIL? SELECT ] MAP",
+                "[ 1 2 ] [ 'E' BIND E 0 DIV 'S' BIND 7 S S NIL? SELECT ] MAP",
                 "[ 7/1 7/1 ]",
             ),
         ] {

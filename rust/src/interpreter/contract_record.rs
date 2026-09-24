@@ -6,7 +6,7 @@
 //! below is the specification's own spelling and nothing is restated by hand.
 //! A User Word's or a block's contract is *inferred* by `word_contract`
 //! without running anything. The two carry different facts — only a registry
-//! declares consumption, projection reasons and ERROR conditions; only an
+//! declares projection reasons and ERROR conditions; only an
 //! inference has a confidence and gaps — so the Records differ in the keys
 //! only one side can supply, and agree on every key both can: `inputs`,
 //! `outputs`, `nil`, `purity`, `determinism`, `cost`, `effects`. A program
@@ -59,7 +59,6 @@ pub(crate) fn registered_contract_record(word: &GeneratedWord) -> Value {
         ("tier", text(word.vocabulary_tier.as_spec_str())),
         ("inputs", arity(word.stack_inputs)),
         ("outputs", arity(word.stack_outputs)),
-        ("consumption", text(word.consumption.as_spec_str())),
         ("nil", text(word.nil_policy.as_spec_str())),
         ("projection", texts(word.projection_reasons)),
         ("errors", texts(word.error_when)),

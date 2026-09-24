@@ -143,41 +143,41 @@
 <section class="ajisai-case" id="core-nil-reason-division-by-zero" data-category="core">
   <h3>NIL-REASON reads the reason of a Bubble/NIL as a protocol string (LANG.VALUES.NIL/LANG.OBSERVATION.DIAGNOSIS)</h3>
   <pre class="ajisai-source">1 0 / NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-check-true-retains-source" data-category="core">
-  <h3>NIL? is TRUE for an operational NIL and retains the inspected value (LANG.OBSERVATION.DIAGNOSIS)</h3>
+<section class="ajisai-case" id="core-nil-check-true-consumes-source" data-category="core">
+  <h3>NIL? is TRUE for an operational NIL and consumes the inspected value (LANG.OBSERVATION.DIAGNOSIS, LANG.STACK.CONSUMPTION)</h3>
   <pre class="ajisai-source">1 0 / NIL?</pre>
-  <pre class="ajisai-expect-result">NIL TRUE</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-check-false-for-present-value" data-category="core">
-  <h3>NIL? is FALSE for a present value and retains it (LANG.OBSERVATION.DIAGNOSIS)</h3>
+  <h3>NIL? is FALSE for a present value and consumes it (LANG.OBSERVATION.DIAGNOSIS, LANG.STACK.CONSUMPTION)</h3>
   <pre class="ajisai-source">5 NIL?</pre>
-  <pre class="ajisai-expect-result">5/1 FALSE</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-nil-reason-present-value-is-nil" data-category="core">
   <h3>NIL-REASON on a present value is NIL, never an error (Bubble Rule, LANG.OBSERVATION.DIAGNOSIS)</h3>
   <pre class="ajisai-source">5 NIL-REASON</pre>
-  <pre class="ajisai-expect-result">5/1 NIL</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absent-declares-a-reasoned-nil" data-category="core">
   <h3>ABSENT makes a NIL whose reason is the program's own text, and NIL-REASON answers that text (LANG.VALUES.NIL)</h3>
   <pre class="ajisai-source">'rate not quoted' ABSENT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'rate not quoted'</pre>
+  <pre class="ajisai-expect-result">'rate not quoted'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absent-is-recoverable" data-category="core">
   <h3>A declared absence is an ordinary NIL: NIL? sees it and SELECT recovers it (LANG.FAILURE.RECOVERY)</h3>
-  <pre class="ajisai-source">0 'rate not quoted' ABSENT NIL? SELECT</pre>
+  <pre class="ajisai-source">'rate not quoted' ABSENT 'S' BIND 0 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">0/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -336,7 +336,7 @@
 
 <section class="ajisai-case" id="core-absence-fallback" data-category="core">
   <h3>A chosen fallback turns a division-by-zero Bubble into a value</h3>
-  <pre class="ajisai-source">99 1 0 / NIL? SELECT</pre>
+  <pre class="ajisai-source">1 0 / 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -553,29 +553,29 @@
      here. Categorized hosted: the Core-only reference interpreter does not
      implement the (Quarantined) child-runtime words. -->
 
-<!-- Recovering an absence is `NIL?` and `SELECT`, not a construct of its own.
-     `NIL?` answers its subject and whether it is absent, which puts the truth
-     exactly where `SELECT` wants it, so `fallback X NIL? SELECT` reads as
-     "X, or the fallback if X is absent" with nothing named and nothing
-     repeated. -->
+<!-- Recovering an absence is `BIND`, `NIL?` and `SELECT`, not a construct of
+     its own. `NIL?` consumes its subject and answers whether it was absent,
+     which puts the truth exactly where `SELECT` wants it, so
+     `subject 'S' BIND fallback S S NIL? SELECT` reads as "S, or the fallback
+     if S is absent": the subject is named once and read twice. -->
 
 <section class="ajisai-case" id="core-absence-present-value-is-kept" data-category="core">
   <h3>A present value is kept and the fallback is not chosen</h3>
-  <pre class="ajisai-source">99 5 NIL? SELECT</pre>
+  <pre class="ajisai-source">5 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absence-written-nil-takes-the-fallback" data-category="core">
   <h3>A written NIL takes the fallback, as a computed one does</h3>
-  <pre class="ajisai-source">99 NIL NIL? SELECT</pre>
+  <pre class="ajisai-source">NIL 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absence-fallback-is-an-ordinary-operand" data-category="core">
   <h3>The fallback is an ordinary operand: a phrase computes it like any other</h3>
-  <pre class="ajisai-source">2 3 ADD NIL NIL? SELECT</pre>
+  <pre class="ajisai-source">NIL 'S' BIND 2 3 ADD S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">5/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -895,20 +895,20 @@
 <section class="ajisai-case" id="core-logic-unknown-is-an-absence" data-category="core">
   <h3>UNKNOWN is an absence: NIL? answers TRUE</h3>
   <pre class="ajisai-source">TRUE NIL AND NIL?</pre>
-  <pre class="ajisai-expect-result">NIL TRUE</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-logic-unknown-keeps-its-reason" data-category="core">
   <h3>UNKNOWN keeps the reason it arrived with: NIL-REASON still reports it</h3>
   <pre class="ajisai-source">1 0 DIV TRUE AND NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-logic-unknown-takes-a-fallback" data-category="core">
   <h3>An UNKNOWN takes a fallback, like any other absence</h3>
-  <pre class="ajisai-source">99 TRUE NIL AND NIL? SELECT</pre>
+  <pre class="ajisai-source">TRUE NIL AND 'S' BIND 99 S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">99/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -992,7 +992,7 @@
 <section class="ajisai-case" id="core-nil-leftmost-reason-preserved" data-category="core">
   <h3>Combining two reasoned NILs preserves the leftmost reason (LANG.FAILURE.PASSTHROUGH)</h3>
   <pre class="ajisai-source">1 0 / 'abc' NUM ADD NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1003,7 +1003,7 @@
 <section class="ajisai-case" id="core-sort-passes-a-nil-through-with-its-reason" data-category="core">
   <h3>SORT passes a NIL through with its reason, rather than raising</h3>
   <pre class="ajisai-source">1 0 DIV SORT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1012,21 +1012,21 @@
 <section class="ajisai-case" id="core-get-out-of-bounds-reason" data-category="core">
   <h3>GET out of bounds projects to a reasoned Bubble</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 9 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-num-parse-failure-reason" data-category="core">
   <h3>NUM of unparsable text is a Bubble with reason invalidEncoding</h3>
   <pre class="ajisai-source">'abc' NUM NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-zero-div-zero-reason" data-category="core">
   <h3>0/0 is the same divisionByZero Bubble as 1/0</h3>
   <pre class="ajisai-source">0 0 / NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1102,14 +1102,14 @@
 <section class="ajisai-case" id="core-num-rejects-truncated-decimal" data-category="core">
   <h3>NUM projects a truncated decimal to NIL, as source would reject it</h3>
   <pre class="ajisai-source">'.5' NUM NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-num-rejects-digit-separator" data-category="core">
   <h3>NUM projects an underscore digit separator to NIL: it is not Ajisai source</h3>
   <pre class="ajisai-source">'1_000' NUM NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1177,7 +1177,7 @@
 <section class="ajisai-case" id="core-str-passes-a-nil-through-with-its-reason" data-category="core">
   <h3>STR passes a NIL through with its reason intact (LANG.FAILURE.PASSTHROUGH)</h3>
   <pre class="ajisai-source">0 0 DIV STR NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1243,7 +1243,7 @@
 <section class="ajisai-case" id="core-eq-nil-passthrough-preserves-reason" data-category="core">
   <h3>EQ passthrough preserves the leftmost NIL operand's reason (Section 4.5.1)</h3>
   <pre class="ajisai-source">1 0 DIV 1 EQ NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1378,14 +1378,14 @@
 <section class="ajisai-case" id="core-arithmetic-preserves-a-nil-lanes-reason" data-category="core">
   <h3>A NIL lane keeps the reason it was created with through the next arithmetic Word</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-arithmetic-preserves-an-exact-lanes-nil" data-category="core">
   <h3>A NIL lane beside an irrational one is still a NIL after the next arithmetic Word</h3>
   <pre class="ajisai-source">[ 2 3 ] [ SQRT ] MAP [ 1 0 ] / [ 1 1 ] + [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1400,14 +1400,14 @@
 <section class="ajisai-case" id="core-nil-lane-survives-a-structural-rebuild" data-category="core">
   <h3>A NIL lane keeps its reason when the vector is rebuilt around it</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 1 0 ] / [ 3 4 ] CONCAT [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-written-nil-lane-keeps-its-own-reason" data-category="core">
   <h3>A NIL written into a vector literal still reports itself as written after the lift</h3>
   <pre class="ajisai-source">[ 1 NIL 3 ] [ 2 ] * [ 1 ] GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'literal'</pre>
+  <pre class="ajisai-expect-result">'literal'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1449,13 +1449,13 @@
 <section class="ajisai-case" id="core-put-out-of-bounds-projects" data-category="core">
   <h3>PUT projects an out-of-range index to NIL, the same answer GET gives on the same condition</h3>
   <pre class="ajisai-source">[ 1 2 3 ] 9 5 PUT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-put-out-of-bounds-recovered" data-category="core">
   <h3>A projected PUT is recovered with the vector the caller already wrote — no data is lost by projecting</h3>
-  <pre class="ajisai-source">[ 1 2 3 ] [ 1 2 3 ] 9 5 PUT NIL? SELECT</pre>
+  <pre class="ajisai-source">[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1463,7 +1463,7 @@
 <section class="ajisai-case" id="core-take-exceeds-length-projects" data-category="core">
   <h3>TAKE beyond the vector length projects to NIL, not a shorter vector and not an error</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] TAKE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1527,7 +1527,7 @@
 <section class="ajisai-case" id="core-floor-keeps-a-lane-reason" data-category="core">
   <h3>FLOOR keeps the reason an absent lane carries</h3>
   <pre class="ajisai-source">1 0 DIV 7/2 2 COLLECT FLOOR 0 GET NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1535,14 +1535,14 @@
 
 <section class="ajisai-case" id="core-absence-vector-fallback" data-category="core">
   <h3>A Vector is a fallback like any other value</h3>
-  <pre class="ajisai-source">[ 5 ] NIL NIL? SELECT</pre>
+  <pre class="ajisai-source">NIL 'S' BIND [ 5 ] S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">[ 5/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-absence-is-asked-of-the-whole-value" data-category="core">
   <h3>NIL? asks about the whole value: a Vector holding an absent lane is present</h3>
-  <pre class="ajisai-source">[ 0 0 ] [ 1 NIL ] NIL? SELECT</pre>
+  <pre class="ajisai-source">[ 1 NIL ] 'S' BIND [ 0 0 ] S S NIL? SELECT</pre>
   <pre class="ajisai-expect-result">[ 1/1 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1770,7 +1770,7 @@ W</pre>
 <section class="ajisai-case" id="core-digest-computable-real" data-category="core">
   <h3>DIGEST projects undecidable for a computable real</h3>
   <pre class="ajisai-source">PI DIGEST NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'undecidable'</pre>
+  <pre class="ajisai-expect-result">'undecidable'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1795,7 +1795,7 @@ W</pre>
 <section class="ajisai-case" id="core-contract-unknown-name" data-category="core">
   <h3>CONTRACT projects missingField for a Symbol naming no Word</h3>
   <pre class="ajisai-source">[ NOPE ] 0 GET CONTRACT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'missingField'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1821,7 +1821,7 @@ W</pre>
 <section class="ajisai-case" id="core-pow-projections" data-category="core">
   <h3>POW projects what has no real value, by the declared reason</h3>
   <pre class="ajisai-source">0 -1 POW NIL-REASON -8 1/3 POW NIL-REASON PI PI SUB 1/3 POW NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'divisionByZero' NIL 'domainMiss' NIL 'undecidable'</pre>
+  <pre class="ajisai-expect-result">'divisionByZero' 'domainMiss' 'undecidable'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2308,7 +2308,7 @@ W</pre>
 <section class="ajisai-case" id="core-sqrt-negative-projects" data-category="core">
   <h3>SQRT of a negative scalar projects to NIL with reason domainMiss</h3>
   <pre class="ajisai-source">-1 SQRT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2322,7 +2322,7 @@ W</pre>
 <section class="ajisai-case" id="core-index-of-missing-projects" data-category="core">
   <h3>INDEX-OF projects to NIL with reason missingField when absent</h3>
   <pre class="ajisai-source">[ 1 2 ] 5 INDEX-OF NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'missingField'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2421,7 +2421,7 @@ W</pre>
 <section class="ajisai-case" id="standard-drop-exceeds-length-projects" data-category="core">
   <h3>DROP beyond the vector length projects to NIL, as TAKE does</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 5 ] DROP NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'indexOutOfBounds'</pre>
+  <pre class="ajisai-expect-result">'indexOutOfBounds'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-drop-malformed-count-still-raises" data-category="core">
@@ -2452,7 +2452,7 @@ W</pre>
 <section class="ajisai-case" id="core-shape-ragged-projects" data-category="core">
   <h3>A ragged vector has no shape: SHAPE projects domainMiss, not an error</h3>
   <pre class="ajisai-source">[ [ 1 2 ] [ 3 ] ] SHAPE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-shape-non-vector-error" data-category="core">
@@ -2596,7 +2596,7 @@ W</pre>
 <section class="ajisai-case" id="core-at-missing-key-projects-missing-field" data-category="core">
   <h3>AT projects missingField for a key the Record does not hold (LANG.FAILURE.PROJECT)</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'missingField'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-with-replaces-in-place" data-category="core">
@@ -2620,7 +2620,7 @@ W</pre>
 <section class="ajisai-case" id="core-without-missing-key-projects-missing-field" data-category="core">
   <h3>WITHOUT projects missingField for an absent key</h3>
   <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' WITHOUT NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'missingField'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-has-asks-presence" data-category="core">
@@ -2700,7 +2700,7 @@ W</pre>
 <section class="ajisai-case" id="standard-bsearch-absent-key-projects" data-category="core">
   <h3>An absent key is a missingField lane, not an error</h3>
   <pre class="ajisai-source">[ 1 3 5 7 ] 4 BSEARCH NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'missingField'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-bsearch-unsorted-raises" data-category="core">
@@ -2719,7 +2719,7 @@ W</pre>
 <section class="ajisai-case" id="standard-search-absent-projects" data-category="core">
   <h3>A needle that does not occur projects missingField</h3>
   <pre class="ajisai-source">'hello' 'z' SEARCH NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <pre class="ajisai-expect-result">'missingField'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-search-empty-needle" data-category="core">
@@ -2824,7 +2824,7 @@ W</pre>
 <section class="ajisai-case" id="standard-json-decode-invalid-encoding" data-category="core">
   <h3>JSON-DECODE projects invalidEncoding for text that is not one JSON value</h3>
   <pre class="ajisai-source">'[1,' JSON-DECODE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <pre class="ajisai-expect-result">'invalidEncoding'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2849,7 +2849,7 @@ W</pre>
 <section class="ajisai-case" id="standard-json-encode-no-image" data-category="core">
   <h3>JSON-ENCODE projects domainMiss for a value with no JSON image</h3>
   <pre class="ajisai-source">2 SQRT JSON-ENCODE NIL-REASON [ ADD ] 0 GET JSON-ENCODE NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss' NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">'domainMiss' 'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2866,14 +2866,14 @@ W</pre>
 <section class="ajisai-case" id="standard-gcd" data-category="core">
   <h3>GCD of two integers, non-negative; a non-integer projects domainMiss</h3>
   <pre class="ajisai-source">12 18 GCD -12 18 GCD 0 0 GCD [ 12 9 ] 6 GCD 1/2 4 GCD NIL-REASON</pre>
-  <pre class="ajisai-expect-result">6/1 6/1 0/1 [ 6/1 3/1 ] NIL 'domainMiss'</pre>
+  <pre class="ajisai-expect-result">6/1 6/1 0/1 [ 6/1 3/1 ] 'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="standard-ratio" data-category="core">
   <h3>RATIO opens a rational into its reduced numerator and denominator</h3>
   <pre class="ajisai-source">6/4 RATIO -3 RATIO 2 SQRT RATIO NIL-REASON PI RATIO NIL-REASON</pre>
-  <pre class="ajisai-expect-result">[ 3/1 2/1 ] [ -3/1 1/1 ] NIL 'domainMiss' NIL 'undecidable'</pre>
+  <pre class="ajisai-expect-result">[ 3/1 2/1 ] [ -3/1 1/1 ] 'domainMiss' 'undecidable'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2906,7 +2906,7 @@ W</pre>
 <section class="ajisai-case" id="standard-ln-domain" data-category="core">
   <h3>LN projects domainMiss outside the positive reals, undecidable for an unseparated sign</h3>
   <pre class="ajisai-source">0 LN NIL-REASON -1 LN NIL-REASON PI PI SUB LN NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL 'domainMiss' NIL 'domainMiss' NIL 'undecidable'</pre>
+  <pre class="ajisai-expect-result">'domainMiss' 'domainMiss' 'undecidable'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

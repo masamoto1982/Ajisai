@@ -107,7 +107,10 @@ mod record_words_tests {
             reason(&format!("{R} 'z' AT")).await.as_deref(),
             Some("missingField")
         );
-        assert_eq!(top(&format!("0 {R} 'z' AT NIL? SELECT")).await, "0/1");
+        assert_eq!(
+            top(&format!("{R} 'z' AT 'S' BIND 0 S S NIL? SELECT")).await,
+            "0/1"
+        );
         assert_eq!(error_of("[ 1 2 ] 'x' AT").await, "nonRecord");
         // A stored NIL is a value under its key: AT answers it, HAS? sees it.
         assert_eq!(top(&format!("{R} 'n' NIL WITH 'n' HAS?")).await, "TRUE");
@@ -188,7 +191,7 @@ mod record_words_tests {
         // Division by zero empties the lane, not the Record.
         assert_eq!(
             top(&format!("{R} 0 DIV 'x' AT NIL-REASON")).await,
-            "NIL 'divisionByZero'"
+            "'divisionByZero'"
         );
         assert_eq!(
             error_of(&format!("{R} [ 'y' 'x' ] [ 1 2 ] RECORD ADD")).await,

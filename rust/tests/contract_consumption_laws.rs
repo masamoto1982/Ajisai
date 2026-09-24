@@ -90,7 +90,7 @@ fn a_user_word_call_consumes_its_operands() {
 fn projecting_words_project_onto_nil_for_domain_misses() {
     assert_eq!(obs("1 0 DIV"), vec!["NIL"]);
     assert_eq!(obs("1 0 /"), vec!["NIL"]);
-    // GET declares `consumption: eat` (LANG.STACK.CONSUMPTION): both
+    // GET consumes what it reads (LANG.STACK.CONSUMPTION): both
     // operands leave the stack and the projected NIL is all that remains.
     assert_eq!(obs("[ 1 2 3 ] 9 GET"), vec!["NIL"]);
 }

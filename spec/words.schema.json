@@ -171,7 +171,6 @@
     "family",
     "category",
     "stack",
-    "consumption",
     "nilPolicy",
     "projection",
     "errorWhen",
@@ -231,13 +230,6 @@
       }
      },
      "additionalProperties": false
-    },
-    "consumption": {
-     "enum": [
-      "none",
-      "eat",
-      "retain"
-     ]
     },
     "nilPolicy": {
      "enum": [

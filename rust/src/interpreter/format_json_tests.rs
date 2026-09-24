@@ -81,7 +81,7 @@ mod format_json_tests {
         assert_eq!(top("'-1.5e2' JSON-DECODE").await, "-150/1");
         assert_eq!(top("'[]' JSON-DECODE").await, "[ ]");
         assert_eq!(top("'{}' JSON-DECODE").await, "{ }");
-        assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "NIL 'literal'");
+        assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "'literal'");
         assert_eq!(top("'\"caf\\u00e9\"' JSON-DECODE").await, "'café'");
         assert_eq!(
             top("'{\"k\": {\"n\": [1, [2]]}}' JSON-DECODE 'k' AT 'n' AT 1 GET").await,
@@ -101,7 +101,7 @@ mod format_json_tests {
         ] {
             assert_eq!(
                 top(&format!("{bad} JSON-DECODE NIL-REASON")).await,
-                "NIL 'invalidEncoding'",
+                "'invalidEncoding'",
                 "{bad}"
             );
         }
@@ -135,7 +135,7 @@ mod format_json_tests {
         ] {
             assert_eq!(
                 top(&format!("{no_image} JSON-ENCODE NIL-REASON")).await,
-                "NIL 'domainMiss'",
+                "'domainMiss'",
                 "{no_image}"
             );
         }

@@ -232,7 +232,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-machine-word-contract">LANG.MACHINE.WORD — Word contracts</h3>
 
-<p>A canonical Word contract selects a semantic family and supplies its differences: stack arity, consumption, NIL policy, projection condition and reason, error conditions, purity, determinism, effects, clause links, documentation, and executor key. Determinism classifies what the result is relative to: <em>deterministic</em> from operands alone, <em>state-relative</em> when the wider stack, frame bindings, or dictionary also decide it (LANG.MACHINE.STATE) — a pure Word can still be state-relative, since purity (LANG.EFFECTS.OUTPUT) asks only whether the same stack and dictionary always yield the same result — or <em>host-relative</em> when the host's own rendering, capture, or discard of the effect also decides it (LANG.EFFECTS.OUTPUT).</p>
+<p>A canonical Word contract selects a semantic family and supplies its differences: stack arity, NIL policy, projection condition and reason, error conditions, purity, determinism, effects, clause links, documentation, and executor key. Determinism classifies what the result is relative to: <em>deterministic</em> from operands alone, <em>state-relative</em> when the wider stack, frame bindings, or dictionary also decide it (LANG.MACHINE.STATE) — a pure Word can still be state-relative, since purity (LANG.EFFECTS.OUTPUT) asks only whether the same stack and dictionary always yield the same result — or <em>host-relative</em> when the host's own rendering, capture, or discard of the effect also decides it (LANG.EFFECTS.OUTPUT).</p>
 
 <p>The executor must refine its contract. Aliases and documentation are projections of the same canonical entry, not independent semantic authorities.</p>
 
@@ -292,7 +292,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-failure-recovery">LANG.FAILURE.RECOVERY — Recovery</h3>
 
-<p>Recovery is a phrase, not a form of its own. <code>NIL?</code> answers its subject together with whether that subject is absent, which is exactly what <code>SELECT</code> reads as its truth operand, so <code>fallback subject NIL? SELECT</code> chooses the subject when it is present and the fallback when it is not — with nothing named, nothing written twice, and the fallback an ordinary operand computed before the choice like every other operand. The question is asked of the whole value: a Vector holding an absent lane is present, so a lane recovered inside a Vector is recovered there rather than around it.</p>
+<p>Recovery is a phrase, not a form of its own. <code>NIL?</code> consumes a value and answers whether it is absent, which is what <code>SELECT</code> reads as its truth operand, so a subject named once and read twice chooses between itself and a fallback: <code>subject 'S' BIND fallback S S NIL? SELECT</code> leaves the subject when it is present and the fallback when it is not, the fallback an ordinary operand computed before the choice like every other operand. The question is asked of the whole value: a Vector holding an absent lane is present, so a lane recovered inside a Vector is recovered there rather than around it.</p>
 
 <p>Recovery does not erase absence from already emitted output.</p>
 
@@ -348,7 +348,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-contract-registry">LANG.CONTRACT.REGISTRY — Machine-readable contracts</h3>
 
-<p>Every Core Word's contract is a machine-readable record in <code>spec/words.json</code>, conforming to <code>spec/words.schema.json</code>. The record is the single place a Word's arity, consumption, NIL policy, projection reason, error conditions, purity, and documentation are stated.</p>
+<p>Every Core Word's contract is a machine-readable record in <code>spec/words.json</code>, conforming to <code>spec/words.schema.json</code>. The record is the single place a Word's arity, NIL policy, projection reason, error conditions, purity, and documentation are stated.</p>
 
 <p>Prose that restates a contract is a projection of that record and carries no independent authority. <code>CONTRACT</code> answers the record from inside the language, as a Record keyed by those fields, for a Symbol naming a Core Word; for a User Word, or for a block of code, it answers the inferred contract of LANG.CONTRACT.CHECK in one shape, and for a Symbol naming nothing it projects <code>missingField</code>.</p>
 

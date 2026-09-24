@@ -510,7 +510,6 @@
     "aliases",
     "family",
     "stack",
-    "consumption",
     "nilPolicy",
     "projection",
     "purity",
@@ -568,9 +567,6 @@
      "additionalProperties": false
     },
     "partiality": {
-     "type": "string"
-    },
-    "consumption": {
      "type": "string"
     },
     "nilPolicy": {

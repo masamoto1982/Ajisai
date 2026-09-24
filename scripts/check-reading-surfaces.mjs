@@ -49,6 +49,9 @@ const EXAMPLE_NAMES = new Set([
   'DELTA', 'STEP',
   // names bound with BIND so a worked example can read a value twice
   'N', 'V', 'R', 'X',
+  // the subject the recovery phrase names once and reads twice:
+  // `subject 'S' BIND fallback S S NIL? SELECT`
+  'S',
   // identity and doubling words of the worked examples
   'ID', 'DOUBLE',
   // the doubling word of the MAP and FOLD examples. It only became visible to
@@ -112,7 +115,7 @@ const UNALLOCATED_MENTIONS = new Set([
   // it — the case this list exists for.
   'DUP', 'SWAP', 'DROP', 'ROT',
   // named once by the recovery clause to say it is retired: `OR-NIL` was the
-  // lazy NIL-coalescing directive, replaced by the `NIL? SELECT` phrase. A
+  // lazy NIL-coalescing directive, replaced by the `BIND` `NIL?` `SELECT` phrase. A
   // reader meeting it in older material needs the clause to say so.
   'OR-NIL',
   // named once beside it for the same reason: `COND` was the branch `SELECT`

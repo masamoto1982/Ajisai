@@ -285,8 +285,8 @@ async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
         "the projected NIL must name its own reason"
     );
 
-    // The retained operand keeps its place under the answer, and a NIL that
-    // does carry a reason reads back as that reason rather than projecting.
+    // A NIL that does carry a reason reads back as that reason rather than
+    // projecting.
     let mut interp = Interpreter::new();
     interp.execute("1 0 / NIL-REASON").await.unwrap();
     let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
@@ -380,15 +380,15 @@ async fn malformed_use_raises_error_not_a_projected_nil() {
 #[tokio::test]
 async fn a_chosen_fallback_replaces_a_reasoned_nil() {
     // bare NIL replaced by the fallback
-    let stack = run_ok("[ 0 ] NIL NIL? SELECT").await;
+    let stack = run_ok("NIL 'S' BIND [ 0 ] S S NIL? SELECT").await;
     assert_eq!(format!("{}", stack[0]), "[ 0/1 ]");
 
     // non-NIL value passes through unchanged
-    let stack = run_ok("[ 0 ] [ 42 ] NIL? SELECT").await;
+    let stack = run_ok("[ 42 ] 'S' BIND [ 0 ] S S NIL? SELECT").await;
     assert_eq!(format!("{}", stack[0]), "[ 42/1 ]");
 
     // a reasoned NIL (division by zero) is replaced; no NIL survives
-    let stack = run_ok("[ 7 ] 1 0 DIV NIL? SELECT").await;
+    let stack = run_ok("1 0 DIV 'S' BIND [ 7 ] S S NIL? SELECT").await;
     assert!(
         !is_nil(&stack[0]),
         "the fallback must replace the reasoned NIL"

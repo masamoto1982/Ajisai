@@ -390,7 +390,7 @@ function verifiedNilSection() {
   if (bubble.stackDisplay.join(' ') !== 'NIL') fail('division by zero must bubble to NIL');
   const event = bubble.errorFlowTrace.find((e) => e.kind === 'nilProduced');
   if (!event || event.absence?.reason !== 'divisionByZero') fail('nilProduced trace event missing');
-  const fallback = expectOk('[ 99 ] 1 0 DIV NIL? SELECT');
+  const fallback = expectOk("1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT");
   if (fallback.stackDisplay.join(' ') !== '[ 99/1 ]') fail('the fallback must replace NIL');
   // Lifted over a vector the same law projects lane by lane, so the top stays
   // a vector. This was written with `[ 1 ] [ 0 ] DIV` and read as `NIL`, which
@@ -478,7 +478,7 @@ pushes \`NIL\` (reason: \`${nil.reason}\`). The projection is recorded in
 \`errorFlowTrace\` as a \`nilProduced\` event with a full diagnosis, and the NIL
 value itself carries \`semantics.absence.reason\` on the stack.
 
-- Provide a fallback with \`NIL?\` and \`SELECT\`: \`[ 99 ] 1 0 DIV NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` answers its subject *and* whether it is absent, which is exactly where \`SELECT\` wants the truth — so the phrase reads "X, or the fallback if X is absent" with nothing named and nothing repeated.
+- Provide a fallback with \`BIND\`, \`NIL?\` and \`SELECT\`: \`1 0 DIV 'S' BIND [ 99 ] S S NIL? SELECT\` → stack \`${nil.fallbackStack}\`. \`NIL?\` consumes its subject like every Word and answers whether it was absent, which is exactly where \`SELECT\` wants the truth — so name the subject once and read it twice: the phrase reads "S, or the fallback if S is absent".
 - Over a vector the projection is **per lane, not per value**: \`[ 6 6 ] [ 1 0 ] DIV\` → stack \`${nil.liftedStack}\`. The lane that could not divide is the only one emptied.
 - That makes the top a vector, not a NIL, so \`NIL?\` — which asks about the whole value — answers FALSE and the fallback is not chosen. Recover a lifted result inside the vector, not around it.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.

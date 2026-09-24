@@ -90,7 +90,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "42 1 0 / NIL? SELECT"
+    "source": "1 0 / 'S' BIND 42 S S NIL? SELECT"
    },
    "expect": {
     "/status": "ok",
@@ -815,7 +815,7 @@
    },
    "expect": {
     "/status": "ok",
-    "/stackDisplay/1": "TRUE"
+    "/stackDisplay/0": "TRUE"
    }
   },
   {

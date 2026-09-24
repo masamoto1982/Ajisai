@@ -713,11 +713,11 @@
         "rust/src/interpreter/nil_diagnostics_tests.rs"
       ],
       "conformance_cases": [
-        "core-nil-check-true-retains-source",
+        "core-nil-check-true-consumes-source",
         "core-nil-check-false-for-present-value"
       ],
       "status": "Formalized",
-      "notes": "Operational-absence predicate; retains the inspected value and projects absence into the K3 truth domain. Reports FALSE for the logical UNKNOWN (§2.3 firewall).",
+      "notes": "Operational-absence predicate; consumes the inspected value and projects absence into the K3 truth domain. Reports TRUE for the logical UNKNOWN, which is an absence (LANG.VALUES.TRUTH).",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -744,7 +744,7 @@
         "core-nil-reason-present-value-is-nil"
       ],
       "status": "Formalized",
-      "notes": "Reads the direct reason of an operational NIL as a lowerCamelCase protocol-string Text; retains the inspected value; NIL when there is no reason. For a userDeclared NIL it answers the declared text.",
+      "notes": "Reads the direct reason of an operational NIL as a lowerCamelCase protocol-string Text; consumes the inspected value; NIL when there is no reason. For a userDeclared NIL it answers the declared text.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [

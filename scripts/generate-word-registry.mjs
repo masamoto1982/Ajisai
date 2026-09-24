@@ -59,7 +59,6 @@ const pascal = (value) =>
 // declaration) and the runtime therefore has to read back.
 const CONTRACT_ENUMS = [
   { rustName: 'Family', field: 'family', doc: 'Semantic family the Word selects its shared laws from.' },
-  { rustName: 'Consumption', field: 'consumption', doc: 'How the Word treats its operands under the default mode (LANG.STACK.CONSUMPTION).' },
   { rustName: 'NilPolicy', field: 'nilPolicy', doc: 'How the Word behaves when an operand is NIL (LANG.FAILURE.PASSTHROUGH).' },
   { rustName: 'Partiality', field: 'partiality', doc: 'Whether well-formed application is total, partial, or NIL-projecting.' },
   { rustName: 'Purity', field: 'purity', doc: 'Observational purity class (LANG.CONTRACT.REGISTRY).' },
@@ -210,7 +209,6 @@ const rows = entries
         family: ${enumRef('Family', word.family)},
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
-        consumption: ${enumRef('Consumption', word.consumption)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
         projection_reasons: ${projectionReasons(word.projection.reason)},
@@ -304,7 +302,6 @@ pub struct GeneratedWord {
     pub family: Family,
     pub stack_inputs: Arity,
     pub stack_outputs: Arity,
-    pub consumption: Consumption,
     pub nil_policy: NilPolicy,
     /// The conditions under which a *well-formed* operand yields a reasoned
     /// NIL; empty for the Words that declare \`never\`. Distinct from

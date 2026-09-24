@@ -947,7 +947,7 @@
                         </div>
                     </div>
                     <h3>NILを調べる: <code>NIL?</code>と<code>NIL-REASON</code></h3>
-                    <p>この2つのワードは、<code>NIL</code>を変えずに調べます。<code>NIL?</code>はスタック最上位の値が<code>NIL</code>かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも値をその場に残したまま、答えをその上に積みます。</p>
+                    <p>この2つのワードは、<code>NIL</code>を調べます。<code>NIL?</code>はスタック最上位の値が<code>NIL</code>かどうかを尋ね、<code>NIL-REASON</code>はそれが持つ理由を読み取ります。どちらも他のワードと同じく<strong>調べた値を消費し</strong>、その場所に答えを積みます。調べたあとも値を使いたいなら、先に<code>BIND</code>で名前を付けてください。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -957,8 +957,8 @@
                             <tbody>
                                 <tr>
                                     <td><code>1 0 / NIL?</code></td>
-                                    <td><code>NIL TRUE</code></td>
-                                    <td class="notes"><code>NIL?</code>は最上位の値を検査し、元の場所に残す。</td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes"><code>NIL?</code>は最上位の値を消費し、その場所に答えを積む。</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -976,7 +976,7 @@
                             <tbody>
                                 <tr>
                                     <td><code>1 0 / NIL-REASON</code></td>
-                                    <td><code>NIL 'divisionByZero'</code></td>
+                                    <td><code>'divisionByZero'</code></td>
                                     <td class="notes">理由はプロトコル文字列なので、プログラムは値が欠けている理由によって分岐できる。</td>
                                 </tr>
                             </tbody>
@@ -998,11 +998,11 @@
                             <tbody>
                                 <tr>
                                     <td><code>'rate not quoted' ABSENT NIL-REASON</code></td>
-                                    <td><code>NIL 'rate not quoted'</code></td>
+                                    <td><code>'rate not quoted'</code></td>
                                     <td class="notes">宣言した文字列がそのまま理由になる。</td>
                                 </tr>
                                 <tr>
-                                    <td><code>0 'rate not quoted' ABSENT NIL? SELECT</code></td>
+                                    <td><code>'rate not quoted' ABSENT 'S' BIND 0 S S NIL? SELECT</code></td>
                                     <td><code>0/1</code></td>
                                     <td class="notes">普通の<code>NIL</code>なので、下の回復の書き方がそのまま効く。</td>
                                 </tr>
@@ -1018,11 +1018,11 @@
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <h3 id="recovery">代わりの値を与える: <code>NIL?</code>と<code>SELECT</code></h3>
-                    <p>不在の回復に専用の構文はありません。<a href="#cond"><code>SELECT</code></a>と<code>NIL?</code>を並べるだけです。</p>
-                    <p><code>NIL?</code>は<strong>調べた値をそのまま残したうえで</strong>、それが不在かどうかの真偽値を積みます(<code>[ x ] -&gt; [ x ] [ bool ]</code>)。積まれる順番が<code>SELECT</code>の求める順番とちょうど一致するので、<code>代わりの値 調べる値 NIL? SELECT</code>と書けば「値があればその値、なければ代わりの値」になります。<strong>名前を付ける必要も、同じ式を2度書く必要もありません。</strong></p>
+                    <h3 id="recovery">代わりの値を与える: <code>BIND</code>・<code>NIL?</code>・<code>SELECT</code></h3>
+                    <p>不在の回復に専用の構文はありません。調べる値に<code>BIND</code>で名前を付け、<a href="#cond"><code>SELECT</code></a>と<code>NIL?</code>を並べるだけです。</p>
+                    <p><code>NIL?</code>は他のワードと同じく<strong>調べた値を消費し</strong>、それが不在だったかどうかの真偽値を積みます(<code>[ x ] -&gt; [ bool ]</code>)。そこで調べる値に一度だけ名前を付け、2回読みます。<code>調べる値 'S' BIND 代わりの値 S S NIL? SELECT</code>と書けば、積まれる順番が<code>SELECT</code>の求める順番(真のときの候補、偽のときの候補、真偽値)とちょうど一致し、「値があればその値、なければ代わりの値」になります。</p>
                     <p class="ref-note">代わりの値は普通のオペランドなので、他のオペランドと同じく<code>SELECT</code>より前に計算され終わります。値がある場合でも代わりの値の計算は行われる、ということです(<a href="#cond"><code>SELECT</code></a>の節を参照)。重い計算や<code>PRINT</code>のような作用を代わりの値の位置に書かないでください。</p>
-                    <p class="ref-note"><code>NIL?</code>が尋ねるのは<strong>値全体</strong>についてです。ベクトルの中の1レーンが<code>NIL</code>でも、そのベクトル自体は不在ではないので<code>FALSE</code>と答えます。<code>[ 0 0 ] [ 1 NIL ] NIL? SELECT</code>は<code>[ 1/1 NIL ]</code>であり、レーンの不在は回復されません。レーンを回復したいなら、ベクトルの外側ではなく内側で回復してください。</p>
+                    <p class="ref-note"><code>NIL?</code>が尋ねるのは<strong>値全体</strong>についてです。ベクトルの中の1レーンが<code>NIL</code>でも、そのベクトル自体は不在ではないので<code>FALSE</code>と答えます。<code>[ 1 NIL ] 'S' BIND [ 0 0 ] S S NIL? SELECT</code>は<code>[ 1/1 NIL ]</code>であり、レーンの不在は回復されません。レーンを回復したいなら、ベクトルの外側ではなく内側で回復してください。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1031,7 +1031,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>99 1 0 / NIL? SELECT</code></td>
+                                    <td><code>1 0 / 'S' BIND 99 S S NIL? SELECT</code></td>
                                     <td><code>99/1</code></td>
                                     <td class="notes">不在だったので代わりの値が選ばれる。</td>
                                 </tr>
@@ -1050,7 +1050,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>99 7 2 / NIL? SELECT</code></td>
+                                    <td><code>7 2 / 'S' BIND 99 S S NIL? SELECT</code></td>
                                     <td><code>7/2</code></td>
                                     <td class="notes">結果が実際の値であるとき、代わりの値は選ばれない。</td>
                                 </tr>
@@ -1237,7 +1237,7 @@
                                 </tr>
                                 <tr>
                                     <td><code>-8 1/3 POW NIL-REASON</code></td>
-                                    <td><code>NIL 'domainMiss'</code></td>
+                                    <td><code>'domainMiss'</code></td>
                                     <td class="notes">負の底の分数べきに実数の答えはない。</td>
                                 </tr>
                                 <tr>
@@ -1252,7 +1252,7 @@
                                 </tr>
                                 <tr>
                                     <td><code>2 SQRT RATIO NIL-REASON</code></td>
-                                    <td><code>NIL 'domainMiss'</code></td>
+                                    <td><code>'domainMiss'</code></td>
                                     <td class="notes">無理数に分子はない。</td>
                                 </tr>
                             </tbody>
@@ -1304,7 +1304,7 @@
                                 </tr>
                                 <tr>
                                     <td><code>0 LN NIL-REASON</code></td>
-                                    <td><code>NIL 'domainMiss'</code></td>
+                                    <td><code>'domainMiss'</code></td>
                                     <td class="notes">0 以下に対数はない。</td>
                                 </tr>
                                 <tr>
@@ -1914,13 +1914,13 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>0 [ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL? SELECT</code></td>
+                                    <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT 'S' BIND 0 S S NIL? SELECT</code></td>
                                     <td><code>0/1</code></td>
                                     <td class="notes">ないキーには代わりの値<code>0</code>が選ばれる。</td>
                                 </tr>
                                 <tr>
                                     <td><code>[ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL-REASON</code></td>
-                                    <td><code>NIL 'missingField'</code></td>
+                                    <td><code>'missingField'</code></td>
                                     <td class="notes">理由はプロトコル文字列なので分岐できる。</td>
                                 </tr>
                             </tbody>
@@ -2187,7 +2187,7 @@
                                 </tr>
                                 <tr>
                                     <td><code>2 SQRT JSON-ENCODE NIL-REASON</code></td>
-                                    <td><code>NIL 'domainMiss'</code></td>
+                                    <td><code>'domainMiss'</code></td>
                                     <td class="notes">JSONに像を持たない値は理由付きの<code>NIL</code>。</td>
                                 </tr>
                                 <tr>
@@ -2700,7 +2700,7 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ 0 999999999999 ] RANGE NIL-REASON</code></td>
-                                    <td><code>NIL 'spaceExhausted'</code></td>
+                                    <td><code>'spaceExhausted'</code></td>
                                     <td class="notes">要求は整った形だが大きすぎるので、エラーではなく理由付きの<code>NIL</code>になる。<code>FILL</code>も同じ理由で同じ振る舞いをする。</td>
                                 </tr>
                             </tbody>
@@ -2710,7 +2710,7 @@ FILTER</code></td>
                             <a class="btn js-open-playground" href="../../index.html">Playgroundで開く</a>
                         </div>
                     </div>
-                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>[ ] [ 0 999999999999 ] RANGE NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
+                    <p class="ref-note"><code>NIL</code>なので、<a href="#recovery">代わりの値に差し替えて</a>先へ進めます。<code>[ 0 999999999999 ] RANGE 'S' BIND [ ] S S NIL? SELECT</code>は空ベクトルへ回復します。エラーにはこの回復手段がありません。</p>
                 </section>
 
                 <section id="words" class="ref-page">
@@ -2909,8 +2909,8 @@ FILTER</code></td>
                     <p>すべてのワードは<strong>コンテンツ同一性</strong>を持ちます。これは、正規化された定義と、それが呼び出すワードたちの同一性にわたるダイジェストです。同じ同一性を持つ2つの定義は、名前が何であれ同じワードであり、定義を変更すると、それに依存するすべてのものの同一性が変わります。これが、<code>DEF</code>と<code>DEL</code>が、他の何かがまだ参照しているワードを乱すことを拒否する理由です。依存しているのはワードに対してであって、綴りに対してではないからです。</p>
                     <h3 id="reflection">辞書と契約を言語の中から読む: <code>DIGEST</code>・<code>CONTRACT</code></h3>
                     <p>2つのワードが、機械がすでに辞書について知っていることを言語の中から読みます。ワードを名指すオペランドは<strong>Symbol</strong>、つまり<code>[ ]</code>の中に書いた裸の名前であって、文字列ではありません（<code>CONTRACT</code>はコードブロックも受けます）。<code>'ADD' CONTRACT</code>は<code>notASymbol</code>のエラーです。テキストから名前を引けるワードがあると、「どのワードもテキストをSymbolに変えない」という、<code>DEF</code>時の循環検査が依拠している事実が崩れるからです。</p>
-                    <p><code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>consumption</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約です。コードブロックをそのまま渡せば、その契約を<strong>走らせずに</strong>推論します——実行前検査（<code>ajisai check --contract</code>）を言語の中から呼ぶ形であり、<code>confidence</code>と<code>gaps</code>が「検証できた／できない」を値として運びます。走らせる前に費用級を問える、という性質はここから来ます。</p>
-                    <p class="ref-note">Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかは、<code>CONTRACT</code>が契約を答えるかどうかで分かります。ワードでない名前には理由付きの<code>NIL</code>が返るので、<code>sym CONTRACT NIL? NOT</code>がその問いになります。<code>NIL?</code>はオペランドをその場に残すので、真偽値の下には契約(または<code>NIL</code>)が残ります。</p>
+                    <p><code>DIGEST</code>は、ワードを名指すSymbolにはそのコンテンツ同一性を、それ以外の値にはその意味内容のダイジェストを、テキストで答えます。同じダイジェストは同じもの、違うダイジェストは何も意味しません。<code>CONTRACT</code>は、ワードの契約をRecordで答えます。Coreワードなら登録済みの契約（<code>inputs</code>・<code>outputs</code>・<code>nil</code>・<code>projection</code>・<code>errors</code>・<code>purity</code>・<code>cost</code>など）、自分で定義したワードなら本体から推論した契約です。コードブロックをそのまま渡せば、その契約を<strong>走らせずに</strong>推論します——実行前検査（<code>ajisai check --contract</code>）を言語の中から呼ぶ形であり、<code>confidence</code>と<code>gaps</code>が「検証できた／できない」を値として運びます。走らせる前に費用級を問える、という性質はここから来ます。</p>
+                    <p class="ref-note">Symbolが<code>Core</code>か<code>User</code>のワードとして解決するかは、<code>CONTRACT</code>が契約を答えるかどうかで分かります。ワードでない名前には理由付きの<code>NIL</code>が返るので、<code>sym CONTRACT NIL? NOT</code>がその問いになります。<code>NIL?</code>はオペランドを消費するので、残るのは真偽値だけです。</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -2920,8 +2920,8 @@ FILTER</code></td>
                             <tbody>
                                 <tr>
                                     <td><code>[ TWICE ] 0 GET CONTRACT NIL? NOT</code></td>
-                                    <td><code>NIL FALSE</code></td>
-                                    <td class="notes">未定義の名前には契約がないので<code>FALSE</code>。<code>NIL?</code>が残したオペランドがその下にある。</td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">未定義の名前には契約がないので<code>FALSE</code>。</td>
                                 </tr>
                                 <tr>
                                     <td><code>'ADD' CONTRACT</code></td>
@@ -2950,7 +2950,7 @@ FILTER</code></td>
                                 </tr>
                                 <tr>
                                     <td><code>[ NOPE ] 0 GET CONTRACT NIL-REASON</code></td>
-                                    <td><code>NIL 'missingField'</code></td>
+                                    <td><code>'missingField'</code></td>
                                     <td class="notes">ワードでない名前は理由付きの<code>NIL</code>。</td>
                                 </tr>
                             </tbody>

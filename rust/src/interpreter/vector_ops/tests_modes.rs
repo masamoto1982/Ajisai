@@ -67,7 +67,7 @@ async fn test_get_consume_mode() {
     assert_eq!(
         interp.stack.len(),
         1,
-        "GET declares `consumption: eat`: both operands leave, the element stays"
+        "GET consumes what it reads: both operands leave, the element stays"
     );
 }
 
@@ -80,7 +80,7 @@ async fn test_length_consume_mode() {
     assert_eq!(
         interp.stack.len(),
         1,
-        "LENGTH declares `consumption: eat`: the measured vector leaves the stack"
+        "LENGTH consumes what it reads: the measured vector leaves the stack"
     );
 }
 
