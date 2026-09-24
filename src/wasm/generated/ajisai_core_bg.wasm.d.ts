@@ -27,7 +27,7 @@ export const ajisaiinterpreter_resolve_host_lookup: (a: number, b: number, c: nu
 export const ajisaiinterpreter_restore_stack_snapshot: (a: number, b: number, c: number) => [number, number];
 export const ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
 export const ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;
-export const ajisaiinterpreter_snapshot_stack: (a: number) => [number, number, number, number];
+export const ajisaiinterpreter_snapshot_stack: (a: number) => [number, number];
 export const init_panic_hook: () => void;
 export const ajisaiinterpreter_reset_session: (a: number) => any;
 export const wasm_bindgen__convert__closures_____invoke__hf668d5029c28e014: (a: number, b: number, c: any) => [number, number];

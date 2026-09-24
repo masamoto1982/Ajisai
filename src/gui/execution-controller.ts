@@ -8,7 +8,6 @@ import {
     createExecutionSnapshot,
     collectUserWords,
     describeFailedRunOutput,
-    describeSnapshotRefusal,
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
@@ -137,15 +136,7 @@ export const createExecutionController = (
             updateView('input');
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
-            // A run whose result cannot be snapshotted leaves the session as it
-            // was, so the editor keeps its program: the reader has something to
-            // change and re-run, exactly as after a failure.
-            const refusal = describeSnapshotRefusal(result);
-            if (refusal) {
-                showInfo(refusal, true);
-            } else {
-                clearEditor(false);
-            }
+            clearEditor(false);
         } else {
             // Keep whatever the run printed before it failed: the host reports
             // it on the error path, and the error is written below it.

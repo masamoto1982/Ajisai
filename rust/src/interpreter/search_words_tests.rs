@@ -86,17 +86,12 @@ mod search_words_tests {
     }
 
     /// The order is checked before the search: an unsorted operand is the
-    /// program being wrong, and a Tier 2 pair that never separates makes the
-    /// order — and so the answer — undecidable, as it does for SORT.
+    /// program being wrong.
     #[tokio::test]
     async fn bsearch_checks_the_order_first() {
         raises("[ 3 1 2 ] [ 2 ] BSEARCH", "BSEARCH").await;
         raises("[ 1 'a' ] 1 BSEARCH", "comparable").await;
         raises("[ 1 2 3 ] 'a' BSEARCH", "comparable").await;
-        assert_eq!(
-            reason("PI PI 2 COLLECT 1 BSEARCH").await.as_deref(),
-            Some("undecidable")
-        );
     }
 
     #[tokio::test]

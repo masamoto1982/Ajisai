@@ -11,14 +11,14 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "canonicalWords": 86,
-    "semanticKernelWords": 50,
-    "standardWords": 36,
-    "corewords": 86,
+    "canonicalWords": 80,
+    "semanticKernelWords": 49,
+    "standardWords": 31,
+    "corewords": 80,
     "aliases": 7,
     "inputHelpers": 1,
     "surface_forms": 6,
-    "manifestEntries": 100
+    "manifestEntries": 94
   },
   "entries": [
     {
@@ -122,11 +122,11 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
-      "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq",
+      "implementation_schema": "exact_order_projection(EQ) via pairwise_eq/scalar_pair_eq",
       "classification": "Core"
     },
     {
@@ -142,7 +142,7 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
@@ -162,7 +162,7 @@
       "algebraic_family": "observation",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
@@ -294,7 +294,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -312,7 +312,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -348,8 +348,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "identity",
       "derived_from": [
-        "algebra.exact-real.bihomographic",
-        "algebra.exact-real.computable-real"
+        "algebra.exact-real.bihomographic"
       ],
       "classification": "Core"
     },
@@ -385,113 +384,6 @@
       "derived_from": [
         "algebra.exact-real.bihomographic",
         "algebra.structure-lift.indexed-sequence"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.exp",
-      "kind": "coreword",
-      "surface": "EXP",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "EXP",
-      "coverage_entry_id": "core.exp",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.ln",
-      "kind": "coreword",
-      "surface": "LN",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "LN",
-      "coverage_entry_id": "core.ln",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.sin",
-      "kind": "coreword",
-      "surface": "SIN",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "SIN",
-      "coverage_entry_id": "core.sin",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.cos",
-      "kind": "coreword",
-      "surface": "COS",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "COS",
-      "coverage_entry_id": "core.cos",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.atan",
-      "kind": "coreword",
-      "surface": "ATAN",
-      "category": "math",
-      "vocabularyTier": "standard",
-      "source": "spec/words.json",
-      "canonical": "ATAN",
-      "coverage_entry_id": "core.atan",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "classification": "Core"
-    },
-    {
-      "id": "core.pi",
-      "kind": "coreword",
-      "surface": "PI",
-      "category": "constant",
-      "vocabularyTier": "kernel",
-      "source": "spec/words.json",
-      "canonical": "PI",
-      "coverage_entry_id": "core.pi",
-      "semantic_role": "Derived",
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "derived_from": [
-        "algebra.exact-real.computable-real"
       ],
       "classification": "Core"
     },
@@ -736,7 +628,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -755,7 +647,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.k3.domain"
       ],
       "classification": "Core"
@@ -863,7 +755,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.bubble.domain"
       ],
       "classification": "Core"
@@ -899,7 +791,7 @@
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.bubble.domain"
       ],
       "classification": "Core"
@@ -1302,7 +1194,7 @@
       "algebraic_family": "exact-scalar",
       "core_tier": "material",
       "derived_from": [
-        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.order",
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "classification": "Core"

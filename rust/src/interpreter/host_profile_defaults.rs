@@ -139,8 +139,7 @@ const NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 10_373;
 const COLLECTION_WORK_FLOOR_RATE_UNITS_PER_MS: u64 = 47_162;
 
 /// Default cap on accumulated internal numeric work units charged through the
-/// work meter (algebraic products, reciprocal recursion, precision doubling,
-/// enclosure refinement).
+/// work meter (algebraic products, reciprocal recursion, precision doubling).
 ///
 /// Derived, not chosen: [`DEFAULT_HOST_TIME_BUDGET_MS`] ×
 /// [`NUMERIC_WORK_FLOOR_RATE_UNITS_PER_MS`]. At the floor rate this spends

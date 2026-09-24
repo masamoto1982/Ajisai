@@ -8,13 +8,6 @@ pub enum NilReason {
     MissingField,
     InvalidEncoding,
     IndexOutOfBounds,
-    /// Comparison-budget exhaustion per LANG.VALUES.EXACT: two lazy CFs
-    /// agreed on every emitted partial quotient up to the budget
-    /// without diverging, or one of the operands' CF streams reported
-    /// `CfStep::Exhausted`. The NIL Projection Rule projects this to NIL with
-    /// `absence.origin = comparisonBudget` rather than a recovered
-    /// error.
-    Undecidable,
     // `LogicallyUnknown` was retired: no `NilReason` value represents the
     // logical truth value UNKNOWN (LANG.VALUES.TRUTH): UNKNOWN is a NIL read
     // in truth position, carrying whatever reason that NIL has.
@@ -225,8 +218,6 @@ impl NilReason {
             NilReason::MissingField => "missingField",
             NilReason::InvalidEncoding => "invalidEncoding",
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
-            NilReason::Undecidable => "undecidable",
-
             NilReason::SpaceExhausted => "spaceExhausted",
             NilReason::DomainMiss => "domainMiss",
             NilReason::NotAvailable => "notAvailable",
@@ -244,7 +235,6 @@ impl NilReason {
         NilReason::MissingField,
         NilReason::InvalidEncoding,
         NilReason::IndexOutOfBounds,
-        NilReason::Undecidable,
         NilReason::SpaceExhausted,
         NilReason::DomainMiss,
         NilReason::NotAvailable,

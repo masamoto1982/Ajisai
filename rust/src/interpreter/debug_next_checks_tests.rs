@@ -353,7 +353,6 @@ mod diagnosis_vocabulary_is_real {
             Some(NilReason::MissingField),
             Some(NilReason::InvalidEncoding),
             Some(NilReason::IndexOutOfBounds),
-            Some(NilReason::Undecidable),
             Some(NilReason::SpaceExhausted),
             Some(NilReason::DomainMiss),
             Some(NilReason::NotAvailable),

@@ -81,11 +81,11 @@ mod reflection_words_tests {
             top("[ TWICE ] 0 GET DIGEST [ TWICE ] 0 GET DIGEST EQ").await,
             "TRUE"
         );
-        // A computable real has nothing finite to digest.
-        assert_eq!(top("PI DIGEST NIL-REASON").await, "NIL 'undecidable'");
+        // Every value has a finite canonical form to digest, an irrational's
+        // inside a Vector included.
         assert_eq!(
-            top("1 PI 2 COLLECT DIGEST NIL-REASON").await,
-            "NIL 'undecidable'"
+            top("1 2 SQRT 2 COLLECT DIGEST 1 8 SQRT 2 DIV 2 COLLECT DIGEST EQ").await,
+            "TRUE"
         );
     }
 

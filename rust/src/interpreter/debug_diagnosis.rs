@@ -129,12 +129,6 @@ pub struct DebugDiagnosis {
     pub summary: String,
     pub evidence: Vec<String>,
     pub next_checks: Vec<DebugCheck>,
-    /// CF-comparison agreed-prefix length (LANG.VALUES.NIL / LANG.VALUES.EXACT): the
-    /// number of leading partial quotients that matched before the
-    /// partial-quotient budget was exhausted on an `Unknown` (U)
-    /// comparison result. `None` for diagnoses unrelated to CF
-    /// comparison. Machine-readable; surfaced as `diagnosis.agreedPrefix`.
-    pub agreed_prefix: Option<usize>,
     /// Known Words within a small edit distance of an unrecognized name, best
     /// match first. "Check the spelling" without saying what the spelling
     /// might have been is the one repair hint an agent cannot act on, and the
@@ -245,10 +239,10 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         // A well-formed operand outside the operation's domain: a negative
         // radicand, a zero divisor.
         NilReason::DomainMiss | NilReason::DivisionByZero => CauseClass::Domain,
-        // Both are budgets rather than mistakes: the materialization ceiling
-        // and the comparison budget answer to "the request is too big", not
-        // "the program is wrong" — the distinction `ResourceLimit` exists for.
-        NilReason::SpaceExhausted | NilReason::Undecidable => CauseClass::ResourceLimit,
+        // A budget rather than a mistake: the materialization ceiling answers
+        // to "the request is too big", not "the program is wrong" — the
+        // distinction `ResourceLimit` exists for.
+        NilReason::SpaceExhausted => CauseClass::ResourceLimit,
         NilReason::IndexOutOfBounds => CauseClass::Index,
         NilReason::MissingField | NilReason::InvalidEncoding => CauseClass::ValueShape,
         NilReason::NotAvailable => CauseClass::Environment,
@@ -366,7 +360,6 @@ impl DebugDiagnosis {
             summary,
             evidence,
             next_checks,
-            agreed_prefix: None,
             candidates,
             resource_limit: None,
         }
@@ -469,13 +462,7 @@ fn semantic_role_for(word: Option<&str>) -> &'static str {
     if let Some(meta) = crate::coreword_registry::get_coreword_metadata(word) {
         return match meta.profile {
             crate::coreword_registry::WordProfile::Hosted => "HostedEffect",
-            crate::coreword_registry::WordProfile::Core => {
-                if matches!(word, "COMPARE-WITHIN") {
-                    "Primitive"
-                } else {
-                    "Derived"
-                }
-            }
+            crate::coreword_registry::WordProfile::Core => "Derived",
         };
     }
     "Unknown"
@@ -484,7 +471,7 @@ fn semantic_role_for(word: Option<&str>) -> &'static str {
 fn semantic_area_for(word: Option<&str>, why: &CauseClass) -> &'static str {
     match word {
         Some("ADD" | "SUB" | "MUL" | "DIV" | "SQRT" | "FLOOR" | "ROUND") => "exact-real-arithmetic",
-        Some("EQ" | "LT" | "GT" | "COMPARE-WITHIN") => "exact-real-comparison",
+        Some("EQ" | "LT" | "GT") => "exact-real-comparison",
         Some("AND" | "NOT") => "k3-truth",
         Some(word) if word.contains('@') => "hosted-effect",
         Some("PRINT") => "hosted-effect",

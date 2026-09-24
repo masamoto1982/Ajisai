@@ -200,7 +200,7 @@ fn zero_and_one_are_numbers_and_booleans_are_booleans() {
 /// no truth-valued NIL on the wire.
 #[test]
 fn a_nil_in_truth_position_is_observed_as_a_nil() {
-    let unknown = Value::nil_with_reason_unknown(crate::error::NilReason::Undecidable);
+    let unknown = Value::nil_with_reason_unknown(crate::error::NilReason::DomainMiss);
     let node = value_to_protocol(&unknown);
     assert_eq!(node.type_str, "nil");
     assert_eq!(node.value, ProtocolValue::Null);

@@ -210,28 +210,22 @@ fn definitions_that_disagree_never_share_an_identity() {
     }
 }
 
-/// The two scalar levels, which the law says are already what it asks for: the
-/// algebraic field decides, and a computable real that cannot be separated says
-/// `unknown` rather than guessing.
+/// The value levels, which the law says are already what it asks for: the
+/// algebraic field decides, and a Record comparison decides because each of its
+/// pairs does.
 #[test]
-fn the_scalar_levels_answer_as_the_law_states() {
+fn the_value_levels_answer_as_the_law_states() {
     let s = spec();
-    for level_id in ["scalarAlgebraicField", "scalarComputableReal"] {
+    for level_id in ["scalarAlgebraicField", "recordDenotation"] {
         let lvl = level(&s, level_id);
         for witness in lvl["witnesses"].as_array().expect("witnesses") {
             let source = witness["source"].as_str().expect("source");
             let expect = witness["expect"].as_str().expect("expect");
             let observed = observe(source);
-            match expect {
-                "nil:undecidable" => assert!(
-                    observed.contains("NIL"),
-                    "{level_id}: {source:?} should answer an undecided NIL, got {observed:?}",
-                ),
-                other => assert!(
-                    observed.contains(other),
-                    "{level_id}: {source:?} should answer {other}, got {observed:?}",
-                ),
-            }
+            assert!(
+                observed.contains(expect),
+                "{level_id}: {source:?} should answer {expect}, got {observed:?}",
+            );
         }
     }
 }

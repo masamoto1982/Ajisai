@@ -20,7 +20,6 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::MissingField => AbsenceOrigin::MissingField,
         NilReason::InvalidEncoding => AbsenceOrigin::InvalidEncoding,
         NilReason::IndexOutOfBounds => AbsenceOrigin::IndexOutOfBounds,
-        NilReason::Undecidable => AbsenceOrigin::ComparisonBudget,
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
         NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,
         NilReason::DomainMiss => AbsenceOrigin::DomainMiss,

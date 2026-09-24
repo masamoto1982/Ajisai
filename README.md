@@ -38,7 +38,7 @@ As it happens, a flower takes its scientific name from the Greek for "water vess
 
 Ajisai is built from ten concepts and nothing else.
 
-1. Exact real arithmetic with no rounding: an algebraic field closed under square roots and rational powers of it, and beyond it computable reals — π, exponentials, logarithms, trigonometry — compared under a budget.
+1. Exact real arithmetic with no rounding: an algebraic field closed under square roots, in which every comparison decides.
 2. Three outcomes: a value, a reasoned absence, or an error — with three-valued truth, and a program may declare either failing outcome itself.
 3. A stack of values, and vectors of values, text included.
 4. Shape and rank: element-wise lifting follows a vector's shape, which a program can read and rewrite.

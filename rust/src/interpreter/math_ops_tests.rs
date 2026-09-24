@@ -1,4 +1,4 @@
-//! Test suite for `crate::interpreter::math_ops` (MATH module MIN/MAX/SQRT/PI).
+//! Test suite for `crate::interpreter::math_ops` (MATH module MIN/MAX/SQRT).
 
 #[cfg(test)]
 mod tests {

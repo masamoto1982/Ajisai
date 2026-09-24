@@ -142,7 +142,3 @@ fn filter_predicates_commute() {
 }
 
 // ── SCAN exposes the catamorphism's intermediate accumulators ──
-// ── COND is K3-honest: a U guard does not fire (LANG.VALUES.TRUTH) ──
-//
-// A guard reducing to `unknown` (an undecidable CF comparison) must fall
-// through exactly like a `false` guard, while a definite `true` fires.

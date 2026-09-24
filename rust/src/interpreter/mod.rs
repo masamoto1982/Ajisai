@@ -72,7 +72,6 @@ mod space_projection;
 pub mod tensor_cmds;
 pub(crate) mod tensor_lane_ops;
 pub mod tensor_ops;
-mod transcendental_ops;
 pub mod upstream_nil_link;
 #[cfg(test)]
 mod upstream_nil_link_tests;
@@ -183,8 +182,6 @@ mod nil_contract_conformance_tests;
 mod nil_diagnostics_tests;
 #[cfg(test)]
 mod nil_reason_tests;
-#[cfg(test)]
-mod tier2_undecidable_conformance_tests;
 
 pub use interpreter_core::*;
 pub use runtime_limits::RuntimeLimits;

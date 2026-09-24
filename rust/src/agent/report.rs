@@ -52,18 +52,15 @@ pub(crate) struct Report {
     /// Canonical `#`-prefixed 64-hex-char BLAKE3 digest of the whole
     /// observation (`status` / stack / output / user-dictionary identities /
     /// error category) — `agent::observation_digest`, Phase 1 of
-    /// `docs/dev/competitive-advantage-work-order-2026-08.md`. `None` means
-    /// the observation could not be encoded: a Tier 2 `ExactReal::Computable`
-    /// scalar was present somewhere in the stack.
-    pub observation_digest: Option<String>,
+    /// `docs/dev/competitive-advantage-work-order-2026-08.md`.
+    pub observation_digest: String,
     /// The execution receipt (`agent::execution_receipt`, Phase 4 of
     /// `docs/dev/auditable-kernel-work-order-2026-09.md`): source digest,
     /// engine version, registry digest, limit profile, outcome status,
     /// `observation_digest` and `resourceUsage`, bundled and folded into one
     /// more digest — the material a third party needs to verify "this
     /// source, on this engine, under these limits, produced this outcome"
-    /// rather than merely being told what the outcome was. `None` exactly
-    /// when `observation_digest` is `None` (Tier 2), and `None` for
+    /// rather than merely being told what the outcome was. `None` for
     /// `check`/`infer-contracts`, which never execute and so have nothing to
     /// receipt.
     pub receipt: Option<Json>,
@@ -123,7 +120,6 @@ pub(crate) fn diagnosis_json(diagnosis: &DebugDiagnosis) -> Json {
         "where": Json::Object(where_obj),
         "evidence": diagnosis.evidence,
         "nextChecks": diagnosis.next_checks.iter().map(check_json).collect::<Vec<_>>(),
-        "agreedPrefix": diagnosis.agreed_prefix,
         "candidates": diagnosis.candidates,
         "resourceLimit": diagnosis.resource_limit.as_ref().map(resource_limit_json),
     })

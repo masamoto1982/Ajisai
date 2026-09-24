@@ -53,7 +53,7 @@ Ajisai の最大の成果は、継続分数やベクトル演算**そのもの�
 |---|---|---|---|
 | `bubble.domain/passthrough/handler`（#10-12） | **値がない**を理由付きで透過 | `NIL` `OR-NIL` | §5 Bubble モナド |
 | `k3.domain/meet/join/involution`（#1-4） | **まだ分からない**を論理で GLB/LUB 透過 | `TRUE` `FALSE` `AND` `OR` `NOT` | §4 Kleene 3 値代数 K3 |
-| `exact-real.budgeted-order`（#6） | 比較が予算内で決まらねば **U を返す**（未決の誠実な保留） | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` `COMPARE-WITHIN` | §3.3 予算付き観測 |
+| `exact-real.order`（#6） | 厳密体上の比較は**常に決まる**（TRUE か FALSE） | `EQ` `LT` `GT` | §3.3 厳密順序 |
 | `observation.structured-diagnostic`（#27）+ `capability.check`（#29） | **プログラムが間違っている**を、ホスト例外を漏らさず構造化診断として観測 | 構造化診断・capability 不足 | §8 観測関数と同一性 |
 
 値空間 V が**直和（direct sum）**であり各成分が互いに素（disjoint）であること——
@@ -114,7 +114,7 @@ Minimal Core は次の三部で定義される。**語の集合ではなく、�
 **幹と枝の関係（本書の要）:** Core は算術やベクトルを**所有しない**。しかし
 **素材の層のあらゆる語は Core の伝播規律に拘束される**。`ADD` は派生語だが、
 NIL を受ければ Core の Bubble パススルーに従って NIL を透過し、比較 `LT` は素材の
-連分数順序を用いつつ Core の budgeted-order 契約（未決なら U）に従う。これが
+厳密順序を用いつつ Core の order 契約（常に決まる）に従う。これが
 「単なる小さな標準ライブラリ」ではなく**カーネル**である理由——Core は演算アルゴリズムを
 持たず、**欠落・未決・不正が演算をどう貫流するかの法則**を持つ。
 

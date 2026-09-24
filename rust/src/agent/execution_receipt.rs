@@ -76,12 +76,7 @@ fn write_limit_profile(bytes: &mut Vec<u8>, limits: &RuntimeLimits, step_limit: 
     limit_profile::write_digest_bytes(bytes, limits, step_limit);
 }
 
-/// Assemble the execution receipt for one run, or `None` when the
-/// observation itself could not be digested — a Tier 2 `ExactReal::Computable`
-/// scalar was present somewhere in the stack, the same condition
-/// `observation_digest` refuses to fabricate a value for (pitfall C: a
-/// receipt built over an approximated observation would certify the wrong
-/// thing, which is worse than certifying nothing).
+/// Assemble the execution receipt for one run.
 ///
 /// `observation_digest` is the caller's own already-computed digest for this
 /// run (`Report::observation_digest`) — never recomputed here, so the two
@@ -92,9 +87,8 @@ pub(crate) fn build_receipt(
     step_limit: usize,
     status: &str,
     resource_usage: &ResourceUsage,
-    observation_digest: Option<&str>,
-) -> Option<Json> {
-    let observation_digest = observation_digest?;
+    observation_digest: &str,
+) -> Json {
     let registry_digest = registry_digest();
     let engine_version = engine_version();
 
@@ -111,7 +105,7 @@ pub(crate) fn build_receipt(
     bytes.extend_from_slice(&resource_usage.collection_work.to_be_bytes());
     let digest = content_digest(&bytes);
 
-    Some(json!({
+    json!({
         "sourceDigest": content_digest(source.as_bytes()),
         "engineVersion": engine_version,
         "registryDigest": registry_digest,
@@ -124,5 +118,5 @@ pub(crate) fn build_receipt(
             "collectionWork": resource_usage.collection_work,
         },
         "digest": digest,
-    }))
+    })
 }

@@ -151,12 +151,8 @@ async fn nil_reason_is_nil_for_present_value() {
 
 /// `NIL-REASON` on the result of an exact-arithmetic comparison must yield
 /// NIL, never a reason — same as `nil_reason_is_nil_for_present_value`
-/// above. This expression was originally written to exercise the logical
-/// Unknown (U), but Tier ≤1 exact comparisons are always decidable in
-/// finite time (`types/exact/computable.rs`), so `2 SQRT 1 ADD` compared
-/// against itself resolves to a definite `TRUE` here, not U — the current
-/// vocabulary has no Tier 2 word and so cannot construct U at all. A test
-/// that actually exercises the `NIL-REASON` firewall on U will need one.
+/// above. Exact comparisons always decide (LANG.VALUES.EXACT), so `2 SQRT 1
+/// ADD` compared against itself resolves to a definite `TRUE`.
 #[tokio::test]
 async fn nil_reason_is_nil_for_a_decidable_exact_comparison() {
     let interp = run("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ NIL-REASON").await;

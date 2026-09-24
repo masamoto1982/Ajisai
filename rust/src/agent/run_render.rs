@@ -44,7 +44,7 @@ pub(crate) fn completed_run_report(
                 interp.max_execution_steps(),
                 "ok",
                 &resource_usage,
-                digest.as_deref(),
+                &digest,
             );
             Report {
                 status: "ok",
@@ -60,7 +60,7 @@ pub(crate) fn completed_run_report(
                 contract_decls: None,
                 stack_elided: None,
                 observation_digest: digest,
-                receipt,
+                receipt: Some(receipt),
             }
         }
         Err(err) => {

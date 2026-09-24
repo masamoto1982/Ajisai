@@ -182,17 +182,17 @@ const rustStrSlice = (values) => {
 
 // A projection condition of "never" is the absence of one, so it is projected
 // as an empty slice rather than as a string every reader would have to compare
-// against. A Word may declare several conditions (`GCD` projects for a
-// non-integer operand and for a Tier 2 one), so the slice is the
-// shape even where only one is declared.
+// against. A Word may declare several conditions (`POW` projects for a zero
+// base under a negative exponent and for an exponent that leaves the field),
+// so the slice is the shape even where only one is declared.
 const projection = (when) => {
   if (when === 'never') return '&[]';
   const conditions = Array.isArray(when) ? when : [when];
   return rustStrSlice(conditions);
 };
 
-// The NIL reason each projection condition answers with, aligned with
-// `projection` position by position; the ids `NIL-REASON` reports.
+// The NIL reasons the projection conditions answer with, each named once (two
+// conditions may share one); the ids `NIL-REASON` reports.
 const projectionReasons = (reason) => {
   if (reason === null || reason === undefined) return '&[]';
   const reasons = Array.isArray(reason) ? reason : [reason];
@@ -313,11 +313,11 @@ pub struct GeneratedWord {
     /// or project without any NIL-operand rule engaging at all.
     ///
     /// A slice rather than a single condition because a Word can project for
-    /// more than one reason: \`GCD\` answers NIL both for a non-integer
-    /// operand and for a Tier 2 operand whose integrality it cannot decide.
+    /// more than one reason: \`POW\` answers NIL both for a zero base under a
+    /// negative exponent and for an exponent that leaves the exact field.
     pub projection: &'static [&'static str],
-    /// The NIL reason each condition in \`projection\` answers with, aligned
-    /// with it position by position: the ids \`NIL-REASON\` reports, and what
+    /// The NIL reasons the conditions in \`projection\` answer with, each
+    /// named once (two conditions may share one): the ids \`NIL-REASON\` reports, and what
     /// \`CONTRACT\` hands a program that asks what a Word can project.
     pub projection_reasons: &'static [&'static str],
     pub partiality: Partiality,

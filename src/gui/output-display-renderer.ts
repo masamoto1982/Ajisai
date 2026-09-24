@@ -310,9 +310,8 @@ const renderStackValueNode = (item: Value, depth: number, budget: RenderBudget):
 ///
 /// There are two honest answers, and the host supplies both. When it sends the
 /// value's normal form (`semantics.exactTerms`) the panel draws that: `√3` is
-/// the number, exactly, in one line. Only when it does not — a computable real
-/// with no closed form — does the panel fall back to the approximation, and
-/// then it marks it `≈`.
+/// the number, exactly, in one line. Only when it does not does the panel fall
+/// back to the approximation, and then it marks it `≈`.
 const renderExactScalar = (item: Value, text: string): string => {
     const semantics = item?.semantics as
         | { approximate?: boolean; exactTerms?: ReadonlyArray<ExactTerm> }

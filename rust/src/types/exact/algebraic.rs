@@ -313,8 +313,7 @@ impl Algebraic {
 
     /// A rational enclosure `[lo, hi]` at 2⁻ᵇⁱᵗˢ per-monomial precision:
     /// with s = ⌊√(m·4ᵇⁱᵗˢ)⌋, √m ∈ [s, s+1]/2ᵇⁱᵗˢ; a point for m = 1.
-    /// Deeper `bits` give nested, shrinking enclosures — the observation
-    /// (`refine`) surface of Tier 1.
+    /// Deeper `bits` give nested, shrinking enclosures.
     pub fn bounds(&self, bits: u64) -> (Fraction, Fraction) {
         let scale = BigInt::one() << bits;
         let mut lo = Fraction::new(BigInt::zero(), BigInt::one());

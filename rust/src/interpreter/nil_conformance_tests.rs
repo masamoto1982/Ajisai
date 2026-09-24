@@ -41,6 +41,8 @@ fn reason_of(v: &Value) -> Option<NilReason> {
 enum NilClass {
     /// Any NIL operand collapses the result to NIL (arithmetic, comparison).
     BinaryBlanket,
+    /// A NIL operand passes through as the result (FLOOR, ROUND).
+    UnaryBlanket,
     /// AND/NOT: strong-Kleene absorption (`kleene_truth_conformance_tests`).
     ThreeValAnd,
     ThreeValNot,
@@ -58,12 +60,13 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
-    // FLOOR / ROUND create NIL on a domain miss and are covered
-    // by projecting_word_set_matches_registry.
-    // The comparison words (EQ/LT/GT) are PassthroughThenProject,
-    // not pure Passthrough — a Tier 2 pair can exhaust its comparison budget
-    // and project to Unknown (LANG.VALUES.EXACT) — so they belong to
-    // PROJECTING_WORDS / tier2_undecidable_conformance_tests, not here.
+    ("FLOOR", NilClass::UnaryBlanket),
+    ("ROUND", NilClass::UnaryBlanket),
+    // Order and equality decide over every number (LANG.VALUES.EXACT), so
+    // the comparison words project nothing of their own.
+    ("EQ", NilClass::BinaryBlanket),
+    ("LT", NilClass::BinaryBlanket),
+    ("GT", NilClass::BinaryBlanket),
     ("NOT", NilClass::ThreeValNot),
     ("AND", NilClass::ThreeValAnd),
     ("SELECT", NilClass::ThreeValSelect),
@@ -104,7 +107,7 @@ fn core_passthrough_completeness() {
             .find(|m| &m.name == name)
             .unwrap_or_else(|| panic!("classified word `{name}` is not registered"));
         let want = match class {
-            NilClass::BinaryBlanket => NilPolicy::Passthrough,
+            NilClass::BinaryBlanket | NilClass::UnaryBlanket => NilPolicy::Passthrough,
             _ => NilPolicy::KleeneAbsorbing,
         };
         assert_eq!(
@@ -131,6 +134,12 @@ async fn passthrough_blanket_collapses_to_nil() {
                     assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
                 }
             }
+            NilClass::UnaryBlanket => {
+                let code = format!("NIL {name}");
+                let stack = run_ok(&code).await;
+                assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
+                assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
+            }
             // Not a blanket collapse; see `kleene_truth_conformance_tests`.
             NilClass::ThreeValAnd | NilClass::ThreeValNot | NilClass::ThreeValSelect => {}
         }
@@ -141,21 +150,18 @@ async fn passthrough_blanket_collapses_to_nil() {
 
 /// Projecting words: a well-formed domain miss yields a reasoned NIL with a
 /// reason; malformed use raises an ordinary error.
-// `EQ`/`GT`/`LT`/`MAX`/`MIN`/`ORDER`/`SORT` are probed
-// in `tier2_undecidable_conformance_tests`: a Tier 2 (`PI`) pair that
-// exhausts its comparison budget. `RANGE`/`SQRT`/`STR` are probed
+// `RANGE`/`SQRT`/`STR` are probed
 // beside their own Words; `SHAPE` (a ragged operand) and `RESHAPE`
 // (the materialization ceiling) in `shape_words_tests`; `BSEARCH` and `SEARCH`
-// (an absent key or needle, and BSEARCH's undecidable order) in `search_words_tests`;
+// (an absent key or needle) in `search_words_tests`;
 // `ABSENT` (the reason a program states) in `declared_outcomes_tests`. `GET`/`TAKE`/`PUT` are probed together
 // in `index_projection_tests`: what they must agree on is one condition
 // answered across three Words, not anything about one of them.
 #[rustfmt::skip]
 const PROJECTING_WORDS: &[&str] = &[
-    "ABSENT", "AT", "BSEARCH", "CONTRACT", "COS", "DIGEST", "DIV", "DROP", "EQ", "EXP", "FILL",
-    "FLOOR", "FORMAT", "GCD", "GET", "GT", "INDEX-OF", "JSON-DECODE", "JSON-ENCODE", "LN", "LT",
-    "MAX", "MIN", "NIL-REASON", "NUM", "ORDER", "POW", "PUT", "RANGE", "RATIO", "RESHAPE",
-    "ROUND", "SEARCH", "SHAPE", "SIN", "SORT", "SQRT", "STR", "TAKE", "WITHOUT",
+    "ABSENT", "AT", "BSEARCH", "CONTRACT", "DIV", "DROP", "FILL", "GCD", "GET", "INDEX-OF",
+    "JSON-DECODE", "JSON-ENCODE", "NIL-REASON", "NUM", "POW", "PUT", "RANGE", "RATIO", "RESHAPE",
+    "SEARCH", "SHAPE", "SQRT", "STR", "TAKE", "WITHOUT",
 ];
 
 /// Declaring a projection condition is a claim that the Word can hand back a
@@ -329,10 +335,9 @@ async fn nil_check_answers_rather_than_projecting() {
 
 #[tokio::test]
 async fn nil_projection_comparison_nil_input() {
-    // Comparison words are Projecting/PassthroughThenProject (LANG.CONTRACT.REGISTRY). A
+    // Comparison words are Total/Passthrough (LANG.CONTRACT.REGISTRY). A
     // NIL operand propagates as NIL output via the passthrough rule
-    // (LANG.FAILURE.PROJECT, LANG.FAILURE.PASSTHROUGH). (Budget exhaustion instead yields Unknown, a NIL
-    // tagged TruthValue — covered by `tier2_undecidable_conformance_tests`.)
+    // (LANG.FAILURE.PASSTHROUGH).
     for name in &["EQ", "LT", "GT"] {
         for code in [
             format!("NIL 1 {name}"),
@@ -352,10 +357,9 @@ async fn nil_projection_comparison_nil_input() {
 
 #[tokio::test]
 async fn projecting_arithmetic_nil_input_passes_through() {
-    // FLOOR/ROUND are Projecting/CreatesNil, but a NIL operand
-    // still propagates as NIL via the universal NIL Projection Rule (LANG.FAILURE.PROJECT)
-    // — the CreatesNil policy is about CF-budget exhaustion on irrational
-    // operands, not about rejecting NIL inputs.
+    // FLOOR/ROUND are Total/Passthrough: a NIL operand propagates as NIL
+    // (LANG.FAILURE.PASSTHROUGH), and every number has a floor and a nearest
+    // integer.
     for name in &["FLOOR", "ROUND"] {
         let code = format!("NIL {name}");
         let stack = run_ok(&code).await;

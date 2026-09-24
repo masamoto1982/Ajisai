@@ -44,20 +44,6 @@ fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
 }
 
 #[test]
-fn comparison_budget_undecidable_protocol_strings() {
-    // LANG.VALUES.EXACT requires the comparison-budget NIL to be tagged
-    // with `reason = "undecidable"` and `origin =
-    // "comparisonBudget"`. The runtime constructs this via
-    // `Value::nil_with_reason_unknown(NilReason::Undecidable)` and the
-    // origin is derived through `absence_origin_for_reason`.
-    assert_eq!(NilReason::Undecidable.as_protocol_str(), "undecidable");
-    assert_eq!(
-        AbsenceOrigin::ComparisonBudget.as_protocol_str(),
-        "comparisonBudget"
-    );
-}
-
-#[test]
 fn domain_miss_protocol_strings() {
     // LANG.FAILURE.PROJECT names the classification: "SQRT of a negative rational is a
     // well-formed domain miss". Reason and origin share the spelling because
@@ -90,7 +76,7 @@ fn unknown_is_observed_as_a_nil() {
     // variant, so it is observed as a NIL — no truth axis, no truth
     // capability, and the NIL capabilities every absence has.
     use crate::types::Value;
-    let u = Value::nil_with_reason_unknown(NilReason::Undecidable);
+    let u = Value::nil_with_reason_unknown(NilReason::DomainMiss);
     assert_eq!(u.truth_value(), None);
     assert!(!u.has_capability(Capability::TruthValued));
     assert!(u.has_capability(Capability::NilPassthrough));
@@ -106,16 +92,4 @@ fn definite_truth_values_expose_truth_value_axis() {
     // A plain number is not truth-valued.
     assert_eq!(Value::from_int(1).truth_value(), None);
     assert!(!Value::from_int(1).has_capability(Capability::TruthValued));
-}
-
-#[test]
-fn nil_with_reason_undecidable_routes_to_comparison_budget_origin() {
-    // `nil_with_reason` is the runtime's primary entry point for
-    // building reasoned NIL values. Verify the LANG.VALUES.EXACT reason/origin
-    // pairing is preserved end-to-end.
-    use crate::types::Value;
-    let v = Value::nil_with_reason_unknown(NilReason::Undecidable);
-    let absence = v.absence_metadata().expect("nil carries absence");
-    assert_eq!(absence.reason, Some(NilReason::Undecidable));
-    assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
 }

@@ -223,8 +223,8 @@ pub(super) fn declared_checks(
 
     // A NIL the Word produced: the registry names the conditions it projects
     // under, so the diagnosis can say which rather than "unknown". A Word may
-    // declare several — `LN` projects for a non-positive argument and for a
-    // sign it cannot decide — and the reason the run actually reported
+    // declare several — `POW` projects for a zero base under a negative
+    // exponent and for an exponent outside the field — and the reason the run actually reported
     // is what tells them apart, so both are put in front of the reader.
     if let (Some(reason), false) = (nil_reason, declared.projection.is_empty()) {
         let when = declared.projection.join(", ");

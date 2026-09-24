@@ -1,38 +1,18 @@
 //! The exact-real scalar value behind `ValueData::ExactScalar` (LANG.VALUES.EXACT).
 //!
-//! An enum over the numeric cost tiers: Tier 0 rationals (`Fraction`,
+//! An enum over the two numeric cost tiers: Tier 0 rationals (`Fraction`,
 //! including the nil sentinel) and Tier 1 algebraic numbers. The variant
 //! is a cost class, never an observable property (LANG.AUTHORITY.FREEDOM): values
 //! demote to the cheapest tier that holds them exactly, so an
-//! `Algebraic` payload is always irrational. A Tier 2 variant (general
-//! computable reals) slots in here when a word that needs it exists.
-//!
-//! This type keeps the method surface of the retired continued-fraction
-//! `ExactReal` so call sites migrate by import swap: arithmetic and
-//! rounding have the same signatures, while the budgeted comparisons are
-//! replaced by [`ExactReal::cmp_exact`] / [`ExactReal::cmp_within`] —
-//! total over Tier ≤ 1, water-consuming only when Tier 2 is involved.
+//! `Algebraic` payload is always irrational. Sign, floor and order are
+//! decidable over both, so every comparison here is total.
 
 use crate::types::exact::algebraic::{Algebraic, AlgebraicResult};
-use crate::types::exact::computable::Computable;
-use crate::types::exact::observation::{RatInterval, Water};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::One;
 use std::cmp::Ordering;
-
-/// Default comparison water for the bare relations (LANG.VALUES.EXACT). Not
-/// observable over Tier ≤ 1 — those comparisons are decidable and spend
-/// nothing; it bounds refinement only when a Tier 2 observation is
-/// involved.
-pub const DEFAULT_COMPARISON_WATER: Water = Water(256);
-
-/// Water cap for the *internal* Tier 2 uses that have no explicit budget
-/// word (floor/round, rational approximation at serialization
-/// boundaries). A safety valve of the same species as the old display
-/// budget, not observable semantics.
-pub(crate) const TIER2_INTERNAL_WATER: u64 = 64;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExactReal {
@@ -42,17 +22,12 @@ pub enum ExactReal {
     /// Tier 1: an algebraic irrational in multiquadratic normal form.
     /// Invariant: never rational (rational results demote eagerly).
     Algebraic(Algebraic),
-    /// Tier 2: a general computable real — a lazily refined shrinking
-    /// enclosure. `PI` constructs this variant; `e`, `log`, … would join it.
-    /// Its equality is only semi-decidable, so a comparison reaching it may
-    /// starve (LANG.VALUES.EXACT).
-    Computable(Computable),
 }
 
 /// Hashes the same way the derived `PartialEq` compares: by variant, then by
 /// the payload's own `Hash` (each tier's own impl is what stays consistent
 /// with that tier's equality — `Fraction`'s reduced pair, `Algebraic`'s
-/// representation-independent bucket key, `Computable`'s pointer identity).
+/// representation-independent bucket key).
 impl std::hash::Hash for ExactReal {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
@@ -64,25 +39,8 @@ impl std::hash::Hash for ExactReal {
                 state.write_u8(1);
                 a.hash(state);
             }
-            Self::Computable(c) => {
-                state.write_u8(2);
-                c.hash(state);
-            }
         }
     }
-}
-
-/// Outcome of an exact-real comparison.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ExactCmp {
-    /// The order is decided. Always the case over Tier ≤ 1.
-    Decided(Ordering),
-    /// A Tier 2 observation spent `steps` refinement steps without
-    /// separating the operands. Projects to the logical `Unknown` (U)
-    /// with `diagnosis.agreedPrefix = steps`.
-    Starved { steps: usize },
-    /// An operand is the absent value (nil); absence has no order.
-    Absent,
 }
 
 impl ExactReal {
@@ -119,7 +77,7 @@ impl ExactReal {
     pub fn as_rational(&self) -> Option<&Fraction> {
         match self {
             Self::Rational(f) => Some(f),
-            Self::Algebraic(_) | Self::Computable(_) => None,
+            Self::Algebraic(_) => None,
         }
     }
 
@@ -132,42 +90,32 @@ impl ExactReal {
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Rational(f) => f.is_nil(),
-            Self::Algebraic(_) | Self::Computable(_) => false,
+            Self::Algebraic(_) => false,
         }
-    }
-
-    /// Whether this is a Tier 2 computable real, whose `PartialEq`/`Hash` are
-    /// allocation identity rather than value identity. A caller that would
-    /// otherwise answer from a structural comparison must ask this first.
-    #[inline]
-    pub fn is_computable(&self) -> bool {
-        matches!(self, Self::Computable(_))
     }
 
     #[inline]
     pub fn is_integer(&self) -> bool {
         match self {
             Self::Rational(f) => f.is_integer(),
-            Self::Algebraic(_) | Self::Computable(_) => false,
+            Self::Algebraic(_) => false,
         }
     }
 
     /// Whether the value is *known* to be exactly zero. Total and never
     /// wrongly `true`: an `Algebraic` is never zero by the normal-form
-    /// invariant, and a Tier 2 process cannot prove zero-ness, so both
-    /// conservatively answer `false`.
+    /// invariant.
     #[inline]
     pub fn is_structurally_zero(&self) -> bool {
         match self {
             Self::Rational(f) => f.is_zero(),
-            Self::Algebraic(_) | Self::Computable(_) => false,
+            Self::Algebraic(_) => false,
         }
     }
 
     // ---- Arithmetic (field operations, nil-propagating) ----
 
-    /// Negation. Preserves nil. A Tier 2 operand negates its enclosure
-    /// generator (interval negation preserves nesting).
+    /// Negation. Preserves nil.
     pub fn neg(&self) -> Self {
         match self {
             Self::Rational(f) => {
@@ -177,33 +125,23 @@ impl ExactReal {
                 Self::Rational(Fraction::new(-f.numerator(), f.denominator()))
             }
             Self::Algebraic(a) => Self::Algebraic(a.neg()),
-            Self::Computable(c) => {
-                let source = c.clone();
-                Self::Computable(Computable::from_enclosures("neg", move |step| {
-                    let iv = source.enclosure_at(step);
-                    RatInterval::new(
-                        Fraction::new(-iv.hi.numerator(), iv.hi.denominator()),
-                        Fraction::new(-iv.lo.numerator(), iv.lo.denominator()),
-                    )
-                }))
-            }
         }
     }
 
     /// Size probe (CS5): the number of algebraic terms this value carries — a
     /// Tier 1 `Algebraic`'s normal-form term count, or `1` for a Tier 0
-    /// rational / Tier 2 computable (neither can explode multiplicatively).
+    /// rational (which cannot explode multiplicatively).
     /// Used to bound the term-pair work of an exact multiply *before* running
     /// it, and to reject a value whose term count crosses `max_algebraic_terms`.
     pub fn algebraic_term_count(&self) -> usize {
         match self {
-            Self::Rational(_) | Self::Computable(_) => 1,
+            Self::Rational(_) => 1,
             Self::Algebraic(a) => a.term_count(),
         }
     }
 
     /// The multiquadratic normal-form terms `(monomial, coefficient)` of a
-    /// Tier 1 value, or `None` for Tier 0/2. Used by the lossless state
+    /// Tier 1 value, or `None` for a rational. Used by the lossless state
     /// persistence codec (`crate::types::value_persist`) to capture the
     /// exact algebraic value; the reader reconstructs it by replaying
     /// `∑ cₘ·√m`, which the canonical normal form makes exact.
@@ -216,7 +154,7 @@ impl ExactReal {
                     .map(|(m, c)| (m.clone(), c.clone()))
                     .collect(),
             ),
-            Self::Rational(_) | Self::Computable(_) => None,
+            Self::Rational(_) => None,
         }
     }
 
@@ -226,16 +164,12 @@ impl ExactReal {
         match self {
             Self::Rational(f) => f.numerator().bits().max(f.denominator().bits()),
             Self::Algebraic(a) => a.max_coefficient_bits(),
-            Self::Computable(_) => 0,
         }
     }
 
     /// Reciprocal `1/x`. `Rational(nil)` for nil; `None` for an exactly
     /// zero operand — decided algebraically, with no budget, because an
-    /// `Algebraic` is never zero. A Tier 2 operand answers the reciprocal of
-    /// its enclosure once the internal budget has separated it from zero
-    /// (`transcendental::tier2_reciprocal`), and `None` when it could not:
-    /// a value that may be zero has no reciprocal the machine can vouch for.
+    /// `Algebraic` is never zero.
     pub fn reciprocal(&self) -> Option<Self> {
         match self {
             Self::Rational(f) => {
@@ -249,13 +183,11 @@ impl ExactReal {
                 Some(Self::Rational(Fraction::new(d, n)))
             }
             Self::Algebraic(a) => Some(Self::from_result(a.reciprocal())),
-            Self::Computable(c) => Self::tier2_reciprocal(c),
         }
     }
 
     /// Addition. Nil-propagating; demotes to `Rational` whenever the sum
-    /// is rational (cheapest-tier-wins). A Tier 2 operand yields a
-    /// derived Tier 2 process via interval addition.
+    /// is rational (cheapest-tier-wins).
     pub fn add(&self, other: &Self) -> Self {
         if self.is_nil() || other.is_nil() {
             return Self::Rational(Fraction::nil());
@@ -266,13 +198,6 @@ impl ExactReal {
                 Self::from_result(a.add_fraction(q))
             }
             (Self::Algebraic(a), Self::Algebraic(b)) => Self::from_result(a.add(b)),
-            (Self::Computable(_), _) | (_, Self::Computable(_)) => {
-                let (a, b) = (self.clone(), other.clone());
-                Self::Computable(Computable::from_enclosures("add", move |step| {
-                    let (x, y) = (a.enclosure_at(step), b.enclosure_at(step));
-                    RatInterval::new(x.lo.add(&y.lo), x.hi.add(&y.hi))
-                }))
-            }
         }
     }
 
@@ -287,8 +212,7 @@ impl ExactReal {
         }
     }
 
-    /// Multiplication. A Tier 2 operand yields a derived Tier 2 process
-    /// via interval multiplication (min/max of the endpoint products).
+    /// Multiplication.
     pub fn mul(&self, other: &Self) -> Self {
         if self.is_nil() || other.is_nil() {
             return Self::Rational(Fraction::nil());
@@ -299,29 +223,11 @@ impl ExactReal {
                 Self::from_result(a.mul_fraction(q))
             }
             (Self::Algebraic(a), Self::Algebraic(b)) => Self::from_result(a.mul(b)),
-            (Self::Computable(_), _) | (_, Self::Computable(_)) => {
-                let (a, b) = (self.clone(), other.clone());
-                Self::Computable(Computable::from_enclosures("mul", move |step| {
-                    let (x, y) = (a.enclosure_at(step), b.enclosure_at(step));
-                    let mut products = [
-                        x.lo.mul(&y.lo),
-                        x.lo.mul(&y.hi),
-                        x.hi.mul(&y.lo),
-                        x.hi.mul(&y.hi),
-                    ];
-                    products.sort();
-                    let [lo, .., hi] = products;
-                    RatInterval::new(lo, hi)
-                }))
-            }
         }
     }
 
     /// Division `self / other`. `Rational(nil)` for nil operands; `None`
-    /// for a zero divisor — exact over Tier ≤ 1, where zero-ness is
-    /// decidable. A Tier 2 divisor divides through its reciprocal, so the
-    /// answer is `None` only when the internal budget could not separate
-    /// the divisor from zero.
+    /// for a zero divisor, which is decidable.
     pub fn div(&self, other: &Self) -> Option<Self> {
         if self.is_nil() || other.is_nil() {
             return Some(Self::Rational(Fraction::nil()));
@@ -337,98 +243,27 @@ impl ExactReal {
                 Some(Self::from_result(a.mul_fraction(&inv)))
             }
             (Self::Algebraic(a), Self::Algebraic(b)) => Some(Self::from_result(a.div(b))),
-            (_, Self::Computable(_)) | (Self::Computable(_), _) => {
-                let inv = other.reciprocal()?;
-                Some(self.mul(&inv))
-            }
         }
     }
 
     // ---- Observations ----
 
-    /// Three-way comparison under a water budget (LANG.VALUES.EXACT / LANG.VALUES.EXACT).
-    /// Tier ≤ 1 pairs decide exactly without consuming any water; the
-    /// budget bounds refinement only when a Tier 2 observation is
-    /// involved, where exhaustion yields `Starved` — the source of the
-    /// logical `Unknown` (U).
-    pub fn cmp_within(&self, other: &Self, water: Water) -> ExactCmp {
+    /// Three-way comparison (LANG.VALUES.EXACT). Total over every non-nil
+    /// pair — order in the field is decidable — and `None` only when an
+    /// operand is the absent value, which has no order.
+    pub fn cmp_exact(&self, other: &Self) -> Option<Ordering> {
         if self.is_nil() || other.is_nil() {
-            return ExactCmp::Absent;
-        }
-        match (self, other) {
-            (Self::Rational(a), Self::Rational(b)) => ExactCmp::Decided(a.cmp(b)),
-            (Self::Rational(q), Self::Algebraic(b)) => {
-                ExactCmp::Decided(b.cmp_fraction(q).reverse())
-            }
-            (Self::Algebraic(a), Self::Rational(q)) => ExactCmp::Decided(a.cmp_fraction(q)),
-            (Self::Algebraic(a), Self::Algebraic(b)) => ExactCmp::Decided(a.cmp(b)),
-            (Self::Computable(_), _) | (_, Self::Computable(_)) => {
-                self.cmp_by_refinement(other, water)
-            }
-        }
-    }
-
-    /// Three-way comparison under the default water. Total (`Decided`)
-    /// for every non-nil Tier ≤ 1 pair.
-    pub fn cmp_exact(&self, other: &Self) -> ExactCmp {
-        self.cmp_within(other, DEFAULT_COMPARISON_WATER)
-    }
-
-    /// Water-explicit rational enclosure of this value after spending `budget`
-    /// refinement steps (the `MATH@ENCLOSE` observation, LANG.VALUES.EXACT / LANG.VALUES.EXACT).
-    /// `None` for nil (the empty observation). Tier ≤ 1 values return a point
-    /// (or tight algebraic bounds); a Tier 2 value returns its generator's
-    /// enclosure — the only tier whose width the budget actually governs.
-    /// Representation-neutral: the caller sees rational endpoints, never a tier.
-    pub fn observe_enclosure(&self, budget: u64) -> Option<RatInterval> {
-        if self.is_nil() {
             return None;
         }
-        Some(self.enclosure_at(budget))
+        Some(match (self, other) {
+            (Self::Rational(a), Self::Rational(b)) => a.cmp(b),
+            (Self::Rational(q), Self::Algebraic(b)) => b.cmp_fraction(q).reverse(),
+            (Self::Algebraic(a), Self::Rational(q)) => a.cmp_fraction(q),
+            (Self::Algebraic(a), Self::Algebraic(b)) => a.cmp(b),
+        })
     }
 
-    /// Enclosure of a non-nil value after `step` refinement steps:
-    /// a point for rationals, the doubling algebraic bounds for Tier 1,
-    /// the generator's interval for Tier 2. Nested and shrinking in
-    /// `step` for every tier.
-    pub(crate) fn enclosure_at(&self, step: u64) -> RatInterval {
-        match self {
-            Self::Rational(f) => RatInterval::point(f.clone()),
-            Self::Algebraic(a) => {
-                let (lo, hi) = a.bounds(8 + 16 * step.min(4096));
-                RatInterval::new(lo, hi)
-            }
-            Self::Computable(c) => c.enclosure_at(step),
-        }
-    }
-
-    /// Interval-separation comparison for pairs involving Tier 2: refine
-    /// both enclosures step by step under the water budget; disjoint
-    /// enclosures decide the order, exhaustion starves. Equality is never
-    /// proven here (undecidable for computable reals) — equal values
-    /// starve, honestly.
-    fn cmp_by_refinement(&self, other: &Self, water: Water) -> ExactCmp {
-        for step in 0..water.0 {
-            let a = self.enclosure_at(step);
-            let b = other.enclosure_at(step);
-            if a.hi.lt(&b.lo) {
-                return ExactCmp::Decided(Ordering::Less);
-            }
-            if b.hi.lt(&a.lo) {
-                return ExactCmp::Decided(Ordering::Greater);
-            }
-            if a.is_point() && b.is_point() && a.lo == b.lo {
-                return ExactCmp::Decided(Ordering::Equal);
-            }
-        }
-        ExactCmp::Starved {
-            steps: water.0 as usize,
-        }
-    }
-
-    /// Floor as an exact real. `None` for nil, and for a Tier 2 value
-    /// whose enclosure does not pin the floor within the internal water
-    /// cap (the undecidable outcome).
+    /// Floor as an exact real. `None` for nil.
     pub fn floor(&self) -> Option<ExactReal> {
         match self {
             Self::Rational(f) => {
@@ -438,16 +273,11 @@ impl ExactReal {
                 Some(Self::from_bigint(f.numerator().div_floor(&f.denominator())))
             }
             Self::Algebraic(a) => Some(Self::from_bigint(a.floor_int())),
-            Self::Computable(_) => self.tier2_pinned_integer(|iv| {
-                let fl = iv.lo.numerator().div_floor(&iv.lo.denominator());
-                let fh = iv.hi.numerator().div_floor(&iv.hi.denominator());
-                (fl == fh).then_some(fl)
-            }),
         }
     }
 
     /// Round to the nearest integer, ties away from zero (matching
-    /// `Fraction::round`). `None` for nil or an unpinned Tier 2 value.
+    /// `Fraction::round`). `None` for nil.
     pub fn round(&self) -> Option<ExactReal> {
         match self {
             Self::Rational(f) => {
@@ -457,25 +287,6 @@ impl ExactReal {
                 Some(Self::Rational(f.round()))
             }
             Self::Algebraic(a) => Some(Self::from_bigint(a.round_int())),
-            Self::Computable(_) => self.tier2_pinned_integer(|iv| {
-                let rl = iv.lo.round();
-                let rh = iv.hi.round();
-                (rl == rh).then(|| rl.numerator())
-            }),
         }
-    }
-
-    /// Refine a Tier 2 enclosure under the internal water cap until
-    /// `pin` extracts a consistent integer from it; `None` on starvation.
-    fn tier2_pinned_integer(
-        &self,
-        pin: impl Fn(&RatInterval) -> Option<BigInt>,
-    ) -> Option<ExactReal> {
-        for step in 0..TIER2_INTERNAL_WATER {
-            if let Some(n) = pin(&self.enclosure_at(step)) {
-                return Some(Self::from_bigint(n));
-            }
-        }
-        None
     }
 }
