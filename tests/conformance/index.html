@@ -712,7 +712,7 @@
   <h3>ADD with one operand raises stackUnderflow (requires violated, LANG.CONFORMANCE.FAMILIES)</h3>
   <pre class="ajisai-source">1 ADD</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Stack underflow</pre>
+  <pre class="ajisai-expect-error">stack underflow</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -720,7 +720,7 @@
   <h3>Element-wise ADD of unequal non-singleton shapes is an error, not a guess</h3>
   <pre class="ajisai-source">[ 1 2 ] [ 1 2 3 ] ADD</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Cannot broadcast shapes</pre>
+  <pre class="ajisai-expect-error">expected shapes that align</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1184,17 +1184,17 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-str-flattens-container-leaves" data-category="core">
-  <h3>STR of a vector space-joins its flat leaves, and a String leaf stays text</h3>
-  <pre class="ajisai-source">[ 'AB' 'CD' ] STR</pre>
-  <pre class="ajisai-expect-result">'AB CD'</pre>
+<section class="ajisai-case" id="core-str-lifts-over-a-vector" data-category="core">
+  <h3>STR lifts over a Vector, keeping its structure, and a String leaf stays text</h3>
+  <pre class="ajisai-source">[ 'AB' [ 1 2 ] ] STR</pre>
+  <pre class="ajisai-expect-result">[ 'AB' [ '1' '2' ] ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-str-nil-leaf-renders-letters" data-category="core">
-  <h3>STR renders a NIL leaf inside a vector as the letters NIL</h3>
-  <pre class="ajisai-source">[ 1 NIL ] STR</pre>
-  <pre class="ajisai-expect-result">'1 NIL'</pre>
+<section class="ajisai-case" id="core-str-is-the-inverse-of-num-per-element" data-category="core">
+  <h3>STR is NUM's inverse element by element, and a NIL lane passes through</h3>
+  <pre class="ajisai-source">[ 1/3 NIL ] STR [ 1/3 NIL ] STR NUM</pre>
+  <pre class="ajisai-expect-result">[ '1/3' NIL ] [ 1/3 NIL ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1592,7 +1592,7 @@
   <h3>Lane counts that neither match nor reduce to one are a shape error</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 10 20 ] [ TRUE FALSE TRUE ] SELECT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">broadcast</pre>
+  <pre class="ajisai-expect-error">expected shapes that align</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1675,7 +1675,7 @@ W</pre>
   <h3>A MAP block that consumes more than its element underflows</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ ADD ] MAP</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Stack underflow</pre>
+  <pre class="ajisai-expect-error">stack underflow</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1692,7 +1692,7 @@ W</pre>
   <h3>EXEC surfaces an underflow raised inside the block</h3>
   <pre class="ajisai-source">[ ADD ] EXEC</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Stack underflow</pre>
+  <pre class="ajisai-expect-error">stack underflow</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1849,7 +1849,7 @@ W</pre>
   <h3>DEF refuses a directly self-referential definition</h3>
   <pre class="ajisai-source">[ DOOMY ] 'DOOMY' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1857,7 +1857,7 @@ W</pre>
   <h3>DEF refuses a definition that closes a mutual reference cycle</h3>
   <pre class="ajisai-source">[ B ] 'A' DEF [ A ] 'B' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1871,7 +1871,7 @@ W</pre>
   <h3>DEF refuses a self-call reached only through a MAP block</h3>
   <pre class="ajisai-source">[ [ 1 2 ] - [ FIB ] MAP 0 [ + ] FOLD ] 'FIB' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1879,7 +1879,7 @@ W</pre>
   <h3>DEF refuses a self-call reached only through an EXEC block</h3>
   <pre class="ajisai-source">[ 1 - [ CNT ] EXEC 1 + ] 'CNT' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1887,7 +1887,7 @@ W</pre>
   <h3>DEF refuses a self-call reached only through an EXEC block inside a would-be FILTER predicate</h3>
   <pre class="ajisai-source">[ [ 1 2 ] [ [ EVENP ] EXEC ] FILTER ] 'EVENP' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1896,7 +1896,7 @@ W</pre>
   <pre class="ajisai-source">[ 1 - [ B ] EXEC ] 'A' DEF
 [ [ A ] EXEC ] 'B' DEF</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">self-referential definition</pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2082,7 +2082,7 @@ W</pre>
   <h3>Any other pairing is ERROR — this is the shapeMismatch each ordering Word registers</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 1 2 ] LT</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">Cannot broadcast shapes</pre>
+  <pre class="ajisai-expect-error">expected shapes that align</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -2459,11 +2459,10 @@ W</pre>
   <pre class="ajisai-expect-result">'domainMiss'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-shape-non-vector-error" data-category="core">
-  <h3>SHAPE of a non-vector is the program being wrong</h3>
-  <pre class="ajisai-source">5 SHAPE</pre>
-  <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">SHAPE: expected a Vector</pre>
+<section class="ajisai-case" id="core-shape-non-vector-is-rank-zero" data-category="core">
+  <h3>A value that is not a Vector has the empty shape, as its DEPTH is 0</h3>
+  <pre class="ajisai-source">5 SHAPE 5 DEPTH</pre>
+  <pre class="ajisai-expect-result">[ ] 0/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="core-reshape" data-category="core">
@@ -2760,7 +2759,7 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 <section class="ajisai-case" id="standard-put" data-category="core"><h3>PUT</h3><pre class="ajisai-source">[ 1 2 3 ] 1 9 PUT</pre><pre class="ajisai-expect-result">[ 1/1 9/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
-<section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP</pre><pre class="ajisai-expect-result">{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-group" data-category="core"><h3>GROUP answers a Record from each key to the Vector of its values (LANG.RECORDS.STRUCTURE)</h3><pre class="ajisai-source">[ 'b' 'a' 'b' 'a' ] [ 1 2 3 4 ] GROUP</pre><pre class="ajisai-expect-result">{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }</pre><div class="ajisai-expect-effects"></div></section>
 
 <!-- FORMAT is the one rounding boundary (LANG.VALUES.EXACT): a scalar
      becomes decimal text at a stated digit count, a tie away from zero as

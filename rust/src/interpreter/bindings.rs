@@ -179,10 +179,10 @@ impl Interpreter {
 /// stack cannot offer and what a DAG-shaped expression needs.
 pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
-    let name_value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let name_value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let names = match binding_names(&name_value).and_then(|names| {
         for name in &names {
             interp.check_bindable_name(name)?;
@@ -196,7 +196,7 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let subject = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let subject = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     match names.as_slice() {
         [only] => interp.bind_local(only.to_uppercase(), subject),
@@ -214,10 +214,9 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                 let is_vector = subject.is_vector();
                 interp.stack.push(subject);
                 interp.stack.push(name_value);
-                // Declared under BIND's own `shapeMismatch`, with a message
-                // about destructuring: the broadcast wording of
-                // `AjisaiError::ShapeMismatch` would describe a failure BIND
-                // never performs.
+                // `shapeMismatch`, with a message about destructuring rather
+                // than the broadcast wording of `AjisaiError::shape_mismatch`,
+                // which would describe a failure BIND never performs.
                 let what = if is_vector {
                     format!("a Vector of {} elements", width)
                 } else {

@@ -89,13 +89,11 @@ fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
 /// outermost first; a ragged Vector has no shape and projects `domainMiss`.
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     let value = take_operand(interp)?;
+    // A value that is not a Vector has no axes: its shape is the empty one,
+    // rank 0, the shape `DEPTH` already reports as depth 0.
     if !is_vector_value(&value) {
-        let got = value.domain_name();
-        restore(interp, value);
-        return Err(AjisaiError::declared(
-            "nonVector",
-            format!("expected a Vector, got {got}"),
-        ));
+        interp.stack.push(Value::from_vector(Vec::new()));
+        return Ok(());
     }
     let answer = match rectangular_shape(&value) {
         Some(shape) => Value::from_vector_promoted(
@@ -149,12 +147,12 @@ pub fn op_flatten(interp: &mut Interpreter) -> Result<()> {
 /// leaf count — nothing is padded or repeated — and a well-formed shape too
 /// large to materialize projects `spaceExhausted`, as `FILL` and `RANGE` do.
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
-    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let shape_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let target = match interp.stack.pop() {
         Some(target) => target,
         None => {
             interp.stack.push(shape_val);
-            return Err(AjisaiError::StackUnderflow);
+            return Err(AjisaiError::stack_underflow());
         }
     };
     let put_back = |interp: &mut Interpreter, target: Value, shape_val: Value| {

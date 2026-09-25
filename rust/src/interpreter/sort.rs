@@ -92,7 +92,7 @@ fn dense_integer_sort(interp: &mut Interpreter, value: &Value) -> Result<Option<
 }
 
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
-    let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     match dense_integer_sort(interp, &val) {
         Ok(Some(())) => return Ok(()),

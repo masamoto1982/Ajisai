@@ -120,11 +120,11 @@ pub(crate) fn lift_binary_numeric(
                 // why the walk exists. The category is the machine-readable
                 // surface (LANG.OBSERVATION.DIAGNOSIS); the message is
                 // correspondingly less detailed than the tensor route's.
-                return Err(AjisaiError::ShapeMismatch {
-                    left: vec![left.len()],
-                    right: vec![right.len()],
-                    axis: 0,
-                });
+                return Err(AjisaiError::shape_mismatch(
+                    &[left.len()],
+                    &[right.len()],
+                    0,
+                ));
             }
             Ok(Value::from_children(
                 left.iter()
@@ -202,7 +202,7 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_unary(interp, &op_sqrt)? {
         return Ok(());
     }
-    let value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     match lift_unary_numeric(&value, &sqrt_scalar) {
         Ok(result) => {

@@ -74,9 +74,9 @@ function resolveAjisaiBin() {
 // Domains considered and rejected, with the reason (kept here so the
 // rejection is not silently rediscovered):
 //
-//   - `scalarFraction` ('1 2 /'), meant to reach `nonInteger`: PUT is the
-//     only Word declaring it, and the table already observes it through
-//     PUT's existing domains, so the whole table need not carry another.
+//   - `scalarFraction` ('1 2 /'), meant to reach `invalidInteger`: the table
+//     already observes it through the integer-taking Words' existing domains,
+//     so the whole table need not carry another.
 //   - `vectorRagged` ('[ [ 1 ] [ 2 3 ] ]'), meant to reach `shapeMismatch`:
 //     a ragged vector broadcasts element-wise against a same-length flat
 //     vector instead of raising (confirmed: `[ [ 1 ] [ 2 3 ] ] [ 1 2 ] ADD`

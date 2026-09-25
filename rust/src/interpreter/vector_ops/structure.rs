@@ -21,12 +21,12 @@ fn concat_values(left: &Value, right: &Value) -> Value {
 
 /// One bound of `RANGE`: an integer the machine can count to. Anything else —
 /// a fraction, a String, a Boolean — names no position in an integer sequence,
-/// so it is the malformed use `invalidRange` declares. A Vector never reaches
+/// so it is the malformed use `invalidInteger` declares. A Vector never reaches
 /// here: `leaf` operands are lifted by the dispatcher first.
 fn parse_range_bound(bound: &Value, label: &str) -> Result<i64> {
     let bigint = extract_bigint_from_value(bound).map_err(|_| {
         AjisaiError::declared(
-            "invalidRange",
+            "invalidInteger",
             format!(
                 "the {} must be an integer, got {}",
                 label,
@@ -34,9 +34,9 @@ fn parse_range_bound(bound: &Value, label: &str) -> Result<i64> {
             ),
         )
     })?;
-    bigint
-        .to_i64()
-        .ok_or_else(|| AjisaiError::declared("invalidRange", format!("the {} is too large", label)))
+    bigint.to_i64().ok_or_else(|| {
+        AjisaiError::declared("invalidInteger", format!("the {} is too large", label))
+    })
 }
 
 /// `CONCAT` — join the top two vectors (SPEC: `2 -> 1`, `errorWhen:
@@ -55,7 +55,7 @@ fn parse_range_bound(bound: &Value, label: &str) -> Result<i64> {
 /// so could not see the operands a longer count would reach.
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
     let base = interp.stack.len() - 2;
@@ -135,7 +135,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
 /// decide the direction and no pair of bounds describes an infinite sequence.
 pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
     let end_val = interp.stack.pop().expect("length checked");
     let start_val = interp.stack.pop().expect("length checked");
@@ -220,7 +220,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
-    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let count_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let count_bigint = match extract_bigint_from_value(&count_val) {
         Ok(bi) => bi,
@@ -228,7 +228,7 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
             let got = crate::types::display::describe_operand(&count_val);
             interp.stack.push(count_val);
             return Err(AjisaiError::declared(
-                "invalidCount",
+                "invalidInteger",
                 format!("expected an integer count, got {got}"),
             ));
         }
@@ -239,7 +239,7 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         _ => {
             interp.stack.push(count_val);
             return Err(AjisaiError::declared(
-                "invalidCount",
+                "invalidInteger",
                 "COLLECT count must be a positive integer",
             ));
         }
@@ -247,7 +247,7 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
 
     if interp.stack.len() < count {
         interp.stack.push(count_val);
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
     if let Err(e) = crate::interpreter::collection_meter::charge_materialization(interp, count) {

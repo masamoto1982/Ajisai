@@ -12,16 +12,12 @@ use crate::types::Value;
 
 use super::ordering_ops::{elements_of, restore, take_operand};
 
-/// `extract_integer_from_value`, with a non-integer operand reclassified as
-/// `nonInteger` — PUT is the only Word that declares it in
-/// `spec/words.json`'s `errorWhen`, and the shared helper serves callers
-/// (GET, TAKE, COLLECT, ...) that declare no such condition, so it cannot
-/// make this remap itself (the same shared-helper lesson as Phase 2's
-/// tensor-conversion helpers).
+/// `extract_integer_from_value`, with a non-integer operand raised as the
+/// declared `invalidInteger` that every integer-taking Word shares.
 fn require_integer_operand(value: &Value) -> Result<i64> {
     extract_integer_from_value(value).map_err(|e| {
         AjisaiError::declared(
-            "invalidIndex",
+            "invalidInteger",
             format!("expected an integer, got {}", e.got),
         )
     })
@@ -75,10 +71,7 @@ pub fn op_zip(interp: &mut Interpreter) -> Result<()> {
     let width = columns[0].len();
     if let Some(other) = columns.iter().find(|column| column.len() != width) {
         restore(interp, value);
-        return Err(AjisaiError::VectorLengthMismatch {
-            len1: width,
-            len2: other.len(),
-        });
+        return Err(AjisaiError::length_mismatch(width, other.len()));
     }
 
     // A transpose copies every cell exactly once, so the price is the whole
@@ -119,7 +112,7 @@ pub fn op_zip(interp: &mut Interpreter) -> Result<()> {
 /// move, a confusion-matrix increment and a histogram bin all do.
 pub fn op_put(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 3 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
     let replacement = interp.stack.pop().expect("checked by len()");
     let index_value = interp.stack.pop().expect("checked by len()");

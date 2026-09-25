@@ -75,10 +75,7 @@ mod record_words_tests {
     #[tokio::test]
     async fn record_rejects_malformed_key_vectors() {
         assert_eq!(error_of("[ 'a' 'a' ] [ 1 2 ] RECORD").await, "duplicateKey");
-        assert_eq!(
-            error_of("[ 'a' ] [ 1 2 ] RECORD").await,
-            "vectorLengthMismatch"
-        );
+        assert_eq!(error_of("[ 'a' ] [ 1 2 ] RECORD").await, "shapeMismatch");
         assert_eq!(error_of("'a' [ 1 ] RECORD").await, "nonVector");
         // Operands are back on the stack after the ERROR.
         let mut interp = Interpreter::new();
@@ -206,11 +203,11 @@ mod record_words_tests {
         assert_eq!(top("[ 3 1 3 ] TALLY").await, "{ 3/1 2/1 1/1 1/1 }");
         assert_eq!(top("[ 3 1 3 ] TALLY VALUES").await, "[ 2/1 1/1 ]");
         assert_eq!(
-            top("[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP").await,
+            top("[ 'b' 'a' 'b' 'a' ] [ 1 2 3 4 ] GROUP").await,
             "{ 'b' [ 1/1 3/1 ] 'a' [ 2/1 4/1 ] }"
         );
         assert_eq!(
-            top("[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP 'a' AT").await,
+            top("[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP 'a' AT").await,
             "[ 1/1 3/1 ]"
         );
     }

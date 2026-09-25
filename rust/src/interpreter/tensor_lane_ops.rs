@@ -101,10 +101,10 @@ where
         }
         (Some(a_children), Some(b_children)) => {
             if a_children.len() != b_children.len() {
-                return Err(AjisaiError::VectorLengthMismatch {
-                    len1: a_children.len(),
-                    len2: b_children.len(),
-                });
+                return Err(AjisaiError::length_mismatch(
+                    a_children.len(),
+                    b_children.len(),
+                ));
             }
             let out: Vec<Value> = a_children
                 .iter()

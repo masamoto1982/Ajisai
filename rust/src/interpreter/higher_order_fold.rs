@@ -80,7 +80,7 @@ fn run_accumulator_walk(
     word: &'static str,
     answer: Answer,
 ) -> Result<()> {
-    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -90,11 +90,11 @@ fn run_accumulator_walk(
         }
     };
 
-    let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let init_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let target_val: Value = interp.stack.pop().ok_or_else(|| {
         interp.stack.push(init_val.clone());
         interp.stack.push(code_val.clone());
-        AjisaiError::StackUnderflow
+        AjisaiError::stack_underflow()
     })?;
 
     if target_val.is_nil() {

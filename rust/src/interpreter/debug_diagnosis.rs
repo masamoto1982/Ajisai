@@ -39,7 +39,6 @@ pub enum CauseClass {
     ValueShape,
     Domain,
     Index,
-    VectorLength,
     ShapeMismatch,
     NilFlow,
     Environment,
@@ -176,7 +175,6 @@ impl CauseClass {
             CauseClass::ValueShape => "valueShape",
             CauseClass::Domain => "domain",
             CauseClass::Index => "index",
-            CauseClass::VectorLength => "vectorLength",
             CauseClass::ShapeMismatch => "shapeMismatch",
             CauseClass::NilFlow => "nilFlow",
             CauseClass::Environment => "environment",
@@ -198,8 +196,6 @@ impl CauseClass {
             ErrorCategory::StackUnderflow => CauseClass::StackShape,
             ErrorCategory::UnknownWord => CauseClass::TypoOrUnknownName,
             ErrorCategory::DivisionByZero => CauseClass::Domain,
-            ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
-            ErrorCategory::ShapeMismatch => CauseClass::ShapeMismatch,
             ErrorCategory::MalformedSource => CauseClass::SourceForm,
             // LANG.MACHINE.LIMITS calls the step and recursion budgets host
             // safety controls rather than language semantics, and the two
@@ -210,10 +206,6 @@ impl CauseClass {
             ErrorCategory::ExecutionLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::ResourceLimitExceeded => CauseClass::ResourceLimit,
             ErrorCategory::RecursionLimitExceeded => CauseClass::ResourceLimit,
-            // A cyclic DEF is a static shape rejected before anything runs —
-            // the same kind of fault as `nameConflict`, not a runtime resource
-            // question.
-            ErrorCategory::SelfReferentialDefinition => CauseClass::ContractViolation,
             // The registry named the condition at the raise site, so the class
             // follows from the spec's own vocabulary.
             ErrorCategory::Declared(condition) => {
@@ -423,13 +415,10 @@ fn resource_limit_facts(err: &AjisaiError) -> Option<ResourceLimitFacts> {
 
 fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'static str {
     match category {
-        Some(ErrorCategory::DivisionByZero)
-        | Some(ErrorCategory::ShapeMismatch)
-        | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
+        Some(ErrorCategory::DivisionByZero) => "fixInput",
         Some(ErrorCategory::UnknownWord)
         | Some(ErrorCategory::StackUnderflow)
-        | Some(ErrorCategory::MalformedSource)
-        | Some(ErrorCategory::SelfReferentialDefinition) => "fixProgram",
+        | Some(ErrorCategory::MalformedSource) => "fixProgram",
         Some(ErrorCategory::ExecutionLimitExceeded)
         | Some(ErrorCategory::RecursionLimitExceeded) => "addBudgetOrFixRecursion",
         // A size ceiling is not fixed by letting the program run longer: the

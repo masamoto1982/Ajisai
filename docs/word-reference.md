@@ -320,7 +320,7 @@ Select elements of a vector by index. One index answers with the element itself;
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 10 20 30 ] [ 0 2 ] GET`
-- **ERROR conditions:** `nonVector`, `invalidIndex`
+- **ERROR conditions:** `nonVector`, `invalidInteger`
 
 ## `LENGTH`
 
@@ -339,7 +339,7 @@ Return the number of elements in a vector.
 
 ## `TAKE`
 
-Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
@@ -350,11 +350,11 @@ Take the first N or last -N elements of a vector. A count larger than the vector
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 4 5 ] 3 TAKE`
-- **ERROR conditions:** `nonVector`, `invalidCount`
+- **ERROR conditions:** `nonVector`, `invalidInteger`
 
 ## `DROP`
 
-Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.
+Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.
 
 - **Vocabulary tier:** Standard (`namedPattern`)
 - **Family:** `collection`
@@ -365,7 +365,7 @@ Drop the first N or last -N elements of a vector and answer the rest. TAKE's cou
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 4 5 ] 2 DROP`
-- **ERROR conditions:** `nonVector`, `invalidCount`
+- **ERROR conditions:** `nonVector`, `invalidInteger`
 
 ## `CONCAT`
 
@@ -399,7 +399,7 @@ Reverse the order of vector elements.
 
 ## `COLLECT`
 
-Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidCount`), and a stack holding fewer than N values is `stackUnderflow`.
+Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidInteger`), and a stack holding fewer than N values is `stackUnderflow`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -409,11 +409,11 @@ Take N values off the stack and answer them as one Vector, first-pushed first: `
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `1 2 3 3 COLLECT`
-- **ERROR conditions:** `invalidCount`, `stackUnderflow`
+- **ERROR conditions:** `invalidInteger`, `stackUnderflow`
 
 ## `RANGE`
 
-Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidRange`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.
+Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidInteger`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -424,7 +424,7 @@ Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `0 5 RANGE`
-- **ERROR conditions:** `invalidRange`, `shapeMismatch`
+- **ERROR conditions:** `invalidInteger`, `shapeMismatch`
 
 ## `FILL`
 
@@ -443,7 +443,7 @@ A Vector of a given shape with every leaf one number: `[ 2 3 ] 0 FILL` is `[ [ 0
 
 ## `SHAPE`
 
-The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.
+The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -454,7 +454,6 @@ The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] 
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] SHAPE`
-- **ERROR conditions:** `nonVector`
 
 ## `RESHAPE`
 
@@ -573,7 +572,7 @@ Bundle equal-length vectors position by position; a matrix transposes.
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] ZIP`
-- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
+- **ERROR conditions:** `nonVector`, `shapeMismatch`
 
 ## `PUT`
 
@@ -588,11 +587,11 @@ A copy of a vector with the element at one index replaced. An out-of-range index
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] 1 9 PUT`
-- **ERROR conditions:** `nonVector`, `invalidIndex`
+- **ERROR conditions:** `nonVector`, `invalidInteger`
 
 ## `GROUP`
 
-Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length.
+Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
@@ -602,8 +601,8 @@ Bundle values by the key at the same position, as a Record from key to the Vecto
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP`
-- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`
+- **Syntax:** `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP`
+- **ERROR conditions:** `nonVector`, `shapeMismatch`
 
 ## `INDEX-OF`
 
@@ -663,7 +662,7 @@ Build a Record — a keyed correspondence, the seventh value domain — from a V
 - **Effects:** none
 - **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.VALUES.VECTOR`
 - **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD`
-- **ERROR conditions:** `nonVector`, `vectorLengthMismatch`, `duplicateKey`
+- **ERROR conditions:** `nonVector`, `shapeMismatch`, `duplicateKey`
 
 ## `KEYS`
 
@@ -777,7 +776,7 @@ Apply a code block to each element of a vector.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -792,7 +791,7 @@ Keep only the elements for which a predicate block returns TRUE.
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -807,7 +806,7 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `higherOrder`
 - **Stack:** 3 input(s) → 1 output(s)
-- **Operands:** `data`, `element`, `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `element`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -822,7 +821,7 @@ Reduce a vector step by step, answering the accumulator after each element rathe
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `higherOrder`
 - **Stack:** 3 input(s) → 1 output(s)
-- **Operands:** `data`, `element`, `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `data`, `element`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -967,12 +966,12 @@ Parse text as a number, by the same grammar a source literal is read with: `'3/4
 
 ## `STR`
 
-Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason domainMiss — the reason JSON-ENCODE projects for a value with no JSON image rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
+Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `TRUE STR` is `'TRUE'`. The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `x STR NUM` is `x` for every number. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `data` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `leaf` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: noExactLexemeForValue → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -981,7 +980,7 @@ Convert a value to its string representation. Text is the sealed numeric grammar
 
 ## `FORMAT`
 
-Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.
+Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidInteger` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `text`
@@ -992,7 +991,7 @@ Render an exact scalar as decimal text with a stated number of digits after the 
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `1/3 5 FORMAT`
-- **ERROR conditions:** `nonNumeric`, `invalidCount`, `shapeMismatch`
+- **ERROR conditions:** `nonNumeric`, `invalidInteger`, `shapeMismatch`
 
 ## `JSON-DECODE`
 
@@ -1030,7 +1029,7 @@ Evaluate a code block.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
 - **Stack:** 1 input(s) → variable output(s)
-- **Operands:** `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
@@ -1043,9 +1042,9 @@ Evaluate a code block.
 The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
-- **Family:** `control`
+- **Family:** `dictionary`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `createsNil`; projection: symbolNamesNoWord → notFound
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
@@ -1060,7 +1059,7 @@ Raise an ERROR the program states: `'width must be positive' FAIL` halts evaluat
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `control`
 - **Stack:** 1 input(s) → 0 output(s)
-- **Operands:** `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1116,7 +1115,7 @@ A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` ans
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
 - **Stack:** 1 input(s) → 1 output(s)
-- **Operands:** `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `createsNil`; projection: always → userDeclared
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
@@ -1131,7 +1130,7 @@ Name a value for the rest of the frame that made it. One name takes the whole va
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
 - **Stack:** 2 input(s) → 0 output(s)
-- **Operands:** `element`, `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `element`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
@@ -1146,7 +1145,7 @@ Define a user word from a body and a name.
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
 - **Stack:** 2 input(s) → 0 output(s)
-- **Operands:** `program`, `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `control`, `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
@@ -1161,7 +1160,7 @@ Delete a User Word from the dictionary: `'INC' DEL`. A Core Word or a reserved a
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
 - **Stack:** 1 input(s) → 0 output(s)
-- **Operands:** `program` (LANG.FAILURE.PASSTHROUGH)
+- **Operands:** `control` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryDelete`

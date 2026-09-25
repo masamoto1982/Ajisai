@@ -96,7 +96,7 @@ fn compute_inverted_value(val: &Value) -> Result<Value> {
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let result = match lift_lanes([&val], &|[x]| compute_inverted_value(x)) {
         Ok(v) => v,
@@ -112,11 +112,11 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
-    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let b_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let result = match lifted_conjunction(&a_val, &b_val) {
         Ok(v) => v,
@@ -145,12 +145,12 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 /// — two candidates and a truth are total by construction.
 pub fn op_select(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 3 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
-    let mask = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let when_false = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let when_true = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let mask = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let when_false = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let when_true = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let result = match lift_lanes([&when_true, &when_false, &mask], &|[t, f, m]| {
         compute_selection(t, f, m)

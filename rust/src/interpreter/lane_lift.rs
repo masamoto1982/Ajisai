@@ -147,13 +147,7 @@ pub(crate) fn lift_lanes_dyn(
         match extent {
             None => extent = Some(len),
             Some(width) if width == len => {}
-            Some(width) => {
-                return Err(AjisaiError::ShapeMismatch {
-                    left: vec![width],
-                    right: vec![len],
-                    axis: 0,
-                })
-            }
+            Some(width) => return Err(AjisaiError::shape_mismatch(&[width], &[len], 0)),
         }
     }
 

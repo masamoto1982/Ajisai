@@ -190,7 +190,7 @@ jobs:
         # observed outcome resolves to a registered id and whether every id is
         # observed somewhere, both registry-wide. Neither asks whether ADD
         # fails with a category ADD's own contract declares. MIN and MAX raised
-        # vectorLengthMismatch against their own shapeMismatch contracts with
+        # a length-mismatch category their contracts did not name, with
         # every gate green, and the static predictor's soundness argument
         # (rust/src/interpreter/word_outcome_vocabulary.rs) assumed exactly the
         # property nothing was checking.

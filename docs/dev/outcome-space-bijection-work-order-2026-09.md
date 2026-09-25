@@ -659,8 +659,10 @@ source unit を読み飛ばす経路）にしか当てはまらず、NIL 分岐�
 - 同じ関数の二 Vector 長不一致チェックが `AjisaiError::declared("shapeMismatch", …)`
   で組んであったが、`shapeMismatch` は `spec/outcomes.schema.json` の言う
   「structural」（固定の `ErrorCategory` variant を持つ）側であり、`declared`
-  経由で作るべきではなかった。専用の `AjisaiError::ShapeMismatch { left, right, axis }`
-  に差し替えた（`ADD` 等の broadcast 失敗と同じ variant）。
+  経由で作るべきではなかった。専用の ShapeMismatch 変種に差し替えた（`ADD` 等の broadcast 失敗と同じ variant）。
+  ※ 2026-09-25 の一貫性整理で変種は廃止し、`shapeMismatch` は `kind: "declared"`
+  に移した（長さ不一致 `vectorLengthMismatch` も統合）。現在は
+  `AjisaiError::shape_mismatch` / `AjisaiError::length_mismatch` で作る。
 - Phase 4 の raise-site 修正には同型の見落としが複数残っていた:
   `PUT`/`RANDOM` の `nonInteger` remap が `expected=="integer" && got=="fraction"`
   にしか一致せず他の非整数形状（文字列・Vector・Boolean 等）を取りこぼして

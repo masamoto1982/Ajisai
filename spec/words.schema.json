@@ -214,14 +214,14 @@
        "$ref": "#/$defs/arity"
       },
       "operands": {
-       "description": "What the Word does with each operand, first-pushed first (LANG.FAILURE.PASSTHROUGH). `leaf`: the Word reads it as one Scalar, String or Boolean, so an absent operand makes the result that absence, and a Vector or Record there lifts the Word over its elements (LANG.COLLECTIONS.LIFT). `data`: the Word reads it whole, so an absent operand makes the result that absence. `element`: the Word carries it without reading it, so a NIL is an ordinary value. `program`: a block it evaluates, a name it binds, defines or looks up, or a message it raises, so a NIL there is malformed use. `truth`: read in truth position, where a NIL is UNKNOWN (LANG.VALUES.TRUTH), and which lifts like a `leaf`. Present exactly when `inputs` is a fixed count, with one role per operand.",
+       "description": "What the Word does with each operand, first-pushed first (LANG.FAILURE.PASSTHROUGH). `leaf`: the Word reads it as one Scalar, String or Boolean, so an absent operand makes the result that absence, and a Vector or Record there lifts the Word over its elements (LANG.COLLECTIONS.LIFT). `data`: the Word reads it whole, so an absent operand makes the result that absence. `element`: the Word carries it without reading it, so a NIL is an ordinary value. `control`: a block it evaluates, a name it binds, defines or looks up, or a message it raises, so a NIL there is malformed use. `truth`: read in truth position, where a NIL is UNKNOWN (LANG.VALUES.TRUTH), and which lifts like a `leaf`. Present exactly when `inputs` is a fixed count, with one role per operand.",
        "type": "array",
        "items": {
         "enum": [
          "leaf",
          "data",
          "element",
-         "program",
+         "control",
          "truth"
         ]
        }

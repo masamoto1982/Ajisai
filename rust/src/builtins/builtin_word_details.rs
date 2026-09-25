@@ -153,7 +153,7 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
                 "A NIL it only carries (a stored, bound or compared value) is an ordinary value.",
             );
         }
-        if has(OperandRole::Program) {
+        if has(OperandRole::Control) {
             lines.push("A NIL where a block, name or message belongs is an error.");
         }
         if has(OperandRole::Leaf) || has(OperandRole::Truth) {

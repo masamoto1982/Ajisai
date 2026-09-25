@@ -195,11 +195,7 @@ pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
             // Report the axis, not just the two shapes. `i` is an index into
             // the *aligned* rank (shapes are right-aligned, NumPy-style), which
             // is the axis a reader counts when they look at the value.
-            return Err(AjisaiError::ShapeMismatch {
-                left: a.to_vec(),
-                right: b.to_vec(),
-                axis: i,
-            });
+            return Err(AjisaiError::shape_mismatch(a, b, i));
         }
     }
 

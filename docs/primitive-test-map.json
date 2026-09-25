@@ -441,7 +441,7 @@
         "core-scan-nil-target",
         "core-shape",
         "core-shape-flat",
-        "core-shape-non-vector-error",
+        "core-shape-non-vector-is-rank-zero",
         "core-shape-ragged-projects",
         "core-take",
         "standard-bsearch",
@@ -557,7 +557,7 @@
         "core-reshape-round-trips-through-shape",
         "core-shape",
         "core-shape-flat",
-        "core-shape-non-vector-error",
+        "core-shape-non-vector-is-rank-zero",
         "core-shape-ragged-projects",
         "standard-fill",
         "standard-group"

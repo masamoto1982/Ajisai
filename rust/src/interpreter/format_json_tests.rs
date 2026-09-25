@@ -57,9 +57,9 @@ mod format_json_tests {
         assert_eq!(error_of("'x' 2 FORMAT").await, "nonNumeric");
         // A Vector value lifts FORMAT over its elements.
         assert_eq!(top("[ 1 2 ] 2 FORMAT").await, "[ '1.00' '2.00' ]");
-        assert_eq!(error_of("1 -1 FORMAT").await, "invalidCount");
-        assert_eq!(error_of("1 1/2 FORMAT").await, "invalidCount");
-        assert_eq!(error_of("1 'x' FORMAT").await, "invalidCount");
+        assert_eq!(error_of("1 -1 FORMAT").await, "invalidInteger");
+        assert_eq!(error_of("1 1/2 FORMAT").await, "invalidInteger");
+        assert_eq!(error_of("1 'x' FORMAT").await, "invalidInteger");
         // Both operands are data: an absent one passes through.
         assert_eq!(top("NIL 2 FORMAT NIL?").await, "TRUE");
         assert_eq!(top("1 NIL FORMAT NIL?").await, "TRUE");

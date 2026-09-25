@@ -266,32 +266,6 @@ pub(crate) fn build_next_checks(
                 ),
             ));
         }
-        CauseClass::VectorLength => {
-            out.push(check(
-                "checkOperandLengths",
-                ("Check operand lengths", "オペランド長を確認する"),
-                (
-                    "Check the lengths of the two vectors involved.",
-                    "対象の 2 つの vector 長を確認する",
-                ),
-            ));
-            out.push(check(
-                "checkElementWiseContract",
-                ("Check element-wise contract", "要素ごとの前提を確認する"),
-                (
-                    "Check the assumptions of the zip / map / element-wise operation.",
-                    "zip / map / element-wise 演算の前提を確認する",
-                ),
-            ));
-            out.push(check(
-                "checkSelectiveOps",
-                ("Check selective ops", "選択的操作を確認する"),
-                (
-                    "Check whether a filter or drop was applied to only one side.",
-                    "片方だけ filter や drop が適用されていないか確認する",
-                ),
-            ));
-        }
         CauseClass::ShapeMismatch => {
             out.push(check(
                 "checkDisagreeingAxis",
@@ -315,6 +289,14 @@ pub(crate) fn build_next_checks(
                 (
                     "Check whether the rank itself is off in a matrix product, transpose or one-hot.",
                     "行列積・転置・One-hot などで次元数そのものがずれていないか確認する",
+                ),
+            ));
+            out.push(check(
+                "checkSelectiveOps",
+                ("Check selective ops", "選択的操作を確認する"),
+                (
+                    "Check whether a filter or drop was applied to only one side.",
+                    "片方だけ filter や drop が適用されていないか確認する",
                 ),
             ));
         }

@@ -149,8 +149,6 @@ pub enum ErrorCategory {
     StackUnderflow,
     UnknownWord,
     DivisionByZero,
-    VectorLengthMismatch,
-    ShapeMismatch,
     MalformedSource,
     ExecutionLimitExceeded,
     /// A named `RuntimeLimits` ceiling other than the step budget. Separate
@@ -158,7 +156,6 @@ pub enum ErrorCategory {
     /// "one value grew past the declared size ceiling" stop sharing an answer.
     ResourceLimitExceeded,
     RecursionLimitExceeded,
-    SelfReferentialDefinition,
     /// The condition the failing Word's `errorWhen` declares for this state.
     /// Its protocol spelling *is* the declared condition name, so a reader who
     /// asked `word_contract` for the Word gets back the same vocabulary the
@@ -172,31 +169,23 @@ impl ErrorCategory {
             ErrorCategory::StackUnderflow => "stackUnderflow",
             ErrorCategory::UnknownWord => "unknownWord",
             ErrorCategory::DivisionByZero => "divisionByZero",
-            ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
-            ErrorCategory::ShapeMismatch => "shapeMismatch",
             ErrorCategory::MalformedSource => "malformedSource",
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
             ErrorCategory::ResourceLimitExceeded => "resourceLimitExceeded",
             ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
-            ErrorCategory::SelfReferentialDefinition => "selfReferentialDefinition",
             ErrorCategory::Declared(condition) => condition,
         }
     }
 
     pub fn from_error(err: &AjisaiError) -> Self {
         match err {
-            AjisaiError::StackUnderflow => ErrorCategory::StackUnderflow,
+            AjisaiError::StackUnderflow { .. } => ErrorCategory::StackUnderflow,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
             AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
-            AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
-            AjisaiError::ShapeMismatch { .. } => ErrorCategory::ShapeMismatch,
             AjisaiError::MalformedSource(_) => ErrorCategory::MalformedSource,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
             AjisaiError::ResourceLimitExceeded { .. } => ErrorCategory::ResourceLimitExceeded,
             AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
-            AjisaiError::SelfReferentialDefinition { .. } => {
-                ErrorCategory::SelfReferentialDefinition
-            }
             AjisaiError::DeclaredCondition { condition, .. } => ErrorCategory::Declared(condition),
         }
     }
@@ -249,26 +238,14 @@ impl NilReason {
 
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
-    StackUnderflow,
+    /// A Word was called with fewer operands than its declared arity. `word`
+    /// is filled in at dispatch (`attributed_to`), like a declared condition's,
+    /// so the message names the Word that was short.
+    StackUnderflow {
+        word: Option<&'static str>,
+    },
     UnknownWord(String),
     DivisionByZero,
-    VectorLengthMismatch {
-        len1: usize,
-        len2: usize,
-    },
-    /// Two operands of an element-wise Word have shapes that do not broadcast:
-    /// on some axis they disagree and neither extent is 1.
-    ///
-    /// Distinct from `VectorLengthMismatch`, which is the one-dimensional case
-    /// discovered while walking a ragged value tree. This one carries both full
-    /// shapes and the axis they part on, because with rank ≥ 2 "which operand
-    /// is the wrong shape, and where" is the whole question — and it is the
-    /// most frequent error there is in any program that multiplies matrices.
-    ShapeMismatch {
-        left: Vec<usize>,
-        right: Vec<usize>,
-        axis: usize,
-    },
     /// Program text that does not parse: an unclosed or crossed delimiter, a
     /// delimiter glued to a name, an unclosed string. The fault is in the
     /// writing, not in any value, so it belongs to neither the value-shape nor
@@ -300,12 +277,6 @@ pub enum AjisaiError {
     RecursionLimitExceeded {
         limit: usize,
         word: String,
-    },
-    /// `DEF` refused: `word`'s body names itself, directly or through other
-    /// User words (LANG.DICTIONARY.ACYCLIC's acyclicity invariant). `cycle` closes back on it.
-    SelfReferentialDefinition {
-        word: String,
-        cycle: Vec<String>,
     },
     /// A raise the failing Word's own registry entry already names: `condition`
     /// is one of the conditions its `errorWhen` declares, spelled the way
@@ -341,12 +312,46 @@ impl AjisaiError {
     /// hand rather than scanning the source, so it only catches a condition
     /// this file names for a program its own list exercises — not every call
     /// site automatically.
+    /// A stack short of operands, not yet attributed to a Word.
+    pub const fn stack_underflow() -> Self {
+        AjisaiError::StackUnderflow { word: None }
+    }
+
     pub fn declared(condition: &'static str, message: impl Into<String>) -> Self {
         AjisaiError::DeclaredCondition {
             condition,
             message: message.into(),
             word: None,
         }
+    }
+
+    /// Two operands whose shapes do not align on `axis` (LANG.COLLECTIONS.LIFT).
+    /// One condition for every alignment a Word performs — lifting, pairing
+    /// keys with values, zipping rows — so a length that differs is
+    /// `shapeMismatch` whichever Word noticed it.
+    pub fn shape_mismatch(left: &[usize], right: &[usize], axis: usize) -> Self {
+        AjisaiError::declared(
+            "shapeMismatch",
+            format!(
+                "expected shapes that align, got {:?} and {:?} (axis {} is {} and {}, and neither is 1)",
+                left,
+                right,
+                axis,
+                left.get(axis).copied().unwrap_or(1),
+                right.get(axis).copied().unwrap_or(1)
+            ),
+        )
+    }
+
+    /// Two sequences that must pair position by position and do not.
+    pub fn length_mismatch(left: usize, right: usize) -> Self {
+        AjisaiError::declared(
+            "shapeMismatch",
+            format!(
+                "expected Vectors of the same length, got {} and {}",
+                left, right
+            ),
+        )
     }
 
     /// Attach the Word a declared failure belongs to, if none is attached
@@ -366,6 +371,9 @@ impl AjisaiError {
                 message,
                 word: Some(name),
             },
+            AjisaiError::StackUnderflow { word: None } => {
+                AjisaiError::StackUnderflow { word: Some(name) }
+            }
             other => other,
         }
     }
@@ -374,23 +382,12 @@ impl AjisaiError {
 impl fmt::Display for AjisaiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AjisaiError::StackUnderflow => write!(f, "Stack underflow"),
+            AjisaiError::StackUnderflow { word: Some(word) } => {
+                write!(f, "{}: stack underflow", word)
+            }
+            AjisaiError::StackUnderflow { word: None } => write!(f, "stack underflow"),
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
-            AjisaiError::VectorLengthMismatch { len1, len2 } => {
-                write!(f, "Vector length mismatch: {} vs {}", len1, len2)
-            }
-            AjisaiError::ShapeMismatch { left, right, axis } => {
-                write!(
-                    f,
-                    "Cannot broadcast shapes {:?} and {:?}: axis {} is {} on the left and {} on the right, and neither is 1",
-                    left,
-                    right,
-                    axis,
-                    left.get(*axis).copied().unwrap_or(1),
-                    right.get(*axis).copied().unwrap_or(1)
-                )
-            }
             AjisaiError::MalformedSource(msg) => write!(f, "{}", msg),
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
@@ -433,14 +430,6 @@ impl fmt::Display for AjisaiError {
             },
             AjisaiError::RecursionLimitExceeded { limit, word } => {
                 write!(f, "recursion limit exceeded ({}) in '{}'", limit, word)
-            }
-            AjisaiError::SelfReferentialDefinition { word, cycle } => {
-                write!(
-                    f,
-                    "Cannot define '{}': self-referential definition ({})",
-                    word,
-                    cycle.join(" -> ")
-                )
             }
             AjisaiError::DeclaredCondition {
                 message,

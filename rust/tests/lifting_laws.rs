@@ -36,6 +36,7 @@ fn samples(word: &str) -> Option<(Vec<&'static str>, Vec<&'static str>)> {
         "CHARS" | "UPPER" | "LOWER" => pair(&["'ab'"], &["'c'"]),
         "TRIM" => pair(&["' a '"], &["'b '"]),
         "NUM" => pair(&["'1'"], &["'x'"]),
+        "STR" => pair(&["1/2"], &["TRUE"]),
         "JSON-DECODE" => pair(&["'1'"], &["'[ 1 ]'"]),
         "TOKENIZE" => pair(&["'a,b'", "','"], &["'c'", "','"]),
         "SEARCH" => pair(&["'ab'", "'b'"], &["'cd'", "'c'"]),

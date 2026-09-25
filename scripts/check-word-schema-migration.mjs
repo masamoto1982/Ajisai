@@ -79,6 +79,9 @@ for (const word of words.entries) {
     /\b(str|bool)\b/.test(effect) ||
     /(?<!\.)\.\.(?!\.)/.test(effect) ||
     /\S\||\|\S/.test(effect) ||
+    // A projection is declared in `projection`; the stack effect names the
+    // value answered, so `| NIL` alternatives are not written there.
+    /\| NIL\b/.test(effect) ||
     !/^(\[ .* \] )?$/.test(inputs)
   ) {
     fail(`${word.name} stack effect \`${effect}\` departs from the one notation (bracketed, unquoted, text, TRUE | FALSE, ...)`);

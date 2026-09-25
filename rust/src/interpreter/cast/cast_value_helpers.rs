@@ -26,7 +26,7 @@ pub(crate) fn apply_unary_cast(
     interp: &mut Interpreter,
     convert: fn(&Value) -> Result<Value>,
 ) -> Result<()> {
-    let value: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let value: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     match convert(&value) {
         Ok(result) => {

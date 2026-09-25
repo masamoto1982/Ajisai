@@ -36,7 +36,7 @@ async fn test_range_single_element() {
 }
 
 /// A bound that is not an integer names no position in an integer sequence:
-/// `invalidRange`, with both bounds put back where the program wrote them.
+/// `invalidInteger`, with both bounds put back where the program wrote them.
 #[tokio::test]
 async fn test_range_non_integer_bound_restores_both_operands() {
     for code in ["0 1/2 RANGE", "'a' 5 RANGE"] {

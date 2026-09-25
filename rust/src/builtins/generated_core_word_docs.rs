@@ -189,7 +189,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "TAKE",
         family: "collection",
-        summary: "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        summary: "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.",
         stack_effect: "[ vec ] [ n ] -> [ prefix ]",
         hover_summary: "TAKE — take N elements from start or end",
         hover_syntax: "[ 1 2 3 4 5 ] 3 TAKE",
@@ -197,7 +197,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "DROP",
         family: "collection",
-        summary: "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        summary: "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.",
         stack_effect: "[ vec ] [ n ] -> [ rest ]",
         hover_summary: "DROP — drop N elements from start or end",
         hover_syntax: "[ 1 2 3 4 5 ] 2 DROP",
@@ -221,7 +221,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "COLLECT",
         family: "collection",
-        summary: "Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidCount`), and a stack holding fewer than N values is `stackUnderflow`.",
+        summary: "Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidInteger`), and a stack holding fewer than N values is `stackUnderflow`.",
         stack_effect: "[ v1 ] ... [ vn ] [ n ] -> [ [ v1 ... vn ] ]",
         hover_summary: "COLLECT — collect N items into vector",
         hover_syntax: "1 2 3 3 COLLECT",
@@ -229,7 +229,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "RANGE",
         family: "collection",
-        summary: "Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidRange`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.",
+        summary: "Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidInteger`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.",
         stack_effect: "[ start ] [ end ] -> [ seq ]",
         hover_summary: "RANGE — integers from start to end",
         hover_syntax: "0 5 RANGE",
@@ -245,7 +245,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "SHAPE",
         family: "collection",
-        summary: "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
+        summary: "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
         stack_effect: "[ vec ] -> [ shape ]",
         hover_summary: "SHAPE — the axis lengths of a rectangular vector",
         hover_syntax: "[ [ 1 2 ] [ 3 4 ] ] SHAPE",
@@ -325,10 +325,10 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "GROUP",
         family: "record",
-        summary: "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length.",
-        stack_effect: "[ values ] [ keys ] -> [ record ]",
+        summary: "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.",
+        stack_effect: "[ keys ] [ values ] -> [ record ]",
         hover_summary: "GROUP — a Record from each key to the Vector of its values",
-        hover_syntax: "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP",
+        hover_syntax: "[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP",
     },
     GeneratedCoreWordDoc {
         name: "INDEX-OF",
@@ -518,14 +518,14 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         name: "NUM",
         family: "text",
         summary: "Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`. Text that spells no number — `'abc'`, `'.5'`, `'1_000'` — projects NIL(invalidEncoding). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.",
-        stack_effect: "[ x ] -> [ n | NIL ]",
+        stack_effect: "[ text ] -> [ n ]",
         hover_summary: "NUM — parse to number",
         hover_syntax: "'42' NUM",
     },
     GeneratedCoreWordDoc {
         name: "STR",
         family: "text",
-        summary: "Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason domainMiss — the reason JSON-ENCODE projects for a value with no JSON image rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.",
+        summary: "Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `TRUE STR` is `'TRUE'`. The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `x STR NUM` is `x` for every number. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.",
         stack_effect: "[ x ] -> [ text ]",
         hover_summary: "STR — convert to string",
         hover_syntax: "42 STR",
@@ -533,7 +533,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "FORMAT",
         family: "text",
-        summary: "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.",
+        summary: "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidInteger` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.",
         stack_effect: "[ x ] [ digits ] -> [ text ]",
         hover_summary: "FORMAT — render an exact scalar as decimal text at a stated precision",
         hover_syntax: "1/3 5 FORMAT",
@@ -564,7 +564,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     },
     GeneratedCoreWordDoc {
         name: "CONTRACT",
-        family: "control",
+        family: "dictionary",
         summary: "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
         stack_effect: "[ symbol | code ] -> [ record ]",
         hover_summary: "CONTRACT — the contract of a Word or a block, as a Record",
@@ -598,7 +598,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         name: "NIL-REASON",
         family: "absence",
         summary: "Read the direct reason of an operational NIL as a protocol-string Text.",
-        stack_effect: "[ x ] -> [ text | NIL ]",
+        stack_effect: "[ x ] -> [ text ]",
         hover_summary: "NIL-REASON — read the NIL reason protocol string",
         hover_syntax: "1 0 / NIL-REASON",
     },

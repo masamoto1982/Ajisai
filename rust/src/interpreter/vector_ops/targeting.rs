@@ -12,7 +12,7 @@ where
 {
     let target_val = interp.stack.pop().ok_or_else(|| {
         interp.stack.push(arg_to_restore.clone());
-        AjisaiError::StackUnderflow
+        AjisaiError::stack_underflow()
     })?;
 
     if !target_val.is_vector() {
@@ -42,7 +42,7 @@ pub(crate) fn with_stacktop_vector_target_no_arg<R, F>(
 where
     F: FnOnce(&Value) -> Result<R>,
 {
-    let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let target_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     if !target_val.is_vector() {
         let got = target_val.domain_name();

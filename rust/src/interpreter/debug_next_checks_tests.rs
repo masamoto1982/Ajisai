@@ -31,7 +31,6 @@ fn every_check_carries_a_code_and_both_locales() {
         CauseClass::Environment,
         CauseClass::ValueShape,
         CauseClass::Index,
-        CauseClass::VectorLength,
         CauseClass::ShapeMismatch,
         CauseClass::SourceForm,
         CauseClass::ResourceLimit,
@@ -204,7 +203,7 @@ fn an_unclassified_raise_lists_the_declared_conditions_and_a_classified_one_does
     let classified = checks_for(
         &CauseClass::ShapeMismatch,
         Some("ADD"),
-        Some(&ErrorCategory::ShapeMismatch),
+        Some(&ErrorCategory::Declared("shapeMismatch")),
         None,
     );
     assert!(classified
@@ -318,7 +317,6 @@ mod diagnosis_vocabulary_is_real {
             CauseClass::Environment,
             CauseClass::ValueShape,
             CauseClass::Index,
-            CauseClass::VectorLength,
             CauseClass::ShapeMismatch,
             CauseClass::SourceForm,
             CauseClass::ResourceLimit,
@@ -335,15 +333,14 @@ mod diagnosis_vocabulary_is_real {
             Some(ErrorCategory::StackUnderflow),
             Some(ErrorCategory::UnknownWord),
             Some(ErrorCategory::DivisionByZero),
-            Some(ErrorCategory::VectorLengthMismatch),
-            Some(ErrorCategory::ShapeMismatch),
+            Some(ErrorCategory::Declared("shapeMismatch")),
             Some(ErrorCategory::MalformedSource),
             Some(ErrorCategory::Declared("nameConflict")),
             Some(ErrorCategory::ExecutionLimitExceeded),
             Some(ErrorCategory::ResourceLimitExceeded),
             Some(ErrorCategory::RecursionLimitExceeded),
             Some(ErrorCategory::Declared("protectedWord")),
-            Some(ErrorCategory::SelfReferentialDefinition),
+            Some(ErrorCategory::Declared("selfReferentialDefinition")),
             Some(ErrorCategory::Declared("divisorEqualsZero")),
         ];
         let reasons = [

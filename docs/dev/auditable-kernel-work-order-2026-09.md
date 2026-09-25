@@ -208,8 +208,8 @@ SKILL.md, tools/mcp-server/assets/**        （再生成）
   `AjisaiError::declared("shapeMismatch", …)` のように書くと、プロトコル文字列は
   同じでも内部表現が別物になり、レジストリ検査と診断分類が食い違う。
 
-第二波でこの取り違えを実際にやり、`AjisaiError::ShapeMismatch { left, right, axis }`
-へ差し替えた。**`declared()` を書く前に必ず `kind` を見ること。**
+第二波でこの取り違えを実際にやり、専用の ShapeMismatch 変種へ差し替えた
+（2026-09-25 に変種は廃止、`shapeMismatch` は declared へ移行済み）。**`declared()` を書く前に必ず `kind` を見ること。**
 structural は 16 種（§0.2 の表）。
 
 #### 落とし穴 B：共有ヘルパーは呼び出し元全部の語彙を見てから直す
@@ -267,7 +267,7 @@ DEF の残り 2 件（本体が Vector でない / 本体が空）は既存語�
 `kind: "declared"` で登録、DEF の `errorWhen` に追加する。BIND の
 destructuring 長さ不一致（`bindings.rs` の `vector of N elements` 検査）は
 BIND が既に宣言している `shapeMismatch` に該当するが、**structural なので
-`declared()` ではなく `AjisaiError::ShapeMismatch` を使う**（落とし穴 A）。
+`declared()` ではなく専用の変種を使う**（落とし穴 A。当時の判断で、現在は declared）。
 
 #### 落とし穴 F：`comparison.rs` は 500 行予算の 1 行手前
 

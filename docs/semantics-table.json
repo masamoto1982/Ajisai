@@ -24109,7 +24109,7 @@
         "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24117,7 +24117,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24197,7 +24197,7 @@
         "scalarZero",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24205,7 +24205,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24285,7 +24285,7 @@
         "scalarNegative",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24293,7 +24293,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24373,7 +24373,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24381,7 +24381,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24461,7 +24461,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24469,7 +24469,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24549,7 +24549,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24557,7 +24557,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24637,7 +24637,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24645,7 +24645,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24725,7 +24725,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24733,7 +24733,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24813,7 +24813,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24821,7 +24821,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24989,7 +24989,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -24997,7 +24997,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "GET",
@@ -25154,7 +25154,7 @@
         "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25162,7 +25162,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25242,7 +25242,7 @@
         "scalarZero",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25250,7 +25250,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25330,7 +25330,7 @@
         "scalarNegative",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25338,7 +25338,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25418,7 +25418,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25426,7 +25426,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25506,7 +25506,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25514,7 +25514,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25594,7 +25594,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25602,7 +25602,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25682,7 +25682,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25690,7 +25690,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25770,7 +25770,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25778,7 +25778,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25858,7 +25858,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -25866,7 +25866,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -26034,7 +26034,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -26042,7 +26042,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "TAKE",
@@ -26122,7 +26122,7 @@
         "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26130,7 +26130,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26210,7 +26210,7 @@
         "scalarZero",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26218,7 +26218,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26298,7 +26298,7 @@
         "scalarNegative",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26306,7 +26306,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26386,7 +26386,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26394,7 +26394,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26474,7 +26474,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26482,7 +26482,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26562,7 +26562,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26570,7 +26570,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26650,7 +26650,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26658,7 +26658,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26738,7 +26738,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26746,7 +26746,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26826,7 +26826,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -26834,7 +26834,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -27002,7 +27002,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -27010,7 +27010,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "DROP",
@@ -28135,7 +28135,7 @@
         "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28143,7 +28143,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28223,7 +28223,7 @@
         "scalarZero",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28231,7 +28231,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28311,7 +28311,7 @@
         "scalarNegative",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28319,7 +28319,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28399,7 +28399,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28407,7 +28407,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28455,7 +28455,7 @@
         "booleanTrue",
         "scalarOne"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28463,7 +28463,7 @@
         "booleanTrue",
         "scalarZero"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28471,7 +28471,7 @@
         "booleanTrue",
         "scalarNegative"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28479,7 +28479,7 @@
         "booleanTrue",
         "scalarLarge"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28487,7 +28487,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28495,7 +28495,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28503,7 +28503,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28511,7 +28511,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28519,7 +28519,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28535,7 +28535,7 @@
         "booleanTrue",
         "codeBlock"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28543,7 +28543,7 @@
         "textShort",
         "scalarOne"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28551,7 +28551,7 @@
         "textShort",
         "scalarZero"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28559,7 +28559,7 @@
         "textShort",
         "scalarNegative"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28567,7 +28567,7 @@
         "textShort",
         "scalarLarge"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28575,7 +28575,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28583,7 +28583,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28591,7 +28591,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28599,7 +28599,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28607,7 +28607,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28623,7 +28623,7 @@
         "textShort",
         "codeBlock"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28663,7 +28663,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28671,7 +28671,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28751,7 +28751,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28759,7 +28759,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28839,7 +28839,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -28847,7 +28847,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -29015,7 +29015,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -29023,7 +29023,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:invalidRange"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "RANGE",
@@ -30038,53 +30038,53 @@
       "inputs": [
         "scalarOne"
       ],
-      "outcome": "error:nonVector"
+      "outcome": "value"
     },
     {
       "word": "SHAPE",
       "inputs": [
         "scalarZero"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SHAPE",
-      "inputs": [
-        "scalarNegative"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SHAPE",
-      "inputs": [
-        "scalarLarge"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SHAPE",
-      "inputs": [
-        "booleanTrue"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SHAPE",
-      "inputs": [
-        "textShort"
-      ],
-      "outcome": "error:nonVector"
-    },
-    {
-      "word": "SHAPE",
-      "inputs": [
-        "vectorPair"
       ],
       "outcome": "value"
     },
     {
       "word": "SHAPE",
       "inputs": [
+        "scalarNegative"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SHAPE",
+      "inputs": [
+        "scalarLarge"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SHAPE",
+      "inputs": [
+        "booleanTrue"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SHAPE",
+      "inputs": [
+        "textShort"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SHAPE",
+      "inputs": [
+        "vectorPair"
+      ],
+      "outcome": "value"
+    },
+    {
+      "word": "SHAPE",
+      "inputs": [
         "vectorTriple"
       ],
       "outcome": "value"
@@ -38554,7 +38554,7 @@
         "booleanTrue",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38563,7 +38563,7 @@
         "booleanTrue",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38572,7 +38572,7 @@
         "booleanTrue",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38581,7 +38581,7 @@
         "booleanTrue",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38590,7 +38590,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38599,7 +38599,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38608,7 +38608,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38617,7 +38617,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38626,7 +38626,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38635,7 +38635,7 @@
         "booleanTrue",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38644,7 +38644,7 @@
         "booleanTrue",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38653,7 +38653,7 @@
         "textShort",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38662,7 +38662,7 @@
         "textShort",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38671,7 +38671,7 @@
         "textShort",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38680,7 +38680,7 @@
         "textShort",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38689,7 +38689,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38698,7 +38698,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38707,7 +38707,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38716,7 +38716,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38725,7 +38725,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38734,7 +38734,7 @@
         "textShort",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -38743,7 +38743,7 @@
         "textShort",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39643,7 +39643,7 @@
         "booleanTrue",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39652,7 +39652,7 @@
         "booleanTrue",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39661,7 +39661,7 @@
         "booleanTrue",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39670,7 +39670,7 @@
         "booleanTrue",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39679,7 +39679,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39688,7 +39688,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39697,7 +39697,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39706,7 +39706,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39715,7 +39715,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39724,7 +39724,7 @@
         "booleanTrue",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39733,7 +39733,7 @@
         "booleanTrue",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39742,7 +39742,7 @@
         "textShort",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39751,7 +39751,7 @@
         "textShort",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39760,7 +39760,7 @@
         "textShort",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39769,7 +39769,7 @@
         "textShort",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39778,7 +39778,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39787,7 +39787,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39796,7 +39796,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39805,7 +39805,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39814,7 +39814,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39823,7 +39823,7 @@
         "textShort",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -39832,7 +39832,7 @@
         "textShort",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40732,7 +40732,7 @@
         "booleanTrue",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40741,7 +40741,7 @@
         "booleanTrue",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40750,7 +40750,7 @@
         "booleanTrue",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40759,7 +40759,7 @@
         "booleanTrue",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40768,7 +40768,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40777,7 +40777,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40786,7 +40786,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40795,7 +40795,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40804,7 +40804,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40813,7 +40813,7 @@
         "booleanTrue",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40822,7 +40822,7 @@
         "booleanTrue",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40831,7 +40831,7 @@
         "textShort",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40840,7 +40840,7 @@
         "textShort",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40849,7 +40849,7 @@
         "textShort",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40858,7 +40858,7 @@
         "textShort",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40867,7 +40867,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40876,7 +40876,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40885,7 +40885,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40894,7 +40894,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40903,7 +40903,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40912,7 +40912,7 @@
         "textShort",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -40921,7 +40921,7 @@
         "textShort",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42910,7 +42910,7 @@
         "booleanTrue",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42919,7 +42919,7 @@
         "booleanTrue",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42928,7 +42928,7 @@
         "booleanTrue",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42937,7 +42937,7 @@
         "booleanTrue",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42946,7 +42946,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42955,7 +42955,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42964,7 +42964,7 @@
         "booleanTrue",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42973,7 +42973,7 @@
         "booleanTrue",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42982,7 +42982,7 @@
         "booleanTrue",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -42991,7 +42991,7 @@
         "booleanTrue",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43000,7 +43000,7 @@
         "booleanTrue",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43009,7 +43009,7 @@
         "textShort",
         "scalarOne"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43018,7 +43018,7 @@
         "textShort",
         "scalarZero"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43027,7 +43027,7 @@
         "textShort",
         "scalarNegative"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43036,7 +43036,7 @@
         "textShort",
         "scalarLarge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43045,7 +43045,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43054,7 +43054,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43063,7 +43063,7 @@
         "textShort",
         "vectorPair"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43072,7 +43072,7 @@
         "textShort",
         "vectorTriple"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43081,7 +43081,7 @@
         "textShort",
         "vectorHuge"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43090,7 +43090,7 @@
         "textShort",
         "nilLiteral"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -43099,7 +43099,7 @@
         "textShort",
         "codeBlock"
       ],
-      "outcome": "error:invalidIndex"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "PUT",
@@ -44186,7 +44186,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44210,7 +44210,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44266,7 +44266,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44282,7 +44282,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44298,7 +44298,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44362,7 +44362,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44386,7 +44386,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44530,7 +44530,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44538,7 +44538,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -44546,7 +44546,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "GROUP",
@@ -48058,7 +48058,7 @@
         "vectorPair",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48082,7 +48082,7 @@
         "vectorPair",
         "codeBlock"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48138,7 +48138,7 @@
         "vectorTriple",
         "vectorPair"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48154,7 +48154,7 @@
         "vectorTriple",
         "vectorHuge"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48170,7 +48170,7 @@
         "vectorTriple",
         "codeBlock"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48234,7 +48234,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48258,7 +48258,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48402,7 +48402,7 @@
         "codeBlock",
         "vectorPair"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48410,7 +48410,7 @@
         "codeBlock",
         "vectorTriple"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -48418,7 +48418,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:vectorLengthMismatch"
+      "outcome": "error:shapeMismatch"
     },
     {
       "word": "RECORD",
@@ -104811,7 +104811,7 @@
         "scalarOne",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104827,7 +104827,7 @@
         "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104835,7 +104835,7 @@
         "scalarOne",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104859,7 +104859,7 @@
         "scalarOne",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104899,7 +104899,7 @@
         "scalarZero",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104915,7 +104915,7 @@
         "scalarZero",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104923,7 +104923,7 @@
         "scalarZero",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104947,7 +104947,7 @@
         "scalarZero",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -104987,7 +104987,7 @@
         "scalarNegative",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105003,7 +105003,7 @@
         "scalarNegative",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105011,7 +105011,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105035,7 +105035,7 @@
         "scalarNegative",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105075,7 +105075,7 @@
         "scalarLarge",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105091,7 +105091,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105099,7 +105099,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105123,7 +105123,7 @@
         "scalarLarge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105339,7 +105339,7 @@
         "vectorPair",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105355,7 +105355,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105363,7 +105363,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105387,7 +105387,7 @@
         "vectorPair",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105427,7 +105427,7 @@
         "vectorTriple",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105443,7 +105443,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105451,7 +105451,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105515,7 +105515,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105531,7 +105531,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105539,7 +105539,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105563,7 +105563,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105691,7 +105691,7 @@
         "codeBlock",
         "scalarNegative"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105707,7 +105707,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105715,7 +105715,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",
@@ -105739,7 +105739,7 @@
         "codeBlock",
         "vectorHuge"
       ],
-      "outcome": "error:invalidCount"
+      "outcome": "error:invalidInteger"
     },
     {
       "word": "FORMAT",

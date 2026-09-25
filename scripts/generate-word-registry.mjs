@@ -255,8 +255,9 @@ pub enum OperandRole {
     Data,
     /// Carried without being read: a NIL is an ordinary value here.
     Element,
-    /// A block, a name, or a message: a NIL here is malformed use.
-    Program,
+    /// Directs the Word rather than being data it transforms — a block, a
+    /// name, or a message: a NIL here is malformed use.
+    Control,
     /// Read in truth position, where a NIL is UNKNOWN (LANG.VALUES.TRUTH).
     Truth,
 }
