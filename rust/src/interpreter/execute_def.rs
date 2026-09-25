@@ -69,13 +69,13 @@ pub(crate) fn set_word_description(
 /// shift argument interpretation.
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
-    let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let name_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let name_str = extract_word_name_from_value(&name_val)?;
 
-    let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let def_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     // Prefer the body's own written tokens when the operand was a literal
     // right here (`execution_loop.rs`'s `def_body_tokens_if_literal_precedes_def`,
@@ -244,10 +244,14 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // never through a Word calling itself: every evaluation is then
     // structurally finite, not merely bounded by a runtime step budget.
     if let Some(cycle) = interp.find_reference_cycle(&upper_name, &new_text_references) {
-        return Err(AjisaiError::SelfReferentialDefinition {
-            word: upper_name,
-            cycle,
-        });
+        return Err(AjisaiError::declared(
+            "selfReferentialDefinition",
+            format!(
+                "Cannot define '{}': the body names itself ({})",
+                upper_name,
+                cycle.join(" -> ")
+            ),
+        ));
     }
 
     for dep_name in &new_dependencies {

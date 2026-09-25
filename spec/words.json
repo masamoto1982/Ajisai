@@ -1078,7 +1078,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "invalidIndex"
+        "invalidInteger"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -1182,7 +1182,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "invalidCount"
+        "invalidInteger"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -1206,7 +1206,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "summary": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.",
         "hover": "TAKE — take N elements from start or end",
         "syntax": "[ 1 2 3 4 5 ] 3 TAKE",
         "stackEffect": "[ vec ] [ n ] -> [ prefix ]"
@@ -1236,7 +1236,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "invalidCount"
+        "invalidInteger"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -1260,7 +1260,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidCount`, because that is the program being wrong.",
+        "summary": "Drop the first N or last -N elements of a vector and answer the rest. TAKE's counterpart: `[ 1 2 3 4 5 ] 2 DROP` is `[ 3 4 5 ]` and `[ 1 2 3 4 5 ] -2 DROP` is `[ 1 2 3 ]`, so `[ n ] TAKE` and `[ n ] DROP` split one vector into two halves that `CONCAT` joins back. A count larger than the vector projects to NIL(indexOutOfBounds), exactly as TAKE's does: it names a position past the end, which is well-formed data that did not work out (LANG.FAILURE.PROJECT). A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.",
         "hover": "DROP — drop N elements from start or end",
         "syntax": "[ 1 2 3 4 5 ] 2 DROP",
         "stackEffect": "[ vec ] [ n ] -> [ rest ]"
@@ -1389,7 +1389,7 @@
         "reason": null
       },
       "errorWhen": [
-        "invalidCount",
+        "invalidInteger",
         "stackUnderflow"
       ],
       "purity": "pure",
@@ -1414,7 +1414,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidCount`), and a stack holding fewer than N values is `stackUnderflow`.",
+        "summary": "Take N values off the stack and answer them as one Vector, first-pushed first: `1 2 3 3 COLLECT` is `[ 1 2 3 ]`. N must be a non-negative integer (`invalidInteger`), and a stack holding fewer than N values is `stackUnderflow`.",
         "hover": "COLLECT — collect N items into vector",
         "syntax": "1 2 3 3 COLLECT",
         "stackEffect": "[ v1 ] ... [ vn ] [ n ] -> [ [ v1 ... vn ] ]"
@@ -1442,7 +1442,7 @@
         "reason": "spaceExhausted"
       },
       "errorWhen": [
-        "invalidRange",
+        "invalidInteger",
         "shapeMismatch"
       ],
       "purity": "pure",
@@ -1467,7 +1467,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidRange`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.",
+        "summary": "Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]`, and `3 0 RANGE` counts down, `[ 3 2 1 0 ]`. There is no step operand — a stride is a multiplication of the sequence, `0 3 RANGE 3 MUL` is `[ 0 3 6 9 ]` — so the bounds alone decide the direction and no pair of bounds describes an infinite sequence. A bound that is not an integer is an ERROR (`invalidInteger`); a sequence longer than the machine materializes projects NIL(spaceExhausted). Both bounds are leaves, so a Vector of bounds lifts to one sequence per lane.",
         "hover": "RANGE — integers from start to end",
         "syntax": "0 5 RANGE",
         "stackEffect": "[ start ] [ end ] -> [ seq ]"
@@ -1547,9 +1547,7 @@
         "when": "raggedNesting",
         "reason": "domainMiss"
       },
-      "errorWhen": [
-        "nonVector"
-      ],
+      "errorWhen": [],
       "purity": "pure",
       "determinism": "deterministic",
       "cost": {
@@ -1571,7 +1569,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
+        "summary": "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
         "hover": "SHAPE — the axis lengths of a rectangular vector",
         "syntax": "[ [ 1 2 ] [ 3 4 ] ] SHAPE",
         "stackEffect": "[ vec ] -> [ shape ]"
@@ -1961,7 +1959,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "vectorLengthMismatch"
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -2016,7 +2014,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "invalidIndex"
+        "invalidInteger"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -2070,7 +2068,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "vectorLengthMismatch"
+        "shapeMismatch"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -2094,10 +2092,10 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Both operands must be Vectors of the same length.",
+        "summary": "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.",
         "hover": "GROUP — a Record from each key to the Vector of its values",
-        "syntax": "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP",
-        "stackEffect": "[ values ] [ keys ] -> [ record ]"
+        "syntax": "[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP",
+        "stackEffect": "[ keys ] [ values ] -> [ record ]"
       },
       "executorKey": "Group",
       "effects": [],
@@ -2285,7 +2283,7 @@
       },
       "errorWhen": [
         "nonVector",
-        "vectorLengthMismatch",
+        "shapeMismatch",
         "duplicateKey"
       ],
       "purity": "pure",
@@ -2687,7 +2685,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "passthrough",
@@ -2739,7 +2737,7 @@
         "outputs": 1,
         "operands": [
           "data",
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "passthrough",
@@ -2794,7 +2792,7 @@
         "operands": [
           "data",
           "element",
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "passthrough",
@@ -2847,7 +2845,7 @@
         "operands": [
           "data",
           "element",
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "passthrough",
@@ -3348,7 +3346,7 @@
         "summary": "Parse text as a number, by the same grammar a source literal is read with: `'3/4' NUM` is `3/4`, `'0.25' NUM` is `1/4`. Text that spells no number — `'abc'`, `'.5'`, `'1_000'` — projects NIL(invalidEncoding). A non-String operand is an ERROR (`nonText`); a Vector of Strings lifts.",
         "hover": "NUM — parse to number",
         "syntax": "'42' NUM",
-        "stackEffect": "[ x ] -> [ n | NIL ]"
+        "stackEffect": "[ text ] -> [ n ]"
       },
       "executorKey": "Num",
       "effects": [],
@@ -3363,7 +3361,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "data"
+          "leaf"
         ]
       },
       "nilPolicy": "passthroughThenProject",
@@ -3393,7 +3391,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Convert a value to its string representation. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects to NIL with reason domainMiss — the reason JSON-ENCODE projects for a value with no JSON image rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.",
+        "summary": "Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `TRUE STR` is `'TRUE'`. The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `x STR NUM` is `x` for every number. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.",
         "hover": "STR — convert to string",
         "syntax": "42 STR",
         "stackEffect": "[ x ] -> [ text ]"
@@ -3422,7 +3420,7 @@
       },
       "errorWhen": [
         "nonNumeric",
-        "invalidCount",
+        "invalidInteger",
         "shapeMismatch"
       ],
       "purity": "pure",
@@ -3447,7 +3445,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidCount` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.",
+        "summary": "Render an exact scalar as decimal text with a stated number of digits after the point, rounding a tie away from zero exactly as `ROUND` does: `1/3 5 FORMAT` is `'0.33333'`, `5/2 0 FORMAT` is `'3'`, `2 SQRT 3 FORMAT` is `'1.414'`. This is the one place a value is rounded, and it is text that leaves it, never a number: arithmetic performs no rounding and `STR` refuses a number with no exact lexeme, so a program that wants a decimal approximation names its precision here, at the display boundary. The digit count is a non-negative integer (`invalidInteger` otherwise) and the value a scalar (`nonNumeric` otherwise). Every digit is decided exactly, an irrational's included, since the field's order never ties.",
         "hover": "FORMAT — render an exact scalar as decimal text at a stated precision",
         "syntax": "1/3 5 FORMAT",
         "stackEffect": "[ x ] [ digits ] -> [ text ]"
@@ -3574,7 +3572,7 @@
         "inputs": 1,
         "outputs": "variable",
         "operands": [
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "rejectNil",
@@ -3619,12 +3617,12 @@
     {
       "name": "CONTRACT",
       "aliases": [],
-      "family": "control",
+      "family": "dictionary",
       "stack": {
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "createsNil",
@@ -3676,7 +3674,7 @@
         "inputs": 1,
         "outputs": 0,
         "operands": [
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "rejectNil",
@@ -3854,7 +3852,7 @@
         "summary": "Read the direct reason of an operational NIL as a protocol-string Text.",
         "hover": "NIL-REASON — read the NIL reason protocol string",
         "syntax": "1 0 / NIL-REASON",
-        "stackEffect": "[ x ] -> [ text | NIL ]"
+        "stackEffect": "[ x ] -> [ text ]"
       },
       "executorKey": "NilReason",
       "effects": [],
@@ -3869,7 +3867,7 @@
         "inputs": 1,
         "outputs": 1,
         "operands": [
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "createsNil",
@@ -3921,7 +3919,7 @@
         "outputs": 0,
         "operands": [
           "element",
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "consumeNil",
@@ -3975,8 +3973,8 @@
         "inputs": 2,
         "outputs": 0,
         "operands": [
-          "program",
-          "program"
+          "control",
+          "control"
         ]
       },
       "nilPolicy": "rejectNil",
@@ -4035,7 +4033,7 @@
         "inputs": 1,
         "outputs": 0,
         "operands": [
-          "program"
+          "control"
         ]
       },
       "nilPolicy": "rejectNil",

@@ -91,13 +91,13 @@ async fn observe(program: &str) -> Outcome {
 /// reasoned NIL (LANG.FAILURE.PASSTHROUGH).
 ///
 /// A NIL where a block, name or message belongs is malformed use whatever
-/// else is absent, so a `program` position decides first. Otherwise a `data`
+/// else is absent, so a `control` position decides first. Otherwise a `data`
 /// position passes the NIL through with its reason, and a `truth` position
 /// reads it as UNKNOWN, which is that same reasoned NIL. A Word whose
 /// operands are all `element`s takes a NIL as an ordinary value, so what it
 /// answers is its own business and this probe places no obligation on it.
 fn required(roles: &[OperandRole]) -> Option<Outcome> {
-    if roles.contains(&OperandRole::Program) {
+    if roles.contains(&OperandRole::Control) {
         Some(Outcome::Error)
     } else if roles.contains(&OperandRole::Data)
         || roles.contains(&OperandRole::Leaf)

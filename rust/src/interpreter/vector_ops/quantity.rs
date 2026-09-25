@@ -86,7 +86,7 @@ impl Split {
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     // `LENGTH` is `[ vec ] -> [ count ]` and consumes what it reads: the
     // measured vector leaves the stack.
-    let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let target_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let len = {
         if target_val.is_nil() {
@@ -123,18 +123,18 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// `TAKE` and `DROP` are one Word up to which side of the cut they answer
-/// with, so they are one executor: same operand reading, same `invalidCount`
+/// with, so they are one executor: same operand reading, same `invalidInteger`
 /// on a count that is not an integer, same projection past the end.
 fn split_by_count(interp: &mut Interpreter, split: Split) -> Result<()> {
-    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let count_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let count = match extract_integer_from_value(&count_val) {
         Ok(v) => v,
-        // `invalidCount`: TAKE's own declared condition for a count operand
+        // `invalidInteger`: TAKE's own declared condition for a count operand
         // that isn't a well-formed integer.
         Err(e) => {
             interp.stack.push(count_val);
             return Err(AjisaiError::declared(
-                "invalidCount",
+                "invalidInteger",
                 format!("expected an integer count, got {}", e.got),
             ));
         }

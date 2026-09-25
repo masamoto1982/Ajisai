@@ -65,7 +65,7 @@ fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&str>) {
 /// `FALSE` otherwise. It checks absence only and never branches on the reason
 /// (LANG.VALUES.NIL).
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     interp
         .stack
         .push(Value::from_bool(value.is_operational_nil()));
@@ -80,7 +80,7 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
 /// with rather than the reason id: that text is the reason's parameter and,
 /// under `LANG.VALUES.NIL`, the NIL's entire observable content.
 pub fn op_nil_reason(interp: &mut Interpreter) -> Result<()> {
-    let value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let protocol: Option<String> = operational_absence(&value).and_then(|absence| {
         let reason = absence.reason.as_ref()?;
         Some(match (reason, absence.detail_text()) {

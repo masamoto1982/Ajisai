@@ -1781,7 +1781,7 @@
         "core-shape",
         "core-shape-flat",
         "core-shape-ragged-projects",
-        "core-shape-non-vector-error"
+        "core-shape-non-vector-is-rank-zero"
       ],
       "status": "Formalized",
       "notes": "Shape observation over the reshape group: the axis lengths of a rectangular nesting, outermost first; a ragged nesting has none and projects domainMiss.",

@@ -40,17 +40,15 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "notASymbol"
         | "invalidShape"
         | "invalidClauseShape"
-        | "invalidCount"
+        | "invalidInteger"
         | "unsortedInput"
         | "nonRecord"
         | "duplicateKey"
-        | "invalidRange"
         | "invalidName"
         | "invalidDefinitionBody" => CauseClass::ValueShape,
         // A position outside the operand.
-        "indexOutOfBounds" | "invalidIndex" => CauseClass::Index,
+        "indexOutOfBounds" => CauseClass::Index,
         "shapeMismatch" => CauseClass::ShapeMismatch,
-        "vectorLengthMismatch" => CauseClass::VectorLength,
         "stackUnderflow" => CauseClass::StackShape,
         // A rule about names, definitions, or what a block promised to leave
         // behind — broken by the program rather than by any one value.
@@ -77,7 +75,6 @@ pub(crate) fn repair_for_declared_condition(why: &CauseClass) -> &'static str {
         CauseClass::ValueShape
         | CauseClass::Index
         | CauseClass::ShapeMismatch
-        | CauseClass::VectorLength
         | CauseClass::Domain => "fixInput",
         _ => "fixProgram",
     }

@@ -8,7 +8,7 @@ use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
-    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -18,7 +18,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let target_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let target_val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     if target_val.is_nil() {
         interp

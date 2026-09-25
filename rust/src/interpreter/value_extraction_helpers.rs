@@ -53,9 +53,9 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
 }
 
 /// An operand that is not an integer, described for the message the caller
-/// raises. Not an `AjisaiError`: GET, TAKE, PUT, COLLECT and RANGE each
-/// declare their own condition for it (`invalidIndex`, `invalidCount`,
-/// `nonInteger`, `invalidRange`), so the caller names it.
+/// raises. Not an `AjisaiError`: GET, TAKE, PUT, COLLECT and RANGE all raise
+/// `invalidInteger` for it, each with a message naming what the integer was
+/// for (an index, a count, a bound).
 #[derive(Debug, Clone)]
 pub(crate) struct NotAnInteger {
     pub got: String,
@@ -142,12 +142,12 @@ pub(crate) fn create_number_value(fraction: Fraction) -> Value {
 
 pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     if interp.stack.len() < count {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
     let values: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
     if values.len() != count {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
     Ok(values)
 }

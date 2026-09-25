@@ -5,7 +5,7 @@ use crate::interpreter::Interpreter;
 use crate::types::Value;
 
 fn pop_string(interp: &mut Interpreter) -> Result<String> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     if is_string_value(&val) {
         return Ok(value_as_string(&val).unwrap_or_default());
     }
@@ -47,8 +47,8 @@ pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
-    let sep_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let src_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow);
+    let sep_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let src_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow());
     let src_val = match src_val {
         Ok(v) => v,
         Err(e) => {

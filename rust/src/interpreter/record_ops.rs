@@ -66,10 +66,7 @@ pub fn op_record(interp: &mut Interpreter) -> Result<()> {
         charge_key_scan(interp, &keys)?;
         RecordData::new(keys, values).map_err(|e| match e {
             RecordBuildError::LengthMismatch { keys, values } => {
-                AjisaiError::VectorLengthMismatch {
-                    len1: keys,
-                    len2: values,
-                }
+                AjisaiError::length_mismatch(keys, values)
             }
             RecordBuildError::DuplicateKey { first, second } => AjisaiError::declared(
                 "duplicateKey",

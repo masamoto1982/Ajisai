@@ -5,18 +5,15 @@ use crate::semantic::Recoverability;
 use crate::types::Value;
 
 /// `extract_integer_from_value`, with a structurally malformed index operand
-/// reclassified as the declared `invalidIndex` — GET's own condition for "not
+/// reclassified as the declared `invalidInteger` — GET's own condition for "not
 /// itself a well-formed index (non-integer, wrong shape)", distinct from
 /// `indexOutOfBounds` (a well-formed index outside bounds, which is a NIL
-/// projection, not this ERROR). The shared helper also serves TAKE, COLLECT,
-/// and (via a local wrapper of its own) PUT, none of which declare
-/// `invalidIndex`, so the remap belongs here rather than in the helper
-/// itself (the same shared-helper lesson as `nonInteger`'s `PUT`
-/// fix).
+/// projection, not this ERROR). The message names an index, which is what
+/// this caller of the shared helper knows the integer was for.
 fn require_index_operand(value: &Value) -> Result<i64> {
     extract_integer_from_value(value).map_err(|e| {
         AjisaiError::declared(
-            "invalidIndex",
+            "invalidInteger",
             format!("expected a well-formed index, got {}", e.got),
         )
     })
@@ -49,7 +46,7 @@ fn index_list(value: &Value) -> Result<Vec<i64>> {
         .map(|position| {
             let child = value.child(position).ok_or_else(|| {
                 AjisaiError::declared(
-                    "invalidIndex",
+                    "invalidInteger",
                     "expected a well-formed index, got an absent element",
                 )
             })?;
@@ -59,7 +56,7 @@ fn index_list(value: &Value) -> Result<Vec<i64>> {
 }
 
 fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, Vec<i64>)> {
-    let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let index_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
     let indices = match index_list(&index_val) {
         Ok(value) => value,
         Err(error) => {
@@ -79,7 +76,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         Some(value) => value,
         None => {
             interp.stack.push(index_val);
-            return Err(AjisaiError::StackUnderflow);
+            return Err(AjisaiError::stack_underflow());
         }
     };
 

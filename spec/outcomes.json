@@ -79,9 +79,9 @@
       "documentation": "The total execution-step budget was exhausted before the program finished."
     },
     {
-      "id": "invalidCount",
+      "id": "invalidInteger",
       "kind": "declared",
-      "documentation": "A count operand is malformed for its Word's contract — TAKE or COLLECT given a count that is not a well-formed count at all (distinct from a well-formed count past the end, which TAKE projects as indexOutOfBounds); FORMAT given a digit count that is not a non-negative integer."
+      "documentation": "An operand that must be a whole number is not one: an index (GET, PUT), a count (TAKE, DROP, COLLECT, FORMAT's digits — a count that cannot be negative is also refused below zero), or a RANGE bound."
     },
     {
       "id": "invalidDefinitionBody",
@@ -89,19 +89,9 @@
       "documentation": "DEF was given a body that is not a well-formed definition: not a Vector, or an empty one."
     },
     {
-      "id": "invalidIndex",
-      "kind": "declared",
-      "documentation": "An index operand (GET, PUT) is not a whole number."
-    },
-    {
       "id": "invalidName",
       "kind": "declared",
       "documentation": "DEF or DEL was given a name that cannot be a Word name at all (empty, wrong lexical shape)."
-    },
-    {
-      "id": "invalidRange",
-      "kind": "declared",
-      "documentation": "A RANGE bound is not an integer, so it names no position in an integer sequence."
     },
     {
       "id": "invalidShape",
@@ -176,16 +166,14 @@
     },
     {
       "id": "selfReferentialDefinition",
-      "kind": "structural",
-      "attribution": "operand",
+      "kind": "declared",
       "repair": "program",
       "documentation": "DEF was refused because the body names itself, directly or through other User words — the DEF-time acyclicity check."
     },
     {
       "id": "shapeMismatch",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "Two operands of an element-wise Word have shapes that do not broadcast on some axis."
+      "kind": "declared",
+      "documentation": "Operands a Word aligns position by position do not align: lifted operands whose shapes neither match nor broadcast (LANG.COLLECTIONS.LIFT), keys and values of different lengths (RECORD, GROUP), rows of different lengths (ZIP), or names that cannot destructure a value (BIND)."
     },
     {
       "id": "stackUnderflow",
@@ -205,12 +193,6 @@
       "attribution": "machine",
       "repair": "program",
       "documentation": "A name in program text did not resolve to any Word in the compiled-in vocabulary or the live dictionary."
-    },
-    {
-      "id": "vectorLengthMismatch",
-      "kind": "structural",
-      "attribution": "operand",
-      "documentation": "Two one-dimensional operands have different lengths where the operation requires them equal — the one-dimensional case of shapeMismatch."
     },
     {
       "id": "wordNotFound",

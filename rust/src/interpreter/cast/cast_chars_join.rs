@@ -3,7 +3,7 @@ use crate::interpreter::Interpreter;
 use crate::types::Value;
 
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let Some(text) = val.as_text() else {
         let got = val.domain_name();
@@ -23,7 +23,7 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let Some(children) = val.as_vector_view().map(|v| v.into_owned()) else {
         let got = val.domain_name();

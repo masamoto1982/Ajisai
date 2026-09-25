@@ -26,7 +26,7 @@ pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
 }
 
 fn exec_block(interp: &mut Interpreter) -> Result<()> {
-    let target: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let target: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let Some(elements) = target.as_vector_view() else {
         let got = target.domain_name();

@@ -254,7 +254,7 @@ async fn put_replaces_exactly_one_position() {
 async fn group_partitions_without_loss() {
     let mut interpreter = Interpreter::new();
     interpreter
-        .execute("[ 1 2 3 4 ] [ 'b' 'a' 'b' 'a' ] GROUP")
+        .execute("[ 'b' 'a' 'b' 'a' ] [ 1 2 3 4 ] GROUP")
         .await
         .unwrap();
     assert_eq!(
@@ -264,7 +264,7 @@ async fn group_partitions_without_loss() {
 
     let mut mismatched = Interpreter::new();
     assert!(mismatched
-        .execute("[ 1 2 3 ] [ 'a' 'b' ] GROUP")
+        .execute("[ 'a' 'b' ] [ 1 2 3 ] GROUP")
         .await
         .is_err());
 }

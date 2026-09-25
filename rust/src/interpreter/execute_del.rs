@@ -3,7 +3,7 @@ use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::Interpreter;
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     let name = extract_word_name_from_value(&val)?;
 

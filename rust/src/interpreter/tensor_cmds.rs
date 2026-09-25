@@ -27,7 +27,7 @@ where
         return Ok(());
     }
 
-    let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
     if val.is_nil() {
         let got = val.domain_name();
@@ -140,7 +140,7 @@ pub fn op_round(interp: &mut Interpreter) -> Result<()> {
 /// value is a `leaf`, so a Vector of values lifts to one filled Vector each.
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
     let value_val = interp.stack.pop().expect("length checked");
     let shape_val = interp.stack.pop().expect("length checked");

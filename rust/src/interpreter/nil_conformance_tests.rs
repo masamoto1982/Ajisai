@@ -243,7 +243,8 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
     for code in [
         "2 SQRT STR",
         "2 SQRT 3 SQRT ADD STR",
-        "[ 1 2 ] 2 SQRT MUL STR",
+        // A lifted STR projects per lane.
+        "[ 1 2 ] 2 SQRT MUL STR 0 GET",
     ] {
         assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
     }

@@ -5,7 +5,7 @@ use std::fmt::Write;
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
     interp.run_effect_schema(|interp| {
-        let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+        let val: Value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
         // PRINT is an output boundary: a String is emitted as its raw
         // character content, without the `'...'` quotes the Stack projection
         // uses to mark it as a string (LANG.EFFECTS.OUTPUT).

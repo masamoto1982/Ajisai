@@ -114,7 +114,7 @@ pub(crate) fn op_format(interp: &mut Interpreter) -> Result<()> {
     let Some(digits) = digit_count(&operands[1]) else {
         restore_all(interp, operands);
         return Err(AjisaiError::declared(
-            "invalidCount",
+            "invalidInteger",
             "expected a non-negative integer digit count",
         ));
     };

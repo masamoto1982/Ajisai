@@ -346,7 +346,7 @@
    },
    "expectedTool": "compute",
    "arguments": {
-    "source": "[ 1 2 3 ] [ 'a' 'b' 'a' ] GROUP"
+    "source": "[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP"
    },
    "expect": {
     "/status": "ok",

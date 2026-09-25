@@ -3,7 +3,7 @@
 //! `spec/words.json` declares, per Word, what it does with each operand
 //! (`stack.operands`, LANG.FAILURE.PASSTHROUGH): a `data` operand is read, so
 //! an absent one makes the result that absence; an `element` is carried
-//! without being read, so a NIL there is an ordinary value; a `program`
+//! without being read, so a NIL there is an ordinary value; a `control`
 //! operand — a block, a name, a message — cannot be absent, so a NIL there is
 //! malformed use; a `truth` operand reads NIL as UNKNOWN. This is the one
 //! place that reads those roles, so no executor can quietly disagree with the
@@ -24,7 +24,7 @@ use super::Interpreter;
 enum NilContract {
     /// The declaration places no obligation here; run the primitive.
     Run,
-    /// A NIL in a `program` position. `offset` is its position within the
+    /// A NIL in a `control` position. `offset` is its position within the
     /// declared arity window, left to right in source order (0 = the
     /// first-pushed operand).
     Reject { offset: usize },
@@ -35,7 +35,7 @@ enum NilContract {
     PassThrough { operands: usize, nil_index: usize },
 }
 
-/// The declared condition a Word raises for a NIL in a `program` position:
+/// The declared condition a Word raises for a NIL in a `control` position:
 /// the same condition its primitive raises for any other operand that is not
 /// a block, a name or a message there, read from that Word's own `errorWhen`.
 ///
@@ -43,7 +43,7 @@ enum NilContract {
 /// a Word can raise, not which one belongs to which position (`DEF` declares
 /// six, of which `invalidDefinitionBody` is its block's and `nonText` its
 /// name's). `every_program_position_has_a_condition` pins the table against
-/// the registry, so a new `program` position without an arm fails the build's
+/// the registry, so a new `control` position without an arm fails the build's
 /// tests rather than panicking at runtime.
 fn nil_rejection_error(word_name: &str, offset: usize) -> AjisaiError {
     const CODE: &str = "expected a Vector ([ ... ]) as the code operand, got NIL";
@@ -78,7 +78,7 @@ impl Interpreter {
     /// What the Word's declared operand roles dictate for the operands
     /// currently on the stack.
     ///
-    /// A NIL in a `program` position is refused first, wherever it sits: a
+    /// A NIL in a `control` position is refused first, wherever it sits: a
     /// block, name or message that is absent is malformed use whatever else
     /// is absent beside it (LANG.FAILURE.TRICHOTOMY puts an ERROR ahead of a
     /// NIL). Otherwise the leftmost NIL in a `data` position is the result,
@@ -101,7 +101,7 @@ impl Interpreter {
         if let Some(offset) = window
             .iter()
             .zip(roles)
-            .position(|(operand, role)| *role == OperandRole::Program && operand.is_nil())
+            .position(|(operand, role)| *role == OperandRole::Control && operand.is_nil())
         {
             return NilContract::Reject {
                 offset: offset + (arity - available),
@@ -167,15 +167,15 @@ mod declared_nil_contract_tests {
     use super::nil_rejection_error;
     use crate::kernel::generated::{OperandRole, GENERATED_WORDS};
 
-    /// Every `program` position has a registered condition for a NIL, and
+    /// Every `control` position has a registered condition for a NIL, and
     /// each is one its Word declares — `nil_rejection_error` panics on a
-    /// missing arm, so this is what catches a new `program` operand before
+    /// missing arm, so this is what catches a new `control` operand before
     /// it ships.
     #[test]
     fn every_program_position_has_a_condition() {
         for word in GENERATED_WORDS {
             for (offset, role) in word.operand_roles.iter().enumerate() {
-                if *role != OperandRole::Program {
+                if *role != OperandRole::Control {
                     continue;
                 }
                 let crate::error::AjisaiError::DeclaredCondition { condition, .. } =

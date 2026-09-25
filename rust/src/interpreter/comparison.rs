@@ -110,7 +110,7 @@ fn compare_lane(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Valu
 
 fn apply_binary_comparison(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
     let b_val = interp.stack.pop().unwrap();
@@ -195,7 +195,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
     }
 
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::stack_underflow());
     }
 
     let b_val = interp.stack.pop().unwrap();
