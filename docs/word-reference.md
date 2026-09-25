@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **80 Words**, of which **49** form the Semantic Kernel and **31** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
+Canonical inventory: **78 Words**, of which **48** form the Semantic Kernel and **30** are Standard Words. Every entry below is an ordinary Core Word reached by its plain name; the tier is a design classification, and each Word carries the same contract detail regardless of it. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json) and are not counted here.
 
 ## `TRUE`
 
@@ -309,18 +309,18 @@ A rational opened into its reduced numerator and denominator, as a two-element V
 
 ## `GET`
 
-Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed. An index with no element is not an error: `GET` answers what is there, and "nothing" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. `TAKE` and `PUT` answer the same condition the same way, so past-the-end is one outcome across the whole vocabulary.
+Read a container: the element of a Vector at an index, or the value of a Record under a key — `[ 10 20 30 ] 1 GET` is `20`, `R 'x' GET` is what R holds under `'x'`. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: `[ 10 20 30 ] [ 2 0 ] GET` is `[ 30 10 ]`, a permutation or a gather in one call. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and `[ 10 20 30 ] [ 0 9 ] GET` is `[ 10/1 NIL ]`. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 2 input(s) → 1 output(s)
 - **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
+- **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds,notFound → indexOutOfBounds, notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `[ 10 20 30 ] [ 0 2 ] GET`
-- **ERROR conditions:** `nonVector`, `invalidInteger`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.RECORDS.STRUCTURE`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 10 20 30 ] 1 GET`
+- **ERROR conditions:** `nonContainer`, `invalidInteger`
 
 ## `LENGTH`
 
@@ -576,22 +576,22 @@ Bundle equal-length vectors position by position; a matrix transposes.
 
 ## `PUT`
 
-A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT` hands it back.
+Write a container: a copy of a Vector with the element at an index replaced, or of a Record with a key set — `[ 1 2 3 ] 1 9 PUT` is `[ 1 9 3 ]`, `R 'z' 3 PUT` is R with `'z'` set to 3. A Record key already present keeps its position and takes the new value; an absent key is appended, so key order records the order keys arrived in. A Vector's positions are fixed by its length, so an index past either end names no slot and projects NIL(indexOutOfBounds), exactly as GET does — the Vector the caller wanted preserved is the one they wrote. The value is carried, so it may be anything, a NIL included (a stored absence). Neither operand is changed: containers are values. GET is the reading half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.
 
-- **Vocabulary tier:** Standard (`operational`)
+- **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
 - **Stack:** 3 input(s) → 1 output(s)
 - **Operands:** `data`, `leaf`, `element` (LANG.FAILURE.PASSTHROUGH)
 - **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.RECORDS.STRUCTURE`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] 1 9 PUT`
-- **ERROR conditions:** `nonVector`, `invalidInteger`
+- **ERROR conditions:** `nonContainer`, `invalidInteger`
 
 ## `GROUP`
 
-Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
+Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `record`
@@ -694,36 +694,6 @@ The values of a Record as a Vector, aligned with `KEYS`: `[ 'x' 'y' ] [ 1 2 ] RE
 - **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD VALUES`
 - **ERROR conditions:** `nonRecord`
 
-## `AT`
-
-The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `notFound`, recovered like any other: `R 'x' AT 'S' BIND fallback S S NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `record`
-- **Stack:** 2 input(s) → 1 output(s)
-- **Operands:** `data`, `leaf` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
-- **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' AT`
-- **ERROR conditions:** `nonRecord`
-
-## `WITH`
-
-A copy of a Record with one key set: `R 'z' 3 WITH`. A key already present keeps its position and takes the new value; a key not yet present is appended, so the Record's key order records the order in which keys arrived. This is `PUT` for keys, and like `PUT` it never changes the operand it was given — Records are values. The value may be anything, a NIL included, since a NIL under a key is a stored absence; a NIL where the Record or the key should be is an ERROR.
-
-- **Vocabulary tier:** Semantic Kernel
-- **Family:** `record`
-- **Stack:** 3 input(s) → 1 output(s)
-- **Operands:** `data`, `leaf`, `element` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
-- **Syntax:** `[ 'x' ] [ 1 ] RECORD 'y' 2 WITH`
-- **ERROR conditions:** `nonRecord`
-
 ## `WITHOUT`
 
 A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Record does not hold is not an identity but the absence `notFound` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.
@@ -741,7 +711,7 @@ A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Rec
 
 ## `HAS?`
 
-Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `AT` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.
+Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `GET` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `record`
@@ -1039,7 +1009,7 @@ Evaluate a code block.
 
 ## `CONTRACT`
 
-The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
+The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`

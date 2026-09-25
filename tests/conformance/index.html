@@ -499,7 +499,7 @@
   <h3>GET rejects a String rather than answering a bare code point</h3>
   <pre class="ajisai-source">'abc' 1 GET</pre>
   <pre class="ajisai-expect-result"></pre>
-  <pre class="ajisai-expect-error">GET: expected a Vector, got String</pre>
+  <pre class="ajisai-expect-error">GET: expected a Vector or a Record, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1733,7 +1733,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-block-never-runs" data-category="core">
   <h3>CONTRACT reports a block's effect without ever performing it</h3>
-  <pre class="ajisai-source">[ 42 PRINT ] CONTRACT 'effects' AT</pre>
+  <pre class="ajisai-source">[ 42 PRINT ] CONTRACT 'effects' GET</pre>
   <pre class="ajisai-expect-result">[ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1745,7 +1745,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-block-gap" data-category="core">
   <h3>CONTRACT reports an unresolved dependency as a gap, not an error</h3>
-  <pre class="ajisai-source">[ UNDEFINED-WORD ] CONTRACT 'confidence' AT [ UNDEFINED-WORD ] CONTRACT 'gaps' AT</pre>
+  <pre class="ajisai-source">[ UNDEFINED-WORD ] CONTRACT 'confidence' GET [ UNDEFINED-WORD ] CONTRACT 'gaps' GET</pre>
   <pre class="ajisai-expect-result">'conservative' [ 'gap.unresolvedWord' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1790,14 +1790,14 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-core-word-record" data-category="core">
   <h3>CONTRACT answers a Core Word's registered record as a Record</h3>
-  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' AT [ DIV ] 0 GET CONTRACT 'projection' AT [ SORT ] 0 GET CONTRACT 'tier' AT</pre>
+  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' GET [ DIV ] 0 GET CONTRACT 'projection' GET [ SORT ] 0 GET CONTRACT 'tier' GET</pre>
   <pre class="ajisai-expect-result">2/1 [ 'divisionByZero' ] 'standard'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-contract-user-word-is-its-body" data-category="core">
   <h3>CONTRACT of a User Word is CONTRACT of its body, and runs nothing</h3>
-  <pre class="ajisai-source">[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT EQ [ SHOUT ] 0 GET CONTRACT 'effects' AT</pre>
+  <pre class="ajisai-source">[ 42 PRINT ] 'SHOUT' DEF [ SHOUT ] 0 GET CONTRACT [ 42 PRINT ] CONTRACT EQ [ SHOUT ] 0 GET CONTRACT 'effects' GET</pre>
   <pre class="ajisai-expect-result">TRUE [ 'consoleWrite' ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2277,8 +2277,8 @@ W</pre>
 </section>
 
 <section class="ajisai-case" id="core-lift-a-key-vector" data-category="core">
-  <h3>A Vector of keys lifts AT, as a Vector of indices lifts GET</h3>
-  <pre class="ajisai-source">[ 'a' 'b' ] [ 4 9 ] RECORD [ 'a' 'b' ] AT [ 10 20 30 ] [ 0 2 ] GET</pre>
+  <h3>A Vector of keys lifts GET over a Record, as a Vector of indices lifts it over a Vector</h3>
+  <pre class="ajisai-source">[ 'a' 'b' ] [ 4 9 ] RECORD [ 'a' 'b' ] GET [ 10 20 30 ] [ 0 2 ] GET</pre>
   <pre class="ajisai-expect-result">[ 4/1 9/1 ] [ 10/1 30/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2555,7 +2555,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-exec-carries-a-record" data-category="core">
   <h3>EXEC of a Vector holding a Record pushes that Record</h3>
-  <pre class="ajisai-source">[ 'x' ] [ 1 ] RECORD 1 COLLECT EXEC 'x' AT</pre>
+  <pre class="ajisai-source">[ 'x' ] [ 1 ] RECORD 1 COLLECT EXEC 'x' GET</pre>
   <pre class="ajisai-expect-result">1/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2592,27 +2592,27 @@ W</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-at-answers-by-key" data-category="core">
-  <h3>AT answers the value under a key</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'y' AT</pre>
+<section class="ajisai-case" id="core-get-answers-by-key" data-category="core">
+  <h3>GET reads a Record by key, as it reads a Vector by index</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'y' GET</pre>
   <pre class="ajisai-expect-result">2/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-at-missing-key-projects-missing-field" data-category="core">
-  <h3>AT projects notFound for a key the Record does not hold (LANG.FAILURE.PROJECT)</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' AT NIL-REASON</pre>
+<section class="ajisai-case" id="core-get-missing-key-projects-not-found" data-category="core">
+  <h3>GET projects notFound for a key the Record does not hold (LANG.FAILURE.PROJECT)</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' GET NIL-REASON</pre>
   <pre class="ajisai-expect-result">'notFound'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-with-replaces-in-place" data-category="core">
-  <h3>WITH replaces a present key's value without moving it</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'x' 9 WITH</pre>
+<section class="ajisai-case" id="core-put-replaces-a-key-in-place" data-category="core">
+  <h3>PUT replaces a present key's value without moving it</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'x' 9 PUT</pre>
   <pre class="ajisai-expect-result">{ 'x' 9/1 'y' 2/1 }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
-<section class="ajisai-case" id="core-with-appends-a-new-key" data-category="core">
-  <h3>WITH appends an absent key at the end</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' 3 WITH</pre>
+<section class="ajisai-case" id="core-put-appends-a-new-key" data-category="core">
+  <h3>PUT appends an absent key at the end</h3>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'z' 3 PUT</pre>
   <pre class="ajisai-expect-result">{ 'x' 1/1 'y' 2/1 'z' 3/1 }</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -2630,7 +2630,7 @@ W</pre>
 </section>
 <section class="ajisai-case" id="core-has-asks-presence" data-category="core">
   <h3>HAS? answers presence alone: a stored NIL is present, an absent key is not</h3>
-  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'n' NIL WITH 'n' HAS? [ 'x' 'y' ] [ 1 2 ] RECORD 'n' HAS?</pre>
+  <pre class="ajisai-source">[ 'x' 'y' ] [ 1 2 ] RECORD 'n' NIL PUT 'n' HAS? [ 'x' 'y' ] [ 1 2 ] RECORD 'n' HAS?</pre>
   <pre class="ajisai-expect-result">TRUE FALSE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>

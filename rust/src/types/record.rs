@@ -6,14 +6,14 @@
 //! sequences: `KEYS` and `VALUES` read them back in the order they were given,
 //! and two Records are one value when their key sequences and their value
 //! sequences are equal (LANG.VALUES.DENOTATION). Nothing here remembers how a
-//! Record was built — `WITH` on an absent key appends, so a key's position is
+//! Record was built — `PUT` on an absent key appends, so a key's position is
 //! part of the value, but the operations that led to that position are not.
 //!
 //! No literal spells a Record; `RECORD` is the only constructor
 //! (`spec/grammar.json` is untouched by the domain), which is what keeps the
 //! lexicon closed while the value space grows.
 //!
-//! Lookup is by hash, so `AT` answers in constant expected time where the
+//! Lookup is by hash, so `GET` on a Record answers in constant expected time where the
 //! parallel-vector idiom it replaces (`INDEX-OF` then `GET`) scanned. The
 //! index is built once per Record and shared through the `Arc` every
 //! `ValueData::Record` holds, so copying a Record onto the stack costs a

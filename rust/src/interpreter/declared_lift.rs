@@ -6,7 +6,7 @@
 //! operand is lifted here, through `lift_lanes_dyn`, except the few whose
 //! primitive already runs the same lift faster itself ([`LIFTS_NATIVELY`]);
 //! one rule decides how `[ 'a' 'b' ] UPPER`,
-//! `[ 1 2 ] 10 ADD` and `R [ 'x' 'y' ] AT` combine their elements. Each
+//! `[ 1 2 ] 10 ADD` and `R [ 'x' 'y' ] GET` combine their elements. Each
 //! element runs through the full dispatcher, so the NIL roles, the declared
 //! conditions and the cost charges are exactly the Word's own.
 

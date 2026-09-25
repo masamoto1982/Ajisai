@@ -10,7 +10,7 @@
 //! inference has a confidence and gaps — so the Records differ in the keys
 //! only one side can supply, and agree on every key both can: `inputs`,
 //! `outputs`, `nil`, `purity`, `determinism`, `cost`, `effects`. A program
-//! that asks `'purity' AT` of either gets an answer.
+//! that asks `'purity' GET` of either gets an answer.
 
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractDeterminism, ContractFlow, ContractPurity, NilBehavior,

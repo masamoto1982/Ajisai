@@ -10,7 +10,7 @@
 
 use ajisai_core::interpreter::Interpreter;
 
-/// The Semantic Kernel: the 49 Words every Standard must be derivable from.
+/// The Semantic Kernel: the 48 Words every Standard must be derivable from.
 const KERNEL_WORDS: &[&str] = &[
     "TRUE",
     "FALSE",
@@ -39,8 +39,7 @@ const KERNEL_WORDS: &[&str] = &[
     "RECORD",
     "KEYS",
     "VALUES",
-    "AT",
-    "WITH",
+    "PUT",
     "WITHOUT",
     "HAS?",
     "MERGE",

@@ -282,7 +282,7 @@ impl Value {
             // A Boolean is the one truth-valued domain (LANG.VALUES.TRUTH).
             ValueData::Boolean(_) => capabilities.push(Capability::TruthValued),
             // A Record is neither iterable nor indexable by position: its
-            // contents are reached by key (`AT`) or through `KEYS`/`VALUES`.
+            // contents are reached by key (`GET`) or through `KEYS`/`VALUES`.
             ValueData::Record(_) => {}
         }
         capabilities

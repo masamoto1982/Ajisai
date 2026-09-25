@@ -19,109 +19,68 @@ fn require_index_operand(value: &Value) -> Result<i64> {
     })
 }
 
-/// Every index the operand names, in the order it names them.
+/// `GET ( [ container ] [ key ] -> [ value ] )`: the element of a Vector at an
+/// index, or the value of a Record under a key — one Word for reading a
+/// container, as `PUT` is one Word for writing one.
 ///
-/// The index operand is written as a Vector (`[ 0 ]`), so a Vector of several
-/// indices is the shape a reader already has in hand — and `[ 10 20 30 40 ] [ 0 2 ] GET`
-/// used to be an error, which made "select these positions" a question the
-/// language could not ask. Selecting a permutation of a Vector, or the labels
-/// that go with a set of distances, is not an exotic operation; without it
-/// every such program has to encode the pairing into the numbers themselves
-/// and decode it afterwards, and the encoding's soundness condition is one the
-/// language can neither express nor check.
-///
-/// A single index is unchanged and still answers with the element itself, so
-/// this is a generalization rather than a new rule: one index selects a value,
-/// several select a Vector of values.
-fn index_list(value: &Value) -> Result<Vec<i64>> {
-    let count = match &value.data {
-        crate::types::ValueData::Vector(children) => children.len(),
-        crate::types::ValueData::Tensor { data, .. } => data.len(),
-        _ => return Ok(vec![require_index_operand(value)?]),
-    };
-    if count <= 1 {
-        return Ok(vec![require_index_operand(value)?]);
-    }
-    (0..count)
-        .map(|position| {
-            let child = value.child(position).ok_or_else(|| {
-                AjisaiError::declared(
-                    "invalidInteger",
-                    "expected a well-formed index, got an absent element",
-                )
-            })?;
-            require_index_operand(&child)
-        })
-        .collect()
-}
-
-fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, Vec<i64>)> {
-    let index_val = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
-    let indices = match index_list(&index_val) {
-        Ok(value) => value,
-        Err(error) => {
-            interp.stack.push(index_val);
-            return Err(error);
-        }
-    };
-    Ok((index_val, indices))
-}
-
+/// The key is a `leaf`, so a Vector of indices or keys lifts at dispatch
+/// (LANG.COLLECTIONS.LIFT) and this primitive only ever sees one. What names
+/// nothing projects: an index outside the Vector is `indexOutOfBounds`, a key
+/// the Record does not hold is `notFound`.
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
-    let (index_val, indices) = pop_index_operand(interp)?;
-
-    // `GET` is `[ vec ] [ idx ] -> [ elem ]` and consumes what it reads, so
-    // the vector operand leaves the stack.
-    let target_val = match interp.stack.pop() {
-        Some(value) => value,
-        None => {
-            interp.stack.push(index_val);
-            return Err(AjisaiError::stack_underflow());
-        }
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::stack_underflow());
+    }
+    let key = interp.stack.pop().expect("checked by len()");
+    let target = interp.stack.pop().expect("checked by len()");
+    let restore = |interp: &mut Interpreter, target: Value, key: Value| {
+        interp.stack.push(target);
+        interp.stack.push(key);
     };
 
-    if !target_val.is_vector() {
-        let got = target_val.domain_name();
-        interp.stack.push(target_val);
-        interp.stack.push(index_val);
+    if let Some(record) = target.as_record() {
+        let answer = match record.get(&key) {
+            Some(value) => value.clone(),
+            None => Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable),
+        };
+        interp.stack.push(answer);
+        return Ok(());
+    }
+
+    if !target.is_vector() {
+        let got = target.domain_name();
+        restore(interp, target, key);
         return Err(AjisaiError::declared(
-            "nonVector",
-            format!("expected a Vector, got {got}"),
+            "nonContainer",
+            format!("expected a Vector or a Record, got {got}"),
         ));
     }
 
-    // One index selects one element; several select that many. Priced on what
-    // is selected rather than on the vector's length — `GET` is the one Word in
-    // the family whose cost does not track the operand it is handed.
-    if let Err(e) =
-        crate::interpreter::collection_meter::charge_copy_of(interp, &target_val, indices.len())
-    {
-        interp.stack.push(target_val);
-        interp.stack.push(index_val);
+    let index = match require_index_operand(&key) {
+        Ok(index) => index,
+        Err(e) => {
+            restore(interp, target, key);
+            return Err(e);
+        }
+    };
+
+    // One element is selected, so one element is priced: `GET` is the one
+    // Word in the family whose cost does not track the operand it is handed.
+    if let Err(e) = crate::interpreter::collection_meter::charge_copy_of(interp, &target, 1) {
+        restore(interp, target, key);
         return Err(e);
     }
 
-    // An index that names nothing projects where it stands: with one index
-    // that is the whole result, and with several it is one NIL among the
-    // selected elements, so the answer keeps the shape of the request and the
-    // miss stays attached to the position that missed it.
-    let len = target_val.len();
-    let select = |index: i64| -> Value {
-        if len == 0 {
-            None
-        } else {
-            normalize_index(index, len)
-        }
-        .and_then(|idx| target_val.child(idx))
-        .unwrap_or_else(|| {
-            Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
-        })
-    };
-    let result_elem = match indices.as_slice() {
-        [only] => select(*only),
-        several => Value::from_vector(several.iter().map(|index| select(*index)).collect()),
-    };
-
-    interp.stack.push(result_elem);
+    let len = target.len();
+    let answer = if len == 0 {
+        None
+    } else {
+        normalize_index(index, len)
+    }
+    .and_then(|position| target.child(position))
+    .unwrap_or_else(|| {
+        Value::nil_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
+    });
+    interp.stack.push(answer);
     Ok(())
 }

@@ -1073,11 +1073,17 @@
       },
       "nilPolicy": "passthroughThenProject",
       "projection": {
-        "when": "indexOutOfBounds",
-        "reason": "indexOutOfBounds"
+        "when": [
+          "indexOutOfBounds",
+          "notFound"
+        ],
+        "reason": [
+          "indexOutOfBounds",
+          "notFound"
+        ]
       },
       "errorWhen": [
-        "nonVector",
+        "nonContainer",
         "invalidInteger"
       ],
       "purity": "pure",
@@ -1092,20 +1098,22 @@
           "exact": false
         },
         "collection": {
-          "class": "linear",
+          "class": "const",
           "exact": true
         }
       },
       "clauses": [
         "LANG.VALUES.VECTOR",
+        "LANG.RECORDS.STRUCTURE",
         "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.PROJECT",
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Select elements of a vector by index. One index answers with the element itself; several answer with a vector of the selected elements, in the order the indices name them, so a permutation or a gather is one call. A negative index counts from the end. An index that names nothing projects to NIL where it stands, so a miss stays attached to the position that missed. An index with no element is not an error: `GET` answers what is there, and \"nothing\" is a complete answer, so an out-of-range index projects to NIL(indexOutOfBounds). The projection is per index — `[ 10 20 30 ] [ 0 9 ] GET` answers `[ 10/1 NIL ]`, keeping every index that did resolve. `TAKE` and `PUT` answer the same condition the same way, so past-the-end is one outcome across the whole vocabulary.",
-        "hover": "GET — select elements at indices",
-        "syntax": "[ 10 20 30 ] [ 0 2 ] GET",
-        "stackEffect": "[ vec ] [ idx... ] -> [ elem | elems ]"
+        "summary": "Read a container: the element of a Vector at an index, or the value of a Record under a key — `[ 10 20 30 ] 1 GET` is `20`, `R 'x' GET` is what R holds under `'x'`. A negative index counts from the end. The key is a leaf, so a Vector of indices or keys lifts to a Vector of answers in the order they were named: `[ 10 20 30 ] [ 2 0 ] GET` is `[ 30 10 ]`, a permutation or a gather in one call. What names nothing is a well-formed question with no answer, so it projects where it stands rather than raising: an index past either end is NIL(indexOutOfBounds), a key the Record does not hold is NIL(notFound), and `[ 10 20 30 ] [ 0 9 ] GET` is `[ 10/1 NIL ]`. HAS? asks presence alone, so a stored NIL is told apart from an absent key. PUT is the writing half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.",
+        "hover": "GET — read a Vector at an index or a Record at a key",
+        "syntax": "[ 10 20 30 ] 1 GET",
+        "stackEffect": "[ container ] [ key ] -> [ value ]"
       },
       "executorKey": "Get",
       "effects": [],
@@ -2013,7 +2021,7 @@
         "reason": "indexOutOfBounds"
       },
       "errorWhen": [
-        "nonVector",
+        "nonContainer",
         "invalidInteger"
       ],
       "purity": "pure",
@@ -2034,20 +2042,21 @@
       },
       "clauses": [
         "LANG.VALUES.VECTOR",
+        "LANG.RECORDS.STRUCTURE",
         "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.PROJECT",
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "A copy of a vector with the element at one index replaced. An out-of-range index projects to NIL(indexOutOfBounds), exactly as it does for `GET`: a well-formed index over a well-formed vector that names no slot is data that did not work out, not a program that is wrong (LANG.FAILURE.PROJECT). `PUT` used to raise here, on the grounds that it answers with the whole vector and so has no single slot to empty — but what is absent is the *answer*, not a slot, and a reasoned NIL is how this language says an answer is absent. Nothing is lost by saying so: the vector the caller wanted preserved is the one they wrote, and `[ 1 2 3 ] 9 5 PUT 'S' BIND [ 1 2 3 ] S S NIL? SELECT` hands it back.",
-        "hover": "PUT — replace the element at an index",
+        "summary": "Write a container: a copy of a Vector with the element at an index replaced, or of a Record with a key set — `[ 1 2 3 ] 1 9 PUT` is `[ 1 9 3 ]`, `R 'z' 3 PUT` is R with `'z'` set to 3. A Record key already present keeps its position and takes the new value; an absent key is appended, so key order records the order keys arrived in. A Vector's positions are fixed by its length, so an index past either end names no slot and projects NIL(indexOutOfBounds), exactly as GET does — the Vector the caller wanted preserved is the one they wrote. The value is carried, so it may be anything, a NIL included (a stored absence). Neither operand is changed: containers are values. GET is the reading half. A first operand that is neither a Vector nor a Record is an ERROR (`nonContainer`); an index that is not an integer is `invalidInteger`.",
+        "hover": "PUT — write a Vector at an index or a Record at a key",
         "syntax": "[ 1 2 3 ] 1 9 PUT",
-        "stackEffect": "[ vec ] [ idx ] [ x ] -> [ vec ]"
+        "stackEffect": "[ container ] [ key ] [ value ] -> [ container ]"
       },
       "executorKey": "Put",
       "effects": [],
       "partiality": "projecting",
-      "vocabularyTier": "standard",
-      "standardKind": "operational"
+      "vocabularyTier": "kernel"
     },
     {
       "name": "GROUP",
@@ -2092,7 +2101,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' AT` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.",
+        "summary": "Bundle values by the key at the same position, as a Record from key to the Vector of its values: `[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP` is `[ 'a' 'b' ] [ [ 1/1 3/1 ] [ 2/1 ] ] RECORD`, keys in order of first appearance and every value kept exactly once. The core of a per-class tally, a centroid update or a stratified partition; `R 'a' GET` then reads one group by name where the earlier Vector-of-Vectors form needed `UNIQUE` and `INDEX-OF` to find it. Keys come first, as they do for RECORD; both operands must be Vectors of the same length.",
         "hover": "GROUP — a Record from each key to the Vector of its values",
         "syntax": "[ 'a' 'b' 'a' ] [ 1 2 3 ] GROUP",
         "stackEffect": "[ keys ] [ values ] -> [ record ]"
@@ -2419,110 +2428,6 @@
       "vocabularyTier": "kernel"
     },
     {
-      "name": "AT",
-      "aliases": [],
-      "family": "record",
-      "stack": {
-        "inputs": 2,
-        "outputs": 1,
-        "operands": [
-          "data",
-          "leaf"
-        ]
-      },
-      "nilPolicy": "passthroughThenProject",
-      "projection": {
-        "when": "notFound",
-        "reason": "notFound"
-      },
-      "errorWhen": [
-        "nonRecord"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "const",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.RECORDS.STRUCTURE",
-        "LANG.VALUES.DISJOINT",
-        "LANG.FAILURE.PROJECT"
-      ],
-      "documentation": {
-        "summary": "The value under a key: `R 'x' AT`. What `GET` does for a position, `AT` does for a key, and where the parallel-Vector idiom (`INDEX-OF` then `GET`) scans every key, `AT` answers in constant expected time. A key the Record does not hold is a well-formed question with no answer, so it projects the reasoned absence `notFound`, recovered like any other: `R 'x' AT 'S' BIND fallback S S NIL? SELECT`. Ask `HAS?` first when presence itself is the question. A non-Record first operand is an ERROR.",
-        "hover": "AT — the value under a key, or the absence notFound",
-        "syntax": "[ 'x' 'y' ] [ 1 2 ] RECORD 'x' AT",
-        "stackEffect": "[ record ] [ key ] -> [ value ]"
-      },
-      "executorKey": "At",
-      "effects": [],
-      "partiality": "projecting",
-      "vocabularyTier": "kernel"
-    },
-    {
-      "name": "WITH",
-      "aliases": [],
-      "family": "record",
-      "stack": {
-        "inputs": 3,
-        "outputs": 1,
-        "operands": [
-          "data",
-          "leaf",
-          "element"
-        ]
-      },
-      "nilPolicy": "passthrough",
-      "projection": {
-        "when": "never",
-        "reason": null
-      },
-      "errorWhen": [
-        "nonRecord"
-      ],
-      "purity": "pure",
-      "determinism": "deterministic",
-      "cost": {
-        "steps": {
-          "class": "const",
-          "exact": true
-        },
-        "numeric": {
-          "class": "const",
-          "exact": false
-        },
-        "collection": {
-          "class": "linear",
-          "exact": true
-        }
-      },
-      "clauses": [
-        "LANG.RECORDS.STRUCTURE",
-        "LANG.VALUES.DISJOINT"
-      ],
-      "documentation": {
-        "summary": "A copy of a Record with one key set: `R 'z' 3 WITH`. A key already present keeps its position and takes the new value; a key not yet present is appended, so the Record's key order records the order in which keys arrived. This is `PUT` for keys, and like `PUT` it never changes the operand it was given — Records are values. The value may be anything, a NIL included, since a NIL under a key is a stored absence; a NIL where the Record or the key should be is an ERROR.",
-        "hover": "WITH — a copy with one key set",
-        "syntax": "[ 'x' ] [ 1 ] RECORD 'y' 2 WITH",
-        "stackEffect": "[ record ] [ key ] [ value ] -> [ record ]"
-      },
-      "executorKey": "With",
-      "effects": [],
-      "partiality": "total",
-      "vocabularyTier": "kernel"
-    },
-    {
       "name": "WITHOUT",
       "aliases": [],
       "family": "record",
@@ -2615,7 +2520,7 @@
         "LANG.VALUES.DISJOINT"
       ],
       "documentation": {
-        "summary": "Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `AT` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.",
+        "summary": "Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `GET` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.",
         "hover": "HAS? — whether a key is present",
         "syntax": "[ 'x' ] [ 1 ] RECORD 'x' HAS?",
         "stackEffect": "[ record ] [ key ] -> [ TRUE | FALSE ]"
@@ -3656,7 +3561,7 @@
         "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' AT` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
+        "summary": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed `name` `tier` `inputs` `outputs` `nil` `projection` `errors` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `nil` `purity` `determinism` `cost` `effects` `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
         "hover": "CONTRACT — the contract of a Word or a block, as a Record",
         "syntax": "[ ADD ] 0 GET CONTRACT",
         "stackEffect": "[ symbol | code ] -> [ record ]"

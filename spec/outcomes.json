@@ -29,7 +29,7 @@
     {
       "id": "notFound",
       "projectable": true,
-      "documentation": "A lookup found nothing at what it was asked for: a key a Record does not hold (AT, WITHOUT), a value a Vector does not contain (INDEX-OF, BSEARCH), a needle a text does not contain (SEARCH), or a name no Word answers to (CONTRACT)."
+      "documentation": "A lookup found nothing at what it was asked for: a key a Record does not hold (GET, WITHOUT), a value a Vector does not contain (INDEX-OF, BSEARCH), a needle a text does not contain (SEARCH), or a name no Word answers to (CONTRACT)."
     },
     {
       "id": "notAvailable",
@@ -114,7 +114,12 @@
     {
       "id": "nonRecord",
       "kind": "declared",
-      "documentation": "A Record Word (KEYS, VALUES, AT, WITH, WITHOUT, HAS?, MERGE) was given something other than a Record where one is required. A Record is its own domain (LANG.VALUES.DISJOINT): a Vector of pairs is not a Record and nothing converts one implicitly."
+      "documentation": "A Record Word (KEYS, VALUES, WITHOUT, HAS?, MERGE) was given something other than a Record where one is required. A Record is its own domain (LANG.VALUES.DISJOINT): a Vector of pairs is not a Record and nothing converts one implicitly."
+    },
+    {
+      "id": "nonContainer",
+      "kind": "declared",
+      "documentation": "An operand the Word reads as a container — GET and PUT, which read and write a Vector at an index or a Record at a key — is neither a Vector nor a Record."
     },
     {
       "id": "nonNumeric",

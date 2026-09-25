@@ -341,7 +341,7 @@ async fn json_decode_and_encode_are_exact_and_compose_to_the_identity() {
     let mut interpreter = Interpreter::new();
     interpreter
         .execute(
-            "'{\"a\": 0.1, \"b\": [true, null, \"x\"]}' JSON-DECODE 'a' AT 10 MUL \
+            "'{\"a\": 0.1, \"b\": [true, null, \"x\"]}' JSON-DECODE 'a' GET 10 MUL \
              [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD JSON-ENCODE \
              [ 'a' 'b' ] [ 1/4 [ TRUE NIL 'x' ] ] RECORD 'V' BIND V V JSON-ENCODE JSON-DECODE EQ \
              1/3 JSON-ENCODE 'J' BIND J J JSON-DECODE NUM \

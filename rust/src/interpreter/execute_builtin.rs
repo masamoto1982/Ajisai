@@ -272,8 +272,6 @@ impl Interpreter {
             WordId::Record => record_ops::op_record(self),
             WordId::Keys => record_ops::op_keys(self),
             WordId::Values => record_ops::op_values(self),
-            WordId::At => record_ops::op_at(self),
-            WordId::With => record_ops::op_with(self),
             WordId::Without => record_ops::op_without(self),
             WordId::Has => record_ops::op_has(self),
             WordId::Merge => record_ops::op_merge(self),

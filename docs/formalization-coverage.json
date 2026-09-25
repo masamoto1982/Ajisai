@@ -579,8 +579,8 @@
         "RECORD",
         "KEYS",
         "VALUES",
-        "AT",
-        "WITH",
+        "GET",
+        "PUT",
         "WITHOUT",
         "HAS?",
         "MERGE",
@@ -591,8 +591,8 @@
         "RECORD",
         "KEYS",
         "VALUES",
-        "AT",
-        "WITH",
+        "GET",
+        "PUT",
         "WITHOUT",
         "HAS?",
         "MERGE",
@@ -1534,19 +1534,23 @@
       ],
       "law_tests": [
         "rust/tests/structural_laws.rs",
-        "rust/tests/contract_consumption_laws.rs"
+        "rust/tests/contract_consumption_laws.rs",
+        "rust/src/interpreter/record_words_tests.rs"
       ],
       "conformance_cases": [
         "core-get-negative-index",
-        "core-get-zero-index"
+        "core-get-zero-index",
+        "core-get-answers-by-key",
+        "core-get-missing-key-projects-not-found"
       ],
       "status": "Formalized",
-      "notes": "Indexed projection over vectors/tensors; out-of-range indices project to NIL while preserving the source vector observation.",
+      "notes": "Reads a container: a Vector at an index (out-of-range projects indexOutOfBounds) or a Record at a key (absent projects notFound).",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
-        "algebra.absence.domain"
+        "algebra.absence.domain",
+        "algebra.record.keyed-correspondence"
       ],
       "algebraic_family": "structure-lift",
       "core_tier": "material"
@@ -2638,22 +2642,24 @@
         "SPECIFICATION.html §7.1"
       ],
       "law_tests": [
-        "rust/tests/standard_operational_laws.rs"
+        "rust/tests/standard_operational_laws.rs",
+        "rust/src/interpreter/record_words_tests.rs"
       ],
       "conformance_cases": [
-        "standard-put"
+        "standard-put",
+        "core-put-replaces-a-key-in-place",
+        "core-put-appends-a-new-key"
       ],
       "status": "Formalized",
-      "notes": "Single-position replacement on an indexed sequence; a negative index counts from the end.",
+      "notes": "Writes a container: a Vector at an index (out-of-range projects indexOutOfBounds) or a Record at a key (present replaced in place, absent appended).",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.record.keyed-correspondence"
       ],
       "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "standard_relation": "operational",
-      "native_retention_reason": "Replaces one element without rebuilding the sequence through a per-element conditional or a three-phrase slice-and-rejoin."
+      "core_tier": "material"
     },
     {
       "id": "core.group",
@@ -2671,7 +2677,7 @@
         "standard-group"
       ],
       "status": "Formalized",
-      "notes": "A Record from each key to the Vector of its values, keys in UNIQUE order, every value kept exactly once; a group is read back by its key with AT.",
+      "notes": "A Record from each key to the Vector of its values, keys in UNIQUE order, every value kept exactly once; a group is read back by its key with GET.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2842,58 +2848,6 @@
       ],
       "status": "Formalized",
       "notes": "The value Vector of a Record aligned with KEYS; RECORD over KEYS and VALUES rebuilds the Record.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.record.keyed-correspondence"
-      ],
-      "algebraic_family": "record",
-      "core_tier": "identity"
-    },
-    {
-      "id": "core.at",
-      "kind": "coreword",
-      "surface": "AT",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/record_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-at-answers-by-key",
-        "core-at-missing-key-projects-missing-field"
-      ],
-      "status": "Formalized",
-      "notes": "The value under a key in constant expected time; an absent key projects notFound.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.record.keyed-correspondence"
-      ],
-      "algebraic_family": "record",
-      "core_tier": "identity"
-    },
-    {
-      "id": "core.with",
-      "kind": "coreword",
-      "surface": "WITH",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §3.7",
-        "SPECIFICATION.html §7.1"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/record_words_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-with-replaces-in-place",
-        "core-with-appends-a-new-key"
-      ],
-      "status": "Formalized",
-      "notes": "A copy with one key set: in place when present, appended when not; a NIL value is stored, a NIL key or Record is an ERROR.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
