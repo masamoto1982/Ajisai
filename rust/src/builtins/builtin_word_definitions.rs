@@ -2,9 +2,8 @@ use crate::coreword_registry::Partiality;
 
 /// Runtime view of a canonical Core Word.
 ///
-/// Documentation and presentation are generated from `spec/words.json`; safety,
-/// partiality, stability, and execution form are projected from the generated
-/// contract. This type assembles those projections for existing GUI and reference
+/// Documentation and presentation are generated from `spec/words.json`;
+/// partiality is projected from the generated contract. This type assembles those projections for existing GUI and reference
 /// consumers and owns no parallel source of language facts.
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
@@ -15,7 +14,6 @@ pub struct BuiltinSpec {
     pub hover_summary: &'static str,
     pub hover_syntax: &'static str,
     pub stack_effect: &'static str,
-    pub stability: &'static str,
     pub partiality: Partiality,
 }
 
@@ -39,8 +37,7 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
                     hover_summary: doc.hover_summary,
                     hover_syntax: doc.hover_syntax,
                     stack_effect: doc.stack_effect,
-                    stability: crate::coreword_registry::stability_from_contract(word),
-                    partiality: crate::coreword_registry::partiality_from_contract(word),
+                    partiality: word.partiality,
                 }
             })
             .collect()
@@ -130,18 +127,7 @@ mod tests {
         for spec in super::builtin_specs() {
             let word = crate::kernel::generated::generated_word(spec.name)
                 .expect("every spec name must be a canonical Word");
-            assert_eq!(
-                spec.stability,
-                crate::coreword_registry::stability_from_contract(word),
-                "{} stability",
-                spec.name
-            );
-            assert_eq!(
-                spec.partiality,
-                crate::coreword_registry::partiality_from_contract(word),
-                "{} partiality",
-                spec.name
-            );
+            assert_eq!(spec.partiality, word.partiality, "{} partiality", spec.name);
         }
     }
 
@@ -154,12 +140,6 @@ mod tests {
                 !spec.stack_effect.is_empty(),
                 "{} missing stack_effect",
                 spec.name
-            );
-            assert!(
-                spec.stability == "stable" || spec.stability == "experimental",
-                "{} has invalid stability {}",
-                spec.name,
-                spec.stability
             );
         }
     }

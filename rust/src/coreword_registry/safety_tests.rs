@@ -1,9 +1,8 @@
-//! Verification of registry joins, profiles, safety, and declared contracts.
-//! AQ-VER-007 — Coreword purity / safe-preview integrity tests.
+//! AQ-VER-007 — Coreword purity integrity tests.
 //!
 //! These tests are linked from `docs/quality/TRACEABILITY_MATRIX.md`
-//! to AQ-REQ-007 ("Built-in word purity classification and `safe_preview`
-//! gating remain self-consistent"). Test names are prefixed with their
+//! to AQ-REQ-007 ("Built-in word purity classification is self-consistent
+//! with the effects and determinism each Word declares"). Test names are prefixed with their
 //! verification ID so that a `cargo test aq_ver_007` invocation runs
 //! the full coreword-registry coverage subset.
 
@@ -27,22 +26,17 @@ fn aq_ver_007_a_metadata_exists_for_all_builtin_words() {
     }
 }
 
-/// A `pure` Word declares no effects and is safe to preview.
+/// A `pure` Word declares no effects.
 ///
 /// Determinism is not asserted here: purity and determinism are separate
 /// axes in the specification, and a pure Word may still be `stateRelative`.
 #[test]
-fn aq_ver_007_b_pure_words_declare_no_effects_and_are_safe_to_preview() {
+fn aq_ver_007_b_pure_words_declare_no_effects() {
     let registry = get_builtin_word_registry();
     for word in registry.iter().filter(|w| w.purity == Purity::Pure) {
         assert!(
             word.effects.is_empty(),
             "{} pure words must have no effects",
-            word.name
-        );
-        assert!(
-            word.safe_preview,
-            "{} pure words must be safe preview",
             word.name
         );
     }
@@ -82,14 +76,9 @@ fn aq_ver_007_b2_conditional_words_borrow_their_purity_from_their_block() {
 }
 
 #[test]
-fn aq_ver_007_c_effectful_words_must_not_be_safe_preview() {
+fn aq_ver_007_c_effectful_words_declare_effects() {
     let registry = get_builtin_word_registry();
     for word in registry.iter().filter(|w| w.purity == Purity::Effectful) {
-        assert!(
-            !word.safe_preview,
-            "{} effectful words must disable safe preview",
-            word.name
-        );
         assert!(
             !word.effects.is_empty(),
             "{} effectful words must declare effects",

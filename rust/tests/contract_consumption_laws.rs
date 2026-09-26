@@ -5,8 +5,9 @@
 //!
 //! 1. **Consumption** (`LANG.STACK.CONSUMPTION`): every Word consumes the
 //!    operands it reads; a value is reused only by naming it with `BIND`.
-//! 2. **Coreword contracts** (`LANG.CONTRACT.REGISTRY`): the `partiality` / `nil_policy` /
-//!    `safety_level` lattices, with contract absence = conformance violation.
+//! 2. **Coreword contracts** (`LANG.CONTRACT.REGISTRY`): the `partiality` /
+//!    `nil_policy` / purity-and-effects declarations, with contract absence =
+//!    conformance violation.
 //! 3. **Static mass conservation** (`LANG.STACK.CONSUMPTION`): consumption/production as a
 //!    resource (linear) discipline, observed here via stack-depth deltas.
 //!
@@ -19,7 +20,7 @@
 mod test_support;
 
 use ajisai_core::coreword_registry::{
-    get_builtin_word_registry, get_coreword_metadata, NilPolicy, Partiality, Purity, SafetyLevel,
+    get_builtin_word_registry, get_coreword_metadata, NilPolicy, Partiality, Purity,
 };
 use proptest::prelude::*;
 use test_support::generators::small;
@@ -124,84 +125,25 @@ fn every_coreword_declares_a_reachable_contract() {
             "{} declares no NIL policy",
             m.name
         );
-        assert!(matches!(
-            m.safety_level,
-            SafetyLevel::A | SafetyLevel::B | SafetyLevel::D
-        ));
     }
 }
 
-/// Safety-level lattice: `A` (the strongest) implies a Word that contributes
-/// no effects of its own and always lands somewhere; effectful words sit
-/// strictly above `B`.
-///
-/// `A` used to also imply *deterministic*, on the reasoning that the strongest
-/// safety class must be reproducible. The canonical declarations show those are
-/// independent axes: `OR-NIL` is safety `A` and `stateRelative` — it computes
-/// nothing and touches no value, but what it *does* is change how the next
-/// Word runs. `OR-NIL` also broke the "A must be pure" half by declaring
-/// `conditional`, the class the hand-written vocabulary could not express.
-/// None of that makes it unsafe, which is what `A` is about; it
-/// makes determinism the wrong question to ask here, so the clause is gone
-/// rather than weakened.
+/// A Word declares effects exactly when it is `effectful`: purity and the
+/// effect list are two declarations of one fact, so neither may hold without
+/// the other. (A derived `A`/`B`/`D` "safety level" used to restate them a
+/// third time; it was a label no specification declared, and it is gone.)
 #[test]
-fn safety_lattice_is_monotone() {
+fn effects_are_declared_exactly_by_effectful_words() {
     for m in get_builtin_word_registry() {
-        if m.safety_level == SafetyLevel::A {
-            assert!(
-                matches!(m.purity, Purity::Pure | Purity::Conditional),
-                "{} A must contribute no effects of its own, got {:?}",
-                m.name,
-                m.purity
-            );
-            assert!(
-                m.effects.is_empty(),
-                "{} A must declare no effects, got {:?}",
-                m.name,
-                m.effects
-            );
-            // `A` is reserved for *total* words. `Projecting` is total by
-            // projection (failures land on NIL), so it qualifies; `Partial`
-            // does not (finding E2, resolved).
-            assert!(
-                matches!(m.partiality, Partiality::Total | Partiality::Projecting),
-                "{} A must be total (or total-by-projection), got {:?}",
-                m.name,
-                m.partiality
-            );
-        }
-        if !m.effects.is_empty() {
-            assert!(
-                m.safety_level == SafetyLevel::D,
-                "{} has effects but safety {:?}",
-                m.name,
-                m.safety_level
-            );
-        }
-        if m.purity == Purity::Effectful {
-            assert!(
-                m.safety_level == SafetyLevel::D,
-                "{} effectful but safety {:?}",
-                m.name,
-                m.safety_level
-            );
-        }
+        assert_eq!(
+            m.purity == Purity::Effectful,
+            !m.effects.is_empty(),
+            "{}: purity {:?} with effects {:?}",
+            m.name,
+            m.purity,
+            m.effects
+        );
     }
-}
-
-/// Safety `A` means "total, pure, deterministic", so no Word may be both `A`
-/// and `Partial`. This guards against regressing the contract.
-#[test]
-fn safety_a_words_are_total() {
-    let a_but_partial: Vec<&str> = get_builtin_word_registry()
-        .iter()
-        .filter(|m| m.safety_level == SafetyLevel::A && m.partiality == Partiality::Partial)
-        .map(|m| m.name.as_str())
-        .collect();
-    assert!(
-        a_but_partial.is_empty(),
-        "LANG.CONTRACT.REGISTRY: safety A must be total, but these are A+Partial: {a_but_partial:?}"
-    );
 }
 
 /// Concrete LANG.CONTRACT.REGISTRY anchor contracts (the narrative examples of LANG.CONTRACT.REGISTRY, pinned as
@@ -213,7 +155,6 @@ fn key_word_contracts_match_spec_7_14() {
     let add = c("ADD");
     assert_eq!(add.partiality, Partiality::Total);
     assert_eq!(add.nil_policy, NilPolicy::Passthrough);
-    assert_eq!(add.safety_level, SafetyLevel::A);
 
     // DIV declares `passthroughThenProject`, not `createsNil`: a NIL operand
     // passes through unchanged, and it is a *well-formed* operand pair with a
@@ -222,7 +163,6 @@ fn key_word_contracts_match_spec_7_14() {
     let div = c("DIV");
     assert_eq!(div.partiality, Partiality::Projecting);
     assert_eq!(div.nil_policy, NilPolicy::PassthroughThenProject);
-    assert_eq!(div.safety_level, SafetyLevel::B);
 
     // EQ/LT declare a blanket `passthrough` and are total: a NIL operand
     // passes through unchanged, and order and equality decide over every
@@ -232,7 +172,6 @@ fn key_word_contracts_match_spec_7_14() {
         let m = c(cmp);
         assert_eq!(m.partiality, Partiality::Total, "{cmp}");
         assert_eq!(m.nil_policy, NilPolicy::Passthrough, "{cmp}");
-        assert_eq!(m.safety_level, SafetyLevel::A, "{cmp}");
     }
 
     // `AND`/`NOT` declare `kleeneAbsorbing`, not a blanket `passthrough`:
@@ -243,6 +182,5 @@ fn key_word_contracts_match_spec_7_14() {
         let m = c(logic);
         assert_eq!(m.partiality, Partiality::Total, "{logic}");
         assert_eq!(m.nil_policy, NilPolicy::KleeneAbsorbing, "{logic}");
-        assert_eq!(m.safety_level, SafetyLevel::A, "{logic}");
     }
 }

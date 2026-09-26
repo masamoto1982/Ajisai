@@ -116,10 +116,8 @@ async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
     );
     assert_eq!(payload.kind.as_deref(), Some("divisionByZero"));
     assert_eq!(payload.recoverability, "fixInput");
-    assert_eq!(payload.semantic_area, "exact-real-arithmetic");
     assert_eq!(payload.word.as_deref(), Some("DIV"));
-    assert_eq!(payload.semantic_role, "Derived");
-    assert_eq!(payload.algebraic_family, "exact-arithmetic");
+    assert_eq!(payload.family.as_deref(), Some("exactArithmetic"));
     assert_eq!(payload.nil_reason.as_deref(), Some("divisionByZero"));
     assert!(payload.truth_value.is_none());
     assert!(payload.effect.is_none());

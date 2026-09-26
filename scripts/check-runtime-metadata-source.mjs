@@ -14,8 +14,8 @@
 // syntax level, to one of the two canonical sources.
 //
 //   prose      -> `doc.<field>`, a field of the generated `GeneratedCoreWordDoc`
-//   contract   -> `<path>::<name>_from_contract(word)`, defined in
-//                 rust/src/coreword_registry/contract.rs
+//   contract   -> `word.<field>`, a field of the generated `GeneratedWord`
+//                 (rust/src/kernel/generated/word_registry.rs)
 //
 // Anything else — a string literal, a `const`, a lookup into a second table, a
 // `..Default::default()` spread — fails, whatever it is named. Together with
@@ -28,7 +28,7 @@ import { resolve } from 'node:path';
 const repoRoot = resolve(import.meta.dirname, '..');
 const DEFINITIONS = 'rust/src/builtins/builtin_word_definitions.rs';
 const GENERATED_DOCS = 'rust/src/builtins/generated_core_word_docs.rs';
-const CONTRACT = 'rust/src/coreword_registry/contract.rs';
+const CONTRACT = 'rust/src/kernel/generated/word_registry.rs';
 
 const errors = [];
 const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
@@ -116,13 +116,11 @@ if (!generatedDocs.startsWith('// @generated')) {
 
 const specFields = structFields(definitions, 'pub struct BuiltinSpec', DEFINITIONS);
 const docFields = new Set(structFields(generatedDocs, 'struct GeneratedCoreWordDoc', GENERATED_DOCS));
-const contractFns = new Set(
-  [...contract.matchAll(/\bfn\s+([a-z_][a-z0-9_]*_from_contract)\s*\(/g)].map((match) => match[1]),
-);
+const contractFields = new Set(structFields(contract, 'pub struct GeneratedWord', CONTRACT));
 
 if (specFields.length === 0) errors.push(`${DEFINITIONS}: BuiltinSpec declares no fields`);
 if (docFields.size === 0) errors.push(`${GENERATED_DOCS}: GeneratedCoreWordDoc declares no fields`);
-if (contractFns.size === 0) errors.push(`${CONTRACT}: no \`*_from_contract\` projections found`);
+if (contractFields.size === 0) errors.push(`${CONTRACT}: GeneratedWord declares no fields`);
 
 // `builtin_specs()` must iterate the generated docs. Iterating anything else
 // would mean the inventory has a second source, even if every field checked out.
@@ -179,14 +177,12 @@ for (const site of sites) {
       continue;
     }
 
-    const fromContract = value.match(
-      /^(?:[A-Za-z_][A-Za-z0-9_]*::)*([a-z_][a-z0-9_]*_from_contract)\(\s*word\s*\)$/,
-    );
+    const fromContract = value.match(/^word\.([a-z_][a-z0-9_]*)$/);
     if (fromContract) {
-      if (!contractFns.has(fromContract[1])) {
+      if (!contractFields.has(fromContract[1])) {
         errors.push(
-          `${DEFINITIONS}:${line}: ${field} calls \`${fromContract[1]}\`, ` +
-            `which is not defined in ${CONTRACT}`,
+          `${DEFINITIONS}:${line}: ${field} reads \`word.${fromContract[1]}\`, ` +
+            `which is not a field of GeneratedWord in ${CONTRACT}`,
         );
       }
       continue;
@@ -194,8 +190,7 @@ for (const site of sites) {
 
     errors.push(
       `${DEFINITIONS}:${line}: ${field} is set from \`${value}\`, which is neither ` +
-        'generated documentation (`doc.<field>`) nor a canonical contract projection ' +
-        '(`<name>_from_contract(word)`). BuiltinSpec is a projection of spec/words.json, ' +
+        'generated documentation (`doc.<field>`) nor the generated contract (`word.<field>`). BuiltinSpec is a projection of spec/words.json, ' +
         'not a place to author Core Word metadata.',
     );
   }
@@ -215,5 +210,5 @@ if (errors.length > 0) {
 
 console.log(
   `[runtime-metadata] BuiltinSpec projects ${specFields.length} fields from generated docs ` +
-    `and ${contractFns.size} canonical contract projections; no authored metadata table.`,
+    `and the generated contract; no authored metadata table.`,
 );

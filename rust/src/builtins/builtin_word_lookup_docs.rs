@@ -4,7 +4,7 @@
 //!
 //! Only content that must be *authored* lives here. Everything derivable
 //! from `BuiltinSpec` — Failure baseline (partiality / nil_policy), Side
-//! Effects (effects), Stability — is derived at render time in
+//! Effects (effects), Vocabulary (tier) — is derived at render time in
 //! `builtin_word_details.rs`, so it can never drift from the LANG.CONTRACT.REGISTRY
 //! contract metadata. Words without an entry here still render the full
 //! derived template; an entry adds the authored depth on top.
