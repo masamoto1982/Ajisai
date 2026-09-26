@@ -119,10 +119,7 @@ for (const word of words.entries) {
   // that the key reaches a runtime arm. The compiler already requires the
   // dispatch match to be total over `WordId`; this catches the case a total
   // match cannot, a Word folded into a neighbour's arm by mistake.
-  const directive = new Set();
-  if (directive.has(word.name)) {
-    if (word.executorKey !== 'LazyNextUnitFallback') fail(`${word.name} executorKey drift`);
-  } else if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
+  if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
     fail(`${word.name} has no dispatch arm for WordId::${word.executorKey}`);
   }
   // Canonical documentation and effects now have one generated spelling.

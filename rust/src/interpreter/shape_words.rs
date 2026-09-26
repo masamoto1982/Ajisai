@@ -71,18 +71,33 @@ fn flatten_into(value: &Value, out: &mut Vec<Value>) {
 }
 
 /// `leaves`, regrouped under `shape` in row-major order. The caller has already
-/// checked that the product of `shape` is `leaves.len()`.
-fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
-    if shape.len() <= 1 {
-        return Value::from_vector_promoted(leaves.to_vec());
+/// checked that the product of `shape` is `leaves.len()`. The empty shape is
+/// rank 0 — the lone leaf itself, as `5 SHAPE` is `[ ]` — and an axis of
+/// length 0 answers empty Vectors below it, as `[ [ ] [ ] ] SHAPE` is `[ 2 0 ]`.
+pub(super) fn regroup(leaves: &[Value], shape: &[usize]) -> Value {
+    match shape.split_first() {
+        None => leaves[0].clone(),
+        Some((_, [])) => Value::from_vector_promoted(leaves.to_vec()),
+        Some((&outer, inner)) => {
+            let stride: usize = inner.iter().product();
+            Value::from_vector_promoted(
+                (0..outer)
+                    .map(|i| regroup(&leaves[i * stride..(i + 1) * stride], inner))
+                    .collect(),
+            )
+        }
     }
-    let stride: usize = shape[1..].iter().product();
-    Value::from_vector_promoted(
-        leaves
-            .chunks(stride)
-            .map(|chunk| regroup(chunk, &shape[1..]))
-            .collect(),
-    )
+}
+
+/// A shape operand: a Vector of non-negative integers — exactly what `SHAPE`
+/// answers, the empty shape of a leaf and a zero-length axis included — or
+/// `None` for anything else (`invalidShape`).
+pub(super) fn parse_shape(shape_val: &Value) -> Option<Vec<usize>> {
+    shape_val
+        .as_vector_view()?
+        .iter()
+        .map(|dim| dim.as_usize())
+        .collect()
 }
 
 /// `SHAPE ( [ vec ] -> [ shape ] )`: the axis lengths of a rectangular Vector,
@@ -168,19 +183,12 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let shape: Vec<usize> = match shape_val.as_vector_view().and_then(|dims| {
-        dims.iter()
-            .map(|dim| dim.as_usize().filter(|n| *n > 0))
-            .collect::<Option<Vec<usize>>>()
-    }) {
-        Some(shape) if !shape.is_empty() => shape,
-        _ => {
-            put_back(interp, target, shape_val);
-            return Err(AjisaiError::declared(
-                "invalidShape",
-                "expected a shape: a non-empty Vector of positive integers",
-            ));
-        }
+    let Some(shape) = parse_shape(&shape_val) else {
+        put_back(interp, target, shape_val);
+        return Err(AjisaiError::declared(
+            "invalidShape",
+            "expected a shape: a Vector of non-negative integers",
+        ));
     };
 
     let max_materialized = interp.runtime_limits.max_materialized_elements;

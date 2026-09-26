@@ -267,11 +267,7 @@ impl Reachability {
 /// vocabulary union can never include on its own, and so would otherwise
 /// under-approximate for any non-trivial program. Included whenever the
 /// program is non-empty (`predict_program_outcomes` decides that), not
-/// narrowed further in V1 — see that module's doc for why, and for the one
-/// declared exception (`OR-NIL`'s `missingFollowingSourceUnit`) that needs
-/// its own handling instead, since it is tied to a specific Word's own
-/// vocabulary but that Word tokenizes to `Token::NilCoalesce`, never a
-/// `Token::Symbol("OR-NIL")` a normal body walk would see.
+/// narrowed further in V1 — see that module's doc for why.
 pub(crate) fn structural_ceiling_ids(reach: &Reachability) -> BTreeSet<String> {
     structural_error_categories()
         .into_iter()

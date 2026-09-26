@@ -18,13 +18,14 @@
 //!     Unknown (U) is a NIL read in truth position (LANG.VALUES.TRUTH), so it
 //!     is an absence: `NIL?` answers TRUE for it and `NIL-REASON` reports the
 //!     reason it arrived with. Excluding U here briefly made
-//!     `1 0 DIV TRUE AND NIL-REASON` answer `notAvailable` while the protocol
+//!     `1 0 DIV TRUE AND NIL-REASON` answer that it had no reason while the protocol
 //!     published `absence.reason = divisionByZero` for the same value.
 //!
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
 //! a predicate answers its question — and `NIL-REASON` projects a NIL whose
-//! reason is `notAvailable`: the "well-formed but cannot produce a value" case
-//! of the NIL Projection Rule (LANG.FAILURE.PROJECT), never an error.
+//! reason is `domainMiss`: a well-formed operand outside the accessor's domain,
+//! the reason `SQRT` gives a negative radicand (LANG.FAILURE.PROJECT), never an
+//! error.
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::Interpreter;
@@ -42,12 +43,12 @@ fn operational_absence(value: &Value) -> Option<&AbsenceMetadata> {
     value.absence_metadata()
 }
 
-/// A protocol-string Text result, or a `notAvailable` NIL when the accessor
+/// A protocol-string Text result, or a `domainMiss` NIL when the accessor
 /// found no value.
 ///
 /// The projected NIL is *reasoned*. It used to be `Value::nil()`, a bare
-/// literal NIL, which left `NIL-REASON`'s declared `projection.reason:
-/// "notAvailable"` unobservable: `5 NIL-REASON NIL-REASON` answered NIL rather
+/// literal NIL, which left `NIL-REASON`'s declared projection reason
+/// unobservable: `5 NIL-REASON NIL-REASON` answered NIL rather
 /// than the registered reason. `LANG.FAILURE.PROJECT` says a projection
 /// produces "NIL with the reason its contract registers", and
 /// `LANG.VALUES.NIL` makes the reason a NIL's entire observable content — a
@@ -57,7 +58,7 @@ fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&str>) {
         Some(protocol) => interp.stack.push(Value::from_string(protocol)),
         None => interp
             .stack
-            .push(Value::nil_with_reason_unknown(NilReason::NotAvailable)),
+            .push(Value::nil_with_reason_unknown(NilReason::DomainMiss)),
     }
 }
 
@@ -73,8 +74,7 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// `NIL-REASON` — the direct reason as a lowerCamelCase protocol-string Text,
-/// or a `notAvailable` NIL when the value carries no reason or is not an
-/// operational NIL.
+/// or a `domainMiss` NIL when the value is not an operational NIL.
 ///
 /// A `userDeclared` NIL (one `ABSENT` made) answers the text it was declared
 /// with rather than the reason id: that text is the reason's parameter and,

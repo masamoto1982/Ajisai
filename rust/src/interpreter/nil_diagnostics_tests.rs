@@ -84,7 +84,7 @@ async fn nil_check_is_true_for_logical_unknown() {
 }
 
 /// A reason survives being read in truth position. `AND` used to swallow it:
-/// `1 0 DIV TRUE AND NIL-REASON` answered `notAvailable` while the protocol
+/// `1 0 DIV TRUE AND NIL-REASON` answered that it had no reason while the protocol
 /// still published `absence.reason = divisionByZero` for that value, so the
 /// language contradicted its own boundary and LANG.VALUES.NIL ("the reason
 /// is the entire observable content of a NIL").

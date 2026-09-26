@@ -166,8 +166,8 @@ async fn an_empty_axis_against_a_longer_one_still_mismatches() {
 /// The exact lift read a lane through `ExactReal::from_fraction(Fraction::
 /// nil())` — a *number* whose denominator happens to be zero — so the law
 /// computed with it and answered an observable `0/0` scalar. The lane stopped
-/// being an absence at all: `NIL-REASON` on it reported `notAvailable`, the
-/// answer for a value that carries no reason, because by then it was a value.
+/// being an absence at all: `NIL-REASON` on it projected, the answer for a
+/// value that is not a NIL, because by then it was a value.
 /// Losing the reason is one bug; losing the NIL is a value escaping
 /// LANG.FAILURE.TRICHOTOMY.
 #[tokio::test]

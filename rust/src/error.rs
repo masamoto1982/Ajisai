@@ -29,13 +29,6 @@ pub enum NilReason {
     /// distinguishes it from an execution failure and what makes the same
     /// variant right for future domain misses in other words.
     DomainMiss,
-    /// A diagnostic accessor was asked for something the value does not carry —
-    /// `NIL-REASON` applied to a value that is not an operational NIL, or to one
-    /// that carries no reason. `spec/words.json` registers this as
-    /// `NIL-REASON`'s projection reason, and `LANG.FAILURE.PROJECT` requires a
-    /// projection to produce "NIL with the reason its contract registers", so
-    /// the accessor's own absence is reasoned like any other.
-    NotAvailable,
     /// A NIL the program *wrote* rather than computed — the `NIL` Word and the
     /// `NIL` symbol inside a vector literal.
     ///
@@ -200,7 +193,6 @@ impl NilReason {
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
             NilReason::SpaceExhausted => "spaceExhausted",
             NilReason::DomainMiss => "domainMiss",
-            NilReason::NotAvailable => "notAvailable",
             NilReason::Literal => "literal",
             NilReason::UserDeclared => "userDeclared",
         }
@@ -217,7 +209,6 @@ impl NilReason {
         NilReason::IndexOutOfBounds,
         NilReason::SpaceExhausted,
         NilReason::DomainMiss,
-        NilReason::NotAvailable,
         NilReason::Literal,
         NilReason::UserDeclared,
     ];

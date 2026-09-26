@@ -149,27 +149,11 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(value_val);
     };
 
-    let Some(fill_value) = value_val.as_scalar().cloned() else {
-        let got = value_val.domain_name();
-        restore(interp, shape_val, value_val);
-        return Err(AjisaiError::declared(
-            "nonNumeric",
-            format!("expected a Scalar to fill with, got {got}"),
-        ));
-    };
-
-    let dims = match shape_val.as_vector_view() {
-        Some(items) if !items.is_empty() => items
-            .iter()
-            .map(|d| d.as_scalar().and_then(|f| f.as_usize()).filter(|d| *d > 0))
-            .collect::<Option<Vec<usize>>>(),
-        _ => None,
-    };
-    let Some(shape) = dims else {
+    let Some(shape) = super::shape_words::parse_shape(&shape_val) else {
         restore(interp, shape_val, value_val);
         return Err(AjisaiError::declared(
             "invalidShape",
-            "expected a non-empty Vector of positive integers as the shape",
+            "expected a shape: a Vector of non-negative integers",
         ));
     };
 
@@ -207,9 +191,16 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         return Err(e);
     }
 
-    let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
-
-    let result = build_nested_value(&data, &shape);
+    // Any leaf fills: a number, a text, a truth or a Symbol (a Vector or a
+    // Record has already lifted, and a NIL has already passed through). A
+    // rational keeps the dense construction it always had.
+    let result = match value_val.as_scalar() {
+        Some(fill_value) => {
+            let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
+            build_nested_value(&data, &shape)
+        }
+        None => super::shape_words::regroup(&vec![value_val; total_size], &shape),
+    };
 
     interp.stack.push(result);
     Ok(())

@@ -235,12 +235,13 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
     };
 
     let count: usize = match count_bigint.to_usize() {
-        Some(c) if c > 0 => c,
-        _ => {
+        Some(c) => c,
+        None => {
+            let got = crate::types::display::describe_operand(&count_val);
             interp.stack.push(count_val);
             return Err(AjisaiError::declared(
                 "invalidInteger",
-                "COLLECT count must be a positive integer",
+                format!("expected a non-negative integer count, got {got}"),
             ));
         }
     };

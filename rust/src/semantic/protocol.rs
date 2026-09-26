@@ -67,7 +67,6 @@ impl AbsenceOrigin {
             AbsenceOrigin::IndexOutOfBounds => "indexOutOfBounds",
             AbsenceOrigin::SpaceBudget => "spaceBudget",
             AbsenceOrigin::DomainMiss => "domainMiss",
-            AbsenceOrigin::NotAvailable => "notAvailable",
             AbsenceOrigin::HostEnvironment => "hostEnvironment",
             AbsenceOrigin::UserDeclared => "userDeclared",
             AbsenceOrigin::Unknown => "unknown",

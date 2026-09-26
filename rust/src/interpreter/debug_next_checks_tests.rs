@@ -351,7 +351,6 @@ mod diagnosis_vocabulary_is_real {
             Some(NilReason::IndexOutOfBounds),
             Some(NilReason::SpaceExhausted),
             Some(NilReason::DomainMiss),
-            Some(NilReason::NotAvailable),
             Some(NilReason::Literal),
         ];
 

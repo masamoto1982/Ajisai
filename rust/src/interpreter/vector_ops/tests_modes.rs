@@ -43,11 +43,24 @@ async fn test_collect_error_underflow() {
 }
 
 #[tokio::test]
-async fn test_collect_error_zero_count() {
+async fn test_collect_zero_count_is_the_empty_vector() {
+    // N is a non-negative integer, so zero is a count like any other: it
+    // takes nothing and answers `[ ]`, leaving the stack below untouched.
     let mut interp = Interpreter::new();
 
     let result = interp.execute("1 2 3 0 COLLECT").await;
-    assert!(result.is_err(), "COLLECT with zero count should fail");
+    assert!(
+        result.is_ok(),
+        "0 COLLECT answers the empty Vector: {:?}",
+        result
+    );
+    assert_eq!(interp.stack.len(), 4);
+    assert_eq!(
+        crate::types::display::render_stack(interp.get_stack())
+            .last()
+            .map(String::as_str),
+        Some("[ ]")
+    );
 }
 
 #[tokio::test]

@@ -35,11 +35,9 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "nonNumeric"
         | "nonText"
         | "nonTruthValue"
-        | "nonTruthGuard"
         | "notExecutable"
         | "notASymbol"
         | "invalidShape"
-        | "invalidClauseShape"
         | "invalidInteger"
         | "unsortedInput"
         | "nonRecord"
@@ -47,8 +45,6 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "duplicateKey"
         | "invalidName"
         | "invalidDefinitionBody" => CauseClass::ValueShape,
-        // A position outside the operand.
-        "indexOutOfBounds" => CauseClass::Index,
         "shapeMismatch" => CauseClass::ShapeMismatch,
         "stackUnderflow" => CauseClass::StackShape,
         // A rule about names, definitions, or what a block promised to leave
@@ -59,9 +55,6 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "selfReferentialDefinition"
         | "nameConflict" => CauseClass::ContractViolation,
         "wordNotFound" => CauseClass::TypoOrUnknownName,
-        // The source is missing a required following unit, not a value the
-        // wrong shape — same family as a malformed delimiter.
-        "missingFollowingSourceUnit" => CauseClass::SourceForm,
         // The program raised it itself with FAIL: its own logic decided a
         // call was wrong, and the repair is in the caller's logic.
         "declaredFailure" => CauseClass::UserLogic,

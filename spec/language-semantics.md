@@ -314,7 +314,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-collections-budget">LANG.COLLECTIONS.BUDGET — Materialization</h3>
 
-<p><code>RANGE</code> and <code>FILL</code> honor the materialization ceiling. A well-formed request that cannot materialize within it yields NIL with reason <code>spaceExhausted</code>; malformed dimensions remain ERROR.</p>
+<p><code>RANGE</code>, <code>FILL</code> and <code>RESHAPE</code> honor the materialization ceiling. A well-formed request that cannot materialize within it yields NIL with reason <code>spaceExhausted</code>; malformed dimensions remain ERROR.</p>
 
 <h2 id="lang-dictionary">8. Dictionary and Effects</h2>
 

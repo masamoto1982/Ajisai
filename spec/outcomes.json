@@ -9,7 +9,7 @@
     {
       "id": "domainMiss",
       "projectable": true,
-      "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational."
+      "documentation": "A well-formed operand outside the operation's domain — the canonical case is SQRT of a negative rational; NIL-REASON asked of a value that is not a NIL is another."
     },
     {
       "id": "indexOutOfBounds",
@@ -19,7 +19,7 @@
     {
       "id": "invalidEncoding",
       "projectable": true,
-      "documentation": "Text that does not denote a value in the operation's target encoding — NUM applied to text outside the sealed numeric grammar, or STR applied to a value with no exact lexeme."
+      "documentation": "Text that does not denote a value in the operation's target encoding — NUM applied to text outside the sealed numeric grammar, or JSON-DECODE applied to text that is not one JSON value."
     },
     {
       "id": "literal",
@@ -30,11 +30,6 @@
       "id": "notFound",
       "projectable": true,
       "documentation": "A lookup found nothing at what it was asked for: a key a Record does not hold (GET, WITHOUT), a value a Vector does not contain (INDEX-OF, BSEARCH), a needle a text does not contain (SEARCH), or a name no Word answers to (CONTRACT)."
-    },
-    {
-      "id": "notAvailable",
-      "projectable": true,
-      "documentation": "A diagnostic accessor was asked for something the value does not carry — NIL-REASON applied to a value that carries no reason."
     },
     {
       "id": "spaceExhausted",
@@ -91,12 +86,12 @@
     {
       "id": "invalidName",
       "kind": "declared",
-      "documentation": "DEF or DEL was given a name that cannot be a Word name at all (empty, wrong lexical shape)."
+      "documentation": "DEF, DEL or BIND was given a name that cannot be a name at all (empty, wrong lexical shape)."
     },
     {
       "id": "invalidShape",
       "kind": "declared",
-      "documentation": "A shape operand (FILL, RESHAPE) is not a well-formed shape: a Vector of positive integers, and for RESHAPE one whose product is the leaf count."
+      "documentation": "A shape operand (FILL, RESHAPE) is not a shape — a Vector of non-negative integers, the image of SHAPE — or, for RESHAPE, is one whose product is not the leaf count."
     },
     {
       "id": "malformedSource",
@@ -203,7 +198,7 @@
       "id": "wordNotFound",
       "kind": "declared",
       "repair": "program",
-      "documentation": "DEL (or another dictionary Word) was asked to act on a name that names no Word."
+      "documentation": "DEL was given a name no User Word holds. The name is DEL's own operand, so this is DEL's condition to declare; a name written in program text that resolves to nothing is unknownWord, which the machine raises before any Word runs."
     }
   ]
 }

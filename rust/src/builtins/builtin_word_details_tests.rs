@@ -56,6 +56,60 @@ fn every_hover_syntax_is_a_well_formed_snippet() {
         );
     }
 }
+#[tokio::test]
+async fn every_hover_syntax_calls_its_word_and_runs() {
+    // Ledger items 10 and 10b. A `hover_syntax` is also the "one correct call"
+    // a diagnosis quotes, so it must be one: it ends in the Word's own
+    // canonical name — never an alias, which is a second spelling of the same
+    // Word — and it runs on a fresh interpreter. FAIL's one correct call is the
+    // ERROR it exists to raise.
+    let aliases: Vec<&str> = GENERATED_WORDS
+        .iter()
+        .flat_map(|word| word.aliases.iter().copied())
+        .collect();
+    let mut ran = 0u32;
+    for spec in builtin_specs() {
+        if spec.hover_syntax.is_empty() {
+            continue;
+        }
+        assert!(
+            !spec
+                .hover_syntax
+                .split_whitespace()
+                .any(|token| aliases.contains(&token)),
+            "{}: hover_syntax `{}` spells a Word by an alias",
+            spec.name,
+            spec.hover_syntax
+        );
+        assert_eq!(
+            spec.hover_syntax.split_whitespace().last(),
+            Some(spec.name),
+            "{}: hover_syntax `{}` does not end in the Word's canonical name",
+            spec.name,
+            spec.hover_syntax
+        );
+        let mut interp = Interpreter::new();
+        let outcome = interp.execute(spec.hover_syntax).await;
+        if spec.name == "FAIL" {
+            let err = outcome.expect_err("FAIL's hover_syntax must raise");
+            assert_eq!(
+                crate::error::ErrorCategory::from_error(&err).as_protocol_str(),
+                "declaredFailure"
+            );
+        } else {
+            assert!(
+                outcome.is_ok(),
+                "{}: hover_syntax `{}` does not run: {:?}",
+                spec.name,
+                spec.hover_syntax,
+                outcome.err()
+            );
+        }
+        ran += 1;
+    }
+    assert!(ran >= 70, "only {ran} hover_syntax examples ran");
+}
+
 /// Parse the `(consumes, produces)` arity from a `stack_effect` prose string,
 /// or `None` when the prose is not in the machine-checkable subset (so the
 /// caller abstains rather than risk a false mismatch). The DSL is `LHS -> RHS`,

@@ -135,7 +135,7 @@
       "documentation": {
         "summary": "Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.",
         "hover": "AND — logical AND",
-        "syntax": "TRUE TRUE &",
+        "syntax": "TRUE FALSE AND",
         "stackEffect": "[ a ] [ b ] -> [ a AND b ]"
       },
       "executorKey": "And",
@@ -288,9 +288,9 @@
         "LANG.VALUES.DENOTATION"
       ],
       "documentation": {
-        "summary": "Test equality of two values.",
+        "summary": "Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.",
         "hover": "EQ — test equality",
-        "syntax": "1 1 =",
+        "syntax": "1 1 EQ",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
       },
       "executorKey": "Eq",
@@ -345,7 +345,7 @@
       "documentation": {
         "summary": "Test less-than comparison.",
         "hover": "LT — test less than",
-        "syntax": "1 2 <",
+        "syntax": "1 2 LT",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
       },
       "executorKey": "Lt",
@@ -400,7 +400,7 @@
       "documentation": {
         "summary": "Test greater-than comparison.",
         "hover": "GT — test greater than",
-        "syntax": "2 1 >",
+        "syntax": "2 1 GT",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
       },
       "executorKey": "Gt",
@@ -455,7 +455,7 @@
       "documentation": {
         "summary": "Add two numeric values, element-wise with broadcasting.",
         "hover": "ADD — add values",
-        "syntax": "1 2 +",
+        "syntax": "1 2 ADD",
         "stackEffect": "[ a ] [ b ] -> [ a + b ]"
       },
       "executorKey": "Add",
@@ -510,7 +510,7 @@
       "documentation": {
         "summary": "Subtract two numeric values, element-wise with broadcasting.",
         "hover": "SUB — subtract values",
-        "syntax": "5 3 -",
+        "syntax": "5 3 SUB",
         "stackEffect": "[ a ] [ b ] -> [ a - b ]"
       },
       "executorKey": "Sub",
@@ -566,7 +566,7 @@
       "documentation": {
         "summary": "Multiply two numeric values, element-wise with broadcasting.",
         "hover": "MUL — multiply values",
-        "syntax": "2 4 *",
+        "syntax": "2 4 MUL",
         "stackEffect": "[ a ] [ b ] -> [ a * b ]"
       },
       "executorKey": "Mul",
@@ -621,7 +621,7 @@
       "documentation": {
         "summary": "Divide two numeric values exactly (fractional result).",
         "hover": "DIV — divide values",
-        "syntax": "10 2 /",
+        "syntax": "10 2 DIV",
         "stackEffect": "[ a ] [ b ] -> [ a / b ]"
       },
       "executorKey": "Div",
@@ -672,7 +672,7 @@
       "documentation": {
         "summary": "Round toward negative infinity.",
         "hover": "FLOOR — round toward negative infinity",
-        "syntax": "[ 7/3 ] FLOOR",
+        "syntax": "7/3 FLOOR",
         "stackEffect": "[ x ] -> [ floor x ]"
       },
       "executorKey": "Floor",
@@ -723,7 +723,7 @@
       "documentation": {
         "summary": "Round to nearest integer (half-up).",
         "hover": "ROUND — round to nearest integer",
-        "syntax": "[ 5/2 ] ROUND",
+        "syntax": "5/2 ROUND",
         "stackEffect": "[ x ] -> [ round x ]"
       },
       "executorKey": "Round",
@@ -1503,8 +1503,7 @@
         "reason": "spaceExhausted"
       },
       "errorWhen": [
-        "invalidShape",
-        "nonNumeric"
+        "invalidShape"
       ],
       "purity": "pure",
       "determinism": "deterministic",
@@ -1528,7 +1527,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "A Vector of a given shape with every leaf one number: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`. The shape comes first, as in RESHAPE, and is a non-empty Vector of positive integers (`invalidShape`); the value is a number (`nonNumeric`), and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).",
+        "summary": "A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).",
         "hover": "FILL — a shape filled with one number",
         "syntax": "[ 2 2 ] 0 FILL",
         "stackEffect": "[ shape ] [ value ] -> [ filled ]"
@@ -1580,7 +1579,7 @@
         "summary": "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
         "hover": "SHAPE — the axis lengths of a rectangular vector",
         "syntax": "[ [ 1 2 ] [ 3 4 ] ] SHAPE",
-        "stackEffect": "[ vec ] -> [ shape ]"
+        "stackEffect": "[ x ] -> [ shape ]"
       },
       "executorKey": "Shape",
       "effects": [],
@@ -1631,7 +1630,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).",
+        "summary": "Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).",
         "hover": "RESHAPE — regroup a vector's leaves under a new shape",
         "syntax": "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE",
         "stackEffect": "[ vec ] [ shape ] -> [ reshaped ]"
@@ -1729,7 +1728,7 @@
         "LANG.DICTIONARY.ACYCLIC"
       ],
       "documentation": {
-        "summary": "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.",
+        "summary": "How deeply Vectors nest: anything that is not a Vector — a number, a text, a truth, a Symbol, a Record — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.",
         "hover": "DEPTH — how deeply a value nests",
         "syntax": "[ 1 [ 2 [ 3 ] ] ] DEPTH",
         "stackEffect": "[ x ] -> [ n ]"
@@ -2678,7 +2677,7 @@
       "documentation": {
         "summary": "Keep only the elements for which a predicate block returns TRUE.",
         "hover": "FILTER — keep elements matching predicate",
-        "syntax": "[ 1 2 3 ] [ 2 = ] FILTER",
+        "syntax": "[ 1 2 3 ] [ 2 EQ ] FILTER",
         "stackEffect": "[ vec ] [ pred ] -> [ kept ]"
       },
       "executorKey": "Filter",
@@ -2732,7 +2731,7 @@
       "documentation": {
         "summary": "Reduce a vector to a single value using an initial accumulator and combiner block.",
         "hover": "FOLD — reduce with initial value",
-        "syntax": "[ 1 2 3 ] [ 0 ] [ + ] FOLD",
+        "syntax": "[ 1 2 3 ] 0 [ ADD ] FOLD",
         "stackEffect": "[ vec ] [ init ] [ combine ] -> [ result ]"
       },
       "executorKey": "Fold",
@@ -2888,7 +2887,7 @@
         "summary": "Join a vector of strings into a single string.",
         "hover": "JOIN — join characters into string",
         "syntax": "[ 'h' 'i' ] JOIN",
-        "stackEffect": "[ chars ] -> [ text ]"
+        "stackEffect": "[ texts ] -> [ text ]"
       },
       "executorKey": "Join",
       "effects": [],
@@ -3708,7 +3707,7 @@
       "documentation": {
         "summary": "Test whether the top value is an operational NIL (absent).",
         "hover": "NIL? — test whether a value is absent",
-        "syntax": "1 0 / NIL?",
+        "syntax": "1 0 DIV NIL?",
         "stackEffect": "[ x ] -> [ TRUE | FALSE ]"
       },
       "executorKey": "NilCheck",
@@ -3729,8 +3728,8 @@
       },
       "nilPolicy": "consumeNil",
       "projection": {
-        "when": "valueIsNotOperationalNilOrHasNoReason",
-        "reason": "notAvailable"
+        "when": "valueIsNotNil",
+        "reason": "domainMiss"
       },
       "errorWhen": [],
       "purity": "pure",
@@ -3754,9 +3753,9 @@
         "LANG.FAILURE.RECOVERY"
       ],
       "documentation": {
-        "summary": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "summary": "The reason an absence carries, as text: `1 0 DIV NIL-REASON` is `'divisionByZero'`, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.",
         "hover": "NIL-REASON — read the NIL reason protocol string",
-        "syntax": "1 0 / NIL-REASON",
+        "syntax": "1 0 DIV NIL-REASON",
         "stackEffect": "[ x ] -> [ text ]"
       },
       "executorKey": "NilReason",
@@ -3920,7 +3919,7 @@
       "documentation": {
         "summary": "Define a user word from a body and a name.",
         "hover": "DEF — define user word",
-        "syntax": "[ 2 * ] 'DOUBLE' DEF",
+        "syntax": "[ 2 MUL ] 'DOUBLE' DEF",
         "stackEffect": "[ body ] [ name ] -> [ ]"
       },
       "executorKey": "Def",
@@ -3976,7 +3975,7 @@
       "documentation": {
         "summary": "Delete a User Word from the dictionary: `'INC' DEL`. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
         "hover": "DEL — delete user word",
-        "syntax": "[ [ 1 ] ] 'W' DEF 'W' DEL",
+        "syntax": "[ 1 ] 'W' DEF 'W' DEL",
         "stackEffect": "[ name ] -> [ ]"
       },
       "executorKey": "Del",

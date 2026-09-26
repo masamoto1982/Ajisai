@@ -32,7 +32,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.",
         stack_effect: "[ a ] [ b ] -> [ a AND b ]",
         hover_summary: "AND — logical AND",
-        hover_syntax: "TRUE TRUE &",
+        hover_syntax: "TRUE FALSE AND",
     },
     GeneratedCoreWordDoc {
         name: "NOT",
@@ -53,10 +53,10 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "EQ",
         family: "comparison",
-        summary: "Test equality of two values.",
+        summary: "Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.",
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         hover_summary: "EQ — test equality",
-        hover_syntax: "1 1 =",
+        hover_syntax: "1 1 EQ",
     },
     GeneratedCoreWordDoc {
         name: "LT",
@@ -64,7 +64,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Test less-than comparison.",
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         hover_summary: "LT — test less than",
-        hover_syntax: "1 2 <",
+        hover_syntax: "1 2 LT",
     },
     GeneratedCoreWordDoc {
         name: "GT",
@@ -72,7 +72,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Test greater-than comparison.",
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         hover_summary: "GT — test greater than",
-        hover_syntax: "2 1 >",
+        hover_syntax: "2 1 GT",
     },
     GeneratedCoreWordDoc {
         name: "ADD",
@@ -80,7 +80,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Add two numeric values, element-wise with broadcasting.",
         stack_effect: "[ a ] [ b ] -> [ a + b ]",
         hover_summary: "ADD — add values",
-        hover_syntax: "1 2 +",
+        hover_syntax: "1 2 ADD",
     },
     GeneratedCoreWordDoc {
         name: "SUB",
@@ -88,7 +88,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Subtract two numeric values, element-wise with broadcasting.",
         stack_effect: "[ a ] [ b ] -> [ a - b ]",
         hover_summary: "SUB — subtract values",
-        hover_syntax: "5 3 -",
+        hover_syntax: "5 3 SUB",
     },
     GeneratedCoreWordDoc {
         name: "MUL",
@@ -96,7 +96,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Multiply two numeric values, element-wise with broadcasting.",
         stack_effect: "[ a ] [ b ] -> [ a * b ]",
         hover_summary: "MUL — multiply values",
-        hover_syntax: "2 4 *",
+        hover_syntax: "2 4 MUL",
     },
     GeneratedCoreWordDoc {
         name: "DIV",
@@ -104,7 +104,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Divide two numeric values exactly (fractional result).",
         stack_effect: "[ a ] [ b ] -> [ a / b ]",
         hover_summary: "DIV — divide values",
-        hover_syntax: "10 2 /",
+        hover_syntax: "10 2 DIV",
     },
     GeneratedCoreWordDoc {
         name: "FLOOR",
@@ -112,7 +112,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Round toward negative infinity.",
         stack_effect: "[ x ] -> [ floor x ]",
         hover_summary: "FLOOR — round toward negative infinity",
-        hover_syntax: "[ 7/3 ] FLOOR",
+        hover_syntax: "7/3 FLOOR",
     },
     GeneratedCoreWordDoc {
         name: "ROUND",
@@ -120,7 +120,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Round to nearest integer (half-up).",
         stack_effect: "[ x ] -> [ round x ]",
         hover_summary: "ROUND — round to nearest integer",
-        hover_syntax: "[ 5/2 ] ROUND",
+        hover_syntax: "5/2 ROUND",
     },
     GeneratedCoreWordDoc {
         name: "MIN",
@@ -237,7 +237,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "FILL",
         family: "collection",
-        summary: "A Vector of a given shape with every leaf one number: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`. The shape comes first, as in RESHAPE, and is a non-empty Vector of positive integers (`invalidShape`); the value is a number (`nonNumeric`), and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).",
+        summary: "A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).",
         stack_effect: "[ shape ] [ value ] -> [ filled ]",
         hover_summary: "FILL — a shape filled with one number",
         hover_syntax: "[ 2 2 ] 0 FILL",
@@ -246,14 +246,14 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         name: "SHAPE",
         family: "collection",
         summary: "The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] ] SHAPE` is `[ 2 2 ]` and `[ 1 2 3 ] SHAPE` is `[ 3 ]`, and a value that is not a Vector has the empty shape: `5 SHAPE` is `[ ]`, rank 0, as `5 DEPTH` is 0. This is the shape LANG.COLLECTIONS.LIFT already aligns operands by, made observable. A ragged vector has no shape, so it projects to NIL(domainMiss): `[ [ 1 2 ] [ 3 ] ] SHAPE` is a reasoned absence, not an error, because the vector is well-formed data that the question does not fit. LENGTH answers the outermost axis alone.",
-        stack_effect: "[ vec ] -> [ shape ]",
+        stack_effect: "[ x ] -> [ shape ]",
         hover_summary: "SHAPE — the axis lengths of a rectangular vector",
         hover_syntax: "[ [ 1 2 ] [ 3 4 ] ] SHAPE",
     },
     GeneratedCoreWordDoc {
         name: "RESHAPE",
         family: "collection",
-        summary: "Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).",
+        summary: "Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).",
         stack_effect: "[ vec ] [ shape ] -> [ reshaped ]",
         hover_summary: "RESHAPE — regroup a vector's leaves under a new shape",
         hover_syntax: "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE",
@@ -269,7 +269,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "DEPTH",
         family: "collection",
-        summary: "How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.",
+        summary: "How deeply Vectors nest: anything that is not a Vector — a number, a text, a truth, a Symbol, a Record — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.",
         stack_effect: "[ x ] -> [ n ]",
         hover_summary: "DEPTH — how deeply a value nests",
         hover_syntax: "[ 1 [ 2 [ 3 ] ] ] DEPTH",
@@ -416,7 +416,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Keep only the elements for which a predicate block returns TRUE.",
         stack_effect: "[ vec ] [ pred ] -> [ kept ]",
         hover_summary: "FILTER — keep elements matching predicate",
-        hover_syntax: "[ 1 2 3 ] [ 2 = ] FILTER",
+        hover_syntax: "[ 1 2 3 ] [ 2 EQ ] FILTER",
     },
     GeneratedCoreWordDoc {
         name: "FOLD",
@@ -424,7 +424,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Reduce a vector to a single value using an initial accumulator and combiner block.",
         stack_effect: "[ vec ] [ init ] [ combine ] -> [ result ]",
         hover_summary: "FOLD — reduce with initial value",
-        hover_syntax: "[ 1 2 3 ] [ 0 ] [ + ] FOLD",
+        hover_syntax: "[ 1 2 3 ] 0 [ ADD ] FOLD",
     },
     GeneratedCoreWordDoc {
         name: "SCAN",
@@ -446,7 +446,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         name: "JOIN",
         family: "text",
         summary: "Join a vector of strings into a single string.",
-        stack_effect: "[ chars ] -> [ text ]",
+        stack_effect: "[ texts ] -> [ text ]",
         hover_summary: "JOIN — join characters into string",
         hover_syntax: "[ 'h' 'i' ] JOIN",
     },
@@ -576,15 +576,15 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Test whether the top value is an operational NIL (absent).",
         stack_effect: "[ x ] -> [ TRUE | FALSE ]",
         hover_summary: "NIL? — test whether a value is absent",
-        hover_syntax: "1 0 / NIL?",
+        hover_syntax: "1 0 DIV NIL?",
     },
     GeneratedCoreWordDoc {
         name: "NIL-REASON",
         family: "absence",
-        summary: "Read the direct reason of an operational NIL as a protocol-string Text.",
+        summary: "The reason an absence carries, as text: `1 0 DIV NIL-REASON` is `'divisionByZero'`, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.",
         stack_effect: "[ x ] -> [ text ]",
         hover_summary: "NIL-REASON — read the NIL reason protocol string",
-        hover_syntax: "1 0 / NIL-REASON",
+        hover_syntax: "1 0 DIV NIL-REASON",
     },
     GeneratedCoreWordDoc {
         name: "ABSENT",
@@ -608,7 +608,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Define a user word from a body and a name.",
         stack_effect: "[ body ] [ name ] -> [ ]",
         hover_summary: "DEF — define user word",
-        hover_syntax: "[ 2 * ] 'DOUBLE' DEF",
+        hover_syntax: "[ 2 MUL ] 'DOUBLE' DEF",
     },
     GeneratedCoreWordDoc {
         name: "DEL",
@@ -616,7 +616,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         summary: "Delete a User Word from the dictionary: `'INC' DEL`. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
         stack_effect: "[ name ] -> [ ]",
         hover_summary: "DEL — delete user word",
-        hover_syntax: "[ [ 1 ] ] 'W' DEF 'W' DEL",
+        hover_syntax: "[ 1 ] 'W' DEF 'W' DEL",
     },
     GeneratedCoreWordDoc {
         name: "DIGEST",
