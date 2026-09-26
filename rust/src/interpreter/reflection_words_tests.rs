@@ -99,7 +99,7 @@ mod reflection_words_tests {
             "[ 'divisionByZero' ]"
         );
         assert_eq!(
-            top("[ DIV ] 0 GET CONTRACT 'errors' GET").await,
+            top("[ DIV ] 0 GET CONTRACT 'errorWhen' GET").await,
             "[ 'nonNumeric' 'shapeMismatch' ]"
         );
         assert_eq!(
@@ -117,10 +117,10 @@ mod reflection_words_tests {
         assert_eq!(top("[ MAP ] 0 GET CONTRACT 'inputs' GET").await, "2/1");
         assert_eq!(
             top("[ SORT ] 0 GET CONTRACT KEYS").await,
-            "[ 'name' 'tier' 'inputs' 'outputs' 'nil' 'projection' 'errors' 'partiality' 'purity' 'determinism' 'cost' 'effects' ]"
+            "[ 'name' 'vocabularyTier' 'inputs' 'outputs' 'nilPolicy' 'projection' 'errorWhen' 'partiality' 'purity' 'determinism' 'cost' 'effects' ]"
         );
         assert_eq!(
-            top("[ SORT ] 0 GET CONTRACT 'tier' GET").await,
+            top("[ SORT ] 0 GET CONTRACT 'vocabularyTier' GET").await,
             "'standard'"
         );
     }
@@ -137,9 +137,30 @@ mod reflection_words_tests {
         );
         assert_eq!(
             top("[ 42 PRINT ] CONTRACT KEYS").await,
-            "[ 'inputs' 'outputs' 'nil' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
+            "[ 'inputs' 'outputs' 'partiality' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
         );
         assert_eq!(top("[ 1 2 ADD ] CONTRACT 'purity' GET").await, "'pure'");
+        // A key both shapes carry is answered in one vocabulary, so a block
+        // compares directly with the Core Word it calls.
+        for key in ["partiality", "purity", "determinism"] {
+            for (core, block) in [
+                ("DIV", "[ 1 0 DIV ]"),
+                ("PRINT", "[ 42 PRINT ]"),
+                ("MAP", "[ [ 1 ] MAP ]"),
+            ] {
+                if key == "purity" && core == "MAP" {
+                    // `conditional` is MAP's own purity: as pure as the block
+                    // it runs. A block whose body is known is never
+                    // conditional, so here the two rightly differ.
+                    continue;
+                }
+                assert_eq!(
+                    top(&format!("[ {core} ] 0 GET CONTRACT '{key}' GET")).await,
+                    top(&format!("{block} CONTRACT '{key}' GET")).await,
+                    "{key} of {core} and of {block}"
+                );
+            }
+        }
         assert_eq!(
             top("[ 1 2 ADD ] CONTRACT 'confidence' GET").await,
             "'complete'"

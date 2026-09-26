@@ -110,17 +110,80 @@
    "items": {
     "type": "object",
     "properties": {
-     "nil": {
-      "type": "string",
-      "description": "How the Word behaves around absence, as *observed*: `nil-free` never yields NIL at all, `nil-propagating` yields one exactly when an operand is one, `may-nil` can produce one of its own. This is a finer vocabulary than the one a declaration is written in — see `suggested` — which is why the two can differ inside one object without either being wrong."
+     "name": {
+      "type": "string"
+     },
+     "inputs": {
+      "oneOf": [
+       {
+        "type": "integer",
+        "minimum": 0
+       },
+       {
+        "const": "variable"
+       }
+      ]
+     },
+     "outputs": {
+      "oneOf": [
+       {
+        "type": "integer",
+        "minimum": 0
+       },
+       {
+        "const": "variable"
+       }
+      ]
+     },
+     "partiality": {
+      "enum": [
+       "total",
+       "partial",
+       "projecting"
+      ],
+      "description": "The registry's derivation over the Words the body calls: `projecting` when one can answer a reasoned NIL of its own, `partial` when one can raise on operands of the right kind, `total` otherwise."
+     },
+     "purity": {
+      "enum": [
+       "pure",
+       "effectful"
+      ]
+     },
+     "determinism": {
+      "enum": [
+       "deterministic",
+       "stateRelative",
+       "hostRelative"
+      ]
+     },
+     "cost": {
+      "type": "object"
+     },
+     "effects": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "confidence": {
+      "enum": [
+       "complete",
+       "conservative"
+      ]
+     },
+     "gaps": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
      },
      "suggested": {
       "type": "string",
-      "description": "A paste-ready `#:contract` line for this Word, written in the *declaration* vocabulary, which has only two NIL values: `nil-free` and `may-nil`. There `nil-free` means the Word does not *manufacture* an absence; it does not mean the Word never passes one through. So a `nil-propagating` Word is declared `nil-free`, and this line reading `nil-free` beside `nil: \"nil-propagating\"` is the two vocabularies agreeing rather than contradicting: paste the line as it stands, and read `nil` for what the Word does with a NIL it is handed."
+      "description": "A paste-ready `#:contract` line for this Word, written in the keys and values of this same object, so pasting it back verifies exactly what was reported."
      }
     }
    },
-   "description": "Inferred contracts for the user-defined Words in the submitted source (`infer_contracts` only). Reports each cost axis as its class alone; unlike a registry entry's `cost`, exactness is observable through `suggested`, which names only the axes the declaration checker can verify. `nil` and `suggested` are written in two different NIL vocabularies — read each field's own description before taking one as a contradiction of the other."
+   "description": "Inferred contracts for the user-defined Words in the submitted source (`infer_contracts` only). Every key a registered Word's contract also has (`word_contract`, and `CONTRACT` inside the language) is spelled the same and takes the same values, so an inferred and a registered contract compare directly. Reports each cost axis as its class alone; exactness is observable through `suggested`, which names only the axes the declaration checker can verify."
   },
   "diagnosis": {
    "oneOf": [

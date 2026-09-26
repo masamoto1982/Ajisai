@@ -326,9 +326,16 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
             println!("{}: no user words defined", path);
         }
         for r in &reports {
+            let count = |n: Option<u16>| n.map_or("variable".to_string(), |n| n.to_string());
             println!(
-                "{} : {} {} {} {} {} [{}]",
-                r.name, r.arity, r.purity, r.nil, r.determinism, r.space, r.confidence
+                "{} : inputs={} outputs={} partiality={} purity={} determinism={} [{}]",
+                r.name,
+                count(r.inputs),
+                count(r.outputs),
+                r.partiality,
+                r.purity,
+                r.determinism,
+                r.confidence
             );
             if !r.effects.is_empty() {
                 println!("    effects: {}", r.effects.join(", "));

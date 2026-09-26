@@ -98,7 +98,7 @@ impl GapCode {
 /// declaration landed in — the vocabulary of `LANG.FAILURE.TRICHOTOMY`
 /// applied at check time rather than run time (Phase 4). Not derived from a
 /// `Vec<DeclFinding>` by counting severities: one declaration can contribute
-/// more than one finding (e.g. a purity *and* a nil-free mismatch), which
+/// more than one finding (e.g. a purity *and* a partiality mismatch), which
 /// would double-count it — the caller classifies each declaration once, from
 /// the findings that one declaration's check produced.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,7 +148,7 @@ pub(crate) fn fold_outcomes(outcomes: &[CheckOutcome]) -> CheckOutcome {
 /// every cannot-verify *finding* cited. `codes` is intentionally a separate
 /// per-finding sequence rather than derived from `outcomes`: a declaration
 /// can carry more than one cannot-verify finding (e.g. arity, purity, and
-/// nil-free all unverifiable on the same recursive word), and `byGap` counts
+/// partiality all unverifiable on the same recursive word), and `byGap` counts
 /// each of those, not one per declaration — changing that would be a
 /// backward-incompatible change to a field Phase 3 already shipped.
 pub(crate) fn gap_summary_json(

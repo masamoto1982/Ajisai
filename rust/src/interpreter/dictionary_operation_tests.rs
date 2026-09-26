@@ -610,12 +610,12 @@ mod tests {
     async fn a_contract_directive_becomes_the_defined_words_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] + ] 'INC' DEF")
             .await
             .unwrap();
         assert_eq!(
             interp.lookup_word_description("INC").as_deref(),
-            Some("( 1 -- 1 ) pure nil-free")
+            Some("inputs=1 outputs=1 purity=pure partiality=partial")
         );
     }
 
@@ -626,14 +626,14 @@ mod tests {
         // `execute()` call rather than sharing one with the `DEF`.
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial")
             .await
             .unwrap();
         assert_eq!(interp.lookup_word_description("INC"), None);
         interp.execute("[ [ 1 ] + ] 'INC' DEF").await.unwrap();
         assert_eq!(
             interp.lookup_word_description("INC").as_deref(),
-            Some("( 1 -- 1 ) pure nil-free")
+            Some("inputs=1 outputs=1 purity=pure partiality=partial")
         );
     }
 
@@ -648,7 +648,7 @@ mod tests {
     async fn redefining_without_a_new_directive_drops_the_old_description() {
         let mut interp = Interpreter::new();
         interp
-            .execute("#:contract INC ( 1 -- 1 ) pure nil-free\n[ [ 1 ] + ] 'INC' DEF")
+            .execute("#:contract INC inputs=1 outputs=1 purity=pure partiality=partial\n[ [ 1 ] + ] 'INC' DEF")
             .await
             .unwrap();
         interp.execute("[ [ 2 ] + ] 'INC' DEF").await.unwrap();

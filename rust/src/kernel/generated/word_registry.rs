@@ -214,8 +214,6 @@ pub enum Purity {
     Pure,
     /// `conditional`
     Conditional,
-    /// `observational`
-    Observational,
     /// `effectful`
     Effectful,
 }
@@ -226,7 +224,6 @@ impl Purity {
         match self {
             Purity::Pure => "pure",
             Purity::Conditional => "conditional",
-            Purity::Observational => "observational",
             Purity::Effectful => "effectful",
         }
     }
@@ -354,8 +351,6 @@ pub enum Arity {
     Fixed(u8),
     /// `variable` — data-dependent, not statically pinned.
     Variable,
-    /// `control` — a positional control directive rather than a stack operation.
-    Control,
 }
 
 impl Arity {
@@ -363,7 +358,7 @@ impl Arity {
     pub const fn fixed(self) -> Option<u8> {
         match self {
             Arity::Fixed(n) => Some(n),
-            Arity::Variable | Arity::Control => None,
+            Arity::Variable => None,
         }
     }
 }

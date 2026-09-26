@@ -270,8 +270,6 @@ pub enum Arity {
     Fixed(u8),
     /// \`variable\` — data-dependent, not statically pinned.
     Variable,
-    /// \`control\` — a positional control directive rather than a stack operation.
-    Control,
 }
 
 impl Arity {
@@ -279,7 +277,7 @@ impl Arity {
     pub const fn fixed(self) -> Option<u8> {
         match self {
             Arity::Fixed(n) => Some(n),
-            Arity::Variable | Arity::Control => None,
+            Arity::Variable => None,
         }
     }
 }

@@ -11,25 +11,30 @@
 //! reports a declaration the inference contradicts.
 //!
 //! ```text
-//! #:contract INC ( 1 -- 1 ) pure nil-free
-//! #:contract NORMALIZE ( 1 -- 1 ) may-nil
+//! #:contract INC inputs=1 outputs=1 purity=pure partiality=total
+//! #:contract NORMALIZE inputs=1 outputs=1 partiality=projecting
 //! #:contract SUM-ALL cost steps=unbounded numeric=linear
 //! ```
 //!
-//! Grammar: `#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [purity] [nil]
-//! [cost]`, where `purity` is `pure`/`observable`/`effectful`,
-//! `nil` is `nil-free`/`may-nil`, and
-//! `cost` is one or more `steps=`/`numeric=`/`collection=` terms each
+//! Grammar: `#:contract NAME [inputs=N] [outputs=N] [purity=P]
+//! [partiality=Q] [determinism=D] [cost AXIS=CLASS...]`. Every key is the
+//! field of the same name in a contract Record (`CONTRACT`,
+//! `spec/words.json`) and every value one that field admits: `purity` is
+//! `pure`/`effectful`, `partiality` `total`/`partial`/`projecting`,
+//! `determinism` `deterministic`/`stateRelative`/`hostRelative`, and each
+//! `cost` axis (`steps`/`numeric`/`collection`) a class
 //! `const`/`linear`/`superlinear`/`unbounded`
-//! (`docs/dev/cost-contract-design.md`). Each part is optional; fields left
-//! out are not checked. Inference is deliberately conservative (SPEC
-//! LANG.CONTRACT.REGISTRY), so an unprovable declaration is a `note`, never a false `error`.
+//! (`docs/dev/cost-contract-design.md`). `inputs` and `outputs` must equal
+//! the inferred counts; every other value is an upper bound the inferred one
+//! must not exceed. Each part is optional; fields left out are not checked.
+//! Inference is deliberately conservative (SPEC LANG.CONTRACT.REGISTRY), so an
+//! unprovable declaration is a `note`, never a false `error`.
 
 use super::contract_cost::{check_cost_decl, parse_cost_terms, CostDecl};
 use super::contract_gap::GapCode;
 use super::contract_gap::{declaration_json, fold_outcomes, gap_summary_json, CheckOutcome};
 use crate::interpreter::word_contract::{
-    ContractConfidence, ContractFlow, ContractPurity, NilBehavior,
+    ContractConfidence, ContractDeterminism, ContractFlow, ContractPartiality, ContractPurity,
 };
 use crate::interpreter::Interpreter;
 use crate::types::Token;
@@ -39,10 +44,11 @@ use crate::types::Token;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ContractDecl {
     pub name: String,
-    pub arity: Option<(u16, u16)>,
+    pub inputs: Option<u16>,
+    pub outputs: Option<u16>,
     pub purity: Option<ContractPurity>,
-    /// `Some(true)` = declared `nil-free`; `Some(false)` = declared `may-nil`.
-    pub nil_free: Option<bool>,
+    pub partiality: Option<ContractPartiality>,
+    pub determinism: Option<ContractDeterminism>,
     /// Declared cost-class bounds, one per axis; each `None` axis is not
     /// checked (Phase 5).
     pub cost: CostDecl,
@@ -119,33 +125,6 @@ impl ContractDeclCheck {
     }
 }
 
-fn purity_from_word(word: &str) -> Option<ContractPurity> {
-    match word {
-        "pure" => Some(ContractPurity::Pure),
-        "observable" => Some(ContractPurity::Observable),
-        "effectful" => Some(ContractPurity::Effectful),
-        _ => None,
-    }
-}
-
-/// How impure a purity level is: pure < observable < effectful. An inferred
-/// purity above the declared level is a violation.
-fn purity_rank(purity: ContractPurity) -> u8 {
-    match purity {
-        ContractPurity::Pure => 0,
-        ContractPurity::Observable => 1,
-        ContractPurity::Effectful => 2,
-    }
-}
-
-fn purity_label(purity: ContractPurity) -> &'static str {
-    match purity {
-        ContractPurity::Pure => "pure",
-        ContractPurity::Observable => "observable",
-        ContractPurity::Effectful => "effectful",
-    }
-}
-
 /// Parse the `#:contract` directives out of `source`. Malformed directives
 /// are returned as error messages so a typo never passes silently.
 pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec<String>) {
@@ -165,9 +144,11 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
 
         let mut decl = ContractDecl {
             name: name.to_uppercase(),
-            arity: None,
+            inputs: None,
+            outputs: None,
             purity: None,
-            nil_free: None,
+            partiality: None,
+            determinism: None,
             cost: CostDecl::default(),
             raw: raw.clone(),
         };
@@ -175,52 +156,22 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
 
         let rest: Vec<&str> = words.collect();
         let mut i = 0;
-        'terms: while i < rest.len() {
-            match rest[i] {
-                "(" => {
-                    // ( CONSUMES -- PRODUCES )
-                    let close = rest[i..].iter().position(|w| *w == ")").map(|p| i + p);
-                    let Some(close) = close else {
-                        malformed = Some(format!("`#:contract {name}`: unclosed `(` in arity"));
-                        break;
-                    };
-                    let inner = &rest[i + 1..close];
-                    match parse_arity(inner) {
-                        Ok(arity) => decl.arity = Some(arity),
-                        Err(e) => {
-                            malformed = Some(format!("`#:contract {name}`: {e}"));
-                            break;
-                        }
-                    }
-                    i = close + 1;
-                }
-                "nil-free" => {
-                    decl.nil_free = Some(true);
-                    i += 1;
-                }
-                "may-nil" => {
-                    decl.nil_free = Some(false);
-                    i += 1;
-                }
-                "cost" => match parse_cost_terms(&rest, i + 1, name, &mut decl.cost) {
+        while i < rest.len() {
+            if rest[i] == "cost" {
+                match parse_cost_terms(&rest, i + 1, name, &mut decl.cost) {
                     Ok(next_i) => i = next_i,
                     Err(e) => {
                         malformed = Some(e);
-                        break 'terms;
-                    }
-                },
-                other => {
-                    if let Some(p) = purity_from_word(other) {
-                        decl.purity = Some(p);
-                    } else {
-                        malformed = Some(format!(
-                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, or `nil-free`/`may-nil`)"
-                        ));
                         break;
                     }
-                    i += 1;
                 }
+                continue;
             }
+            if let Err(e) = parse_term(rest[i], &mut decl) {
+                malformed = Some(format!("`#:contract {name}`: {e}"));
+                break;
+            }
+            i += 1;
         }
 
         match malformed {
@@ -232,30 +183,58 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
     (decls, errors)
 }
 
-/// Parse the `c -- p` interior of an arity clause.
-fn parse_arity(inner: &[&str]) -> Result<(u16, u16), String> {
-    let sep = inner
-        .iter()
-        .position(|w| *w == "--")
-        .ok_or_else(|| "arity needs `--` between consumes and produces".to_string())?;
-    let consumes_words = &inner[..sep];
-    let produces_words = &inner[sep + 1..];
-    let consumes = parse_count(consumes_words, "consumes")?;
-    let produces = parse_count(produces_words, "produces")?;
-    Ok((consumes, produces))
+/// One `key=value` term, written in the contract Record's own field names
+/// and values.
+fn parse_term(term: &str, decl: &mut ContractDecl) -> Result<(), String> {
+    fn value<T>(key: &str, v: &str, parsed: Option<T>, admits: &str) -> Result<T, String> {
+        parsed.ok_or_else(|| format!("`{key}` is {admits}, got `{v}`"))
+    }
+    let Some((key, v)) = term.split_once('=') else {
+        return Err(unknown_term(term));
+    };
+    match key {
+        "inputs" | "outputs" => {
+            let count = value(key, v, v.parse::<u16>().ok(), "a non-negative integer")?;
+            if key == "inputs" {
+                decl.inputs = Some(count);
+            } else {
+                decl.outputs = Some(count);
+            }
+        }
+        "purity" => {
+            decl.purity = Some(value(
+                key,
+                v,
+                ContractPurity::from_spec_str(v),
+                "`pure` or `effectful`",
+            )?)
+        }
+        "partiality" => {
+            decl.partiality = Some(value(
+                key,
+                v,
+                ContractPartiality::from_spec_str(v),
+                "`total`, `partial` or `projecting`",
+            )?)
+        }
+        "determinism" => {
+            decl.determinism = Some(value(
+                key,
+                v,
+                ContractDeterminism::from_spec_str(v),
+                "`deterministic`, `stateRelative` or `hostRelative`",
+            )?)
+        }
+        _ => return Err(unknown_term(term)),
+    }
+    Ok(())
 }
 
-fn parse_count(words: &[&str], side: &str) -> Result<u16, String> {
-    match words {
-        [] => Ok(0),
-        [single] => single
-            .parse::<u16>()
-            .map_err(|_| format!("{side} count `{single}` is not a non-negative integer")),
-        _ => Err(format!(
-            "{side} side must be a single count (got `{}`)",
-            words.join(" ")
-        )),
-    }
+fn unknown_term(term: &str) -> String {
+    format!(
+        "unknown term `{term}` (expected `inputs=N`, `outputs=N`, `purity=…`, \
+         `partiality=…`, `determinism=…`, or `cost steps=… numeric=… collection=…`)"
+    )
 }
 
 /// Extract every top-level `[ body ] 'NAME' DEF` from `tokens`, returning
@@ -406,78 +385,87 @@ fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<D
         None
     };
 
-    if let Some((dc, dp)) = decl.arity {
+    for (key, declared, inferred) in [("inputs", decl.inputs, 0), ("outputs", decl.outputs, 1)] {
+        let Some(declared) = declared else {
+            continue;
+        };
         match &contract.flow {
             ContractFlow::Fixed { consumes, produces } => {
-                if *consumes != dc || *produces != dp {
+                let inferred = if inferred == 0 { *consumes } else { *produces };
+                if inferred != declared {
                     findings.push(DeclFinding {
                         severity: Severity::Error,
-                        message: arity_msg(&decl.name, dc, dp, *consumes, *produces),
+                        message: format!(
+                            "`#:contract {}`: declared `{key}={declared}` but inferred `{key}={inferred}`.",
+                            decl.name
+                        ),
                         code: None,
                     });
                 }
             }
-            ContractFlow::Dynamic => findings.push(DeclFinding {
-                severity: if conservative {
-                    Severity::Note
-                } else {
-                    Severity::Error
-                },
-                message: format!(
-                        "`#:contract {}`: declared fixed arity ( {} -- {} ) but the inferred arity is dynamic{}.",
-                        decl.name, dc, dp,
-                        if conservative { " (unverified)" } else { "" }
-                    ),
-                code: if conservative { code } else { None },
-            }),
+            ContractFlow::Dynamic => findings.push(bound_finding(
+                &decl.name,
+                &format!("{key}={declared}"),
+                &format!("{key}=variable"),
+                conservative,
+                code,
+            )),
         }
     }
 
-    if let Some(declared) = decl.purity {
-        if purity_rank(contract.purity) > purity_rank(declared) {
-            findings.push(DeclFinding {
-                severity: if conservative {
-                    Severity::Note
-                } else {
-                    Severity::Error
-                },
-                message: format!(
-                    "`#:contract {}`: declared `{}` but inferred `{}`{}.",
-                    decl.name,
-                    purity_label(declared),
-                    purity_label(contract.purity),
-                    if conservative { " (unverified)" } else { "" }
-                ),
-                code: if conservative { code } else { None },
-            });
-        }
+    // `purity`, `partiality` and `determinism` are each a bound: the word may
+    // be tighter than declared, never looser.
+    if let Some(declared) = decl.purity.filter(|d| contract.purity > *d) {
+        findings.push(bound_finding(
+            &decl.name,
+            &format!("purity={}", declared.as_spec_str()),
+            &format!("purity={}", contract.purity.as_spec_str()),
+            conservative,
+            code,
+        ));
     }
-
-    if decl.nil_free == Some(true) {
-        // `nil-free` means the word never *manufactures* absence. Only
-        // `MayCreate` (e.g. DIV) does that; `Propagates` merely carries an
-        // input NIL through (ADD1 is nil-free yet propagates).
-        let may_create = matches!(contract.nil_behavior, NilBehavior::MayCreate);
-        if may_create {
-            findings.push(DeclFinding {
-                severity: if conservative {
-                    Severity::Note
-                } else {
-                    Severity::Error
-                },
-                message: format!(
-                        "`#:contract {}`: declared `nil-free` but inference shows it can create or propagate NIL{}.",
-                        decl.name,
-                        if conservative { " (unverified)" } else { "" }
-                    ),
-                code: if conservative { code } else { None },
-            });
-        }
+    if let Some(declared) = decl.partiality.filter(|d| contract.partiality > *d) {
+        findings.push(bound_finding(
+            &decl.name,
+            &format!("partiality={}", declared.as_spec_str()),
+            &format!("partiality={}", contract.partiality.as_spec_str()),
+            conservative,
+            code,
+        ));
+    }
+    if let Some(declared) = decl.determinism.filter(|d| contract.determinism > *d) {
+        findings.push(bound_finding(
+            &decl.name,
+            &format!("determinism={}", declared.as_spec_str()),
+            &format!("determinism={}", contract.determinism.as_spec_str()),
+            conservative,
+            code,
+        ));
     }
 
     check_cost_decl(&decl.name, decl.cost, contract.cost, code, findings);
 }
 
-fn arity_msg(name: &str, dc: u16, dp: u16, ic: u16, ip: u16) -> String {
-    format!("`#:contract {name}`: declared arity ( {dc} -- {dp} ) but inferred ( {ic} -- {ip} ).")
+/// A declared bound the inferred contract exceeds: a violation when the
+/// inference is complete, and only a note — unverifiable, never a false
+/// error — when it is conservative.
+fn bound_finding(
+    name: &str,
+    declared: &str,
+    inferred: &str,
+    conservative: bool,
+    code: Option<&'static str>,
+) -> DeclFinding {
+    DeclFinding {
+        severity: if conservative {
+            Severity::Note
+        } else {
+            Severity::Error
+        },
+        message: format!(
+            "`#:contract {name}`: declared `{declared}` but inferred `{inferred}`{}.",
+            if conservative { " (unverified)" } else { "" }
+        ),
+        code: if conservative { code } else { None },
+    }
 }
