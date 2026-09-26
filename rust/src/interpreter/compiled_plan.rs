@@ -89,11 +89,12 @@ fn try_collect_literal_vector(
     tokens: &[Token],
     start: usize,
     depth: usize,
+    max_depth: usize,
 ) -> Option<(Vec<Value>, usize)> {
     if !matches!(tokens.get(start), Some(Token::VectorStart)) {
         return None;
     }
-    if depth > crate::interpreter::MAX_VECTOR_NESTING_DEPTH {
+    if depth > max_depth {
         return None;
     }
 
@@ -105,7 +106,8 @@ fn try_collect_literal_vector(
             Token::VectorStart => {
                 // A nested empty vector returns `None` from the recursive call
                 // above (the interpreter rejects it), so `nested` is non-empty.
-                let (nested, consumed) = try_collect_literal_vector(tokens, i, depth + 1)?;
+                let (nested, consumed) =
+                    try_collect_literal_vector(tokens, i, depth + 1, max_depth)?;
                 values.push(Value::from_vector_promoted(nested));
                 i += consumed;
             }
@@ -164,7 +166,12 @@ fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
                 None => CompiledOp::FallbackToken(token.clone()),
             },
             Token::String(s) => CompiledOp::PushLiteral(Value::from_string(s)),
-            Token::VectorStart => match try_collect_literal_vector(&tokens, i, 1) {
+            Token::VectorStart => match try_collect_literal_vector(
+                &tokens,
+                i,
+                1,
+                interp.runtime_limits.max_nesting_depth,
+            ) {
                 Some((values, consumed)) if interp.vector_literal_enabled => {
                     i += consumed - 1;
                     CompiledOp::PushVectorLiteral(Value::from_vector_promoted(values))
@@ -278,7 +285,8 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 let stack_len_before = interp.stack.len();
                 let mut outcome = interp.charge_execution_step();
                 if outcome.is_ok() {
-                    outcome = execute_compiled_call(interp, call);
+                    outcome = execute_compiled_call(interp, call)
+                        .and_then(|()| interp.check_fresh_nesting());
                 }
                 if let Err(err) = outcome {
                     interp.record_word_dispatch_failure(&call.name, &err, stack_len_before);

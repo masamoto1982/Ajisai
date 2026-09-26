@@ -205,10 +205,7 @@ pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
 pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     if shape.is_empty() {
         if data.len() == 1 {
-            return Value {
-                data: ValueData::Scalar(data[0].clone()),
-                absence: None,
-            };
+            return Value::new(ValueData::Scalar(data[0].clone()), None);
         }
         let children: Vec<Value> = data
             .iter()
@@ -222,10 +219,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
             .iter()
             .map(|f| Value::from_fraction(f.clone()))
             .collect();
-        return Value {
-            data: ValueData::Vector(Arc::new(children)),
-            absence: None,
-        };
+        return Value::new(ValueData::Vector(Arc::new(children)), None);
     }
 
     let outer_size: usize = shape[0];
@@ -240,10 +234,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         })
         .collect();
 
-    Value {
-        data: ValueData::Vector(Arc::new(children)),
-        absence: None,
-    }
+    Value::new(ValueData::Vector(Arc::new(children)), None)
 }
 
 /// The rectangular tensor shape of `value`, or `None` when the value cannot

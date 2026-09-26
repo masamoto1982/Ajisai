@@ -322,10 +322,7 @@ fn decode_value(value: &PersistData) -> Result<Value, String> {
             _ => Value::nil_with_reason_unknown(reason),
         });
     }
-    Ok(Value {
-        data: decode_data(value)?,
-        absence: None,
-    })
+    Ok(Value::new(decode_data(value)?, None))
 }
 
 // ---- Public stack codec (WASM boundary) ----

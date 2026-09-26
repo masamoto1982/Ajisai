@@ -27,6 +27,54 @@ use crate::types::Value;
 /// request was. This is a size ceiling: `observed` is the whole requested
 /// count, measured before anything was built, and `limit` is what fits.
 pub(crate) fn space_exhausted_nil(word: &str, limit: usize, observed: Option<u128>) -> Value {
+    let message = match observed {
+        Some(count) => format!(
+            "{} would materialize {} elements; materializedElements is {}",
+            word, count, limit
+        ),
+        // A shape whose element product overflows `usize` has no count to
+        // report: the size is past what the machine can express, let alone
+        // allocate. The ceiling and its name still are.
+        None => format!(
+            "{} names a shape whose element count overflows; materializedElements is {}",
+            word, limit
+        ),
+    };
+    exhausted_nil(
+        word,
+        ResourceLimit::MaterializedElements,
+        limit,
+        observed.and_then(|count| u64::try_from(count).ok()),
+        message,
+    )
+}
+
+/// The same projection for a result that would nest deeper than the nesting
+/// ceiling (LANG.MACHINE.LIMITS): a shape of too many axes, or JSON text
+/// nested too deep. Depth is a dimension of the size of what a generative
+/// Word was asked to build, so it declines the same way a count does; a value
+/// that grows too deep through Words that build nothing of their own size is
+/// refused with an ERROR instead (`Interpreter::check_fresh_nesting`).
+pub(crate) fn nesting_exhausted_nil(word: &str, limit: usize, observed: usize) -> Value {
+    exhausted_nil(
+        word,
+        ResourceLimit::NestingDepth,
+        limit,
+        Some(observed as u64),
+        format!(
+            "{} would build a value nested {} deep; nestingDepth is {}",
+            word, observed, limit
+        ),
+    )
+}
+
+fn exhausted_nil(
+    word: &str,
+    resource: ResourceLimit,
+    limit: usize,
+    observed: Option<u64>,
+    message: String,
+) -> Value {
     let mut diagnosis = DebugDiagnosis::from_error_category(
         ErrorPhase::ExecuteWord,
         Some(word),
@@ -34,26 +82,12 @@ pub(crate) fn space_exhausted_nil(word: &str, limit: usize, observed: Option<u12
         Some(&NilReason::SpaceExhausted),
         0,
         0,
-        Some(match observed {
-            Some(count) => format!(
-                "{} would materialize {} elements; materializedElements is {}",
-                word, count, limit
-            ),
-            // A shape whose element product overflows `usize` has no count to
-            // report: the size is past what the machine can express, let alone
-            // allocate. The ceiling and its name still are.
-            None => format!(
-                "{} names a shape whose element count overflows; materializedElements is {}",
-                word, limit
-            ),
-        }),
+        Some(message),
     );
     diagnosis.resource_limit = Some(ResourceLimitFacts {
-        resource: ResourceLimit::MaterializedElements
-            .as_protocol_str()
-            .to_string(),
+        resource: resource.as_protocol_str().to_string(),
         limit: limit as u64,
-        observed: observed.and_then(|count| u64::try_from(count).ok()),
+        observed,
         progress: None,
     });
     Value::nil_with_absence(AbsenceMetadata {

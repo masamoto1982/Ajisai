@@ -111,7 +111,12 @@ impl Value {
         }
         match &mut self.data {
             ValueData::Vector(v) => {
+                // One more child: the nesting can only grow to hold it, so it
+                // is updated from that child alone rather than rescanned.
+                let with_child = child.nesting().saturating_add(1);
                 Arc::make_mut(v).push(child);
+                self.raise_nesting_to(with_child);
+                return;
             }
             ValueData::Nil => {
                 self.data = ValueData::Vector(Arc::new(vec![child]));
@@ -130,6 +135,7 @@ impl Value {
             | ValueData::Symbol(_)
             | ValueData::Record(_) => {}
         }
+        self.refresh_nesting();
     }
 
     #[inline]

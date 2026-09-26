@@ -54,6 +54,8 @@ fn unbounded() -> RuntimeLimits {
         max_collection_work: u64::MAX,
         max_bigint_bits: u64::MAX,
         max_algebraic_terms: usize::MAX,
+        // Not lifted: it bounds the native stack, not a price.
+        max_nesting_depth: RuntimeLimits::default().max_nesting_depth,
     }
 }
 

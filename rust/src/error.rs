@@ -76,6 +76,9 @@ pub enum ResourceLimit {
     BigintBits,
     /// Algebraic term count of one exact value (`max_algebraic_terms`).
     AlgebraicTerms,
+    /// How many containers deep one value nests (`max_nesting_depth`) —
+    /// whether written as a literal, decoded from JSON, or built by Words.
+    NestingDepth,
     /// Execution-step budget (`Interpreter::max_execution_steps`). Kept in the
     /// same vocabulary even though it lives outside `RuntimeLimits`, because a
     /// host publishes it as one more entry in the same limit table.
@@ -131,6 +134,7 @@ impl ResourceLimit {
             ResourceLimit::CollectionWork => "collectionWork",
             ResourceLimit::BigintBits => "bigintBits",
             ResourceLimit::AlgebraicTerms => "algebraicTerms",
+            ResourceLimit::NestingDepth => "nestingDepth",
             ResourceLimit::ExecutionSteps => "executionSteps",
             ResourceLimit::MaterializedElements => "materializedElements",
         }

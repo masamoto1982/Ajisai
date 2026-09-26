@@ -107,17 +107,17 @@ fn a_nil_lane_reconciles_across_the_two_representations() {
     }
 
     let dense = Value::from_vector_promoted(vec![Value::from_int(1), div_by_zero()]);
-    let nested = Value {
-        data: ValueData::Vector(Arc::new(vec![Value::from_int(1), div_by_zero()])),
-        absence: None,
-    };
+    let nested = Value::new(
+        ValueData::Vector(Arc::new(vec![Value::from_int(1), div_by_zero()])),
+        None,
+    );
     assert_eq!(dense, nested);
     assert_eq!(hash_of(&dense), hash_of(&nested));
 
-    let written = Value {
-        data: ValueData::Vector(Arc::new(vec![Value::from_int(1), Value::nil()])),
-        absence: None,
-    };
+    let written = Value::new(
+        ValueData::Vector(Arc::new(vec![Value::from_int(1), Value::nil()])),
+        None,
+    );
     assert_ne!(
         dense, written,
         "a computed absence is not a written one, in either representation"

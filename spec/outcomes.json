@@ -162,7 +162,7 @@
       "id": "resourceLimitExceeded",
       "kind": "structural",
       "attribution": "machine",
-      "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, a numeric literal's digit count, or a program's byte length."
+      "documentation": "A named internal-computation ceiling other than the step budget was crossed — bigintBits, algebraicTerms, nestingDepth, a numeric literal's digit count, or a program's byte length."
     },
     {
       "id": "selfReferentialDefinition",

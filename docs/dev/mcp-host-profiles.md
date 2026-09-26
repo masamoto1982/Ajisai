@@ -38,6 +38,7 @@ to trust a document that could drift:
 | `collectionWork` | 20,000,000 | 1,414,860,000 | accumulated element operations inside collection Words — copies, order comparisons, equality probes | **yes**, from the host time budget |
 | `bigintBits` | 262,144 | 1,000,000 | coefficient width of one exact arithmetic result | no — size, not time (§ below) |
 | `algebraicTerms` | 512 | 10,000 | term count of one exact algebraic value | no — size, not time (§ below) |
+| `nestingDepth` | 256 | 256 | containers one value nests, however it was built | no — the native stack a value walk descends, not time |
 
 Both profiles' triple of derived ceilings bound the same amount of *time*, not
 the same number of units — the paths do not count the same thing, so setting
