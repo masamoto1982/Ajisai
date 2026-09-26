@@ -1758,7 +1758,14 @@ W</pre>
 <section class="ajisai-case" id="core-contract-block-pure" data-category="core">
   <h3>CONTRACT infers a pure block as pure, with no gaps, as a contract Record</h3>
   <pre class="ajisai-source">[ 1 2 ADD ] CONTRACT</pre>
-  <pre class="ajisai-expect-result">{ 'inputs' 0/1 'outputs' 1/1 'nil' 'propagates' 'purity' 'pure' 'determinism' 'deterministic' 'cost' { 'steps' 'const' 'numeric' 'const' 'collection' 'const' } 'effects' [ ] 'confidence' 'complete' 'gaps' [ ] }</pre>
+  <pre class="ajisai-expect-result">{ 'inputs' 0/1 'outputs' 1/1 'partiality' 'total' 'purity' 'pure' 'determinism' 'deterministic' 'cost' { 'steps' 'const' 'numeric' 'const' 'collection' 'const' } 'effects' [ ] 'confidence' 'complete' 'gaps' [ ] }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contract-one-vocabulary" data-category="core">
+  <h3>A block's contract and a Core Word's answer a shared key in one vocabulary (LANG.CONTRACT.REGISTRY)</h3>
+  <pre class="ajisai-source">[ PRINT ] 0 GET CONTRACT 'determinism' GET [ 42 PRINT ] CONTRACT 'determinism' GET EQ [ DIV ] 0 GET CONTRACT 'partiality' GET [ 1 0 DIV ] CONTRACT 'partiality' GET EQ</pre>
+  <pre class="ajisai-expect-result">TRUE TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1825,7 +1832,7 @@ W</pre>
 
 <section class="ajisai-case" id="core-contract-core-word-record" data-category="core">
   <h3>CONTRACT answers a Core Word's registered record as a Record</h3>
-  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' GET [ DIV ] 0 GET CONTRACT 'projection' GET [ SORT ] 0 GET CONTRACT 'tier' GET</pre>
+  <pre class="ajisai-source">[ DIV ] 0 GET CONTRACT 'inputs' GET [ DIV ] 0 GET CONTRACT 'projection' GET [ SORT ] 0 GET CONTRACT 'vocabularyTier' GET</pre>
   <pre class="ajisai-expect-result">2/1 [ 'divisionByZero' ] 'standard'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>

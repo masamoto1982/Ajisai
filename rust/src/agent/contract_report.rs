@@ -11,116 +11,57 @@
 //! so this never executes the program.
 
 use super::contract_decl::build_definitions_interpreter;
-use crate::interpreter::word_contract::{
-    ContractConfidence, ContractDeterminism, ContractFlow, ContractPurity, NilBehavior,
-    OrderSensitivity,
-};
+use crate::interpreter::word_contract::{ContractFlow, WordContract};
 use crate::interpreter::word_cost::CostClass;
-use crate::interpreter::word_space::SpaceClass;
 
-/// One user word's inferred contract, rendered into stable labels.
+/// One user word's inferred contract, under the keys and in the vocabulary of
+/// a contract Record (`CONTRACT`, `spec/words.json`): a report, the Record
+/// `CONTRACT` answers for the same word, and a `#:contract` declaration all
+/// spell one fact one way.
 pub(crate) struct WordReport {
     pub name: String,
-    /// `"( c -- p )"` for a fixed arity, or `"dynamic"`.
-    pub arity: String,
+    /// `inputs` and `outputs`: a count, or `None` for `variable`.
+    pub inputs: Option<u16>,
+    pub outputs: Option<u16>,
+    pub partiality: &'static str,
     pub purity: &'static str,
     pub determinism: &'static str,
-    pub nil: &'static str,
-    pub order: &'static str,
-    /// The inferred space-growth class (`space:const` … `space:unbounded`).
-    pub space: &'static str,
     /// The inferred charged-cost class on each of the three axes
-    /// (`"const"` … `"unbounded"`, no `cost:`/`space:`-style prefix — these
-    /// sit under a named axis in both JSON and terminal output, and the bare
-    /// word matches the declaration vocabulary (`cost steps=const`)).
+    /// (`"const"` … `"unbounded"`).
     pub cost_steps: &'static str,
     pub cost_numeric: &'static str,
     pub cost_collection: &'static str,
     pub effects: Vec<String>,
     pub confidence: &'static str,
+    pub gaps: Vec<&'static str>,
     /// A `#:contract` directive line that codifies the checkable subset of
-    /// this inferred contract (arity + purity + nil-freedom + `cost`). Never
-    /// the space class, which the declaration grammar cannot parse.
+    /// this inferred contract.
     pub suggested: String,
 }
 
-fn purity_label(p: ContractPurity) -> &'static str {
-    match p {
-        ContractPurity::Pure => "pure",
-        ContractPurity::Observable => "observable",
-        ContractPurity::Effectful => "effectful",
-    }
-}
-
-fn nil_label(n: NilBehavior) -> &'static str {
-    match n {
-        NilBehavior::NeverCreates => "nil-free",
-        NilBehavior::Propagates => "nil-propagating",
-        NilBehavior::MayCreate => "may-create-nil",
-        NilBehavior::RejectsNil => "rejects-nil",
-        NilBehavior::ConsumesNil => "consumes-nil",
-    }
-}
-
-fn space_label(class: SpaceClass) -> &'static str {
-    match class {
-        SpaceClass::Const => "space:const",
-        SpaceClass::Linear => "space:linear",
-        SpaceClass::Superlinear => "space:superlinear",
-        SpaceClass::Unbounded => "space:unbounded",
-    }
-}
-
-fn arity_label(flow: &ContractFlow) -> String {
+fn counts(flow: &ContractFlow) -> (Option<u16>, Option<u16>) {
     match flow {
-        ContractFlow::Fixed { consumes, produces } => format!("( {consumes} -- {produces} )"),
-        ContractFlow::Dynamic => "dynamic".to_string(),
+        ContractFlow::Fixed { consumes, produces } => (Some(*consumes), Some(*produces)),
+        ContractFlow::Dynamic => (None, None),
     }
 }
 
 /// The `#:contract` directive that codifies the inferred contract's checkable
-/// subset. A dynamic arity is omitted (the checker cannot pin it).
-///
-/// The NIL term is derived from `nil_label` — the same rendering the report's
-/// own `nil` field uses — rather than from a second, independently-maintained
-/// match over `NilBehavior`. The two used to disagree in the same JSON object
-/// (`"nil": "nil-propagating"` beside `"suggested": "... nil-free ..."`): both
-/// were true under the checker's own definition (`contract_decl.rs`'s
-/// `nil-free` means "never *manufactures* absence," which a propagating word
-/// satisfies), but stated in two different vocabularies nothing reconciled
-/// for a reader of one response. Deriving `suggested` from `nil_label`'s
-/// output instead makes the two fields agree by construction: only the
-/// literal string `"nil-free"` earns a `nil-free` directive term, so a
-/// propagating word — reported as `nil-propagating` — now suggests no NIL
-/// term at all, the same silence `rejects-nil`/`consumes-nil` already get.
-fn suggested_directive(
-    name: &str,
-    contract: &crate::interpreter::word_contract::WordContract,
-) -> String {
+/// subset, in the same keys and values the report itself uses, so pasting it
+/// back verifies exactly what was reported. A `variable` arity is omitted (the
+/// checker cannot pin it).
+fn suggested_directive(name: &str, contract: &WordContract) -> String {
     let mut parts = vec![format!("#:contract {name}")];
-    if let ContractFlow::Fixed { consumes, produces } = &contract.flow {
-        parts.push(format!("( {consumes} -- {produces} )"));
+    if let (Some(inputs), Some(outputs)) = counts(&contract.flow) {
+        parts.push(format!("inputs={inputs}"));
+        parts.push(format!("outputs={outputs}"));
     }
-    parts.push(purity_label(contract.purity).to_string());
-    let nil = match nil_label(contract.nil_behavior) {
-        "nil-free" => Some("nil-free"),
-        "may-create-nil" => Some("may-nil"),
-        // "nil-propagating", "rejects-nil", "consumes-nil" are not
-        // expressible as a nil-free/may-nil flag.
-        _ => None,
-    };
-    if let Some(nil) = nil {
-        parts.push(nil.to_string());
-    }
-    // No space term: the space class is *reported* (see `WordReport::space`)
-    // but is not part of the checkable subset. `contract_decl.rs` has no
-    // `space:` production — the declarable properties are arity, purity and
-    // NIL behavior (`spec/language-semantics.md`, LANG.CONTRACT.CHECK) plus
-    // `cost` — so emitting `space:linear` here made the whole directive a
-    // malformed one, and a malformed directive is a hard `error` that fails
-    // `check --contract` outright. `suggested` exists only to be pasted back
-    // and pass, so it must carry nothing the checker cannot parse.
-    //
+    parts.push(format!("purity={}", contract.purity.as_spec_str()));
+    parts.push(format!("partiality={}", contract.partiality.as_spec_str()));
+    parts.push(format!(
+        "determinism={}",
+        contract.determinism.as_spec_str()
+    ));
     // The exact-only discipline instead applies to `cost`, per axis rather
     // than word-wide: `steps`/`numeric`/`collection` each carry their own
     // witness (`docs/dev/cost-contract-design.md` §3), so each is gated on
@@ -165,32 +106,29 @@ pub(crate) fn report_contracts(source: &str) -> Vec<WordReport> {
         let Some(contract) = interp.infer_word_contract(&name) else {
             continue;
         };
+        let (inputs, outputs) = counts(&contract.flow);
         reports.push(WordReport {
             name: name.clone(),
-            arity: arity_label(&contract.flow),
-            purity: purity_label(contract.purity),
-            determinism: match contract.determinism {
-                ContractDeterminism::Deterministic => "deterministic",
-                ContractDeterminism::NonDeterministic => "non-deterministic",
-            },
-            nil: nil_label(contract.nil_behavior),
-            order: match contract.order_sensitivity {
-                OrderSensitivity::OrderIndependent => "order-independent",
-                OrderSensitivity::OrderSensitive => "order-sensitive",
-            },
-            space: space_label(contract.space),
+            inputs,
+            outputs,
+            partiality: contract.partiality.as_spec_str(),
+            purity: contract.purity.as_spec_str(),
+            determinism: contract.determinism.as_spec_str(),
             cost_steps: CostClass::as_spec_str(contract.cost.steps.0),
             cost_numeric: CostClass::as_spec_str(contract.cost.numeric.0),
             cost_collection: CostClass::as_spec_str(contract.cost.collection.0),
             effects: contract.effects.clone(),
-            confidence: match contract.confidence {
-                ContractConfidence::Complete => "complete",
-                ContractConfidence::Conservative => "conservative",
-            },
+            confidence: contract.confidence.as_spec_str(),
+            gaps: contract.gaps.iter().map(|gap| gap.as_str()).collect(),
             suggested: suggested_directive(&name, &contract),
         });
     }
     reports
+}
+
+/// A count, or `"variable"` — the spelling a contract Record uses.
+fn arity_json(count: Option<u16>) -> serde_json::Value {
+    count.map_or_else(|| serde_json::json!("variable"), |n| serde_json::json!(n))
 }
 
 /// JSON array for the `--json` envelope.
@@ -201,12 +139,11 @@ pub(crate) fn reports_json(reports: &[WordReport]) -> serde_json::Value {
             .map(|r| {
                 serde_json::json!({
                     "name": r.name,
-                    "arity": r.arity,
+                    "inputs": arity_json(r.inputs),
+                    "outputs": arity_json(r.outputs),
+                    "partiality": r.partiality,
                     "purity": r.purity,
                     "determinism": r.determinism,
-                    "nil": r.nil,
-                    "order": r.order,
-                    "space": r.space,
                     "cost": {
                         "steps": r.cost_steps,
                         "numeric": r.cost_numeric,
@@ -214,6 +151,7 @@ pub(crate) fn reports_json(reports: &[WordReport]) -> serde_json::Value {
                     },
                     "effects": r.effects,
                     "confidence": r.confidence,
+                    "gaps": r.gaps,
                     "suggested": r.suggested,
                 })
             })

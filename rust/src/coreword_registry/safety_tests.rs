@@ -97,38 +97,3 @@ fn aq_ver_007_c_effectful_words_must_not_be_safe_preview() {
         );
     }
 }
-
-/// The vocabulary currently holds no `observational` Word: `LOOKUP` was the
-/// only one, and looking a Word up is the host's job now, not a program's. The
-/// loop below therefore has no subjects today, and it is kept deliberately —
-/// `observational` remains a contract a future Word may declare, and this is
-/// where what that declaration obliges is written down. A Word that reads the
-/// session's state must say which state (`effects`), must be `stateRelative`
-/// rather than deterministic — reproducible for one interpreter snapshot is not
-/// the same as reproducible — and must stay out of auto preview, where it would
-/// run against a snapshot the reader never asked about.
-#[test]
-fn aq_ver_007_d_observational_words_read_state_and_do_not_auto_preview() {
-    let registry = get_builtin_word_registry();
-    for word in registry
-        .iter()
-        .filter(|w| w.purity == Purity::Observational)
-    {
-        assert!(
-            !word.effects.is_empty(),
-            "{} observational words must declare effects",
-            word.name
-        );
-        assert_eq!(
-            word.determinism,
-            Determinism::StateRelative,
-            "{} observes state rather than the host",
-            word.name
-        );
-        assert!(
-            !word.safe_preview,
-            "{} observational words must not run in auto preview",
-            word.name
-        );
-    }
-}

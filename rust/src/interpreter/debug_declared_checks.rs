@@ -90,7 +90,6 @@ fn arity_notation(declared: &GeneratedWord) -> String {
         match arity {
             Arity::Fixed(n) => n.to_string(),
             Arity::Variable => "variable".to_string(),
-            Arity::Control => "control".to_string(),
         }
     }
     format!(

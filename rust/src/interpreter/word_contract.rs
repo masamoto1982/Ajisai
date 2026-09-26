@@ -13,14 +13,14 @@ use std::sync::Arc;
 
 use crate::agent::contract_gap::GapCode;
 use crate::coreword_registry::{
-    get_coreword_metadata, Determinism, MassContract, NilPolicy, Purity,
+    get_coreword_metadata, Determinism, MassContract, Partiality, Purity,
 };
 use crate::types::{Token, WordDefinition};
 
-use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
-use super::word_contract_lattice::{
-    widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
+pub use super::word_contract_facets::{
+    ContractConfidence, ContractDeterminism, ContractPartiality, ContractPurity,
 };
+use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
 use super::word_contract_widen::{classify_vector_positions, LiteralContext};
 use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
@@ -38,8 +38,7 @@ pub struct WordContract {
     pub purity: ContractPurity,
     pub effects: Vec<String>,
     pub determinism: ContractDeterminism,
-    pub order_sensitivity: OrderSensitivity,
-    pub nil_behavior: NilBehavior,
+    pub partiality: ContractPartiality,
     /// Sound upper bound on the word's space growth (Phase 2.2; `word_space`).
     pub space: SpaceClass,
     /// True when the bound is provably attained, licensing a declaration error.
@@ -58,40 +57,6 @@ pub struct WordContract {
 pub enum ContractFlow {
     Fixed { consumes: u16, produces: u16 },
     Dynamic,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ContractPurity {
-    Pure,
-    Observable,
-    Effectful,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ContractDeterminism {
-    Deterministic,
-    NonDeterministic,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum OrderSensitivity {
-    OrderIndependent,
-    OrderSensitive,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NilBehavior {
-    NeverCreates,
-    Propagates,
-    MayCreate,
-    RejectsNil,
-    ConsumesNil,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ContractConfidence {
-    Complete,
-    Conservative,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -118,9 +83,8 @@ impl WordContract {
             flow: ContractFlow::Dynamic,
             purity: ContractPurity::Effectful,
             effects: vec!["conservative".to_string()],
-            determinism: ContractDeterminism::NonDeterministic,
-            order_sensitivity: OrderSensitivity::OrderSensitive,
-            nil_behavior: NilBehavior::MayCreate,
+            determinism: ContractDeterminism::HostRelative,
+            partiality: ContractPartiality::Projecting,
             space: SpaceClass::Unbounded,
             space_exact: false,
             cost: CostBound::CONSERVATIVE,
@@ -140,8 +104,7 @@ impl WordContract {
             purity: ContractPurity::Pure,
             effects: Vec::new(),
             determinism: ContractDeterminism::Deterministic,
-            order_sensitivity: OrderSensitivity::OrderIndependent,
-            nil_behavior: NilBehavior::NeverCreates,
+            partiality: ContractPartiality::Total,
             space: SpaceClass::Const,
             space_exact: true,
             cost: CostBound::IDENTITY,
@@ -162,7 +125,6 @@ impl From<Purity> for ContractPurity {
             // double-count — a `MAP` over a pure block is pure, and over an
             // effectful one the block's own effects make the caller effectful.
             Purity::Conditional => ContractPurity::Pure,
-            Purity::Observational => ContractPurity::Observable,
             Purity::Effectful => ContractPurity::Effectful,
         }
     }
@@ -172,11 +134,18 @@ impl From<Determinism> for ContractDeterminism {
     fn from(value: Determinism) -> Self {
         match value {
             Determinism::Deterministic => ContractDeterminism::Deterministic,
-            // Both non-deterministic classes collapse here: the lattice asks
-            // only whether a result is reproducible from its operands.
-            Determinism::StateRelative | Determinism::HostRelative => {
-                ContractDeterminism::NonDeterministic
-            }
+            Determinism::StateRelative => ContractDeterminism::StateRelative,
+            Determinism::HostRelative => ContractDeterminism::HostRelative,
+        }
+    }
+}
+
+impl From<Partiality> for ContractPartiality {
+    fn from(value: Partiality) -> Self {
+        match value {
+            Partiality::Total => ContractPartiality::Total,
+            Partiality::Partial => ContractPartiality::Partial,
+            Partiality::Projecting => ContractPartiality::Projecting,
         }
     }
 }
@@ -199,8 +168,7 @@ pub(crate) struct AccumulatedContract {
     purity: ContractPurity,
     effects: Vec<String>,
     determinism: ContractDeterminism,
-    order_sensitivity: OrderSensitivity,
-    nil_behavior: NilBehavior,
+    partiality: ContractPartiality,
     confidence: ContractConfidence,
     pub(crate) gaps: Vec<GapCode>,
 }
@@ -212,24 +180,22 @@ impl AccumulatedContract {
             purity: contract.purity,
             effects: contract.effects.clone(),
             determinism: contract.determinism,
-            order_sensitivity: contract.order_sensitivity,
-            nil_behavior: contract.nil_behavior,
+            partiality: contract.partiality,
             confidence: contract.confidence,
             gaps: contract.gaps.clone(),
         }
     }
 
     pub(crate) fn widen_with(&mut self, other: &WordContract) {
-        self.purity = widen_purity(self.purity, other.purity);
+        self.purity = self.purity.max(other.purity);
         for effect in &other.effects {
             if !self.effects.contains(effect) {
                 self.effects.push(effect.clone());
             }
         }
-        self.determinism = widen_determinism(self.determinism, other.determinism);
-        self.order_sensitivity = widen_order(self.order_sensitivity, other.order_sensitivity);
-        self.nil_behavior = widen_nil(self.nil_behavior, other.nil_behavior);
-        self.confidence = widen_confidence(self.confidence, other.confidence);
+        self.determinism = self.determinism.max(other.determinism);
+        self.partiality = self.partiality.max(other.partiality);
+        self.confidence = self.confidence.max(other.confidence);
         // Incompleteness propagates like a NIL reason; canonicalized once at
         // the end of accumulation, not per widen.
         self.gaps.extend(other.gaps.iter().copied());
@@ -241,20 +207,6 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
     let Some(meta) = get_coreword_metadata(name) else {
         return WordContract::conservative(key);
     };
-    let nil_behavior = match meta.nil_policy {
-        NilPolicy::Passthrough | NilPolicy::PreserveReason => NilBehavior::Propagates,
-        // `passthroughThenProject` does both: a NIL operand flows through,
-        // and a well-formed operand may still project onto one — `MayCreate`
-        // is the wider of the two, the one a caller has to plan for.
-        NilPolicy::PassthroughThenProject | NilPolicy::CreatesNil => NilBehavior::MayCreate,
-        NilPolicy::RejectNil => NilBehavior::RejectsNil,
-        // `inspectNil` reads NIL-ness rather than propagating it — `ConsumesNil`.
-        NilPolicy::ConsumeNil => NilBehavior::ConsumesNil,
-        // `kleeneAbsorbing` may or may not produce a NIL depending on the
-        // other operand (LANG.VALUES.TRUTH) — the same "plan for either"
-        // shape as `passthroughThenProject`, so it widens the same way.
-        NilPolicy::KleeneAbsorbing => NilBehavior::MayCreate,
-    };
     let (space, space_exact) = super::word_space::builtin_space_for(name);
     let cost = super::word_cost::builtin_cost_for(name);
     WordContract {
@@ -262,8 +214,7 @@ pub(crate) fn static_word_contract(name: &str, def: &WordDefinition) -> WordCont
         purity: meta.purity.into(),
         effects: meta.effects,
         determinism: meta.determinism.into(),
-        order_sensitivity: OrderSensitivity::OrderIndependent,
-        nil_behavior,
+        partiality: meta.partiality.into(),
         space,
         space_exact,
         cost,
@@ -450,8 +401,7 @@ impl Interpreter {
             purity: acc.purity,
             effects: acc.effects,
             determinism: acc.determinism,
-            order_sensitivity: acc.order_sensitivity,
-            nil_behavior: acc.nil_behavior,
+            partiality: acc.partiality,
             space,
             space_exact,
             cost,

@@ -8,14 +8,13 @@
 //! without running anything. The two carry different facts — only a registry
 //! declares projection reasons and ERROR conditions; only an
 //! inference has a confidence and gaps — so the Records differ in the keys
-//! only one side can supply, and agree on every key both can: `inputs`,
-//! `outputs`, `nil`, `purity`, `determinism`, `cost`, `effects`. A program
-//! that asks `'purity' GET` of either gets an answer.
+//! only one side can supply, and agree on every key both can — `inputs`,
+//! `outputs`, `partiality`, `purity`, `determinism`, `cost`, `effects` — in
+//! name and in vocabulary: every key is a `spec/words.json` field name and
+//! every value a value that field admits. A program that asks
+//! `'purity' GET` of either gets an answer it can compare with the other's.
 
-use crate::interpreter::word_contract::{
-    ContractConfidence, ContractDeterminism, ContractFlow, ContractPurity, NilBehavior,
-    WordContract,
-};
+use crate::interpreter::word_contract::{ContractFlow, WordContract};
 use crate::interpreter::word_cost::CostBound;
 use crate::kernel::generated::{Arity, CostClass, GeneratedWord};
 use crate::types::{RecordData, Value};
@@ -40,7 +39,6 @@ fn arity(arity: Arity) -> Value {
     match arity {
         Arity::Fixed(n) => Value::from_int(i64::from(n)),
         Arity::Variable => text("variable"),
-        Arity::Control => text("control"),
     }
 }
 
@@ -52,16 +50,19 @@ fn cost_record(steps: CostClass, numeric: CostClass, collection: CostClass) -> V
     ])
 }
 
-/// The registered contract of a Core Word, field for field from the registry.
+/// The registered contract of a Core Word, field for field from the registry
+/// and under the registry's own field names (`spec/words.json`): `inputs` and
+/// `outputs` are `stack.inputs` and `stack.outputs`, and `projection` is the
+/// reasons `projection.reason` names.
 pub(crate) fn registered_contract_record(word: &GeneratedWord) -> Value {
     record(vec![
         ("name", text(word.name)),
-        ("tier", text(word.vocabulary_tier.as_spec_str())),
+        ("vocabularyTier", text(word.vocabulary_tier.as_spec_str())),
         ("inputs", arity(word.stack_inputs)),
         ("outputs", arity(word.stack_outputs)),
-        ("nil", text(word.nil_policy.as_spec_str())),
+        ("nilPolicy", text(word.nil_policy.as_spec_str())),
         ("projection", texts(word.projection_reasons)),
-        ("errors", texts(word.error_when)),
+        ("errorWhen", texts(word.error_when)),
         ("partiality", text(word.partiality.as_spec_str())),
         ("purity", text(word.purity.as_spec_str())),
         ("determinism", text(word.determinism.as_spec_str())),
@@ -77,38 +78,6 @@ pub(crate) fn registered_contract_record(word: &GeneratedWord) -> Value {
     ])
 }
 
-fn purity_str(purity: ContractPurity) -> &'static str {
-    match purity {
-        ContractPurity::Pure => "pure",
-        ContractPurity::Observable => "observable",
-        ContractPurity::Effectful => "effectful",
-    }
-}
-
-fn determinism_str(determinism: ContractDeterminism) -> &'static str {
-    match determinism {
-        ContractDeterminism::Deterministic => "deterministic",
-        ContractDeterminism::NonDeterministic => "nonDeterministic",
-    }
-}
-
-fn nil_str(nil: NilBehavior) -> &'static str {
-    match nil {
-        NilBehavior::NeverCreates => "neverCreates",
-        NilBehavior::Propagates => "propagates",
-        NilBehavior::MayCreate => "mayCreate",
-        NilBehavior::RejectsNil => "rejectsNil",
-        NilBehavior::ConsumesNil => "consumesNil",
-    }
-}
-
-fn confidence_str(confidence: ContractConfidence) -> &'static str {
-    match confidence {
-        ContractConfidence::Complete => "complete",
-        ContractConfidence::Conservative => "conservative",
-    }
-}
-
 fn flow(flow: &ContractFlow) -> (Value, Value) {
     match flow {
         ContractFlow::Fixed { consumes, produces } => (
@@ -119,10 +88,10 @@ fn flow(flow: &ContractFlow) -> (Value, Value) {
     }
 }
 
-/// The inferred contract of a User Word or a block. The checkable subset a
-/// `#:contract` declaration verifies against (purity, nil behavior, arity)
-/// plus what makes *cannot verify* readable as data rather than as an opaque
-/// failure: `confidence` and `gaps` (LANG.CONTRACT.CHECK's trichotomy).
+/// The inferred contract of a User Word or a block: every key it shares with
+/// a registered contract, in the registry's vocabulary, plus what makes
+/// *cannot verify* readable as data rather than as an opaque failure:
+/// `confidence` and `gaps` (LANG.CONTRACT.CHECK's trichotomy).
 pub(crate) fn inferred_contract_record(contract: &WordContract) -> Value {
     let (inputs, outputs) = flow(&contract.flow);
     let CostBound {
@@ -133,12 +102,12 @@ pub(crate) fn inferred_contract_record(contract: &WordContract) -> Value {
     record(vec![
         ("inputs", inputs),
         ("outputs", outputs),
-        ("nil", text(nil_str(contract.nil_behavior))),
-        ("purity", text(purity_str(contract.purity))),
-        ("determinism", text(determinism_str(contract.determinism))),
+        ("partiality", text(contract.partiality.as_spec_str())),
+        ("purity", text(contract.purity.as_spec_str())),
+        ("determinism", text(contract.determinism.as_spec_str())),
         ("cost", cost_record(steps.0, numeric.0, collection.0)),
         ("effects", texts(&contract.effects)),
-        ("confidence", text(confidence_str(contract.confidence))),
+        ("confidence", text(contract.confidence.as_spec_str())),
         ("gaps", texts(contract.gaps.iter().map(|gap| gap.as_str()))),
     ])
 }

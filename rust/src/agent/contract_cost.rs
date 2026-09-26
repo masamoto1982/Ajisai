@@ -30,6 +30,14 @@ pub(crate) fn parse_cost_terms(
         let Some((axis, class_word)) = rest[i].split_once('=') else {
             break;
         };
+        // A top-level key ends the group: it is the next term
+        // (`inputs=1`, `purity=pure`, …).
+        if matches!(
+            axis,
+            "inputs" | "outputs" | "purity" | "partiality" | "determinism"
+        ) {
+            break;
+        }
         let Some(class) = CostClass::from_spec_str(class_word) else {
             return Err(format!(
                 "`#:contract {name}`: unknown cost class `{class_word}` (expected `const`/`linear`/`superlinear`/`unbounded`)"
@@ -90,7 +98,7 @@ pub(crate) fn check_cost_decl(
     }
 }
 
-/// Check one `cost` axis (Step 5.5). Unlike arity/purity/nil-free, severity
+/// Check one `cost` axis (Step 5.5). Unlike inputs/outputs, purity, partiality and determinism, severity
 /// here is driven by *this axis's own* `exact` bit, not the word's overall
 /// `ContractConfidence` — `word_space`'s "never a false error" invariant
 /// (`docs/dev/cost-contract-design.md` §3): a mismatch is only ever a proven

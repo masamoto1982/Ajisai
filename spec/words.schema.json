@@ -265,7 +265,6 @@
      "enum": [
       "pure",
       "conditional",
-      "observational",
       "effectful"
      ]
     },

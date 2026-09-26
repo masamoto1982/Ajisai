@@ -83,8 +83,8 @@ pub mod vector_ops;
 mod word_candidates;
 pub mod word_contract;
 mod word_contract_code_operand;
+mod word_contract_facets;
 mod word_contract_flow;
-mod word_contract_lattice;
 mod word_contract_probe;
 #[cfg(test)]
 mod word_contract_tests;

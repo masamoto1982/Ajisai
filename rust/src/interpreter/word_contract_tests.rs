@@ -16,7 +16,7 @@ async fn pure_arithmetic_user_word_is_complete_and_pure() {
     let contract = contract_for("[ [ 1 ] ADD ] 'INC' DEF", "INC").await;
     assert_eq!(contract.purity, ContractPurity::Pure);
     assert_eq!(contract.determinism, ContractDeterminism::Deterministic);
-    assert_eq!(contract.nil_behavior, NilBehavior::Propagates);
+    assert_eq!(contract.partiality, ContractPartiality::Total);
     assert_eq!(
         contract.flow,
         ContractFlow::Fixed {
@@ -60,7 +60,7 @@ async fn redefinition_invalidates_old_contract_cache_key() {
     interp.execute("[ DIV ] 'W' DEF").await.unwrap();
     let second = interp.infer_word_contract("W").unwrap();
     assert_ne!(first.cache_key, second.cache_key);
-    assert_eq!(second.nil_behavior, NilBehavior::MayCreate);
+    assert_eq!(second.partiality, ContractPartiality::Projecting);
 }
 
 #[tokio::test]
@@ -101,7 +101,7 @@ async fn del_refuses_while_a_dependent_would_be_left_dangling() {
         .await
         .unwrap();
     let before = interp.infer_word_contract("USE").unwrap();
-    assert_eq!(before.nil_behavior, NilBehavior::MayCreate);
+    assert_eq!(before.partiality, ContractPartiality::Projecting);
 
     interp
         .execute("'DEP' DEL")
@@ -109,7 +109,7 @@ async fn del_refuses_while_a_dependent_would_be_left_dangling() {
         .expect_err("DEL must refuse while USE still depends on DEP");
 
     let after = interp.infer_word_contract("USE").unwrap();
-    assert_eq!(after.nil_behavior, NilBehavior::MayCreate);
+    assert_eq!(after.partiality, ContractPartiality::Projecting);
 }
 
 // ---------------------------------------------------------------------------

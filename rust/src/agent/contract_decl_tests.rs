@@ -36,12 +36,12 @@ mod contract_decl_tests {
     #[test]
     fn a_correct_declaration_over_literals_is_verified_not_violated() {
         for (body, decl) in [
-            ("[ 1 2 ]", "( 0 -- 1 )"),
-            ("[ 10 20 ] ADD", "( 1 -- 1 )"),
-            ("[ 2 MUL ] MAP", "( 1 -- 1 )"),
-            ("[ [ 1 ] [ 2 ] ]", "( 0 -- 1 )"),
-            ("[ [ 1 2 ] ]", "( 0 -- 1 )"),
-            ("[ [ 1 ] ]", "( 0 -- 1 )"),
+            ("[ 1 2 ]", "inputs=0 outputs=1"),
+            ("[ 10 20 ] ADD", "inputs=1 outputs=1"),
+            ("[ 2 MUL ] MAP", "inputs=1 outputs=1"),
+            ("[ [ 1 ] [ 2 ] ]", "inputs=0 outputs=1"),
+            ("[ [ 1 2 ] ]", "inputs=0 outputs=1"),
+            ("[ [ 1 ] ]", "inputs=0 outputs=1"),
         ] {
             let source = format!("[ {body} ] 'W' DEF\n#:contract W {decl}");
             let decls = contract_decls(&source);
@@ -59,7 +59,7 @@ mod contract_decl_tests {
     fn a_wrong_declaration_over_literals_is_still_violated() {
         // The counterpart of the test above: the fix must not buy its way out
         // of false errors by giving up on real ones.
-        let source = "[ [ 1 2 ] ] 'W' DEF\n#:contract W ( 0 -- 2 )";
+        let source = "[ [ 1 2 ] ] 'W' DEF\n#:contract W inputs=0 outputs=2";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert_eq!(findings.len(), 1);
@@ -83,7 +83,7 @@ mod contract_decl_tests {
         // INNER is defined by a nested (non-top-level) DEF, so the
         // definitions pass that builds the check environment never
         // registers it — CALLER's own inference cannot resolve it.
-        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty(), "expected at least one finding");
@@ -92,14 +92,15 @@ mod contract_decl_tests {
             assert_eq!(finding["code"], "gap.unresolvedWord");
         }
         assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
-        assert_eq!(decls["gapSummary"]["byGap"]["gap.unresolvedWord"], 1);
+        // `inputs` and `outputs` are two declared keys, each unverifiable.
+        assert_eq!(decls["gapSummary"]["byGap"]["gap.unresolvedWord"], 2);
     }
 
     #[test]
     fn violated_declaration_has_no_gap_code() {
         // Inference is complete here (no recursion, no unresolved symbol), so
         // a mismatch is a proven violation, not a gap.
-        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
         let findings = decls["findings"].as_array().expect("findings array");
         assert!(!findings.is_empty(), "expected at least one finding");
@@ -118,9 +119,9 @@ mod contract_decl_tests {
 [ INNER ] 'CALLER' DEF
 [ 1 PRINT ] 'BAD' DEF
 [ 1 SUB ] 'GOOD' DEF
-#:contract CALLER ( 0 -- 1 ) pure nil-free
-#:contract BAD ( 1 -- 0 ) pure
-#:contract GOOD ( 1 -- 1 ) pure nil-free";
+#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial
+#:contract BAD inputs=1 outputs=0 purity=pure
+#:contract GOOD inputs=1 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         let summary = &decls["gapSummary"];
         let checked = summary["declarationsChecked"].as_i64().unwrap();
@@ -138,7 +139,7 @@ mod contract_decl_tests {
     fn gap_summary_key_order_is_stable() {
         let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ INNER ] 'CALLER' DEF
-#:contract CALLER ( 0 -- 1 ) pure nil-free";
+#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         let first = serde_json::to_string(&contract_decls(source)).unwrap();
         let second = serde_json::to_string(&contract_decls(source)).unwrap();
         assert_eq!(
@@ -163,7 +164,7 @@ mod contract_decl_tests {
 
     #[test]
     fn verified_declaration_is_a_value() {
-        let source = "[ 1 SUB ] 'GOOD' DEF\n#:contract GOOD ( 1 -- 1 ) pure nil-free";
+        let source = "[ 1 SUB ] 'GOOD' DEF\n#:contract GOOD inputs=1 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "value");
         assert_eq!(decls["declarations"][0]["word"], "GOOD");
@@ -174,7 +175,7 @@ mod contract_decl_tests {
 
     #[test]
     fn unverifiable_declaration_is_a_nil_with_a_reason() {
-        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
         assert_eq!(decls["declarations"][0]["word"], "CALLER");
@@ -184,7 +185,7 @@ mod contract_decl_tests {
 
     #[test]
     fn violated_declaration_is_an_error() {
-        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "error");
         assert_eq!(decls["declarations"][0]["word"], "F");
@@ -197,8 +198,8 @@ mod contract_decl_tests {
         // REC is unverifiable (nil); F is a proven violation (error).
         let source = "[ 1 SUB REC ] 'REC' DEF
 [ 1 PRINT ] 'F' DEF
-#:contract REC ( 1 -- 1 ) pure nil-free
-#:contract F ( 1 -- 0 ) pure";
+#:contract REC inputs=1 outputs=1 purity=pure partiality=partial
+#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "error");
     }
@@ -209,8 +210,8 @@ mod contract_decl_tests {
         let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ INNER ] 'CALLER' DEF
 [ 1 SUB ] 'GOOD' DEF
-#:contract CALLER ( 0 -- 1 ) pure nil-free
-#:contract GOOD ( 1 -- 1 ) pure nil-free";
+#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial
+#:contract GOOD inputs=1 outputs=1 purity=pure partiality=partial";
         let decls = contract_decls(source);
         assert_eq!(decls["outcome"], "nil");
     }
@@ -228,10 +229,10 @@ mod contract_decl_tests {
     /// that — only a proven `error` does.
     #[test]
     fn outcome_does_not_change_the_exit_code() {
-        let nil_only = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER ( 0 -- 1 ) pure nil-free";
+        let nil_only = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF\n[ INNER ] 'CALLER' DEF\n#:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         assert_eq!(exit_code(nil_only), 0, "cannot-verify must not fail check");
 
-        let with_error = "[ 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let with_error = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         assert_eq!(
             exit_code(with_error),
             1,
@@ -335,7 +336,7 @@ mod contract_decl_tests {
 
     #[test]
     fn legacy_fields_still_present() {
-        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F ( 1 -- 0 ) pure";
+        let source = "[ 1 PRINT ] 'F' DEF\n#:contract F inputs=1 outputs=0 purity=pure";
         let decls = contract_decls(source);
         assert_eq!(decls["violated"], true);
         let findings = decls["findings"].as_array().expect("findings array");
@@ -360,7 +361,7 @@ mod contract_decl_tests {
             "[ [ PRINT ] ]",
             "[ [ [ [ PRINT ] 0 GET EXEC ] ] 0 GET EXEC ]",
         ] {
-            let source = format!("[ {body} ] 'W' DEF\n#:contract W pure");
+            let source = format!("[ {body} ] 'W' DEF\n#:contract W purity=pure");
             let decls = contract_decls(&source);
             assert_eq!(
                 decls["findings"].as_array().expect("findings array").len(),
