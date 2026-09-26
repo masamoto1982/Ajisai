@@ -12,6 +12,7 @@ mod algebraic_floor;
 mod algebraic_tests;
 pub(crate) mod basis;
 mod power;
+pub mod squarefree;
 pub mod value;
 mod value_approx;
 

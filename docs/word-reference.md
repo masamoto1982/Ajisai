@@ -125,7 +125,7 @@ Whether the left number is greater than the right: `2 1 GT` is `TRUE`, element-w
 
 ## `ADD`
 
-The exact sum: `1/3 1/6 ADD` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 ] 10 ADD` is `[ 11 12 ]`. Nothing is rounded: `2 SQRT 2 SQRT ADD` is `2 SQRT 2 MUL`. A non-number is `nonNumeric`.
+The exact sum: `1/3 1/6 ADD` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 ] 10 ADD` is `[ 11 12 ]`. Nothing is rounded: `2 SQRT 2 SQRT ADD` is `8 SQRT`. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`
@@ -249,7 +249,7 @@ The larger of two numbers: `1 2 MAX` is `2`, and element-wise over Vectors with 
 
 ## `SQRT`
 
-The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so `2 SQRT 2 SQRT MUL` is `2`. Element-wise over Vectors, and a negative radicand projects NIL(domainMiss): `[ 4 -1 ] SQRT` is `[ 2 NIL ]` with the second lane absent for that reason. A non-number is `nonNumeric`.
+The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so `2 SQRT 2 SQRT MUL` is `2`. The radicand is reduced to its square-free part, so one number has one form however it was built: `8 SQRT` is `2 SQRT 2 MUL`. That reduction factors the radicand and is charged to the run's numeric work; a radicand the remaining work cannot factor is `resourceLimitExceeded`. Element-wise over Vectors, and a negative radicand projects NIL(domainMiss): `[ 4 -1 ] SQRT` is `[ 2 NIL ]` with the second lane absent for that reason. A non-number is `nonNumeric`.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `exactArithmetic`

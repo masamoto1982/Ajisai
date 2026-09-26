@@ -41,11 +41,19 @@ fn nil(reason: NilReason, recoverability: Recoverability) -> Value {
     Value::nil_with_reason(reason, recoverability)
 }
 
-fn pow_scalar(x: &Value, y: &Value) -> Result<Value> {
+fn pow_scalar(
+    x: &Value,
+    y: &Value,
+    budget: &crate::interpreter::radicand_budget::RadicandBudget,
+) -> Result<Value> {
     let (Some(base), Some(exponent)) = (exact_real_of(x), exact_real_of(y)) else {
         return Err(non_numeric(&[x, y]));
     };
-    Ok(match base.pow(&exponent) {
+    let mut left = budget.take();
+    let outcome = base.pow_within(&exponent, &mut left);
+    budget.spent(left, matches!(outcome, PowOutcome::WorkExhausted));
+    Ok(match outcome {
+        PowOutcome::WorkExhausted => return Err(budget.exhausted_error()),
         PowOutcome::Value(er) => Value::from_exact_real(er),
         PowOutcome::DivisionByZero => nil(NilReason::DivisionByZero, Recoverability::Recoverable),
         PowOutcome::DomainMiss => nil(NilReason::DomainMiss, Recoverability::Recoverable),
@@ -122,7 +130,21 @@ pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
     if record_lift::lift_binary(interp, &op_pow)? {
         return Ok(());
     }
-    binary(interp, &pow_scalar)
+    let budget = crate::interpreter::radicand_budget::RadicandBudget::of(interp);
+    let operands = extract_operands(interp, 2)?;
+    let lifted = lift_binary_numeric(&operands[0], &operands[1], &|x, y| {
+        pow_scalar(x, y, &budget)
+    });
+    match budget.settle(interp).and(lifted) {
+        Ok(result) => {
+            finish(interp, result);
+            Ok(())
+        }
+        Err(e) => {
+            restore(interp, operands);
+            Err(e)
+        }
+    }
 }
 
 pub(crate) fn op_gcd(interp: &mut Interpreter) -> Result<()> {

@@ -29,6 +29,9 @@ pub enum PowOutcome {
     DomainMiss,
     /// An exponent too large to materialize.
     SpaceExhausted,
+    /// The work budget could not factor the base's radicand into its
+    /// square-free normal form (`squarefree.rs`).
+    WorkExhausted,
 }
 
 /// Bits the result of an integer power may reach: the exponent times the
@@ -86,8 +89,15 @@ fn power_by_integer(x: &ExactReal, n: &BigInt) -> PowOutcome {
 }
 
 impl ExactReal {
-    /// `self` raised to `exponent`.
+    /// `self` raised to `exponent`, with no bound on the work a root's
+    /// normal form may take.
     pub fn pow(&self, exponent: &ExactReal) -> PowOutcome {
+        self.pow_within(exponent, &mut u64::MAX.clone())
+    }
+
+    /// `self` raised to `exponent`, charging a root's factorization to
+    /// `budget`.
+    pub fn pow_within(&self, exponent: &ExactReal, budget: &mut u64) -> PowOutcome {
         let Some(y) = exponent.as_rational() else {
             return PowOutcome::DomainMiss;
         };
@@ -106,8 +116,10 @@ impl ExactReal {
             Ordering::Equal => PowOutcome::DivisionByZero,
             Ordering::Greater => match self.as_rational() {
                 Some(x) => {
-                    let root = ExactReal::from_sqrt_rational(x.clone())
-                        .expect("a positive rational has a square root");
+                    let root = match ExactReal::try_sqrt_rational(x.clone(), budget) {
+                        Ok(root) => root.expect("a positive rational has a square root"),
+                        Err(_) => return PowOutcome::WorkExhausted,
+                    };
                     power_by_integer(&root, &p)
                 }
                 None => PowOutcome::DomainMiss,
