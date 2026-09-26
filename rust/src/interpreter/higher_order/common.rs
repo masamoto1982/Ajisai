@@ -59,20 +59,25 @@ pub(crate) fn extract_executable_code(
     ))
 }
 
-/// The predicate result of a higher-order block, which LANG.VALUES.TRUTH
-/// restricts to the two-valued Boolean domain.
+/// Whether a higher-order block's predicate result keeps its element, read in
+/// truth position (LANG.VALUES.TRUTH): TRUE keeps it, and FALSE and UNKNOWN — a
+/// NIL read here, whatever its reason — do not, since only a predicate that
+/// holds selects.
 ///
 /// The domains are disjoint (LANG.VALUES.DISJOINT), so nothing else is a truth
-/// value: a scalar is not a Boolean even when it is non-zero, a singleton
-/// Vector is not its element, and NIL is absence rather than falsity. Each of
-/// those used to be accepted here, which gave `FILTER` a truthiness rule no
-/// other Word shared — `[ 1 2 3 ] [ 1 ] FILTER` silently kept every element
-/// instead of raising `nonTruthValue`, the same declared condition
-/// `AND`/`NOT` raise for the identical fault. A caller that wants a
-/// numeric condition writes the comparison it means, e.g. `0 EQ NOT`.
+/// value: a scalar is not a Boolean even when it is non-zero, and a singleton
+/// Vector is not its element. Each of those used to be accepted here, which
+/// gave `FILTER` a truthiness rule no other Word shared — `[ 1 2 3 ] [ 1 ]
+/// FILTER` silently kept every element instead of raising `nonTruthValue`, the
+/// same declared condition `AND`/`NOT` raise for the identical fault. A NIL, by
+/// contrast, is UNKNOWN in truth position for every Word that reads one, so
+/// here too.
 pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
     if let Some(b) = condition_result.as_truth() {
         return Ok(b);
+    }
+    if condition_result.is_nil() {
+        return Ok(false);
     }
 
     Err(AjisaiError::declared(

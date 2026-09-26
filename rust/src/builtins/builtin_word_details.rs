@@ -1,13 +1,10 @@
 use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
-use super::builtin_word_lookup_docs::lookup_builtin_lookup_doc;
 use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
 use crate::coreword_registry::Partiality;
 use crate::kernel::generated::{generated_word, OperandRole, VocabularyTier};
 
 /// Render the LOOKUP body for a built-in word: the base sections (Family /
-/// Summary / Stack Effect), the authored
-/// Layer 2 sections when `builtin_word_lookup_docs.rs` carries an entry
-/// (Behavior / Examples / Failure note / Related), and the sections
+/// Summary / Stack Effect), the Word's one correct call (Examples), and the sections
 /// derived from the LANG.CONTRACT.REGISTRY contract metadata (Failure baseline, Side
 /// Effects, Vocabulary) — derived so they can never drift from the
 /// registry. See docs/dev/three-layer-documentation-model.md §3.
@@ -30,55 +27,20 @@ pub fn lookup_builtin_detail(name: &str) -> String {
         spec.stack_effect,
     );
 
-    let doc = lookup_builtin_lookup_doc(spec.name);
-
-    if let Some(doc) = doc {
-        out.push('\n');
-        out.push_str("Behavior:\n");
-        push_indented(&mut out, doc.behavior, "  ");
-    }
-
+    // One source for what a Word does: the summary above, from
+    // `spec/words.json`, carries the prose and the tested examples. The
+    // example here is the one correct call a diagnosis quotes.
     out.push('\n');
     out.push_str("Examples:\n");
-    match doc {
-        Some(doc) if !doc.examples.is_empty() => {
-            for example in doc.examples {
-                push_indented(&mut out, example.code, "  ");
-                if !example.result.is_empty() {
-                    out.push('\n');
-                    out.push_str("  Result:\n");
-                    push_indented(&mut out, example.result, "    ");
-                }
-            }
-        }
-        _ => {
-            // Every builtin carries a real invocation as its hover syntax
-            // (three-layer model §4.3); reuse it when no authored example
-            // exists yet.
-            push_indented(&mut out, spec.hover_syntax, "  ");
-        }
-    }
+    push_indented(&mut out, spec.hover_syntax, "  ");
 
     out.push('\n');
     out.push_str("Failure:\n");
     push_indented(&mut out, &derive_failure_text(spec, &canonical), "  ");
-    if let Some(doc) = doc {
-        if !doc.failure_note.is_empty() {
-            push_indented(&mut out, doc.failure_note, "  ");
-        }
-    }
 
     out.push('\n');
     out.push_str("Side Effects:\n");
     push_indented(&mut out, &derive_side_effects_text(&canonical), "  ");
-
-    if let Some(doc) = doc {
-        if !doc.related.is_empty() {
-            out.push('\n');
-            out.push_str("Related:\n");
-            push_indented(&mut out, &doc.related.join(", "), "  ");
-        }
-    }
 
     out.push('\n');
     out.push_str("Vocabulary:\n");

@@ -91,16 +91,12 @@ mod tests {
         }
     }
 
-    /// A predicate block must decide in the Boolean domain: a scalar, a NIL,
-    /// and a singleton Vector are each a nonconforming predicate result rather
-    /// than a truth value (LANG.VALUES.TRUTH).
+    /// A predicate block must decide in the truth domain: a scalar and a
+    /// singleton Vector are each a nonconforming predicate result rather than
+    /// a truth value (LANG.VALUES.TRUTH).
     #[tokio::test]
     async fn test_higher_order_predicates_reject_non_boolean() {
-        for source in [
-            "[ 1 2 3 ] [ 1 ] FILTER",
-            "[ 1 2 3 ] [ NIL ] FILTER",
-            "[ 1 2 3 ] [ [ TRUE ] ] FILTER",
-        ] {
+        for source in ["[ 1 2 3 ] [ 1 ] FILTER", "[ 1 2 3 ] [ [ TRUE ] ] FILTER"] {
             let mut interp = Interpreter::new();
             let result = interp.execute(source).await;
             assert!(
@@ -110,5 +106,23 @@ mod tests {
                 result
             );
         }
+    }
+
+    /// A NIL is UNKNOWN in truth position (LANG.VALUES.TRUTH), for FILTER's
+    /// predicate as for AND and SELECT: it is a truth value, so it raises
+    /// nothing, and only a predicate that holds keeps its element.
+    #[tokio::test]
+    async fn test_filter_drops_an_unknown_predicate() {
+        // `1 X DIV` is NIL(divisionByZero) for the 0 lane, so its comparison
+        // is UNKNOWN there and TRUE for the other two.
+        let mut interp = Interpreter::new();
+        interp
+            .execute("[ 1 0 2 ] [ 'X' BIND 1 X DIV 1/3 GT ] FILTER")
+            .await
+            .expect("an UNKNOWN predicate is a truth value, not an ERROR");
+        assert_eq!(
+            crate::types::display::render_stack(interp.get_stack()),
+            vec!["[ 1/1 2/1 ]".to_string()]
+        );
     }
 }

@@ -3,7 +3,6 @@
 
 use super::builtin_word_definitions::{builtin_specs, lookup_builtin_spec};
 use super::builtin_word_details::lookup_builtin_detail;
-use super::builtin_word_lookup_docs::builtin_lookup_docs;
 
 const REQUIRED_SECTIONS: &[&str] = &["Family:", "Summary:", "Stack Effect:"];
 
@@ -26,90 +25,6 @@ fn every_builtin_renders_the_derived_sections() {
             );
         }
     }
-}
-
-#[test]
-fn every_authored_doc_entry_names_a_real_builtin() {
-    for doc in builtin_lookup_docs() {
-        assert!(
-            lookup_builtin_spec(doc.word).is_some(),
-            "authored LOOKUP doc for `{}` has no matching BuiltinSpec",
-            doc.word
-        );
-        for related in doc.related {
-            assert!(
-                lookup_builtin_spec(related).is_some(),
-                "`{}` lists unknown related word `{}`",
-                doc.word,
-                related
-            );
-        }
-    }
-}
-
-#[test]
-fn authored_doc_entries_are_editor_safe_plain_text() {
-    // three-layer model §3.3: UTF-8 English plain text, ≤ 80 columns, no control
-    // characters, no trailing whitespace — the LOOKUP body is loaded
-    // into the code editor verbatim.
-    for doc in builtin_lookup_docs() {
-        assert!(
-            !doc.behavior.is_empty(),
-            "`{}` has an empty behavior",
-            doc.word
-        );
-        let mut texts: Vec<&str> = vec![doc.behavior, doc.failure_note];
-        for example in doc.examples {
-            assert!(
-                !example.code.is_empty(),
-                "`{}` has an example with empty code",
-                doc.word
-            );
-            texts.push(example.code);
-            texts.push(example.result);
-        }
-        for text in texts {
-            for line in text.split('\n') {
-                assert!(
-                    line.len() <= 80,
-                    "`{}` has a line over 80 columns: {}",
-                    doc.word,
-                    line
-                );
-                assert!(
-                    !line.chars().any(|c| c.is_control()),
-                    "`{}` has a control character in: {}",
-                    doc.word,
-                    line
-                );
-                assert_eq!(
-                    line,
-                    line.trim_end(),
-                    "`{}` has trailing whitespace in: {}",
-                    doc.word,
-                    line
-                );
-            }
-        }
-    }
-}
-
-#[test]
-fn authored_entry_renders_behavior_examples_and_related() {
-    let body = lookup_builtin_detail("GET");
-    for section in ["Behavior:", "Related:", "Result:"] {
-        assert!(
-            body.contains(section),
-            "GET LOOKUP body missing {}: full body =\n{}",
-            section,
-            body
-        );
-    }
-    assert!(
-        body.contains("indexOutOfBounds"),
-        "GET Failure must name the NIL-projection reason:\n{}",
-        body
-    );
 }
 
 /// `LOOKUP` is a reading surface for the vocabulary, so it says which half
