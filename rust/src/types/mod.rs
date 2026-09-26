@@ -196,6 +196,72 @@ impl std::hash::Hash for ValueData {
 pub struct Value {
     pub data: ValueData,
     pub absence: Option<AbsenceMetadata>,
+    /// How many containers deep this value nests, computed once when the
+    /// value is built (`Value::new`). Private so that no value can be built
+    /// around it: every construction goes through `Value::new`, and every
+    /// in-place change of `data` recomputes it (`value_children.rs`).
+    nesting: u32,
+}
+
+impl Value {
+    /// A value from its parts. The one constructor: every other one goes
+    /// through here, so a value's nesting is always the one its data has.
+    #[inline]
+    pub fn new(data: ValueData, absence: Option<AbsenceMetadata>) -> Self {
+        let nesting = data.nesting();
+        Self {
+            data,
+            absence,
+            nesting,
+        }
+    }
+
+    /// How many containers deep this value nests: 0 for anything that is not
+    /// a container, and one more than its deepest element for a Vector or a
+    /// Record (a dense tensor nests as deep as its rank). This is what
+    /// LANG.MACHINE.LIMITS' nesting ceiling bounds; it counts Records, which
+    /// `DEPTH` does not, because every walk over a value descends into both.
+    ///
+    /// Constant time: the figure is kept on the value, so checking a value
+    /// against the ceiling never walks it.
+    #[inline]
+    pub fn nesting(&self) -> u32 {
+        self.nesting
+    }
+
+    /// Raise the kept nesting to at least `nesting`, after a child was added
+    /// in place.
+    pub(crate) fn raise_nesting_to(&mut self, nesting: u32) {
+        self.nesting = self.nesting.max(nesting);
+    }
+
+    /// Recompute the nesting after `data` was changed in place.
+    pub(crate) fn refresh_nesting(&mut self) {
+        self.nesting = self.data.nesting();
+    }
+}
+
+impl ValueData {
+    /// The nesting of a value holding this data, from its children's kept
+    /// figures — one level of work, never a walk.
+    fn nesting(&self) -> u32 {
+        let deepest = |children: &mut dyn Iterator<Item = &Value>| {
+            children.map(Value::nesting).max().unwrap_or(0)
+        };
+        match self {
+            ValueData::Vector(children) => deepest(&mut children.iter()).saturating_add(1),
+            ValueData::Record(record) => {
+                deepest(&mut record.keys().iter().chain(record.values().iter())).saturating_add(1)
+            }
+            ValueData::Tensor { shape, .. } => u32::try_from(shape.len()).unwrap_or(u32::MAX),
+            ValueData::Boolean(_)
+            | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
+            | ValueData::Nil
+            | ValueData::Symbol(_)
+            | ValueData::Text(_) => 0,
+        }
+    }
 }
 
 impl PartialEq for Value {

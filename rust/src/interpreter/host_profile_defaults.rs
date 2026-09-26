@@ -291,3 +291,21 @@ pub const DEFAULT_MAX_BIGINT_BITS: u64 = 1_000_000;
 /// from a stated size-legibility criterion; it is chosen to be *live*, which
 /// is a weaker and more urgent property than being *right*.
 pub const DEFAULT_MAX_ALGEBRAIC_TERMS: usize = 10_000;
+
+/// Default cap on how many containers deep one value may nest
+/// (`Value::nesting`), however it came to be: a literal, a decoded JSON text,
+/// or a value Words built. Every walk over a value — comparing, rendering,
+/// hashing, encoding, broadcasting, and the recursive `Drop` of a nested
+/// `Arc<Vec<Value>>` — descends one native frame per level, so a value a few
+/// thousand levels deep overflowed the native stack and aborted the process
+/// (an unrecoverable trap in the WASM playground) instead of failing with a
+/// diagnosable error.
+///
+/// Not derived from the time budget: it bounds the shape of one value, not
+/// accumulated work. It matches `MAX_USER_WORD_DEPTH`, which is vetted
+/// against the same WASM stack envelope — one level of a value walk is
+/// lighter than a User Word call, which expands to several native frames — and
+/// is ~20x the deepest hand-written nesting in the corpus. The literal ceiling
+/// was already this figure; the JSON decoder's was 512, and a program could
+/// build past either with no ceiling at all.
+pub const DEFAULT_MAX_NESTING_DEPTH: usize = 256;

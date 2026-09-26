@@ -190,13 +190,13 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
         ScalarFastWrap::Scalar => Value::from_fraction(result),
         ScalarFastWrap::Tensor(shape) => {
             if let Some(data) = DenseTensor::from_fractions(vec![result.clone()], shape.clone()) {
-                Value {
-                    data: ValueData::Tensor {
+                Value::new(
+                    ValueData::Tensor {
                         data: Arc::new(data),
                         shape: Arc::new(shape.clone()),
                     },
-                    absence: None,
-                }
+                    None,
+                )
             } else {
                 Value::from_tensor(vec![result], shape.clone())
             }

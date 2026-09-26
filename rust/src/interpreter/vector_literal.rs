@@ -21,6 +21,7 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
         depth: usize,
+        limits: &crate::interpreter::RuntimeLimits,
     ) -> Result<(Vec<Value>, usize)> {
         if tokens.get(start_index) != Some(&Token::VectorStart) {
             return Err(AjisaiError::MalformedSource(
@@ -28,18 +29,12 @@ impl Interpreter {
             ));
         }
 
-        // Guard against unbounded nesting before recursing. Without this, a few
-        // thousand levels of `[ [ [ ... ] ] ]` from plain source build a value
-        // so deeply nested that recursively displaying or dropping it overflows
-        // the native stack and aborts the process (a WASM trap). Rejecting here
-        // keeps the value — and every later traversal of it — within a depth the
-        // stack can handle, surfaced as a recoverable error.
-        if depth > crate::interpreter::MAX_VECTOR_NESTING_DEPTH {
-            return Err(AjisaiError::MalformedSource(format!(
-                "Vector nesting too deep (limit {})",
-                crate::interpreter::MAX_VECTOR_NESTING_DEPTH
-            )));
-        }
+        // The nesting ceiling (LANG.MACHINE.LIMITS), checked before recursing:
+        // this builder descends one native frame per level, so a few thousand
+        // levels of `[ [ [ ... ] ] ]` would overflow the native stack here,
+        // before the value could be checked at all. It is the same ceiling a
+        // value Words build meets, and fails the same way.
+        limits.check_nesting_depth(depth)?;
 
         let mut values = Vec::new();
         let mut i = start_index + 1;
@@ -48,7 +43,7 @@ impl Interpreter {
             match &tokens[i] {
                 Token::VectorStart => {
                     let (nested_values, consumed) =
-                        Self::collect_bracketed_with_depth(tokens, i, depth + 1)?;
+                        Self::collect_bracketed_with_depth(tokens, i, depth + 1, limits)?;
                     values.push(Value::from_vector_promoted(nested_values));
                     i += consumed;
                 }

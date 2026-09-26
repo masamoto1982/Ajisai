@@ -33,26 +33,17 @@ impl Value {
             // materialization that reads it.
             return Self::nil_with_absence(AbsenceMetadata::with_reasonless_unknown());
         }
-        Self {
-            data: ValueData::Scalar(f),
-            absence: None,
-        }
+        Self::new(ValueData::Scalar(f), None)
     }
 
     #[inline]
     pub fn from_int(n: i64) -> Self {
-        Self {
-            data: ValueData::Scalar(Fraction::from(n)),
-            absence: None,
-        }
+        Self::new(ValueData::Scalar(Fraction::from(n)), None)
     }
 
     #[inline]
     pub fn from_bool(b: bool) -> Self {
-        Self {
-            data: ValueData::Boolean(b),
-            absence: None,
-        }
+        Self::new(ValueData::Boolean(b), None)
     }
 
     /// The definite truth value carried by a Boolean data value, or `None`
@@ -77,10 +68,7 @@ impl Value {
     /// `TOKENIZE`. NIL means "no value here", and `''` is a perfectly good
     /// value with no characters in it.
     pub fn from_string(s: &str) -> Self {
-        Self {
-            data: ValueData::Text(Arc::from(s)),
-            absence: None,
-        }
+        Self::new(ValueData::Text(Arc::from(s)), None)
     }
 
     /// The characters of a String value, or `None` for any other domain.
@@ -98,10 +86,7 @@ impl Value {
 
     /// Build a Record value (LANG.RECORDS.STRUCTURE).
     pub fn from_record(record: RecordData) -> Self {
-        Self {
-            data: ValueData::Record(Arc::new(record)),
-            absence: None,
-        }
+        Self::new(ValueData::Record(Arc::new(record)), None)
     }
 
     /// The Record behind a Record value, or `None` for any other domain.
@@ -116,18 +101,12 @@ impl Value {
     /// A bare Word reference — data until something executes it. See
     /// `ValueData::Symbol`'s doc comment.
     pub fn from_symbol(s: &str) -> Self {
-        Self {
-            data: ValueData::Symbol(Arc::from(s)),
-            absence: None,
-        }
+        Self::new(ValueData::Symbol(Arc::from(s)), None)
     }
 
     #[inline]
     pub fn from_children(children: Vec<Value>) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(children)),
-            absence: None,
-        }
+        Self::new(ValueData::Vector(Arc::new(children)), None)
     }
 
     /// Build a Vector value (LANG.VALUES.VECTOR).
@@ -140,25 +119,16 @@ impl Value {
     /// Vector "an ordered finite collection of values" and makes "order and
     /// length" its whole observable structure; zero is a finite length.
     pub fn from_vector(values: Vec<Value>) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(values)),
-            absence: None,
-        }
+        Self::new(ValueData::Vector(Arc::new(values)), None)
     }
 
     #[inline]
     pub fn from_exact_real(er: crate::types::exact::ExactReal) -> Self {
         // If the ExactReal is already rational, use the fast Fraction path.
         if let Some(f) = er.as_rational() {
-            return Self {
-                data: ValueData::Scalar(f.clone()),
-                absence: None,
-            };
+            return Self::new(ValueData::Scalar(f.clone()), None);
         }
-        Self {
-            data: ValueData::ExactScalar(er),
-            absence: None,
-        }
+        Self::new(ValueData::ExactScalar(er), None)
     }
 
     #[inline]
@@ -388,10 +358,10 @@ impl Value {
         match &self.data {
             ValueData::Tensor { data, shape } => {
                 let children = tensor_to_nested_values(data, shape);
-                std::borrow::Cow::Owned(Value {
-                    data: ValueData::Vector(Arc::new(children)),
-                    absence: self.absence.clone(),
-                })
+                std::borrow::Cow::Owned(Value::new(
+                    ValueData::Vector(Arc::new(children)),
+                    self.absence.clone(),
+                ))
             }
             _ => std::borrow::Cow::Borrowed(self),
         }

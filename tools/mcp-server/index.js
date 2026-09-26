@@ -42,6 +42,7 @@ export const LIMITS = Object.freeze({
   collectionWork: 20_000_000,
   bigintBits: 262_144,
   algebraicTerms: 512,
+  nestingDepth: 256,
 });
 /**
  * How long a saturated server waits for an execution slot before answering

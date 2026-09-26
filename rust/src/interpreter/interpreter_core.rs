@@ -27,21 +27,6 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = super::runtime_limits::DEFAULT_MA
 /// definition impossible to construct.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
-/// Cap on how deeply vector literals may nest (`[ [ [ ... ] ] ]`). The literal
-/// builder `collect_vector_with_depth` recurses one frame per level, and so do
-/// every downstream traversal of the resulting value — `Display`, the derived
-/// recursive `Drop` of the nested `Arc<Vec<Value>>`, and the JSON
-/// arena/stringify conversions. None of those had a depth guard, so a few
-/// thousand levels of nesting from plain source overflowed the native stack and
-/// aborted the process (an unrecoverable trap inside the WASM playground)
-/// rather than producing a diagnosable `AjisaiError`. The ceiling matches
-/// `MAX_USER_WORD_DEPTH`: a single self-recursive vector frame is lighter than
-/// a user-word call (which expands to several Rust frames per level), so a
-/// value capped at this depth stays safely within the same WASM stack envelope
-/// that depth is already vetted against, while remaining ~20x the deepest
-/// hand-written nesting in the corpus.
-pub const MAX_VECTOR_NESTING_DEPTH: usize = 256;
-
 /// Default cap on the number of elements a single generative built-in
 /// (`RANGE`, `FILL`, ...) may materialize in one call. Such words loop
 /// internally to build a vector/tensor, so they each count as a *single*
@@ -348,6 +333,26 @@ impl Interpreter {
             });
         }
         Ok(())
+    }
+
+    /// Hold every value written to the stack since the last check to the
+    /// nesting ceiling (LANG.MACHINE.LIMITS).
+    ///
+    /// Run after each Word, so a Word that builds a value too deep fails as
+    /// itself, and once more when a run ends, for the literals pushed after
+    /// the last Word. A literal is bounded by its own builder and a Word adds
+    /// only a few levels to operands that already passed, so nothing between
+    /// two checks can grow deep enough to overflow a walk. Each value's
+    /// nesting is kept on the value, and only the slots written since the last
+    /// check are read, so the check costs what the Word wrote.
+    pub(crate) fn check_fresh_nesting(&mut self) -> crate::error::Result<()> {
+        let start = self.stack.take_fresh_start();
+        let deepest = self.stack.as_slice()[start..]
+            .iter()
+            .map(Value::nesting)
+            .max()
+            .unwrap_or(0);
+        self.runtime_limits.check_nesting_depth(deepest as usize)
     }
 
     pub fn runtime_metrics(&self) -> RuntimeMetrics {

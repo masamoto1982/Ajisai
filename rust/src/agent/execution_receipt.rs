@@ -25,7 +25,7 @@ use crate::interpreter::{limit_profile, ResourceUsage, RuntimeLimits};
 /// Version tag for the receipt's own byte grammar. Bump it if the grammar
 /// changes — a receipt is not a compatible value across a tag change, the
 /// same discipline `observation_digest::DIGEST_SCHEMA_TAG` documents.
-const RECEIPT_SCHEMA_TAG: &[u8] = b"AJISAI-RECEIPT-1";
+const RECEIPT_SCHEMA_TAG: &[u8] = b"AJISAI-RECEIPT-2";
 
 /// The exact bytes of the vocabulary and outcome-space registry this binary
 /// was built from, embedded at compile time. `spec/words.json` and
