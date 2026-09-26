@@ -73,6 +73,15 @@ impl ExactReal {
         Algebraic::sqrt_of_fraction(&radicand).map(Self::from_result)
     }
 
+    /// [`Self::from_sqrt_rational`] with the square-free factorization of the
+    /// radicand charged to `budget`; `Err` when the budget cannot factor it.
+    pub fn try_sqrt_rational(
+        radicand: Fraction,
+        budget: &mut u64,
+    ) -> Result<Option<Self>, super::squarefree::FactorBudgetExhausted> {
+        Ok(Algebraic::sqrt_of_fraction_within(&radicand, budget)?.map(Self::from_result))
+    }
+
     #[inline]
     pub fn as_rational(&self) -> Option<&Fraction> {
         match self {

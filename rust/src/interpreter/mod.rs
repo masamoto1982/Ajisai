@@ -51,6 +51,7 @@ mod power_words_tests;
 pub(crate) mod predict_program_outcomes;
 #[cfg(test)]
 mod predict_program_outcomes_tests;
+mod radicand_budget;
 mod record_lift;
 mod record_ops;
 #[cfg(test)]

@@ -195,8 +195,9 @@ mod tests {
         );
         assert_eq!(format_exact_real(&sqrt2.neg()), "-sqrt(2)");
         assert_eq!(format_exact_real(&sqrt2.add(&sqrt2)), "2/1*sqrt(2)");
-        // The stored form is rendered faithfully: √8 is not reduced to 2√2.
-        assert_eq!(format_exact_real(&sqrt_of(8, 1)), "sqrt(8)");
+        // One value, one display (LANG.VALUES.DENOTATION): √8 is 2√2 however
+        // it was built, so it renders exactly as √2 + √2 does.
+        assert_eq!(format_exact_real(&sqrt_of(8, 1)), "2/1*sqrt(2)");
         // A perfect square collapses to the exact rational form.
         assert_eq!(format_exact_real(&sqrt_of(4, 1)), "2/1");
     }

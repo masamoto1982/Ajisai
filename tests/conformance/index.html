@@ -2311,6 +2311,13 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-sqrt-one-value-one-form" data-category="core">
+  <h3>One number has one normal form however it was built: the radicand is square-free, so √8 displays as 2√2 does (LANG.VALUES.DENOTATION)</h3>
+  <pre class="ajisai-source">8 SQRT 2 SQRT 2 SQRT ADD 8/9 SQRT</pre>
+  <pre class="ajisai-expect-result">2/1*sqrt(2) 2/1*sqrt(2) 2/3*sqrt(2)</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-lift-text-words-over-a-vector" data-category="core">
   <h3>A text Word lifts over a Vector by the one lifting rule (LANG.COLLECTIONS.LIFT)</h3>
   <pre class="ajisai-source">[ 'ab' 'c' ] UPPER [ 'ab' 'cd' ] 'b' SEARCH</pre>

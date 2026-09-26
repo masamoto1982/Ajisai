@@ -19,6 +19,7 @@
 
 use crate::types::bigint_gcd::balanced_bigint_gcd;
 use crate::types::exact::basis::Basis;
+use crate::types::exact::squarefree::{squarefree_split, FactorBudgetExhausted};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -83,34 +84,40 @@ impl Algebraic {
     /// `ExactReal::from_sqrt_rational`: `None` for nil or negative input,
     /// `Rational` for zero and perfect squares, `Irrational` otherwise.
     pub fn sqrt_of_fraction(radicand: &Fraction) -> Option<AlgebraicResult> {
+        Self::sqrt_of_fraction_within(radicand, &mut u64::MAX.clone())
+            .expect("an unbounded budget always factors")
+    }
+
+    /// √`radicand` over its square-free part (`squarefree.rs`), charging the
+    /// factorization to `budget`: `Err` when the budget cannot factor it.
+    pub fn sqrt_of_fraction_within(
+        radicand: &Fraction,
+        budget: &mut u64,
+    ) -> Result<Option<AlgebraicResult>, FactorBudgetExhausted> {
         if radicand.is_nil() {
-            return None;
+            return Ok(None);
         }
         let num = radicand.numerator();
         let den = radicand.denominator();
         if num.is_negative() {
-            return None;
+            return Ok(None);
         }
         if num.is_zero() {
-            return Some(AlgebraicResult::Rational(Fraction::new(
+            return Ok(Some(AlgebraicResult::Rational(Fraction::new(
                 BigInt::zero(),
                 BigInt::one(),
-            )));
+            ))));
         }
-        let sn = num.sqrt();
-        let sd = den.sqrt();
-        if &sn * &sn == num && &sd * &sd == den {
-            return Some(AlgebraicResult::Rational(Fraction::new(sn, sd)));
+        // √(p/q) = √(p·q)/q, and p·q = s²·m with m square-free, so the value
+        // is (s/q)·√m — one normal form whatever built the radicand.
+        let (outside, monomial) = squarefree_split(&(&num * &den), budget)?;
+        if monomial.is_one() {
+            return Ok(Some(AlgebraicResult::Rational(Fraction::new(outside, den))));
         }
-        // √(p/q) = √(p·q)/q over the integer radicand p·q.
-        let integer_radicand = &num * &den;
-        let basis = Basis::build(vec![integer_radicand.clone()]);
-        let (outside, monomial) = basis
-            .decompose_sqrt(&integer_radicand)
-            .expect("basis was built from this radicand");
+        let basis = Basis::build(vec![monomial.clone()]);
         let mut terms = BTreeMap::new();
         terms.insert(monomial, Fraction::new(outside, den));
-        Some(AlgebraicResult::from_parts(basis, terms))
+        Ok(Some(AlgebraicResult::from_parts(basis, terms)))
     }
 
     /// Number of terms in the normal form (test/diagnostic surface).
@@ -368,14 +375,13 @@ fn floor_scaled(f: &Fraction, target_bits: u64) -> BigInt {
 impl std::hash::Hash for Algebraic {
     /// A representation-independent hash key: `floor(self * 2^HASH_KEY_BITS)`.
     ///
-    /// Two normal forms for the same real number can disagree structurally
-    /// — `√12` built directly keeps the coarse basis `{12}`; built as
-    /// `2·√3` it carries `{3}` — so hashing `basis`/`terms` would hash equal
-    /// values unequally and break the `Hash`/`Eq` contract `HashMap` needs.
-    /// No factorization step fixes this cheaply (basis-building is
-    /// deliberately not full prime factorization; see `basis.rs`).
+    /// Radicands are square-free (`squarefree.rs`), so equal values carry
+    /// equal terms; the basis they carry still depends on history (`√6` over
+    /// `{6}` or over `{2, 3}`), and a probable prime misjudged above the
+    /// proven range would leave a radicand that is not square-free. Hashing
+    /// the number rather than any structure is immune to both.
     ///
-    /// Instead this reuses the decidability `sign` already relies on:
+    /// This reuses the decidability `sign` already relies on:
     /// `bounds(bits)` is a shrinking enclosure of the true value, and an
     /// irrational value (the only kind this type holds; rationals demote
     /// eagerly) is never exactly on a `2^-HASH_KEY_BITS` grid line. So

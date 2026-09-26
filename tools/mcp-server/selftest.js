@@ -370,7 +370,10 @@ for (const limit of limitCases()) {
           JSON.stringify(expected),
       );
       check(`limit ${limit.name} (${probe.edge})`, mismatches.length === 0);
-      if (mismatches.length) console.error(`  ${JSON.stringify(mismatches)}`);
+      if (mismatches.length) {
+        const actual = mismatches.map(([pointer]) => [pointer, atPointer(observed.structuredContent, pointer)]);
+        console.error(`  expected ${JSON.stringify(mismatches)}, got ${JSON.stringify(actual)}`);
+      }
     }
   } else {
     check(

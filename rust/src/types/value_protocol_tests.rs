@@ -159,10 +159,11 @@ fn algebraic_stack_display_writes_the_normal_form_short() {
         assert_eq!(exact_terms(&value), None, "{value:?} has no normal form");
     }
 
-    // The stored form is rendered faithfully, including the case where two
-    // equal values hold different terms. Reducing `sqrt(8)` to `2/1*sqrt(2)`
-    // here would make the display disagree with the `exactTerms` beside it.
-    assert_eq!(display(&sqrt_of(8)), "sqrt(8)");
+    // Two equal values hold the same terms, so the display and the
+    // `exactTerms` beside it agree and neither depends on how the value was
+    // built (LANG.VALUES.DENOTATION): √8 is 2√2.
+    assert_eq!(display(&sqrt_of(8)), "2/1*sqrt(2)");
+    assert_eq!(exact_terms(&sqrt_of(8)), exact_terms(&two_sqrt2));
 }
 
 // --- scalar and truth domains ---

@@ -156,7 +156,7 @@
           "/aiDiagnostic/kind": "resourceLimitExceeded",
           "/diagnosis/resourceLimit/resource": "numericWork",
           "/diagnosis/resourceLimit/limit": 10000000,
-          "/diagnosis/resourceLimit/observed": 10194944
+          "/diagnosis/resourceLimit/observed": 10200112
         }
       },
       "note": "Charged on every rational and algebraic operation in every operand shape, priced as lanes x limb-multiply units, addition included -- Ajisai's `+` is rational addition, three multiplications and a gcd, not anything linear. The pair applies one 256-term cascade eighteen times against nineteen: work accumulates while no single value grows, which is the shape only a *cumulative* ceiling can catch, and keeps this pair from testing `algebraicTerms` or `bigintBits` by accident. It was `injectedLimit` for three rounds and three different reasons -- arithmetic outside the scalar path was not charged at all, then the refusal's 27MB envelope became `responseTooLarge`, then the cascade that reaches it could not be built because *rendering* 32 terms took 147s."

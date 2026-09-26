@@ -5,7 +5,6 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
-use crate::types::exact::ExactReal;
 use crate::types::Value;
 
 fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
@@ -203,8 +202,10 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     let value = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
+    let budget = crate::interpreter::radicand_budget::RadicandBudget::of(interp);
 
-    match lift_unary_numeric(&value, &sqrt_scalar) {
+    let lifted = lift_unary_numeric(&value, &|lane| sqrt_scalar(lane, &budget));
+    match budget.settle(interp).and(lifted) {
         Ok(result) => {
             interp.stack.push(result);
             Ok(())
@@ -217,7 +218,10 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// The scalar law of `SQRT`, lifted by [`lift_unary_numeric`].
-fn sqrt_scalar(value: &Value) -> Result<Value> {
+fn sqrt_scalar(
+    value: &Value,
+    budget: &crate::interpreter::radicand_budget::RadicandBudget,
+) -> Result<Value> {
     let Some(f) = value.as_scalar() else {
         // `nonNumeric` is the same declared condition `DIV` uses for
         // an operand outside the numeric domain; SQRT did not declare it
@@ -231,7 +235,7 @@ fn sqrt_scalar(value: &Value) -> Result<Value> {
         ));
     };
     // `from_exact_real` collapses a rational result back to Scalar.
-    Ok(match ExactReal::from_sqrt_rational(f.clone()) {
+    Ok(match budget.sqrt(f.clone())? {
         Some(er) => Value::from_exact_real(er),
         None => Value::nil_with_reason(NilReason::DomainMiss, Recoverability::Recoverable),
     })
