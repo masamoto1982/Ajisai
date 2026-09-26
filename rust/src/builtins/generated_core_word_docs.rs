@@ -597,7 +597,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "BIND",
         family: "dictionary",
-        summary: "Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10`, and `[ 1 2 ] [ 'A' 'B' ] BIND B A SUB` is `1`. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.",
+        summary: "Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10`, and `[ 1 2 ] [ 'A' 'B' ] BIND B A SUB` is `1`. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both. A value that names its own binding, directly or through other bindings, is refused as `selfReferentialDefinition`, the same rule DEF applies (LANG.DICTIONARY.ACYCLIC).",
         stack_effect: "[ x ] [ name... ] -> [ ]",
         hover_summary: "BIND — name a value locally",
         hover_syntax: "[ 1 2 3 ] 'XS' BIND",

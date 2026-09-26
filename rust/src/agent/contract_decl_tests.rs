@@ -68,15 +68,24 @@ mod contract_decl_tests {
         assert_eq!(exit_code(source), 1);
     }
 
-    // `gap.unmodelledControlFlow` fired when a body's stack height could not
-    // be walked linearly — which needed a token that selects between paths of
-    // differing height. There were exactly two: `COND`'s `|` clause separator
-    // and `OR-NIL`'s lazy fallback unit. Both Words are gone, and every other
-    // way to unbalance a body is refused at tokenize time (`Unclosed '['`,
-    // `Unexpected ']'`), so no source reaches the flag any more. As with
-    // `gap.recursiveDependency` above, the code is kept — unreachable — for
-    // protocol stability, and `FlowSim`'s guard is kept because it is a
-    // soundness guard rather than a feature.
+    #[test]
+    fn unread_code_operand_reports_unmodelled_control_flow_gap() {
+        // EXEC runs a Vector taken out of data, which the walk read only as
+        // inert data: the PRINT inside it is invisible, so `purity=pure`
+        // cannot be verified. Before the gap existed this inferred `pure`
+        // with complete confidence — a false verification.
+        let source =
+            "[ [ [ 42 PRINT ] ] 0 GET EXEC ] 'W' DEF\n#:contract W inputs=0 outputs=0 purity=pure";
+        let decls = contract_decls(source);
+        let findings = decls["findings"].as_array().expect("findings array");
+        assert!(!findings.is_empty(), "expected at least one finding");
+        for finding in findings {
+            assert_eq!(finding["severity"], "note");
+            assert_eq!(finding["code"], "gap.unmodelledControlFlow");
+        }
+        assert_eq!(decls["gapSummary"]["cannotVerify"], 1);
+        assert_eq!(decls["gapSummary"]["verified"], 0);
+    }
 
     #[test]
     fn unresolved_word_reports_unresolved_gap() {
@@ -139,6 +148,8 @@ mod contract_decl_tests {
     fn gap_summary_key_order_is_stable() {
         let source = "[ [ 1 ] 'INNER' DEF ] 'OUTER' DEF
 [ INNER ] 'CALLER' DEF
+[ [ [ 42 PRINT ] ] 0 GET EXEC ] 'DYN' DEF
+#:contract DYN inputs=0 outputs=0 purity=pure
 #:contract CALLER inputs=0 outputs=1 purity=pure partiality=partial";
         let first = serde_json::to_string(&contract_decls(source)).unwrap();
         let second = serde_json::to_string(&contract_decls(source)).unwrap();
@@ -147,18 +158,20 @@ mod contract_decl_tests {
             "two runs over identical source must render identically"
         );
 
-        // The ordering half of this test needed two reachable gap kinds, and
-        // `gap.unmodelledControlFlow` — the other one — went unreachable with
-        // `OR-NIL` (see the note above `unresolved_word_reports_unresolved_gap`).
-        // What remains is the claim that still has a witness: the summary is a
-        // `BTreeMap`, so its keys render in one order, and two runs over the
-        // same source are byte-identical.
+        // `DYN` is declared first and fires the later-sorting gap, so the
+        // keys can only come out sorted if the summary sorts them.
         let by_gap_start = first.find("\"byGap\":{").expect("byGap object present");
         let by_gap_end = by_gap_start + first[by_gap_start..].find('}').unwrap();
         let by_gap = &first[by_gap_start..by_gap_end];
+        let control = by_gap
+            .find("gap.unmodelledControlFlow")
+            .expect("byGap names the unread-code gap");
+        let unresolved = by_gap
+            .find("gap.unresolvedWord")
+            .expect("byGap names the unresolved-word gap");
         assert!(
-            by_gap.contains("gap.unresolvedWord"),
-            "byGap must name the gap that fired: {by_gap}"
+            control < unresolved,
+            "byGap keys must render in sorted order: {by_gap}"
         );
     }
 

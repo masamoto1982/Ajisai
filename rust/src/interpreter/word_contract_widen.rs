@@ -88,6 +88,27 @@ fn consumes_preceding_as_code(canonical_name: &str) -> bool {
     )
 }
 
+/// Whether the Symbol at `idx`, named `canonical_name`, runs code this walk
+/// never read: a Word that runs its operand as code (not `CONTRACT`, which
+/// only reads it) whose operand is anything but the `[ ... ]` literal written
+/// immediately before it. A Vector taken out of data (`[ [ [ 42 PRINT ] ] ]
+/// 0 GET EXEC`), a bound name, or a dependency's result are all code the walk
+/// saw only as inert data, so it cannot say what running them does.
+pub(super) fn runs_unread_code(
+    tokens: &[Token],
+    contexts: &[LiteralContext],
+    idx: usize,
+    canonical_name: &str,
+) -> bool {
+    if !consumes_preceding_as_code(canonical_name) || canonical_name == "CONTRACT" {
+        return false;
+    }
+    let read_literal = idx.checked_sub(1).is_some_and(|prev| {
+        tokens[prev] == Token::VectorEnd && contexts[prev] == LiteralContext::Code
+    });
+    !read_literal
+}
+
 /// The Symbol at `from` — `None` if the
 /// body ends first or a non-Symbol token comes first (a code-consuming Word
 /// is always named directly; nothing else can be "what follows").

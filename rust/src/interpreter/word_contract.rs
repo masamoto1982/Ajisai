@@ -21,7 +21,7 @@ pub use super::word_contract_facets::{
     ContractConfidence, ContractDeterminism, ContractPartiality, ContractPurity,
 };
 use super::word_contract_flow::{note_bound_names, BoundNames, FlowSim};
-use super::word_contract_widen::{classify_vector_positions, LiteralContext};
+use super::word_contract_widen::{classify_vector_positions, runs_unread_code, LiteralContext};
 use super::word_cost::{CostBound, CostSim, DepCost};
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
@@ -68,7 +68,7 @@ pub struct WordContractCacheKey {
 }
 
 /// A cache key for a builtin/leaf contract: no dependencies, current schema.
-fn leaf_cache_key(word_identity: String) -> WordContractCacheKey {
+pub(super) fn leaf_cache_key(word_identity: String) -> WordContractCacheKey {
     WordContractCacheKey {
         word_identity,
         dependency_identities: Vec::new(),
@@ -304,6 +304,11 @@ impl Interpreter {
                     sim.feed_literal();
                     cost_sim.feed_literal();
                     if contexts[idx] == LiteralContext::Code {
+                        let canonical =
+                            crate::core_word_aliases::canonicalize_core_word_name(symbol);
+                        if runs_unread_code(&def.body, &contexts, idx, &canonical) {
+                            self.widen_with_unread_code_operand(&mut acc, &mut complete);
+                        }
                         self.widen_with_code_operand_symbol(
                             symbol,
                             visiting,
@@ -321,6 +326,9 @@ impl Interpreter {
                 Token::Symbol(symbol) => {
                     let canonical = crate::core_word_aliases::canonicalize_core_word_name(symbol);
                     note_bound_names(&mut bound, &canonical, &def.body, idx);
+                    if runs_unread_code(&def.body, &contexts, idx, &canonical) {
+                        self.widen_with_unread_code_operand(&mut acc, &mut complete);
+                    }
                     let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
                         complete = false;
                         flow.go_dynamic();

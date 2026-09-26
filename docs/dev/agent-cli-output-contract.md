@@ -118,9 +118,10 @@ change what counts as a violation.
   recursion), `gap.dependencyUnknown` (a dependency's own inference could not
   complete), `gap.conservativeSeed` (inference fell back to the maximally
   cautious contract without going through one of the other reasons),
-  `gap.unmodelledControlFlow` (the body reaches a control directive whose
-  paths differ in stack height — `^`, `|` — or an unbalanced `[`/`{`
-  delimiter, so no fixed arity describes it). `gap.opaqueReflection` was
+  `gap.unmodelledControlFlow` (the body runs code inference never read — a
+  code operand that is not the `[ ... ]` literal written before the Word that
+  runs it, such as `[ [ [ 42 PRINT ] ] 0 GET EXEC ]` — or no fixed arity
+  describes its stack flow). `gap.opaqueReflection` was
   retired along with `REFLECT` (CodeBlock/Vector unification, docs/dev/
   type-unification-work-order-2026-08.md): every Vector is executable now,
   so there is no separate crossing whose contents inference cannot trust.

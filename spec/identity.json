@@ -77,8 +77,8 @@
       "decides": ["same", "unknown"],
       "total": false,
       "unknownArrivesAs": {
-        "kind": "hostJudgement",
-        "note": "Comparing two definitions is not an operation the language has — no Word takes two Words and answers whether they are one. The question is asked by a host reading the identities it is given, so this level's `unknown` is not a value a program can hold and has no NIL reason. It is a rule about what a host may conclude: from equal identities, that the definitions are one; from unequal ones, nothing."
+        "kind": "readingRule",
+        "note": "Comparing two definitions is not an operation the language has — no Word takes two Words and answers whether they are one. A program can read the identities (`DIGEST` answers a Word's content identity as text) and compare the texts with `EQ`, but that `EQ` decides whether two digests are one text, which is the question of the level below it, not this one: its FALSE is not a value this level produces and carries no NIL reason. So this level's `unknown` is a rule about what any reader of identities — a host or a program — may conclude: from equal identities, that the definitions are one; from unequal ones, nothing."
       },
       "soundness": "Equal identities imply equal denotations. This direction is what the host's import deduplication rests on (src/gui/interpreter-state-persistence.ts merges words that share an identity), so an unsound identity would silently merge two different Words in a reader's dictionary.",
       "incompleteness": "Unequal identities imply nothing. Two definitions that denote the same function can carry different identities, because the digest sees normalized structure and structure is finer than denotation. A consumer must read an identity mismatch as `unknown`, never as `different`.",

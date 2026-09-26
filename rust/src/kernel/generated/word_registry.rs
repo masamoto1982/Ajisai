@@ -2999,6 +2999,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
             "shapeMismatch",
             "invalidName",
             "protectedWord",
+            "selfReferentialDefinition",
         ],
         syntax: Some("[ 1 2 3 ] 'XS' BIND"),
     },
