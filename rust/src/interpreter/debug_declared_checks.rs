@@ -43,6 +43,7 @@ pub(crate) fn cause_class_for_declared_condition(condition: &str) -> CauseClass 
         | "invalidInteger"
         | "unsortedInput"
         | "nonRecord"
+        | "nonContainer"
         | "duplicateKey"
         | "invalidName"
         | "invalidDefinitionBody" => CauseClass::ValueShape,

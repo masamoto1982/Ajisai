@@ -86,7 +86,7 @@ mod format_json_tests {
         assert_eq!(top("'null' JSON-DECODE NIL-REASON").await, "'literal'");
         assert_eq!(top("'\"caf\\u00e9\"' JSON-DECODE").await, "'café'");
         assert_eq!(
-            top("'{\"k\": {\"n\": [1, [2]]}}' JSON-DECODE 'k' AT 'n' AT 1 GET").await,
+            top("'{\"k\": {\"n\": [1, [2]]}}' JSON-DECODE 'k' GET 'n' GET 1 GET").await,
             "[ 2/1 ]"
         );
     }

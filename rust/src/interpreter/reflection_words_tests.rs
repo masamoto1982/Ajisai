@@ -91,35 +91,38 @@ mod reflection_words_tests {
 
     #[tokio::test]
     async fn contract_answers_the_registered_record_of_a_core_word() {
-        assert_eq!(top("[ DIV ] 0 GET CONTRACT 'name' AT").await, "'DIV'");
-        assert_eq!(top("[ DIV ] 0 GET CONTRACT 'inputs' AT").await, "2/1");
-        assert_eq!(top("[ DIV ] 0 GET CONTRACT 'outputs' AT").await, "1/1");
+        assert_eq!(top("[ DIV ] 0 GET CONTRACT 'name' GET").await, "'DIV'");
+        assert_eq!(top("[ DIV ] 0 GET CONTRACT 'inputs' GET").await, "2/1");
+        assert_eq!(top("[ DIV ] 0 GET CONTRACT 'outputs' GET").await, "1/1");
         assert_eq!(
-            top("[ DIV ] 0 GET CONTRACT 'projection' AT").await,
+            top("[ DIV ] 0 GET CONTRACT 'projection' GET").await,
             "[ 'divisionByZero' ]"
         );
         assert_eq!(
-            top("[ DIV ] 0 GET CONTRACT 'errors' AT").await,
+            top("[ DIV ] 0 GET CONTRACT 'errors' GET").await,
             "[ 'nonNumeric' 'shapeMismatch' ]"
         );
         assert_eq!(
-            top("[ DIV ] 0 GET CONTRACT 'cost' AT KEYS").await,
+            top("[ DIV ] 0 GET CONTRACT 'cost' GET KEYS").await,
             "[ 'steps' 'numeric' 'collection' ]"
         );
         assert_eq!(
-            top("[ MAP ] 0 GET CONTRACT 'cost' AT 'steps' AT").await,
+            top("[ MAP ] 0 GET CONTRACT 'cost' GET 'steps' GET").await,
             "'unbounded'"
         );
         assert_eq!(
-            top("[ PRINT ] 0 GET CONTRACT 'effects' AT").await,
+            top("[ PRINT ] 0 GET CONTRACT 'effects' GET").await,
             "[ 'consoleWrite' ]"
         );
-        assert_eq!(top("[ MAP ] 0 GET CONTRACT 'inputs' AT").await, "2/1");
+        assert_eq!(top("[ MAP ] 0 GET CONTRACT 'inputs' GET").await, "2/1");
         assert_eq!(
             top("[ SORT ] 0 GET CONTRACT KEYS").await,
             "[ 'name' 'tier' 'inputs' 'outputs' 'nil' 'projection' 'errors' 'partiality' 'purity' 'determinism' 'cost' 'effects' ]"
         );
-        assert_eq!(top("[ SORT ] 0 GET CONTRACT 'tier' AT").await, "'standard'");
+        assert_eq!(
+            top("[ SORT ] 0 GET CONTRACT 'tier' GET").await,
+            "'standard'"
+        );
     }
 
     #[tokio::test]
@@ -136,24 +139,24 @@ mod reflection_words_tests {
             top("[ 42 PRINT ] CONTRACT KEYS").await,
             "[ 'inputs' 'outputs' 'nil' 'purity' 'determinism' 'cost' 'effects' 'confidence' 'gaps' ]"
         );
-        assert_eq!(top("[ 1 2 ADD ] CONTRACT 'purity' AT").await, "'pure'");
+        assert_eq!(top("[ 1 2 ADD ] CONTRACT 'purity' GET").await, "'pure'");
         assert_eq!(
-            top("[ 1 2 ADD ] CONTRACT 'confidence' AT").await,
+            top("[ 1 2 ADD ] CONTRACT 'confidence' GET").await,
             "'complete'"
         );
-        assert_eq!(top("[ 1 2 ADD ] CONTRACT 'inputs' AT").await, "0/1");
-        assert_eq!(top("[ ADD ] CONTRACT 'inputs' AT").await, "2/1");
-        assert_eq!(top("[ ] CONTRACT 'purity' AT").await, "'pure'");
+        assert_eq!(top("[ 1 2 ADD ] CONTRACT 'inputs' GET").await, "0/1");
+        assert_eq!(top("[ ADD ] CONTRACT 'inputs' GET").await, "2/1");
+        assert_eq!(top("[ ] CONTRACT 'purity' GET").await, "'pure'");
         assert_eq!(
-            top("[ 42 PRINT ] CONTRACT 'effects' AT").await,
+            top("[ 42 PRINT ] CONTRACT 'effects' GET").await,
             "[ 'consoleWrite' ]"
         );
         assert_eq!(
-            top("[ 42 PRINT ] CONTRACT 'purity' AT").await,
+            top("[ 42 PRINT ] CONTRACT 'purity' GET").await,
             "'effectful'"
         );
         assert_eq!(
-            top("[ NOPE ] CONTRACT 'confidence' AT [ NOPE ] CONTRACT 'gaps' AT").await,
+            top("[ NOPE ] CONTRACT 'confidence' GET [ NOPE ] CONTRACT 'gaps' GET").await,
             "'conservative' [ 'gap.unresolvedWord' ]"
         );
         // Nothing ran: the effect was reported, not performed, for the
@@ -171,7 +174,7 @@ mod reflection_words_tests {
     #[tokio::test]
     async fn contract_reads_the_block_and_restores_a_bad_operand() {
         assert_eq!(
-            top("[ 1 ] 'B' BIND B B CONTRACT 'inputs' AT").await,
+            top("[ 1 ] 'B' BIND B B CONTRACT 'inputs' GET").await,
             "[ 1/1 ] 0/1"
         );
         for source in ["1 CONTRACT", "NIL CONTRACT"] {

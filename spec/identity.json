@@ -56,7 +56,7 @@
       "procedure": "Compare the key sequences position by position, then the value sequences, each pair by the procedure its own domain provides.",
       "decides": ["same", "different"],
       "total": true,
-      "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by WITH in one order is different from one built in another, and construction history beyond that is unobservable. Every key and value is compared by a procedure that decides, so the Record comparison decides too.",
+      "note": "A Record's identity is its two sequences (LANG.RECORDS.STRUCTURE): the same keys in the same order over the same values. Key order counts, so a Record built by PUT in one order is different from one built in another, and construction history beyond that is unobservable. Every key and value is compared by a procedure that decides, so the Record comparison decides too.",
       "witnesses": [
         {
           "source": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'x' 'y' ] [ 1 2 ] RECORD EQ",

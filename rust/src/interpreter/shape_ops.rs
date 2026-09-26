@@ -102,9 +102,13 @@ pub fn op_zip(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// `PUT ( [ vec ] [ idx ] [ value ] -> [ vec' ] )`: a copy of `vec` with the
-/// element at `idx` replaced. A negative index counts from the end, as
-/// everywhere else.
+/// `PUT ( [ container ] [ key ] [ value ] -> [ container' ] )`: a copy of a
+/// Vector with the element at an index replaced, or of a Record with a key
+/// set — one Word for writing a container, as `GET` is one Word for reading
+/// one. A negative index counts from the end, as everywhere else. A Record key
+/// already present is replaced in place and an absent one is appended: a
+/// Record's keys are its own to extend, where a Vector's positions are fixed
+/// by its length, so an index past the end projects `indexOutOfBounds`.
 ///
 /// The alternative was rebuilding the whole vector from an index mask and a
 /// `SELECT`, or the `TAKE`/`CONCAT` surgery that spells the same thing in
@@ -117,6 +121,23 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
     let replacement = interp.stack.pop().expect("checked by len()");
     let index_value = interp.stack.pop().expect("checked by len()");
     let target = interp.stack.pop().expect("checked by len()");
+
+    // Either container is answered as a copy with one entry changed, so the
+    // whole of it is priced however small the edit is.
+    if let Some(record) = target.as_record() {
+        let entries = record.len();
+        if let Err(e) =
+            crate::interpreter::collection_meter::charge_copy_of(interp, &target, entries)
+        {
+            interp.stack.push(target);
+            interp.stack.push(index_value);
+            interp.stack.push(replacement);
+            return Err(e);
+        }
+        let next = record.with(index_value, replacement);
+        interp.stack.push(Value::from_record(next));
+        return Ok(());
+    }
 
     // `PUT` answers with a copy of the vector, one element replaced, so it
     // copies the whole thing however small the edit is.
@@ -137,8 +158,8 @@ pub fn op_put(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(index_value);
             interp.stack.push(replacement);
             return Err(AjisaiError::declared(
-                "nonVector",
-                format!("expected a Vector, got {got}"),
+                "nonContainer",
+                format!("expected a Vector or a Record, got {got}"),
             ));
         }
     };

@@ -1,10 +1,11 @@
-//! The Record Words: `RECORD`, `KEYS`, `VALUES`, `AT`, `WITH`, `WITHOUT`,
-//! `HAS?`, `MERGE` (LANG.RECORDS.STRUCTURE).
+//! The Record Words: `RECORD`, `KEYS`, `VALUES`, `WITHOUT`, `HAS?`, `MERGE`
+//! (LANG.RECORDS.STRUCTURE). Reading and writing one key is `GET` and `PUT`,
+//! the same two Words that read and write a Vector position.
 //!
 //! A Record is the seventh value domain: a keyed correspondence whose keys
 //! keep the order they arrived in. It is the one shape the parallel-vector
 //! idiom could only imitate — `INDEX-OF` then `GET` scans every key where
-//! `AT` hashes one — and it is what structured data from a host arrives as.
+//! `GET` on a Record hashes one — and it is what structured data from a host arrives as.
 //! Nothing here converts a Vector to a Record or back on its own: `RECORD`
 //! and `KEYS`/`VALUES` are the only bridges, both explicit.
 //!
@@ -40,7 +41,7 @@ fn non_record(position: &str, got: &Value) -> AjisaiError {
     )
 }
 
-/// The `notFound` absence `AT` and `WITHOUT` project for a key the
+/// The `notFound` absence `WITHOUT` projects for a key the
 /// Record does not hold.
 fn not_found() -> Value {
     Value::nil_with_reason(NilReason::NotFound, Recoverability::Recoverable)
@@ -112,44 +113,6 @@ pub fn op_values(interp: &mut Interpreter) -> Result<()> {
     };
     let values = Value::from_vector(record.values().to_vec());
     interp.stack.push(values);
-    Ok(())
-}
-
-/// `AT ( [ record ] [ key ] -> [ value ] )`: projects `notFound`.
-pub fn op_at(interp: &mut Interpreter) -> Result<()> {
-    let operands = extract_operands(interp, 2)?;
-    let Some(record) = operands[0].as_record() else {
-        let err = non_record("the first operand", &operands[0]);
-        restore_all(interp, operands);
-        return Err(err);
-    };
-    let answer = match record.get(&operands[1]) {
-        Some(value) => value.clone(),
-        None => not_found(),
-    };
-    interp.stack.push(answer);
-    Ok(())
-}
-
-/// `WITH ( [ record ] [ key ] [ value ] -> [ record ] )`.
-///
-/// Declared `consumeNil` rather than `rejectNil`: a NIL *value* is a stored
-/// absence and belongs under a key, so only a NIL Record or a NIL key is
-/// malformed use, and the Word decides that itself.
-pub fn op_with(interp: &mut Interpreter) -> Result<()> {
-    let operands = extract_operands(interp, 3)?;
-    let Some(record) = operands[0].as_record() else {
-        let err = non_record("the first operand", &operands[0]);
-        restore_all(interp, operands);
-        return Err(err);
-    };
-    if operands[1].is_operational_nil() {
-        let err = non_record("the key", &operands[1]);
-        restore_all(interp, operands);
-        return Err(err);
-    }
-    let next = record.with(operands[1].clone(), operands[2].clone());
-    push_record(interp, next);
     Ok(())
 }
 

@@ -125,10 +125,10 @@ fn builtin_space(id: WordId) -> (SpaceClass, bool) {
         // Ordering, grouping and shape Words: the result is bounded by the
         // operands' total size, and a vector operand attains the bound.
         Unique | Tally | Zip | Put | Group => (Linear, true),
-        // Record Words: a Record's size is its operands', and `AT`/`HAS?`
-        // answer one value.
-        Record | Keys | Values | With | Without | Merge => (Linear, true),
-        At | Has => (Const, false),
+        // Record Words: a Record's size is its operands', and `HAS?` answers
+        // one value.
+        Record | Keys | Values | Without | Merge => (Linear, true),
+        Has => (Const, false),
     }
 }
 
