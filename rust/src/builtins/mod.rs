@@ -4,7 +4,6 @@ mod builtin_word_details;
 mod builtin_word_details_lookup_tests;
 #[cfg(test)]
 mod builtin_word_details_tests;
-mod builtin_word_lookup_docs;
 mod generated_core_word_docs;
 
 pub use builtin_word_definitions::lookup_builtin_spec;

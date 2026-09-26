@@ -36,7 +36,7 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Push the boolean TRUE onto the stack.",
+        "summary": "The truth value TRUE: `TRUE` is `1 1 EQ`. It is a Boolean, not the number one (LANG.VALUES.DISJOINT), so `TRUE 1 EQ` is `FALSE`.",
         "hover": "TRUE — push TRUE",
         "syntax": "TRUE",
         "stackEffect": "-> [ TRUE ]"
@@ -81,7 +81,7 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Push the boolean FALSE onto the stack.",
+        "summary": "The truth value FALSE: `FALSE` is `1 2 EQ`. It is a Boolean, not the number zero (LANG.VALUES.DISJOINT), so `FALSE 0 EQ` is `FALSE`.",
         "hover": "FALSE — push FALSE",
         "syntax": "FALSE",
         "stackEffect": "-> [ FALSE ]"
@@ -133,7 +133,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yields UNKNOWN.",
+        "summary": "Conjunction under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE FALSE AND` is `FALSE`, and element-wise over Vectors, `[ TRUE TRUE ] [ TRUE FALSE ] AND` is `[ TRUE FALSE ]`. A NIL read here is UNKNOWN: FALSE settles the answer against it, `NIL FALSE AND` is `FALSE`, and anything else leaves it UNKNOWN with its reason kept. A disjunction is `a NOT b NOT AND NOT`. An operand that is neither a truth value nor a NIL is `nonTruthValue`.",
         "hover": "AND — logical AND",
         "syntax": "TRUE FALSE AND",
         "stackEffect": "[ a ] [ b ] -> [ a AND b ]"
@@ -183,7 +183,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Logical negation. TRUE and FALSE invert; a NIL operand (UNKNOWN) passes through unchanged.",
+        "summary": "Negation under the strong Kleene table (LANG.VALUES.TRUTH): `TRUE NOT` is `FALSE`, and element-wise over Vectors, `[ TRUE FALSE ] NOT` is `[ FALSE TRUE ]`. UNKNOWN — a NIL read here — stays UNKNOWN with its reason kept. An operand that is neither a truth value nor a NIL is `nonTruthValue`.",
         "hover": "NOT — logical negation",
         "syntax": "TRUE NOT",
         "stackEffect": "[ a ] -> [ NOT a ]"
@@ -236,7 +236,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Choose between two already-computed values by a truth value: TRUE answers the first, FALSE answers the second. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
+        "summary": "Choose between two already-computed values by a truth value: `'yes' 'no' TRUE SELECT` is `'yes'` and `'yes' 'no' FALSE SELECT` is `'no'`. The choice is element-wise (LANG.COLLECTIONS.LIFT), so a Vector of truths weaves two Vectors lane by lane and a one-lane operand is reused across the other's length. An UNKNOWN lane — a NIL read in truth position, whatever its reason — chooses neither and answers that same absence, so the reason survives the choice. Both operands are values the program already built: SELECT evaluates nothing, and whatever computed them ran before it, exactly once.",
         "hover": "SELECT — choose between two values by truth",
         "syntax": "[ 'yes' ] [ 'no' ] TRUE SELECT",
         "stackEffect": "[ whenTrue ] [ whenFalse ] [ mask ] -> [ chosen ]"
@@ -343,7 +343,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Test less-than comparison.",
+        "summary": "Whether the left number is less than the right: `1 2 LT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 LT` is `[ TRUE FALSE ]`. Order over the exact field always decides (LANG.VALUES.EXACT), irrationals included: `2 SQRT 3/2 LT` is `TRUE`. Only numbers are ordered; anything else is `nonNumeric`.",
         "hover": "LT — test less than",
         "syntax": "1 2 LT",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
@@ -398,7 +398,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Test greater-than comparison.",
+        "summary": "Whether the left number is greater than the right: `2 1 GT` is `TRUE`, element-wise over Vectors, `[ 1 5 ] 3 GT` is `[ FALSE TRUE ]`. Order over the exact field always decides (LANG.VALUES.EXACT). Only numbers are ordered; anything else is `nonNumeric`.",
         "hover": "GT — test greater than",
         "syntax": "2 1 GT",
         "stackEffect": "[ a ] [ b ] -> [ TRUE | FALSE ]"
@@ -453,7 +453,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Add two numeric values, element-wise with broadcasting.",
+        "summary": "The exact sum: `1/3 1/6 ADD` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 ] 10 ADD` is `[ 11 12 ]`. Nothing is rounded: `2 SQRT 2 SQRT ADD` is `2 SQRT 2 MUL`. A non-number is `nonNumeric`.",
         "hover": "ADD — add values",
         "syntax": "1 2 ADD",
         "stackEffect": "[ a ] [ b ] -> [ a + b ]"
@@ -508,7 +508,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Subtract two numeric values, element-wise with broadcasting.",
+        "summary": "The exact difference, left minus right: `5 3 SUB` is `2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `2 [ 1 2 3 ] SUB` is `[ 1 0 -1 ]`. A non-number is `nonNumeric`.",
         "hover": "SUB — subtract values",
         "syntax": "5 3 SUB",
         "stackEffect": "[ a ] [ b ] -> [ a - b ]"
@@ -564,7 +564,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Multiply two numeric values, element-wise with broadcasting.",
+        "summary": "The exact product: `2/3 3/4 MUL` is `1/2`, and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 1 2 3 ] [ 10 ] MUL` is `[ 10 20 30 ]`. A non-number is `nonNumeric`.",
         "hover": "MUL — multiply values",
         "syntax": "2 4 MUL",
         "stackEffect": "[ a ] [ b ] -> [ a * b ]"
@@ -620,7 +620,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "Divide two numeric values exactly (fractional result).",
+        "summary": "The exact quotient, left over right: `1 3 DIV` is `1/3` — never a decimal approximation — and element-wise over Vectors with broadcasting (LANG.COLLECTIONS.LIFT), `[ 2 4 ] 2 DIV` is `[ 1 2 ]`. A zero divisor projects NIL(divisionByZero), lane by lane. A non-number is `nonNumeric`.",
         "hover": "DIV — divide values",
         "syntax": "10 2 DIV",
         "stackEffect": "[ a ] [ b ] -> [ a / b ]"
@@ -671,7 +671,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Round toward negative infinity.",
+        "summary": "The greatest integer not above the number: `7/3 FLOOR` is `2` and `-7/3 FLOOR` is `-3`, element-wise over Vectors. Irrationals floor exactly: `2 SQRT FLOOR` is `1`. A non-number is `nonNumeric`.",
         "hover": "FLOOR — round toward negative infinity",
         "syntax": "7/3 FLOOR",
         "stackEffect": "[ x ] -> [ floor x ]"
@@ -722,7 +722,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Round to nearest integer (half-up).",
+        "summary": "The nearest integer, a tie going away from zero: `5/2 ROUND` is `3` and `-5/2 ROUND` is `-3`, element-wise over Vectors. FORMAT rounds its last digit the same way. A non-number is `nonNumeric`.",
         "hover": "ROUND — round to nearest integer",
         "syntax": "5/2 ROUND",
         "stackEffect": "[ x ] -> [ round x ]"
@@ -776,7 +776,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Smaller of two numbers, element-wise with broadcasting.",
+        "summary": "The smaller of two numbers: `1 2 MIN` is `1`, and element-wise over Vectors with broadcasting, `[ 3 1 ] 2 MIN` is `[ 2 1 ]`. A non-number is `nonNumeric`.",
         "hover": "MIN — smaller of two numbers",
         "syntax": "1 2 MIN",
         "stackEffect": "[ a ] [ b ] -> [ min ]"
@@ -830,7 +830,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Larger of two numbers, element-wise with broadcasting.",
+        "summary": "The larger of two numbers: `1 2 MAX` is `2`, and element-wise over Vectors with broadcasting, `[ -1 2 -3 ] 0 MAX` is `[ 0 2 0 ]`. A non-number is `nonNumeric`.",
         "hover": "MAX — larger of two numbers",
         "syntax": "1 2 MAX",
         "stackEffect": "[ a ] [ b ] -> [ max ]"
@@ -883,7 +883,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "Exact square root of a non-negative rational, element-wise over a vector. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.",
+        "summary": "The exact square root of a non-negative number: `4 SQRT` is `2`, and `2 SQRT` is the irrational itself, carried in multiquadratic normal form and compared with no rounding (LANG.VALUES.EXACT), so `2 SQRT 2 SQRT MUL` is `2`. Element-wise over Vectors, and a negative radicand projects NIL(domainMiss): `[ 4 -1 ] SQRT` is `[ 2 NIL ]` with the second lane absent for that reason. A non-number is `nonNumeric`.",
         "hover": "SQRT — exact square root",
         "syntax": "2 SQRT",
         "stackEffect": "[ x ] -> [ sqrt(x) ]"
@@ -946,7 +946,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "Exact power `x y POW`, element-wise over Vectors, answered inside the exact field. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`. An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2√2`. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`); an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.",
+        "summary": "Exact power `x y POW`, element-wise over Vectors, answered inside the exact field. An integer exponent keeps the result in the base's own tier: `2 10 POW` is `1024`, `2 SQRT 2 POW` is `2`, `2 -1 POW` is `1/2`. An exponent `p/2` over a non-negative rational base stays in the field too — `2 1/2 POW` is exactly what `2 SQRT` answers, and `2 3/2 POW` is `2 2 SQRT MUL`. `0 y POW` with a negative `y` projects `divisionByZero`; a negative base under `p/2` has no real value and projects `domainMiss`; every other exponent — a denominator other than 1 or 2, `p/2` over an irrational base, an irrational exponent — leaves the field and projects `domainMiss` as well (`8 1/3 POW`, `2 2 SQRT POW`); an exponent past what the machine will materialize projects `spaceExhausted`. `SQRT` remains the Word that builds the field; `POW` is not its sugar.",
         "hover": "POW — exact power, inside the exact field",
         "syntax": "2 10 POW",
         "stackEffect": "[ x ] [ y ] -> [ x^y ]"
@@ -1165,7 +1165,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Return the number of elements in a vector.",
+        "summary": "How many elements a Vector holds: `[ 1 2 3 ] LENGTH` is `3` and `[ ] LENGTH` is `0`. Only the outermost axis is counted — `[ [ 1 2 ] [ 3 ] ] LENGTH` is `2`; SHAPE answers every axis. A non-Vector is `nonVector`.",
         "hover": "LENGTH — return element count",
         "syntax": "[ 1 2 3 ] LENGTH",
         "stackEffect": "[ vec ] -> [ count ]"
@@ -1219,7 +1219,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "Take the first N or last -N elements of a vector. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.",
+        "summary": "Take the first N or last -N elements of a vector: `[ 1 2 3 ] 2 TAKE` is `[ 1 2 ]` and `[ 1 2 3 ] -2 TAKE` is `[ 2 3 ]`. A count larger than the vector projects to NIL(indexOutOfBounds): asking for more than there is names a position past the end, which is the same question `GET` answers past the end and is answered the same way — well-formed data that did not work out, not a malformed program (LANG.FAILURE.PROJECT). So `[ 1 2 3 ] 9 TAKE` is NIL, and a caller who wants something else writes it: `[ 1 2 3 ] 9 TAKE 'S' BIND [ 1 2 3 ] S S NIL? SELECT` answers the whole vector instead. A count that is not an integer at all is still `invalidInteger`, because that is the program being wrong.",
         "hover": "TAKE — take N elements from start or end",
         "syntax": "[ 1 2 3 4 5 ] 3 TAKE",
         "stackEffect": "[ vec ] [ n ] -> [ prefix ]"
@@ -1376,7 +1376,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Reverse the order of vector elements.",
+        "summary": "The elements of a Vector in the opposite order: `[ 1 2 3 ] REVERSE` is `[ 3 2 1 ]`. Only the outermost axis is reversed: `[ [ 1 2 ] 3 ] REVERSE` is `[ 3 [ 1 2 ] ]`. A non-Vector is `nonVector`.",
         "hover": "REVERSE — reverse element order",
         "syntax": "[ 1 2 3 ] REVERSE",
         "stackEffect": "[ vec ] -> [ reversed ]"
@@ -1784,7 +1784,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Return a copy of a vector sorted in ascending order.",
+        "summary": "A copy of a Vector of numbers in ascending order: `[ 3 1 2 ] SORT` is `[ 1 2 3 ]`. Order is exact, irrationals included. Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`. ORDER answers the permutation instead.",
         "hover": "SORT — sort ascending",
         "syntax": "[ 3 1 2 ] SORT",
         "stackEffect": "[ vec ] -> [ sorted ]"
@@ -1836,7 +1836,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "The indices that would sort a vector ascending; ties keep their original order.",
+        "summary": "The indices that would sort a Vector of numbers ascending: `[ 30 10 20 ] ORDER` is `[ 1 2 0 ]`, so gathering by it sorts: `[ 30 10 20 ] 'V' BIND V V ORDER GET` is `[ 10 20 30 ]`. Ties keep their original order: `[ 2 1 2 1 ] ORDER` is `[ 1 3 0 2 ]`. Only numbers are ordered (`nonNumeric`), and a non-Vector is `nonVector`.",
         "hover": "ORDER — sorting permutation",
         "syntax": "[ 30 10 20 ] ORDER",
         "stackEffect": "[ vec ] -> [ permutation ]"
@@ -1887,7 +1887,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "The distinct elements of a vector, in first-occurrence order.",
+        "summary": "The distinct elements of a Vector, each at its first occurrence: `[ 3 1 3 ] UNIQUE` is `[ 3 1 ]`. Distinct means not one value (LANG.VALUES.DENOTATION), so it works on texts, nested Vectors and NILs alike, and `[ 2 4/2 ] UNIQUE` is `[ 2 ]`. A non-Vector is `nonVector`.",
         "hover": "UNIQUE — distinct elements",
         "syntax": "[ 'a' 'b' 'a' ] UNIQUE",
         "stackEffect": "[ vec ] -> [ distinct ]"
@@ -1991,7 +1991,7 @@
         "LANG.MACHINE.LIMITS"
       ],
       "documentation": {
-        "summary": "Bundle equal-length vectors position by position; a matrix transposes.",
+        "summary": "Vectors of equal length bundled position by position: `[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ] ZIP` is `[ [ 1 3 5 ] [ 2 4 6 ] ]`, so a matrix transposes and `ZIP ZIP` gives it back. Rows of different lengths are `shapeMismatch`; an operand that is not a Vector of Vectors is `nonVector`.",
         "hover": "ZIP — pair vectors by position",
         "syntax": "[ [ 1 2 ] [ 3 4 ] ] ZIP",
         "stackEffect": "[ [ vec... ] ] -> [ [ tuple... ] ]"
@@ -2317,7 +2317,7 @@
         "LANG.VALUES.VECTOR"
       ],
       "documentation": {
-        "summary": "Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins.",
+        "summary": "Build a Record — a keyed correspondence, the seventh value domain — from a Vector of keys and a Vector of values paired position by position: `[ 'x' 'y' ] [ 1 2 ] RECORD 'y' GET` is `2`. Keys keep the order they were given, which KEYS and VALUES read back. Two lengths that differ, or a key that appears twice, is the program being wrong, so both are ERRORs rather than a silent last-one-wins.",
         "hover": "RECORD — a keyed correspondence from a key Vector and a value Vector",
         "syntax": "[ 'x' 'y' ] [ 1 2 ] RECORD",
         "stackEffect": "[ keys ] [ values ] -> [ record ]"
@@ -2470,7 +2470,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Record does not hold is not an identity but the absence `notFound` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.",
+        "summary": "A copy of a Record with one key removed: `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT KEYS` is `[ 'y' ]`. Removing a key the Record does not hold is not an identity but the absence `notFound` — the same discipline `GET`, `TAKE` and `PUT` keep for a position outside the Vector, so a misspelled key cannot pass silently. The other keys keep their order. A non-Record first operand is an ERROR.",
         "hover": "WITHOUT — a copy with one key removed",
         "syntax": "[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT",
         "stackEffect": "[ record ] [ key ] -> [ record ]"
@@ -2522,7 +2522,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `GET` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.",
+        "summary": "Whether a Record holds a key: `[ 'x' ] [ 1 ] RECORD 'x' HAS?` is `TRUE` and `[ 'x' ] [ 1 ] RECORD 'y' HAS?` is `FALSE`. It asks about presence without touching the value, so a program can tell a key that is absent from a key whose stored value is NIL — `GET` alone answers NIL for both. Like `NIL?`, it is a predicate and ends in `?`. A non-Record first operand is an ERROR.",
         "hover": "HAS? — whether a key is present",
         "syntax": "[ 'x' ] [ 1 ] RECORD 'x' HAS?",
         "stackEffect": "[ record ] [ key ] -> [ TRUE | FALSE ]"
@@ -2573,7 +2573,7 @@
         "LANG.VALUES.DISJOINT"
       ],
       "documentation": {
-        "summary": "The union of two Records, the right one winning: `defaults overrides MERGE`. The left Record's keys keep their order and take the right Record's value wherever both hold the key; keys only the right holds are appended in the right's order. Layering overrides on defaults is the shape this Word is for; swap the operands for the left to win. Either operand not a Record is an ERROR.",
+        "summary": "The union of two Records, the right one winning: `[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE VALUES` is `[ 1 9 3 ]`. The left Record's keys keep their order and take the right Record's value wherever both hold the key; keys only the right holds are appended in the right's order. Layering overrides on defaults is the shape this Word is for; swap the operands for the left to win. Either operand not a Record is an ERROR.",
         "hover": "MERGE — the right-biased union of two Records",
         "syntax": "[ 'x' 'y' ] [ 1 2 ] RECORD [ 'y' 'z' ] [ 9 3 ] RECORD MERGE",
         "stackEffect": "[ record ] [ record ] -> [ record ]"
@@ -2625,7 +2625,7 @@
         "LANG.COLLECTIONS.HIGHER"
       ],
       "documentation": {
-        "summary": "Apply a code block to each element of a vector.",
+        "summary": "A block applied to each element of a Vector, in order, answering a Vector of the results: `[ 1 2 3 ] [ 2 MUL ] MAP` is `[ 2 4 6 ]`. The block's result is whatever it leaves on top, a Vector included (LANG.COLLECTIONS.HIGHER): `[ 1 2 ] [ 1 COLLECT ] MAP` is `[ [ 1 ] [ 2 ] ]`. An absent Vector answers that absence. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves nothing `blockContractViolation`.",
         "hover": "MAP — apply block to each element",
         "syntax": "[ 1 2 3 ] [ 2 MUL ] MAP",
         "stackEffect": "[ vec ] [ body ] -> [ mapped ]"
@@ -2678,7 +2678,7 @@
         "LANG.COLLECTIONS.HIGHER"
       ],
       "documentation": {
-        "summary": "Keep only the elements for which a predicate block returns TRUE.",
+        "summary": "The elements of a Vector for which a predicate block answers TRUE, in order: `[ 1 2 3 4 ] [ 2 GT ] FILTER` is `[ 3 4 ]`. The block's answer is read as a truth value, and an UNKNOWN drops the element like FALSE does. A non-Vector is `nonVector`, a non-block `notExecutable`, a block that leaves nothing `blockContractViolation`, and an answer that is not a truth value `nonTruthValue`.",
         "hover": "FILTER — keep elements matching predicate",
         "syntax": "[ 1 2 3 ] [ 2 EQ ] FILTER",
         "stackEffect": "[ vec ] [ pred ] -> [ kept ]"
@@ -2732,7 +2732,7 @@
         "LANG.COLLECTIONS.HIGHER"
       ],
       "documentation": {
-        "summary": "Reduce a vector to a single value using an initial accumulator and combiner block.",
+        "summary": "A Vector reduced to one value by a block that combines the accumulator with each element in turn, starting from a seed: `[ 1 2 3 ] 0 [ ADD ] FOLD` is `6`, and `[ 1 2 3 ] 10 [ SUB ] FOLD` is `4`. An empty Vector answers the seed: `[ ] 0 [ ADD ] FOLD` is `0`. SCAN answers every accumulator instead of the last. A non-Vector is `nonVector`, a non-block `notExecutable`, and a block that leaves nothing `blockContractViolation`.",
         "hover": "FOLD — reduce with initial value",
         "syntax": "[ 1 2 3 ] 0 [ ADD ] FOLD",
         "stackEffect": "[ vec ] [ init ] [ combine ] -> [ result ]"
@@ -2837,7 +2837,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Split a string into a vector of one-character strings.",
+        "summary": "A text split into its characters, each a one-character text: `'héllo' CHARS` is `[ 'h' 'é' 'l' 'l' 'o' ]`, and `'' CHARS` is `[ ]`. JOIN puts them back. A Vector of texts lifts; a non-text is `nonText`.",
         "hover": "CHARS — split string into characters",
         "syntax": "'hi' CHARS",
         "stackEffect": "[ text ] -> [ chars ]"
@@ -2888,7 +2888,7 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Join a vector of strings into a single string.",
+        "summary": "A Vector of texts joined end to end into one text: `[ 'h' 'i' ] JOIN` is `'hi'`, and `[ ] JOIN` is `''`, so `CHARS JOIN` gives a text back. Every element must be a text (`nonText`), and a non-Vector is `nonVector`.",
         "hover": "JOIN — join characters into string",
         "syntax": "[ 'h' 'i' ] JOIN",
         "stackEffect": "[ texts ] -> [ text ]"
@@ -2939,7 +2939,7 @@
         "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
-        "summary": "Remove whitespace from both ends of a string.",
+        "summary": "A text with the whitespace at both ends removed: `'  a b  ' TRIM` is `'a b'`; whitespace inside is kept. A Vector of texts lifts; a non-text is `nonText`.",
         "hover": "TRIM — strip leading and trailing whitespace",
         "syntax": "'  hi  ' TRIM",
         "stackEffect": "[ text ] -> [ text' ]"
@@ -3310,7 +3310,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `TRUE STR` is `'TRUE'`. The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `x STR NUM` is `x` for every number. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.",
+        "summary": "Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is `'42'`, `1/3 STR` is `'1/3'`, `TRUE STR` is `'TRUE'`. The operand is a leaf, so a Vector or Record lifts — `[ 1 2 ] STR` is `[ '1' '2' ]` — and STR is NUM's inverse element by element: `1/3 STR NUM` is `1/3`, as `x STR NUM` gives back every number with a lexeme. Text is the sealed numeric grammar's alphabet, so a number with no lexeme in it — an exact irrational such as 2 SQRT — has no faithful text and projects NIL(domainMiss), the reason JSON-ENCODE projects for a value with no JSON image, rather than answering with a rational look-alike. FORMAT renders a stated approximation when one is wanted.",
         "hover": "STR — convert to string",
         "syntax": "42 STR",
         "stackEffect": "[ x ] -> [ text ]"
@@ -3425,7 +3425,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "Read JSON text into a value: an object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1'` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past what the machine holds projects `spaceExhausted`, the outcome of every materialization past a ceiling. A non-String operand is an ERROR (`nonText`).",
+        "summary": "Read JSON text into a value: `'[1, 2]' JSON-DECODE` is `[ 1 2 ]`. An object becomes a Record keyed by its member names in order, an array a Vector, a string a String, a number the exact rational it spells (`'0.1' JSON-DECODE` is `1/10`, never a float), `true`/`false` Booleans and `null` a NIL. Text that is not one JSON value — malformed, empty, trailing content, or an object naming one member twice — projects `invalidEncoding`, the reason `NUM` projects for text that spells no number. Nesting is bounded by the text rather than by any Word, so this Word cannot be written in the language, whose repetition is over a Vector that already exists; a value nested past what the machine holds projects `spaceExhausted`, the outcome of every materialization past a ceiling. A non-String operand is an ERROR (`nonText`).",
         "hover": "JSON-DECODE — read JSON text into values and Records",
         "syntax": "'{\"a\": 1, \"b\": [true, null]}' JSON-DECODE",
         "stackEffect": "[ text ] -> [ value ]"
@@ -3527,7 +3527,7 @@
         "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "Evaluate a code block.",
+        "summary": "A block run where it stands, its results left on the stack: `[ 1 2 ADD ] EXEC` is `3`. It reads and writes the stack like any other code, so `2 [ 3 MUL ] EXEC` is `6`. A non-block is `notExecutable`.",
         "hover": "EXEC — evaluate a code block",
         "syntax": "[ 1 2 ADD ] EXEC",
         "stackEffect": "[ code ] -> [ result... ]"
@@ -3580,7 +3580,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "The contract of a Word or of a block, as a Record. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — `name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects` — the same keys, in the same vocabulary, so the two compare directly — and `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
+        "summary": "The contract of a Word or of a block, as a Record: `[ DIV ] 0 GET CONTRACT 'partiality' GET` is `'projecting'`. For a Symbol naming a Core Word it is the registered record of `spec/words.json` (LANG.CONTRACT.REGISTRY), keyed by the registry's own field names — `name` `vocabularyTier` `inputs` `outputs` `nilPolicy` `projection` `errorWhen` `partiality` `purity` `determinism` `cost` `effects`, so `[ DIV ] 0 GET CONTRACT 'cost' GET` asks a Word's cost class before running it. For a Symbol naming a User Word, or for a block of code, it is the contract inferred without running anything — the same inference `ajisai check --contract` runs from outside the language — keyed `inputs` `outputs` `partiality` `purity` `determinism` `cost` `effects` — the same keys, in the same vocabulary, so the two compare directly — and `confidence` `gaps`, where `confidence` and `gaps` carry the check's own trichotomy (LANG.CONTRACT.CHECK) as data: an unresolved dependency is a gap in the answer, not an ERROR. A block is never evaluated, so `[ 42 PRINT ] CONTRACT` reports `consoleWrite` under `effects` without printing. A Symbol that names no Word projects `notFound`; an operand that is neither a Symbol nor a block is an ERROR (`notASymbol`).",
         "hover": "CONTRACT — the contract of a Word or a block, as a Record",
         "syntax": "[ ADD ] 0 GET CONTRACT",
         "stackEffect": "[ symbol | code ] -> [ record ]"
@@ -3677,7 +3677,7 @@
         "LANG.FAILURE.RECOVERY"
       ],
       "documentation": {
-        "summary": "Push the NIL value onto the stack.",
+        "summary": "The absence written into the program: `NIL NIL?` is `TRUE`, and its reason is `literal`: `NIL NIL-REASON` is `'literal'` (LANG.VALUES.NIL). ABSENT writes one with a reason of the program's own.",
         "hover": "NIL — push NIL",
         "syntax": "NIL",
         "stackEffect": "-> [ NIL ]"
@@ -3725,7 +3725,7 @@
         "LANG.FAILURE.RECOVERY"
       ],
       "documentation": {
-        "summary": "Test whether the top value is an operational NIL (absent).",
+        "summary": "Whether a value is absent: `1 0 DIV NIL?` is `TRUE` and `5 NIL?` is `FALSE`. It asks about the whole value, so a Vector holding a NIL is present: `[ 1 NIL ] NIL?` is `FALSE`. With SELECT it chooses a fallback (LANG.FAILURE.RECOVERY).",
         "hover": "NIL? — test whether a value is absent",
         "syntax": "1 0 DIV NIL?",
         "stackEffect": "[ x ] -> [ TRUE | FALSE ]"
@@ -3826,7 +3826,7 @@
         "LANG.FAILURE.PROJECT"
       ],
       "documentation": {
-        "summary": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
+        "summary": "A NIL whose reason the program states: `'rate not quoted' ABSENT NIL?` is `TRUE`. `'rate not quoted' ABSENT NIL-REASON` answers `'rate not quoted'`. Its registered reason is `userDeclared`, and the text is the reason NIL-REASON answers, so a user Word can say why it has no answer exactly as a Core Word's contract does — and a caller recovers it the same way, `subject 'S' BIND fallback S S NIL? SELECT`. The text is part of the value (LANG.VALUES.NIL): two absences with different texts are two values. A non-text operand is the program being wrong.",
         "hover": "ABSENT — a NIL carrying a reason the program states",
         "syntax": "'rate not quoted' ABSENT",
         "stackEffect": "[ reason ] -> [ NIL ]"
@@ -3881,7 +3881,7 @@
         "LANG.DICTIONARY.RESOLUTION"
       ],
       "documentation": {
-        "summary": "Name a value for the rest of the frame that made it. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.",
+        "summary": "Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10`, and `[ 1 2 ] [ 'A' 'B' ] BIND B A SUB` is `1`. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.",
         "hover": "BIND — name a value locally",
         "syntax": "[ 1 2 3 ] 'XS' BIND",
         "stackEffect": "[ x ] [ name... ] -> [ ]"
@@ -3939,7 +3939,7 @@
         "LANG.DICTIONARY.ACYCLIC"
       ],
       "documentation": {
-        "summary": "Define a user word from a body and a name.",
+        "summary": "A User Word defined from a body and a name: `[ 2 MUL ] 'DOUBLE' DEF 5 DOUBLE` is `10`. The body may call Core and User Words but never, directly or through others, the Word being defined (`selfReferentialDefinition`, LANG.DICTIONARY.ACYCLIC). Redefining a User Word replaces it unless others still call it (`definitionConflict`); a Core Word's name is `protectedWord`, a name held by a binding is `nameConflict`, and a name that cannot be written as one token is `invalidName`.",
         "hover": "DEF — define user word",
         "syntax": "[ 2 MUL ] 'DOUBLE' DEF",
         "stackEffect": "[ body ] [ name ] -> [ ]"
@@ -3995,7 +3995,7 @@
         "LANG.DICTIONARY.MUTATION"
       ],
       "documentation": {
-        "summary": "Delete a User Word from the dictionary: `'INC' DEL`. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
+        "summary": "Delete a User Word from the dictionary: `[ 1 ] 'W' DEF 'W' DEL [ W ] 0 GET CONTRACT NIL?` is `TRUE`, since the name no longer names a Word. A Core Word or a reserved alias is refused (`protectedWord`), a name no User Word holds is `wordNotFound`, and a Word other User Words still call is `definitionConflict` until they are deleted first.",
         "hover": "DEL — delete user word",
         "syntax": "[ 1 ] 'W' DEF 'W' DEL",
         "stackEffect": "[ name ] -> [ ]"
@@ -4047,7 +4047,7 @@
         "LANG.DICTIONARY.RESOLUTION"
       ],
       "documentation": {
-        "summary": "The content identity of a Word, or the digest of a value's denotation, as text. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing.",
+        "summary": "The content identity of a Word, or the digest of a value's denotation, as text: `8 SQRT DIGEST 2 SQRT 2 SQRT ADD DIGEST EQ` is `TRUE`. A Symbol naming a User Word answers that Word's content identity — the digest over its normalized definition and the identities of the Words it calls that the dictionary already keeps (LANG.DICTIONARY.MUTATION) — and a Symbol naming a Core Word answers the fixed identity of that sealed Word. Any other value, a Symbol naming nothing included, answers the digest of its denotation: two values that `EQ` calls one value digest alike, however each was built, so `8 SQRT DIGEST` equals `2 SQRT 2 SQRT ADD DIGEST`, and a NIL digests by its reason. Equal digests mean one thing; unequal digests mean nothing.",
         "hover": "DIGEST — the content identity of a Word or a value",
         "syntax": "[ ADD ] 0 GET DIGEST",
         "stackEffect": "[ x ] -> [ digest ]"
@@ -4095,7 +4095,7 @@
         "LANG.MACHINE.ORDER"
       ],
       "documentation": {
-        "summary": "Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.",
+        "summary": "Write a value to the output, consuming it: `42 PRINT` writes `42` and leaves nothing. A text is written as its raw characters, without the quotes the stack shows ('TEST' prints as TEST); a text nested in a Vector keeps its quotes. Output is the one effect that leaves the machine (LANG.EFFECTS.OUTPUT).",
         "hover": "PRINT — output value to display",
         "syntax": "42 PRINT",
         "stackEffect": "[ x ] -> [ ]"
