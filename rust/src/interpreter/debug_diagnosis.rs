@@ -234,7 +234,6 @@ fn cause_class_for_nil_reason(reason: &NilReason) -> CauseClass {
         NilReason::SpaceExhausted => CauseClass::ResourceLimit,
         NilReason::IndexOutOfBounds => CauseClass::Index,
         NilReason::NotFound | NilReason::InvalidEncoding => CauseClass::ValueShape,
-        NilReason::NotAvailable => CauseClass::Environment,
         // Absence that no operation produced — a `NIL` in source, or one that
         // has passed through a dense lane, which carries presence but no
         // reason. Nothing is wrong; a NIL is simply flowing.

@@ -110,7 +110,7 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
             name
         );
         // Neither raises on any operand. `NIL?` always answers a truth;
-        // `NIL-REASON` answers NIL(notAvailable) for a value with no reason,
+        // `NIL-REASON` answers NIL(domainMiss) for a value that is not a NIL,
         // which is a projection, so it is `projecting` and safety B.
         let (partiality, safety) = if *name == "NIL?" {
             (Partiality::Total, SafetyLevel::A)

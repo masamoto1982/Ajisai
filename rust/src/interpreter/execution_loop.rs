@@ -47,7 +47,6 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         | NilReason::InvalidEncoding
         | NilReason::SpaceExhausted
         | NilReason::DomainMiss
-        | NilReason::NotAvailable
         | NilReason::Literal
         | NilReason::UserDeclared => None,
     }

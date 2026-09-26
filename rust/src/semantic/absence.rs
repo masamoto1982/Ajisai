@@ -27,9 +27,6 @@ pub enum AbsenceOrigin {
     /// projected to NIL under the NIL Projection Rule (LANG.FAILURE.PROJECT). Used
     /// together with `NilReason::DomainMiss`.
     DomainMiss,
-    /// A diagnostic accessor found nothing to report — the origin paired with
-    /// `NilReason::NotAvailable`.
-    NotAvailable,
     HostEnvironment,
     /// The program declared the absence itself (`ABSENT`).
     UserDeclared,

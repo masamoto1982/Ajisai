@@ -43,7 +43,7 @@ Logical AND. FALSE absorbs a NIL operand into FALSE; otherwise a NIL operand yie
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `TRUE TRUE &`
+- **Syntax:** `TRUE FALSE AND`
 - **ERROR conditions:** `nonTruthValue`, `shapeMismatch`
 
 ## `NOT`
@@ -78,7 +78,7 @@ Choose between two already-computed values by a truth value: TRUE answers the fi
 
 ## `EQ`
 
-Test equality of two values.
+Whether two values are one value (LANG.VALUES.DENOTATION), whatever built each: `1 1/1 EQ` is `TRUE`, `2 SQRT 2 SQRT MUL 2 EQ` is `TRUE`, and `[ 1 2 ] [ 1 2 ] EQ` is `TRUE` — EQ compares its operands whole and does not lift. It reads both operands, so an absent one is the answer, as it is for every data operand (LANG.FAILURE.PASSTHROUGH): `1 0 DIV 1 EQ` is the UNKNOWN that absence already was, since there is nothing to compare. Inside a Vector a NIL is an element like any other and is compared by its reason, so `[ NIL ] [ NIL ] EQ` is `TRUE`; that is the equality MEMBER?, INDEX-OF and UNIQUE use, and a program that wants two possibly absent values compared rather than passed through wraps each in `1 COLLECT` first.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `comparison`
@@ -88,7 +88,7 @@ Test equality of two values.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.VALUES.DENOTATION`
-- **Syntax:** `1 1 =`
+- **Syntax:** `1 1 EQ`
 - **Aliases:** `=`
 
 ## `LT`
@@ -103,7 +103,7 @@ Test less-than comparison.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `1 2 <`
+- **Syntax:** `1 2 LT`
 - **Aliases:** `<`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -119,7 +119,7 @@ Test greater-than comparison.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
-- **Syntax:** `2 1 >`
+- **Syntax:** `2 1 GT`
 - **Aliases:** `>`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -135,7 +135,7 @@ Add two numeric values, element-wise with broadcasting.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 2 +`
+- **Syntax:** `1 2 ADD`
 - **Aliases:** `+`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -151,7 +151,7 @@ Subtract two numeric values, element-wise with broadcasting.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `5 3 -`
+- **Syntax:** `5 3 SUB`
 - **Aliases:** `-`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -167,7 +167,7 @@ Multiply two numeric values, element-wise with broadcasting.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 4 *`
+- **Syntax:** `2 4 MUL`
 - **Aliases:** `*`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -183,7 +183,7 @@ Divide two numeric values exactly (fractional result).
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `10 2 /`
+- **Syntax:** `10 2 DIV`
 - **Aliases:** `/`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -199,7 +199,7 @@ Round toward negative infinity.
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 7/3 ] FLOOR`
+- **Syntax:** `7/3 FLOOR`
 - **ERROR conditions:** `nonNumeric`
 
 ## `ROUND`
@@ -214,7 +214,7 @@ Round to nearest integer (half-up).
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 5/2 ] ROUND`
+- **Syntax:** `5/2 ROUND`
 - **ERROR conditions:** `nonNumeric`
 
 ## `MIN`
@@ -428,7 +428,7 @@ Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]
 
 ## `FILL`
 
-A Vector of a given shape with every leaf one number: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`. The shape comes first, as in RESHAPE, and is a non-empty Vector of positive integers (`invalidShape`); the value is a number (`nonNumeric`), and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).
+A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 0 0 ] [ 0 0 0 ] ]`, and `[ 2 ] 'a' FILL` is `[ 'a' 'a' ]`. The shape comes first, as in RESHAPE, and is what SHAPE answers — a Vector of non-negative integers, so `[ 0 ] 0 FILL` is `[ ]` and the empty shape `[ ]` answers the value itself, rank 0 — and anything else is `invalidShape`. The value is a leaf of any domain, and a Vector of values lifts to one filled Vector each. A shape too large to materialize projects NIL(spaceExhausted).
 
 - **Vocabulary tier:** Standard (`operational`)
 - **Family:** `collection`
@@ -439,7 +439,7 @@ A Vector of a given shape with every leaf one number: `[ 2 3 ] 0 FILL` is `[ [ 0
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 2 2 ] 0 FILL`
-- **ERROR conditions:** `invalidShape`, `nonNumeric`
+- **ERROR conditions:** `invalidShape`
 
 ## `SHAPE`
 
@@ -457,7 +457,7 @@ The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] 
 
 ## `RESHAPE`
 
-Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is a vector of positive integers whose product must equal the leaf count; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
+Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` is `[ [ 1 2 3 ] [ 4 5 6 ] ]`, and `SHAPE RESHAPE` on a rectangular vector gives it back. The leaves are everything FLATTEN would answer, however deeply they were nested. The shape is what SHAPE answers — a Vector of non-negative integers, the empty one included, whose product must equal the leaf count, so `[ 5 ] [ ] RESHAPE` is `5` and `[ ] [ 2 0 ] RESHAPE` is `[ [ ] [ ] ]`; any other shape is ERROR(invalidShape), because nothing is padded or repeated to make it fit. A well-formed shape too large to materialize projects to NIL(spaceExhausted), as RANGE and FILL do (LANG.COLLECTIONS.BUDGET).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -487,7 +487,7 @@ Collapse every axis into one: `[ [ 1 [ 2 3 ] ] [ 4 ] ] FLATTEN` is `[ 1 2 3 4 ]`
 
 ## `DEPTH`
 
-How deeply a value nests: a leaf — a number, a text, a truth, a NIL — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.
+How deeply Vectors nest: anything that is not a Vector — a number, a text, a truth, a Symbol, a Record — is 0, a flat vector is 1, and a vector is one more than its deepest element, so `[ 1 [ 2 [ 3 ] ] ] DEPTH` is `3` and `[ ] DEPTH` is `1`. Like FLATTEN it cannot be written as a user definition, because the very thing it measures is what a non-recursive program cannot walk.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `collection`
@@ -766,7 +766,7 @@ Keep only the elements for which a predicate block returns TRUE.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] [ 2 = ] FILTER`
+- **Syntax:** `[ 1 2 3 ] [ 2 EQ ] FILTER`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`, `nonTruthValue`
 
 ## `FOLD`
@@ -781,7 +781,7 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Effects:** none
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] [ 0 ] [ + ] FOLD`
+- **Syntax:** `[ 1 2 3 ] 0 [ ADD ] FOLD`
 - **ERROR conditions:** `nonVector`, `notExecutable`, `blockContractViolation`
 
 ## `SCAN`
@@ -1062,21 +1062,21 @@ Test whether the top value is an operational NIL (absent).
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL?`
+- **Syntax:** `1 0 DIV NIL?`
 
 ## `NIL-REASON`
 
-Read the direct reason of an operational NIL as a protocol-string Text.
+The reason an absence carries, as text: `1 0 DIV NIL-REASON` is `'divisionByZero'`, and a NIL that ABSENT made answers the text it was given. The reason is the whole observable content of a NIL (LANG.VALUES.NIL), so this is how a program reads it. A value that is not a NIL is a well-formed operand outside the question's domain and projects NIL(domainMiss), as a negative radicand does for SQRT.
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `absence`
 - **Stack:** 1 input(s) → 1 output(s)
 - **Operands:** `element` (LANG.FAILURE.PASSTHROUGH)
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrHasNoReason → notAvailable
+- **NIL policy:** `consumeNil`; projection: valueIsNotNil → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL-REASON`
+- **Syntax:** `1 0 DIV NIL-REASON`
 
 ## `ABSENT`
 
@@ -1120,7 +1120,7 @@ Define a user word from a body and a name.
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryWrite`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.ACYCLIC`
-- **Syntax:** `[ 2 * ] 'DOUBLE' DEF`
+- **Syntax:** `[ 2 MUL ] 'DOUBLE' DEF`
 - **ERROR conditions:** `invalidName`, `protectedWord`, `nameConflict`, `definitionConflict`, `selfReferentialDefinition`, `nonText`, `invalidDefinitionBody`
 
 ## `DEL`
@@ -1135,7 +1135,7 @@ Delete a User Word from the dictionary: `'INC' DEL`. A Core Word or a reserved a
 - **Purity / determinism:** `effectful` / `stateRelative`
 - **Effects:** `dictionaryDelete`
 - **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
-- **Syntax:** `[ [ 1 ] ] 'W' DEF 'W' DEL`
+- **Syntax:** `[ 1 ] 'W' DEF 'W' DEL`
 - **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`, `nonText`, `definitionConflict`
 
 ## `DIGEST`

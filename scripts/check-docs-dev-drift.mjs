@@ -125,6 +125,19 @@ const KNOWN_FALSE_POSITIVES = new Set([
   // EmptySequence entry above: a work-order instruction, now fulfilled.
   'outcome-space-bijection-work-order-2026-09.md::AjisaiError::Custom',
 
+  // `notAvailable` was the reason NIL-REASON projected for a value that is
+  // not a NIL. It named the condition `domainMiss` already names — a
+  // well-formed operand outside the operation's domain — so the two were
+  // merged and the variant (with its origin) deleted. The migration plan
+  // records the state it was written against.
+  'semantic-spine-migration-plan.md::NilReason::NotAvailable',
+  'semantic-spine-migration-plan.md::AbsenceOrigin::NotAvailable',
+
+  // `Token::NilCoalesce` was `OR-NIL`'s token. Both are retired; the last
+  // rust/src comment naming them went with the stale note that described
+  // `OR-NIL` as a live exception to outcome prediction.
+  'outcome-space-bijection-work-order-2026-09.md::Token::NilCoalesce',
+
   // The interpretation-role plane (`Interpretation`, the word-hint override
   // table) these memos describe as then-present has since been deleted: every
   // observation of a value is derived from the value itself. The memos record

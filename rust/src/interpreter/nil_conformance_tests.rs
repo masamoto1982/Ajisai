@@ -267,9 +267,10 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
 /// operational NIL carrying a reason has no reason to read, so the answer is
 /// NIL rather than an error. A reasoned NIL answers with its reason string.
 ///
-/// The projected NIL carries the reason the contract registers, `notAvailable`.
-/// It used to be a bare literal NIL, which made
-/// `projection.reason: "notAvailable"` the one declared projection reason no
+/// The projected NIL carries the reason the contract registers, `domainMiss`:
+/// a value that is not a NIL is a well-formed operand outside the accessor's
+/// domain, the same reason `SQRT` gives a negative radicand. It used to be a
+/// bare literal NIL, which made the declared projection reason the one no
 /// program could observe — `5 NIL-REASON NIL-REASON` answered NIL instead of
 /// naming why. `LANG.FAILURE.PROJECT` requires a projection to produce "NIL
 /// with the reason its contract registers", and `LANG.VALUES.NIL` makes the
@@ -277,17 +278,14 @@ async fn nil_projection_str_projects_on_a_number_with_no_lexeme() {
 #[tokio::test]
 async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
     for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
-        assert_eq!(
-            projected_reason(code).await.as_deref(),
-            Some("notAvailable")
-        );
+        assert_eq!(projected_reason(code).await.as_deref(), Some("domainMiss"));
     }
 
     // Reading the projected NIL is what makes the registered reason
     // observable from inside the language.
     assert_eq!(
         text_answer("5 NIL-REASON NIL-REASON").await.as_deref(),
-        Some("notAvailable"),
+        Some("domainMiss"),
         "the projected NIL must name its own reason"
     );
 
@@ -303,7 +301,7 @@ async fn nil_projection_nil_reason_projects_on_a_reasonless_value() {
 }
 
 /// `NIL?` answers a question; it never projects. It declared
-/// `valueIsNotOperationalNilOrFieldAbsent` → `notAvailable`, the same condition
+/// `valueIsNotOperationalNilOrFieldAbsent`, the same condition
 /// as `NIL-REASON`, but a predicate that returned NIL for "not a NIL" could not
 /// be asked its question. Pinned so the declaration cannot drift back.
 #[tokio::test]

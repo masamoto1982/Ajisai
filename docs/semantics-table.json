@@ -29103,21 +29103,13 @@
         "scalarOne",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
       "inputs": [
         "scalarOne",
         "textShort"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FILL",
-      "inputs": [
-        "scalarOne",
-        "vectorPair"
       ],
       "outcome": "error:invalidShape"
     },
@@ -29125,6 +29117,14 @@
       "word": "FILL",
       "inputs": [
         "scalarOne",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarOne",
         "vectorTriple"
       ],
       "outcome": "error:invalidShape"
@@ -29191,21 +29191,13 @@
         "scalarZero",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
       "inputs": [
         "scalarZero",
         "textShort"
-      ],
-      "outcome": "error:nonNumeric"
-    },
-    {
-      "word": "FILL",
-      "inputs": [
-        "scalarZero",
-        "vectorPair"
       ],
       "outcome": "error:invalidShape"
     },
@@ -29213,6 +29205,14 @@
       "word": "FILL",
       "inputs": [
         "scalarZero",
+        "vectorPair"
+      ],
+      "outcome": "error:invalidShape"
+    },
+    {
+      "word": "FILL",
+      "inputs": [
+        "scalarZero",
         "vectorTriple"
       ],
       "outcome": "error:invalidShape"
@@ -29279,7 +29279,7 @@
         "scalarNegative",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29287,7 +29287,7 @@
         "scalarNegative",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29367,7 +29367,7 @@
         "scalarLarge",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29375,7 +29375,7 @@
         "scalarLarge",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29455,7 +29455,7 @@
         "booleanTrue",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29463,7 +29463,7 @@
         "booleanTrue",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29543,7 +29543,7 @@
         "textShort",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29551,7 +29551,7 @@
         "textShort",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "error:invalidShape"
     },
     {
       "word": "FILL",
@@ -29631,7 +29631,7 @@
         "vectorPair",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29639,7 +29639,7 @@
         "vectorPair",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29719,7 +29719,7 @@
         "vectorTriple",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29727,7 +29727,7 @@
         "vectorTriple",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29775,7 +29775,7 @@
         "vectorHuge",
         "scalarOne"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29783,7 +29783,7 @@
         "vectorHuge",
         "scalarZero"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29791,7 +29791,7 @@
         "vectorHuge",
         "scalarNegative"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29799,7 +29799,7 @@
         "vectorHuge",
         "scalarLarge"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29807,7 +29807,7 @@
         "vectorHuge",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29815,7 +29815,7 @@
         "vectorHuge",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29823,7 +29823,7 @@
         "vectorHuge",
         "vectorPair"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29831,7 +29831,7 @@
         "vectorHuge",
         "vectorTriple"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29839,7 +29839,7 @@
         "vectorHuge",
         "vectorHuge"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29855,7 +29855,7 @@
         "vectorHuge",
         "codeBlock"
       ],
-      "outcome": "error:invalidShape"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29983,7 +29983,7 @@
         "codeBlock",
         "booleanTrue"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -29991,7 +29991,7 @@
         "codeBlock",
         "textShort"
       ],
-      "outcome": "error:nonNumeric"
+      "outcome": "value"
     },
     {
       "word": "FILL",
@@ -93282,63 +93282,63 @@
       "inputs": [
         "scalarOne"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "scalarZero"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "scalarNegative"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "scalarLarge"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "booleanTrue"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "textShort"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "vectorPair"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "vectorTriple"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
       "inputs": [
         "vectorHuge"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "NIL-REASON",
@@ -93352,7 +93352,7 @@
       "inputs": [
         "codeBlock"
       ],
-      "outcome": "nil:notAvailable"
+      "outcome": "nil:domainMiss"
     },
     {
       "word": "ABSENT",

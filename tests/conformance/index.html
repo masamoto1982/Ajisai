@@ -168,6 +168,13 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-nil-reason-of-a-present-value-is-domain-miss" data-category="core">
+  <h3>NIL-REASON's NIL for a present value is domainMiss: a well-formed operand outside the question's domain (LANG.FAILURE.PROJECT)</h3>
+  <pre class="ajisai-source">5 NIL-REASON NIL-REASON</pre>
+  <pre class="ajisai-expect-result">'domainMiss'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-absent-declares-a-reasoned-nil" data-category="core">
   <h3>ABSENT makes a NIL whose reason is the program's own text, and NIL-REASON answers that text (LANG.VALUES.NIL)</h3>
   <pre class="ajisai-source">'rate not quoted' ABSENT NIL-REASON</pre>
@@ -447,6 +454,13 @@
   <h3>COLLECT gathers a leading-count N of stack values</h3>
   <pre class="ajisai-source">1 2 3 3 COLLECT</pre>
   <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-collect-zero-is-empty" data-category="core">
+  <h3>COLLECT's count is a non-negative integer, so zero collects nothing and leaves the stack below alone</h3>
+  <pre class="ajisai-source">1 0 COLLECT</pre>
+  <pre class="ajisai-expect-result">1/1 [ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1330,6 +1344,27 @@
   <h3>FILL builds a nested tensor for a multi-dimensional shape</h3>
   <pre class="ajisai-source">[ 2 2 ] 0 FILL</pre>
   <pre class="ajisai-expect-result">[ [ 0/1 0/1 ] [ 0/1 0/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-fill-any-leaf" data-category="core">
+  <h3>FILL fills with a leaf of any domain, not only a number</h3>
+  <pre class="ajisai-source">[ 2 ] 'a' FILL</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'a' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-shape-image-round-trips" data-category="core">
+  <h3>A shape is whatever SHAPE answers, a zero-length axis included, so FILL and RESHAPE accept it</h3>
+  <pre class="ajisai-source">[ [ ] [ ] ] SHAPE 0 FILL [ ] [ 2 0 ] RESHAPE EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-shape-is-rank-zero" data-category="core">
+  <h3>The empty shape is rank 0: FILL answers the value itself, as 5 SHAPE is [ ]</h3>
+  <pre class="ajisai-source">5 SHAPE 7 FILL [ 7 ] [ ] RESHAPE</pre>
+  <pre class="ajisai-expect-result">7/1 7/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
