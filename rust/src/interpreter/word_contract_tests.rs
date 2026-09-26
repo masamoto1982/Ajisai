@@ -238,21 +238,34 @@ async fn a_block_written_inside_a_vector_literal_is_quoted_but_never_run() {
 }
 
 #[tokio::test]
-async fn a_value_only_reaching_exec_through_collect_is_a_known_gap() {
-    // Before `{ }` was retired as a block, `{ PRINT }` written outside any vector
-    // widened unconditionally, so `COLLECT`ing it and later `GET`+`EXEC`ing
-    // it (measured: `'hi' { PRINT } 1 COLLECT 0 GET EXEC` printed "hi")
-    // still counted as effectful. `classify_vector_positions` instead asks
-    // whether a code-consuming Word immediately follows a literal's own
-    // close — sound for the ordinary `MAP`/`FILTER`/`EXEC`/`COND` shapes,
-    // but `COLLECT` gathers already-evaluated stack values built arbitrarily
-    // far away, which no positional rule can see. This is an accepted,
-    // narrower guarantee, not a regression target: the declaration check
-    // stays conservative-by-omission (a missed `note`, never a false
-    // `error`), and a value actually reaching `EXEC` this way is unusual
-    // enough that recovering it is not worth another special case.
-    let contract = contract_for("[ [ PRINT ] 1 COLLECT 0 GET EXEC ] 'W' DEF", "W").await;
-    assert_eq!(contract.purity, ContractPurity::Pure);
+async fn a_code_operand_that_is_not_a_literal_is_a_gap_not_pure() {
+    // `classify_vector_positions` sees a code operand only when it is the
+    // `[ ... ]` written immediately before the Word that runs it. A Vector
+    // `COLLECT`ed, taken out of data by `GET`, or held by a binding reaches
+    // `EXEC` from somewhere the walk read as inert data, so the `PRINT`
+    // inside it is invisible. Inferring `pure`/`complete` there verified a
+    // false `purity=pure` declaration; the walk now says it cannot tell.
+    for body in [
+        "[ PRINT ] 1 COLLECT 0 GET EXEC",
+        "[ [ 42 PRINT ] ] 0 GET EXEC",
+        "[ 42 PRINT ] 'B' BIND B EXEC",
+        "[ 1 2 ] [ [ PRINT ] ] 0 GET MAP",
+    ] {
+        let source = format!("[ {body} ] 'W' DEF");
+        let contract = contract_for(&source, "W").await;
+        assert_eq!(contract.purity, ContractPurity::Effectful, "body: {body}");
+        assert_eq!(
+            contract.confidence,
+            ContractConfidence::Conservative,
+            "body: {body}"
+        );
+        assert!(
+            contract
+                .gaps
+                .contains(&crate::agent::contract_gap::GapCode::UnmodelledControlFlow),
+            "body: {body}"
+        );
+    }
 }
 
 #[tokio::test]

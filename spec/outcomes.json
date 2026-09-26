@@ -168,7 +168,7 @@
       "id": "selfReferentialDefinition",
       "kind": "declared",
       "repair": "program",
-      "documentation": "DEF was refused because the body names itself, directly or through other User words — the DEF-time acyclicity check."
+      "documentation": "DEF or BIND was refused because what it names would reach itself: a body naming the Word being defined, directly or through other User words, or a bound value naming its own binding, directly or through other bindings — the acyclicity check of LANG.DICTIONARY.ACYCLIC, made when the name is given."
     },
     {
       "id": "shapeMismatch",

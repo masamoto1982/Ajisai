@@ -18,21 +18,23 @@
 //!  * `WordContract::conservative()` is reached as a fallback seed rather
 //!    than through one of the three sites above (`ConservativeSeed`).
 //!
-//! A fifth was added when the stack-flow simulation stopped guessing at the
-//! constructs it cannot model (`word_contract_flow.rs`):
+//! A fifth names what the walk cannot see:
 //!
-//!  * the body reaches a control directive whose paths differ in stack height,
-//!    or an unbalanced delimiter, so no fixed arity describes it
-//!    (`UnmodelledControlFlow`). No source reaches this any more: the two
-//!    directives that had differing-height paths were `COND`'s `|` and
-//!    `OR-NIL`, both retired, and an unbalanced delimiter is refused at
-//!    tokenize time. The id is kept, unreachable, for protocol stability.
+//!  * the body runs code the walk never read, so it cannot say what that
+//!    code does (`UnmodelledControlFlow`). The stack-flow simulation
+//!    (`word_contract_flow.rs`) raises it when no fixed arity describes a
+//!    body, and the widen step (`word_contract_widen::runs_unread_code`)
+//!    raises it when a Word that runs its operand as code is handed anything
+//!    but the `[ ... ]` literal written before it — a Vector taken out of
+//!    data, a bound name, a dependency's result. Every such operand was seen,
+//!    if at all, as inert data, so trusting the walk there would infer a
+//!    false `pure` for `[ [ [ 42 PRINT ] ] 0 GET EXEC ]`.
 //!
 //! It earns an id of its own rather than being folded into `ConservativeSeed`
 //! for the reason that seed is named after: `ConservativeSeed` says inference
-//! fell back to `WordContract::conservative()`, which this site does not do —
-//! it produces a perfectly ordinary contract whose *flow* alone is
-//! unmodelled. Reusing that id would make `byGap` count two different
+//! fell back to `WordContract::conservative()` for a whole Word, which this
+//! one does not do — the rest of the body is still read, and only the part
+//! the walk could not see is widened to the unknown. Reusing that id would make `byGap` count two different
 //! situations as one, which is exactly the telemetry the gap ids exist to
 //! keep apart.
 //!

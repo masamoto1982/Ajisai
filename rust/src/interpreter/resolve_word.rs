@@ -101,20 +101,18 @@ impl Interpreter {
         for (word_name, word_def) in &all_words {
             let mut dependencies = HashSet::new();
             let mut text_references = HashSet::new();
-            for token in word_def.body.iter() {
-                if let crate::types::Token::Symbol(s) = token {
-                    let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
-                    text_references.insert(upper_s.to_string());
-                    if let Some((resolved_name, resolved_def)) = self.resolve_word_entry(&upper_s) {
-                        // Only User Words are dependencies: Core is sealed,
-                        // so nothing can invalidate a reference to it.
-                        if !resolved_def.is_builtin {
-                            dependencies.insert(resolved_name.to_string());
-                            self.dependents
-                                .entry(resolved_name.to_string())
-                                .or_default()
-                                .insert(word_name.clone());
-                        }
+            for s in crate::interpreter::body_symbols::body_symbol_names(&word_def.body) {
+                let upper_s = crate::core_word_aliases::canonicalize_core_word_name(&s);
+                text_references.insert(upper_s.to_string());
+                if let Some((resolved_name, resolved_def)) = self.resolve_word_entry(&upper_s) {
+                    // Only User Words are dependencies: Core is sealed,
+                    // so nothing can invalidate a reference to it.
+                    if !resolved_def.is_builtin {
+                        dependencies.insert(resolved_name.to_string());
+                        self.dependents
+                            .entry(resolved_name.to_string())
+                            .or_default()
+                            .insert(word_name.clone());
                     }
                 }
             }

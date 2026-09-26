@@ -225,14 +225,15 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // below needs to see a forward reference to a word that does not exist
     // yet, which `new_dependencies` cannot represent.
     let mut new_text_references = HashSet::new();
-    for token in body.iter() {
-        if let Token::Symbol(s) = token {
-            let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
-            new_text_references.insert(upper_s.to_string());
-            if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
-                if !resolved_def.is_builtin || resolved_name.contains('@') {
-                    new_dependencies.insert(resolved_name.to_string());
-                }
+    // Every name the body holds, a Symbol inside a Record it carries whole
+    // included (`body_symbols`): one it could reach at run time is one this
+    // check has to see.
+    for s in crate::interpreter::body_symbols::body_symbol_names(&body) {
+        let upper_s = crate::core_word_aliases::canonicalize_core_word_name(&s);
+        new_text_references.insert(upper_s.to_string());
+        if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
+            if !resolved_def.is_builtin || resolved_name.contains('@') {
+                new_dependencies.insert(resolved_name.to_string());
             }
         }
     }

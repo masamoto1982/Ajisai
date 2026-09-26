@@ -19,7 +19,7 @@
   "invariant": {
     "id": "everyReachableWordIsNamedBySymbol",
     "statement": "A Word runs only when a Symbol naming it is written in source. There is no way to compute a call: no Word turns text into a Symbol, and a String is not code (LANG.SOURCE.CODE), so the code operand of the higher-order Words is a Vector and nothing else.",
-    "whyItMatters": "The DEF-time acyclicity check reads the Symbols in a body. It is sound only if every call a body can make is visible to it as a Symbol. A call reachable some other way would not be in the reference graph at all, and the graph's acyclicity would say nothing about whether that call returns.",
+    "whyItMatters": "The acyclicity checks read the Symbols a body or a bound value holds. They are sound only if every call it can make is visible to them as a Symbol. A call reachable some other way would not be in the reference graph at all, and the graph's acyclicity would say nothing about whether that call returns.",
     "history": "Until this was fixed, the higher-order Words also accepted a String naming a Word as their code operand. The name could be computed, so it appeared in no token for the check to read: `[ [ 1 ] [ 'J' 'W' ] JOIN MAP ] 'JW' DEF` was accepted and then recursed until the native depth guard fired. Termination there was decided by a ceiling, which is exactly what the claim above says it never is.",
     "witnesses": {
       "refused": [
@@ -45,9 +45,9 @@
   "acyclicity": {
     "id": "acyclicUserDictionary",
     "clause": "LANG.DICTIONARY.ACYCLIC",
-    "statement": "The User dictionary's reference graph is acyclic. DEF refuses a definition whose body names the Word being defined, directly or through any chain of other User Words, however that name is reached.",
+    "statement": "The reference graph the Symbols of a program can reach is acyclic. DEF refuses a definition whose body names the Word being defined, directly or through any chain of other User Words, however that name is reached — a Symbol inside a Record or other value the body carries whole included. BIND refuses a value that names its own binding, directly or through other bindings the frame can see, because a binding is looked up when its Vector runs and would otherwise call itself with no Word in between.",
     "errorCategory": "selfReferentialDefinition",
-    "consequence": "A chain of Word calls is therefore shorter than the number of User Words, so it cannot be infinite.",
+    "consequence": "A chain of Word calls is therefore shorter than the number of User Words, and a chain of bound values run by name is shorter than the number of bindings, so neither can be infinite.",
     "witnesses": {
       "refused": [
         {
@@ -69,22 +69,46 @@
         {
           "source": "[ LATER ] 'FIRST' DEF\n[ FIRST ] 'LATER' DEF",
           "note": "A forward reference to a Word that does not exist yet: the cycle closes at the second DEF, which is where it is caught. Definition order does not matter."
+        },
+        {
+          "source": "[ 'k' ] [ [ W ] ] RECORD 1 COLLECT [ 'k' GET EXEC ] CONCAT 'W' DEF",
+          "note": "The name is held inside a Record the body carries whole, where no top-level Symbol shows it. The check reads every Symbol the body holds, not only the ones written at its top level."
+        },
+        {
+          "source": "[ F EXEC ] 'F' BIND",
+          "note": "A binding whose value runs its own name. No Word is defined, so a check that read only definitions would miss it."
+        },
+        {
+          "source": "[ G EXEC ] 'F' BIND\n[ F EXEC ] 'G' BIND",
+          "note": "Indirect, through another binding: the cycle closes at the second BIND."
+        },
+        {
+          "source": "[ [ G EXEC ] [ F EXEC ] ] [ 'F' 'G' ] BIND",
+          "note": "Destructuring cannot close a cycle between its own parts: the names bound together count as bound already."
         }
       ],
       "accepted": [
         {
           "source": "[ 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\n[ W2 ] 'W3' DEF\nW3",
           "note": "An acyclic chain. Completeness matters as much as soundness: a check that refused this would make the language smaller, not safer."
+        },
+        {
+          "source": "[ 1 ] 'F' BIND\n[ F EXEC F EXEC ADD ] 'G' BIND\nG EXEC",
+          "note": "A binding that runs another binding, twice, with no cycle."
         }
       ]
     }
   },
   "measure": {
-    "note": "Lexicographic, outermost component first. Every descent below strictly decreases one component and leaves the components before it unchanged, so no descent chain is infinite.",
+    "note": "Lexicographic, outermost component first. Every descent below strictly decreases one component and increases none before it, so no descent chain is infinite.",
     "components": [
       {
         "id": "dictionaryRank",
         "description": "The length of the longest chain of User Word references leaving the Word being evaluated. Finite because the reference graph is acyclic and the dictionary is finite."
+      },
+      {
+        "id": "bindingRank",
+        "description": "The length of the longest chain of binding references leaving the code being evaluated, in the frame's bindings at the moment of descent. Finite because BIND keeps that graph acyclic and a frame holds finitely many bindings; a User Word call starts from a frame with none (LANG.SOURCE.FRAME), which is why this component comes after dictionaryRank."
       },
       {
         "id": "remainingElements",
@@ -106,11 +130,19 @@
       "witness": "[ 1 ] 'W1' DEF\n[ W1 ] 'W2' DEF\nW2"
     },
     {
+      "id": "boundValue",
+      "kind": "binding",
+      "descendsInto": "the value a name is bound to, when EXEC or a higher-order Word runs it",
+      "decreases": "bindingRank",
+      "why": "The value's longest outgoing binding chain is shorter than that of the code which named it, because BIND refused every value that reaches its own name.",
+      "witness": "[ [ 1 ] EXEC ] 'F' BIND\n[ F EXEC ] 'G' BIND\nG EXEC"
+    },
+    {
       "id": "EXEC",
       "kind": "word",
       "descendsInto": "the Vector operand, read as code",
       "decreases": "blockNesting",
-      "why": "The operand is a finite Vector that existed before EXEC ran, and the tokens inside it can only name blocks nested within it or Words reached through the acyclic dictionary.",
+      "why": "The operand is a finite Vector that existed before EXEC ran, and the tokens inside it can only name blocks nested within it, bindings reached through the acyclic binding graph, or Words reached through the acyclic dictionary.",
       "witness": "[ [ [ 1 ] EXEC ] EXEC ] EXEC"
     },
     {

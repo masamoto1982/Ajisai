@@ -1095,7 +1095,7 @@ A NIL whose reason the program states: `'rate not quoted' ABSENT NIL?` is `TRUE`
 
 ## `BIND`
 
-Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10`, and `[ 1 2 ] [ 'A' 'B' ] BIND B A SUB` is `1`. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both.
+Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10`, and `[ 1 2 ] [ 'A' 'B' ] BIND B A SUB` is `1`. One name takes the whole value; several destructure a vector of the same length, position by position. Both operands are consumed and the name pushes the value wherever it is written afterwards, however many times. A binding reaches the blocks written in its frame and never a Word called from it, and it ends when the frame does. A name already held by a Core or User Word is refused, so a name is a Word or a binding and never both. A value that names its own binding, directly or through other bindings, is refused as `selfReferentialDefinition`, the same rule DEF applies (LANG.DICTIONARY.ACYCLIC).
 
 - **Vocabulary tier:** Semantic Kernel
 - **Family:** `dictionary`
@@ -1106,7 +1106,7 @@ Name a value for the rest of the frame that made it: `5 'N' BIND N N ADD` is `10
 - **Effects:** none
 - **Clauses:** `LANG.SOURCE.FRAME`, `LANG.DICTIONARY.RESOLUTION`
 - **Syntax:** `[ 1 2 3 ] 'XS' BIND`
-- **ERROR conditions:** `nonText`, `nameConflict`, `shapeMismatch`, `invalidName`, `protectedWord`
+- **ERROR conditions:** `nonText`, `nameConflict`, `shapeMismatch`, `invalidName`, `protectedWord`, `selfReferentialDefinition`
 
 ## `DEF`
 

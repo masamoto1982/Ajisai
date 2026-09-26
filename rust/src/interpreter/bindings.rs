@@ -198,6 +198,12 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
 
     let subject = interp.stack.pop().ok_or(AjisaiError::stack_underflow())?;
 
+    if let Err(error) = check_binding_acyclic(interp, &names, &subject) {
+        interp.stack.push(subject);
+        interp.stack.push(name_value);
+        return Err(error);
+    }
+
     match names.as_slice() {
         [only] => interp.bind_local(only.to_uppercase(), subject),
         several => {
@@ -232,6 +238,64 @@ pub(crate) fn op_bind(interp: &mut Interpreter) -> Result<()> {
                     .child(position)
                     .expect("the element count was checked against the name count");
                 interp.bind_local(name.to_uppercase(), part);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Refuse a binding whose value reaches its own name.
+///
+/// A binding is looked up before the dictionary, and a Symbol inside a bound
+/// Vector resolves when that Vector runs, not when it is bound. So
+/// `[ F EXEC ] 'F' BIND F EXEC` would call itself with no Word in between, and
+/// the DEF-time acyclicity check (LANG.DICTIONARY.ACYCLIC) never sees it: it
+/// reads definitions, and a binding is not one. The same rule is applied here,
+/// at the same moment — when the name is given — over the same graph: the
+/// Symbols the value holds, followed through the bindings this frame can see
+/// (a User Word's body cannot see them, so the walk stops at the dictionary).
+/// The names being bound together count as bound already, so destructuring
+/// cannot close a cycle between its own parts either.
+fn check_binding_acyclic(interp: &Interpreter, names: &[String], subject: &Value) -> Result<()> {
+    use super::body_symbols::value_symbol_names;
+    use std::collections::HashSet;
+    let pending: Vec<(String, Value)> = match names {
+        [only] => vec![(only.to_uppercase(), subject.clone())],
+        several => several
+            .iter()
+            .enumerate()
+            .filter_map(|(position, name)| Some((name.to_uppercase(), subject.child(position)?)))
+            .collect(),
+    };
+    let bound_value = |name: &str| -> Option<Value> {
+        match pending
+            .iter()
+            .find(|(pending_name, _)| pending_name == name)
+        {
+            Some((_, value)) => Some(value.clone()),
+            None => interp.lookup_binding(name),
+        }
+    };
+    for (target, value) in &pending {
+        let mut visited: HashSet<String> = HashSet::new();
+        let mut frontier = Vec::new();
+        value_symbol_names(value, &mut frontier);
+        while let Some(symbol) = frontier.pop() {
+            let symbol = symbol.to_uppercase();
+            if symbol == *target {
+                return Err(AjisaiError::declared(
+                    "selfReferentialDefinition",
+                    format!(
+                        "Cannot bind '{}': the value names '{}' itself, directly or through other bindings, so running it would never end.",
+                        target, target
+                    ),
+                ));
+            }
+            if !visited.insert(symbol.clone()) {
+                continue;
+            }
+            if let Some(next) = bound_value(&symbol) {
+                value_symbol_names(&next, &mut frontier);
             }
         }
     }

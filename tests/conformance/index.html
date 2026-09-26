@@ -1769,6 +1769,57 @@ W</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- A body built from a Vector can carry a Record whole, and a Symbol inside
+     it is a name the body holds as surely as a top-level one: `'k' GET EXEC`
+     runs it. The DEF-time acyclicity check read only top-level Symbols, so
+     this Word was accepted and then recursed until a ceiling stopped it. -->
+
+<section class="ajisai-case" id="core-def-record-held-self-reference" data-category="core">
+  <h3>DEF refuses a body that names itself through a Record it carries (LANG.DICTIONARY.ACYCLIC)</h3>
+  <pre class="ajisai-source">[ 'k' ] [ [ W ] ] RECORD 1 COLLECT [ 'k' GET EXEC ] CONCAT 'W' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">the body names itself</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-del-record-held-dependency" data-category="core">
+  <h3>A Word named inside a Record another body carries is a dependency, so DEL refuses it (LANG.DICTIONARY.MUTATION)</h3>
+  <pre class="ajisai-source">[ 1 ] 'W' DEF [ 'k' ] [ [ W ] ] RECORD 1 COLLECT 'V' DEF 'W' DEL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">referenced by V</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- A binding is looked up when its Vector runs, so a value that names its
+     own binding would call itself with no Word in between. BIND applies
+     DEF's acyclicity rule over the bindings the frame can see. -->
+
+<section class="ajisai-case" id="core-bind-self-reference" data-category="core">
+  <h3>BIND refuses a value that reaches its own name through other bindings (LANG.DICTIONARY.ACYCLIC)</h3>
+  <pre class="ajisai-source">[ G EXEC ] 'F' BIND [ F EXEC ] 'G' BIND</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">directly or through other bindings</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-bind-acyclic-chain" data-category="core">
+  <h3>A binding that runs another binding is not a cycle</h3>
+  <pre class="ajisai-source">[ 1 ] 'F' BIND [ F EXEC F EXEC ADD ] 'G' BIND G EXEC</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- EXEC's operand here is a Vector taken out of data, which inference read
+     only as inert data: the PRINT inside is invisible to it. Inferring
+     `pure`/`complete` there would verify a false declaration. -->
+
+<section class="ajisai-case" id="core-contract-unread-code-operand-is-a-gap" data-category="core">
+  <h3>CONTRACT does not vouch for code it never read: a code operand that is not a literal is a gap</h3>
+  <pre class="ajisai-source">[ [ [ 42 PRINT ] ] 0 GET EXEC ] CONTRACT 'C' BIND C 'confidence' GET C 'gaps' GET</pre>
+  <pre class="ajisai-expect-result">'conservative' [ 'gap.unmodelledControlFlow' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-contract-one-vocabulary" data-category="core">
   <h3>A block's contract and a Core Word's answer a shared key in one vocabulary (LANG.CONTRACT.REGISTRY)</h3>
   <pre class="ajisai-source">[ PRINT ] 0 GET CONTRACT 'determinism' GET [ 42 PRINT ] CONTRACT 'determinism' GET EQ [ DIV ] 0 GET CONTRACT 'partiality' GET [ 1 0 DIV ] CONTRACT 'partiality' GET EQ</pre>
