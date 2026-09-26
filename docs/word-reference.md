@@ -182,7 +182,7 @@ Divide two numeric values exactly (fractional result).
 - **NIL policy:** `passthroughThenProject`; projection: divisorEqualsZero → divisionByZero
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `10 2 DIV`
 - **Aliases:** `/`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
@@ -258,7 +258,7 @@ Exact square root of a non-negative rational, element-wise over a vector. The re
 - **NIL policy:** `passthroughThenProject`; projection: negativeScalar → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `2 SQRT`
 - **ERROR conditions:** `nonNumeric`
 
@@ -273,7 +273,7 @@ Exact power `x y POW`, element-wise over Vectors, answered inside the exact fiel
 - **NIL policy:** `passthroughThenProject`; projection: zeroBaseNegativeExponent,negativeBaseFractionalExponent,exponentOutsideTheField,exponentTooLargeToMaterialize → divisionByZero, domainMiss, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `2 10 POW`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -288,7 +288,7 @@ The greatest common divisor of two integers, non-negative, element-wise over Vec
 - **NIL policy:** `passthroughThenProject`; projection: nonIntegerOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `12 18 GCD`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
@@ -303,7 +303,7 @@ A rational opened into its reduced numerator and denominator, as a two-element V
 - **NIL policy:** `passthroughThenProject`; projection: irrationalOperand → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `6/4 RATIO`
 - **ERROR conditions:** `nonNumeric`
 
@@ -333,7 +333,7 @@ Return the number of elements in a vector.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] LENGTH`
 - **ERROR conditions:** `nonVector`
 
@@ -348,7 +348,7 @@ Take the first N or last -N elements of a vector. A count larger than the vector
 - **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 2 3 4 5 ] 3 TAKE`
 - **ERROR conditions:** `nonVector`, `invalidInteger`
 
@@ -363,7 +363,7 @@ Drop the first N or last -N elements of a vector and answer the rest. TAKE's cou
 - **NIL policy:** `passthroughThenProject`; projection: indexOutOfBounds → indexOutOfBounds
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 2 3 4 5 ] 2 DROP`
 - **ERROR conditions:** `nonVector`, `invalidInteger`
 
@@ -378,7 +378,7 @@ Join two vectors end to end: `[ 1 2 ] [ 3 ] CONCAT` is `[ 1 2 3 ]`. Elements are
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 ] [ 3 4 ] CONCAT`
 - **ERROR conditions:** `nonVector`
 
@@ -393,7 +393,7 @@ Reverse the order of vector elements.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] REVERSE`
 - **ERROR conditions:** `nonVector`
 
@@ -407,7 +407,7 @@ Take N values off the stack and answer them as one Vector, first-pushed first: `
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `1 2 3 3 COLLECT`
 - **ERROR conditions:** `invalidInteger`, `stackUnderflow`
 
@@ -422,7 +422,7 @@ Every integer from a start to an end, both included: `0 3 RANGE` is `[ 0 1 2 3 ]
 - **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `0 5 RANGE`
 - **ERROR conditions:** `invalidInteger`, `shapeMismatch`
 
@@ -437,7 +437,7 @@ A Vector of a given shape with every leaf one value: `[ 2 3 ] 0 FILL` is `[ [ 0 
 - **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 2 2 ] 0 FILL`
 - **ERROR conditions:** `invalidShape`
 
@@ -452,7 +452,7 @@ The lengths of a rectangular vector's axes, outermost first: `[ [ 1 2 ] [ 3 4 ] 
 - **NIL policy:** `passthroughThenProject`; projection: raggedNesting → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] SHAPE`
 
 ## `RESHAPE`
@@ -466,7 +466,7 @@ Regroup a vector's leaves, in order, under a new shape: `[ 1 2 3 4 5 6 ] [ 2 3 ]
 - **NIL policy:** `passthroughThenProject`; projection: materializationBudgetExceeded → spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.BUDGET`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE`
 - **ERROR conditions:** `nonVector`, `invalidShape`
 
@@ -510,7 +510,7 @@ Return a copy of a vector sorted in ascending order.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 3 1 2 ] SORT`
 - **ERROR conditions:** `nonVector`, `nonNumeric`
 
@@ -525,7 +525,7 @@ The indices that would sort a vector ascending; ties keep their original order.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 30 10 20 ] ORDER`
 - **ERROR conditions:** `nonVector`, `nonNumeric`
 
@@ -540,7 +540,7 @@ The distinct elements of a vector, in first-occurrence order.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 'a' 'b' 'a' ] UNIQUE`
 - **ERROR conditions:** `nonVector`
 
@@ -570,7 +570,7 @@ Bundle equal-length vectors position by position; a matrix transposes.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] ZIP`
 - **ERROR conditions:** `nonVector`, `shapeMismatch`
 
@@ -615,7 +615,7 @@ The index of the first element equal to the value: `[ 10 20 30 ] 20 INDEX-OF` is
 - **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 2 ] 2 INDEX-OF`
 - **ERROR conditions:** `nonVector`
 
@@ -630,7 +630,7 @@ Whether the value occurs in the vector: `[ 1 2 3 ] 2 MEMBER?` is `TRUE`. Members
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.MACHINE.LIMITS`
 - **Syntax:** `[ 1 2 3 ] 2 MEMBER?`
 - **ERROR conditions:** `nonVector`
 
@@ -645,7 +645,7 @@ The index of each key in an ascending vector, found by halving: `[ 1 3 5 7 ] [ 5
 - **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 1 3 5 7 ] [ 5 ] BSEARCH`
 - **ERROR conditions:** `nonVector`, `unsortedInput`, `nonNumeric`
 
@@ -705,7 +705,7 @@ A copy of a Record with one key removed: `R 'x' WITHOUT`. Removing a key the Rec
 - **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.PROJECT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `[ 'x' 'y' ] [ 1 2 ] RECORD 'x' WITHOUT`
 - **ERROR conditions:** `nonRecord`
 
@@ -720,7 +720,7 @@ Whether a Record holds a key: `R 'x' HAS?` is TRUE or FALSE. It asks about prese
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`
+- **Clauses:** `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.DISJOINT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `[ 'x' ] [ 1 ] RECORD 'x' HAS?`
 - **ERROR conditions:** `nonRecord`
 
@@ -810,7 +810,7 @@ Split a string into a vector of one-character strings.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'hi' CHARS`
 - **ERROR conditions:** `nonText`
 
@@ -840,7 +840,7 @@ Remove whitespace from both ends of a string.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'  hi  ' TRIM`
 - **ERROR conditions:** `nonText`
 
@@ -855,7 +855,7 @@ The String with every character mapped to its upper form under Unicode's default
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'Ajisai' UPPER`
 - **ERROR conditions:** `nonText`
 
@@ -870,7 +870,7 @@ The String with every character mapped to its lower form under Unicode's default
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'Ajisai' LOWER`
 - **ERROR conditions:** `nonText`
 
@@ -885,7 +885,7 @@ Split a string into a vector of substrings at every occurrence of a separator: `
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'a,b,c' ',' TOKENIZE`
 - **ERROR conditions:** `nonText`, `shapeMismatch`
 
@@ -900,7 +900,7 @@ The position, in characters, at which a text first occurs in another: `'hello wo
 - **NIL policy:** `passthroughThenProject`; projection: notFound → notFound
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'hello world' 'world' SEARCH`
 - **ERROR conditions:** `nonText`, `shapeMismatch`
 
@@ -915,7 +915,7 @@ Every occurrence of one text replaced by another: `'a-b-c' '-' '+' REPLACE` is `
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `'a-b-c' '-' '+' REPLACE`
 - **ERROR conditions:** `nonText`, `shapeMismatch`
 
@@ -930,7 +930,7 @@ Parse text as a number, by the same grammar a source literal is read with: `'3/4
 - **NIL policy:** `passthroughThenProject`; projection: parseFailure → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'42' NUM`
 - **ERROR conditions:** `nonText`
 
@@ -945,7 +945,7 @@ Write a Scalar, String or Boolean as the text that reads back as it: `42 STR` is
 - **NIL policy:** `passthroughThenProject`; projection: noExactLexemeForValue → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `42 STR`
 
 ## `FORMAT`
@@ -959,7 +959,7 @@ Render an exact scalar as decimal text with a stated number of digits after the 
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1/3 5 FORMAT`
 - **ERROR conditions:** `nonNumeric`, `invalidInteger`, `shapeMismatch`
 
@@ -974,7 +974,7 @@ Read JSON text into a value: an object becomes a Record keyed by its member name
 - **NIL policy:** `passthroughThenProject`; projection: textIsNotJson,nestingDeeperThanTheMachineHolds → invalidEncoding, spaceExhausted
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'{"a": 1, "b": [true, null]}' JSON-DECODE`
 - **ERROR conditions:** `nonText`
 
@@ -989,7 +989,7 @@ Write a value as JSON text, the inverse of `JSON-DECODE`: a Record with String k
 - **NIL policy:** `consumeNil`; projection: valueHasNoJsonImage → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.RECORDS.STRUCTURE`, `LANG.VALUES.EXACT`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ 'a' ] [ 1 ] RECORD JSON-ENCODE`
 
 ## `EXEC`
@@ -1018,7 +1018,7 @@ The contract of a Word or of a block, as a Record. For a Symbol naming a Core Wo
 - **NIL policy:** `createsNil`; projection: symbolNamesNoWord → notFound
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
-- **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`, `LANG.SOURCE.CODE`
+- **Clauses:** `LANG.CONTRACT.REGISTRY`, `LANG.CONTRACT.CHECK`, `LANG.DICTIONARY.RESOLUTION`, `LANG.SOURCE.CODE`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `[ ADD ] 0 GET CONTRACT`
 - **ERROR conditions:** `notASymbol`
 
@@ -1075,7 +1075,7 @@ The reason an absence carries, as text: `1 0 DIV NIL-REASON` is `'divisionByZero
 - **NIL policy:** `consumeNil`; projection: valueIsNotNil → domainMiss
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `1 0 DIV NIL-REASON`
 
 ## `ABSENT`
@@ -1089,7 +1089,7 @@ A NIL whose reason the program states: `'rate not quoted' ABSENT NIL-REASON` ans
 - **NIL policy:** `createsNil`; projection: always → userDeclared
 - **Purity / determinism:** `pure` / `deterministic`
 - **Effects:** none
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.RECOVERY`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.TRICHOTOMY`, `LANG.FAILURE.RECOVERY`, `LANG.FAILURE.PROJECT`
 - **Syntax:** `'rate not quoted' ABSENT`
 - **ERROR conditions:** `nonText`
 
@@ -1149,7 +1149,7 @@ The content identity of a Word, or the digest of a value's denotation, as text. 
 - **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `stateRelative`
 - **Effects:** none
-- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.VALUES.DENOTATION`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.VALUES.DENOTATION`, `LANG.VALUES.EXACT`, `LANG.DICTIONARY.RESOLUTION`
 - **Syntax:** `[ ADD ] 0 GET DIGEST`
 
 ## `PRINT`

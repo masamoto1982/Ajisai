@@ -155,10 +155,8 @@ pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
     json!({
         "kind": payload.kind,
         "recoverability": payload.recoverability,
-        "semanticArea": payload.semantic_area,
         "word": payload.word,
-        "semanticRole": payload.semantic_role,
-        "algebraicFamily": payload.algebraic_family,
+        "family": payload.family,
         "absenceReason": payload.nil_reason,
         "truthValue": payload.truth_value,
         "effect": payload.effect,

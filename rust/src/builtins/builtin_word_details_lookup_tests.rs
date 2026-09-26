@@ -10,7 +10,7 @@ const REQUIRED_SECTIONS: &[&str] = &["Family:", "Summary:", "Stack Effect:"];
 /// Sections every builtin now renders, authored entry or not: the
 /// derived template (three-layer model §3.4) on top of the four base
 /// sections.
-const DERIVED_SECTIONS: &[&str] = &["Examples:", "Failure:", "Side Effects:", "Stability:"];
+const DERIVED_SECTIONS: &[&str] = &["Examples:", "Failure:", "Side Effects:", "Vocabulary:"];
 
 #[test]
 fn every_builtin_renders_the_derived_sections() {
@@ -207,29 +207,16 @@ fn every_builtin_lookup_contains_all_four_sections() {
 }
 
 #[test]
-fn experimental_word_header_shows_stability() {
-    // PRINT is marked experimental in BUILTIN_SPECS.
-    let body = lookup_builtin_detail("PRINT");
-    assert!(
-        body.contains("# PRINT  (experimental)"),
-        "PRINT header must show '(experimental)':\n{}",
-        body
-    );
-}
-
-#[test]
-fn stable_word_header_omits_stability() {
-    let body = lookup_builtin_detail("ADD");
-    assert!(
-        body.contains("# ADD\n"),
-        "ADD (stable) header must be bare:\n{}",
-        body
-    );
-    assert!(
-        !body.contains("# ADD  (stable)"),
-        "stable stability must NOT be shown in header:\n{}",
-        body
-    );
+fn word_header_is_the_bare_name() {
+    // The header carries the name alone: no label the registry does not
+    // declare. PRINT used to read `(experimental)` for having an effect.
+    for name in ["ADD", "PRINT", "DEF"] {
+        let body = lookup_builtin_detail(name);
+        assert!(
+            body.contains(&format!("# {name}\n")),
+            "{name} header must be bare:\n{body}"
+        );
+    }
 }
 
 #[test]

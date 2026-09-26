@@ -9,7 +9,7 @@ use crate::kernel::generated::{generated_word, OperandRole, VocabularyTier};
 /// Layer 2 sections when `builtin_word_lookup_docs.rs` carries an entry
 /// (Behavior / Examples / Failure note / Related), and the sections
 /// derived from the LANG.CONTRACT.REGISTRY contract metadata (Failure baseline, Side
-/// Effects, Stability) — derived so they can never drift from the
+/// Effects, Vocabulary) — derived so they can never drift from the
 /// registry. See docs/dev/three-layer-documentation-model.md §3.
 pub fn lookup_builtin_detail(name: &str) -> String {
     let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
@@ -25,7 +25,6 @@ pub fn lookup_builtin_detail(name: &str) -> String {
     let mut out = render_sections(
         &alias_lead,
         spec.name,
-        spec.stability,
         spec.family,
         spec.summary,
         spec.stack_effect,
@@ -84,18 +83,6 @@ pub fn lookup_builtin_detail(name: &str) -> String {
     out.push('\n');
     out.push_str("Vocabulary:\n");
     push_indented(&mut out, &derive_vocabulary_text(&canonical), "  ");
-
-    out.push('\n');
-    out.push_str("Stability:\n");
-    push_indented(
-        &mut out,
-        if spec.stability.is_empty() {
-            "stable"
-        } else {
-            spec.stability
-        },
-        "  ",
-    );
 
     out
 }
@@ -198,7 +185,6 @@ pub(super) fn effect_sentence(effect: &str) -> Option<&'static str> {
         "consoleWrite" => Some("Writes to the output area."),
         "dictionaryWrite" => Some("Modifies the dictionary."),
         "dictionaryDelete" => Some("Removes a word from the dictionary."),
-        "dictionaryRead" => Some("Loads documentation into the editor."),
         _ => None,
     }
 }
@@ -206,7 +192,6 @@ pub(super) fn effect_sentence(effect: &str) -> Option<&'static str> {
 pub fn render_sections(
     alias_lead: &str,
     name: &str,
-    stability: &str,
     family: &str,
     summary: &str,
     stack_effect: &str,
@@ -214,11 +199,7 @@ pub fn render_sections(
     let mut out = String::new();
     out.push_str(alias_lead);
 
-    if stability.is_empty() || stability == "stable" {
-        out.push_str(&format!("# {}\n\n", name));
-    } else {
-        out.push_str(&format!("# {}  ({})\n\n", name, stability));
-    }
+    out.push_str(&format!("# {}\n\n", name));
 
     out.push_str("Family:\n");
     push_indented(&mut out, family, "  ");

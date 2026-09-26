@@ -1,8 +1,8 @@
-//! Verification of declared contracts, profiles, and registry uniqueness.
+//! Verification of declared contracts and registry uniqueness.
 
 use super::{
     collect_duplicate_entries, get_builtin_word_registry, get_coreword_metadata, NilPolicy,
-    Partiality, Purity, SafetyLevel, WordProfile,
+    Partiality, Purity,
 };
 
 #[test]
@@ -26,14 +26,6 @@ fn aq_ver_contract_a_every_word_has_contract_metadata() {
             "{} must declare nil_policy",
             word.name
         );
-        assert!(
-            matches!(
-                word.safety_level,
-                SafetyLevel::A | SafetyLevel::B | SafetyLevel::D
-            ),
-            "{} must declare safety_level",
-            word.name
-        );
     }
 }
 
@@ -48,12 +40,10 @@ fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
     let div = get_coreword_metadata("DIV").expect("DIV must be in registry");
     assert_eq!(div.partiality, Partiality::Projecting);
     assert_eq!(div.nil_policy, NilPolicy::PassthroughThenProject);
-    assert_eq!(div.safety_level, SafetyLevel::B);
 
     let add = get_coreword_metadata("ADD").expect("ADD must be in registry");
     assert_eq!(add.partiality, Partiality::Total);
     assert_eq!(add.nil_policy, NilPolicy::Passthrough);
-    assert_eq!(add.safety_level, SafetyLevel::A);
 }
 
 #[test]
@@ -78,12 +68,6 @@ fn aq_ver_contract_f_comparison_and_rounding_words_are_total() {
             "{} must be Passthrough (LANG.FAILURE.PASSTHROUGH)",
             name
         );
-        assert_eq!(
-            meta.safety_level,
-            SafetyLevel::A,
-            "{} must be SafetyLevel A",
-            name
-        );
     }
 }
 
@@ -92,7 +76,7 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
     // LANG.VALUES.NIL / LANG.OBSERVATION.DIAGNOSIS: the five diagnostic absence accessors inspect a
     // NIL rather than propagate it, so their nil_policy is ConsumesNil (the
     // OR-NIL-family "inspect or branch on NIL" classification). They are pure,
-    // total, safety-A observations that consume what they read, like every
+    // observations that consume what they read, like every
     // Word (LANG.STACK.CONSUMPTION), so their mass contract is a pinned 1 -> 1.
     for name in &["NIL?", "NIL-REASON"] {
         let meta =
@@ -111,14 +95,13 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
         );
         // Neither raises on any operand. `NIL?` always answers a truth;
         // `NIL-REASON` answers NIL(domainMiss) for a value that is not a NIL,
-        // which is a projection, so it is `projecting` and safety B.
-        let (partiality, safety) = if *name == "NIL?" {
-            (Partiality::Total, SafetyLevel::A)
+        // which is a projection, so it is `projecting`.
+        let partiality = if *name == "NIL?" {
+            Partiality::Total
         } else {
-            (Partiality::Projecting, SafetyLevel::B)
+            Partiality::Projecting
         };
         assert_eq!(meta.partiality, partiality, "{}", name);
-        assert_eq!(meta.safety_level, safety, "{}", name);
         // The declared arity is 1 in, 1 out: the inspected value is
         // consumed and the answer takes its place. A program that needs the
         // value afterwards names it with `BIND`.
@@ -130,43 +113,6 @@ fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
             },
             "{} declares a pinned 1 -> 1 arity",
             name
-        );
-    }
-}
-
-#[test]
-fn aq_ver_contract_c_effectful_words_have_d_safety() {
-    let registry = get_builtin_word_registry();
-    for word in registry.iter().filter(|w| w.purity == Purity::Effectful) {
-        assert!(
-            matches!(word.safety_level, SafetyLevel::D),
-            "{} effectful words must have safety_level D, got {:?}",
-            word.name,
-            word.safety_level
-        );
-    }
-}
-
-#[test]
-fn aq_ver_contract_e_builtin_spec_stability_matches_safety_level() {
-    // Three-layer documentation model §5.3: stability label must agree
-    // with the LANG.CONTRACT.REGISTRY contract metadata declared on each `BuiltinSpec`.
-    // The mapping is:
-    //   safety_level A or B          -> "stable"
-    //   safety_level D                -> "experimental"
-    // This test catches drift between BuiltinSpec.stability and the
-    // registry contract.
-    for spec in crate::builtins::builtin_specs() {
-        let meta = get_coreword_metadata(spec.name)
-            .unwrap_or_else(|| panic!("{} must be in registry", spec.name));
-        let expected = match meta.safety_level {
-            SafetyLevel::A | SafetyLevel::B => "stable",
-            SafetyLevel::D => "experimental",
-        };
-        assert_eq!(
-            spec.stability, expected,
-            "{}: BuiltinSpec.stability = {:?} but safety_level = {:?} maps to {:?}",
-            spec.name, spec.stability, meta.safety_level, expected
         );
     }
 }
@@ -221,33 +167,4 @@ fn aq_ver_listing_a_no_two_entries_share_a_name() {
         "built-in word names must be unique (duplicates: {:?})",
         dupes
     );
-}
-
-#[test]
-fn aq_ver_profile_a_print_is_the_only_hosted_word() {
-    // Output is the only *hosted* effect (LANG.EFFECTS.OUTPUT), so PRINT is the
-    // only Word outside the Core profile. DEF/DEL are effectful as well, but
-    // their effect stays inside the machine, so they keep the Core profile.
-    let hosted: Vec<_> = get_builtin_word_registry()
-        .iter()
-        .filter(|word| word.profile == WordProfile::Hosted)
-        .collect();
-    assert_eq!(
-        hosted.iter().map(|w| w.name.as_str()).collect::<Vec<_>>(),
-        vec!["PRINT"],
-        "PRINT must be the only Hosted-profile Word"
-    );
-}
-
-#[test]
-fn aq_ver_profile_b_core_profile_excludes_print() {
-    for word in get_builtin_word_registry()
-        .iter()
-        .filter(|word| word.profile == WordProfile::Core)
-    {
-        assert_ne!(
-            word.name, "PRINT",
-            "PRINT is the effectful Word and must not be Core-profile"
-        );
-    }
 }

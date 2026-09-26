@@ -1,24 +1,20 @@
 {
   "schemaVersion": 1,
   "authority": "spec/language-semantics.md",
-  "description": "Shared laws selected by canonical Word contracts. Families classify behavior; they do not add Words.",
+  "description": "The laws a family's Words share: a family's clauses are exactly the clauses every one of its Words cites (scripts/check-word-schema-migration.mjs). Families classify behavior; they do not add Words, and a law is stated by the clause it cites rather than restated here.",
   "families": [
     {
       "id": "booleanLogic",
       "clauses": [
-        "LANG.VALUES.TRUTH",
-        "LANG.VALUES.NIL",
-        "LANG.COLLECTIONS.LIFT"
-      ],
-      "truth": "threeValued"
+        "LANG.VALUES.TRUTH"
+      ]
     },
     {
       "id": "comparison",
       "clauses": [
         "LANG.VALUES.TRUTH",
         "LANG.VALUES.EXACT"
-      ],
-      "decidability": "totalOverField"
+      ]
     },
     {
       "id": "exactArithmetic",
@@ -31,33 +27,24 @@
     {
       "id": "collection",
       "clauses": [
-        "LANG.VALUES.VECTOR",
-        "LANG.COLLECTIONS.LIFT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "budgetOutcome": "reasonedNil"
+        "LANG.VALUES.VECTOR"
+      ]
     },
     {
       "id": "higherOrder",
       "clauses": [
         "LANG.COLLECTIONS.HIGHER"
-      ],
-      "effectOrder": "elementVisitOrder"
+      ]
     },
     {
       "id": "text",
       "clauses": [
-        "LANG.VALUES.DISJOINT",
-        "LANG.FAILURE.TRICHOTOMY"
+        "LANG.VALUES.DISJOINT"
       ]
     },
     {
       "id": "control",
-      "clauses": [
-        "LANG.MACHINE.TRANSFORMERS",
-        "LANG.SOURCE.CODE"
-      ],
-      "effectOrder": "evaluationOrder"
+      "clauses": []
     },
     {
       "id": "absence",
@@ -69,28 +56,21 @@
     {
       "id": "dictionary",
       "clauses": [
-        "LANG.DICTIONARY.RESOLUTION",
-        "LANG.DICTIONARY.MUTATION"
-      ],
-      "commit": "atomic"
+        "LANG.DICTIONARY.RESOLUTION"
+      ]
     },
     {
       "id": "output",
       "clauses": [
         "LANG.EFFECTS.OUTPUT",
         "LANG.MACHINE.ORDER"
-      ],
-      "effectOrder": "requestOrder"
+      ]
     },
     {
       "id": "record",
       "clauses": [
-        "LANG.RECORDS.STRUCTURE",
-        "LANG.VALUES.DISJOINT",
-        "LANG.MACHINE.LIMITS"
-      ],
-      "keyOrder": "insertion",
-      "budgetOutcome": "reasonedNil"
+        "LANG.RECORDS.STRUCTURE"
+      ]
     }
   ]
 }

@@ -106,10 +106,11 @@ pub struct ResourceLimitFacts {
 pub struct AiDiagnosticPayload {
     pub kind: Option<String>,
     pub recoverability: String,
-    pub semantic_area: String,
     pub word: Option<String>,
-    pub semantic_role: String,
-    pub algebraic_family: String,
+    /// The Word's semantic family as `spec/words.json` declares it, or
+    /// `None` when no Core Word is at fault. The one classification of a
+    /// Word the diagnosis reports is the registry's own.
+    pub family: Option<String>,
     pub nil_reason: Option<String>,
     pub truth_value: Option<String>,
     pub effect: Option<String>,
@@ -369,10 +370,10 @@ impl DebugDiagnosis {
         AiDiagnosticPayload {
             kind: category.map(|c| c.as_protocol_str().to_string()),
             recoverability: recoverability_for(&self.why, category).to_string(),
-            semantic_area: semantic_area_for(word, &self.why).to_string(),
             word: self.where_.word.clone(),
-            semantic_role: semantic_role_for(word).to_string(),
-            algebraic_family: algebraic_family_for(word, &self.why).to_string(),
+            family: word
+                .and_then(crate::kernel::generated::generated_word)
+                .map(|w| w.family.as_spec_str().to_string()),
             nil_reason: nil_reason.map(|r| r.as_protocol_str().to_string()),
             truth_value: truth_value.map(str::to_string),
             effect: effect.map(str::to_string),
@@ -434,45 +435,6 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
             CauseClass::NilFlow => "handleUnknownOrNil",
             _ => "inspectContext",
         },
-    }
-}
-
-fn semantic_role_for(word: Option<&str>) -> &'static str {
-    let Some(word) = word else {
-        return "Unknown";
-    };
-    if let Some(meta) = crate::coreword_registry::get_coreword_metadata(word) {
-        return match meta.profile {
-            crate::coreword_registry::WordProfile::Hosted => "HostedEffect",
-            crate::coreword_registry::WordProfile::Core => "Derived",
-        };
-    }
-    "Unknown"
-}
-
-fn semantic_area_for(word: Option<&str>, why: &CauseClass) -> &'static str {
-    match word {
-        Some("ADD" | "SUB" | "MUL" | "DIV" | "SQRT" | "FLOOR" | "ROUND") => "exact-real-arithmetic",
-        Some("EQ" | "LT" | "GT") => "exact-real-comparison",
-        Some("AND" | "NOT") => "k3-truth",
-        Some(word) if word.contains('@') => "hosted-effect",
-        Some("PRINT") => "hosted-effect",
-        _ => match why {
-            CauseClass::Effect | CauseClass::Environment => "hosted-effect",
-            CauseClass::NilFlow => "unknown-or-absence",
-            CauseClass::StackShape | CauseClass::ValueShape => "stack-value-shape",
-            _ => "unknown",
-        },
-    }
-}
-
-fn algebraic_family_for(word: Option<&str>, why: &CauseClass) -> &'static str {
-    match semantic_area_for(word, why) {
-        "exact-real-arithmetic" => "exact-arithmetic",
-        "exact-real-comparison" => "observation",
-        "k3-truth" => "k3-truth",
-        "hosted-effect" => "hosted-effect",
-        other => other,
     }
 }
 

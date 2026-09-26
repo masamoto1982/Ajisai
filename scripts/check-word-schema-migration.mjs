@@ -112,6 +112,19 @@ for (const word of words.entries) {
     fail(`${word.name} has data-dependent arity and must not declare operand roles`);
   }
   for (const clause of word.clauses) if (!language.includes(`${clause} —`)) fail(`${word.name} references missing clause ${clause}`);
+  // Two clauses restate a fact the declaration already records, so the
+  // citation is derived from it rather than chosen: a Word is subject to the
+  // lifting law exactly when it has a lifted operand, and to the projection
+  // law exactly when it declares a projection.
+  const derivedClauses = [
+    ['LANG.COLLECTIONS.LIFT', (word.stack.operands ?? []).some((role) => role === 'leaf' || role === 'truth')],
+    ['LANG.FAILURE.PROJECT', word.projection.when !== 'never'],
+  ];
+  for (const [clause, applies] of derivedClauses) {
+    if (applies !== word.clauses.includes(clause)) {
+      fail(`${word.name} ${applies ? 'must' : 'must not'} cite ${clause}: its declaration ${applies ? 'has' : 'has no'} the property the clause governs`);
+    }
+  }
 
   // The executor key used to be written a second time on the Rust spec entry,
   // and this check reconciled the two copies. It is written once now — the
@@ -130,6 +143,20 @@ for (const word of words.entries) {
     const aliasStart = aliasesSource.indexOf(aliasPattern);
     const aliasBlock = aliasesSource.slice(aliasStart, aliasesSource.indexOf('},', aliasStart));
     if (aliasStart < 0 || !aliasBlock.includes(canonicalPattern)) fail(`${word.name} alias drift: ${alias}`);
+  }
+}
+
+// A family is the laws its Words share (spec/semantic-families.json), so its
+// clauses are exactly the clauses every member cites — no more, which would
+// claim a law some member is not subject to, and no fewer.
+for (const family of families.families) {
+  const members = words.entries.filter((word) => word.family === family.id);
+  const shared = members.length
+    ? members[0].clauses.filter((clause) => members.every((word) => word.clauses.includes(clause)))
+    : [];
+  const declared = [...family.clauses].sort();
+  if (JSON.stringify(declared) !== JSON.stringify([...shared].sort())) {
+    fail(`family ${family.id} declares clauses [${declared.join(', ')}] but its Words share [${[...shared].sort().join(', ')}]`);
   }
 }
 
