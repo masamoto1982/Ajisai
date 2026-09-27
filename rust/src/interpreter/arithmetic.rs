@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::arithmetic_division::{
     apply_division_schema, build_scalar_fast_projection, division_by_zero_projection,
 };
@@ -13,8 +13,6 @@ use crate::interpreter::value_extraction_helpers::{
     extract_operands, nil_passthrough_binary, push_result,
 };
 use crate::interpreter::Interpreter;
-use crate::kernel::arithmetic as kernel_arithmetic;
-use crate::kernel::{KernelValue, Scalar as KernelScalar};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, SparseTensor, Value, ValueData};
@@ -204,28 +202,16 @@ fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
     }
 }
 
-/// `schema(a, b)` via the Semantic Spine (migration plan §12 Phase 4, §10.12).
-/// The caller already charged, checks the result size, and gave us rationals.
-fn schema_via_kernel(
-    schema: ExactArithmeticSchema,
-    a: &Fraction,
-    b: &Fraction,
-) -> Result<Fraction> {
-    let operands = [
-        KernelValue::Scalar(KernelScalar::from_fraction(a.clone())),
-        KernelValue::Scalar(KernelScalar::from_fraction(b.clone())),
-    ];
-    let primitive: fn(&[KernelValue]) -> Vec<KernelValue> = match schema {
-        ExactArithmeticSchema::Add => kernel_arithmetic::add,
-        ExactArithmeticSchema::Sub => kernel_arithmetic::sub,
-        ExactArithmeticSchema::Mul => kernel_arithmetic::mul,
-        ExactArithmeticSchema::Div => kernel_arithmetic::div,
-    };
-    match &primitive(&operands)[0] {
-        KernelValue::Scalar(result) => Ok(result.as_fraction().cloned().expect("rational")),
-        KernelValue::Nil(Some(NilReason::DivisionByZero)) => Err(AjisaiError::DivisionByZero),
-        other => unreachable!("kernel arithmetic returned {other:?} for two Scalar operands"),
-    }
+/// `schema(a, b)` over two rationals. The caller already charged, checks the
+/// result size, and gave us rationals; division by zero is the one refusal.
+fn rational_schema(schema: ExactArithmeticSchema, a: &Fraction, b: &Fraction) -> Result<Fraction> {
+    Ok(match schema {
+        ExactArithmeticSchema::Add => a.add(b),
+        ExactArithmeticSchema::Sub => a.sub(b),
+        ExactArithmeticSchema::Mul => a.mul(b),
+        ExactArithmeticSchema::Div if b.is_zero() => return Err(AjisaiError::DivisionByZero),
+        ExactArithmeticSchema::Div => a.div(b),
+    })
 }
 
 fn push_scalar_fastpath_result(
@@ -249,7 +235,7 @@ fn push_scalar_fastpath_result(
 
     // The work of this operation was charged at the dispatch entry, before any
     // route was chosen — see `charge_binary_schema`.
-    let result = match schema_via_kernel(schema, &a.fraction, &b.fraction) {
+    let result = match rational_schema(schema, &a.fraction, &b.fraction) {
         Ok(result) => build_scalar_fast_result(result, &a.wrap),
         Err(AjisaiError::DivisionByZero) => build_scalar_fast_projection(&a.wrap),
         Err(error) => return Err(error),
