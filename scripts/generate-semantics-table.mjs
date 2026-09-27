@@ -24,7 +24,7 @@
 
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { cpus, tmpdir } from 'node:os';
+import { cpus, tmpdir, totalmem } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -216,20 +216,54 @@ function runCellAsync(ajisaiBin, scratchDir, counter, program) {
     writeFileSync(file, `${program}\n`);
     const proc = spawn(ajisaiBin, ['run', file, '--json']);
     let stdout = '';
+    let stderr = '';
     proc.stdout.on('data', (chunk) => {
       stdout += chunk;
     });
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
     proc.on('error', (err) => fail(`failed to spawn ajisai CLI: ${err.message}`));
-    proc.on('close', () => {
+    proc.on('close', (code, signal) => {
+      // A child killed mid-write leaves a truncated stdout, which used to be
+      // reported only as invalid JSON — and a cell like `[ 0 1000001 ] 999
+      // RANGE` peaks at ~3 GB, so under memory pressure the kernel's OOM
+      // killer is the likeliest cause. Name the signal instead of the symptom.
+      if (signal !== null) {
+        fail(
+          `CLI for ${JSON.stringify(program)} was killed by ${signal}`
+            + (signal === 'SIGKILL' ? ' (likely out of memory; see WORKER_MEMORY_BYTES)' : '')
+            + ` after ${stdout.length} bytes of stdout`
+        );
+      }
+      // The CLI exits 0 (OK) or 1 (a language ERROR); anything else is a
+      // failure of the CLI itself, whose stdout is not a report.
+      if (code !== 0 && code !== 1) {
+        fail(`CLI for ${JSON.stringify(program)} exited ${code}: ${stderr.slice(0, 2000)}`);
+      }
       let json;
       try {
         json = JSON.parse(stdout);
-      } catch {
-        fail(`CLI stdout for ${JSON.stringify(program)} is not valid JSON:\n${stdout}`);
+      } catch (err) {
+        fail(
+          `CLI stdout for ${JSON.stringify(program)} is not valid JSON (${err.message}); `
+            + `${stdout.length} bytes, starting:\n${stdout.slice(0, 2000)}`
+        );
       }
       resolveCell(classifyOutcome(json));
     });
   });
+}
+
+// One CLI per CPU, but never more than memory holds. A single cell can be
+// large: `[ 0 1000001 ] 999 RANGE` answers a million-element stack, and the CLI
+// peaks near 3.2 GB rendering it while this process holds its ~200 MB report.
+// Four of those at once exceed a 16 GB machine, and the kernel's OOM killer
+// then takes one child mid-write — the check's intermittent failure. Budgeting
+// 4 GiB per worker keeps the worst case inside memory on any machine.
+const WORKER_MEMORY_BYTES = 4 * 1024 ** 3;
+function poolSize() {
+  return Math.max(1, Math.min(cpus().length, Math.floor(totalmem() / WORKER_MEMORY_BYTES)));
 }
 
 // A fixed-size pool of workers pulling from a shared index, each awaiting its
@@ -276,7 +310,7 @@ async function buildTable(ajisaiBin) {
     const jobs = specs.map(
       (spec, i) => () => runCellAsync(ajisaiBin, scratchDir, i, spec.program),
     );
-    const outcomes = await runPool(jobs, cpus().length);
+    const outcomes = await runPool(jobs, poolSize());
     cells = specs.map((spec, i) => ({ word: spec.word, inputs: spec.inputs, outcome: outcomes[i] }));
   } finally {
     rmSync(scratchDir, { recursive: true, force: true });
