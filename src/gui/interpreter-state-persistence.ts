@@ -4,6 +4,7 @@ import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-typ
 import { EXAMPLE_USER_WORDS } from './example-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
+import { collectUserWords } from './interpreter-execution-utils';
 
 // The persisted session document. `stateVersion` identifies the format; a
 // document that does not carry the current version is not migrated — the beta
@@ -61,36 +62,18 @@ declare global {
     }
 }
 
-// Words are addressed by bare name (LANG.DICTIONARY.RESOLUTION: two tiers, and
-// User is one of them). A `DICT@NAME` prefix resolves to nothing, so composing
-// one here persisted every definition as null and lost the user's words on the
-// next load.
-const toUserWord = (
-    wordData: [string, string, boolean],
-    getDefinition: (name: string) => string | null
-): UserWord => ({
-    dictionary: wordData[0],
-    name: wordData[1],
-    definition: getDefinition(wordData[1])
-});
-
 const readActiveDictionarySheet = (): string | undefined => {
     const sheetSelect = document.getElementById('dictionary-sheet-select') as HTMLSelectElement | null;
     return sheetSelect?.value || undefined;
 };
 
 const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
-    const userWordsInfo = interpreter.collect_user_words_info();
-    const userWords: UserWord[] = userWordsInfo.map(wordData =>
-        toUserWord(wordData, name => interpreter.lookup_word_definition(name))
-    );
-
     return {
         stateVersion: STATE_FORMAT_VERSION,
         // The lossless snapshot is what restore reads; `stack` is display data.
         stack: interpreter.collect_stack(),
         stackSnapshot: interpreter.snapshot_stack(),
-        userWords,
+        userWords: collectUserWords(interpreter),
         activeDictionarySheet: readActiveDictionarySheet()
     };
 };

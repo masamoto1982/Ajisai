@@ -54,6 +54,14 @@ describe('formatAjisaiSource', () => {
         expect(formatAjisaiSource('a~b')).toBe('a~b');
     });
 
+    test('keeps a hash or quote glued to a word as part of the word', () => {
+        // Only at the start of an atom do `#` and `'` start a comment or a
+        // string (rust/src/tokenizer.rs); inside a word they are name
+        // characters, and splitting them out would change the program.
+        expect(formatAjisaiSource('a#b 1')).toBe('a#b 1');
+        expect(formatAjisaiSource("a'b c")).toBe("a'b c");
+    });
+
     test('still pads an already-standalone bar between spaced tokens', () => {
         // Written with its own whitespace, `|` already scans as its own
         // token; the formatter just normalizes the spacing around it, same as

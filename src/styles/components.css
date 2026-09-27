@@ -330,6 +330,12 @@
     font-family: var(--font-stack-mono);
     font-size: 0.78rem;
     cursor: pointer;
+
+    /* The item Tab accepts, moved with the arrow keys. */
+    &:hover,
+    &.is-selected {
+        background: var(--color-light);
+    }
 }
 
 .editor-suggestions--symbols {
